@@ -33,7 +33,23 @@ python -m blueprints.export <model>
 
 Example: `python -m blueprints.export hello_world`
 
-Exports land in `exports/<model>/` (`model.png`, plus STEP/STL/SVG/DXF). **PNG is required** in the reply (HTML `<img>`). Other formats are optional extras. If PNG export fails, fix that before considering the task done.
+Exports land in `exports/<model>/` (`model.png`, plus STEP/STL/USDZ/HTML/SVG/DXF). **PNG is required** in the reply.
+
+Chat on iOS **and** web only *renders* `<img>` and `<video>`. Copy PNG (and optional orbit video) to `/opt/cursor/artifacts/` and embed with:
+
+```html
+<img src="/opt/cursor/artifacts/obyvak_cutaway.png" alt="obyvak cutaway" />
+```
+
+Only those `src` values are rewritten to a public artifact URL. **Do not** put `/opt/cursor/artifacts/…` in `<a href>` — the chat leaves the path as-is, the browser resolves it to `https://cursor.com/opt/cursor/artifacts/…`, and Cursor shows **404**. USDZ/HTML/STEP never appear as tiles.
+
+After a 3D export, still write `{model}_3d.usdz` and `{model}_3d.html` into `/opt/cursor/artifacts/` (and `docs/previews/` when the mesh should live in git). To let the user actually open the mesh, give a real `https://…` URL that returns the file (or a PNG QR of that URL). Do not attach STEP unless the user asks.
+
+USDZ is a zip **container** of a binary `.usdc` crate (`UsdUtils.CreateNewARKitUsdzPackage`). Quick Look opens the `.usdz` file itself — never unzip it (a folder of crate files is not a preview). If Safari saves it as `.zip`, rename back to `.usdz` without extracting. ASCII `.usda` zips are **not** Quick Look-compatible; do not hand-roll them.
+
+Author USDZ in **metres** (`metersPerUnit = 1`) with the mesh sitting on Y=0. RealityKit often ignores `metersPerUnit`, so millimetre CAD numbers look like kilometres in AR (Object mode still auto-fits). Models whose real span exceeds 2 m are uniformly scaled to a ~0.45 m tabletop so iPad AR can find a plane; add Apple's `Preliminary_AnchoringAPI` (horizontal plane). The HTML viewer is a separate WebGL path and must actually execute in Safari (a Filebin download page or a blank canvas is not a working viewer).
+
+If PNG export fails, fix that before considering the task done.
 
 ## Tests
 
@@ -44,6 +60,6 @@ python -m pytest
 
 ## Cursor Cloud specific instructions
 
-- `install` must finish with a working `.venv` that can `import build123d` and `import cairosvg` (PNG).
+- `install` must finish with a working `.venv` that can `import build123d`, `import cairosvg` (PNG), and `from pxr import Usd` (ARKit USDZ).
 - Do not assume `python3 -m venv` works on the base image; install `python3.12-venv` first (`scripts/cloud-agent-install.sh`).
 - `libcairo2` is required at runtime for CairoSVG PNG export.
