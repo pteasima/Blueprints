@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Obývak — AR</title>
+<style>
+  body { font: 16px/1.4 -apple-system, sans-serif; margin: 24px; max-width: 40rem; }
+  a.ar { display: inline-block; }
+  a.ar img { display: block; width: min(100%, 480px); height: auto; border-radius: 12px; }
+</style>
+</head>
+<body>
+<h1>Obývak</h1>
+<p>
+  Na iPhonu nebo iPadu v <strong>Safari</strong> klepni na obrázek — otevře se Quick Look / AR.
+  Funguje jen když tento adresář servíruje HTTPS a <code>.usdz</code> jako
+  <code>model/vnd.usdz+zip</code> (GitHub Pages po zapnutí; git blob nestačí).
+</p>
+<a class="ar" rel="ar" href="obyvak_3d.usdz">
+  <img src="obyvak.png" alt="Obývak v AR"/>
+</a>
+<p><a href="obyvak_3d.html">WebGL prohlížeč (funguje i jako jeden soubor, bez hostingu)</a></p>
+</body>
+</html>

@@ -589,7 +589,11 @@ _VIEWER_HTML = """<!DOCTYPE html>
   html,body { margin:0; height:100%; background:#111; color:#eee; font-family:-apple-system,sans-serif; }
   #bar { position:fixed; top:0; left:0; right:0; z-index:2; display:flex; gap:8px; align-items:center;
          padding:10px 12px; background:rgba(0,0,0,.72); font-size:14px; }
-  #bar button { font:inherit; padding:8px 12px; border:0; border-radius:8px; background:#eee; color:#111; }
+  #ql { position:relative; display:inline-flex; align-items:center; justify-content:center;
+        min-height:36px; padding:8px 12px; border-radius:8px; background:#eee; color:#111;
+        text-decoration:none; font:inherit; line-height:1; }
+  #ql img { position:absolute; inset:0; width:100%; height:100%; opacity:0; }
+  #ql::after { content:"Otevřít v AR"; }
   #err { display:none; position:fixed; top:56px; left:12px; right:12px; z-index:2;
          background:#4a1010; color:#fcc; padding:10px; border-radius:8px; white-space:pre-wrap; }
   canvas { display:block; width:100%; height:100%; touch-action:none; }
@@ -597,14 +601,15 @@ _VIEWER_HTML = """<!DOCTYPE html>
 </head>
 <body>
 <div id="bar">
-  <button type="button" id="ql">Otevřít v Quick Look</button>
+  <a id="ql" rel="ar" href="data:model/vnd.usdz+zip;base64,%%USDZ_B64%%">
+    <img alt="Otevřít v AR" width="1" height="1" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"/>
+  </a>
   <span>Táhni = otáčení · štípej = zoom</span>
 </div>
 <pre id="err"></pre>
 <canvas id="c"></canvas>
 <script>
 const COORDS_B64 = "%%COORDS_B64%%";
-const USDZ_B64 = "%%USDZ_B64%%";
 const cx = %%CX%%, cy = %%CY%%, cz = %%CZ%%, span = %%SPAN%%;
 const errEl = document.getElementById('err');
 function fail(msg) { errEl.style.display = 'block'; errEl.textContent = msg; }
@@ -614,20 +619,21 @@ function b64bytes(s) {
   for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
   return u8;
 }
-document.getElementById('ql').onclick = () => {
-  const blob = new Blob([b64bytes(USDZ_B64)], {type:'model/vnd.usdz+zip'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.rel = 'ar';
-  a.href = url;
-  a.download = 'model.usdz';
-  const img = document.createElement('img');
-  img.alt = '3D';
-  a.appendChild(img);
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-};
+(function () {
+  const a = document.getElementById('ql');
+  if (a.relList && a.relList.supports('ar')) return;
+  a.addEventListener('click', function (e) {
+    e.preventDefault();
+    const b64 = a.getAttribute('href').split(',')[1];
+    const blob = new Blob([b64bytes(b64)], {type:'model/vnd.usdz+zip'});
+    const url = URL.createObjectURL(blob);
+    const d = document.createElement('a');
+    d.href = url;
+    d.download = 'model.usdz';
+    d.click();
+    URL.revokeObjectURL(url);
+  });
+})();
 const canvas = document.getElementById('c');
 const gl = canvas.getContext('webgl', {alpha:false, antialias:true})
         || canvas.getContext('experimental-webgl', {alpha:false});

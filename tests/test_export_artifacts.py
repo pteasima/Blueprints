@@ -75,7 +75,11 @@ def test_export_publishes_usdz_to_artifacts(tmp_path, monkeypatch):
     assert "attribute vec3 aPos, aNrm" not in html
     assert "COMPILE_STATUS" in html
     assert "model/vnd.usdz+zip" in html
-    assert "Otevřít v Quick Look" in html
+    assert 'rel="ar"' in html
+    assert "data:model/vnd.usdz+zip;base64," in html
+    assert "Otevřít v AR" in html
+    assert "a.download = 'model.usdz'" not in html
+    assert "a.relList.supports('ar')" in html
     script = html.split("<script>", 1)[1].split("</script>", 1)[0]
     subprocess.run(["node", "--check"], input=script, text=True, check=True)
 
@@ -127,6 +131,15 @@ def test_usdz_tabletop_scale_for_room_sized_mesh(tmp_path):
     assert span == pytest.approx(_AR_TABLETOP_SPAN_M, rel=1e-5)
     assert UsdGeom.GetStageMetersPerUnit(stage) == 1.0
     assert stage.GetDefaultPrim().GetAttribute("preliminary:anchoring:type").Get() == "plane"
+
+
+def test_previews_index_is_safari_ar_link():
+    """Hosted launcher uses rel=ar + sibling USDZ; git blob pages cannot do this."""
+    index = ROOT / "docs" / "previews" / "index.html"
+    text = index.read_text(encoding="utf-8")
+    assert 'rel="ar"' in text
+    assert 'href="obyvak_3d.usdz"' in text
+    assert "<img" in text.split('rel="ar"', 1)[1]
 
 
 def test_agents_md_does_not_emit_artifact_hrefs():
