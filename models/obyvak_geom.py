@@ -1,10 +1,12 @@
 """Shared Obývák 1.02 parameters and 2D sketch helpers (mm).
 
-World intent for later 3D:
+World:
   X = eave ↔ eave (room_width), Y = kitchen ↔ living (room_length), Z up.
 
-2D drawings both sit in Plane.XZ for the current orthographic exporter:
-  section X = transverse, elevation X = longitudinal (maps to world Y in 3D).
+2D drawings sit in Plane.XZ for the orthographic exporter:
+  section X = transverse, elevation X = longitudinal (world Y).
+3D (`models/obyvak.py`) extrudes section profiles along Y and gable profiles along Y
+(thickness) / X (span).
 """
 
 from __future__ import annotations
@@ -99,6 +101,22 @@ class ObyvakLayout:
         self.x_pred_l = p.predstena_kitchen
         self.x_pred_r = p.room_length - p.predstena_living
 
+        self.yl_eps = -p.wall_plaster - p.wall_mason - p.wall_eps
+        self.yl_mas = -p.wall_plaster - p.wall_mason
+        self.yr_int = p.room_length
+        self.yr_mas = p.room_length + p.wall_plaster + p.wall_mason
+        self.yr_eps = self.yr_mas + p.wall_eps
+        self.y_pred_l = p.predstena_kitchen
+        self.y_pred_r = p.room_length - p.predstena_living
+        self.y_roof0 = self.yl_eps - p.ridge_runout
+        self.y_roof1 = self.yr_eps + p.ridge_runout
+        # Cabinet/soffit run is not on either 2D sheet; default = clear span between gable predstěny.
+        self.y_furn0 = self.y_pred_l
+        self.y_furn1 = self.y_pred_r
+
+        self.zle_tile = self.z_tile(0.0) - (0.0 - self.left_eave) * self.tan
+        self.zre_tile = self.z_tile(p.room_width) - (self.right_eave - p.room_width) * self.tan
+
     def z_raf(self, x: float) -> float:
         return self.z_raf_inner_ridge - abs(x - self.x_ridge) * self.tan
 
@@ -107,6 +125,96 @@ class ObyvakLayout:
 
     def z_tile(self, x: float) -> float:
         return self.z_raf(x) + (self.t_above_raf + self.p.rafter_t) / self.cos
+
+    def z_gable_top(self, x: float) -> float:
+        """Gable masonry top: 40° rake, 3200 at both eaves, peak at ridge."""
+        x_c = min(max(x, 0.0), self.p.room_width)
+        return self.p.eave_wall_z + (self.x_ridge - abs(x_c - self.x_ridge)) * self.tan
+
+    def z_ceil(self, x: float) -> float:
+        """Interior soffit from panel A (false ridge, then horizontal over cabinets)."""
+        if x <= self.x_false:
+            return self.h_start + max(x, 0.0) * self.tan
+        if x >= self.x_furn:
+            return self.z_gkf_horiz
+        t = (x - self.x_false) / (self.x_furn - self.x_false)
+        return self.z_false + t * (self.z_gkf_horiz - self.z_false)
+
+    def ceil_pts(self) -> list[tuple[float, float]]:
+        p = self.p
+        return [
+            (0.0, self.h_start),
+            (self.x_false, self.z_false),
+            (self.x_furn, self.z_gkf_horiz),
+            (p.room_width, self.z_gkf_horiz),
+        ]
+
+    def krov_pts(self) -> list[tuple[float, float]]:
+        p = self.p
+        return [
+            (self.left_eave, self.zle_tile - self.t_above_raf / self.cos),
+            (self.x_ridge, self.z_raf_outer(self.x_ridge)),
+            (self.right_eave, self.zre_tile - self.t_above_raf / self.cos),
+            (self.right_eave, self.zre_tile - (self.t_above_raf + p.rafter_t) / self.cos),
+            (self.x_ridge, self.z_raf(self.x_ridge)),
+            (self.left_eave, self.zle_tile - (self.t_above_raf + p.rafter_t) / self.cos),
+        ]
+
+    def krytina_pts(self) -> list[tuple[float, float]]:
+        return [
+            (self.left_eave, self.zle_tile - self.t_above_raf / self.cos),
+            (self.x_ridge, self.z_raf_outer(self.x_ridge)),
+            (self.right_eave, self.zre_tile - self.t_above_raf / self.cos),
+            (self.right_eave, self.zre_tile),
+            (self.x_ridge, self.p.ridge_z),
+            (self.left_eave, self.zle_tile),
+        ]
+
+    def vata_pts(self) -> list[tuple[float, float]]:
+        p = self.p
+        return [
+            (0.0, self.h_start),
+            (self.x_false, self.z_false),
+            (self.x_furn, self.z_gkf_horiz),
+            (p.room_width, self.z_gkf_horiz),
+            (p.room_width, self.z_raf(p.room_width)),
+            (self.x_ridge, self.z_raf(self.x_ridge)),
+            (0.0, self.z_raf(0.0)),
+        ]
+
+    def predstena_pts(self) -> list[tuple[float, float]]:
+        p = self.p
+        return [
+            (0.0, p.predstena_bottom_z),
+            (p.room_width, p.predstena_bottom_z),
+            (p.room_width, self.z_gkf_horiz),
+            (self.x_furn, self.z_gkf_horiz),
+            (self.x_false, self.z_false),
+            (0.0, self.h_start),
+        ]
+
+    def podhled_pts(self) -> list[tuple[float, float]]:
+        t = self.p.soffit_hint_t
+        ceil = self.ceil_pts()
+        return ceil + [(x, z - t) for x, z in reversed(ceil)]
+
+    def gable_wall_pts(self, x0: float, x1: float, z_bot: float) -> list[tuple[float, float]]:
+        pts = [(x0, z_bot), (x1, z_bot)]
+        top_xs = [x1]
+        if min(x0, x1) < self.x_ridge < max(x0, x1):
+            top_xs.append(self.x_ridge)
+        top_xs.append(x0)
+        pts.extend((x, self.z_gable_top(x)) for x in top_xs)
+        return pts
+
+    def gable_crown_pts(self, x0: float, x1: float) -> list[tuple[float, float]]:
+        h = self.p.gable_crown_h
+        xs = [x0]
+        if min(x0, x1) < self.x_ridge < max(x0, x1):
+            xs.append(self.x_ridge)
+        xs.append(x1)
+        top = [(x, self.z_gable_top(x)) for x in xs]
+        return top + [(x, z + h) for x, z in reversed(top)]
 
 
 def build_layout(params: ObyvakParams | None = None) -> ObyvakLayout:
