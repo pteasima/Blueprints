@@ -1,10 +1,11 @@
 {
   "name": "Blueprints",
-  "install": "python3 -m venv .venv && . .venv/bin/activate && pip install -U pip && pip install -e .",
+  "install": "bash scripts/cloud-agent-install.sh",
   "terminals": [
     {
       "name": "python",
-      "command": "source .venv/bin/activate && bash"
+      "command": "source .venv/bin/activate && bash",
+      "description": "Repo venv with build123d and cairosvg"
     }
   ]
 }
