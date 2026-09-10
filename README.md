@@ -20,9 +20,11 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
 
-# Hello-world parametric box → exports/
-python -m blueprints.export models.hello_world
+# Hello-world parametric box → exports/hello_world/
+python -m blueprints.export hello_world
 ```
+
+Generated artifacts: `STEP`, `STL`, `SVG`, `DXF`, and a white-background `PNG` preview (good for Cursor iOS review). A copy of the hello-world preview lives in `docs/previews/`.
 
 ## Layout
 
