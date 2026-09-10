@@ -1,0 +1,23 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+.DS_Store
+
+# Large generated binaries (keep SVGs/DXF small previews if useful)
+exports/**/*.step
+exports/**/*.stp
+exports/**/*.stl
+exports/**/*.brep
+exports/**/*.png
+exports/**/*.pdf
+
+# Local secrets / editor
+.env
+.idea/
+.vscode/

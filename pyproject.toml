@@ -1,0 +1,27 @@
+[project]
+name = "blueprints"
+version = "0.1.0"
+description = "Parametric 2D/3D house models (build123d) for the pteasima Blueprints workspace"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "build123d>=0.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[project.scripts]
+bp-export = "blueprints.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
