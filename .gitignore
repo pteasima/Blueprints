@@ -17,6 +17,9 @@ exports/**/*.brep
 exports/**/*.png
 exports/**/*.pdf
 
+# Tracked review previews live under docs/previews/
+!docs/previews/**/*.png
+
 # Local secrets / editor
 .env
 .idea/

@@ -10,6 +10,7 @@ from build123d import Compound, ExportDXF, ExportSVG, Shape, export_step, export
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 EXPORTS_DIR = REPO_ROOT / "exports"
+PREVIEW_LINE_WEIGHT = 1.0
 
 
 def ensure_export_dir(model_name: str) -> Path:
@@ -24,16 +25,44 @@ def _viewport_edges(shape: Shape | Compound):
     return visible
 
 
+def _write_svg(edges, path: Path) -> None:
+    exporter = ExportSVG(scale=1.0, line_weight=PREVIEW_LINE_WEIGHT)
+    exporter.add_layer("visible", line_weight=PREVIEW_LINE_WEIGHT)
+    exporter.add_shape(edges, layer="visible")
+    exporter.write(path)
+
+
+def _write_dxf(edges, path: Path) -> None:
+    exporter = ExportDXF()
+    exporter.add_layer("visible")
+    exporter.add_shape(edges, layer="visible")
+    exporter.write(path)
+
+
+def _write_png(svg_path: Path, png_path: Path, *, width: int = 1400) -> None:
+    try:
+        import cairosvg
+    except ImportError as exc:  # pragma: no cover
+        raise ImportError("PNG export requires cairosvg; pip install cairosvg") from exc
+    cairosvg.svg2png(
+        url=str(svg_path),
+        write_to=str(png_path),
+        output_width=width,
+        background_color="white",
+    )
+
+
 def export_shape(
     shape: Shape | Compound,
     model_name: str,
     *,
     stem: str = "model",
-    formats: tuple[str, ...] = ("step", "stl", "svg", "dxf"),
+    formats: tuple[str, ...] = ("step", "stl", "svg", "dxf", "png"),
 ) -> dict[str, Path]:
     """Export a build123d shape to common formats under exports/<model_name>/."""
     out_dir = ensure_export_dir(model_name)
     written: dict[str, Path] = {}
+    edges = None
 
     for fmt in formats:
         path = out_dir / f"{stem}.{fmt}"
@@ -41,16 +70,19 @@ def export_shape(
             export_step(shape, path)
         elif fmt == "stl":
             export_stl(shape, path)
-        elif fmt == "svg":
-            exporter = ExportSVG(scale=1.0)
-            exporter.add_layer("visible")
-            exporter.add_shape(_viewport_edges(shape), layer="visible")
-            exporter.write(path)
-        elif fmt == "dxf":
-            exporter = ExportDXF()
-            exporter.add_layer("visible")
-            exporter.add_shape(_viewport_edges(shape), layer="visible")
-            exporter.write(path)
+        elif fmt in {"svg", "dxf", "png"}:
+            if edges is None:
+                edges = _viewport_edges(shape)
+            if fmt == "svg":
+                _write_svg(edges, path)
+            elif fmt == "dxf":
+                _write_dxf(edges, path)
+            else:
+                svg_path = written.get("svg") or (out_dir / f"{stem}.svg")
+                if "svg" not in written:
+                    _write_svg(edges, svg_path)
+                    written["svg"] = svg_path
+                _write_png(svg_path, path)
         else:
             raise ValueError(f"Unsupported export format: {fmt}")
         written[fmt] = path
