@@ -2,7 +2,7 @@
 
 Parametric 2D/3D house and furniture models in Python, using [build123d](https://github.com/gumyr/build123d) (Open CASCADE).
 
-This repo is meant for Cursor agent workflows: edit parameters, regenerate geometry, export STEP/STL/SVG/DXF/PNG previews, and review diffs + screenshots from the Cursor iOS app or desktop.
+This repo is meant for Cursor agent workflows: edit parameters, regenerate geometry, export STEP/STL/SVG/DXF/PNG previews, and review diffs + screenshots from the Cursor iOS app or desktop. Agent operating notes (always attach PNG previews, Cloud Agent bootstrap) live in [`AGENTS.md`](AGENTS.md).
 
 ## Why build123d (vs plain ezdxf)
 
@@ -16,9 +16,8 @@ ezdxf remains available (it is a build123d dependency) for importing legacy DXF 
 ## Quick start
 
 ```bash
-python3 -m venv .venv
+bash scripts/cloud-agent-install.sh
 source .venv/bin/activate
-pip install -e .
 
 # Hello-world parametric box → exports/hello_world/
 python -m blueprints.export hello_world
@@ -34,6 +33,8 @@ models/             # parametric models (one module per design)
 exports/            # generated STEP / STL / SVG / DXF / PNG (gitignored binaries OK to keep small SVGs)
 inputs/             # drop legacy DXF / notes from prior tools (next step)
 docs/               # design notes
+scripts/            # Cloud Agent / local bootstrap
+AGENTS.md           # agent operating notes (PNG previews, env)
 .cursor/            # cloud agent environment hints
 ```
 
