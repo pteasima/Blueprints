@@ -33,7 +33,9 @@ python -m blueprints.export <model>
 
 Example: `python -m blueprints.export hello_world`
 
-Exports land in `exports/<model>/` (`model.png`, plus STEP/STL/SVG/DXF). **PNG is required** in the reply (HTML `<img>`). Other formats are optional extras. If PNG export fails, fix that before considering the task done.
+Exports land in `exports/<model>/` (`model.png`, plus STEP/STL/USDZ/SVG/DXF). **PNG is required** in the reply (HTML `<img>`). iOS chat shows PNG; `.step` / `.dxf` in git open as text. After every 3D export, also copy `{model}_3d.usdz` into `/opt/cursor/artifacts/` (automatic in `export_shape`). USDZ opens in iOS Files / Quick Look / AR. Do not attach STEP unless the user asks.
+
+If PNG export fails, fix that before considering the task done.
 
 ## Tests
 

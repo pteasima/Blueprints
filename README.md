@@ -23,7 +23,7 @@ source .venv/bin/activate
 python -m blueprints.export hello_world
 ```
 
-Generated artifacts: `STEP`, `STL`, `SVG`, `DXF`, and a white-background `PNG` preview (good for Cursor iOS review). A copy of the hello-world preview lives in `docs/previews/`.
+Generated artifacts: `STEP`/`STL` (desktop CAD), `USDZ` (iOS Quick Look), `SVG`/`DXF`, and a white-background `PNG` preview. Cloud Agent iOS chat shows PNG; 3D review on iPhone uses the USDZ copy in run artifacts.
 
 ## Layout
 

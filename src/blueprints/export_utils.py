@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import os
+import shutil
+import struct
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -239,6 +243,8 @@ def export_shape(
             raise ValueError(f"Unsupported export format: {fmt}")
         written[fmt] = path
 
+    _maybe_write_usdz(written)
+    publish_to_artifacts(model_name, written)
     return written
 
 
@@ -314,7 +320,113 @@ def export_section(
             raise ValueError(f"Unsupported section export format: {fmt}")
         written[fmt] = path
 
+    publish_to_artifacts(model_name, written)
     return written
+
+
+def artifacts_dir() -> Path | None:
+    """Cloud Agent chat attachments. iOS shows PNG; STEP/DXF/USDZ are for web + Share."""
+    override = os.environ.get("BLUEPRINTS_ARTIFACTS_DIR")
+    if override:
+        path = Path(override)
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+    # pytest must not sprinkle CAD files into the live chat folder
+    if "PYTEST_CURRENT_TEST" in os.environ:
+        return None
+    path = Path("/opt/cursor/artifacts")
+    return path if path.is_dir() else None
+
+
+_CHAT_FORMATS = frozenset({".png", ".usdz"})
+
+
+def _artifact_name(model_name: str, path: Path) -> str:
+    suffix = path.suffix.lower()
+    if path.stem == "model" and suffix in {".step", ".stp", ".stl", ".usdz"}:
+        return f"{model_name}_3d{suffix}"
+    return f"{model_name}_{path.name}"
+
+
+def publish_to_artifacts(model_name: str, paths: dict[str, Path]) -> dict[str, Path]:
+    """Copy review files next to PNG previews so they can be downloaded from the agent."""
+    dest_root = artifacts_dir()
+    if dest_root is None:
+        return {}
+    published: dict[str, Path] = {}
+    for path in paths.values():
+        if path.suffix.lower() not in _CHAT_FORMATS or not path.is_file():
+            continue
+        dest = dest_root / _artifact_name(model_name, path)
+        shutil.copy2(path, dest)
+        published[path.suffix.lower().lstrip(".")] = dest
+    return published
+
+
+def _read_binary_stl(path: Path) -> tuple[list[tuple[float, float, float]], list[tuple[int, int, int]]]:
+    data = path.read_bytes()
+    if len(data) < 84:
+        raise ValueError(f"STL too small: {path}")
+    count = struct.unpack_from("<I", data, 80)[0]
+    points: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, int, int]] = []
+    offset = 84
+    for _ in range(count):
+        # skip normal (3 floats), read 3 vertices
+        verts = struct.unpack_from("<9f", data, offset + 12)
+        i = len(points)
+        points.append((verts[0], verts[1], verts[2]))
+        points.append((verts[3], verts[4], verts[5]))
+        points.append((verts[6], verts[7], verts[8]))
+        faces.append((i, i + 1, i + 2))
+        offset += 50
+    return points, faces
+
+
+def stl_to_usdz(stl_path: Path, usdz_path: Path) -> Path:
+    """Pack a binary STL as USDZ so iOS Quick Look / Files can open the 3D mesh."""
+    points, faces = _read_binary_stl(stl_path)
+    if not faces:
+        raise ValueError(f"STL has no triangles: {stl_path}")
+    xs = [p[0] for p in points]
+    ys = [p[1] for p in points]
+    zs = [p[2] for p in points]
+    point_txt = ", ".join(f"({x:.6f}, {y:.6f}, {z:.6f})" for x, y, z in points)
+    index_txt = ", ".join(str(i) for tri in faces for i in tri)
+    counts_txt = ", ".join("3" for _ in faces)
+    usda = f"""#usda 1.0
+(
+    defaultPrim = "Model"
+    metersPerUnit = 0.001
+    upAxis = "Z"
+)
+
+def Mesh "Model"
+{{
+    float3[] extent = [({min(xs):.6f}, {min(ys):.6f}, {min(zs):.6f}), ({max(xs):.6f}, {max(ys):.6f}, {max(zs):.6f})]
+    int[] faceVertexCounts = [{counts_txt}]
+    int[] faceVertexIndices = [{index_txt}]
+    point3f[] points = [{point_txt}]
+}}
+"""
+    usdz_path.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(usdz_path, "w") as zf:
+        info = zipfile.ZipInfo("mimetype")
+        info.compress_type = zipfile.ZIP_STORED
+        zf.writestr(info, "model/vnd.usdz+zip")
+        geo = zipfile.ZipInfo("model.usda")
+        geo.compress_type = zipfile.ZIP_STORED
+        zf.writestr(geo, usda)
+    return usdz_path
+
+
+def _maybe_write_usdz(written: dict[str, Path]) -> None:
+    stl_path = written.get("stl")
+    if stl_path is None or not stl_path.is_file():
+        return
+    usdz_path = stl_path.with_suffix(".usdz")
+    stl_to_usdz(stl_path, usdz_path)
+    written["usdz"] = usdz_path
 
 
 def summarize_params(params: dict[str, Any]) -> str:
