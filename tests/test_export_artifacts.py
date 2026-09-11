@@ -4,6 +4,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "models"))
+AGENTS_MD = ROOT / "AGENTS.md"
 
 from hello_world import HelloWorldParams, build  # noqa: E402
 from blueprints.export_utils import export_shape, stl_to_usdz  # noqa: E402
@@ -45,3 +46,11 @@ def test_stl_to_usdz_roundtrip(tmp_path, monkeypatch):
     out = tmp_path / "manual.usdz"
     stl_to_usdz(paths["stl"], out)
     assert out.stat().st_size > 0
+
+
+def test_agents_md_does_not_emit_artifact_hrefs():
+    """Relative /opt/cursor/artifacts hrefs 404 on cursor.com; only img/video src is rewritten."""
+    text = AGENTS_MD.read_text(encoding="utf-8")
+    assert 'href="/opt/cursor/artifacts' not in text
+    assert "<a href=\"/opt/cursor/artifacts" not in text
+    assert "<img src=\"/opt/cursor/artifacts/" in text

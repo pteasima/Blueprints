@@ -325,7 +325,7 @@ def export_section(
 
 
 def artifacts_dir() -> Path | None:
-    """Cloud Agent chat attachments. iOS shows PNG; STEP/DXF/USDZ are for web + Share."""
+    """Cloud Agent artifact folder. Chat renders PNG/video tiles only; hrefs are not rewritten."""
     override = os.environ.get("BLUEPRINTS_ARTIFACTS_DIR")
     if override:
         path = Path(override)
@@ -349,7 +349,11 @@ def _artifact_name(model_name: str, path: Path) -> str:
 
 
 def publish_to_artifacts(model_name: str, paths: dict[str, Path]) -> dict[str, Path]:
-    """Copy review files next to PNG previews so they can be downloaded from the agent."""
+    """Copy PNG/USDZ/HTML into the run artifact folder.
+
+    Chat still only displays PNG/video. Do not emit `<a href="/opt/cursor/artifacts/…">`;
+    those paths 404 on cursor.com. Give the user a real https URL or a QR PNG instead.
+    """
     dest_root = artifacts_dir()
     if dest_root is None:
         return {}

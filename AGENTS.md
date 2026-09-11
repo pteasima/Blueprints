@@ -33,14 +33,17 @@ python -m blueprints.export <model>
 
 Example: `python -m blueprints.export hello_world`
 
-Exports land in `exports/<model>/` (`model.png`, plus STEP/STL/USDZ/SVG/DXF). **PNG is required** in the reply (HTML `<img>`). The chat UI on iOS **and** web only *displays* PNG/video — USDZ copied to artifacts will not appear as a tile. After every 3D export, also write `{model}_3d.usdz` and `{model}_3d.html` into `/opt/cursor/artifacts/` and put tap-able links in the reply:
+Exports land in `exports/<model>/` (`model.png`, plus STEP/STL/USDZ/HTML/SVG/DXF). **PNG is required** in the reply.
+
+Chat on iOS **and** web only *renders* `<img>` and `<video>`. Copy PNG (and optional orbit video) to `/opt/cursor/artifacts/` and embed with:
 
 ```html
-<a href="/opt/cursor/artifacts/obyvak_3d.html">Otevřít 3D</a>
-<a href="/opt/cursor/artifacts/obyvak_3d.usdz">Stáhnout USDZ</a>
+<img src="/opt/cursor/artifacts/obyvak_cutaway.png" alt="obyvak cutaway" />
 ```
 
-Those `/opt/cursor/artifacts/…` hrefs are rewritten to public download URLs the same way PNG `src` is. Do not attach STEP unless the user asks.
+Only those `src` values are rewritten to a public artifact URL. **Do not** put `/opt/cursor/artifacts/…` in `<a href>` — the chat leaves the path as-is, the browser resolves it to `https://cursor.com/opt/cursor/artifacts/…`, and Cursor shows **404**. USDZ/HTML/STEP never appear as tiles.
+
+After a 3D export, still write `{model}_3d.usdz` and `{model}_3d.html` into `/opt/cursor/artifacts/` (and `docs/previews/` when the mesh should live in git). To let the user actually open the mesh, give a real `https://…` URL that returns the file (or a PNG QR of that URL). Do not attach STEP unless the user asks.
 
 If PNG export fails, fix that before considering the task done.
 
