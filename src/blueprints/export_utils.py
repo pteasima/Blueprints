@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import base64
 import os
 import shutil
 import struct
-import zipfile
+import zlib
 from pathlib import Path
 from typing import Any
 
@@ -376,7 +377,6 @@ def _read_binary_stl(path: Path) -> tuple[list[tuple[float, float, float]], list
     faces: list[tuple[int, int, int]] = []
     offset = 84
     for _ in range(count):
-        # skip normal (3 floats), read 3 vertices
         verts = struct.unpack_from("<9f", data, offset + 12)
         i = len(points)
         points.append((verts[0], verts[1], verts[2]))
@@ -387,105 +387,292 @@ def _read_binary_stl(path: Path) -> tuple[list[tuple[float, float, float]], list
     return points, faces
 
 
-def stl_to_usdz(stl_path: Path, usdz_path: Path) -> Path:
-    """Pack a binary STL as USDZ so iOS Quick Look / Files can open the 3D mesh."""
-    points, faces = _read_binary_stl(stl_path)
-    if not faces:
-        raise ValueError(f"STL has no triangles: {stl_path}")
-    xs = [p[0] for p in points]
-    ys = [p[1] for p in points]
-    zs = [p[2] for p in points]
-    point_txt = ", ".join(f"({x:.6f}, {y:.6f}, {z:.6f})" for x, y, z in points)
+def _weld_mesh(
+    points: list[tuple[float, float, float]],
+    faces: list[tuple[int, int, int]],
+) -> tuple[list[tuple[float, float, float]], list[tuple[int, int, int]]]:
+    key_to_i: dict[tuple[float, float, float], int] = {}
+    welded: list[tuple[float, float, float]] = []
+    new_faces: list[tuple[int, int, int]] = []
+    for i, j, k in faces:
+        tri: list[int] = []
+        for idx in (i, j, k):
+            key = (round(points[idx][0], 5), round(points[idx][1], 5), round(points[idx][2], 5))
+            if key not in key_to_i:
+                key_to_i[key] = len(welded)
+                welded.append(points[idx])
+            tri.append(key_to_i[key])
+        new_faces.append((tri[0], tri[1], tri[2]))
+    return welded, new_faces
+
+
+def _y_up(p: tuple[float, float, float]) -> tuple[float, float, float]:
+    """CAD Z-up (mm) → Apple USDZ Y-up."""
+    x, y, z = p
+    return (x, z, -y)
+
+
+def _cross(
+    a: tuple[float, float, float],
+    b: tuple[float, float, float],
+    c: tuple[float, float, float],
+) -> tuple[float, float, float]:
+    ux, uy, uz = b[0] - a[0], b[1] - a[1], b[2] - a[2]
+    vx, vy, vz = c[0] - a[0], c[1] - a[1], c[2] - a[2]
+    return (uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx)
+
+
+def _mesh_to_usda(
+    points: list[tuple[float, float, float]],
+    faces: list[tuple[int, int, int]],
+) -> str:
+    yup = [_y_up(p) for p in points]
+    xs = [p[0] for p in yup]
+    ys = [p[1] for p in yup]
+    zs = [p[2] for p in yup]
+    normals: list[tuple[float, float, float]] = []
+    for i, j, k in faces:
+        n = _cross(yup[i], yup[j], yup[k])
+        normals.extend((n, n, n))
+    point_txt = ", ".join(f"({x:.6f}, {y:.6f}, {z:.6f})" for x, y, z in yup)
     index_txt = ", ".join(str(i) for tri in faces for i in tri)
     counts_txt = ", ".join("3" for _ in faces)
-    usda = f"""#usda 1.0
+    nrm_txt = ", ".join(f"({x:.6f}, {y:.6f}, {z:.6f})" for x, y, z in normals)
+    return f"""#usda 1.0
 (
     defaultPrim = "Model"
     metersPerUnit = 0.001
-    upAxis = "Z"
+    upAxis = "Y"
 )
 
-def Mesh "Model"
+def Xform "Model" (
+    kind = "component"
+)
 {{
-    float3[] extent = [({min(xs):.6f}, {min(ys):.6f}, {min(zs):.6f}), ({max(xs):.6f}, {max(ys):.6f}, {max(zs):.6f})]
-    int[] faceVertexCounts = [{counts_txt}]
-    int[] faceVertexIndices = [{index_txt}]
-    point3f[] points = [{point_txt}]
+    def Mesh "Geom"
+    {{
+        float3[] extent = [({min(xs):.6f}, {min(ys):.6f}, {min(zs):.6f}), ({max(xs):.6f}, {max(ys):.6f}, {max(zs):.6f})]
+        int[] faceVertexCounts = [{counts_txt}]
+        int[] faceVertexIndices = [{index_txt}]
+        point3f[] points = [{point_txt}]
+        normal3f[] normals = [{nrm_txt}] (
+            interpolation = "faceVarying"
+        )
+        color3f[] primvars:displayColor = [(0.82, 0.8, 0.76)] (
+            interpolation = "constant"
+        )
+        uniform token subdivisionScheme = "none"
+    }}
 }}
 """
+
+
+def _usdz_zip(files: list[tuple[str, bytes]]) -> bytes:
+    """ZIP32, stored only, 64-byte-aligned payloads (Apple USDZ / Quick Look)."""
+    align = 64
+    buf = bytearray()
+    central = bytearray()
+    count = 0
+    for name, payload in files:
+        name_b = name.encode("utf-8")
+        crc = zlib.crc32(payload) & 0xFFFFFFFF
+        size = len(payload)
+        extra_len = (align - ((len(buf) + 30 + len(name_b)) % align)) % align
+        if extra_len and extra_len < 4:
+            extra_len += align
+        if extra_len:
+            extra = struct.pack("<HH", 0xA11E, extra_len - 4) + b"\x00" * (extra_len - 4)
+        else:
+            extra = b""
+        local_off = len(buf)
+        buf += struct.pack(
+            "<IHHHHHIIIHH",
+            0x04034B50,
+            20,
+            0,
+            0,
+            0,
+            0,
+            crc,
+            size,
+            size,
+            len(name_b),
+            len(extra),
+        )
+        buf += name_b
+        buf += extra
+        buf += payload
+        central += struct.pack(
+            "<IHHHHHHIIIHHHHHII",
+            0x02014B50,
+            0x0317,
+            20,
+            0,
+            0,
+            0,
+            0,
+            crc,
+            size,
+            size,
+            len(name_b),
+            0,
+            0,
+            0,
+            0,
+            0,
+            local_off,
+        )
+        central += name_b
+        count += 1
+    cd_off = len(buf)
+    buf += central
+    buf += struct.pack(
+        "<IHHHHIIH",
+        0x06054B50,
+        0,
+        0,
+        count,
+        count,
+        len(central),
+        cd_off,
+        0,
+    )
+    return bytes(buf)
+
+
+def usdz_data_offsets(data: bytes) -> list[int]:
+    """Byte offset of each local-file payload; used to assert 64-byte alignment."""
+    offsets: list[int] = []
+    pos = 0
+    while pos + 30 <= len(data) and data[pos : pos + 4] == b"PK\x03\x04":
+        fn_len, extra_len = struct.unpack_from("<HH", data, pos + 26)
+        payload_size = struct.unpack_from("<I", data, pos + 22)[0]
+        data_off = pos + 30 + fn_len + extra_len
+        offsets.append(data_off)
+        pos = data_off + payload_size
+    return offsets
+
+
+def _usdz_bytes(
+    points: list[tuple[float, float, float]],
+    faces: list[tuple[int, int, int]],
+) -> bytes:
+    usda = _mesh_to_usda(points, faces).encode("utf-8")
+    return _usdz_zip(
+        [
+            ("mimetype", b"model/vnd.usdz+zip"),
+            ("model.usda", usda),
+        ]
+    )
+
+
+def stl_to_usdz(stl_path: Path, usdz_path: Path) -> Path:
+    """Pack a binary STL as Apple-aligned USDZ for iOS Quick Look."""
+    points, faces = _read_binary_stl(stl_path)
+    if not faces:
+        raise ValueError(f"STL has no triangles: {stl_path}")
+    points, faces = _weld_mesh(points, faces)
     usdz_path.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(usdz_path, "w") as zf:
-        info = zipfile.ZipInfo("mimetype")
-        info.compress_type = zipfile.ZIP_STORED
-        zf.writestr(info, "model/vnd.usdz+zip")
-        geo = zipfile.ZipInfo("model.usda")
-        geo.compress_type = zipfile.ZIP_STORED
-        zf.writestr(geo, usda)
+    usdz_path.write_bytes(_usdz_bytes(points, faces))
     return usdz_path
 
 
-def stl_to_html_viewer(stl_path: Path, html_path: Path) -> Path:
-    """Self-contained WebGL viewer so the model can be opened in Safari (chat UI is PNG-only)."""
-    points, faces = _read_binary_stl(stl_path)
-    # Flat xyz list for the triangle soup.
-    coords: list[float] = []
-    for i, j, k in faces:
-        for idx in (i, j, k):
-            coords.extend(points[idx])
-    xs = coords[0::3]
-    ys = coords[1::3]
-    zs = coords[2::3]
-    cx, cy, cz = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2, (min(zs) + max(zs)) / 2
-    span = max(max(xs) - min(xs), max(ys) - min(ys), max(zs) - min(zs), 1.0)
-    html = f"""<!DOCTYPE html>
+_VIEWER_HTML = """<!DOCTYPE html>
 <html lang="cs">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
 <title>3D preview</title>
 <style>
-  html,body {{ margin:0; height:100%; background:#111; color:#eee; font-family:-apple-system,sans-serif; }}
-  canvas {{ display:block; width:100%; height:100%; touch-action:none; }}
-  p {{ position:fixed; left:12px; bottom:12px; margin:0; font-size:13px; opacity:.8; }}
+  html,body { margin:0; height:100%; background:#111; color:#eee; font-family:-apple-system,sans-serif; }
+  #bar { position:fixed; top:0; left:0; right:0; z-index:2; display:flex; gap:8px; align-items:center;
+         padding:10px 12px; background:rgba(0,0,0,.72); font-size:14px; }
+  #bar button { font:inherit; padding:8px 12px; border:0; border-radius:8px; background:#eee; color:#111; }
+  #err { display:none; position:fixed; top:56px; left:12px; right:12px; z-index:2;
+         background:#4a1010; color:#fcc; padding:10px; border-radius:8px; white-space:pre-wrap; }
+  canvas { display:block; width:100%; height:100%; touch-action:none; }
 </style>
 </head>
 <body>
+<div id="bar">
+  <button type="button" id="ql">Otevřít v Quick Look</button>
+  <span>Táhni = otáčení · štípej = zoom</span>
+</div>
+<pre id="err"></pre>
 <canvas id="c"></canvas>
-<p>Táhni = otáčení · dva prsty = zoom</p>
 <script>
-const P = {coords};
-const cx = {cx:.6f}, cy = {cy:.6f}, cz = {cz:.6f}, span = {span:.6f};
+const COORDS_B64 = "%%COORDS_B64%%";
+const USDZ_B64 = "%%USDZ_B64%%";
+const cx = %%CX%%, cy = %%CY%%, cz = %%CZ%%, span = %%SPAN%%;
+const errEl = document.getElementById('err');
+function fail(msg) { errEl.style.display = 'block'; errEl.textContent = msg; }
+function b64bytes(s) {
+  const bin = atob(s);
+  const u8 = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  return u8;
+}
+document.getElementById('ql').onclick = () => {
+  const blob = new Blob([b64bytes(USDZ_B64)], {type:'model/vnd.usdz+zip'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.rel = 'ar';
+  a.href = url;
+  a.download = 'model.usdz';
+  const img = document.createElement('img');
+  img.alt = '3D';
+  a.appendChild(img);
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+};
 const canvas = document.getElementById('c');
-const gl = canvas.getContext('webgl');
-if (!gl) {{ document.body.textContent = 'WebGL není k dispozici.'; }}
-else {{
+const gl = canvas.getContext('webgl', {alpha:false, antialias:true})
+        || canvas.getContext('experimental-webgl', {alpha:false});
+if (!gl) { fail('WebGL není k dispozici.'); }
+else {
   const vs = gl.createShader(gl.VERTEX_SHADER);
-  gl.shaderSource(vs, `
-    attribute vec3 aPos, aNrm;
-    uniform mat4 uMVP, uN;
-    varying vec3 vN;
-    void main() {{
-      vN = mat3(uN) * aNrm;
-      gl_Position = uMVP * vec4(aPos, 1.0);
-    }}`);
+  gl.shaderSource(vs, [
+    'attribute vec3 aPos;',
+    'attribute vec3 aNrm;',
+    'uniform mat4 uMVP;',
+    'uniform mat4 uN;',
+    'varying vec3 vN;',
+    'void main() {',
+    '  vN = mat3(uN) * aNrm;',
+    '  gl_Position = uMVP * vec4(aPos, 1.0);',
+    '}'
+  ].join('\\n'));
   gl.compileShader(vs);
+  if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
+    fail('Vertex shader: ' + gl.getShaderInfoLog(vs));
+  }
   const fs = gl.createShader(gl.FRAGMENT_SHADER);
-  gl.shaderSource(fs, `
-    precision mediump float;
-    varying vec3 vN;
-    void main() {{
-      vec3 n = normalize(vN);
-      float d = max(dot(n, normalize(vec3(.35,.6,.7))), .12);
-      gl_FragColor = vec4(vec3(.82,.8,.76) * d, 1.0);
-    }}`);
+  gl.shaderSource(fs, [
+    'precision mediump float;',
+    'varying vec3 vN;',
+    'void main() {',
+    '  vec3 n = normalize(vN);',
+    '  float d = max(dot(n, normalize(vec3(0.35, 0.6, 0.7))), 0.18);',
+    '  gl_FragColor = vec4(vec3(0.82, 0.80, 0.76) * d, 1.0);',
+    '}'
+  ].join('\\n'));
   gl.compileShader(fs);
+  if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
+    fail('Fragment shader: ' + gl.getShaderInfoLog(fs));
+  }
   const prog = gl.createProgram();
   gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+    fail('WebGL link: ' + gl.getProgramInfoLog(prog));
+  }
   gl.useProgram(prog);
+  const raw = b64bytes(COORDS_B64);
+  const P = new Float32Array(raw.buffer, raw.byteOffset, raw.byteLength / 4);
   const ntri = P.length / 9;
   const pos = new Float32Array(P.length);
   const nrm = new Float32Array(P.length);
-  for (let t = 0; t < ntri; t++) {{
+  for (let t = 0; t < ntri; t++) {
     const o = t * 9;
     const ax=P[o]-cx, ay=P[o+1]-cy, az=P[o+2]-cz;
     const bx=P[o+3]-cx, by=P[o+4]-cy, bz=P[o+5]-cz;
@@ -493,63 +680,65 @@ else {{
     const nx=(by-ay)*(czp-az)-(bz-az)*(cyp-ay);
     const ny=(bz-az)*(cxp-ax)-(bx-ax)*(czp-az);
     const nz=(bx-ax)*(cyp-ay)-(by-ay)*(cxp-ax);
-    for (let k = 0; k < 3; k++) {{
+    for (let k = 0; k < 3; k++) {
       pos[o+k*3]=P[o+k*3]-cx; pos[o+k*3+1]=P[o+k*3+1]-cy; pos[o+k*3+2]=P[o+k*3+2]-cz;
       nrm[o+k*3]=nx; nrm[o+k*3+1]=ny; nrm[o+k*3+2]=nz;
-    }}
-  }}
-  function buf(data, locName) {{
+    }
+  }
+  function buf(data, locName) {
     const b = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, b);
     gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
     const loc = gl.getAttribLocation(prog, locName);
+    if (loc < 0) { fail('Chybí atribut ' + locName); return; }
     gl.enableVertexAttribArray(loc);
     gl.vertexAttribPointer(loc, 3, gl.FLOAT, false, 0, 0);
-  }}
+  }
   buf(pos, 'aPos'); buf(nrm, 'aNrm');
   const uMVP = gl.getUniformLocation(prog, 'uMVP');
   const uN = gl.getUniformLocation(prog, 'uN');
   let yaw = 0.6, pitch = 0.45, dist = span * 1.8;
-  function resize() {{
-    canvas.width = innerWidth * devicePixelRatio;
-    canvas.height = innerHeight * devicePixelRatio;
+  function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.max(1, innerWidth * dpr);
+    canvas.height = Math.max(1, innerHeight * dpr);
     gl.viewport(0,0,canvas.width,canvas.height);
-  }}
+  }
   addEventListener('resize', resize); resize();
   let last=null, pinching=null;
-  canvas.addEventListener('pointerdown', e => {{ last={{x:e.clientX,y:e.clientY,id:e.pointerId}}; canvas.setPointerCapture(e.pointerId); }});
+  canvas.addEventListener('pointerdown', e => { last={x:e.clientX,y:e.clientY,id:e.pointerId}; canvas.setPointerCapture(e.pointerId); });
   canvas.addEventListener('pointerup', () => last=null);
-  canvas.addEventListener('pointermove', e => {{
+  canvas.addEventListener('pointermove', e => {
     if (!last || e.pointerId!==last.id) return;
     yaw += (e.clientX-last.x)*0.008;
     pitch = Math.max(-1.2, Math.min(1.2, pitch+(e.clientY-last.y)*0.008));
-    last={{x:e.clientX,y:e.clientY,id:e.pointerId}};
-  }});
-  canvas.addEventListener('wheel', e => {{ e.preventDefault(); dist *= (e.deltaY>0?1.08:0.92); }}, {{passive:false}});
-  canvas.addEventListener('touchstart', e => {{
-    if (e.touches.length===2) {{
+    last={x:e.clientX,y:e.clientY,id:e.pointerId};
+  });
+  canvas.addEventListener('wheel', e => { e.preventDefault(); dist *= (e.deltaY>0?1.08:0.92); }, {passive:false});
+  canvas.addEventListener('touchstart', e => {
+    if (e.touches.length===2) {
       const a=e.touches[0], b=e.touches[1];
       pinching=Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY);
-    }}
-  }}, {{passive:true}});
-  canvas.addEventListener('touchmove', e => {{
-    if (e.touches.length===2 && pinching) {{
+    }
+  }, {passive:true});
+  canvas.addEventListener('touchmove', e => {
+    if (e.touches.length===2 && pinching) {
       const a=e.touches[0], b=e.touches[1];
       const d=Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY);
       dist *= pinching/d; pinching=d;
-    }}
-  }}, {{passive:true}});
-  function mul(a,b) {{
+    }
+  }, {passive:true});
+  function mul(a,b) {
     const r=new Float32Array(16);
     for (let i=0;i<4;i++) for (let j=0;j<4;j++)
       r[j*4+i]=a[i]*b[j*4]+a[4+i]*b[j*4+1]+a[8+i]*b[j*4+2]+a[12+i]*b[j*4+3];
     return r;
-  }}
-  function persp(f, asp, n, f2) {{
+  }
+  function persp(f, asp, n, f2) {
     const t=1/Math.tan(f/2);
     return new Float32Array([t/asp,0,0,0, 0,t,0,0, 0,0,(f2+n)/(n-f2),-1, 0,0,(2*f2*n)/(n-f2),0]);
-  }}
-  function look() {{
+  }
+  function look() {
     const cp=Math.cos(pitch), sp=Math.sin(pitch), cy=Math.cos(yaw), sy=Math.sin(yaw);
     const ex=dist*cp*sy, ey=-dist*sp, ez=dist*cp*cy;
     const upx=0, upy=1, upz=0;
@@ -562,21 +751,48 @@ else {{
       xx,yx,zx,0, xy,yy,zy,0, xz,yz,zz,0,
       -(xx*ex+xy*ey+xz*ez), -(yx*ex+yy*ey+yz*ez), -(zx*ex+zy*ey+zz*ez), 1
     ]);
-  }}
+  }
   gl.enable(gl.DEPTH_TEST); gl.clearColor(0.07,0.07,0.08,1);
-  (function frame() {{
-    const mvp = mul(persp(0.7, canvas.width/canvas.height, span*0.02, span*20), look());
+  (function frame() {
+    const asp = canvas.width / Math.max(canvas.height, 1);
+    const mvp = mul(persp(0.7, asp, span*0.02, span*20), look());
     gl.uniformMatrix4fv(uMVP, false, mvp);
     gl.uniformMatrix4fv(uN, false, look());
     gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
     gl.drawArrays(gl.TRIANGLES, 0, ntri*3);
     requestAnimationFrame(frame);
-  }})();
-}}
+  })();
+}
 </script>
 </body>
 </html>
 """
+
+
+def stl_to_html_viewer(stl_path: Path, html_path: Path, usdz_path: Path | None = None) -> Path:
+    """Self-contained WebGL viewer with a Quick Look button (chat UI is PNG-only)."""
+    points, faces = _read_binary_stl(stl_path)
+    coords: list[float] = []
+    for i, j, k in faces:
+        for idx in (i, j, k):
+            coords.extend(points[idx])
+    xs, ys, zs = coords[0::3], coords[1::3], coords[2::3]
+    cx, cy, cz = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2, (min(zs) + max(zs)) / 2
+    span = max(max(xs) - min(xs), max(ys) - min(ys), max(zs) - min(zs), 1.0)
+    packed = struct.pack(f"<{len(coords)}f", *coords)
+    if usdz_path is not None and usdz_path.is_file():
+        usdz_raw = usdz_path.read_bytes()
+    else:
+        welded_pts, welded_faces = _weld_mesh(points, faces)
+        usdz_raw = _usdz_bytes(welded_pts, welded_faces)
+    html = (
+        _VIEWER_HTML.replace("%%COORDS_B64%%", base64.b64encode(packed).decode("ascii"))
+        .replace("%%USDZ_B64%%", base64.b64encode(usdz_raw).decode("ascii"))
+        .replace("%%CX%%", f"{cx:.6f}")
+        .replace("%%CY%%", f"{cy:.6f}")
+        .replace("%%CZ%%", f"{cz:.6f}")
+        .replace("%%SPAN%%", f"{span:.6f}")
+    )
     html_path.parent.mkdir(parents=True, exist_ok=True)
     html_path.write_text(html, encoding="utf-8")
     return html_path
@@ -590,7 +806,7 @@ def _maybe_write_usdz(written: dict[str, Path]) -> None:
     stl_to_usdz(stl_path, usdz_path)
     written["usdz"] = usdz_path
     html_path = stl_path.with_suffix(".html")
-    stl_to_html_viewer(stl_path, html_path)
+    stl_to_html_viewer(stl_path, html_path, usdz_path=usdz_path)
     written["html"] = html_path
 
 

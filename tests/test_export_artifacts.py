@@ -7,7 +7,7 @@ sys.path.insert(0, str(ROOT / "models"))
 AGENTS_MD = ROOT / "AGENTS.md"
 
 from hello_world import HelloWorldParams, build  # noqa: E402
-from blueprints.export_utils import export_shape, stl_to_usdz  # noqa: E402
+from blueprints.export_utils import export_shape, stl_to_usdz, usdz_data_offsets  # noqa: E402
 
 
 def test_export_publishes_usdz_to_artifacts(tmp_path, monkeypatch):
@@ -30,9 +30,22 @@ def test_export_publishes_usdz_to_artifacts(tmp_path, monkeypatch):
     assert "canvas" in (artifacts / "hello_world_3d.html").read_text()
     assert not (artifacts / "hello_world_model.dxf").exists()
     with zipfile.ZipFile(paths["usdz"]) as zf:
-        assert "mimetype" in zf.namelist()
+        assert zf.namelist()[0] == "mimetype"
         assert zf.read("mimetype") == b"model/vnd.usdz+zip"
         assert "model.usda" in zf.namelist()
+        usda = zf.read("model.usda").decode()
+        assert 'upAxis = "Y"' in usda
+        assert "subdivisionScheme" in usda
+        assert "def Xform" in usda
+    raw = paths["usdz"].read_bytes()
+    for off in usdz_data_offsets(raw):
+        assert off % 64 == 0
+    html = (artifacts / "hello_world_3d.html").read_text()
+    assert "attribute vec3 aPos;" in html
+    assert "attribute vec3 aPos, aNrm" not in html
+    assert "COMPILE_STATUS" in html
+    assert "model/vnd.usdz+zip" in html
+    assert "Otevřít v Quick Look" in html
 
 
 def test_stl_to_usdz_roundtrip(tmp_path, monkeypatch):
@@ -46,6 +59,8 @@ def test_stl_to_usdz_roundtrip(tmp_path, monkeypatch):
     out = tmp_path / "manual.usdz"
     stl_to_usdz(paths["stl"], out)
     assert out.stat().st_size > 0
+    for off in usdz_data_offsets(out.read_bytes()):
+        assert off % 64 == 0
 
 
 def test_agents_md_does_not_emit_artifact_hrefs():
