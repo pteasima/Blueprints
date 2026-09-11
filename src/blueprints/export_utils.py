@@ -13,6 +13,7 @@ from build123d import (
     ExportSVG,
     LineType,
     Shape,
+    Vector,
     export_step,
     export_stl,
 )
@@ -140,15 +141,43 @@ def ensure_export_dir(model_name: str) -> Path:
     return out
 
 
+def _shape_span(shape: Shape | Compound) -> float:
+    size = shape.bounding_box().size
+    return max(size.X, size.Y, size.Z)
+
+
+def _preview_line_weight(shape: Shape | Compound) -> float:
+    """1 mm strokes vanish on an 11 m isometric; use section weights for large models."""
+    if _shape_span(shape) > 2000:
+        return SECTION_LINE_WEIGHT
+    return PREVIEW_LINE_WEIGHT
+
+
+def _preview_png_width(shape: Shape | Compound) -> int:
+    if _shape_span(shape) > 2000:
+        return SECTION_PNG_WIDTH
+    return 1400
+
+
+def _stl_tolerance(shape: Shape | Compound) -> float:
+    if _shape_span(shape) > 2000:
+        return 2.0
+    return 1e-3
+
+
 def _viewport_edges(shape: Shape | Compound):
-    """Isometric-ish visible edges for mobile-friendly 2D review."""
-    visible, _hidden = shape.project_to_viewport((-1.2, -1.5, 1.0))
+    """Isometric-ish visible edges; camera sits outside the bbox (orthographic)."""
+    bb = shape.bounding_box()
+    center = bb.center()
+    direction = Vector(-1.2, -1.5, 1.0).normalized()
+    origin = center + direction * (bb.diagonal * 1.5)
+    visible, _hidden = shape.project_to_viewport(origin, look_at=center)
     return visible
 
 
-def _write_svg(edges, path: Path) -> None:
-    exporter = ExportSVG(scale=1.0, line_weight=PREVIEW_LINE_WEIGHT)
-    exporter.add_layer("visible", line_weight=PREVIEW_LINE_WEIGHT)
+def _write_svg(edges, path: Path, *, line_weight: float = PREVIEW_LINE_WEIGHT) -> None:
+    exporter = ExportSVG(scale=1.0, line_weight=line_weight)
+    exporter.add_layer("visible", line_weight=line_weight)
     exporter.add_shape(edges, layer="visible")
     exporter.write(path)
 
@@ -184,26 +213,28 @@ def export_shape(
     out_dir = ensure_export_dir(model_name)
     written: dict[str, Path] = {}
     edges = None
+    line_weight = _preview_line_weight(shape)
+    png_width = _preview_png_width(shape)
 
     for fmt in formats:
         path = out_dir / f"{stem}.{fmt}"
         if fmt == "step":
             export_step(shape, path)
         elif fmt == "stl":
-            export_stl(shape, path)
+            export_stl(shape, path, tolerance=_stl_tolerance(shape))
         elif fmt in {"svg", "dxf", "png"}:
             if edges is None:
                 edges = _viewport_edges(shape)
             if fmt == "svg":
-                _write_svg(edges, path)
+                _write_svg(edges, path, line_weight=line_weight)
             elif fmt == "dxf":
                 _write_dxf(edges, path)
             else:
                 svg_path = written.get("svg") or (out_dir / f"{stem}.svg")
                 if "svg" not in written:
-                    _write_svg(edges, svg_path)
+                    _write_svg(edges, svg_path, line_weight=line_weight)
                     written["svg"] = svg_path
-                _write_png(svg_path, path)
+                _write_png(svg_path, path, width=png_width)
         else:
             raise ValueError(f"Unsupported export format: {fmt}")
         written[fmt] = path

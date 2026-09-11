@@ -1,7 +1,7 @@
 """Obývák 1.02 — příčný řez (panel A), parametrické 2D profily v Plane.XZ.
 
 Hrubý řez místnosti: stěny, krov, podhled, soffit jako hmota (bez detailu skladeb).
-Bez textů a kót. 3D později: extrude podél Y (délka místnosti je v params.room_length).
+Bez textů a kót. 3D: `models/obyvak.py` (extrude podél Y).
 
     python -m blueprints.export obyvak_section
 
