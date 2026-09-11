@@ -39,11 +39,15 @@ def main(argv: list[str] | None = None) -> int:
     else:
         shape, meta = result, {}
 
-    from blueprints.export_utils import export_shape, summarize_params
+    from blueprints.export_utils import export_section, export_shape, summarize_params
 
     model_name = getattr(mod, "MODEL_NAME", name)
-    paths = export_shape(shape, model_name)
-    params = getattr(mod, "PARAMS", meta.get("params", {}))
+    kind = meta.get("kind") or getattr(mod, "EXPORT_KIND", "solid")
+    if kind == "section":
+        paths = export_section(shape, model_name)
+    else:
+        paths = export_shape(shape, model_name)
+    params = meta.get("derived") or getattr(mod, "PARAMS", meta.get("params", {}))
     print(f"Built {model_name}: {summarize_params(params) if params else '(no params)'}")
     for fmt, path in paths.items():
         print(f"  {fmt}: {path}")
