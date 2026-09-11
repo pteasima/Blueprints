@@ -1,4 +1,5 @@
 from pathlib import Path
+import subprocess
 import sys
 import zipfile
 
@@ -46,6 +47,8 @@ def test_export_publishes_usdz_to_artifacts(tmp_path, monkeypatch):
     assert "COMPILE_STATUS" in html
     assert "model/vnd.usdz+zip" in html
     assert "Otevřít v Quick Look" in html
+    script = html.split("<script>", 1)[1].split("</script>", 1)[0]
+    subprocess.run(["node", "--check"], input=script, text=True, check=True)
 
 
 def test_stl_to_usdz_roundtrip(tmp_path, monkeypatch):
