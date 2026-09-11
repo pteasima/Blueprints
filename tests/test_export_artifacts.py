@@ -22,8 +22,11 @@ def test_export_publishes_usdz_to_artifacts(tmp_path, monkeypatch):
     paths = export_shape(shape, "hello_world", formats=("step", "stl", "svg", "dxf"))
 
     assert paths["usdz"].exists()
+    assert paths["html"].exists()
     assert (artifacts / "hello_world_3d.usdz").stat().st_size > 0
+    assert (artifacts / "hello_world_3d.html").stat().st_size > 0
     assert not (artifacts / "hello_world_3d.step").exists()
+    assert "canvas" in (artifacts / "hello_world_3d.html").read_text()
     assert not (artifacts / "hello_world_model.dxf").exists()
     with zipfile.ZipFile(paths["usdz"]) as zf:
         assert "mimetype" in zf.namelist()

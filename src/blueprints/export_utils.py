@@ -338,12 +338,12 @@ def artifacts_dir() -> Path | None:
     return path if path.is_dir() else None
 
 
-_CHAT_FORMATS = frozenset({".png", ".usdz"})
+_CHAT_FORMATS = frozenset({".png", ".usdz", ".html"})
 
 
 def _artifact_name(model_name: str, path: Path) -> str:
     suffix = path.suffix.lower()
-    if path.stem == "model" and suffix in {".step", ".stp", ".stl", ".usdz"}:
+    if path.stem == "model" and suffix in {".step", ".stp", ".stl", ".usdz", ".html"}:
         return f"{model_name}_3d{suffix}"
     return f"{model_name}_{path.name}"
 
@@ -420,6 +420,164 @@ def Mesh "Model"
     return usdz_path
 
 
+def stl_to_html_viewer(stl_path: Path, html_path: Path) -> Path:
+    """Self-contained WebGL viewer so the model can be opened in Safari (chat UI is PNG-only)."""
+    points, faces = _read_binary_stl(stl_path)
+    # Flat xyz list for the triangle soup.
+    coords: list[float] = []
+    for i, j, k in faces:
+        for idx in (i, j, k):
+            coords.extend(points[idx])
+    xs = coords[0::3]
+    ys = coords[1::3]
+    zs = coords[2::3]
+    cx, cy, cz = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2, (min(zs) + max(zs)) / 2
+    span = max(max(xs) - min(xs), max(ys) - min(ys), max(zs) - min(zs), 1.0)
+    html = f"""<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<title>3D preview</title>
+<style>
+  html,body {{ margin:0; height:100%; background:#111; color:#eee; font-family:-apple-system,sans-serif; }}
+  canvas {{ display:block; width:100%; height:100%; touch-action:none; }}
+  p {{ position:fixed; left:12px; bottom:12px; margin:0; font-size:13px; opacity:.8; }}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<p>Táhni = otáčení · dva prsty = zoom</p>
+<script>
+const P = {coords};
+const cx = {cx:.6f}, cy = {cy:.6f}, cz = {cz:.6f}, span = {span:.6f};
+const canvas = document.getElementById('c');
+const gl = canvas.getContext('webgl');
+if (!gl) {{ document.body.textContent = 'WebGL není k dispozici.'; }}
+else {{
+  const vs = gl.createShader(gl.VERTEX_SHADER);
+  gl.shaderSource(vs, `
+    attribute vec3 aPos, aNrm;
+    uniform mat4 uMVP, uN;
+    varying vec3 vN;
+    void main() {{
+      vN = mat3(uN) * aNrm;
+      gl_Position = uMVP * vec4(aPos, 1.0);
+    }}`);
+  gl.compileShader(vs);
+  const fs = gl.createShader(gl.FRAGMENT_SHADER);
+  gl.shaderSource(fs, `
+    precision mediump float;
+    varying vec3 vN;
+    void main() {{
+      vec3 n = normalize(vN);
+      float d = max(dot(n, normalize(vec3(.35,.6,.7))), .12);
+      gl_FragColor = vec4(vec3(.82,.8,.76) * d, 1.0);
+    }}`);
+  gl.compileShader(fs);
+  const prog = gl.createProgram();
+  gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
+  gl.useProgram(prog);
+  const ntri = P.length / 9;
+  const pos = new Float32Array(P.length);
+  const nrm = new Float32Array(P.length);
+  for (let t = 0; t < ntri; t++) {{
+    const o = t * 9;
+    const ax=P[o]-cx, ay=P[o+1]-cy, az=P[o+2]-cz;
+    const bx=P[o+3]-cx, by=P[o+4]-cy, bz=P[o+5]-cz;
+    const cxp=P[o+6]-cx, cyp=P[o+7]-cy, czp=P[o+8]-cz;
+    const nx=(by-ay)*(czp-az)-(bz-az)*(cyp-ay);
+    const ny=(bz-az)*(cxp-ax)-(bx-ax)*(czp-az);
+    const nz=(bx-ax)*(cyp-ay)-(by-ay)*(cxp-ax);
+    for (let k = 0; k < 3; k++) {{
+      pos[o+k*3]=P[o+k*3]-cx; pos[o+k*3+1]=P[o+k*3+1]-cy; pos[o+k*3+2]=P[o+k*3+2]-cz;
+      nrm[o+k*3]=nx; nrm[o+k*3+1]=ny; nrm[o+k*3+2]=nz;
+    }}
+  }}
+  function buf(data, locName) {{
+    const b = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, b);
+    gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+    const loc = gl.getAttribLocation(prog, locName);
+    gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc, 3, gl.FLOAT, false, 0, 0);
+  }}
+  buf(pos, 'aPos'); buf(nrm, 'aNrm');
+  const uMVP = gl.getUniformLocation(prog, 'uMVP');
+  const uN = gl.getUniformLocation(prog, 'uN');
+  let yaw = 0.6, pitch = 0.45, dist = span * 1.8;
+  function resize() {{
+    canvas.width = innerWidth * devicePixelRatio;
+    canvas.height = innerHeight * devicePixelRatio;
+    gl.viewport(0,0,canvas.width,canvas.height);
+  }}
+  addEventListener('resize', resize); resize();
+  let last=null, pinching=null;
+  canvas.addEventListener('pointerdown', e => {{ last={{x:e.clientX,y:e.clientY,id:e.pointerId}}; canvas.setPointerCapture(e.pointerId); }});
+  canvas.addEventListener('pointerup', () => last=null);
+  canvas.addEventListener('pointermove', e => {{
+    if (!last || e.pointerId!==last.id) return;
+    yaw += (e.clientX-last.x)*0.008;
+    pitch = Math.max(-1.2, Math.min(1.2, pitch+(e.clientY-last.y)*0.008));
+    last={{x:e.clientX,y:e.clientY,id:e.pointerId}};
+  }});
+  canvas.addEventListener('wheel', e => {{ e.preventDefault(); dist *= (e.deltaY>0?1.08:0.92); }}, {{passive:false}});
+  canvas.addEventListener('touchstart', e => {{
+    if (e.touches.length===2) {{
+      const a=e.touches[0], b=e.touches[1];
+      pinching=Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY);
+    }}
+  }}, {{passive:true}});
+  canvas.addEventListener('touchmove', e => {{
+    if (e.touches.length===2 && pinching) {{
+      const a=e.touches[0], b=e.touches[1];
+      const d=Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY);
+      dist *= pinching/d; pinching=d;
+    }}
+  }}, {{passive:true}});
+  function mul(a,b) {{
+    const r=new Float32Array(16);
+    for (let i=0;i<4;i++) for (let j=0;j<4;j++)
+      r[j*4+i]=a[i]*b[j*4]+a[4+i]*b[j*4+1]+a[8+i]*b[j*4+2]+a[12+i]*b[j*4+3];
+    return r;
+  }}
+  function persp(f, asp, n, f2) {{
+    const t=1/Math.tan(f/2);
+    return new Float32Array([t/asp,0,0,0, 0,t,0,0, 0,0,(f2+n)/(n-f2),-1, 0,0,(2*f2*n)/(n-f2),0]);
+  }}
+  function look() {{
+    const cp=Math.cos(pitch), sp=Math.sin(pitch), cy=Math.cos(yaw), sy=Math.sin(yaw);
+    const ex=dist*cp*sy, ey=-dist*sp, ez=dist*cp*cy;
+    const upx=0, upy=1, upz=0;
+    let zx=-ex, zy=-ey, zz=-ez;
+    let zl=Math.hypot(zx,zy,zz); zx/=zl; zy/=zl; zz/=zl;
+    let xx=upy*zz-upz*zy, xy=upz*zx-upx*zz, xz=upx*zy-upy*zx;
+    let xl=Math.hypot(xx,xy,xz); xx/=xl; xy/=xl; xz/=xl;
+    const yx=zy*xz-zz*xy, yy=zz*xx-zx*xz, yz=zx*xy-zy*xx;
+    return new Float32Array([
+      xx,yx,zx,0, xy,yy,zy,0, xz,yz,zz,0,
+      -(xx*ex+xy*ey+xz*ez), -(yx*ex+yy*ey+yz*ez), -(zx*ex+zy*ey+zz*ez), 1
+    ]);
+  }}
+  gl.enable(gl.DEPTH_TEST); gl.clearColor(0.07,0.07,0.08,1);
+  (function frame() {{
+    const mvp = mul(persp(0.7, canvas.width/canvas.height, span*0.02, span*20), look());
+    gl.uniformMatrix4fv(uMVP, false, mvp);
+    gl.uniformMatrix4fv(uN, false, look());
+    gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+    gl.drawArrays(gl.TRIANGLES, 0, ntri*3);
+    requestAnimationFrame(frame);
+  }})();
+}}
+</script>
+</body>
+</html>
+"""
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+    html_path.write_text(html, encoding="utf-8")
+    return html_path
+
+
 def _maybe_write_usdz(written: dict[str, Path]) -> None:
     stl_path = written.get("stl")
     if stl_path is None or not stl_path.is_file():
@@ -427,6 +585,9 @@ def _maybe_write_usdz(written: dict[str, Path]) -> None:
     usdz_path = stl_path.with_suffix(".usdz")
     stl_to_usdz(stl_path, usdz_path)
     written["usdz"] = usdz_path
+    html_path = stl_path.with_suffix(".html")
+    stl_to_html_viewer(stl_path, html_path)
+    written["html"] = html_path
 
 
 def summarize_params(params: dict[str, Any]) -> str:

@@ -33,7 +33,14 @@ python -m blueprints.export <model>
 
 Example: `python -m blueprints.export hello_world`
 
-Exports land in `exports/<model>/` (`model.png`, plus STEP/STL/USDZ/SVG/DXF). **PNG is required** in the reply (HTML `<img>`). iOS chat shows PNG; `.step` / `.dxf` in git open as text. After every 3D export, also copy `{model}_3d.usdz` into `/opt/cursor/artifacts/` (automatic in `export_shape`). USDZ opens in iOS Files / Quick Look / AR. Do not attach STEP unless the user asks.
+Exports land in `exports/<model>/` (`model.png`, plus STEP/STL/USDZ/SVG/DXF). **PNG is required** in the reply (HTML `<img>`). The chat UI on iOS **and** web only *displays* PNG/video — USDZ copied to artifacts will not appear as a tile. After every 3D export, also write `{model}_3d.usdz` and `{model}_3d.html` into `/opt/cursor/artifacts/` and put tap-able links in the reply:
+
+```html
+<a href="/opt/cursor/artifacts/obyvak_3d.html">Otevřít 3D</a>
+<a href="/opt/cursor/artifacts/obyvak_3d.usdz">Stáhnout USDZ</a>
+```
+
+Those `/opt/cursor/artifacts/…` hrefs are rewritten to public download URLs the same way PNG `src` is. Do not attach STEP unless the user asks.
 
 If PNG export fails, fix that before considering the task done.
 
