@@ -11,6 +11,7 @@ from build123d import (
     Compound,
     ExportDXF,
     ExportSVG,
+    LineType,
     Shape,
     export_step,
     export_stl,
@@ -64,6 +65,25 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "dxf": ColorIndex.YELLOW,
         "weight": SECTION_LINE_WEIGHT,
     },
+    "koruna": {
+        "fill": (196, 165, 116),
+        "line": (107, 79, 42),
+        "dxf": ColorIndex.YELLOW,
+        "weight": SECTION_LINE_WEIGHT,
+    },
+    "predstena": {
+        "fill": (200, 232, 240),
+        "line": (26, 122, 154),
+        "dxf": ColorIndex.CYAN,
+        "weight": SECTION_LINE_WEIGHT,
+    },
+    "pouzdro": {
+        "fill": (232, 224, 208),
+        "line": (102, 102, 102),
+        "dxf": ColorIndex.GRAY,
+        "weight": SECTION_LINE_WEIGHT,
+        "dashed": True,
+    },
     "krov": {
         "fill": (196, 165, 116),
         "line": (107, 79, 42),
@@ -103,9 +123,12 @@ SECTION_LAYER_ORDER = [
     "omitka",
     "vata",
     "nabytek",
+    "pouzdro",
     "pozednice",
+    "koruna",
     "krov",
     "soffit",
+    "predstena",
     "podhled",
     "krytina",
 ]
@@ -224,12 +247,14 @@ def export_section(
             exporter = ExportSVG(scale=1.0, margin=80)
             for name in layer_names:
                 style = SECTION_LAYERS.get(name, {})
-                exporter.add_layer(
-                    name,
+                svg_kwargs: dict[str, Any] = dict(
                     fill_color=style.get("fill"),
                     line_color=style.get("line", (0, 0, 0)),
                     line_weight=style.get("weight", SECTION_LINE_WEIGHT),
                 )
+                if style.get("dashed"):
+                    svg_kwargs["line_type"] = LineType.DASHED
+                exporter.add_layer(name, **svg_kwargs)
                 for piece in grouped[name]:
                     exporter.add_shape(piece, layer=name)
             exporter.write(path)
@@ -237,11 +262,13 @@ def export_section(
             exporter = ExportDXF()
             for name in layer_names:
                 style = SECTION_LAYERS.get(name, {})
-                exporter.add_layer(
-                    name,
+                dxf_kwargs: dict[str, Any] = dict(
                     color=style.get("dxf", ColorIndex.BLACK),
                     line_weight=0.35,
                 )
+                if style.get("dashed"):
+                    dxf_kwargs["line_type"] = LineType.DASHED
+                exporter.add_layer(name, **dxf_kwargs)
                 for piece in grouped[name]:
                     exporter.add_shape(piece, layer=name)
             exporter.write(path)

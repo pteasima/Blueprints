@@ -1,0 +1,137 @@
+"""Shared Obývák 1.02 parameters and 2D sketch helpers (mm).
+
+World intent for later 3D:
+  X = eave ↔ eave (room_width), Y = kitchen ↔ living (room_length), Z up.
+
+2D drawings both sit in Plane.XZ for the current orthographic exporter:
+  section X = transverse, elevation X = longitudinal (maps to world Y in 3D).
+"""
+
+from __future__ import annotations
+
+import math
+from dataclasses import dataclass
+
+from build123d import Edge, Face, Vector, Wire
+
+
+@dataclass(frozen=True)
+class ObyvakParams:
+    """Room and build-up thicknesses. Layer stack keeps H_START / Z_SOFFIT honest."""
+
+    room_width: float = 5350.0
+    room_length: float = 11100.0
+    ridge_z: float = 5850.0
+    eave_wall_z: float = 3200.0
+    roof_angle_deg: float = 40.0
+    furniture_width: float = 450.0
+    furniture_height: float = 2450.0
+    furniture_gap: float = 20.0
+    wall_mason: float = 250.0
+    wall_eps: float = 200.0
+    wall_plaster: float = 15.0
+    plate_w: float = 140.0
+    plate_h: float = 100.0
+    rafter_t: float = 160.0
+    plenum_t: float = 100.0
+    cd_t: float = 27.0
+    finish_t: float = 2.0
+    basic_t: float = 2.0
+    naturheld_t: float = 40.0
+    flex_t: float = 60.0
+    foil_t: float = 1.0
+    sdk_t: float = 12.5
+    vent_t: float = 40.0
+    dhv_t: float = 1.0
+    counter_batten_t: float = 40.0
+    batten_t: float = 40.0
+    tile_t: float = 22.0
+    floor_t: float = 150.0
+    roof_overhang: float = 280.0
+    predstena_kitchen: float = 190.0
+    predstena_living: float = 450.0
+    predstena_bottom_z: float = 2450.0
+    pouzdro_d: float = 120.0
+    gable_crown_h: float = 80.0
+    soffit_hint_t: float = 30.0
+    ridge_runout: float = 200.0
+
+
+class ObyvakLayout:
+    """Derived measures — same formulas as the legacy ezdxf sheets."""
+
+    def __init__(self, p: ObyvakParams):
+        self.p = p
+        th = math.radians(p.roof_angle_deg)
+        self.sin = math.sin(th)
+        self.cos = math.cos(th)
+        self.tan = math.tan(th)
+
+        self.t_soft_below_sdk = (
+            p.finish_t + p.basic_t + p.naturheld_t + p.flex_t + p.foil_t + p.sdk_t
+        )
+        self.t_left = p.plenum_t + p.cd_t + self.t_soft_below_sdk
+        self.t_above_raf = (
+            p.vent_t + p.dhv_t + p.counter_batten_t + p.batten_t + p.tile_t
+        )
+
+        self.x_ridge = p.room_width / 2.0
+        self.x_furn = p.room_width - p.furniture_width
+        self.x_false = (p.room_width - p.furniture_width) / 2.0
+        self.z_raf_inner_ridge = p.ridge_z - (self.t_above_raf + p.rafter_t) / self.cos
+        self.h_start = self.z_raf(0.0) - self.t_left / self.cos
+        self.z_false = self.h_start + self.x_false * self.tan
+        self.z_gkf_horiz = self.h_start
+        self.z_nabeh_bot = p.furniture_height + p.furniture_gap
+        self.z_soffit = self.h_start + self.x_ridge * self.tan
+        self.z_raf_top = self.z_raf_inner_ridge + p.rafter_t / self.cos
+
+        self.xl_eps = -p.wall_plaster - p.wall_mason - p.wall_eps
+        self.xl_mas = -p.wall_plaster - p.wall_mason
+        self.xr_int = p.room_width
+        self.xr_mas = p.room_width + p.wall_plaster + p.wall_mason
+        self.xr_eps = p.room_width + p.wall_plaster + p.wall_mason + p.wall_eps
+        self.left_eave = self.xl_eps - p.roof_overhang
+        self.right_eave = self.xr_eps + p.roof_overhang
+        self.poz_l0 = self.xl_mas + p.wall_mason - p.plate_w
+        self.poz_r0 = self.xr_int + p.wall_plaster
+
+        self.x_pred_l = p.predstena_kitchen
+        self.x_pred_r = p.room_length - p.predstena_living
+
+    def z_raf(self, x: float) -> float:
+        return self.z_raf_inner_ridge - abs(x - self.x_ridge) * self.tan
+
+    def z_raf_outer(self, x: float) -> float:
+        return self.z_raf(x) + self.p.rafter_t / self.cos
+
+    def z_tile(self, x: float) -> float:
+        return self.z_raf(x) + (self.t_above_raf + self.p.rafter_t) / self.cos
+
+
+def build_layout(params: ObyvakParams | None = None) -> ObyvakLayout:
+    return ObyvakLayout(params or ObyvakParams())
+
+
+def xz(x: float, z: float) -> Vector:
+    return Vector(x, 0.0, z)
+
+
+def xz_face(pts: list[tuple[float, float]], label: str) -> Face:
+    return Face(Wire.make_polygon([xz(x, z) for x, z in pts]), label=label)
+
+
+def xz_rect(x: float, z: float, w: float, h: float, label: str) -> Face:
+    return xz_face([(x, z), (x + w, z), (x + w, z + h), (x, z + h)], label)
+
+
+def xz_polyline(pts: list[tuple[float, float]], label: str) -> Wire:
+    wire = Wire.make_polygon([xz(x, z) for x, z in pts], close=False)
+    wire.label = label
+    return wire
+
+
+def xz_line(x0: float, z0: float, x1: float, z1: float, label: str) -> Edge:
+    edge = Edge.make_line(xz(x0, z0), xz(x1, z1))
+    edge.label = label
+    return edge
