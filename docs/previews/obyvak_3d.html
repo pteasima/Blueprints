@@ -63,7 +63,7 @@ else {
     '  vN = mat3(uN) * aNrm;',
     '  gl_Position = uMVP * vec4(aPos, 1.0);',
     '}'
-  ].join('\n'));
+  ].join(String.fromCharCode(10)));
   gl.compileShader(vs);
   if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
     fail('Vertex shader: ' + gl.getShaderInfoLog(vs));
@@ -77,7 +77,7 @@ else {
     '  float d = max(dot(n, normalize(vec3(0.35, 0.6, 0.7))), 0.18);',
     '  gl_FragColor = vec4(vec3(0.82, 0.80, 0.76) * d, 1.0);',
     '}'
-  ].join('\n'));
+  ].join(String.fromCharCode(10)));
   gl.compileShader(fs);
   if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
     fail('Fragment shader: ' + gl.getShaderInfoLog(fs));
@@ -162,15 +162,19 @@ else {
   function look() {
     const cp=Math.cos(pitch), sp=Math.sin(pitch), cy=Math.cos(yaw), sy=Math.sin(yaw);
     const ex=dist*cp*sy, ey=-dist*sp, ez=dist*cp*cy;
-    const upx=0, upy=1, upz=0;
-    let zx=-ex, zy=-ey, zz=-ez;
-    let zl=Math.hypot(zx,zy,zz); zx/=zl; zy/=zl; zz/=zl;
-    let xx=upy*zz-upz*zy, xy=upz*zx-upx*zz, xz=upx*zy-upy*zx;
-    let xl=Math.hypot(xx,xy,xz); xx/=xl; xy/=xl; xz/=xl;
-    const yx=zy*xz-zz*xy, yy=zz*xx-zx*xz, yz=zx*xy-zy*xx;
+    let fx=-ex, fy=-ey, fz=-ez;
+    let fl=Math.hypot(fx,fy,fz); fx/=fl; fy/=fl; fz/=fl;
+    let sx=fy*0-fz*1, sy=fz*0-fx*0, sz=fx*1-fy*0;
+    let sl=Math.hypot(sx,sy,sz); sx/=sl; sy/=sl; sz/=sl;
+    const ux=sy*fz-sz*fy, uy=sz*fx-sx*fz, uz=sx*fy-sy*fx;
     return new Float32Array([
-      xx,yx,zx,0, xy,yy,zy,0, xz,yz,zz,0,
-      -(xx*ex+xy*ey+xz*ez), -(yx*ex+yy*ey+yz*ez), -(zx*ex+zy*ey+zz*ez), 1
+      sx, ux, -fx, 0,
+      sy, uy, -fy, 0,
+      sz, uz, -fz, 0,
+      -(sx*ex+sy*ey+sz*ez),
+      -(ux*ex+uy*ey+uz*ez),
+      (fx*ex+fy*ey+fz*ez),
+      1
     ]);
   }
   gl.enable(gl.DEPTH_TEST); gl.clearColor(0.07,0.07,0.08,1);
