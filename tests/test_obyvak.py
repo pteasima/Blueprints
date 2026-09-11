@@ -4,7 +4,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "models"))
 
-from obyvak import build, build_preview  # noqa: E402
+from obyvak import build, build_elevation_slice, build_preview, build_section_slice  # noqa: E402
 from obyvak_geom import ObyvakParams, build_layout  # noqa: E402
 from obyvak_section import build as build_section  # noqa: E402
 from blueprints.export_utils import export_shape  # noqa: E402
@@ -94,3 +94,22 @@ def test_obyvak_3d_exports(tmp_path, monkeypatch):
     assert left_eave == []
     cut = export_shape(preview, "obyvak", stem="cutaway", formats=("svg", "png"))
     assert cut["png"].stat().st_size > 0
+
+    sec, _ = build_section_slice()
+    sec_labels = {c.label for c in sec.children}
+    assert "nabytek" in sec_labels
+    assert "soffit" in sec_labels
+    assert "krov" in sec_labels
+    assert "predstena" not in sec_labels
+
+    elev, _ = build_elevation_slice()
+    elev_labels = {c.label for c in elev.children}
+    assert "predstena" in elev_labels
+    assert "pouzdro" in elev_labels
+    assert "koruna" in elev_labels
+    from blueprints.export_utils import export_section as _export_section
+
+    sliced = _export_section(sec, "obyvak", stem="slice_section")
+    assert sliced["png"].stat().st_size > 0
+    sliced_e = _export_section(elev, "obyvak", stem="slice_elevation")
+    assert sliced_e["png"].stat().st_size > 0

@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from dataclasses import asdict
 
-from build123d import Align, Box, Color, Compound, Location, Solid
+from build123d import Align, Axis, Box, Color, Compound, Location, Plane, Solid
 
 from obyvak_geom import ObyvakLayout, ObyvakParams, xz_face
 
@@ -185,15 +185,74 @@ def build(params: ObyvakParams | None = None):
 
 
 def build_preview(params: ObyvakParams | None = None):
-    """Cutaway: drop the window-eave wall so the isometric reads the interior."""
+    """Dollhouse cutaway: drop roof, window eave, and kitchen gable."""
     p = params or ObyvakParams()
     g = ObyvakLayout(p)
     kept = []
     for part in _parts(p, g):
-        if part.label in {"eps", "zdivo", "omitka", "pozednice"} and part.bounding_box().max.X <= 1.0:
+        bb = part.bounding_box()
+        if part.label in {"krov", "krytina", "vata", "podhled"}:
             continue
+        if part.label in {"eps", "zdivo", "omitka", "pozednice", "koruna"}:
+            if bb.max.X <= 1.0 or bb.max.Y <= 1.0:
+                continue
         kept.append(part)
     return _compound(kept, label=f"{MODEL_NAME}_cutaway"), _meta(p, g)
+
+
+def _labeled_slices(parts: list, plane: Plane):
+    faces = []
+    for part in parts:
+        hits = part.intersect(plane)
+        if not hits:
+            continue
+        for face in hits:
+            face.label = part.label
+            faces.append(face)
+    return faces
+
+
+def build_section_slice(params: ObyvakParams | None = None):
+    """XZ slice at mid-length — same station as panel A, taken from the 3D solids."""
+    p = params or ObyvakParams()
+    g = ObyvakLayout(p)
+    y_mid = p.room_length / 2.0
+    faces = _labeled_slices(_parts(p, g), Plane.XZ.offset(-y_mid))
+    moved = []
+    for face in faces:
+        placed = face.moved(Location((0.0, -y_mid, 0.0)))
+        placed.label = face.label
+        moved.append(placed)
+    meta = _meta(p, g)
+    meta["kind"] = "section"
+    return _compound(moved, label=f"{MODEL_NAME}_slice_section"), meta
+
+
+def build_elevation_slice(params: ObyvakParams | None = None):
+    """YZ slice at the ridge, remapped to XZ (drawing X = world Y) like panel B."""
+    p = params or ObyvakParams()
+    g = ObyvakLayout(p)
+    faces = _labeled_slices(_parts(p, g), Plane.YZ.offset(g.x_ridge))
+    mapped = []
+    for face in faces:
+        placed = face.moved(Location((-g.x_ridge, 0.0, 0.0))).rotate(Axis.Z, -90)
+        # Snap onto XZ so SVG export stays planar.
+        pts = [(v.X, v.Z) for v in placed.vertices()]
+        mapped.append(xz_face(pts, face.label))
+    meta = _meta(p, g)
+    meta["kind"] = "section"
+    return _compound(mapped, label=f"{MODEL_NAME}_slice_elevation"), meta
+
+
+def extra_exports(params: ObyvakParams | None = None):
+    preview, _ = build_preview(params)
+    section, _ = build_section_slice(params)
+    elevation, _ = build_elevation_slice(params)
+    return [
+        ("cutaway", preview, "solid"),
+        ("slice_section", section, "section"),
+        ("slice_elevation", elevation, "section"),
+    ]
 
 
 if __name__ == "__main__":
