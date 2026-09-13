@@ -8,6 +8,8 @@ sys.path.insert(0, str(ROOT / "models"))
 AGENTS_MD = ROOT / "AGENTS.md"
 
 from hello_world import HelloWorldParams, build  # noqa: E402
+from pxr import Usd, UsdGeom  # noqa: E402
+
 from blueprints.export_utils import export_shape, stl_to_usdz, usdz_data_offsets  # noqa: E402
 
 
@@ -31,16 +33,20 @@ def test_export_publishes_usdz_to_artifacts(tmp_path, monkeypatch):
     assert "canvas" in (artifacts / "hello_world_3d.html").read_text()
     assert not (artifacts / "hello_world_model.dxf").exists()
     with zipfile.ZipFile(paths["usdz"]) as zf:
-        assert zf.namelist()[0] == "mimetype"
-        assert zf.read("mimetype") == b"model/vnd.usdz+zip"
-        assert "model.usda" in zf.namelist()
-        usda = zf.read("model.usda").decode()
-        assert 'upAxis = "Y"' in usda
-        assert "subdivisionScheme" in usda
-        assert "def Xform" in usda
+        names = zf.namelist()
+        assert any(name.endswith(".usdc") for name in names)
+        assert not any(name.endswith(".usda") for name in names)
     raw = paths["usdz"].read_bytes()
-    for off in usdz_data_offsets(raw):
+    offsets = usdz_data_offsets(raw)
+    assert offsets
+    for off in offsets:
         assert off % 64 == 0
+
+    stage = Usd.Stage.Open(str(paths["usdz"]))
+    assert stage is not None
+    default_prim = stage.GetDefaultPrim()
+    assert default_prim and default_prim.GetPath() == "/Model"
+    assert UsdGeom.GetStageUpAxis(stage) == UsdGeom.Tokens.y
     html = (artifacts / "hello_world_3d.html").read_text()
     assert "attribute vec3 aPos;" in html
     assert "attribute vec3 aPos, aNrm" not in html
@@ -64,6 +70,9 @@ def test_stl_to_usdz_roundtrip(tmp_path, monkeypatch):
     assert out.stat().st_size > 0
     for off in usdz_data_offsets(out.read_bytes()):
         assert off % 64 == 0
+    stage = Usd.Stage.Open(str(out))
+    assert stage is not None
+    assert stage.GetDefaultPrim().GetPath() == "/Model"
 
 
 def test_agents_md_does_not_emit_artifact_hrefs():

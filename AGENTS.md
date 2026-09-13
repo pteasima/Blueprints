@@ -45,7 +45,7 @@ Only those `src` values are rewritten to a public artifact URL. **Do not** put `
 
 After a 3D export, still write `{model}_3d.usdz` and `{model}_3d.html` into `/opt/cursor/artifacts/` (and `docs/previews/` when the mesh should live in git). To let the user actually open the mesh, give a real `https://…` URL that returns the file (or a PNG QR of that URL). Do not attach STEP unless the user asks.
 
-USDZ is a zip **container** — Quick Look opens the `.usdz` file itself. Never unzip it (that yields `mimetype` + `model.usda` and iOS will not preview the folder). If Safari saves it as `.zip`, rename back to `.usdz` without extracting. The HTML viewer must actually execute in Safari (a Filebin download page or a blank canvas is not a working viewer).
+USDZ is a zip **container** of a binary `.usdc` crate (`UsdUtils.CreateNewARKitUsdzPackage`). Quick Look opens the `.usdz` file itself — never unzip it (a folder of crate files is not a preview). If Safari saves it as `.zip`, rename back to `.usdz` without extracting. ASCII `.usda` zips are **not** Quick Look-compatible; do not hand-roll them. The HTML viewer is a separate WebGL path and must actually execute in Safari (a Filebin download page or a blank canvas is not a working viewer).
 
 If PNG export fails, fix that before considering the task done.
 
@@ -58,6 +58,6 @@ python -m pytest
 
 ## Cursor Cloud specific instructions
 
-- `install` must finish with a working `.venv` that can `import build123d` and `import cairosvg` (PNG).
+- `install` must finish with a working `.venv` that can `import build123d`, `import cairosvg` (PNG), and `from pxr import Usd` (ARKit USDZ).
 - Do not assume `python3 -m venv` works on the base image; install `python3.12-venv` first (`scripts/cloud-agent-install.sh`).
 - `libcairo2` is required at runtime for CairoSVG PNG export.

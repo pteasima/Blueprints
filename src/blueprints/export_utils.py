@@ -6,7 +6,7 @@ import base64
 import os
 import shutil
 import struct
-import zlib
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -422,122 +422,76 @@ def _cross(
     return (uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx)
 
 
-def _mesh_to_usda(
+def _normalize(n: tuple[float, float, float]) -> tuple[float, float, float]:
+    x, y, z = n
+    length = (x * x + y * y + z * z) ** 0.5
+    if length < 1e-12:
+        return (0.0, 1.0, 0.0)
+    return (x / length, y / length, z / length)
+
+
+def _write_arkit_usdz(
     points: list[tuple[float, float, float]],
     faces: list[tuple[int, int, int]],
-) -> str:
+    usdz_path: Path,
+) -> Path:
+    """Package a mesh as a single-layer .usdc USDZ (what Apple Quick Look actually opens)."""
+    from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdShade, UsdUtils
+
     yup = [_y_up(p) for p in points]
     xs = [p[0] for p in yup]
     ys = [p[1] for p in yup]
     zs = [p[2] for p in yup]
-    normals: list[tuple[float, float, float]] = []
+    gf_points = [Gf.Vec3f(*p) for p in yup]
+    counts = [3] * len(faces)
+    indices: list[int] = []
+    normals: list = []
     for i, j, k in faces:
-        n = _cross(yup[i], yup[j], yup[k])
+        indices.extend((i, j, k))
+        n = Gf.Vec3f(*_normalize(_cross(yup[i], yup[j], yup[k])))
         normals.extend((n, n, n))
-    point_txt = ", ".join(f"({x:.6f}, {y:.6f}, {z:.6f})" for x, y, z in yup)
-    index_txt = ", ".join(str(i) for tri in faces for i in tri)
-    counts_txt = ", ".join("3" for _ in faces)
-    nrm_txt = ", ".join(f"({x:.6f}, {y:.6f}, {z:.6f})" for x, y, z in normals)
-    return f"""#usda 1.0
-(
-    defaultPrim = "Model"
-    metersPerUnit = 0.001
-    upAxis = "Y"
-)
 
-def Xform "Model" (
-    kind = "component"
-)
-{{
-    def Mesh "Geom"
-    {{
-        float3[] extent = [({min(xs):.6f}, {min(ys):.6f}, {min(zs):.6f}), ({max(xs):.6f}, {max(ys):.6f}, {max(zs):.6f})]
-        int[] faceVertexCounts = [{counts_txt}]
-        int[] faceVertexIndices = [{index_txt}]
-        point3f[] points = [{point_txt}]
-        normal3f[] normals = [{nrm_txt}] (
-            interpolation = "faceVarying"
+    usdz_path = usdz_path.resolve()
+    usdz_path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory() as tmp:
+        usdc_path = Path(tmp) / "model.usdc"
+        stage = Usd.Stage.CreateNew(str(usdc_path))
+        UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y)
+        UsdGeom.SetStageMetersPerUnit(stage, 0.001)
+        root = UsdGeom.Xform.Define(stage, "/Model")
+        stage.SetDefaultPrim(root.GetPrim())
+        Usd.ModelAPI(root.GetPrim()).SetKind(Kind.Tokens.component)
+        mesh = UsdGeom.Mesh.Define(stage, "/Model/Geom")
+        mesh.CreatePointsAttr(gf_points)
+        mesh.CreateFaceVertexCountsAttr(counts)
+        mesh.CreateFaceVertexIndicesAttr(indices)
+        mesh.CreateNormalsAttr(normals)
+        mesh.SetNormalsInterpolation(UsdGeom.Tokens.faceVarying)
+        mesh.CreateSubdivisionSchemeAttr().Set(UsdGeom.Tokens.none)
+        mesh.CreateExtentAttr(
+            [Gf.Vec3f(min(xs), min(ys), min(zs)), Gf.Vec3f(max(xs), max(ys), max(zs))]
         )
-        color3f[] primvars:displayColor = [(0.82, 0.8, 0.76)] (
-            interpolation = "constant"
-        )
-        uniform token subdivisionScheme = "none"
-    }}
-}}
-"""
+        mesh.CreateDisplayColorAttr([Gf.Vec3f(0.82, 0.8, 0.76)])
 
+        material = UsdShade.Material.Define(stage, "/Model/Looks/Material")
+        shader = UsdShade.Shader.Define(stage, "/Model/Looks/Material/PreviewSurface")
+        shader.CreateIdAttr("UsdPreviewSurface")
+        shader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).Set(
+            Gf.Vec3f(0.82, 0.8, 0.76)
+        )
+        shader.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(0.6)
+        shader.CreateInput("metallic", Sdf.ValueTypeNames.Float).Set(0.0)
+        material.CreateSurfaceOutput().ConnectToSource(shader.ConnectableAPI(), "surface")
+        UsdShade.MaterialBindingAPI.Apply(mesh.GetPrim())
+        UsdShade.MaterialBindingAPI(mesh).Bind(material)
+        stage.GetRootLayer().Save()
 
-def _usdz_zip(files: list[tuple[str, bytes]]) -> bytes:
-    """ZIP32, stored only, 64-byte-aligned payloads (Apple USDZ / Quick Look)."""
-    align = 64
-    buf = bytearray()
-    central = bytearray()
-    count = 0
-    for name, payload in files:
-        name_b = name.encode("utf-8")
-        crc = zlib.crc32(payload) & 0xFFFFFFFF
-        size = len(payload)
-        extra_len = (align - ((len(buf) + 30 + len(name_b)) % align)) % align
-        if extra_len and extra_len < 4:
-            extra_len += align
-        if extra_len:
-            extra = struct.pack("<HH", 0xA11E, extra_len - 4) + b"\x00" * (extra_len - 4)
-        else:
-            extra = b""
-        local_off = len(buf)
-        buf += struct.pack(
-            "<IHHHHHIIIHH",
-            0x04034B50,
-            20,
-            0,
-            0,
-            0,
-            0,
-            crc,
-            size,
-            size,
-            len(name_b),
-            len(extra),
-        )
-        buf += name_b
-        buf += extra
-        buf += payload
-        central += struct.pack(
-            "<IHHHHHHIIIHHHHHII",
-            0x02014B50,
-            0x0317,
-            20,
-            0,
-            0,
-            0,
-            0,
-            crc,
-            size,
-            size,
-            len(name_b),
-            0,
-            0,
-            0,
-            0,
-            0,
-            local_off,
-        )
-        central += name_b
-        count += 1
-    cd_off = len(buf)
-    buf += central
-    buf += struct.pack(
-        "<IHHHHIIH",
-        0x06054B50,
-        0,
-        0,
-        count,
-        count,
-        len(central),
-        cd_off,
-        0,
-    )
-    return bytes(buf)
+        if usdz_path.exists():
+            usdz_path.unlink()
+        ok = UsdUtils.CreateNewARKitUsdzPackage(str(usdc_path), str(usdz_path))
+        if not ok or not usdz_path.is_file():
+            raise RuntimeError(f"CreateNewARKitUsdzPackage failed for {usdz_path}")
+    return usdz_path
 
 
 def usdz_data_offsets(data: bytes) -> list[int]:
@@ -557,24 +511,19 @@ def _usdz_bytes(
     points: list[tuple[float, float, float]],
     faces: list[tuple[int, int, int]],
 ) -> bytes:
-    usda = _mesh_to_usda(points, faces).encode("utf-8")
-    return _usdz_zip(
-        [
-            ("mimetype", b"model/vnd.usdz+zip"),
-            ("model.usda", usda),
-        ]
-    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "model.usdz"
+        _write_arkit_usdz(points, faces, path)
+        return path.read_bytes()
 
 
 def stl_to_usdz(stl_path: Path, usdz_path: Path) -> Path:
-    """Pack a binary STL as Apple-aligned USDZ for iOS Quick Look."""
+    """Pack a binary STL as an ARKit USDZ crate for iOS/macOS Quick Look."""
     points, faces = _read_binary_stl(stl_path)
     if not faces:
         raise ValueError(f"STL has no triangles: {stl_path}")
     points, faces = _weld_mesh(points, faces)
-    usdz_path.parent.mkdir(parents=True, exist_ok=True)
-    usdz_path.write_bytes(_usdz_bytes(points, faces))
-    return usdz_path
+    return _write_arkit_usdz(points, faces, usdz_path)
 
 
 _VIEWER_HTML = """<!DOCTYPE html>
