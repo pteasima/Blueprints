@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+import base64
+import os
+import shutil
+import struct
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -239,6 +244,8 @@ def export_shape(
             raise ValueError(f"Unsupported export format: {fmt}")
         written[fmt] = path
 
+    _maybe_write_usdz(written)
+    publish_to_artifacts(model_name, written)
     return written
 
 
@@ -314,7 +321,500 @@ def export_section(
             raise ValueError(f"Unsupported section export format: {fmt}")
         written[fmt] = path
 
+    publish_to_artifacts(model_name, written)
     return written
+
+
+def artifacts_dir() -> Path | None:
+    """Cloud Agent artifact folder. Chat renders PNG/video tiles only; hrefs are not rewritten."""
+    override = os.environ.get("BLUEPRINTS_ARTIFACTS_DIR")
+    if override:
+        path = Path(override)
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+    # pytest must not sprinkle CAD files into the live chat folder
+    if "PYTEST_CURRENT_TEST" in os.environ:
+        return None
+    path = Path("/opt/cursor/artifacts")
+    return path if path.is_dir() else None
+
+
+_CHAT_FORMATS = frozenset({".png", ".usdz", ".html"})
+
+
+def _artifact_name(model_name: str, path: Path) -> str:
+    suffix = path.suffix.lower()
+    if path.stem == "model" and suffix in {".step", ".stp", ".stl", ".usdz", ".html"}:
+        return f"{model_name}_3d{suffix}"
+    return f"{model_name}_{path.name}"
+
+
+def publish_to_artifacts(model_name: str, paths: dict[str, Path]) -> dict[str, Path]:
+    """Copy PNG/USDZ/HTML into the run artifact folder.
+
+    Chat still only displays PNG/video. Do not emit `<a href="/opt/cursor/artifacts/…">`;
+    those paths 404 on cursor.com. Give the user a real https URL or a QR PNG instead.
+    """
+    dest_root = artifacts_dir()
+    if dest_root is None:
+        return {}
+    published: dict[str, Path] = {}
+    for path in paths.values():
+        if path.suffix.lower() not in _CHAT_FORMATS or not path.is_file():
+            continue
+        dest = dest_root / _artifact_name(model_name, path)
+        shutil.copy2(path, dest)
+        published[path.suffix.lower().lstrip(".")] = dest
+    return published
+
+
+def _read_binary_stl(path: Path) -> tuple[list[tuple[float, float, float]], list[tuple[int, int, int]]]:
+    data = path.read_bytes()
+    if len(data) < 84:
+        raise ValueError(f"STL too small: {path}")
+    count = struct.unpack_from("<I", data, 80)[0]
+    points: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, int, int]] = []
+    offset = 84
+    for _ in range(count):
+        verts = struct.unpack_from("<9f", data, offset + 12)
+        i = len(points)
+        points.append((verts[0], verts[1], verts[2]))
+        points.append((verts[3], verts[4], verts[5]))
+        points.append((verts[6], verts[7], verts[8]))
+        faces.append((i, i + 1, i + 2))
+        offset += 50
+    return points, faces
+
+
+def _weld_mesh(
+    points: list[tuple[float, float, float]],
+    faces: list[tuple[int, int, int]],
+) -> tuple[list[tuple[float, float, float]], list[tuple[int, int, int]]]:
+    key_to_i: dict[tuple[float, float, float], int] = {}
+    welded: list[tuple[float, float, float]] = []
+    new_faces: list[tuple[int, int, int]] = []
+    for i, j, k in faces:
+        tri: list[int] = []
+        for idx in (i, j, k):
+            key = (round(points[idx][0], 5), round(points[idx][1], 5), round(points[idx][2], 5))
+            if key not in key_to_i:
+                key_to_i[key] = len(welded)
+                welded.append(points[idx])
+            tri.append(key_to_i[key])
+        new_faces.append((tri[0], tri[1], tri[2]))
+    return welded, new_faces
+
+
+# CAD is millimetres. RealityKit / AR Quick Look treat 1 unit as 1 metre and
+# often ignore metersPerUnit, so USDZ is authored in metres. Object mode still
+# auto-fits; AR needs a detected plane larger than the asset — an 11 m house
+# never places indoors, so oversize models are scaled to a tabletop span.
+_CAD_MM_TO_M = 0.001
+_AR_REAL_SPAN_LIMIT_M = 2.0
+_AR_TABLETOP_SPAN_M = 0.45
+
+
+def _y_up(p: tuple[float, float, float]) -> tuple[float, float, float]:
+    """CAD Z-up (mm) → Apple USDZ Y-up (still mm)."""
+    x, y, z = p
+    return (x, z, -y)
+
+
+def _prepare_usdz_points(
+    points: list[tuple[float, float, float]],
+) -> list[tuple[float, float, float]]:
+    """Y-up metres, grounded at Y=0, XZ-centred; tabletop-scale if too large for indoor AR."""
+    meters = [
+        (x * _CAD_MM_TO_M, y * _CAD_MM_TO_M, z * _CAD_MM_TO_M) for x, y, z in (_y_up(p) for p in points)
+    ]
+    xs = [p[0] for p in meters]
+    ys = [p[1] for p in meters]
+    zs = [p[2] for p in meters]
+    cx = (min(xs) + max(xs)) / 2
+    cz = (min(zs) + max(zs)) / 2
+    min_y = min(ys)
+    grounded = [(x - cx, y - min_y, z - cz) for x, y, z in meters]
+    span = max(
+        max(p[0] for p in grounded) - min(p[0] for p in grounded),
+        max(p[1] for p in grounded) - min(p[1] for p in grounded),
+        max(p[2] for p in grounded) - min(p[2] for p in grounded),
+        1e-9,
+    )
+    if span > _AR_REAL_SPAN_LIMIT_M:
+        scale = _AR_TABLETOP_SPAN_M / span
+        grounded = [(x * scale, y * scale, z * scale) for x, y, z in grounded]
+    return grounded
+
+
+def _cross(
+    a: tuple[float, float, float],
+    b: tuple[float, float, float],
+    c: tuple[float, float, float],
+) -> tuple[float, float, float]:
+    ux, uy, uz = b[0] - a[0], b[1] - a[1], b[2] - a[2]
+    vx, vy, vz = c[0] - a[0], c[1] - a[1], c[2] - a[2]
+    return (uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx)
+
+
+def _normalize(n: tuple[float, float, float]) -> tuple[float, float, float]:
+    x, y, z = n
+    length = (x * x + y * y + z * z) ** 0.5
+    if length < 1e-12:
+        return (0.0, 1.0, 0.0)
+    return (x / length, y / length, z / length)
+
+
+def _write_arkit_usdz(
+    points: list[tuple[float, float, float]],
+    faces: list[tuple[int, int, int]],
+    usdz_path: Path,
+) -> Path:
+    """Package a mesh as a single-layer .usdc USDZ (what Apple Quick Look actually opens)."""
+    from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdShade, UsdUtils
+
+    yup = _prepare_usdz_points(points)
+    xs = [p[0] for p in yup]
+    ys = [p[1] for p in yup]
+    zs = [p[2] for p in yup]
+    gf_points = [Gf.Vec3f(*p) for p in yup]
+    counts = [3] * len(faces)
+    indices: list[int] = []
+    normals: list = []
+    for i, j, k in faces:
+        indices.extend((i, j, k))
+        n = Gf.Vec3f(*_normalize(_cross(yup[i], yup[j], yup[k])))
+        normals.extend((n, n, n))
+
+    usdz_path = usdz_path.resolve()
+    usdz_path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory() as tmp:
+        usdc_path = Path(tmp) / "model.usdc"
+        stage = Usd.Stage.CreateNew(str(usdc_path))
+        UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y)
+        UsdGeom.SetStageMetersPerUnit(stage, 1.0)
+        root = UsdGeom.Xform.Define(stage, "/Model")
+        stage.SetDefaultPrim(root.GetPrim())
+        Usd.ModelAPI(root.GetPrim()).SetKind(Kind.Tokens.component)
+        root_prim = root.GetPrim()
+        try:
+            root_prim.AddAppliedSchema("Preliminary_AnchoringAPI")
+        except Exception:
+            pass
+        root_prim.CreateAttribute(
+            "preliminary:anchoring:type",
+            Sdf.ValueTypeNames.Token,
+            False,
+            Sdf.VariabilityUniform,
+        ).Set("plane")
+        root_prim.CreateAttribute(
+            "preliminary:planeAnchoring:alignment",
+            Sdf.ValueTypeNames.Token,
+            False,
+            Sdf.VariabilityUniform,
+        ).Set("horizontal")
+        mesh = UsdGeom.Mesh.Define(stage, "/Model/Geom")
+        mesh.CreatePointsAttr(gf_points)
+        mesh.CreateFaceVertexCountsAttr(counts)
+        mesh.CreateFaceVertexIndicesAttr(indices)
+        mesh.CreateNormalsAttr(normals)
+        mesh.SetNormalsInterpolation(UsdGeom.Tokens.faceVarying)
+        mesh.CreateSubdivisionSchemeAttr().Set(UsdGeom.Tokens.none)
+        mesh.CreateDoubleSidedAttr(True)
+        mesh.CreateExtentAttr(
+            [Gf.Vec3f(min(xs), min(ys), min(zs)), Gf.Vec3f(max(xs), max(ys), max(zs))]
+        )
+        mesh.CreateDisplayColorAttr([Gf.Vec3f(0.82, 0.8, 0.76)])
+
+        material = UsdShade.Material.Define(stage, "/Model/Looks/Material")
+        shader = UsdShade.Shader.Define(stage, "/Model/Looks/Material/PreviewSurface")
+        shader.CreateIdAttr("UsdPreviewSurface")
+        shader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).Set(
+            Gf.Vec3f(0.82, 0.8, 0.76)
+        )
+        shader.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(0.6)
+        shader.CreateInput("metallic", Sdf.ValueTypeNames.Float).Set(0.0)
+        material.CreateSurfaceOutput().ConnectToSource(shader.ConnectableAPI(), "surface")
+        UsdShade.MaterialBindingAPI.Apply(mesh.GetPrim())
+        UsdShade.MaterialBindingAPI(mesh).Bind(material)
+        stage.GetRootLayer().Save()
+
+        if usdz_path.exists():
+            usdz_path.unlink()
+        ok = UsdUtils.CreateNewARKitUsdzPackage(str(usdc_path), str(usdz_path))
+        if not ok or not usdz_path.is_file():
+            raise RuntimeError(f"CreateNewARKitUsdzPackage failed for {usdz_path}")
+    return usdz_path
+
+
+def usdz_data_offsets(data: bytes) -> list[int]:
+    """Byte offset of each local-file payload; used to assert 64-byte alignment."""
+    offsets: list[int] = []
+    pos = 0
+    while pos + 30 <= len(data) and data[pos : pos + 4] == b"PK\x03\x04":
+        fn_len, extra_len = struct.unpack_from("<HH", data, pos + 26)
+        payload_size = struct.unpack_from("<I", data, pos + 22)[0]
+        data_off = pos + 30 + fn_len + extra_len
+        offsets.append(data_off)
+        pos = data_off + payload_size
+    return offsets
+
+
+def _usdz_bytes(
+    points: list[tuple[float, float, float]],
+    faces: list[tuple[int, int, int]],
+) -> bytes:
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "model.usdz"
+        _write_arkit_usdz(points, faces, path)
+        return path.read_bytes()
+
+
+def stl_to_usdz(stl_path: Path, usdz_path: Path) -> Path:
+    """Pack a binary STL as an ARKit USDZ crate for iOS/macOS Quick Look."""
+    points, faces = _read_binary_stl(stl_path)
+    if not faces:
+        raise ValueError(f"STL has no triangles: {stl_path}")
+    points, faces = _weld_mesh(points, faces)
+    return _write_arkit_usdz(points, faces, usdz_path)
+
+
+_VIEWER_HTML = """<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+<title>3D preview</title>
+<style>
+  html,body { margin:0; height:100%; background:#111; color:#eee; font-family:-apple-system,sans-serif; }
+  #bar { position:fixed; top:0; left:0; right:0; z-index:2; display:flex; gap:8px; align-items:center;
+         padding:10px 12px; background:rgba(0,0,0,.72); font-size:14px; }
+  #bar button { font:inherit; padding:8px 12px; border:0; border-radius:8px; background:#eee; color:#111; }
+  #err { display:none; position:fixed; top:56px; left:12px; right:12px; z-index:2;
+         background:#4a1010; color:#fcc; padding:10px; border-radius:8px; white-space:pre-wrap; }
+  canvas { display:block; width:100%; height:100%; touch-action:none; }
+</style>
+</head>
+<body>
+<div id="bar">
+  <button type="button" id="ql">Otevřít v Quick Look</button>
+  <span>Táhni = otáčení · štípej = zoom</span>
+</div>
+<pre id="err"></pre>
+<canvas id="c"></canvas>
+<script>
+const COORDS_B64 = "%%COORDS_B64%%";
+const USDZ_B64 = "%%USDZ_B64%%";
+const cx = %%CX%%, cy = %%CY%%, cz = %%CZ%%, span = %%SPAN%%;
+const errEl = document.getElementById('err');
+function fail(msg) { errEl.style.display = 'block'; errEl.textContent = msg; }
+function b64bytes(s) {
+  const bin = atob(s);
+  const u8 = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  return u8;
+}
+document.getElementById('ql').onclick = () => {
+  const blob = new Blob([b64bytes(USDZ_B64)], {type:'model/vnd.usdz+zip'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.rel = 'ar';
+  a.href = url;
+  a.download = 'model.usdz';
+  const img = document.createElement('img');
+  img.alt = '3D';
+  a.appendChild(img);
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+};
+const canvas = document.getElementById('c');
+const gl = canvas.getContext('webgl', {alpha:false, antialias:true})
+        || canvas.getContext('experimental-webgl', {alpha:false});
+if (!gl) { fail('WebGL není k dispozici.'); }
+else {
+  const vs = gl.createShader(gl.VERTEX_SHADER);
+  gl.shaderSource(vs, [
+    'attribute vec3 aPos;',
+    'attribute vec3 aNrm;',
+    'uniform mat4 uMVP;',
+    'uniform mat4 uN;',
+    'varying vec3 vN;',
+    'void main() {',
+    '  vN = mat3(uN) * aNrm;',
+    '  gl_Position = uMVP * vec4(aPos, 1.0);',
+    '}'
+  ].join(String.fromCharCode(10)));
+  gl.compileShader(vs);
+  if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
+    fail('Vertex shader: ' + gl.getShaderInfoLog(vs));
+  }
+  const fs = gl.createShader(gl.FRAGMENT_SHADER);
+  gl.shaderSource(fs, [
+    'precision mediump float;',
+    'varying vec3 vN;',
+    'void main() {',
+    '  vec3 n = normalize(vN);',
+    '  float d = max(dot(n, normalize(vec3(0.35, 0.6, 0.7))), 0.18);',
+    '  gl_FragColor = vec4(vec3(0.82, 0.80, 0.76) * d, 1.0);',
+    '}'
+  ].join(String.fromCharCode(10)));
+  gl.compileShader(fs);
+  if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
+    fail('Fragment shader: ' + gl.getShaderInfoLog(fs));
+  }
+  const prog = gl.createProgram();
+  gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+    fail('WebGL link: ' + gl.getProgramInfoLog(prog));
+  }
+  gl.useProgram(prog);
+  const raw = b64bytes(COORDS_B64);
+  const P = new Float32Array(raw.buffer, raw.byteOffset, raw.byteLength / 4);
+  const ntri = P.length / 9;
+  const pos = new Float32Array(P.length);
+  const nrm = new Float32Array(P.length);
+  for (let t = 0; t < ntri; t++) {
+    const o = t * 9;
+    const ax=P[o]-cx, ay=P[o+1]-cy, az=P[o+2]-cz;
+    const bx=P[o+3]-cx, by=P[o+4]-cy, bz=P[o+5]-cz;
+    const cxp=P[o+6]-cx, cyp=P[o+7]-cy, czp=P[o+8]-cz;
+    const nx=(by-ay)*(czp-az)-(bz-az)*(cyp-ay);
+    const ny=(bz-az)*(cxp-ax)-(bx-ax)*(czp-az);
+    const nz=(bx-ax)*(cyp-ay)-(by-ay)*(cxp-ax);
+    for (let k = 0; k < 3; k++) {
+      pos[o+k*3]=P[o+k*3]-cx; pos[o+k*3+1]=P[o+k*3+1]-cy; pos[o+k*3+2]=P[o+k*3+2]-cz;
+      nrm[o+k*3]=nx; nrm[o+k*3+1]=ny; nrm[o+k*3+2]=nz;
+    }
+  }
+  function buf(data, locName) {
+    const b = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, b);
+    gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+    const loc = gl.getAttribLocation(prog, locName);
+    if (loc < 0) { fail('Chybí atribut ' + locName); return; }
+    gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc, 3, gl.FLOAT, false, 0, 0);
+  }
+  buf(pos, 'aPos'); buf(nrm, 'aNrm');
+  const uMVP = gl.getUniformLocation(prog, 'uMVP');
+  const uN = gl.getUniformLocation(prog, 'uN');
+  let yaw = 0.6, pitch = 0.45, dist = span * 1.8;
+  function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.max(1, innerWidth * dpr);
+    canvas.height = Math.max(1, innerHeight * dpr);
+    gl.viewport(0,0,canvas.width,canvas.height);
+  }
+  addEventListener('resize', resize); resize();
+  let last=null, pinching=null;
+  canvas.addEventListener('pointerdown', e => { last={x:e.clientX,y:e.clientY,id:e.pointerId}; canvas.setPointerCapture(e.pointerId); });
+  canvas.addEventListener('pointerup', () => last=null);
+  canvas.addEventListener('pointermove', e => {
+    if (!last || e.pointerId!==last.id) return;
+    yaw += (e.clientX-last.x)*0.008;
+    pitch = Math.max(-1.2, Math.min(1.2, pitch+(e.clientY-last.y)*0.008));
+    last={x:e.clientX,y:e.clientY,id:e.pointerId};
+  });
+  canvas.addEventListener('wheel', e => { e.preventDefault(); dist *= (e.deltaY>0?1.08:0.92); }, {passive:false});
+  canvas.addEventListener('touchstart', e => {
+    if (e.touches.length===2) {
+      const a=e.touches[0], b=e.touches[1];
+      pinching=Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY);
+    }
+  }, {passive:true});
+  canvas.addEventListener('touchmove', e => {
+    if (e.touches.length===2 && pinching) {
+      const a=e.touches[0], b=e.touches[1];
+      const d=Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY);
+      dist *= pinching/d; pinching=d;
+    }
+  }, {passive:true});
+  function mul(a,b) {
+    const r=new Float32Array(16);
+    for (let i=0;i<4;i++) for (let j=0;j<4;j++)
+      r[j*4+i]=a[i]*b[j*4]+a[4+i]*b[j*4+1]+a[8+i]*b[j*4+2]+a[12+i]*b[j*4+3];
+    return r;
+  }
+  function persp(f, asp, n, f2) {
+    const t=1/Math.tan(f/2);
+    return new Float32Array([t/asp,0,0,0, 0,t,0,0, 0,0,(f2+n)/(n-f2),-1, 0,0,(2*f2*n)/(n-f2),0]);
+  }
+  function look() {
+    const cPitch=Math.cos(pitch), sPitch=Math.sin(pitch);
+    const cYaw=Math.cos(yaw), sYaw=Math.sin(yaw);
+    const ex=dist*cPitch*sYaw, ey=-dist*sPitch, ez=dist*cPitch*cYaw;
+    let fx=-ex, fy=-ey, fz=-ez;
+    let fl=Math.hypot(fx,fy,fz); fx/=fl; fy/=fl; fz/=fl;
+    let rx=fy*0-fz*1, ry=fz*0-fx*0, rz=fx*1-fy*0;
+    let rl=Math.hypot(rx,ry,rz); rx/=rl; ry/=rl; rz/=rl;
+    const ux=ry*fz-rz*fy, uy=rz*fx-rx*fz, uz=rx*fy-ry*fx;
+    return new Float32Array([
+      rx, ux, -fx, 0,
+      ry, uy, -fy, 0,
+      rz, uz, -fz, 0,
+      -(rx*ex+ry*ey+rz*ez),
+      -(ux*ex+uy*ey+uz*ez),
+      (fx*ex+fy*ey+fz*ez),
+      1
+    ]);
+  }
+  gl.enable(gl.DEPTH_TEST); gl.clearColor(0.07,0.07,0.08,1);
+  (function frame() {
+    const asp = canvas.width / Math.max(canvas.height, 1);
+    const mvp = mul(persp(0.7, asp, span*0.02, span*20), look());
+    gl.uniformMatrix4fv(uMVP, false, mvp);
+    gl.uniformMatrix4fv(uN, false, look());
+    gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+    gl.drawArrays(gl.TRIANGLES, 0, ntri*3);
+    requestAnimationFrame(frame);
+  })();
+}
+</script>
+</body>
+</html>
+"""
+
+
+def stl_to_html_viewer(stl_path: Path, html_path: Path, usdz_path: Path | None = None) -> Path:
+    """Self-contained WebGL viewer with a Quick Look button (chat UI is PNG-only)."""
+    points, faces = _read_binary_stl(stl_path)
+    coords: list[float] = []
+    for i, j, k in faces:
+        for idx in (i, j, k):
+            coords.extend(points[idx])
+    xs, ys, zs = coords[0::3], coords[1::3], coords[2::3]
+    cx, cy, cz = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2, (min(zs) + max(zs)) / 2
+    span = max(max(xs) - min(xs), max(ys) - min(ys), max(zs) - min(zs), 1.0)
+    packed = struct.pack(f"<{len(coords)}f", *coords)
+    if usdz_path is not None and usdz_path.is_file():
+        usdz_raw = usdz_path.read_bytes()
+    else:
+        welded_pts, welded_faces = _weld_mesh(points, faces)
+        usdz_raw = _usdz_bytes(welded_pts, welded_faces)
+    html = (
+        _VIEWER_HTML.replace("%%COORDS_B64%%", base64.b64encode(packed).decode("ascii"))
+        .replace("%%USDZ_B64%%", base64.b64encode(usdz_raw).decode("ascii"))
+        .replace("%%CX%%", f"{cx:.6f}")
+        .replace("%%CY%%", f"{cy:.6f}")
+        .replace("%%CZ%%", f"{cz:.6f}")
+        .replace("%%SPAN%%", f"{span:.6f}")
+    )
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+    html_path.write_text(html, encoding="utf-8")
+    return html_path
+
+
+def _maybe_write_usdz(written: dict[str, Path]) -> None:
+    stl_path = written.get("stl")
+    if stl_path is None or not stl_path.is_file():
+        return
+    usdz_path = stl_path.with_suffix(".usdz")
+    stl_to_usdz(stl_path, usdz_path)
+    written["usdz"] = usdz_path
+    html_path = stl_path.with_suffix(".html")
+    stl_to_html_viewer(stl_path, html_path, usdz_path=usdz_path)
+    written["html"] = html_path
 
 
 def summarize_params(params: dict[str, Any]) -> str:

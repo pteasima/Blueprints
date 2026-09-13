@@ -23,7 +23,7 @@ source .venv/bin/activate
 python -m blueprints.export hello_world
 ```
 
-Generated artifacts: `STEP`, `STL`, `SVG`, `DXF`, and a white-background `PNG` preview (good for Cursor iOS review). A copy of the hello-world preview lives in `docs/previews/`.
+Generated artifacts: `STEP`/`STL` (desktop CAD), `USDZ` (iOS Quick Look), self-contained `HTML` viewer, `SVG`/`DXF`, and a white-background `PNG` preview. Cloud Agent chat on iOS and web only displays PNG/video tiles; USDZ/HTML must be opened via a real `https://` URL (see `AGENTS.md`).
 
 ## Layout
 
