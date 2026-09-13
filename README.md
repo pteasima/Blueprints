@@ -23,7 +23,7 @@ source .venv/bin/activate
 python -m blueprints.export hello_world
 ```
 
-Generated artifacts: `STEP`/`STL` (desktop CAD), `USDZ` (iOS Quick Look), self-contained `HTML` viewer, `SVG`/`DXF`, and a white-background `PNG` preview. Cloud Agent chat on iOS and web only displays PNG/video tiles; USDZ/HTML must be opened via a real `https://` URL (see `AGENTS.md`).
+Generated artifacts: `STEP`/`STL` (desktop CAD), `USDZ` (iOS Quick Look / AR), self-contained `HTML` viewer (Safari **Otevřít v AR** uses `rel="ar"` + a data URI so you do not need Filebin), `SVG`/`DXF`, and a white-background `PNG` preview. Cursor chat only displays PNG/video tiles; a git blob URL is not a USDZ (see `AGENTS.md` and `docs/previews/README.md`).
 
 ## Layout
 
