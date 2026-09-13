@@ -406,10 +406,45 @@ def _weld_mesh(
     return welded, new_faces
 
 
+# CAD is millimetres. RealityKit / AR Quick Look treat 1 unit as 1 metre and
+# often ignore metersPerUnit, so USDZ is authored in metres. Object mode still
+# auto-fits; AR needs a detected plane larger than the asset — an 11 m house
+# never places indoors, so oversize models are scaled to a tabletop span.
+_CAD_MM_TO_M = 0.001
+_AR_REAL_SPAN_LIMIT_M = 2.0
+_AR_TABLETOP_SPAN_M = 0.45
+
+
 def _y_up(p: tuple[float, float, float]) -> tuple[float, float, float]:
-    """CAD Z-up (mm) → Apple USDZ Y-up."""
+    """CAD Z-up (mm) → Apple USDZ Y-up (still mm)."""
     x, y, z = p
     return (x, z, -y)
+
+
+def _prepare_usdz_points(
+    points: list[tuple[float, float, float]],
+) -> list[tuple[float, float, float]]:
+    """Y-up metres, grounded at Y=0, XZ-centred; tabletop-scale if too large for indoor AR."""
+    meters = [
+        (x * _CAD_MM_TO_M, y * _CAD_MM_TO_M, z * _CAD_MM_TO_M) for x, y, z in (_y_up(p) for p in points)
+    ]
+    xs = [p[0] for p in meters]
+    ys = [p[1] for p in meters]
+    zs = [p[2] for p in meters]
+    cx = (min(xs) + max(xs)) / 2
+    cz = (min(zs) + max(zs)) / 2
+    min_y = min(ys)
+    grounded = [(x - cx, y - min_y, z - cz) for x, y, z in meters]
+    span = max(
+        max(p[0] for p in grounded) - min(p[0] for p in grounded),
+        max(p[1] for p in grounded) - min(p[1] for p in grounded),
+        max(p[2] for p in grounded) - min(p[2] for p in grounded),
+        1e-9,
+    )
+    if span > _AR_REAL_SPAN_LIMIT_M:
+        scale = _AR_TABLETOP_SPAN_M / span
+        grounded = [(x * scale, y * scale, z * scale) for x, y, z in grounded]
+    return grounded
 
 
 def _cross(
@@ -438,7 +473,7 @@ def _write_arkit_usdz(
     """Package a mesh as a single-layer .usdc USDZ (what Apple Quick Look actually opens)."""
     from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdShade, UsdUtils
 
-    yup = [_y_up(p) for p in points]
+    yup = _prepare_usdz_points(points)
     xs = [p[0] for p in yup]
     ys = [p[1] for p in yup]
     zs = [p[2] for p in yup]
@@ -457,10 +492,27 @@ def _write_arkit_usdz(
         usdc_path = Path(tmp) / "model.usdc"
         stage = Usd.Stage.CreateNew(str(usdc_path))
         UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y)
-        UsdGeom.SetStageMetersPerUnit(stage, 0.001)
+        UsdGeom.SetStageMetersPerUnit(stage, 1.0)
         root = UsdGeom.Xform.Define(stage, "/Model")
         stage.SetDefaultPrim(root.GetPrim())
         Usd.ModelAPI(root.GetPrim()).SetKind(Kind.Tokens.component)
+        root_prim = root.GetPrim()
+        try:
+            root_prim.AddAppliedSchema("Preliminary_AnchoringAPI")
+        except Exception:
+            pass
+        root_prim.CreateAttribute(
+            "preliminary:anchoring:type",
+            Sdf.ValueTypeNames.Token,
+            False,
+            Sdf.VariabilityUniform,
+        ).Set("plane")
+        root_prim.CreateAttribute(
+            "preliminary:planeAnchoring:alignment",
+            Sdf.ValueTypeNames.Token,
+            False,
+            Sdf.VariabilityUniform,
+        ).Set("horizontal")
         mesh = UsdGeom.Mesh.Define(stage, "/Model/Geom")
         mesh.CreatePointsAttr(gf_points)
         mesh.CreateFaceVertexCountsAttr(counts)
@@ -468,6 +520,7 @@ def _write_arkit_usdz(
         mesh.CreateNormalsAttr(normals)
         mesh.SetNormalsInterpolation(UsdGeom.Tokens.faceVarying)
         mesh.CreateSubdivisionSchemeAttr().Set(UsdGeom.Tokens.none)
+        mesh.CreateDoubleSidedAttr(True)
         mesh.CreateExtentAttr(
             [Gf.Vec3f(min(xs), min(ys), min(zs)), Gf.Vec3f(max(xs), max(ys), max(zs))]
         )
