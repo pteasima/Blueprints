@@ -70,15 +70,16 @@ def test_export_publishes_usdz_to_artifacts(tmp_path, monkeypatch):
     assert root_prim.GetAttribute("preliminary:planeAnchoring:alignment").Get() == "horizontal"
 
 
-def test_preview_hub_on_github_pages_site(tmp_path, monkeypatch, capsys):
+def test_preview_hub_updates_models_for_pages(tmp_path, monkeypatch, capsys):
     import blueprints.export_utils as eu
+    import blueprints.preview_hub as ph
 
     exports = tmp_path / "exports"
     artifacts = tmp_path / "artifacts"
     site = tmp_path / "docs"
     artifacts.mkdir()
     monkeypatch.setattr(eu, "EXPORTS_DIR", exports)
-    monkeypatch.setattr(eu, "PREVIEW_SITE_DIR", site)
+    monkeypatch.setattr(ph, "PREVIEW_SITE_DIR", site)
     monkeypatch.setenv("BLUEPRINTS_ARTIFACTS_DIR", str(artifacts))
     monkeypatch.delenv("BLUEPRINTS_SKIP_PREVIEW_SITE", raising=False)
     monkeypatch.setenv("BLUEPRINTS_ALLOW_PREVIEW_SITE", "1")
@@ -100,6 +101,23 @@ def test_preview_hub_on_github_pages_site(tmp_path, monkeypatch, capsys):
     assert "catbox" not in html
     out = capsys.readouterr().out
     assert "preview_url: https://pteasima.github.io/Blueprints/" in out
+
+
+def test_build_preview_hub_script(tmp_path, monkeypatch):
+    import blueprints.preview_hub as ph
+
+    monkeypatch.setattr(ph, "PREVIEW_SITE_DIR", tmp_path)
+    models = tmp_path / "models"
+    models.mkdir()
+    (models / "manifest.json").write_text(
+        '[{"id": "demo", "label": "Quick Look"}]\n', encoding="utf-8"
+    )
+    # Minimal zip-shaped payload is enough for hub embedding
+    (models / "demo.usdz").write_bytes(b"PK\x03\x04" + b"\x00" * 60)
+    path = ph.write_preview_hub()
+    html = path.read_text(encoding="utf-8")
+    assert ">Quick Look</span>" in html
+    assert "data:model/vnd.usdz+zip;base64," in html
 
 
 def test_stl_to_usdz_roundtrip(tmp_path, monkeypatch):
@@ -152,9 +170,11 @@ def test_usdz_tabletop_scale_for_room_sized_mesh(tmp_path):
     assert stage.GetDefaultPrim().GetAttribute("preliminary:anchoring:type").Get() == "plane"
 
 
-def test_agents_md_points_at_github_pages():
+def test_agents_md_points_at_rolling_pages():
     text = AGENTS_MD.read_text(encoding="utf-8")
     assert "pteasima.github.io/Blueprints" in text
+    assert "GitHub Actions" in text
+    assert "Git LFS" in text
     assert "catbox" not in text.lower()
     assert "QR" not in text
     assert 'href="/opt/cursor/artifacts' not in text

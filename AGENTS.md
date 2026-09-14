@@ -20,6 +20,8 @@ source .venv/bin/activate
 
 The default Cloud Agent image does **not** include `ensurepip`. Creating `.venv` without `python3.12-venv` leaves a broken tree (Python symlink, no pip). If that happens, rerun the install script; do not debug pip by hand.
 
+Install also enables **Git LFS** (`docs/models/*.usdz`). Pull with LFS available so mesh pointers resolve.
+
 `.cursor/environment.json` is the repo copy of that bootstrap. The dashboard environment may also need **Save** after an agent proposes an install change.
 
 ## Export and PNG previews
@@ -47,22 +49,23 @@ After a 3D export, still write `{model}_3d.usdz` into `/opt/cursor/artifacts/`. 
 
 ### Quick Look from chat (required after every 3D change)
 
-Cursor chat cannot open a USDZ tile or an artifact path. Export updates the **GitHub Pages hub**:
+Cursor chat cannot open a USDZ tile or an artifact path. Export updates the Pages **inputs** (not the live site by itself):
 
-- `docs/index.html` — single root page for the whole repo (one or more **Quick Look** buttons)
-- `docs/models/<id>.usdz` + `docs/models/manifest.json` — meshes and button labels
+- `docs/models/<id>.usdz` — Git LFS (overwrite in place; do not version-stack copies)
+- `docs/models/manifest.json` — button labels / order
+- `docs/index.html` — **generated locally and by CI; gitignored** — do not commit it
 
-The CLI prints:
+The `pages` GitHub Action rebuilds the hub and deploys a **rolling** site (last push to `main` or `cursor/**` wins):
 
 ```text
 preview_url: https://pteasima.github.io/Blueprints/
 ```
 
-In the chat reply you **must** paste that URL as plain text (tappable on Cursor iOS). On iPhone/iPad: tap → Safari → **Quick Look**.
+After `git push`, wait for the `pages` workflow to go green, then paste that URL in chat (tappable on Cursor iOS). Safari → **Quick Look**.
 
-Pages source: branch `main`, folder `/docs` (or the `pages` GitHub Action). Enable once under https://github.com/pteasima/Blueprints/settings/pages — **Save** a source; making the repo public alone leaves Pages off (`has_pages: false`) and github.io 404s. Cloud agent tokens cannot enable Pages (API 403). Override the printed URL with `BLUEPRINTS_PAGES_URL` if needed. Skip site updates with `BLUEPRINTS_SKIP_PREVIEW_SITE=1`.
+One-time enable: https://github.com/pteasima/Blueprints/settings/pages → Source = **GitHub Actions** → Save. Cloud agent tokens cannot flip this (API 403). Override the printed URL with `BLUEPRINTS_PAGES_URL` if needed. Skip site file updates with `BLUEPRINTS_SKIP_PREVIEW_SITE=1`.
 
-Add more buttons later (sectional cuts, other models) by exporting more meshes into `docs/models/` / editing `manifest.json` labels — keep one hub page.
+Add more buttons later (sectional cuts, other models) via more USDZs + manifest rows — one hub page.
 
 USDZ is a zip **container** of a binary `.usdc` crate (`UsdUtils.CreateNewARKitUsdzPackage`). Quick Look opens the `.usdz` file itself — never unzip it. The hub embeds USDZ as a `data:model/vnd.usdz+zip;base64,…` `rel="ar"` link so Safari does not depend on GitHub’s USDZ MIME type.
 
@@ -79,6 +82,6 @@ python -m pytest
 
 ## Cursor Cloud specific instructions
 
-- `install` must finish with a working `.venv` that can `import build123d`, `import cairosvg` (PNG), and `from pxr import Usd` (ARKit USDZ).
+- `install` must finish with a working `.venv` that can `import build123d`, `import cairosvg` (PNG), and `from pxr import Usd` (ARKit USDZ), plus `git lfs`.
 - Do not assume `python3 -m venv` works on the base image; install `python3.12-venv` first (`scripts/cloud-agent-install.sh`).
 - `libcairo2` is required at runtime for CairoSVG PNG export.

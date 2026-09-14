@@ -1,11 +1,15 @@
-# Deploy docs/ to GitHub Pages via Actions.
-# One-time: Settings → Pages → Source = GitHub Actions (or use Deploy from a branch /docs).
+# Deploy docs/ to GitHub Pages (rolling URL — last push wins).
+# One-time: Settings → Pages → Source = GitHub Actions.
 name: pages
 
 on:
   push:
-    branches: [main]
-    paths: ["docs/**", ".github/workflows/pages.yml"]
+    branches: [main, "cursor/**"]
+    paths:
+      - "docs/**"
+      - "src/blueprints/preview_hub.py"
+      - "scripts/build-preview-hub.py"
+      - ".github/workflows/pages.yml"
   workflow_dispatch:
 
 permissions:
@@ -25,6 +29,13 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build Quick Look hub
+        run: python scripts/build-preview-hub.py
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
