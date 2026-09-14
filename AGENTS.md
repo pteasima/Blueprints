@@ -60,7 +60,7 @@ preview_url: https://pteasima.github.io/Blueprints/
 
 In the chat reply you **must** paste that URL as plain text (tappable on Cursor iOS). On iPhone/iPad: tap → Safari → **Quick Look**.
 
-Pages source: branch `main`, folder `/docs`. Enable once under GitHub → Settings → Pages. This repo is private; Pages for private repos needs GitHub Pro (or make the repo public). Until Pages is enabled, the github.io URL 404s even though `docs/index.html` is in git. Override the printed URL with `BLUEPRINTS_PAGES_URL` if needed. Skip site updates with `BLUEPRINTS_SKIP_PREVIEW_SITE=1`.
+Pages source: branch `main`, folder `/docs` (or the `pages` GitHub Action). Enable once under https://github.com/pteasima/Blueprints/settings/pages — **Save** a source; making the repo public alone leaves Pages off (`has_pages: false`) and github.io 404s. Cloud agent tokens cannot enable Pages (API 403). Override the printed URL with `BLUEPRINTS_PAGES_URL` if needed. Skip site updates with `BLUEPRINTS_SKIP_PREVIEW_SITE=1`.
 
 Add more buttons later (sectional cuts, other models) by exporting more meshes into `docs/models/` / editing `manifest.json` labels — keep one hub page.
 
