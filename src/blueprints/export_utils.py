@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import base64
 import os
 import shutil
 import struct
@@ -22,6 +21,8 @@ from build123d import (
     export_step,
     export_stl,
 )
+
+from blueprints.preview_hub import publish_to_preview_site
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -244,7 +245,7 @@ def export_shape(
             raise ValueError(f"Unsupported export format: {fmt}")
         written[fmt] = path
 
-    _maybe_write_usdz(written, shape=shape)
+    _maybe_write_usdz(written, model_name, shape=shape)
     publish_to_artifacts(model_name, written)
     return written
 
@@ -339,32 +340,35 @@ def artifacts_dir() -> Path | None:
     return path if path.is_dir() else None
 
 
-_CHAT_FORMATS = frozenset({".png", ".usdz", ".html"})
+_CHAT_FORMATS = frozenset({".png", ".usdz"})
 
 
 def _artifact_name(model_name: str, path: Path) -> str:
     suffix = path.suffix.lower()
-    if path.stem == "model" and suffix in {".step", ".stp", ".stl", ".usdz", ".html"}:
+    if path.stem == "model" and suffix in {".step", ".stp", ".stl", ".usdz"}:
         return f"{model_name}_3d{suffix}"
     return f"{model_name}_{path.name}"
 
 
 def publish_to_artifacts(model_name: str, paths: dict[str, Path]) -> dict[str, Path]:
-    """Copy PNG/USDZ/HTML into the run artifact folder.
+    """Copy PNG/USDZ into the run artifact folder.
 
     Chat still only displays PNG/video. Do not emit `<a href="/opt/cursor/artifacts/…">`;
-    those paths 404 on cursor.com. Give the user a real https URL or a QR PNG instead.
+    those paths 404 on cursor.com. Paste the GitHub Pages URL from export instead.
     """
     dest_root = artifacts_dir()
     if dest_root is None:
         return {}
     published: dict[str, Path] = {}
-    for path in paths.values():
-        if path.suffix.lower() not in _CHAT_FORMATS or not path.is_file():
+    for key, path in paths.items():
+        if not path.is_file():
+            continue
+        suffix = path.suffix.lower()
+        if suffix not in _CHAT_FORMATS:
             continue
         dest = dest_root / _artifact_name(model_name, path)
         shutil.copy2(path, dest)
-        published[path.suffix.lower().lstrip(".")] = dest
+        published[key] = dest
     return published
 
 
@@ -497,7 +501,7 @@ def _linear_to_srgb(channel: float) -> float:
 
 
 def _part_diffuse_rgb(part: Shape | Compound) -> tuple[float, float, float]:
-    """Diffuse colour for USDZ/HTML: section fill, else stroke, else shape.color, else default."""
+    """Diffuse colour for USDZ: section fill, else stroke, else shape.color, else default."""
     label = getattr(part, "label", None) or ""
     style = SECTION_LAYERS.get(label, {})
     rgb8 = style.get("fill") or style.get("line")
@@ -716,21 +720,6 @@ def usdz_data_offsets(data: bytes) -> list[int]:
     return offsets
 
 
-def _usdz_bytes(
-    points: list[tuple[float, float, float]],
-    faces: list[tuple[int, int, int]],
-    *,
-    color: tuple[float, float, float] = _DEFAULT_USDZ_COLOR,
-    mesh_parts: list[
-        tuple[str, list[tuple[float, float, float]], list[tuple[int, int, int]], tuple[float, float, float]]
-    ]
-    | None = None,
-) -> bytes:
-    with tempfile.TemporaryDirectory() as tmp:
-        path = Path(tmp) / "model.usdz"
-        _write_arkit_usdz(points, faces, path, color=color, mesh_parts=mesh_parts)
-        return path.read_bytes()
-
 
 def stl_to_usdz(stl_path: Path, usdz_path: Path) -> Path:
     """Pack a binary STL as an ARKit USDZ crate for iOS/macOS Quick Look."""
@@ -741,306 +730,9 @@ def stl_to_usdz(stl_path: Path, usdz_path: Path) -> Path:
     return _write_arkit_usdz(points, faces, usdz_path)
 
 
-_VIEWER_HTML = """<!DOCTYPE html>
-<html lang="cs">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-<title>3D preview</title>
-<style>
-  html,body { margin:0; height:100%; background:#111; color:#eee; font-family:-apple-system,sans-serif; }
-  #bar { position:fixed; top:0; left:0; right:0; z-index:2; display:flex; gap:8px; align-items:center;
-         padding:10px 12px; background:rgba(0,0,0,.72); font-size:14px; }
-  #bar button { font:inherit; padding:8px 12px; border:0; border-radius:8px; background:#eee; color:#111; }
-  #err { display:none; position:fixed; top:56px; left:12px; right:12px; z-index:2;
-         background:#4a1010; color:#fcc; padding:10px; border-radius:8px; white-space:pre-wrap; }
-  canvas { display:block; width:100%; height:100%; touch-action:none; }
-</style>
-</head>
-<body>
-<div id="bar">
-  <button type="button" id="ql">Otevřít v Quick Look</button>
-  <span>Táhni = otáčení · štípej = zoom</span>
-</div>
-<pre id="err"></pre>
-<canvas id="c"></canvas>
-<script>
-const COORDS_B64 = "%%COORDS_B64%%";
-const USDZ_B64 = "%%USDZ_B64%%";
-const cx = %%CX%%, cy = %%CY%%, cz = %%CZ%%, span = %%SPAN%%;
-const errEl = document.getElementById('err');
-function fail(msg) { errEl.style.display = 'block'; errEl.textContent = msg; }
-function b64bytes(s) {
-  const bin = atob(s);
-  const u8 = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-  return u8;
-}
-document.getElementById('ql').onclick = () => {
-  const blob = new Blob([b64bytes(USDZ_B64)], {type:'model/vnd.usdz+zip'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.rel = 'ar';
-  a.href = url;
-  a.download = 'model.usdz';
-  const img = document.createElement('img');
-  img.alt = '3D';
-  a.appendChild(img);
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-};
-const canvas = document.getElementById('c');
-const gl = canvas.getContext('webgl', {alpha:false, antialias:true})
-        || canvas.getContext('experimental-webgl', {alpha:false});
-if (!gl) { fail('WebGL není k dispozici.'); }
-else {
-  const vs = gl.createShader(gl.VERTEX_SHADER);
-  gl.shaderSource(vs, [
-    'attribute vec3 aPos;',
-    'attribute vec3 aNrm;',
-    'attribute vec3 aCol;',
-    'uniform mat4 uMVP;',
-    'uniform mat4 uN;',
-    'varying vec3 vN;',
-    'varying vec3 vC;',
-    'void main() {',
-    '  vN = mat3(uN) * aNrm;',
-    '  vC = aCol;',
-    '  gl_Position = uMVP * vec4(aPos, 1.0);',
-    '}'
-  ].join(String.fromCharCode(10)));
-  gl.compileShader(vs);
-  if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
-    fail('Vertex shader: ' + gl.getShaderInfoLog(vs));
-  }
-  const fs = gl.createShader(gl.FRAGMENT_SHADER);
-  gl.shaderSource(fs, [
-    'precision mediump float;',
-    'varying vec3 vN;',
-    'varying vec3 vC;',
-    'void main() {',
-    '  vec3 n = normalize(vN);',
-    '  float d = max(dot(n, normalize(vec3(0.35, 0.6, 0.7))), 0.18);',
-    '  gl_FragColor = vec4(vC * d, 1.0);',
-    '}'
-  ].join(String.fromCharCode(10)));
-  gl.compileShader(fs);
-  if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
-    fail('Fragment shader: ' + gl.getShaderInfoLog(fs));
-  }
-  const prog = gl.createProgram();
-  gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
-  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-    fail('WebGL link: ' + gl.getProgramInfoLog(prog));
-  }
-  gl.useProgram(prog);
-  const raw = b64bytes(COORDS_B64);
-  const P = new Float32Array(raw.buffer, raw.byteOffset, raw.byteLength / 4);
-  const ntri = P.length / 18;
-  const pos = new Float32Array(ntri * 9);
-  const nrm = new Float32Array(ntri * 9);
-  const col = new Float32Array(ntri * 9);
-  for (let t = 0; t < ntri; t++) {
-    const s = t * 18, o = t * 9;
-    const ax=P[s]-cx, ay=P[s+1]-cy, az=P[s+2]-cz;
-    const bx=P[s+6]-cx, by=P[s+7]-cy, bz=P[s+8]-cz;
-    const cxp=P[s+12]-cx, cyp=P[s+13]-cy, czp=P[s+14]-cz;
-    const nx=(by-ay)*(czp-az)-(bz-az)*(cyp-ay);
-    const ny=(bz-az)*(cxp-ax)-(bx-ax)*(czp-az);
-    const nz=(bx-ax)*(cyp-ay)-(by-ay)*(cxp-ax);
-    for (let k = 0; k < 3; k++) {
-      const si = s + k * 6, oi = o + k * 3;
-      pos[oi]=P[si]-cx; pos[oi+1]=P[si+1]-cy; pos[oi+2]=P[si+2]-cz;
-      nrm[oi]=nx; nrm[oi+1]=ny; nrm[oi+2]=nz;
-      col[oi]=P[si+3]; col[oi+1]=P[si+4]; col[oi+2]=P[si+5];
-    }
-  }
-  function buf(data, locName) {
-    const b = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, b);
-    gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
-    const loc = gl.getAttribLocation(prog, locName);
-    if (loc < 0) { fail('Chybí atribut ' + locName); return; }
-    gl.enableVertexAttribArray(loc);
-    gl.vertexAttribPointer(loc, 3, gl.FLOAT, false, 0, 0);
-  }
-  buf(pos, 'aPos'); buf(nrm, 'aNrm'); buf(col, 'aCol');
-  const uMVP = gl.getUniformLocation(prog, 'uMVP');
-  const uN = gl.getUniformLocation(prog, 'uN');
-  let yaw = 0.6, pitch = 0.45, dist = span * 1.8;
-  function resize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = Math.max(1, innerWidth * dpr);
-    canvas.height = Math.max(1, innerHeight * dpr);
-    gl.viewport(0,0,canvas.width,canvas.height);
-  }
-  addEventListener('resize', resize); resize();
-  let last=null, pinching=null;
-  canvas.addEventListener('pointerdown', e => { last={x:e.clientX,y:e.clientY,id:e.pointerId}; canvas.setPointerCapture(e.pointerId); });
-  canvas.addEventListener('pointerup', () => last=null);
-  canvas.addEventListener('pointermove', e => {
-    if (!last || e.pointerId!==last.id) return;
-    yaw += (e.clientX-last.x)*0.008;
-    pitch = Math.max(-1.2, Math.min(1.2, pitch+(e.clientY-last.y)*0.008));
-    last={x:e.clientX,y:e.clientY,id:e.pointerId};
-  });
-  canvas.addEventListener('wheel', e => { e.preventDefault(); dist *= (e.deltaY>0?1.08:0.92); }, {passive:false});
-  canvas.addEventListener('touchstart', e => {
-    if (e.touches.length===2) {
-      const a=e.touches[0], b=e.touches[1];
-      pinching=Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY);
-    }
-  }, {passive:true});
-  canvas.addEventListener('touchmove', e => {
-    if (e.touches.length===2 && pinching) {
-      const a=e.touches[0], b=e.touches[1];
-      const d=Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY);
-      dist *= pinching/d; pinching=d;
-    }
-  }, {passive:true});
-  function mul(a,b) {
-    const r=new Float32Array(16);
-    for (let i=0;i<4;i++) for (let j=0;j<4;j++)
-      r[j*4+i]=a[i]*b[j*4]+a[4+i]*b[j*4+1]+a[8+i]*b[j*4+2]+a[12+i]*b[j*4+3];
-    return r;
-  }
-  function persp(f, asp, n, f2) {
-    const t=1/Math.tan(f/2);
-    return new Float32Array([t/asp,0,0,0, 0,t,0,0, 0,0,(f2+n)/(n-f2),-1, 0,0,(2*f2*n)/(n-f2),0]);
-  }
-  function look() {
-    const cPitch=Math.cos(pitch), sPitch=Math.sin(pitch);
-    const cYaw=Math.cos(yaw), sYaw=Math.sin(yaw);
-    const ex=dist*cPitch*sYaw, ey=-dist*sPitch, ez=dist*cPitch*cYaw;
-    let fx=-ex, fy=-ey, fz=-ez;
-    let fl=Math.hypot(fx,fy,fz); fx/=fl; fy/=fl; fz/=fl;
-    let rx=fy*0-fz*1, ry=fz*0-fx*0, rz=fx*1-fy*0;
-    let rl=Math.hypot(rx,ry,rz); rx/=rl; ry/=rl; rz/=rl;
-    const ux=ry*fz-rz*fy, uy=rz*fx-rx*fz, uz=rx*fy-ry*fx;
-    return new Float32Array([
-      rx, ux, -fx, 0,
-      ry, uy, -fy, 0,
-      rz, uz, -fz, 0,
-      -(rx*ex+ry*ey+rz*ez),
-      -(ux*ex+uy*ey+uz*ez),
-      (fx*ex+fy*ey+fz*ez),
-      1
-    ]);
-  }
-  gl.enable(gl.DEPTH_TEST); gl.clearColor(0.07,0.07,0.08,1);
-  (function frame() {
-    const asp = canvas.width / Math.max(canvas.height, 1);
-    const mvp = mul(persp(0.7, asp, span*0.02, span*20), look());
-    gl.uniformMatrix4fv(uMVP, false, mvp);
-    gl.uniformMatrix4fv(uN, false, look());
-    gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
-    gl.drawArrays(gl.TRIANGLES, 0, ntri*3);
-    requestAnimationFrame(frame);
-  })();
-}
-</script>
-</body>
-</html>
-"""
-
-
-def _pack_viewer_mesh(
-    points: list[tuple[float, float, float]],
-    faces: list[tuple[int, int, int]],
-    *,
-    color: tuple[float, float, float] = _DEFAULT_USDZ_COLOR,
-    face_colors: list[tuple[float, float, float]] | None = None,
-) -> tuple[bytes, float, float, float, float]:
-    """Interleave xyz+rgb per vertex for the WebGL viewer; return packed bytes + framing."""
-    coords: list[float] = []
-    for fi, (i, j, k) in enumerate(faces):
-        rgb = face_colors[fi] if face_colors is not None else color
-        for idx in (i, j, k):
-            coords.extend(points[idx])
-            coords.extend(rgb)
-    xs, ys, zs = coords[0::6], coords[1::6], coords[2::6]
-    cx = (min(xs) + max(xs)) / 2
-    cy = (min(ys) + max(ys)) / 2
-    cz = (min(zs) + max(zs)) / 2
-    span = max(max(xs) - min(xs), max(ys) - min(ys), max(zs) - min(zs), 1.0)
-    packed = struct.pack(f"<{len(coords)}f", *coords)
-    return packed, cx, cy, cz, span
-
-
-def _write_html_viewer(
-    html_path: Path,
-    *,
-    packed_coords: bytes,
-    cx: float,
-    cy: float,
-    cz: float,
-    span: float,
-    usdz_raw: bytes,
-) -> Path:
-    html = (
-        _VIEWER_HTML.replace("%%COORDS_B64%%", base64.b64encode(packed_coords).decode("ascii"))
-        .replace("%%USDZ_B64%%", base64.b64encode(usdz_raw).decode("ascii"))
-        .replace("%%CX%%", f"{cx:.6f}")
-        .replace("%%CY%%", f"{cy:.6f}")
-        .replace("%%CZ%%", f"{cz:.6f}")
-        .replace("%%SPAN%%", f"{span:.6f}")
-    )
-    html_path.parent.mkdir(parents=True, exist_ok=True)
-    html_path.write_text(html, encoding="utf-8")
-    return html_path
-
-
-def stl_to_html_viewer(stl_path: Path, html_path: Path, usdz_path: Path | None = None) -> Path:
-    """Self-contained WebGL viewer with a Quick Look button (chat UI is PNG-only)."""
-    points, faces = _read_binary_stl(stl_path)
-    packed, cx, cy, cz, span = _pack_viewer_mesh(points, faces)
-    if usdz_path is not None and usdz_path.is_file():
-        usdz_raw = usdz_path.read_bytes()
-    else:
-        welded_pts, welded_faces = _weld_mesh(points, faces)
-        usdz_raw = _usdz_bytes(welded_pts, welded_faces)
-    return _write_html_viewer(
-        html_path,
-        packed_coords=packed,
-        cx=cx,
-        cy=cy,
-        cz=cz,
-        span=span,
-        usdz_raw=usdz_raw,
-    )
-
-
-def _html_from_mesh_parts(
-    mesh_parts: list[
-        tuple[str, list[tuple[float, float, float]], list[tuple[int, int, int]], tuple[float, float, float]]
-    ],
-    html_path: Path,
-    usdz_raw: bytes,
-) -> Path:
-    points: list[tuple[float, float, float]] = []
-    faces: list[tuple[int, int, int]] = []
-    face_colors: list[tuple[float, float, float]] = []
-    for _name, pts, tris, rgb in mesh_parts:
-        base = len(points)
-        points.extend(pts)
-        for i, j, k in tris:
-            faces.append((base + i, base + j, base + k))
-            face_colors.append(rgb)
-    packed, cx, cy, cz, span = _pack_viewer_mesh(points, faces, face_colors=face_colors)
-    return _write_html_viewer(
-        html_path,
-        packed_coords=packed,
-        cx=cx,
-        cy=cy,
-        cz=cz,
-        span=span,
-        usdz_raw=usdz_raw,
-    )
-
-
 def _maybe_write_usdz(
     written: dict[str, Path],
+    model_name: str,
     *,
     shape: Shape | Compound | None = None,
 ) -> None:
@@ -1048,7 +740,6 @@ def _maybe_write_usdz(
     if stl_path is None or not stl_path.is_file():
         return
     usdz_path = stl_path.with_suffix(".usdz")
-    html_path = stl_path.with_suffix(".html")
 
     mesh_parts = None
     if shape is not None:
@@ -1056,15 +747,13 @@ def _maybe_write_usdz(
 
     if mesh_parts:
         _write_arkit_usdz([], [], usdz_path, mesh_parts=mesh_parts)
-        written["usdz"] = usdz_path
-        _html_from_mesh_parts(mesh_parts, html_path, usdz_path.read_bytes())
-        written["html"] = html_path
-        return
-
-    stl_to_usdz(stl_path, usdz_path)
+    else:
+        stl_to_usdz(stl_path, usdz_path)
     written["usdz"] = usdz_path
-    stl_to_html_viewer(stl_path, html_path, usdz_path=usdz_path)
-    written["html"] = html_path
+
+    hub = publish_to_preview_site(model_name, usdz_path)
+    if hub is not None:
+        written["preview_hub"] = hub
 
 
 def summarize_params(params: dict[str, Any]) -> str:
