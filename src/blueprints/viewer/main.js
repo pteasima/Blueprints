@@ -67,6 +67,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   let cameraMovedSinceLock = false;
   /** Ignore OrbitControls change events caused by framing / presets. */
   let suppressCameraChange = false;
+  /** True while a section slider is being dragged (avoid rebuilding that row). */
+  let cutSliderActive = false;
 
   const loader = new GLTFLoader();
   loader.parse(
@@ -143,6 +145,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       camera.updateProjectionMatrix();
       controls.update();
     });
+    maybeSpawnDraftFromCamera();
   }
 
   function setCameraPreset(name) {
@@ -167,6 +170,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       camera.updateProjectionMatrix();
       controls.update();
     });
+    maybeSpawnDraftFromCamera();
   }
 
   function setPartVisible(name, visible) {
@@ -279,6 +283,15 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     refreshCutRow(cut);
   }
 
+  function maybeSpawnDraftFromCamera() {
+    if (lockedCuts().length === 0) return;
+    if (hasDraftCut()) return;
+    cameraMovedSinceLock = true;
+    if (cutSliderActive) return;
+    ensureDraftCut();
+    buildCutUI();
+  }
+
   function setCutT(id, t) {
     const cut = cuts.find((c) => c.id === id);
     if (!cut) return;
@@ -370,8 +383,17 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         cut.locked ? `Section ${cut.label}` : "Section cut",
       );
       range.addEventListener("pointerdown", () => {
+        cutSliderActive = true;
         if (!cut.locked) lockCut(cut);
       });
+      const endSlider = () => {
+        if (!cutSliderActive) return;
+        cutSliderActive = false;
+        // Orbit damping may have requested a draft while the thumb was held.
+        maybeSpawnDraftFromCamera();
+      };
+      range.addEventListener("pointerup", endSlider);
+      range.addEventListener("pointercancel", endSlider);
       range.addEventListener("input", () => {
         setCutT(cut.id, range.value);
       });
@@ -391,16 +413,12 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     }
   }
 
-  function onCameraChange() {
+  // Spawn a draft after the user finishes orbiting/panning — not on every
+  // damping `change`, which would rebuild the cut UI mid-slider-drag.
+  controls.addEventListener("end", () => {
     if (suppressCameraChange) return;
-    if (lockedCuts().length === 0) return;
-    if (hasDraftCut()) return;
-    cameraMovedSinceLock = true;
-    ensureDraftCut();
-    buildCutUI();
-  }
-
-  controls.addEventListener("change", onCameraChange);
+    maybeSpawnDraftFromCamera();
+  });
 
   function resize() {
     const w = Math.max(1, canvas.clientWidth);
