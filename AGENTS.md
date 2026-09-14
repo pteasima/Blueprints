@@ -63,7 +63,7 @@ preview_url: https://pteasima.github.io/Blueprints/
 
 After `git push`, wait for the `pages` workflow to go green, then paste that URL in chat (tappable on Cursor iOS). Safari → **Quick Look**.
 
-One-time enable: https://github.com/pteasima/Blueprints/settings/pages → Source = **GitHub Actions** → Save. Cloud agent tokens cannot flip this (API 403). Override the printed URL with `BLUEPRINTS_PAGES_URL` if needed. Skip site file updates with `BLUEPRINTS_SKIP_PREVIEW_SITE=1`.
+One-time enable: https://github.com/pteasima/Blueprints/settings/pages → Source = **GitHub Actions** → Save. Then open **Settings → Environments → github-pages → Deployment branches** and allow `cursor/**` (or All branches) — by default only `main` can deploy, which blocks unmerged agent previews. Cloud agent tokens cannot change this (API 403). Override the printed URL with `BLUEPRINTS_PAGES_URL` if needed. Skip site file updates with `BLUEPRINTS_SKIP_PREVIEW_SITE=1`.
 
 Add more buttons later (sectional cuts, other models) via more USDZs + manifest rows — one hub page.
 

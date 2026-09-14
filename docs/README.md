@@ -5,7 +5,8 @@ Last successful `pages` workflow deploy wins (pushes to `main` or `cursor/**`).
 
 ## Enable once
 
-https://github.com/pteasima/Blueprints/settings/pages → Source = **GitHub Actions** → Save.
+1. https://github.com/pteasima/Blueprints/settings/pages → Source = **GitHub Actions** → Save.
+2. https://github.com/pteasima/Blueprints/settings/environments → **github-pages** → Deployment branches → allow `cursor/**` (or All branches). Default is `main` only, which blocks unmerged agent previews.
 
 ## Layout
 
