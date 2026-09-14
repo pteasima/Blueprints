@@ -8,10 +8,12 @@ cd "$(dirname "$0")/.."
 
 export DEBIAN_FRONTEND=noninteractive
 
-if ! dpkg -s python3.12-venv >/dev/null 2>&1 || ! dpkg -s libcairo2 >/dev/null 2>&1; then
+if ! dpkg -s python3.12-venv >/dev/null 2>&1 || ! dpkg -s libcairo2 >/dev/null 2>&1 || ! dpkg -s git-lfs >/dev/null 2>&1; then
   sudo apt-get update -qq
-  sudo apt-get install -y --no-install-recommends python3.12-venv libcairo2
+  sudo apt-get install -y --no-install-recommends python3.12-venv libcairo2 git-lfs
 fi
+
+git lfs install --local
 
 if [[ ! -x .venv/bin/pip ]]; then
   rm -rf .venv

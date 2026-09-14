@@ -1,5 +1,4 @@
 from pathlib import Path
-import subprocess
 import sys
 import zipfile
 
@@ -30,16 +29,15 @@ def test_export_publishes_usdz_to_artifacts(tmp_path, monkeypatch):
     artifacts.mkdir()
     monkeypatch.setattr(eu, "EXPORTS_DIR", exports)
     monkeypatch.setenv("BLUEPRINTS_ARTIFACTS_DIR", str(artifacts))
+    monkeypatch.setenv("BLUEPRINTS_SKIP_PREVIEW_SITE", "1")
 
     shape, _ = build(HelloWorldParams(width=50, depth=40, height=20, fillet_radius=2))
     paths = export_shape(shape, "hello_world", formats=("step", "stl", "svg", "dxf"))
 
     assert paths["usdz"].exists()
-    assert paths["html"].exists()
+    assert "html" not in paths
     assert (artifacts / "hello_world_3d.usdz").stat().st_size > 0
-    assert (artifacts / "hello_world_3d.html").stat().st_size > 0
     assert not (artifacts / "hello_world_3d.step").exists()
-    assert "canvas" in (artifacts / "hello_world_3d.html").read_text()
     assert not (artifacts / "hello_world_model.dxf").exists()
     with zipfile.ZipFile(paths["usdz"]) as zf:
         names = zf.namelist()
@@ -70,14 +68,56 @@ def test_export_publishes_usdz_to_artifacts(tmp_path, monkeypatch):
     root_prim = stage.GetDefaultPrim()
     assert root_prim.GetAttribute("preliminary:anchoring:type").Get() == "plane"
     assert root_prim.GetAttribute("preliminary:planeAnchoring:alignment").Get() == "horizontal"
-    html = (artifacts / "hello_world_3d.html").read_text()
-    assert "attribute vec3 aPos;" in html
-    assert "attribute vec3 aPos, aNrm" not in html
-    assert "COMPILE_STATUS" in html
-    assert "model/vnd.usdz+zip" in html
-    assert "Otevřít v Quick Look" in html
-    script = html.split("<script>", 1)[1].split("</script>", 1)[0]
-    subprocess.run(["node", "--check"], input=script, text=True, check=True)
+
+
+def test_preview_hub_updates_models_for_pages(tmp_path, monkeypatch, capsys):
+    import blueprints.export_utils as eu
+    import blueprints.preview_hub as ph
+
+    exports = tmp_path / "exports"
+    artifacts = tmp_path / "artifacts"
+    site = tmp_path / "docs"
+    artifacts.mkdir()
+    monkeypatch.setattr(eu, "EXPORTS_DIR", exports)
+    monkeypatch.setattr(ph, "PREVIEW_SITE_DIR", site)
+    monkeypatch.setenv("BLUEPRINTS_ARTIFACTS_DIR", str(artifacts))
+    monkeypatch.delenv("BLUEPRINTS_SKIP_PREVIEW_SITE", raising=False)
+    monkeypatch.setenv("BLUEPRINTS_ALLOW_PREVIEW_SITE", "1")
+    monkeypatch.setenv("BLUEPRINTS_PAGES_URL", "https://pteasima.github.io/Blueprints/")
+
+    shape, _ = build(HelloWorldParams(width=30, depth=20, height=10, fillet_radius=1))
+    paths = export_shape(shape, "hello_world", formats=("stl",))
+    assert paths["preview_hub"] == site / "index.html"
+    assert (site / "models" / "hello_world.usdz").is_file()
+    assert (site / ".nojekyll").is_file()
+    manifest = (site / "models" / "manifest.json").read_text(encoding="utf-8")
+    assert '"id": "hello_world"' in manifest
+    html = (site / "index.html").read_text(encoding="utf-8")
+    assert "<script" not in html.lower()
+    assert 'rel="ar"' in html
+    assert "data:model/vnd.usdz+zip;base64," in html
+    assert ">Quick Look</span>" in html
+    assert "Otevřít" not in html
+    assert "catbox" not in html
+    out = capsys.readouterr().out
+    assert "preview_url: https://pteasima.github.io/Blueprints/" in out
+
+
+def test_build_preview_hub_script(tmp_path, monkeypatch):
+    import blueprints.preview_hub as ph
+
+    monkeypatch.setattr(ph, "PREVIEW_SITE_DIR", tmp_path)
+    models = tmp_path / "models"
+    models.mkdir()
+    (models / "manifest.json").write_text(
+        '[{"id": "demo", "label": "Quick Look"}]\n', encoding="utf-8"
+    )
+    # Minimal zip-shaped payload is enough for hub embedding
+    (models / "demo.usdz").write_bytes(b"PK\x03\x04" + b"\x00" * 60)
+    path = ph.write_preview_hub()
+    html = path.read_text(encoding="utf-8")
+    assert ">Quick Look</span>" in html
+    assert "data:model/vnd.usdz+zip;base64," in html
 
 
 def test_stl_to_usdz_roundtrip(tmp_path, monkeypatch):
@@ -85,6 +125,7 @@ def test_stl_to_usdz_roundtrip(tmp_path, monkeypatch):
 
     monkeypatch.setattr(eu, "EXPORTS_DIR", tmp_path)
     monkeypatch.setenv("BLUEPRINTS_ARTIFACTS_DIR", str(tmp_path / "artifacts"))
+    monkeypatch.setenv("BLUEPRINTS_SKIP_PREVIEW_SITE", "1")
     (tmp_path / "artifacts").mkdir()
     shape, _ = build(HelloWorldParams(width=30, depth=20, height=10, fillet_radius=1))
     paths = export_shape(shape, "box", formats=("stl",))
@@ -129,9 +170,12 @@ def test_usdz_tabletop_scale_for_room_sized_mesh(tmp_path):
     assert stage.GetDefaultPrim().GetAttribute("preliminary:anchoring:type").Get() == "plane"
 
 
-def test_agents_md_does_not_emit_artifact_hrefs():
-    """Relative /opt/cursor/artifacts hrefs 404 on cursor.com; only img/video src is rewritten."""
+def test_agents_md_points_at_rolling_pages():
     text = AGENTS_MD.read_text(encoding="utf-8")
+    assert "pteasima.github.io/Blueprints" in text
+    assert "GitHub Actions" in text
+    assert "Git LFS" in text
+    assert "catbox" not in text.lower()
+    assert "QR" not in text
     assert 'href="/opt/cursor/artifacts' not in text
-    assert "<a href=\"/opt/cursor/artifacts" not in text
     assert "<img src=\"/opt/cursor/artifacts/" in text

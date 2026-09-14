@@ -23,7 +23,7 @@ source .venv/bin/activate
 python -m blueprints.export hello_world
 ```
 
-Generated artifacts: `STEP`/`STL` (desktop CAD), `USDZ` (iOS Quick Look), self-contained `HTML` viewer, `SVG`/`DXF`, and a white-background `PNG` preview. Cloud Agent chat on iOS and web only displays PNG/video tiles; USDZ/HTML must be opened via a real `https://` URL (see `AGENTS.md`).
+Generated artifacts: `STEP`/`STL` (desktop CAD), `USDZ` (iOS Quick Look via Git LFS under `docs/models/`), `SVG`/`DXF`, and a white-background `PNG` preview. The `pages` GitHub Action builds `docs/index.html` and deploys a rolling site at https://pteasima.github.io/Blueprints/ (see `AGENTS.md` / `docs/README.md`).
 
 ## Layout
 
