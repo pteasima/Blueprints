@@ -32,3 +32,8 @@ docs/index.html
 .env
 .idea/
 .vscode/
+
+# Viewer toolchain (commit the built viewer.iife.js only)
+src/blueprints/viewer/node_modules/
+exports/**/*.glb
+exports/**/*.html

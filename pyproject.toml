@@ -27,3 +27,6 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.setuptools.package-data]
+blueprints = ["viewer/viewer.iife.js", "viewer/main.js", "viewer/package.json"]

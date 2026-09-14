@@ -35,7 +35,7 @@ python -m blueprints.export <model>
 
 Example: `python -m blueprints.export hello_world`
 
-Exports land in `exports/<model>/` (`model.png`, plus STEP/STL/USDZ/SVG/DXF). **PNG is required** in the reply.
+Exports land in `exports/<model>/` (`model.png`, plus STEP/STL/USDZ/GLB/HTML/SVG/DXF). **PNG is required** in the reply. The HTML viewer is a self-contained offline WebGL page (embedded GLB + custom Three.js shell) with part toggles and camera presets; USDZ remains for Quick Look/AR.
 
 Chat on iOS **and** web only *renders* `<img>` and `<video>`. Copy PNG (and optional orbit video) to `/opt/cursor/artifacts/` and embed with:
 
