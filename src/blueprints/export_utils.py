@@ -750,9 +750,9 @@ _VIEWER_HTML = """<!DOCTYPE html>
     display: flex; flex-direction: column; gap: 8px;
     padding: 10px 12px; background: rgba(0,0,0,.78); font-size: 13px;
     max-height: 40vh; overflow: auto; }
-  .cut-row { display: flex; gap: 8px; align-items: center; }
+  .cut-row { display: flex; gap: 8px; align-items: center; min-height: 2rem; }
   .cut-label { min-width: 7.5rem; opacity: .9; font-variant-numeric: tabular-nums; }
-  .cut-row input[type=range] { flex: 1; min-width: 0; }
+  .cut-row input[type=range] { flex: 1; min-width: 0; height: 1.75rem; cursor: pointer; }
   .cut-remove { font: inherit; padding: 6px 10px; border: 0; border-radius: 8px;
     background: #eee; color: #111; cursor: pointer; }
   canvas { display: block; width: 100%; height: 100%; touch-action: none; }
