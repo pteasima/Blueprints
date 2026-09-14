@@ -23,7 +23,7 @@ source .venv/bin/activate
 python -m blueprints.export hello_world
 ```
 
-Generated artifacts: `STEP`/`STL` (desktop CAD), `USDZ` (iOS Quick Look), self-contained `HTML` viewer + no-JS AR launcher, `SVG`/`DXF`, and a white-background `PNG` preview. Cloud Agent chat on iOS and web only displays PNG/video tiles; after each 3D export the CLI prints a temporary `preview_url` (and QR) so you can open Safari AR without going through GitHub (see `AGENTS.md`).
+Generated artifacts: `STEP`/`STL` (desktop CAD), `USDZ` (iOS Quick Look), `SVG`/`DXF`, and a white-background `PNG` preview. After each 3D export the CLI updates `docs/index.html` (GitHub Pages hub) and prints `preview_url: https://pteasima.github.io/Blueprints/` for one-tap Safari Quick Look (see `AGENTS.md` / `docs/README.md`).
 
 ## Layout
 

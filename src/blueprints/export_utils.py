@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 import base64
+import json
 import os
 import shutil
 import struct
 import tempfile
-import urllib.error
-import urllib.request
-import uuid
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +27,9 @@ from build123d import (
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 EXPORTS_DIR = REPO_ROOT / "exports"
+# GitHub Pages site root (Settings → Pages → Deploy from branch, folder /docs).
+PREVIEW_SITE_DIR = REPO_ROOT / "docs"
+DEFAULT_PAGES_URL = "https://pteasima.github.io/Blueprints/"
 PREVIEW_LINE_WEIGHT = 1.0
 
 # Drawing-unit stroke widths so a ~6 m section still reads at ~1800 px PNG.
@@ -247,9 +248,8 @@ def export_shape(
             raise ValueError(f"Unsupported export format: {fmt}")
         written[fmt] = path
 
-    _maybe_write_usdz(written)
+    _maybe_write_usdz(written, model_name)
     publish_to_artifacts(model_name, written)
-    _maybe_publish_preview_link(model_name, written)
     return written
 
 
@@ -343,27 +343,21 @@ def artifacts_dir() -> Path | None:
     return path if path.is_dir() else None
 
 
-_CHAT_FORMATS = frozenset({".png", ".usdz", ".html", ".txt"})
+_CHAT_FORMATS = frozenset({".png", ".usdz"})
 
 
 def _artifact_name(model_name: str, path: Path) -> str:
     suffix = path.suffix.lower()
-    if path.stem == "model" and suffix in {".step", ".stp", ".stl", ".usdz", ".html"}:
+    if path.stem == "model" and suffix in {".step", ".stp", ".stl", ".usdz"}:
         return f"{model_name}_3d{suffix}"
-    if path.stem.endswith("_ar") and suffix == ".html":
-        return f"{model_name}_3d_ar.html"
-    if path.name.endswith("_preview_url.txt"):
-        return f"{model_name}_3d_url.txt"
-    if path.name.endswith("_preview_qr.png"):
-        return f"{model_name}_3d_qr.png"
     return f"{model_name}_{path.name}"
 
 
 def publish_to_artifacts(model_name: str, paths: dict[str, Path]) -> dict[str, Path]:
-    """Copy PNG/USDZ/HTML (and preview URL/QR) into the run artifact folder.
+    """Copy PNG/USDZ into the run artifact folder.
 
     Chat still only displays PNG/video. Do not emit `<a href="/opt/cursor/artifacts/…">`;
-    those paths 404 on cursor.com. Paste the published https URL (and optional QR PNG).
+    those paths 404 on cursor.com. Paste the GitHub Pages URL from export instead.
     """
     dest_root = artifacts_dir()
     if dest_root is None:
@@ -381,104 +375,182 @@ def publish_to_artifacts(model_name: str, paths: dict[str, Path]) -> dict[str, P
     return published
 
 
-def _preview_upload_enabled() -> bool:
-    if os.environ.get("BLUEPRINTS_SKIP_PREVIEW_UPLOAD") == "1":
+def pages_url() -> str:
+    return os.environ.get("BLUEPRINTS_PAGES_URL", DEFAULT_PAGES_URL).rstrip("/") + "/"
+
+
+def _preview_site_enabled() -> bool:
+    if os.environ.get("BLUEPRINTS_SKIP_PREVIEW_SITE") == "1":
         return False
+    # pytest must not rewrite the real GitHub Pages hub unless explicitly allowed
     if "PYTEST_CURRENT_TEST" in os.environ and os.environ.get(
-        "BLUEPRINTS_ALLOW_PREVIEW_UPLOAD"
+        "BLUEPRINTS_ALLOW_PREVIEW_SITE"
     ) != "1":
         return False
     return True
 
 
-def upload_preview_file(
-    path: Path,
+def _models_dir() -> Path:
+    return PREVIEW_SITE_DIR / "models"
+
+
+def _manifest_path() -> Path:
+    return _models_dir() / "manifest.json"
+
+
+def _load_manifest() -> list[dict[str, str]]:
+    path = _manifest_path()
+    if not path.is_file():
+        return []
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, list):
+        raise ValueError(f"Preview manifest must be a list: {path}")
+    return data
+
+
+def _save_manifest(entries: list[dict[str, str]]) -> None:
+    path = _manifest_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(entries, indent=2) + "\n", encoding="utf-8")
+
+
+def _upsert_manifest(model_id: str, *, label: str | None = None) -> list[dict[str, str]]:
+    entries = _load_manifest()
+    for entry in entries:
+        if entry.get("id") == model_id:
+            if label is not None:
+                entry["label"] = label
+            return entries
+    entries.append({"id": model_id, "label": label or "Quick Look"})
+    return entries
+
+
+_PIXEL_GIF = "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+
+_HUB_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Blueprints</title>
+<style>
+  html, body {
+    margin: 0;
+    min-height: 100%;
+    background: #111;
+    color: #eee;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  main {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 24px;
+    text-align: center;
+    box-sizing: border-box;
+  }
+  h1 { margin: 0; font-size: 1.5rem; font-weight: 600; }
+  .buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    width: min(20rem, 100%);
+  }
+  a.ql {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 3.25rem;
+    padding: 0 1.25rem;
+    border-radius: 12px;
+    background: #f2f2f2;
+    color: #111;
+    text-decoration: none;
+    font-size: 1.05rem;
+    font-weight: 600;
+  }
+  a.ql img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+  }
+  a.ql span { pointer-events: none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Blueprints</h1>
+  <div class="buttons">
+%%BUTTONS%%
+  </div>
+</main>
+</body>
+</html>
+"""
+
+
+def _ql_button_html(label: str, usdz_b64: str) -> str:
+    return (
+        f'    <a class="ql" rel="ar" href="data:model/vnd.usdz+zip;base64,{usdz_b64}">\n'
+        f'      <img alt="" width="1" height="1" '
+        f'src="data:image/gif;base64,{_PIXEL_GIF}"/>\n'
+        f"      <span>{label}</span>\n"
+        f"    </a>"
+    )
+
+
+def write_preview_hub(entries: list[dict[str, str]] | None = None) -> Path:
+    """Regenerate docs/index.html from docs/models/manifest.json + *.usdz."""
+    if entries is None:
+        entries = _load_manifest()
+    buttons: list[str] = []
+    models = _models_dir()
+    for entry in entries:
+        model_id = entry["id"]
+        label = entry.get("label") or "Quick Look"
+        usdz_path = models / f"{model_id}.usdz"
+        if not usdz_path.is_file():
+            continue
+        usdz_b64 = base64.b64encode(usdz_path.read_bytes()).decode("ascii")
+        buttons.append(_ql_button_html(label, usdz_b64))
+    html = _HUB_HTML.replace("%%BUTTONS%%", "\n".join(buttons) if buttons else "")
+    PREVIEW_SITE_DIR.mkdir(parents=True, exist_ok=True)
+    (PREVIEW_SITE_DIR / ".nojekyll").write_text("", encoding="utf-8")
+    index_path = PREVIEW_SITE_DIR / "index.html"
+    index_path.write_text(html, encoding="utf-8")
+    return index_path
+
+
+def publish_to_preview_site(
+    model_name: str,
+    usdz_path: Path,
     *,
-    ttl: str = "72h",
-    endpoint: str | None = None,
-) -> str:
-    """Upload a file to litterbox and return a public https URL.
+    label: str | None = None,
+) -> Path | None:
+    """Copy USDZ into docs/models and regenerate the GitHub Pages hub.
 
-    litterbox serves HTML as text/html (Safari can open the AR launcher). USDZ
-    usually comes back as application/octet-stream, so prefer the HTML launcher.
+    Returns the hub index path, or None when site updates are disabled.
     """
-    # Multipart form without extra deps.
-    boundary = f"----BlueprintsBoundary{uuid.uuid4().hex}"
-    filename = path.name
-    raw = path.read_bytes()
-    content_type = {
-        ".html": "text/html; charset=utf-8",
-        ".usdz": "model/vnd.usdz+zip",
-        ".png": "image/png",
-    }.get(path.suffix.lower(), "application/octet-stream")
-    body = b"".join(
-        [
-            f"--{boundary}\r\n".encode(),
-            b'Content-Disposition: form-data; name="reqtype"\r\n\r\n',
-            b"fileupload\r\n",
-            f"--{boundary}\r\n".encode(),
-            b'Content-Disposition: form-data; name="time"\r\n\r\n',
-            f"{ttl}\r\n".encode(),
-            f"--{boundary}\r\n".encode(),
-            (
-                f'Content-Disposition: form-data; name="fileToUpload"; '
-                f'filename="{filename}"\r\n'
-            ).encode(),
-            f"Content-Type: {content_type}\r\n\r\n".encode(),
-            raw,
-            b"\r\n",
-            f"--{boundary}--\r\n".encode(),
-        ]
-    )
-    url = endpoint or "https://litterbox.catbox.moe/resources/internals/api.php"
-    req = urllib.request.Request(
-        url,
-        data=body,
-        method="POST",
-        headers={
-            "Content-Type": f"multipart/form-data; boundary={boundary}",
-            "User-Agent": "blueprints-export/1.0",
-        },
-    )
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        text = resp.read().decode("utf-8", errors="replace").strip()
-    if not text.startswith("https://"):
-        raise RuntimeError(f"Preview upload failed: {text[:200]!r}")
-    return text
-
-
-def write_preview_qr(url: str, dest: Path) -> Path:
-    """Write a chat-displayable PNG QR for a preview URL."""
-    import qrcode
-
-    img = qrcode.make(url, box_size=8, border=2)
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    img.save(dest)
-    return dest
-
-
-def _maybe_publish_preview_link(model_name: str, written: dict[str, Path]) -> None:
-    """Host the no-JS AR launcher and attach URL + QR for chat."""
-    ar_html = written.get("ar_html")
-    if ar_html is None or not ar_html.is_file():
-        return
-    if not _preview_upload_enabled():
-        return
-    try:
-        url = upload_preview_file(ar_html)
-    except (urllib.error.URLError, TimeoutError, RuntimeError, OSError) as exc:
-        print(f"preview_url: (upload failed: {exc})")
-        return
-
-    stem = ar_html.name.removesuffix("_ar.html")
-    url_path = ar_html.with_name(f"{stem}_preview_url.txt")
-    qr_path = ar_html.with_name(f"{stem}_preview_qr.png")
-    url_path.write_text(url + "\n", encoding="utf-8")
-    write_preview_qr(url, qr_path)
-    written["preview_url"] = url_path
-    written["preview_qr"] = qr_path
-    publish_to_artifacts(model_name, {"preview_url": url_path, "preview_qr": qr_path})
-    print(f"preview_url: {url}")
+    if not _preview_site_enabled():
+        return None
+    if not usdz_path.is_file():
+        return None
+    models = _models_dir()
+    models.mkdir(parents=True, exist_ok=True)
+    dest = models / f"{model_name}.usdz"
+    shutil.copy2(usdz_path, dest)
+    entries = _upsert_manifest(model_name, label=label)
+    _save_manifest(entries)
+    index_path = write_preview_hub(entries)
+    print(f"preview_url: {pages_url()}")
+    return index_path
 
 
 def _read_binary_stl(path: Path) -> tuple[list[tuple[float, float, float]], list[tuple[int, int, int]]]:
@@ -673,16 +745,6 @@ def usdz_data_offsets(data: bytes) -> list[int]:
     return offsets
 
 
-def _usdz_bytes(
-    points: list[tuple[float, float, float]],
-    faces: list[tuple[int, int, int]],
-) -> bytes:
-    with tempfile.TemporaryDirectory() as tmp:
-        path = Path(tmp) / "model.usdz"
-        _write_arkit_usdz(points, faces, path)
-        return path.read_bytes()
-
-
 def stl_to_usdz(stl_path: Path, usdz_path: Path) -> Path:
     """Pack a binary STL as an ARKit USDZ crate for iOS/macOS Quick Look."""
     points, faces = _read_binary_stl(stl_path)
@@ -692,300 +754,16 @@ def stl_to_usdz(stl_path: Path, usdz_path: Path) -> Path:
     return _write_arkit_usdz(points, faces, usdz_path)
 
 
-_VIEWER_HTML = """<!DOCTYPE html>
-<html lang="cs">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-<title>3D preview</title>
-<style>
-  html,body { margin:0; height:100%; background:#111; color:#eee; font-family:-apple-system,sans-serif; }
-  #bar { position:fixed; top:0; left:0; right:0; z-index:2; display:flex; gap:8px; align-items:center;
-         padding:10px 12px; background:rgba(0,0,0,.72); font-size:14px; }
-  #ql { position:relative; display:inline-flex; align-items:center; justify-content:center;
-        min-height:36px; padding:8px 12px; border-radius:8px; background:#eee; color:#111;
-        text-decoration:none; font:inherit; line-height:1; }
-  #ql img { position:absolute; inset:0; width:100%; height:100%; opacity:0; }
-  #ql::after { content:"Otevřít v AR"; }
-  #err { display:none; position:fixed; top:56px; left:12px; right:12px; z-index:2;
-         background:#4a1010; color:#fcc; padding:10px; border-radius:8px; white-space:pre-wrap; }
-  canvas { display:block; width:100%; height:100%; touch-action:none; }
-</style>
-</head>
-<body>
-<div id="bar">
-  <a id="ql" rel="ar" href="data:model/vnd.usdz+zip;base64,%%USDZ_B64%%">
-    <img alt="Otevřít v AR" width="1" height="1" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"/>
-  </a>
-  <span>Táhni = otáčení · štípej = zoom</span>
-</div>
-<pre id="err"></pre>
-<canvas id="c"></canvas>
-<script>
-const COORDS_B64 = "%%COORDS_B64%%";
-const cx = %%CX%%, cy = %%CY%%, cz = %%CZ%%, span = %%SPAN%%;
-const errEl = document.getElementById('err');
-function fail(msg) { errEl.style.display = 'block'; errEl.textContent = msg; }
-function b64bytes(s) {
-  const bin = atob(s);
-  const u8 = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-  return u8;
-}
-(function () {
-  const a = document.getElementById('ql');
-  if (a.relList && a.relList.supports('ar')) return;
-  a.addEventListener('click', function (e) {
-    e.preventDefault();
-    const b64 = a.getAttribute('href').split(',')[1];
-    const blob = new Blob([b64bytes(b64)], {type:'model/vnd.usdz+zip'});
-    const url = URL.createObjectURL(blob);
-    const d = document.createElement('a');
-    d.href = url;
-    d.download = 'model.usdz';
-    d.click();
-    URL.revokeObjectURL(url);
-  });
-})();
-const canvas = document.getElementById('c');
-const gl = canvas.getContext('webgl', {alpha:false, antialias:true})
-        || canvas.getContext('experimental-webgl', {alpha:false});
-if (!gl) { fail('WebGL není k dispozici.'); }
-else {
-  const vs = gl.createShader(gl.VERTEX_SHADER);
-  gl.shaderSource(vs, [
-    'attribute vec3 aPos;',
-    'attribute vec3 aNrm;',
-    'uniform mat4 uMVP;',
-    'uniform mat4 uN;',
-    'varying vec3 vN;',
-    'void main() {',
-    '  vN = mat3(uN) * aNrm;',
-    '  gl_Position = uMVP * vec4(aPos, 1.0);',
-    '}'
-  ].join(String.fromCharCode(10)));
-  gl.compileShader(vs);
-  if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
-    fail('Vertex shader: ' + gl.getShaderInfoLog(vs));
-  }
-  const fs = gl.createShader(gl.FRAGMENT_SHADER);
-  gl.shaderSource(fs, [
-    'precision mediump float;',
-    'varying vec3 vN;',
-    'void main() {',
-    '  vec3 n = normalize(vN);',
-    '  float d = max(dot(n, normalize(vec3(0.35, 0.6, 0.7))), 0.18);',
-    '  gl_FragColor = vec4(vec3(0.82, 0.80, 0.76) * d, 1.0);',
-    '}'
-  ].join(String.fromCharCode(10)));
-  gl.compileShader(fs);
-  if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
-    fail('Fragment shader: ' + gl.getShaderInfoLog(fs));
-  }
-  const prog = gl.createProgram();
-  gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
-  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-    fail('WebGL link: ' + gl.getProgramInfoLog(prog));
-  }
-  gl.useProgram(prog);
-  const raw = b64bytes(COORDS_B64);
-  const P = new Float32Array(raw.buffer, raw.byteOffset, raw.byteLength / 4);
-  const ntri = P.length / 9;
-  const pos = new Float32Array(P.length);
-  const nrm = new Float32Array(P.length);
-  for (let t = 0; t < ntri; t++) {
-    const o = t * 9;
-    const ax=P[o]-cx, ay=P[o+1]-cy, az=P[o+2]-cz;
-    const bx=P[o+3]-cx, by=P[o+4]-cy, bz=P[o+5]-cz;
-    const cxp=P[o+6]-cx, cyp=P[o+7]-cy, czp=P[o+8]-cz;
-    const nx=(by-ay)*(czp-az)-(bz-az)*(cyp-ay);
-    const ny=(bz-az)*(cxp-ax)-(bx-ax)*(czp-az);
-    const nz=(bx-ax)*(cyp-ay)-(by-ay)*(cxp-ax);
-    for (let k = 0; k < 3; k++) {
-      pos[o+k*3]=P[o+k*3]-cx; pos[o+k*3+1]=P[o+k*3+1]-cy; pos[o+k*3+2]=P[o+k*3+2]-cz;
-      nrm[o+k*3]=nx; nrm[o+k*3+1]=ny; nrm[o+k*3+2]=nz;
-    }
-  }
-  function buf(data, locName) {
-    const b = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, b);
-    gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
-    const loc = gl.getAttribLocation(prog, locName);
-    if (loc < 0) { fail('Chybí atribut ' + locName); return; }
-    gl.enableVertexAttribArray(loc);
-    gl.vertexAttribPointer(loc, 3, gl.FLOAT, false, 0, 0);
-  }
-  buf(pos, 'aPos'); buf(nrm, 'aNrm');
-  const uMVP = gl.getUniformLocation(prog, 'uMVP');
-  const uN = gl.getUniformLocation(prog, 'uN');
-  let yaw = 0.6, pitch = 0.45, dist = span * 1.8;
-  function resize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = Math.max(1, innerWidth * dpr);
-    canvas.height = Math.max(1, innerHeight * dpr);
-    gl.viewport(0,0,canvas.width,canvas.height);
-  }
-  addEventListener('resize', resize); resize();
-  let last=null, pinching=null;
-  canvas.addEventListener('pointerdown', e => { last={x:e.clientX,y:e.clientY,id:e.pointerId}; canvas.setPointerCapture(e.pointerId); });
-  canvas.addEventListener('pointerup', () => last=null);
-  canvas.addEventListener('pointermove', e => {
-    if (!last || e.pointerId!==last.id) return;
-    yaw += (e.clientX-last.x)*0.008;
-    pitch = Math.max(-1.2, Math.min(1.2, pitch+(e.clientY-last.y)*0.008));
-    last={x:e.clientX,y:e.clientY,id:e.pointerId};
-  });
-  canvas.addEventListener('wheel', e => { e.preventDefault(); dist *= (e.deltaY>0?1.08:0.92); }, {passive:false});
-  canvas.addEventListener('touchstart', e => {
-    if (e.touches.length===2) {
-      const a=e.touches[0], b=e.touches[1];
-      pinching=Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY);
-    }
-  }, {passive:true});
-  canvas.addEventListener('touchmove', e => {
-    if (e.touches.length===2 && pinching) {
-      const a=e.touches[0], b=e.touches[1];
-      const d=Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY);
-      dist *= pinching/d; pinching=d;
-    }
-  }, {passive:true});
-  function mul(a,b) {
-    const r=new Float32Array(16);
-    for (let i=0;i<4;i++) for (let j=0;j<4;j++)
-      r[j*4+i]=a[i]*b[j*4]+a[4+i]*b[j*4+1]+a[8+i]*b[j*4+2]+a[12+i]*b[j*4+3];
-    return r;
-  }
-  function persp(f, asp, n, f2) {
-    const t=1/Math.tan(f/2);
-    return new Float32Array([t/asp,0,0,0, 0,t,0,0, 0,0,(f2+n)/(n-f2),-1, 0,0,(2*f2*n)/(n-f2),0]);
-  }
-  function look() {
-    const cPitch=Math.cos(pitch), sPitch=Math.sin(pitch);
-    const cYaw=Math.cos(yaw), sYaw=Math.sin(yaw);
-    const ex=dist*cPitch*sYaw, ey=-dist*sPitch, ez=dist*cPitch*cYaw;
-    let fx=-ex, fy=-ey, fz=-ez;
-    let fl=Math.hypot(fx,fy,fz); fx/=fl; fy/=fl; fz/=fl;
-    let rx=fy*0-fz*1, ry=fz*0-fx*0, rz=fx*1-fy*0;
-    let rl=Math.hypot(rx,ry,rz); rx/=rl; ry/=rl; rz/=rl;
-    const ux=ry*fz-rz*fy, uy=rz*fx-rx*fz, uz=rx*fy-ry*fx;
-    return new Float32Array([
-      rx, ux, -fx, 0,
-      ry, uy, -fy, 0,
-      rz, uz, -fz, 0,
-      -(rx*ex+ry*ey+rz*ez),
-      -(ux*ex+uy*ey+uz*ez),
-      (fx*ex+fy*ey+fz*ez),
-      1
-    ]);
-  }
-  gl.enable(gl.DEPTH_TEST); gl.clearColor(0.07,0.07,0.08,1);
-  (function frame() {
-    const asp = canvas.width / Math.max(canvas.height, 1);
-    const mvp = mul(persp(0.7, asp, span*0.02, span*20), look());
-    gl.uniformMatrix4fv(uMVP, false, mvp);
-    gl.uniformMatrix4fv(uN, false, look());
-    gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
-    gl.drawArrays(gl.TRIANGLES, 0, ntri*3);
-    requestAnimationFrame(frame);
-  })();
-}
-</script>
-</body>
-</html>
-"""
-
-# No JavaScript: temporary hosts often set CSP that blocks inline scripts.
-# Safari launches AR Quick Look from <a rel="ar" href="data:model/vnd.usdz+zip;…">.
-_AR_LAUNCHER_HTML = """<!DOCTYPE html>
-<html lang="cs">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>%%TITLE%% — AR</title>
-<style>
-  html,body { margin:0; min-height:100%; background:#111; color:#eee;
-              font-family:-apple-system,BlinkMacSystemFont,sans-serif; }
-  main { min-height:100vh; display:flex; flex-direction:column; align-items:center;
-         justify-content:center; gap:18px; padding:24px; text-align:center; box-sizing:border-box; }
-  h1 { font-size:1.25rem; font-weight:600; margin:0; }
-  p { margin:0; opacity:.75; max-width:22rem; line-height:1.4; }
-  a.ar { position:relative; display:inline-flex; align-items:center; justify-content:center;
-         min-width:12rem; min-height:3.25rem; padding:0 1.25rem; border-radius:12px;
-         background:#f2f2f2; color:#111; text-decoration:none; font-size:1.05rem; font-weight:600; }
-  a.ar img { position:absolute; inset:0; width:100%; height:100%; opacity:0; }
-  a.ar span { pointer-events:none; }
-</style>
-</head>
-<body>
-<main>
-  <h1>%%TITLE%%</h1>
-  <p>V Safari klepni na tlačítko — otevře se Quick Look / AR. Nemusíš nic stahovat z GitHubu.</p>
-  <a class="ar" rel="ar" href="data:model/vnd.usdz+zip;base64,%%USDZ_B64%%">
-    <img alt="" width="1" height="1" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"/>
-    <span>Otevřít v AR</span>
-  </a>
-</main>
-</body>
-</html>
-"""
-
-
-def stl_to_html_viewer(stl_path: Path, html_path: Path, usdz_path: Path | None = None) -> Path:
-    """Self-contained WebGL viewer with a Quick Look button (chat UI is PNG-only)."""
-    points, faces = _read_binary_stl(stl_path)
-    coords: list[float] = []
-    for i, j, k in faces:
-        for idx in (i, j, k):
-            coords.extend(points[idx])
-    xs, ys, zs = coords[0::3], coords[1::3], coords[2::3]
-    cx, cy, cz = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2, (min(zs) + max(zs)) / 2
-    span = max(max(xs) - min(xs), max(ys) - min(ys), max(zs) - min(zs), 1.0)
-    packed = struct.pack(f"<{len(coords)}f", *coords)
-    if usdz_path is not None and usdz_path.is_file():
-        usdz_raw = usdz_path.read_bytes()
-    else:
-        welded_pts, welded_faces = _weld_mesh(points, faces)
-        usdz_raw = _usdz_bytes(welded_pts, welded_faces)
-    usdz_b64 = base64.b64encode(usdz_raw).decode("ascii")
-    html = (
-        _VIEWER_HTML.replace("%%COORDS_B64%%", base64.b64encode(packed).decode("ascii"))
-        .replace("%%USDZ_B64%%", usdz_b64)
-        .replace("%%CX%%", f"{cx:.6f}")
-        .replace("%%CY%%", f"{cy:.6f}")
-        .replace("%%CZ%%", f"{cz:.6f}")
-        .replace("%%SPAN%%", f"{span:.6f}")
-    )
-    html_path.parent.mkdir(parents=True, exist_ok=True)
-    html_path.write_text(html, encoding="utf-8")
-    return html_path
-
-
-def write_ar_launcher(usdz_path: Path, html_path: Path, *, title: str = "3D preview") -> Path:
-    """Minimal no-JS page that launches Safari AR Quick Look from an embedded USDZ."""
-    usdz_b64 = base64.b64encode(usdz_path.read_bytes()).decode("ascii")
-    html = (
-        _AR_LAUNCHER_HTML.replace("%%TITLE%%", title)
-        .replace("%%USDZ_B64%%", usdz_b64)
-    )
-    html_path.parent.mkdir(parents=True, exist_ok=True)
-    html_path.write_text(html, encoding="utf-8")
-    return html_path
-
-
-def _maybe_write_usdz(written: dict[str, Path]) -> None:
+def _maybe_write_usdz(written: dict[str, Path], model_name: str) -> None:
     stl_path = written.get("stl")
     if stl_path is None or not stl_path.is_file():
         return
     usdz_path = stl_path.with_suffix(".usdz")
     stl_to_usdz(stl_path, usdz_path)
     written["usdz"] = usdz_path
-    html_path = stl_path.with_suffix(".html")
-    stl_to_html_viewer(stl_path, html_path, usdz_path=usdz_path)
-    written["html"] = html_path
-    ar_path = stl_path.with_name(f"{stl_path.stem}_ar.html")
-    title = stl_path.parent.name if stl_path.parent.name else "3D preview"
-    write_ar_launcher(usdz_path, ar_path, title=title)
-    written["ar_html"] = ar_path
+    hub = publish_to_preview_site(model_name, usdz_path)
+    if hub is not None:
+        written["preview_hub"] = hub
 
 
 def summarize_params(params: dict[str, Any]) -> str:

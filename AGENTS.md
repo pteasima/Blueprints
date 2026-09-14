@@ -33,7 +33,7 @@ python -m blueprints.export <model>
 
 Example: `python -m blueprints.export hello_world`
 
-Exports land in `exports/<model>/` (`model.png`, plus STEP/STL/USDZ/HTML/SVG/DXF). **PNG is required** in the reply.
+Exports land in `exports/<model>/` (`model.png`, plus STEP/STL/USDZ/SVG/DXF). **PNG is required** in the reply.
 
 Chat on iOS **and** web only *renders* `<img>` and `<video>`. Copy PNG (and optional orbit video) to `/opt/cursor/artifacts/` and embed with:
 
@@ -41,36 +41,32 @@ Chat on iOS **and** web only *renders* `<img>` and `<video>`. Copy PNG (and opti
 <img src="/opt/cursor/artifacts/obyvak_cutaway.png" alt="obyvak cutaway" />
 ```
 
-Only those `src` values are rewritten to a public artifact URL. **Do not** put `/opt/cursor/artifacts/…` in `<a href>` — the chat leaves the path as-is, the browser resolves it to `https://cursor.com/opt/cursor/artifacts/…`, and Cursor shows **404**. USDZ/HTML/STEP never appear as tiles.
+Only those `src` values are rewritten to a public artifact URL. **Do not** put `/opt/cursor/artifacts/…` in `<a href>` — the chat leaves the path as-is, the browser resolves it to `https://cursor.com/opt/cursor/artifacts/…`, and Cursor shows **404**. USDZ never appears as a tile.
 
-After a 3D export, still write `{model}_3d.usdz` and `{model}_3d.html` into `/opt/cursor/artifacts/` (and `docs/previews/` when the mesh should live in git). Do not attach STEP unless the user asks.
+After a 3D export, still write `{model}_3d.usdz` into `/opt/cursor/artifacts/`. Do not attach STEP unless the user asks.
 
-### One-tap AR from chat (required after every 3D change)
+### Quick Look from chat (required after every 3D change)
 
-Cursor chat cannot open a USDZ tile or an artifact path. This repo is **private**, so GitHub/raw/jsDelivr links 404 for the user. A git “view file” page is HTML, not a mesh.
+Cursor chat cannot open a USDZ tile or an artifact path. Export updates the **GitHub Pages hub**:
 
-`python -m blueprints.export` uploads a **no-JS AR launcher** HTML (embedded USDZ via `<a rel="ar" href="data:model/vnd.usdz+zip;base64,…">`) to a temporary host and prints:
+- `docs/index.html` — single root page for the whole repo (one or more **Quick Look** buttons)
+- `docs/models/<id>.usdz` + `docs/models/manifest.json` — meshes and button labels
+
+The CLI prints:
 
 ```text
-preview_url: https://litter.catbox.moe/….html
+preview_url: https://pteasima.github.io/Blueprints/
 ```
 
-In the chat reply you **must**:
+In the chat reply you **must** paste that URL as plain text (tappable on Cursor iOS). On iPhone/iPad: tap → Safari → **Quick Look**.
 
-1. Paste that `https://…` URL as plain text (tappable in Cursor iOS).
-2. Also embed the QR PNG so the camera can open it:
+Pages source: branch `main`, folder `/docs`. Enable once under GitHub → Settings → Pages. This repo is private; Pages for private repos needs GitHub Pro (or make the repo public). Until Pages is enabled, the github.io URL 404s even though `docs/index.html` is in git. Override the printed URL with `BLUEPRINTS_PAGES_URL` if needed. Skip site updates with `BLUEPRINTS_SKIP_PREVIEW_SITE=1`.
 
-```html
-<img src="/opt/cursor/artifacts/{model}_3d_qr.png" alt="{model} AR QR" />
-```
+Add more buttons later (sectional cuts, other models) by exporting more meshes into `docs/models/` / editing `manifest.json` labels — keep one hub page.
 
-On iPhone/iPad: tap the link (or scan the QR) → Safari → **Otevřít v AR**. No GitHub, no Share, no rename-from-zip. Links expire (~72h on litterbox). Skip upload only with `BLUEPRINTS_SKIP_PREVIEW_UPLOAD=1`.
+USDZ is a zip **container** of a binary `.usdc` crate (`UsdUtils.CreateNewARKitUsdzPackage`). Quick Look opens the `.usdz` file itself — never unzip it. The hub embeds USDZ as a `data:model/vnd.usdz+zip;base64,…` `rel="ar"` link so Safari does not depend on GitHub’s USDZ MIME type.
 
-A Siri Shortcut does **not** fix chat: it cannot see `/opt/cursor/artifacts/`, and GitHub blob pages are still HTML. Prefer the hosted AR launcher URL above.
-
-USDZ is a zip **container** of a binary `.usdc` crate (`UsdUtils.CreateNewARKitUsdzPackage`). Quick Look opens the `.usdz` file itself — never unzip it (a folder of crate files is not a preview). If Safari saves it as `.zip`, rename back to `.usdz` without extracting. ASCII `.usda` zips are **not** Quick Look-compatible; do not hand-roll them.
-
-Author USDZ in **metres** (`metersPerUnit = 1`) with the mesh sitting on Y=0. RealityKit often ignores `metersPerUnit`, so millimetre CAD numbers look like kilometres in AR (Object mode still auto-fits). Models whose real span exceeds 2 m are uniformly scaled to a ~0.45 m tabletop so iPad AR can find a plane; add Apple's `Preliminary_AnchoringAPI` (horizontal plane). The full WebGL viewer (`*_3d.html`) is for local/AirDrop; the hosted AR launcher needs no JavaScript.
+Author USDZ in **metres** (`metersPerUnit = 1`) with the mesh sitting on Y=0. RealityKit often ignores `metersPerUnit`, so millimetre CAD numbers look like kilometres in AR (Object mode still auto-fits). Models whose real span exceeds 2 m are uniformly scaled to a ~0.45 m tabletop so iPad AR can find a plane; add Apple's `Preliminary_AnchoringAPI` (horizontal plane).
 
 If PNG export fails, fix that before considering the task done.
 
@@ -83,6 +79,6 @@ python -m pytest
 
 ## Cursor Cloud specific instructions
 
-- `install` must finish with a working `.venv` that can `import build123d`, `import cairosvg` (PNG), `import qrcode`, and `from pxr import Usd` (ARKit USDZ).
+- `install` must finish with a working `.venv` that can `import build123d`, `import cairosvg` (PNG), and `from pxr import Usd` (ARKit USDZ).
 - Do not assume `python3 -m venv` works on the base image; install `python3.12-venv` first (`scripts/cloud-agent-install.sh`).
 - `libcairo2` is required at runtime for CairoSVG PNG export.

@@ -7,7 +7,6 @@ requires-python = ">=3.11"
 dependencies = [
     "build123d>=0.9",
     "cairosvg>=2.7",
-    "qrcode[pil]>=8.0",
     "usd-core>=24.8",
 ]
 

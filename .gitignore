@@ -17,13 +17,15 @@ exports/**/*.brep
 exports/**/*.png
 exports/**/*.pdf
 exports/**/*.usdz
-exports/**/*_preview_url.txt
-exports/**/*_preview_qr.png
 
 # Tracked review previews live under docs/previews/
 !docs/previews/**/*.png
-!docs/previews/**/*.usdz
-!docs/previews/**/*.html
+!docs/previews/**/*.svg
+# GitHub Pages Quick Look hub
+!docs/models/**/*.usdz
+!docs/models/**/*.json
+!docs/index.html
+!docs/.nojekyll
 
 # Local secrets / editor
 .env
