@@ -4,13 +4,13 @@
 
 ## Enable once
 
-1. GitHub → **Settings** → **Pages**
-2. Build and deployment → Source: **Deploy from a branch**
-3. Branch: `main`, folder: `/docs` → Save
+Open https://github.com/pteasima/Blueprints/settings/pages
 
-Site URL: https://pteasima.github.io/Blueprints/
+**Option A (simplest):** Source = **Deploy from a branch** → branch `main` (or this PR branch until merge) → folder `/docs` → **Save**.
 
-Private repos need **GitHub Pro** for Pages (or make the repo public). The published site is public HTML even when the git repo stays private.
+**Option B:** Source = **GitHub Actions**, then run the `pages` workflow (`.github/workflows/pages.yml`).
+
+Making the repo public is not enough — Pages stays off until you Save a source. Site URL: https://pteasima.github.io/Blueprints/
 
 ## Layout
 
