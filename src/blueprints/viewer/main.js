@@ -292,6 +292,16 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     buildCutUI();
   }
 
+  function flushDeferredDraft() {
+    // Called when a slider drag ends: only create a draft if the camera moved
+    // while the thumb was held (deferred by cutSliderActive).
+    if (!cameraMovedSinceLock) return;
+    if (hasDraftCut()) return;
+    if (lockedCuts().length === 0) return;
+    ensureDraftCut();
+    buildCutUI();
+  }
+
   function setCutT(id, t) {
     const cut = cuts.find((c) => c.id === id);
     if (!cut) return;
@@ -382,19 +392,28 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         "aria-label",
         cut.locked ? `Section ${cut.label}` : "Section cut",
       );
-      range.addEventListener("pointerdown", () => {
+      range.addEventListener("pointerdown", (ev) => {
         cutSliderActive = true;
+        try {
+          range.setPointerCapture(ev.pointerId);
+        } catch (_) {
+          /* ignore */
+        }
         if (!cut.locked) lockCut(cut);
       });
       const endSlider = () => {
         if (!cutSliderActive) return;
         cutSliderActive = false;
-        // Orbit damping may have requested a draft while the thumb was held.
-        maybeSpawnDraftFromCamera();
+        flushDeferredDraft();
       };
       range.addEventListener("pointerup", endSlider);
       range.addEventListener("pointercancel", endSlider);
+      range.addEventListener("lostpointercapture", endSlider);
       range.addEventListener("input", () => {
+        setCutT(cut.id, range.value);
+      });
+      // Also keep the model in sync if the user commits via change (keyboard).
+      range.addEventListener("change", () => {
         setCutT(cut.id, range.value);
       });
 
