@@ -56,7 +56,9 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       scene.add(root);
       root.traverse((obj) => {
         if (!obj.isMesh) return;
-        const name = obj.name || obj.parent?.name || "part";
+        const raw = obj.name || obj.parent?.name || "part";
+        // OCCT/Three may uniquify duplicate labels (krov, krov_1, …); group for toggles.
+        const name = raw.replace(/_\d+$/, "") || raw;
         if (!parts.has(name)) parts.set(name, []);
         parts.get(name).push(obj);
         if (obj.material) {
