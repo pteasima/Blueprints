@@ -17,6 +17,8 @@ exports/**/*.brep
 exports/**/*.png
 exports/**/*.pdf
 exports/**/*.usdz
+exports/**/*_preview_url.txt
+exports/**/*_preview_qr.png
 
 # Tracked review previews live under docs/previews/
 !docs/previews/**/*.png
