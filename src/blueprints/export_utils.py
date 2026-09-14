@@ -244,7 +244,7 @@ def export_shape(
             raise ValueError(f"Unsupported export format: {fmt}")
         written[fmt] = path
 
-    _maybe_write_usdz(written)
+    _maybe_write_usdz(written, shape=shape)
     publish_to_artifacts(model_name, written)
     return written
 
@@ -421,10 +421,10 @@ def _y_up(p: tuple[float, float, float]) -> tuple[float, float, float]:
     return (x, z, -y)
 
 
-def _prepare_usdz_points(
+def _usdz_placement(
     points: list[tuple[float, float, float]],
-) -> list[tuple[float, float, float]]:
-    """Y-up metres, grounded at Y=0, XZ-centred; tabletop-scale if too large for indoor AR."""
+) -> tuple[float, float, float, float]:
+    """Shared AR placement: centre XZ, ground Y, optional tabletop scale (metres)."""
     meters = [
         (x * _CAD_MM_TO_M, y * _CAD_MM_TO_M, z * _CAD_MM_TO_M) for x, y, z in (_y_up(p) for p in points)
     ]
@@ -441,10 +441,32 @@ def _prepare_usdz_points(
         max(p[2] for p in grounded) - min(p[2] for p in grounded),
         1e-9,
     )
-    if span > _AR_REAL_SPAN_LIMIT_M:
-        scale = _AR_TABLETOP_SPAN_M / span
-        grounded = [(x * scale, y * scale, z * scale) for x, y, z in grounded]
-    return grounded
+    scale = _AR_TABLETOP_SPAN_M / span if span > _AR_REAL_SPAN_LIMIT_M else 1.0
+    return cx, cz, min_y, scale
+
+
+def _apply_usdz_placement(
+    points: list[tuple[float, float, float]],
+    cx: float,
+    cz: float,
+    min_y: float,
+    scale: float,
+) -> list[tuple[float, float, float]]:
+    placed: list[tuple[float, float, float]] = []
+    for p in points:
+        x, y, z = _y_up(p)
+        x = x * _CAD_MM_TO_M - cx
+        y = y * _CAD_MM_TO_M - min_y
+        z = z * _CAD_MM_TO_M - cz
+        placed.append((x * scale, y * scale, z * scale))
+    return placed
+
+
+def _prepare_usdz_points(
+    points: list[tuple[float, float, float]],
+) -> list[tuple[float, float, float]]:
+    """Y-up metres, grounded at Y=0, XZ-centred; tabletop-scale if too large for indoor AR."""
+    return _apply_usdz_placement(points, *_usdz_placement(points))
 
 
 def _cross(
@@ -465,26 +487,175 @@ def _normalize(n: tuple[float, float, float]) -> tuple[float, float, float]:
     return (x / length, y / length, z / length)
 
 
-def _write_arkit_usdz(
+_DEFAULT_USDZ_COLOR = (0.82, 0.8, 0.76)
+
+
+def _linear_to_srgb(channel: float) -> float:
+    if channel <= 0.0031308:
+        return 12.92 * channel
+    return 1.055 * (channel ** (1.0 / 2.4)) - 0.055
+
+
+def _part_diffuse_rgb(part: Shape | Compound) -> tuple[float, float, float]:
+    """Diffuse colour for USDZ/HTML: section fill, else stroke, else shape.color, else default."""
+    label = getattr(part, "label", None) or ""
+    style = SECTION_LAYERS.get(label, {})
+    rgb8 = style.get("fill") or style.get("line")
+    if rgb8:
+        return (rgb8[0] / 255.0, rgb8[1] / 255.0, rgb8[2] / 255.0)
+    color = getattr(part, "color", None)
+    if color is not None:
+        try:
+            lin = color.wrapped.GetRGB()
+            return (
+                _linear_to_srgb(lin.Red()),
+                _linear_to_srgb(lin.Green()),
+                _linear_to_srgb(lin.Blue()),
+            )
+        except Exception:
+            pass
+    return _DEFAULT_USDZ_COLOR
+
+
+def _usd_safe_name(name: str, used: set[str]) -> str:
+    base = "".join(ch if ch.isalnum() or ch == "_" else "_" for ch in (name or "part"))
+    if not base or base[0].isdigit():
+        base = f"Part_{base}"
+    candidate = base
+    n = 2
+    while candidate in used:
+        candidate = f"{base}_{n}"
+        n += 1
+    used.add(candidate)
+    return candidate
+
+
+def _tessellate_colored_parts(
+    shape: Shape | Compound,
+    *,
+    tolerance: float,
+) -> list[tuple[str, list[tuple[float, float, float]], list[tuple[int, int, int]], tuple[float, float, float]]]:
+    """Tessellate labeled children (or the whole shape); merge same labels into one mesh."""
+    children = list(getattr(shape, "children", ()) or ())
+    sources: list[Shape | Compound] = children if children else [shape]
+    label_to_name: dict[str, str] = {}
+    used_names: set[str] = set()
+    by_name: dict[
+        str, tuple[list[tuple[float, float, float]], list[tuple[int, int, int]], tuple[float, float, float]]
+    ] = {}
+    order: list[str] = []
+
+    for src in sources:
+        label = str(getattr(src, "label", None) or getattr(shape, "label", None) or "Geom")
+        if label not in label_to_name:
+            label_to_name[label] = _usd_safe_name(label, used_names)
+        name = label_to_name[label]
+        try:
+            verts, tris = src.tessellate(tolerance)
+        except Exception:
+            continue
+        if not tris:
+            continue
+        points = [(float(v.X), float(v.Y), float(v.Z)) for v in verts]
+        faces = [(int(a), int(b), int(c)) for a, b, c in tris]
+        points, faces = _weld_mesh(points, faces)
+        rgb = _part_diffuse_rgb(src)
+        if name not in by_name:
+            by_name[name] = (points, faces, rgb)
+            order.append(name)
+            continue
+        base_pts, base_faces, base_rgb = by_name[name]
+        offset = len(base_pts)
+        base_pts.extend(points)
+        base_faces.extend((i + offset, j + offset, k + offset) for i, j, k in faces)
+        by_name[name] = (base_pts, base_faces, base_rgb)
+
+    parts: list[
+        tuple[str, list[tuple[float, float, float]], list[tuple[int, int, int]], tuple[float, float, float]]
+    ] = []
+    for name in order:
+        pts, faces, rgb = by_name[name]
+        pts, faces = _weld_mesh(pts, faces)
+        parts.append((name, pts, faces, rgb))
+    return parts
+
+
+def _bind_preview_material(stage, mesh, path: str, rgb: tuple[float, float, float]) -> None:
+    from pxr import Gf, Sdf, UsdShade
+
+    material = UsdShade.Material.Define(stage, path)
+    shader = UsdShade.Shader.Define(stage, f"{path}/PreviewSurface")
+    shader.CreateIdAttr("UsdPreviewSurface")
+    shader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).Set(Gf.Vec3f(*rgb))
+    shader.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(0.6)
+    shader.CreateInput("metallic", Sdf.ValueTypeNames.Float).Set(0.0)
+    material.CreateSurfaceOutput().ConnectToSource(shader.ConnectableAPI(), "surface")
+    UsdShade.MaterialBindingAPI.Apply(mesh.GetPrim())
+    UsdShade.MaterialBindingAPI(mesh).Bind(material)
+
+
+def _write_mesh_prim(
+    stage,
+    path: str,
     points: list[tuple[float, float, float]],
     faces: list[tuple[int, int, int]],
-    usdz_path: Path,
-) -> Path:
-    """Package a mesh as a single-layer .usdc USDZ (what Apple Quick Look actually opens)."""
-    from pxr import Gf, Kind, Sdf, Usd, UsdGeom, UsdShade, UsdUtils
+    rgb: tuple[float, float, float],
+) -> None:
+    from pxr import Gf, UsdGeom
 
-    yup = _prepare_usdz_points(points)
-    xs = [p[0] for p in yup]
-    ys = [p[1] for p in yup]
-    zs = [p[2] for p in yup]
-    gf_points = [Gf.Vec3f(*p) for p in yup]
+    xs = [p[0] for p in points]
+    ys = [p[1] for p in points]
+    zs = [p[2] for p in points]
     counts = [3] * len(faces)
     indices: list[int] = []
     normals: list = []
     for i, j, k in faces:
         indices.extend((i, j, k))
-        n = Gf.Vec3f(*_normalize(_cross(yup[i], yup[j], yup[k])))
+        n = Gf.Vec3f(*_normalize(_cross(points[i], points[j], points[k])))
         normals.extend((n, n, n))
+    mesh = UsdGeom.Mesh.Define(stage, path)
+    mesh.CreatePointsAttr([Gf.Vec3f(*p) for p in points])
+    mesh.CreateFaceVertexCountsAttr(counts)
+    mesh.CreateFaceVertexIndicesAttr(indices)
+    mesh.CreateNormalsAttr(normals)
+    mesh.SetNormalsInterpolation(UsdGeom.Tokens.faceVarying)
+    mesh.CreateSubdivisionSchemeAttr().Set(UsdGeom.Tokens.none)
+    mesh.CreateDoubleSidedAttr(True)
+    mesh.CreateExtentAttr(
+        [Gf.Vec3f(min(xs), min(ys), min(zs)), Gf.Vec3f(max(xs), max(ys), max(zs))]
+    )
+    mesh.CreateDisplayColorAttr([Gf.Vec3f(*rgb)])
+    mat_name = path.rsplit("/", 1)[-1]
+    _bind_preview_material(stage, mesh, f"/Model/Looks/{mat_name}", rgb)
+
+
+def _write_arkit_usdz(
+    points: list[tuple[float, float, float]],
+    faces: list[tuple[int, int, int]],
+    usdz_path: Path,
+    *,
+    color: tuple[float, float, float] = _DEFAULT_USDZ_COLOR,
+    mesh_parts: list[
+        tuple[str, list[tuple[float, float, float]], list[tuple[int, int, int]], tuple[float, float, float]]
+    ]
+    | None = None,
+) -> Path:
+    """Package mesh(es) as a single-layer .usdc USDZ (what Apple Quick Look actually opens).
+
+    When ``mesh_parts`` is set, each entry becomes its own Geom mesh + UsdPreviewSurface
+    so layer colours (EPS, masonry, wood, drywall, …) survive into AR Quick Look.
+    """
+    from pxr import Kind, Sdf, Usd, UsdGeom, UsdUtils
+
+    if mesh_parts:
+        all_points = [p for _n, pts, _f, _c in mesh_parts for p in pts]
+        cx, cz, min_y, scale = _usdz_placement(all_points)
+        placed_parts = [
+            (name, _apply_usdz_placement(pts, cx, cz, min_y, scale), tris, rgb)
+            for name, pts, tris, rgb in mesh_parts
+        ]
+    else:
+        placed_parts = [("Geom", _prepare_usdz_points(points), faces, color)]
 
     usdz_path = usdz_path.resolve()
     usdz_path.parent.mkdir(parents=True, exist_ok=True)
@@ -513,30 +684,15 @@ def _write_arkit_usdz(
             False,
             Sdf.VariabilityUniform,
         ).Set("horizontal")
-        mesh = UsdGeom.Mesh.Define(stage, "/Model/Geom")
-        mesh.CreatePointsAttr(gf_points)
-        mesh.CreateFaceVertexCountsAttr(counts)
-        mesh.CreateFaceVertexIndicesAttr(indices)
-        mesh.CreateNormalsAttr(normals)
-        mesh.SetNormalsInterpolation(UsdGeom.Tokens.faceVarying)
-        mesh.CreateSubdivisionSchemeAttr().Set(UsdGeom.Tokens.none)
-        mesh.CreateDoubleSidedAttr(True)
-        mesh.CreateExtentAttr(
-            [Gf.Vec3f(min(xs), min(ys), min(zs)), Gf.Vec3f(max(xs), max(ys), max(zs))]
-        )
-        mesh.CreateDisplayColorAttr([Gf.Vec3f(0.82, 0.8, 0.76)])
 
-        material = UsdShade.Material.Define(stage, "/Model/Looks/Material")
-        shader = UsdShade.Shader.Define(stage, "/Model/Looks/Material/PreviewSurface")
-        shader.CreateIdAttr("UsdPreviewSurface")
-        shader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).Set(
-            Gf.Vec3f(0.82, 0.8, 0.76)
-        )
-        shader.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(0.6)
-        shader.CreateInput("metallic", Sdf.ValueTypeNames.Float).Set(0.0)
-        material.CreateSurfaceOutput().ConnectToSource(shader.ConnectableAPI(), "surface")
-        UsdShade.MaterialBindingAPI.Apply(mesh.GetPrim())
-        UsdShade.MaterialBindingAPI(mesh).Bind(material)
+        if len(placed_parts) == 1:
+            name, pts, tris, rgb = placed_parts[0]
+            _write_mesh_prim(stage, "/Model/Geom", pts, tris, rgb)
+        else:
+            UsdGeom.Xform.Define(stage, "/Model/Geom")
+            for name, pts, tris, rgb in placed_parts:
+                _write_mesh_prim(stage, f"/Model/Geom/{name}", pts, tris, rgb)
+
         stage.GetRootLayer().Save()
 
         if usdz_path.exists():
@@ -563,10 +719,16 @@ def usdz_data_offsets(data: bytes) -> list[int]:
 def _usdz_bytes(
     points: list[tuple[float, float, float]],
     faces: list[tuple[int, int, int]],
+    *,
+    color: tuple[float, float, float] = _DEFAULT_USDZ_COLOR,
+    mesh_parts: list[
+        tuple[str, list[tuple[float, float, float]], list[tuple[int, int, int]], tuple[float, float, float]]
+    ]
+    | None = None,
 ) -> bytes:
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / "model.usdz"
-        _write_arkit_usdz(points, faces, path)
+        _write_arkit_usdz(points, faces, path, color=color, mesh_parts=mesh_parts)
         return path.read_bytes()
 
 
@@ -637,11 +799,14 @@ else {
   gl.shaderSource(vs, [
     'attribute vec3 aPos;',
     'attribute vec3 aNrm;',
+    'attribute vec3 aCol;',
     'uniform mat4 uMVP;',
     'uniform mat4 uN;',
     'varying vec3 vN;',
+    'varying vec3 vC;',
     'void main() {',
     '  vN = mat3(uN) * aNrm;',
+    '  vC = aCol;',
     '  gl_Position = uMVP * vec4(aPos, 1.0);',
     '}'
   ].join(String.fromCharCode(10)));
@@ -653,10 +818,11 @@ else {
   gl.shaderSource(fs, [
     'precision mediump float;',
     'varying vec3 vN;',
+    'varying vec3 vC;',
     'void main() {',
     '  vec3 n = normalize(vN);',
     '  float d = max(dot(n, normalize(vec3(0.35, 0.6, 0.7))), 0.18);',
-    '  gl_FragColor = vec4(vec3(0.82, 0.80, 0.76) * d, 1.0);',
+    '  gl_FragColor = vec4(vC * d, 1.0);',
     '}'
   ].join(String.fromCharCode(10)));
   gl.compileShader(fs);
@@ -671,20 +837,23 @@ else {
   gl.useProgram(prog);
   const raw = b64bytes(COORDS_B64);
   const P = new Float32Array(raw.buffer, raw.byteOffset, raw.byteLength / 4);
-  const ntri = P.length / 9;
-  const pos = new Float32Array(P.length);
-  const nrm = new Float32Array(P.length);
+  const ntri = P.length / 18;
+  const pos = new Float32Array(ntri * 9);
+  const nrm = new Float32Array(ntri * 9);
+  const col = new Float32Array(ntri * 9);
   for (let t = 0; t < ntri; t++) {
-    const o = t * 9;
-    const ax=P[o]-cx, ay=P[o+1]-cy, az=P[o+2]-cz;
-    const bx=P[o+3]-cx, by=P[o+4]-cy, bz=P[o+5]-cz;
-    const cxp=P[o+6]-cx, cyp=P[o+7]-cy, czp=P[o+8]-cz;
+    const s = t * 18, o = t * 9;
+    const ax=P[s]-cx, ay=P[s+1]-cy, az=P[s+2]-cz;
+    const bx=P[s+6]-cx, by=P[s+7]-cy, bz=P[s+8]-cz;
+    const cxp=P[s+12]-cx, cyp=P[s+13]-cy, czp=P[s+14]-cz;
     const nx=(by-ay)*(czp-az)-(bz-az)*(cyp-ay);
     const ny=(bz-az)*(cxp-ax)-(bx-ax)*(czp-az);
     const nz=(bx-ax)*(cyp-ay)-(by-ay)*(cxp-ax);
     for (let k = 0; k < 3; k++) {
-      pos[o+k*3]=P[o+k*3]-cx; pos[o+k*3+1]=P[o+k*3+1]-cy; pos[o+k*3+2]=P[o+k*3+2]-cz;
-      nrm[o+k*3]=nx; nrm[o+k*3+1]=ny; nrm[o+k*3+2]=nz;
+      const si = s + k * 6, oi = o + k * 3;
+      pos[oi]=P[si]-cx; pos[oi+1]=P[si+1]-cy; pos[oi+2]=P[si+2]-cz;
+      nrm[oi]=nx; nrm[oi+1]=ny; nrm[oi+2]=nz;
+      col[oi]=P[si+3]; col[oi+1]=P[si+4]; col[oi+2]=P[si+5];
     }
   }
   function buf(data, locName) {
@@ -696,7 +865,7 @@ else {
     gl.enableVertexAttribArray(loc);
     gl.vertexAttribPointer(loc, 3, gl.FLOAT, false, 0, 0);
   }
-  buf(pos, 'aPos'); buf(nrm, 'aNrm');
+  buf(pos, 'aPos'); buf(nrm, 'aNrm'); buf(col, 'aCol');
   const uMVP = gl.getUniformLocation(prog, 'uMVP');
   const uN = gl.getUniformLocation(prog, 'uN');
   let yaw = 0.6, pitch = 0.45, dist = span * 1.8;
@@ -776,24 +945,41 @@ else {
 """
 
 
-def stl_to_html_viewer(stl_path: Path, html_path: Path, usdz_path: Path | None = None) -> Path:
-    """Self-contained WebGL viewer with a Quick Look button (chat UI is PNG-only)."""
-    points, faces = _read_binary_stl(stl_path)
+def _pack_viewer_mesh(
+    points: list[tuple[float, float, float]],
+    faces: list[tuple[int, int, int]],
+    *,
+    color: tuple[float, float, float] = _DEFAULT_USDZ_COLOR,
+    face_colors: list[tuple[float, float, float]] | None = None,
+) -> tuple[bytes, float, float, float, float]:
+    """Interleave xyz+rgb per vertex for the WebGL viewer; return packed bytes + framing."""
     coords: list[float] = []
-    for i, j, k in faces:
+    for fi, (i, j, k) in enumerate(faces):
+        rgb = face_colors[fi] if face_colors is not None else color
         for idx in (i, j, k):
             coords.extend(points[idx])
-    xs, ys, zs = coords[0::3], coords[1::3], coords[2::3]
-    cx, cy, cz = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2, (min(zs) + max(zs)) / 2
+            coords.extend(rgb)
+    xs, ys, zs = coords[0::6], coords[1::6], coords[2::6]
+    cx = (min(xs) + max(xs)) / 2
+    cy = (min(ys) + max(ys)) / 2
+    cz = (min(zs) + max(zs)) / 2
     span = max(max(xs) - min(xs), max(ys) - min(ys), max(zs) - min(zs), 1.0)
     packed = struct.pack(f"<{len(coords)}f", *coords)
-    if usdz_path is not None and usdz_path.is_file():
-        usdz_raw = usdz_path.read_bytes()
-    else:
-        welded_pts, welded_faces = _weld_mesh(points, faces)
-        usdz_raw = _usdz_bytes(welded_pts, welded_faces)
+    return packed, cx, cy, cz, span
+
+
+def _write_html_viewer(
+    html_path: Path,
+    *,
+    packed_coords: bytes,
+    cx: float,
+    cy: float,
+    cz: float,
+    span: float,
+    usdz_raw: bytes,
+) -> Path:
     html = (
-        _VIEWER_HTML.replace("%%COORDS_B64%%", base64.b64encode(packed).decode("ascii"))
+        _VIEWER_HTML.replace("%%COORDS_B64%%", base64.b64encode(packed_coords).decode("ascii"))
         .replace("%%USDZ_B64%%", base64.b64encode(usdz_raw).decode("ascii"))
         .replace("%%CX%%", f"{cx:.6f}")
         .replace("%%CY%%", f"{cy:.6f}")
@@ -805,14 +991,78 @@ def stl_to_html_viewer(stl_path: Path, html_path: Path, usdz_path: Path | None =
     return html_path
 
 
-def _maybe_write_usdz(written: dict[str, Path]) -> None:
+def stl_to_html_viewer(stl_path: Path, html_path: Path, usdz_path: Path | None = None) -> Path:
+    """Self-contained WebGL viewer with a Quick Look button (chat UI is PNG-only)."""
+    points, faces = _read_binary_stl(stl_path)
+    packed, cx, cy, cz, span = _pack_viewer_mesh(points, faces)
+    if usdz_path is not None and usdz_path.is_file():
+        usdz_raw = usdz_path.read_bytes()
+    else:
+        welded_pts, welded_faces = _weld_mesh(points, faces)
+        usdz_raw = _usdz_bytes(welded_pts, welded_faces)
+    return _write_html_viewer(
+        html_path,
+        packed_coords=packed,
+        cx=cx,
+        cy=cy,
+        cz=cz,
+        span=span,
+        usdz_raw=usdz_raw,
+    )
+
+
+def _html_from_mesh_parts(
+    mesh_parts: list[
+        tuple[str, list[tuple[float, float, float]], list[tuple[int, int, int]], tuple[float, float, float]]
+    ],
+    html_path: Path,
+    usdz_raw: bytes,
+) -> Path:
+    points: list[tuple[float, float, float]] = []
+    faces: list[tuple[int, int, int]] = []
+    face_colors: list[tuple[float, float, float]] = []
+    for _name, pts, tris, rgb in mesh_parts:
+        base = len(points)
+        points.extend(pts)
+        for i, j, k in tris:
+            faces.append((base + i, base + j, base + k))
+            face_colors.append(rgb)
+    packed, cx, cy, cz, span = _pack_viewer_mesh(points, faces, face_colors=face_colors)
+    return _write_html_viewer(
+        html_path,
+        packed_coords=packed,
+        cx=cx,
+        cy=cy,
+        cz=cz,
+        span=span,
+        usdz_raw=usdz_raw,
+    )
+
+
+def _maybe_write_usdz(
+    written: dict[str, Path],
+    *,
+    shape: Shape | Compound | None = None,
+) -> None:
     stl_path = written.get("stl")
     if stl_path is None or not stl_path.is_file():
         return
     usdz_path = stl_path.with_suffix(".usdz")
+    html_path = stl_path.with_suffix(".html")
+
+    mesh_parts = None
+    if shape is not None:
+        mesh_parts = _tessellate_colored_parts(shape, tolerance=_stl_tolerance(shape))
+
+    if mesh_parts:
+        _write_arkit_usdz([], [], usdz_path, mesh_parts=mesh_parts)
+        written["usdz"] = usdz_path
+        _html_from_mesh_parts(mesh_parts, html_path, usdz_path.read_bytes())
+        written["html"] = html_path
+        return
+
     stl_to_usdz(stl_path, usdz_path)
     written["usdz"] = usdz_path
-    html_path = stl_path.with_suffix(".html")
     stl_to_html_viewer(stl_path, html_path, usdz_path=usdz_path)
     written["html"] = html_path
 
