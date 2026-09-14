@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import os
 import shutil
 import struct
@@ -17,7 +18,9 @@ from build123d import (
     ExportSVG,
     LineType,
     Shape,
+    Unit,
     Vector,
+    export_gltf,
     export_step,
     export_stl,
 )
@@ -27,6 +30,8 @@ from blueprints.preview_hub import publish_to_preview_site
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 EXPORTS_DIR = REPO_ROOT / "exports"
+VIEWER_DIR = Path(__file__).resolve().parent / "viewer"
+VIEWER_IIFE_PATH = VIEWER_DIR / "viewer.iife.js"
 PREVIEW_LINE_WEIGHT = 1.0
 
 # Drawing-unit stroke widths so a ~6 m section still reads at ~1800 px PNG.
@@ -245,7 +250,7 @@ def export_shape(
             raise ValueError(f"Unsupported export format: {fmt}")
         written[fmt] = path
 
-    _maybe_write_usdz(written, model_name, shape=shape)
+    _maybe_write_usdz(written, model_name, shape=shape, stem=stem)
     publish_to_artifacts(model_name, written)
     return written
 
@@ -340,18 +345,18 @@ def artifacts_dir() -> Path | None:
     return path if path.is_dir() else None
 
 
-_CHAT_FORMATS = frozenset({".png", ".usdz"})
+_CHAT_FORMATS = frozenset({".png", ".usdz", ".html", ".glb"})
 
 
 def _artifact_name(model_name: str, path: Path) -> str:
     suffix = path.suffix.lower()
-    if path.stem == "model" and suffix in {".step", ".stp", ".stl", ".usdz"}:
+    if path.stem == "model" and suffix in {".step", ".stp", ".stl", ".usdz", ".glb", ".html"}:
         return f"{model_name}_3d{suffix}"
     return f"{model_name}_{path.name}"
 
 
 def publish_to_artifacts(model_name: str, paths: dict[str, Path]) -> dict[str, Path]:
-    """Copy PNG/USDZ into the run artifact folder.
+    """Copy PNG/USDZ/GLB/HTML into the run artifact folder.
 
     Chat still only displays PNG/video. Do not emit `<a href="/opt/cursor/artifacts/…">`;
     those paths 404 on cursor.com. Paste the GitHub Pages URL from export instead.
@@ -721,6 +726,116 @@ def usdz_data_offsets(data: bytes) -> list[int]:
 
 
 
+_VIEWER_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+<title>Blueprints viewer</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #111; color: #eee;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+  #bar { position: fixed; top: 0; left: 0; right: 0; z-index: 2;
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    padding: 10px 12px; background: rgba(0,0,0,.78); font-size: 13px; }
+  #bar button, #ql { font: inherit; padding: 8px 12px; border: 0; border-radius: 8px;
+    background: #eee; color: #111; cursor: pointer; }
+  #cams, #parts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  #parts { max-width: 100%; max-height: 5.5rem; overflow: auto; }
+  label.part { display: inline-flex; gap: 4px; align-items: center;
+    padding: 4px 8px; border-radius: 6px; background: #222; }
+  #err { display: none; position: fixed; top: 56px; left: 12px; right: 12px; z-index: 2;
+    background: #4a1010; color: #fcc; padding: 10px; border-radius: 8px; white-space: pre-wrap; }
+  canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  .hint { opacity: .7; }
+</style>
+</head>
+<body>
+<div id="bar">
+  <button type="button" id="ql" hidden>Open in Quick Look</button>
+  <div id="cams"></div>
+  <div id="parts"></div>
+  <span class="hint">Drag orbit · scroll zoom</span>
+</div>
+<pre id="err"></pre>
+<canvas id="c"></canvas>
+<script>
+%%VIEWER_JS%%
+</script>
+<script>
+(function () {
+  function b64ToBuf(s) {
+    const bin = atob(s);
+    const u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    return u8.buffer;
+  }
+  const canvas = document.getElementById('c');
+  const glb = b64ToBuf("%%GLB_B64%%");
+  const usdzB64 = "%%USDZ_B64%%";
+  BlueprintsViewerBundle.mountViewer(canvas, glb, {
+    usdzBase64: usdzB64 || undefined,
+  });
+})();
+</script>
+</body>
+</html>
+"""
+
+
+def _viewer_iife() -> str:
+    if not VIEWER_IIFE_PATH.is_file():
+        raise FileNotFoundError(
+            f"Missing {VIEWER_IIFE_PATH}; run: npm --prefix src/blueprints/viewer run build"
+        )
+    return VIEWER_IIFE_PATH.read_text(encoding="utf-8")
+
+
+def write_glb(
+    shape: Shape | Compound,
+    glb_path: Path,
+    *,
+    linear_deflection: float | None = None,
+) -> Path:
+    """Write a binary glTF (.glb) preserving labeled compounds and materials."""
+    glb_path = glb_path.resolve()
+    glb_path.parent.mkdir(parents=True, exist_ok=True)
+    tol = linear_deflection if linear_deflection is not None else _stl_tolerance(shape)
+    ok = export_gltf(
+        shape,
+        glb_path,
+        unit=Unit.MM,
+        binary=True,
+        linear_deflection=tol,
+        angular_deflection=0.1,
+    )
+    if not ok or not glb_path.is_file():
+        raise RuntimeError(f"export_gltf failed for {glb_path}")
+    return glb_path
+
+
+def write_gltf_html_viewer(
+    glb_path: Path,
+    html_path: Path,
+    *,
+    usdz_path: Path | None = None,
+) -> Path:
+    """Self-contained offline HTML viewer (bundled Three.js + embedded GLB)."""
+    glb_b64 = base64.b64encode(glb_path.read_bytes()).decode("ascii")
+    usdz_b64 = ""
+    if usdz_path is not None and usdz_path.is_file():
+        usdz_b64 = base64.b64encode(usdz_path.read_bytes()).decode("ascii")
+    html = (
+        _VIEWER_HTML.replace("%%VIEWER_JS%%", _viewer_iife())
+        .replace("%%GLB_B64%%", glb_b64)
+        .replace("%%USDZ_B64%%", usdz_b64)
+    )
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+    html_path.write_text(html, encoding="utf-8")
+    return html_path
+
+
+
 def stl_to_usdz(stl_path: Path, usdz_path: Path) -> Path:
     """Pack a binary STL as an ARKit USDZ crate for iOS/macOS Quick Look."""
     points, faces = _read_binary_stl(stl_path)
@@ -735,6 +850,7 @@ def _maybe_write_usdz(
     model_name: str,
     *,
     shape: Shape | Compound | None = None,
+    stem: str = "model",
 ) -> None:
     stl_path = written.get("stl")
     if stl_path is None or not stl_path.is_file():
@@ -751,9 +867,23 @@ def _maybe_write_usdz(
         stl_to_usdz(stl_path, usdz_path)
     written["usdz"] = usdz_path
 
-    hub = publish_to_preview_site(model_name, usdz_path)
-    if hub is not None:
-        written["preview_hub"] = hub
+    if shape is not None:
+        glb_path = stl_path.with_suffix(".glb")
+        write_glb(shape, glb_path)
+        written["glb"] = glb_path
+        html_path = stl_path.with_suffix(".html")
+        write_gltf_html_viewer(glb_path, html_path, usdz_path=usdz_path)
+        written["html"] = html_path
+
+    # Only the primary stem updates the Pages hub (extras must not overwrite it).
+    if stem == "model":
+        hub = publish_to_preview_site(
+            model_name,
+            usdz_path,
+            glb_path=written.get("glb"),
+        )
+        if hub is not None:
+            written["preview_hub"] = hub
 
 
 def summarize_params(params: dict[str, Any]) -> str:

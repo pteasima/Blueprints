@@ -35,8 +35,15 @@ def test_export_publishes_usdz_to_artifacts(tmp_path, monkeypatch):
     paths = export_shape(shape, "hello_world", formats=("step", "stl", "svg", "dxf"))
 
     assert paths["usdz"].exists()
-    assert "html" not in paths
+    assert paths["glb"].exists()
+    assert paths["html"].exists()
+    assert paths["glb"].stat().st_size > 100
+    html = paths["html"].read_text(encoding="utf-8")
+    assert "BlueprintsViewerBundle" in html
+    assert "mountViewer" in html
     assert (artifacts / "hello_world_3d.usdz").stat().st_size > 0
+    assert (artifacts / "hello_world_3d.html").stat().st_size > 0
+    assert (artifacts / "hello_world_3d.glb").stat().st_size > 0
     assert not (artifacts / "hello_world_3d.step").exists()
     assert not (artifacts / "hello_world_model.dxf").exists()
     with zipfile.ZipFile(paths["usdz"]) as zf:
@@ -89,6 +96,8 @@ def test_preview_hub_updates_models_for_pages(tmp_path, monkeypatch, capsys):
     paths = export_shape(shape, "hello_world", formats=("stl",))
     assert paths["preview_hub"] == site / "index.html"
     assert (site / "models" / "hello_world.usdz").is_file()
+    assert (site / "models" / "hello_world.glb").is_file()
+    assert (site / "viewer" / "viewer.iife.js").is_file()
     assert (site / ".nojekyll").is_file()
     manifest = (site / "models" / "manifest.json").read_text(encoding="utf-8")
     assert '"id": "hello_world"' in manifest
@@ -97,6 +106,8 @@ def test_preview_hub_updates_models_for_pages(tmp_path, monkeypatch, capsys):
     assert 'rel="ar"' in html
     assert "data:model/vnd.usdz+zip;base64," in html
     assert ">Quick Look</span>" in html
+    assert 'href="viewer/?m=hello_world"' in html
+    assert ">Web 3D</span>" in html
     assert "Otevřít" not in html
     assert "catbox" not in html
     out = capsys.readouterr().out

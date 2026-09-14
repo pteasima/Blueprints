@@ -24,6 +24,7 @@ exports/**/*.usdz
 
 # GitHub Pages Quick Look inputs (USDZ via LFS). Hub HTML is CI-generated.
 !docs/models/**/*.usdz
+!docs/models/**/*.glb
 !docs/models/**/*.json
 !docs/.nojekyll
 docs/index.html
@@ -32,3 +33,8 @@ docs/index.html
 .env
 .idea/
 .vscode/
+
+# Viewer toolchain (commit the built viewer.iife.js only)
+src/blueprints/viewer/node_modules/
+exports/**/*.glb
+exports/**/*.html

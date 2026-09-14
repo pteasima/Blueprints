@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+<title>Blueprints viewer</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #111; color: #eee;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+  #bar { position: fixed; top: 0; left: 0; right: 0; z-index: 2;
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    padding: 10px 12px; background: rgba(0,0,0,.78); font-size: 13px; }
+  #bar button, #ql, #home { font: inherit; padding: 8px 12px; border: 0; border-radius: 8px;
+    background: #eee; color: #111; cursor: pointer; text-decoration: none; }
+  #cams, #parts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  #parts { max-width: 100%; max-height: 5.5rem; overflow: auto; }
+  label.part { display: inline-flex; gap: 4px; align-items: center;
+    padding: 4px 8px; border-radius: 6px; background: #222; }
+  #err { display: none; position: fixed; top: 56px; left: 12px; right: 12px; z-index: 2;
+    background: #4a1010; color: #fcc; padding: 10px; border-radius: 8px; white-space: pre-wrap; }
+  canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  .hint { opacity: .7; }
+</style>
+</head>
+<body>
+<div id="bar">
+  <a id="home" href="../">Hub</a>
+  <button type="button" id="ql" hidden>Open in Quick Look</button>
+  <div id="cams"></div>
+  <div id="parts"></div>
+  <span class="hint">Drag orbit · scroll zoom</span>
+</div>
+<pre id="err"></pre>
+<canvas id="c"></canvas>
+<script src="viewer.iife.js"></script>
+<script>
+(function () {
+  const errEl = document.getElementById("err");
+  function fail(msg) {
+    errEl.style.display = "block";
+    errEl.textContent = msg;
+  }
+  function bufToB64(buf) {
+    const u8 = new Uint8Array(buf);
+    let s = "";
+    const chunk = 0x8000;
+    for (let i = 0; i < u8.length; i += chunk) {
+      s += String.fromCharCode.apply(null, u8.subarray(i, i + chunk));
+    }
+    return btoa(s);
+  }
+  const params = new URLSearchParams(location.search);
+  const id = (params.get("m") || params.get("id") || "").trim();
+  if (!id) {
+    fail("Missing model id. Open via hub, or use ?m=<id>.");
+    return;
+  }
+  document.title = id + " · Blueprints viewer";
+  const canvas = document.getElementById("c");
+  Promise.all([
+    fetch("../models/" + encodeURIComponent(id) + ".glb").then(function (r) {
+      if (!r.ok) throw new Error("GLB HTTP " + r.status);
+      return r.arrayBuffer();
+    }),
+    fetch("../models/" + encodeURIComponent(id) + ".usdz")
+      .then(function (r) { return r.ok ? r.arrayBuffer() : null; })
+      .catch(function () { return null; }),
+  ]).then(function (pair) {
+    const glb = pair[0];
+    const usdz = pair[1];
+    BlueprintsViewerBundle.mountViewer(canvas, glb, {
+      usdzBase64: usdz ? bufToB64(usdz) : undefined,
+    });
+  }).catch(function (e) {
+    fail(String(e && e.message ? e.message : e));
+  });
+})();
+</script>
+</body>
+</html>
