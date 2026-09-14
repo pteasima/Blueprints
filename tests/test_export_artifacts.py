@@ -170,6 +170,43 @@ def test_usdz_tabletop_scale_for_room_sized_mesh(tmp_path):
     assert stage.GetDefaultPrim().GetAttribute("preliminary:anchoring:type").Get() == "plane"
 
 
+def test_obyvak_usdz_has_layer_materials(tmp_path, monkeypatch):
+    """Each construction layer must keep its own UsdPreviewSurface colour in the USDZ."""
+    import blueprints.export_utils as eu
+    from obyvak import build as build_obyvak
+    from pxr import UsdShade
+
+    monkeypatch.setattr(eu, "EXPORTS_DIR", tmp_path)
+    monkeypatch.setenv("BLUEPRINTS_ARTIFACTS_DIR", str(tmp_path / "artifacts"))
+    monkeypatch.setenv("BLUEPRINTS_SKIP_PREVIEW_SITE", "1")
+    (tmp_path / "artifacts").mkdir()
+
+    shape, _ = build_obyvak()
+    paths = export_shape(shape, "obyvak", formats=("stl",))
+    stage = Usd.Stage.Open(str(paths["usdz"]))
+    assert stage is not None
+
+    expected = {
+        "eps": (217 / 255, 232 / 255, 200 / 255),
+        "zdivo": (207 / 255, 200 / 255, 188 / 255),
+        "krov": (196 / 255, 165 / 255, 116 / 255),
+        "predstena": (200 / 255, 232 / 255, 240 / 255),
+        "krytina": (139 / 255, 46 / 255, 26 / 255),  # stroke used when fill is None
+        "vata": (217 / 255, 232 / 255, 200 / 255),
+        "nabytek": (232 / 255, 213 / 255, 163 / 255),
+    }
+    for name, rgb in expected.items():
+        mesh_prim = stage.GetPrimAtPath(f"/Model/Geom/{name}")
+        assert mesh_prim.IsValid(), name
+        mat_prim = stage.GetPrimAtPath(f"/Model/Looks/{name}")
+        assert mat_prim.IsValid(), name
+        shader = UsdShade.Shader(stage.GetPrimAtPath(f"/Model/Looks/{name}/PreviewSurface"))
+        diffuse = shader.GetInput("diffuseColor").Get()
+        assert diffuse[0] == pytest.approx(rgb[0], abs=1e-5)
+        assert diffuse[1] == pytest.approx(rgb[1], abs=1e-5)
+        assert diffuse[2] == pytest.approx(rgb[2], abs=1e-5)
+
+
 def test_agents_md_points_at_rolling_pages():
     text = AGENTS_MD.read_text(encoding="utf-8")
     assert "pteasima.github.io/Blueprints" in text

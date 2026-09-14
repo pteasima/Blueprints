@@ -55,13 +55,19 @@ def main(argv: list[str] | None = None) -> int:
                 extra = export_section(extra_shape, model_name, stem=stem)
             else:
                 extra = export_shape(
-                    extra_shape, model_name, stem=stem, formats=("svg", "dxf", "png")
+                    extra_shape,
+                    model_name,
+                    stem=stem,
+                    formats=("step", "stl", "svg", "dxf", "png"),
                 )
             paths.update({f"{stem}_{k}": v for k, v in extra.items()})
     elif hasattr(mod, "build_preview"):
         preview, _ = mod.build_preview()
         extra = export_shape(
-            preview, model_name, stem="cutaway", formats=("svg", "dxf", "png")
+            preview,
+            model_name,
+            stem="cutaway",
+            formats=("step", "stl", "svg", "dxf", "png"),
         )
         paths.update({f"cutaway_{k}": v for k, v in extra.items()})
     params = meta.get("derived") or getattr(mod, "PARAMS", meta.get("params", {}))
