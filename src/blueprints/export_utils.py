@@ -7,6 +7,9 @@ import os
 import shutil
 import struct
 import tempfile
+import urllib.error
+import urllib.request
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -246,6 +249,7 @@ def export_shape(
 
     _maybe_write_usdz(written)
     publish_to_artifacts(model_name, written)
+    _maybe_publish_preview_link(model_name, written)
     return written
 
 
@@ -339,33 +343,142 @@ def artifacts_dir() -> Path | None:
     return path if path.is_dir() else None
 
 
-_CHAT_FORMATS = frozenset({".png", ".usdz", ".html"})
+_CHAT_FORMATS = frozenset({".png", ".usdz", ".html", ".txt"})
 
 
 def _artifact_name(model_name: str, path: Path) -> str:
     suffix = path.suffix.lower()
     if path.stem == "model" and suffix in {".step", ".stp", ".stl", ".usdz", ".html"}:
         return f"{model_name}_3d{suffix}"
+    if path.stem.endswith("_ar") and suffix == ".html":
+        return f"{model_name}_3d_ar.html"
+    if path.name.endswith("_preview_url.txt"):
+        return f"{model_name}_3d_url.txt"
+    if path.name.endswith("_preview_qr.png"):
+        return f"{model_name}_3d_qr.png"
     return f"{model_name}_{path.name}"
 
 
 def publish_to_artifacts(model_name: str, paths: dict[str, Path]) -> dict[str, Path]:
-    """Copy PNG/USDZ/HTML into the run artifact folder.
+    """Copy PNG/USDZ/HTML (and preview URL/QR) into the run artifact folder.
 
     Chat still only displays PNG/video. Do not emit `<a href="/opt/cursor/artifacts/…">`;
-    those paths 404 on cursor.com. Give the user a real https URL or a QR PNG instead.
+    those paths 404 on cursor.com. Paste the published https URL (and optional QR PNG).
     """
     dest_root = artifacts_dir()
     if dest_root is None:
         return {}
     published: dict[str, Path] = {}
-    for path in paths.values():
-        if path.suffix.lower() not in _CHAT_FORMATS or not path.is_file():
+    for key, path in paths.items():
+        if not path.is_file():
+            continue
+        suffix = path.suffix.lower()
+        if suffix not in _CHAT_FORMATS:
             continue
         dest = dest_root / _artifact_name(model_name, path)
         shutil.copy2(path, dest)
-        published[path.suffix.lower().lstrip(".")] = dest
+        published[key] = dest
     return published
+
+
+def _preview_upload_enabled() -> bool:
+    if os.environ.get("BLUEPRINTS_SKIP_PREVIEW_UPLOAD") == "1":
+        return False
+    if "PYTEST_CURRENT_TEST" in os.environ and os.environ.get(
+        "BLUEPRINTS_ALLOW_PREVIEW_UPLOAD"
+    ) != "1":
+        return False
+    return True
+
+
+def upload_preview_file(
+    path: Path,
+    *,
+    ttl: str = "72h",
+    endpoint: str | None = None,
+) -> str:
+    """Upload a file to litterbox and return a public https URL.
+
+    litterbox serves HTML as text/html (Safari can open the AR launcher). USDZ
+    usually comes back as application/octet-stream, so prefer the HTML launcher.
+    """
+    # Multipart form without extra deps.
+    boundary = f"----BlueprintsBoundary{uuid.uuid4().hex}"
+    filename = path.name
+    raw = path.read_bytes()
+    content_type = {
+        ".html": "text/html; charset=utf-8",
+        ".usdz": "model/vnd.usdz+zip",
+        ".png": "image/png",
+    }.get(path.suffix.lower(), "application/octet-stream")
+    body = b"".join(
+        [
+            f"--{boundary}\r\n".encode(),
+            b'Content-Disposition: form-data; name="reqtype"\r\n\r\n',
+            b"fileupload\r\n",
+            f"--{boundary}\r\n".encode(),
+            b'Content-Disposition: form-data; name="time"\r\n\r\n',
+            f"{ttl}\r\n".encode(),
+            f"--{boundary}\r\n".encode(),
+            (
+                f'Content-Disposition: form-data; name="fileToUpload"; '
+                f'filename="{filename}"\r\n'
+            ).encode(),
+            f"Content-Type: {content_type}\r\n\r\n".encode(),
+            raw,
+            b"\r\n",
+            f"--{boundary}--\r\n".encode(),
+        ]
+    )
+    url = endpoint or "https://litterbox.catbox.moe/resources/internals/api.php"
+    req = urllib.request.Request(
+        url,
+        data=body,
+        method="POST",
+        headers={
+            "Content-Type": f"multipart/form-data; boundary={boundary}",
+            "User-Agent": "blueprints-export/1.0",
+        },
+    )
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        text = resp.read().decode("utf-8", errors="replace").strip()
+    if not text.startswith("https://"):
+        raise RuntimeError(f"Preview upload failed: {text[:200]!r}")
+    return text
+
+
+def write_preview_qr(url: str, dest: Path) -> Path:
+    """Write a chat-displayable PNG QR for a preview URL."""
+    import qrcode
+
+    img = qrcode.make(url, box_size=8, border=2)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    img.save(dest)
+    return dest
+
+
+def _maybe_publish_preview_link(model_name: str, written: dict[str, Path]) -> None:
+    """Host the no-JS AR launcher and attach URL + QR for chat."""
+    ar_html = written.get("ar_html")
+    if ar_html is None or not ar_html.is_file():
+        return
+    if not _preview_upload_enabled():
+        return
+    try:
+        url = upload_preview_file(ar_html)
+    except (urllib.error.URLError, TimeoutError, RuntimeError, OSError) as exc:
+        print(f"preview_url: (upload failed: {exc})")
+        return
+
+    stem = ar_html.name.removesuffix("_ar.html")
+    url_path = ar_html.with_name(f"{stem}_preview_url.txt")
+    qr_path = ar_html.with_name(f"{stem}_preview_qr.png")
+    url_path.write_text(url + "\n", encoding="utf-8")
+    write_preview_qr(url, qr_path)
+    written["preview_url"] = url_path
+    written["preview_qr"] = qr_path
+    publish_to_artifacts(model_name, {"preview_url": url_path, "preview_qr": qr_path})
+    print(f"preview_url: {url}")
 
 
 def _read_binary_stl(path: Path) -> tuple[list[tuple[float, float, float]], list[tuple[int, int, int]]]:
@@ -589,7 +702,11 @@ _VIEWER_HTML = """<!DOCTYPE html>
   html,body { margin:0; height:100%; background:#111; color:#eee; font-family:-apple-system,sans-serif; }
   #bar { position:fixed; top:0; left:0; right:0; z-index:2; display:flex; gap:8px; align-items:center;
          padding:10px 12px; background:rgba(0,0,0,.72); font-size:14px; }
-  #bar button { font:inherit; padding:8px 12px; border:0; border-radius:8px; background:#eee; color:#111; }
+  #ql { position:relative; display:inline-flex; align-items:center; justify-content:center;
+        min-height:36px; padding:8px 12px; border-radius:8px; background:#eee; color:#111;
+        text-decoration:none; font:inherit; line-height:1; }
+  #ql img { position:absolute; inset:0; width:100%; height:100%; opacity:0; }
+  #ql::after { content:"Otevřít v AR"; }
   #err { display:none; position:fixed; top:56px; left:12px; right:12px; z-index:2;
          background:#4a1010; color:#fcc; padding:10px; border-radius:8px; white-space:pre-wrap; }
   canvas { display:block; width:100%; height:100%; touch-action:none; }
@@ -597,14 +714,15 @@ _VIEWER_HTML = """<!DOCTYPE html>
 </head>
 <body>
 <div id="bar">
-  <button type="button" id="ql">Otevřít v Quick Look</button>
+  <a id="ql" rel="ar" href="data:model/vnd.usdz+zip;base64,%%USDZ_B64%%">
+    <img alt="Otevřít v AR" width="1" height="1" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"/>
+  </a>
   <span>Táhni = otáčení · štípej = zoom</span>
 </div>
 <pre id="err"></pre>
 <canvas id="c"></canvas>
 <script>
 const COORDS_B64 = "%%COORDS_B64%%";
-const USDZ_B64 = "%%USDZ_B64%%";
 const cx = %%CX%%, cy = %%CY%%, cz = %%CZ%%, span = %%SPAN%%;
 const errEl = document.getElementById('err');
 function fail(msg) { errEl.style.display = 'block'; errEl.textContent = msg; }
@@ -614,20 +732,21 @@ function b64bytes(s) {
   for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
   return u8;
 }
-document.getElementById('ql').onclick = () => {
-  const blob = new Blob([b64bytes(USDZ_B64)], {type:'model/vnd.usdz+zip'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.rel = 'ar';
-  a.href = url;
-  a.download = 'model.usdz';
-  const img = document.createElement('img');
-  img.alt = '3D';
-  a.appendChild(img);
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-};
+(function () {
+  const a = document.getElementById('ql');
+  if (a.relList && a.relList.supports('ar')) return;
+  a.addEventListener('click', function (e) {
+    e.preventDefault();
+    const b64 = a.getAttribute('href').split(',')[1];
+    const blob = new Blob([b64bytes(b64)], {type:'model/vnd.usdz+zip'});
+    const url = URL.createObjectURL(blob);
+    const d = document.createElement('a');
+    d.href = url;
+    d.download = 'model.usdz';
+    d.click();
+    URL.revokeObjectURL(url);
+  });
+})();
 const canvas = document.getElementById('c');
 const gl = canvas.getContext('webgl', {alpha:false, antialias:true})
         || canvas.getContext('experimental-webgl', {alpha:false});
@@ -775,6 +894,41 @@ else {
 </html>
 """
 
+# No JavaScript: temporary hosts often set CSP that blocks inline scripts.
+# Safari launches AR Quick Look from <a rel="ar" href="data:model/vnd.usdz+zip;…">.
+_AR_LAUNCHER_HTML = """<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>%%TITLE%% — AR</title>
+<style>
+  html,body { margin:0; min-height:100%; background:#111; color:#eee;
+              font-family:-apple-system,BlinkMacSystemFont,sans-serif; }
+  main { min-height:100vh; display:flex; flex-direction:column; align-items:center;
+         justify-content:center; gap:18px; padding:24px; text-align:center; box-sizing:border-box; }
+  h1 { font-size:1.25rem; font-weight:600; margin:0; }
+  p { margin:0; opacity:.75; max-width:22rem; line-height:1.4; }
+  a.ar { position:relative; display:inline-flex; align-items:center; justify-content:center;
+         min-width:12rem; min-height:3.25rem; padding:0 1.25rem; border-radius:12px;
+         background:#f2f2f2; color:#111; text-decoration:none; font-size:1.05rem; font-weight:600; }
+  a.ar img { position:absolute; inset:0; width:100%; height:100%; opacity:0; }
+  a.ar span { pointer-events:none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>%%TITLE%%</h1>
+  <p>V Safari klepni na tlačítko — otevře se Quick Look / AR. Nemusíš nic stahovat z GitHubu.</p>
+  <a class="ar" rel="ar" href="data:model/vnd.usdz+zip;base64,%%USDZ_B64%%">
+    <img alt="" width="1" height="1" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"/>
+    <span>Otevřít v AR</span>
+  </a>
+</main>
+</body>
+</html>
+"""
+
 
 def stl_to_html_viewer(stl_path: Path, html_path: Path, usdz_path: Path | None = None) -> Path:
     """Self-contained WebGL viewer with a Quick Look button (chat UI is PNG-only)."""
@@ -792,13 +946,26 @@ def stl_to_html_viewer(stl_path: Path, html_path: Path, usdz_path: Path | None =
     else:
         welded_pts, welded_faces = _weld_mesh(points, faces)
         usdz_raw = _usdz_bytes(welded_pts, welded_faces)
+    usdz_b64 = base64.b64encode(usdz_raw).decode("ascii")
     html = (
         _VIEWER_HTML.replace("%%COORDS_B64%%", base64.b64encode(packed).decode("ascii"))
-        .replace("%%USDZ_B64%%", base64.b64encode(usdz_raw).decode("ascii"))
+        .replace("%%USDZ_B64%%", usdz_b64)
         .replace("%%CX%%", f"{cx:.6f}")
         .replace("%%CY%%", f"{cy:.6f}")
         .replace("%%CZ%%", f"{cz:.6f}")
         .replace("%%SPAN%%", f"{span:.6f}")
+    )
+    html_path.parent.mkdir(parents=True, exist_ok=True)
+    html_path.write_text(html, encoding="utf-8")
+    return html_path
+
+
+def write_ar_launcher(usdz_path: Path, html_path: Path, *, title: str = "3D preview") -> Path:
+    """Minimal no-JS page that launches Safari AR Quick Look from an embedded USDZ."""
+    usdz_b64 = base64.b64encode(usdz_path.read_bytes()).decode("ascii")
+    html = (
+        _AR_LAUNCHER_HTML.replace("%%TITLE%%", title)
+        .replace("%%USDZ_B64%%", usdz_b64)
     )
     html_path.parent.mkdir(parents=True, exist_ok=True)
     html_path.write_text(html, encoding="utf-8")
@@ -815,6 +982,10 @@ def _maybe_write_usdz(written: dict[str, Path]) -> None:
     html_path = stl_path.with_suffix(".html")
     stl_to_html_viewer(stl_path, html_path, usdz_path=usdz_path)
     written["html"] = html_path
+    ar_path = stl_path.with_name(f"{stl_path.stem}_ar.html")
+    title = stl_path.parent.name if stl_path.parent.name else "3D preview"
+    write_ar_launcher(usdz_path, ar_path, title=title)
+    written["ar_html"] = ar_path
 
 
 def summarize_params(params: dict[str, Any]) -> str:

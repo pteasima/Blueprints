@@ -23,7 +23,7 @@ source .venv/bin/activate
 python -m blueprints.export hello_world
 ```
 
-Generated artifacts: `STEP`/`STL` (desktop CAD), `USDZ` (iOS Quick Look), self-contained `HTML` viewer, `SVG`/`DXF`, and a white-background `PNG` preview. Cloud Agent chat on iOS and web only displays PNG/video tiles; USDZ/HTML must be opened via a real `https://` URL (see `AGENTS.md`).
+Generated artifacts: `STEP`/`STL` (desktop CAD), `USDZ` (iOS Quick Look), self-contained `HTML` viewer + no-JS AR launcher, `SVG`/`DXF`, and a white-background `PNG` preview. Cloud Agent chat on iOS and web only displays PNG/video tiles; after each 3D export the CLI prints a temporary `preview_url` (and QR) so you can open Safari AR without going through GitHub (see `AGENTS.md`).
 
 ## Layout
 

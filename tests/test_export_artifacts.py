@@ -30,14 +30,17 @@ def test_export_publishes_usdz_to_artifacts(tmp_path, monkeypatch):
     artifacts.mkdir()
     monkeypatch.setattr(eu, "EXPORTS_DIR", exports)
     monkeypatch.setenv("BLUEPRINTS_ARTIFACTS_DIR", str(artifacts))
+    monkeypatch.setenv("BLUEPRINTS_SKIP_PREVIEW_UPLOAD", "1")
 
     shape, _ = build(HelloWorldParams(width=50, depth=40, height=20, fillet_radius=2))
     paths = export_shape(shape, "hello_world", formats=("step", "stl", "svg", "dxf"))
 
     assert paths["usdz"].exists()
     assert paths["html"].exists()
+    assert paths["ar_html"].exists()
     assert (artifacts / "hello_world_3d.usdz").stat().st_size > 0
     assert (artifacts / "hello_world_3d.html").stat().st_size > 0
+    assert (artifacts / "hello_world_3d_ar.html").stat().st_size > 0
     assert not (artifacts / "hello_world_3d.step").exists()
     assert "canvas" in (artifacts / "hello_world_3d.html").read_text()
     assert not (artifacts / "hello_world_model.dxf").exists()
@@ -74,10 +77,39 @@ def test_export_publishes_usdz_to_artifacts(tmp_path, monkeypatch):
     assert "attribute vec3 aPos;" in html
     assert "attribute vec3 aPos, aNrm" not in html
     assert "COMPILE_STATUS" in html
-    assert "model/vnd.usdz+zip" in html
-    assert "Otevřít v Quick Look" in html
+    assert 'rel="ar"' in html
+    assert "data:model/vnd.usdz+zip;base64," in html
+    assert "Otevřít v AR" in html
     script = html.split("<script>", 1)[1].split("</script>", 1)[0]
     subprocess.run(["node", "--check"], input=script, text=True, check=True)
+    ar = (artifacts / "hello_world_3d_ar.html").read_text()
+    assert "<script" not in ar.lower()
+    assert 'rel="ar"' in ar
+    assert "data:model/vnd.usdz+zip;base64," in ar
+
+
+def test_preview_url_upload_and_qr(tmp_path, monkeypatch):
+    import blueprints.export_utils as eu
+
+    exports = tmp_path / "exports"
+    artifacts = tmp_path / "artifacts"
+    artifacts.mkdir()
+    monkeypatch.setattr(eu, "EXPORTS_DIR", exports)
+    monkeypatch.setenv("BLUEPRINTS_ARTIFACTS_DIR", str(artifacts))
+    monkeypatch.delenv("BLUEPRINTS_SKIP_PREVIEW_UPLOAD", raising=False)
+    monkeypatch.setenv("BLUEPRINTS_ALLOW_PREVIEW_UPLOAD", "1")
+    monkeypatch.setattr(
+        eu,
+        "upload_preview_file",
+        lambda path, **kwargs: "https://litter.catbox.moe/example_ar.html",
+    )
+
+    shape, _ = build(HelloWorldParams(width=30, depth=20, height=10, fillet_radius=1))
+    paths = export_shape(shape, "hello_world", formats=("stl",))
+    assert paths["preview_url"].read_text().strip() == "https://litter.catbox.moe/example_ar.html"
+    assert paths["preview_qr"].stat().st_size > 0
+    assert (artifacts / "hello_world_3d_url.txt").read_text().startswith("https://")
+    assert (artifacts / "hello_world_3d_qr.png").stat().st_size > 0
 
 
 def test_stl_to_usdz_roundtrip(tmp_path, monkeypatch):
@@ -85,6 +117,7 @@ def test_stl_to_usdz_roundtrip(tmp_path, monkeypatch):
 
     monkeypatch.setattr(eu, "EXPORTS_DIR", tmp_path)
     monkeypatch.setenv("BLUEPRINTS_ARTIFACTS_DIR", str(tmp_path / "artifacts"))
+    monkeypatch.setenv("BLUEPRINTS_SKIP_PREVIEW_UPLOAD", "1")
     (tmp_path / "artifacts").mkdir()
     shape, _ = build(HelloWorldParams(width=30, depth=20, height=10, fillet_radius=1))
     paths = export_shape(shape, "box", formats=("stl",))
@@ -129,9 +162,9 @@ def test_usdz_tabletop_scale_for_room_sized_mesh(tmp_path):
     assert stage.GetDefaultPrim().GetAttribute("preliminary:anchoring:type").Get() == "plane"
 
 
-def test_agents_md_does_not_emit_artifact_hrefs():
-    """Relative /opt/cursor/artifacts hrefs 404 on cursor.com; only img/video src is rewritten."""
+def test_agents_md_requires_preview_url():
     text = AGENTS_MD.read_text(encoding="utf-8")
+    assert "preview_url:" in text
+    assert "Siri Shortcut" in text
     assert 'href="/opt/cursor/artifacts' not in text
-    assert "<a href=\"/opt/cursor/artifacts" not in text
     assert "<img src=\"/opt/cursor/artifacts/" in text
