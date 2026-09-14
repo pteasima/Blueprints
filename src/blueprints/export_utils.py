@@ -250,7 +250,7 @@ def export_shape(
             raise ValueError(f"Unsupported export format: {fmt}")
         written[fmt] = path
 
-    _maybe_write_usdz(written, model_name, shape=shape)
+    _maybe_write_usdz(written, model_name, shape=shape, stem=stem)
     publish_to_artifacts(model_name, written)
     return written
 
@@ -850,6 +850,7 @@ def _maybe_write_usdz(
     model_name: str,
     *,
     shape: Shape | Compound | None = None,
+    stem: str = "model",
 ) -> None:
     stl_path = written.get("stl")
     if stl_path is None or not stl_path.is_file():
@@ -874,9 +875,15 @@ def _maybe_write_usdz(
         write_gltf_html_viewer(glb_path, html_path, usdz_path=usdz_path)
         written["html"] = html_path
 
-    hub = publish_to_preview_site(model_name, usdz_path)
-    if hub is not None:
-        written["preview_hub"] = hub
+    # Only the primary stem updates the Pages hub (extras must not overwrite it).
+    if stem == "model":
+        hub = publish_to_preview_site(
+            model_name,
+            usdz_path,
+            glb_path=written.get("glb"),
+        )
+        if hub is not None:
+            written["preview_hub"] = hub
 
 
 def summarize_params(params: dict[str, Any]) -> str:

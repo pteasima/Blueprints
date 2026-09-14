@@ -65,7 +65,7 @@ After `git push`, wait for the `pages` workflow to go green, then paste that URL
 
 One-time enable: https://github.com/pteasima/Blueprints/settings/pages → Source = **GitHub Actions** → Save. Then open **Settings → Environments → github-pages → Deployment branches** and allow `cursor/**` (or All branches) — by default only `main` can deploy, which blocks unmerged agent previews. Cloud agent tokens cannot change this (API 403). Override the printed URL with `BLUEPRINTS_PAGES_URL` if needed. Skip site file updates with `BLUEPRINTS_SKIP_PREVIEW_SITE=1`.
 
-Add more buttons later (sectional cuts, other models) via more USDZs + manifest rows — one hub page.
+Add more buttons later (sectional cuts, other models) via more USDZs/GLBs + manifest rows — one hub page. **Web 3D** opens `/viewer/?m=<id>` (GLB + custom Three.js shell); Quick Look stays USDZ-only.
 
 USDZ is a zip **container** of a binary `.usdc` crate (`UsdUtils.CreateNewARKitUsdzPackage`). Quick Look opens the `.usdz` file itself — never unzip it. The hub embeds USDZ as a `data:model/vnd.usdz+zip;base64,…` `rel="ar"` link so Safari does not depend on GitHub’s USDZ MIME type.
 

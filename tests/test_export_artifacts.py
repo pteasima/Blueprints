@@ -96,6 +96,8 @@ def test_preview_hub_updates_models_for_pages(tmp_path, monkeypatch, capsys):
     paths = export_shape(shape, "hello_world", formats=("stl",))
     assert paths["preview_hub"] == site / "index.html"
     assert (site / "models" / "hello_world.usdz").is_file()
+    assert (site / "models" / "hello_world.glb").is_file()
+    assert (site / "viewer" / "viewer.iife.js").is_file()
     assert (site / ".nojekyll").is_file()
     manifest = (site / "models" / "manifest.json").read_text(encoding="utf-8")
     assert '"id": "hello_world"' in manifest
@@ -104,6 +106,8 @@ def test_preview_hub_updates_models_for_pages(tmp_path, monkeypatch, capsys):
     assert 'rel="ar"' in html
     assert "data:model/vnd.usdz+zip;base64," in html
     assert ">Quick Look</span>" in html
+    assert 'href="viewer/?m=hello_world"' in html
+    assert ">Web 3D</span>" in html
     assert "Otevřít" not in html
     assert "catbox" not in html
     out = capsys.readouterr().out
