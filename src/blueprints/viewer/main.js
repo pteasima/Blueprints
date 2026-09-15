@@ -5,6 +5,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { USDZExporter } from "three/addons/exporters/USDZExporter.js";
 import { meshToClippedExportMesh } from "./clipGeometry.js";
 import { applyArPlacement, computeArPlacement } from "./arPlacement.js";
@@ -62,13 +63,17 @@ export function mountViewer(canvas, glbBuffer) {
   controls.dampingFactor = 0.08;
   controls.screenSpacePanning = true;
 
-  scene.add(new THREE.AmbientLight(0xffffff, 0.55));
-  const key = new THREE.DirectionalLight(0xffffff, 1.05);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+  const key = new THREE.DirectionalLight(0xffffff, 1.15);
   key.position.set(0.6, 1.0, 0.4);
   scene.add(key);
-  const fill = new THREE.DirectionalLight(0xffffff, 0.35);
+  const fill = new THREE.DirectionalLight(0xffffff, 0.4);
   fill.position.set(-0.5, 0.2, -0.6);
   scene.add(fill);
+  // Soft IBL so Realistic metal/clearcoat/roughness differences read clearly.
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  pmrem.dispose();
 
   /** @type {THREE.Object3D | null} */
   let root = null;

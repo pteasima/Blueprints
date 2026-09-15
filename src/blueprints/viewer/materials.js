@@ -147,73 +147,74 @@ function getMapTexture(kind) {
   if (!ctx) return null;
 
   if (kind === "wood") {
-    ctx.fillStyle = "#c8a060";
+    ctx.fillStyle = "#c49858";
     ctx.fillRect(0, 0, size, size);
     for (let i = 0; i < size; i++) {
       const n = Math.sin(i * 0.35) * 8 + Math.sin(i * 0.11) * 4;
-      const g = 140 + ((i * 17) % 40);
-      ctx.strokeStyle = `rgba(${g - 30}, ${g - 50}, ${g - 90}, 0.35)`;
+      const g = 130 + ((i * 17) % 50);
+      ctx.strokeStyle = `rgba(${g - 40}, ${g - 60}, ${g - 100}, 0.55)`;
+      ctx.lineWidth = 1.2;
       ctx.beginPath();
       ctx.moveTo(0, i + n * 0.15);
       ctx.lineTo(size, i - n * 0.1);
       ctx.stroke();
     }
-    for (let k = 0; k < 40; k++) {
+    for (let k = 0; k < 60; k++) {
       const x = (k * 37) % size;
       const y = (k * 53) % size;
-      ctx.fillStyle = "rgba(80, 50, 20, 0.12)";
-      ctx.fillRect(x, y, 2, 6 + (k % 5));
+      ctx.fillStyle = "rgba(70, 40, 15, 0.22)";
+      ctx.fillRect(x, y, 2, 7 + (k % 5));
     }
   } else if (kind === "foam") {
-    ctx.fillStyle = "#a8dc78";
+    ctx.fillStyle = "#9ed468";
     ctx.fillRect(0, 0, size, size);
-    for (let y = 0; y < size; y += 8) {
-      for (let x = 0; x < size; x += 8) {
-        const ox = ((y / 8) % 2) * 4;
-        const r = 2.2 + ((x * y) % 5) * 0.15;
+    for (let y = 0; y < size; y += 7) {
+      for (let x = 0; x < size; x += 7) {
+        const ox = ((y / 7) % 2) * 3.5;
+        const r = 2.4 + ((x * y) % 5) * 0.2;
         ctx.beginPath();
-        ctx.arc(x + ox + 4, y + 4, r, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(255,255,255,0.35)";
+        ctx.arc(x + ox + 3.5, y + 3.5, r, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255,255,255,0.55)";
         ctx.fill();
-        ctx.strokeStyle = "rgba(60,100,40,0.2)";
+        ctx.strokeStyle = "rgba(40,90,30,0.35)";
         ctx.stroke();
       }
     }
   } else if (kind === "plaster") {
     const img = ctx.createImageData(size, size);
     for (let i = 0; i < img.data.length; i += 4) {
-      const n = 210 + ((i * 13) % 35);
+      const n = 200 + ((i * 13) % 45);
       img.data[i] = n;
-      img.data[i + 1] = n - 8;
-      img.data[i + 2] = n - 18;
+      img.data[i + 1] = n - 10;
+      img.data[i + 2] = n - 22;
       img.data[i + 3] = 255;
     }
     ctx.putImageData(img, 0, 0);
   } else if (kind === "wool") {
-    ctx.fillStyle = "#94d070";
+    ctx.fillStyle = "#88c860";
     ctx.fillRect(0, 0, size, size);
-    for (let i = 0; i < 900; i++) {
+    for (let i = 0; i < 1400; i++) {
       const x = (i * 47) % size;
       const y = (i * 91) % size;
-      ctx.fillStyle = i % 3 === 0 ? "rgba(255,255,255,0.25)" : "rgba(40,80,30,0.18)";
+      ctx.fillStyle = i % 3 === 0 ? "rgba(255,255,255,0.4)" : "rgba(30,70,20,0.28)";
       ctx.fillRect(x, y, 1 + (i % 2), 2 + (i % 3));
     }
   } else if (kind === "metal") {
     const grad = ctx.createLinearGradient(0, 0, size, size);
-    grad.addColorStop(0, "#b03028");
-    grad.addColorStop(0.45, "#e06050");
-    grad.addColorStop(0.55, "#902820");
-    grad.addColorStop(1, "#c04034");
+    grad.addColorStop(0, "#a02820");
+    grad.addColorStop(0.4, "#f07060");
+    grad.addColorStop(0.55, "#701810");
+    grad.addColorStop(1, "#d04838");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, size, size);
-    for (let y = 0; y < size; y += 10) {
-      ctx.fillStyle = "rgba(255,255,255,0.12)";
+    for (let y = 0; y < size; y += 9) {
+      ctx.fillStyle = "rgba(255,255,255,0.22)";
       ctx.fillRect(0, y, size, 2);
-      ctx.fillStyle = "rgba(0,0,0,0.15)";
-      ctx.fillRect(0, y + 5, size, 1);
+      ctx.fillStyle = "rgba(0,0,0,0.28)";
+      ctx.fillRect(0, y + 4, size, 2);
     }
   } else if (kind === "masonry") {
-    ctx.fillStyle = "#c69470";
+    ctx.fillStyle = "#b88868";
     ctx.fillRect(0, 0, size, size);
     const brickH = 16;
     const brickW = 32;
@@ -222,9 +223,9 @@ function getMapTexture(kind) {
       for (let col = -1; col < size / brickW + 1; col++) {
         const x = col * brickW + offset;
         const y = row * brickH;
-        ctx.fillStyle = `rgba(${180 + ((row + col) % 3) * 12}, ${120 + (row % 4) * 8}, ${80 + (col % 3) * 10}, 0.55)`;
+        ctx.fillStyle = `rgba(${170 + ((row + col) % 3) * 18}, ${110 + (row % 4) * 10}, ${70 + (col % 3) * 12}, 0.75)`;
         ctx.fillRect(x + 1, y + 1, brickW - 2, brickH - 2);
-        ctx.strokeStyle = "rgba(90,60,40,0.35)";
+        ctx.strokeStyle = "rgba(70,45,30,0.55)";
         ctx.strokeRect(x + 0.5, y + 0.5, brickW - 1, brickH - 1);
       }
     }
@@ -282,6 +283,74 @@ function finishMaterial(mat, planes) {
 }
 
 /**
+ * CAD GLBs from build123d/OCCT ship without UVs; project box UVs so maps show.
+ * @param {THREE.BufferGeometry} geometry
+ * @returns {number} characteristic span (mm) for texture repeat
+ */
+function ensureBoxUVs(geometry) {
+  geometry.computeBoundingBox();
+  const bb = geometry.boundingBox;
+  const size = new THREE.Vector3();
+  bb.getSize(size);
+  const sx = Math.max(size.x, 1e-6);
+  const sy = Math.max(size.y, 1e-6);
+  const sz = Math.max(size.z, 1e-6);
+  const span = Math.max(sx, sy, sz);
+
+  if (!geometry.getAttribute("normal")) {
+    geometry.computeVertexNormals();
+  }
+  const pos = geometry.getAttribute("position");
+  const nrm = geometry.getAttribute("normal");
+  if (!pos) return span;
+
+  const existing = geometry.getAttribute("uv");
+  if (existing && existing.count === pos.count) return span;
+
+  const uvs = new Float32Array(pos.count * 2);
+  const v = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i);
+    const nx = Math.abs(nrm.getX(i));
+    const ny = Math.abs(nrm.getY(i));
+    const nz = Math.abs(nrm.getZ(i));
+    let u;
+    let vv;
+    if (ny >= nx && ny >= nz) {
+      u = (v.x - bb.min.x) / sx;
+      vv = (v.z - bb.min.z) / sz;
+    } else if (nx >= nz) {
+      u = (v.z - bb.min.z) / sz;
+      vv = (v.y - bb.min.y) / sy;
+    } else {
+      u = (v.x - bb.min.x) / sx;
+      vv = (v.y - bb.min.y) / sy;
+    }
+    uvs[i * 2] = u;
+    uvs[i * 2 + 1] = vv;
+  }
+  geometry.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
+  return span;
+}
+
+/**
+ * @param {string} kind
+ * @param {number} spanMm
+ * @returns {THREE.CanvasTexture | null}
+ */
+function mapForSpan(kind, spanMm) {
+  const base = getMapTexture(kind);
+  if (!base) return null;
+  // Clone so each label can use its own repeat without fighting the cache.
+  const tex = base.clone();
+  tex.needsUpdate = true;
+  // ~1 tile per 400 mm of largest edge (readable wood/foam at room scale).
+  const tiles = Math.max(1.2, Math.min(12, spanMm / 400));
+  tex.repeat.set(tiles, tiles);
+  return tex;
+}
+
+/**
  * @param {Map<string, THREE.Object3D[]>} partsMap
  * @param {string} mode
  * @param {{ isDark?: boolean, clippingPlanes?: THREE.Plane[] | null }} [opts]
@@ -293,6 +362,15 @@ export function applyMaterialMode(partsMap, mode, opts = {}) {
 
   for (const [label, meshes] of partsMap) {
     const rgb = colorForLabel(label);
+    let spanMm = 1000;
+    if (realistic) {
+      for (const mesh of meshes) {
+        if (mesh.isMesh && mesh.geometry) {
+          spanMm = Math.max(spanMm, ensureBoxUVs(mesh.geometry));
+        }
+      }
+    }
+
     /** @type {THREE.Material} */
     let mat;
     if (realistic) {
@@ -303,7 +381,7 @@ export function applyMaterialMode(partsMap, mode, opts = {}) {
         map: "none",
       };
       const color = solidColor(preset.color, isDark);
-      const map = getMapTexture(preset.map || "none");
+      const map = mapForSpan(preset.map || "none", spanMm);
       if (preset.clearcoat) {
         mat = new THREE.MeshPhysicalMaterial({
           color,
@@ -312,6 +390,7 @@ export function applyMaterialMode(partsMap, mode, opts = {}) {
           metalness: preset.metalness,
           clearcoat: preset.clearcoat,
           clearcoatRoughness: preset.clearcoatRoughness ?? 0.3,
+          envMapIntensity: 0.85,
         });
       } else {
         mat = new THREE.MeshStandardMaterial({
@@ -319,6 +398,7 @@ export function applyMaterialMode(partsMap, mode, opts = {}) {
           map,
           roughness: preset.roughness,
           metalness: preset.metalness,
+          envMapIntensity: preset.metalness > 0.05 ? 1.1 : 0.55,
         });
       }
     } else {
@@ -326,6 +406,7 @@ export function applyMaterialMode(partsMap, mode, opts = {}) {
         color: solidColor(rgb, isDark),
         roughness: 0.78,
         metalness: 0.0,
+        envMapIntensity: 0.25,
       });
     }
     finishMaterial(mat, planes);
@@ -343,8 +424,11 @@ export function applyMaterialMode(partsMap, mode, opts = {}) {
     }
     for (const m of previous) {
       if (m === mat) continue;
-      // Keep cached procedural maps alive across mode switches.
       if (m.map && [...textureCache.values()].includes(m.map)) {
+        m.map = null;
+      } else if (m.map) {
+        // Cloned procedural maps from mapForSpan — dispose the clone.
+        m.map.dispose?.();
         m.map = null;
       }
       m.dispose?.();
