@@ -40,77 +40,77 @@ SECTION_HEAVY_WEIGHT = 22.0
 SECTION_PNG_WIDTH = 1800
 
 # SVG fill/line colours (0–255 RGB) keyed by Face/Wire.label from the section model.
-# Mid-luminance, higher-chroma solids so layers read on both light and dark glass chrome.
+# High-contrast solids: strong chroma and distinct hues so layers separate on glass chrome.
 # Optional roughness/metallic feed UsdPreviewSurface (viewer Realistic mode is separate).
 # Keep SOLID_COLORS in src/blueprints/viewer/materials.js in sync with fill/line RGB.
 SECTION_LAYERS: dict[str, dict[str, Any]] = {
     "podlaha": {
-        "fill": (196, 158, 98),
-        "line": (92, 64, 32),
+        "fill": (210, 130, 45),
+        "line": (100, 50, 10),
         "dxf": ColorIndex.YELLOW,
         "weight": SECTION_LINE_WEIGHT,
         "roughness": 0.72,
         "metallic": 0.0,
     },
     "eps": {
-        "fill": (168, 220, 120),
-        "line": (64, 122, 40),
+        "fill": (100, 215, 50),
+        "line": (40, 120, 20),
         "dxf": ColorIndex.GREEN,
         "weight": SECTION_LINE_WEIGHT,
         "roughness": 0.92,
         "metallic": 0.0,
     },
     "zdivo": {
-        "fill": (198, 148, 112),
-        "line": (110, 72, 48),
+        "fill": (200, 95, 60),
+        "line": (120, 45, 25),
         "dxf": ColorIndex.YELLOW,
         "weight": SECTION_LINE_WEIGHT,
         "roughness": 0.88,
         "metallic": 0.0,
     },
     "omitka": {
-        "fill": (236, 220, 196),
-        "line": (140, 124, 100),
+        "fill": (245, 215, 160),
+        "line": (150, 120, 70),
         "dxf": ColorIndex.LIGHT_GRAY,
         "weight": SECTION_LINE_WEIGHT,
         "roughness": 0.9,
         "metallic": 0.0,
     },
     "nabytek": {
-        "fill": (232, 176, 72),
-        "line": (138, 96, 28),
+        "fill": (255, 165, 30),
+        "line": (150, 90, 10),
         "dxf": ColorIndex.YELLOW,
         "weight": SECTION_LINE_WEIGHT,
         "roughness": 0.45,
         "metallic": 0.0,
     },
     "pozednice": {
-        "fill": (204, 140, 64),
-        "line": (112, 68, 28),
+        "fill": (185, 105, 30),
+        "line": (100, 50, 10),
         "dxf": ColorIndex.YELLOW,
         "weight": SECTION_LINE_WEIGHT,
         "roughness": 0.58,
         "metallic": 0.0,
     },
     "koruna": {
-        "fill": (204, 140, 64),
-        "line": (112, 68, 28),
+        "fill": (185, 105, 30),
+        "line": (100, 50, 10),
         "dxf": ColorIndex.YELLOW,
         "weight": SECTION_LINE_WEIGHT,
         "roughness": 0.58,
         "metallic": 0.0,
     },
     "predstena": {
-        "fill": (96, 196, 224),
-        "line": (20, 110, 140),
+        "fill": (30, 185, 230),
+        "line": (10, 100, 140),
         "dxf": ColorIndex.CYAN,
         "weight": SECTION_LINE_WEIGHT,
         "roughness": 0.82,
         "metallic": 0.0,
     },
     "pouzdro": {
-        "fill": (220, 200, 168),
-        "line": (120, 100, 72),
+        "fill": (210, 175, 120),
+        "line": (120, 90, 50),
         "dxf": ColorIndex.GRAY,
         "weight": SECTION_LINE_WEIGHT,
         "dashed": True,
@@ -118,24 +118,24 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "metallic": 0.0,
     },
     "krov": {
-        "fill": (204, 140, 64),
-        "line": (112, 68, 28),
+        "fill": (185, 105, 30),
+        "line": (100, 50, 10),
         "dxf": ColorIndex.YELLOW,
         "weight": SECTION_LINE_WEIGHT,
         "roughness": 0.58,
         "metallic": 0.0,
     },
     "vata": {
-        "fill": (148, 208, 112),
-        "line": (56, 118, 40),
+        "fill": (70, 200, 140),
+        "line": (25, 110, 70),
         "dxf": ColorIndex.GREEN,
         "weight": SECTION_LINE_WEIGHT,
         "roughness": 0.95,
         "metallic": 0.0,
     },
     "soffit": {
-        "fill": (96, 176, 48),
-        "line": (48, 100, 24),
+        "fill": (55, 160, 25),
+        "line": (30, 90, 10),
         "dxf": ColorIndex.GREEN,
         "weight": SECTION_LINE_WEIGHT,
         "roughness": 0.75,
@@ -143,7 +143,7 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
     },
     "podhled": {
         "fill": None,
-        "line": (40, 128, 196),
+        "line": (25, 110, 220),
         "dxf": ColorIndex.BLUE,
         "weight": SECTION_HEAVY_WEIGHT,
         "roughness": 0.8,
@@ -151,7 +151,7 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
     },
     "krytina": {
         "fill": None,
-        "line": (180, 48, 36),
+        "line": (215, 30, 25),
         "dxf": ColorIndex.RED,
         "weight": SECTION_HEAVY_WEIGHT,
         "roughness": 0.38,
@@ -791,7 +791,6 @@ _VIEWER_HTML = """<!DOCTYPE html>
   <div class="sheet-scroll" id="sheet-scroll">
     <section class="sheet-section" id="section-view">
       <h2 class="sheet-title">View</h2>
-      <div id="mats" class="seg" role="group" aria-label="Materials"></div>
       <div id="cams" class="seg"></div>
     </section>
     <section class="sheet-section" id="section-cuts">
@@ -801,6 +800,10 @@ _VIEWER_HTML = """<!DOCTYPE html>
     <section class="sheet-section" id="section-parts">
       <h2 class="sheet-title">Parts</h2>
       <div id="parts" class="parts"></div>
+    </section>
+    <section class="sheet-section" id="section-materials">
+      <h2 class="sheet-title">Materials</h2>
+      <div id="mats" class="seg" role="group" aria-label="Materials"></div>
     </section>
   </div>
 </aside>

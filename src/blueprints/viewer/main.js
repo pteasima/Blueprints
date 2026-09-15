@@ -277,8 +277,17 @@ export function mountViewer(canvas, glbBuffer) {
     }
   }
 
-  /** @type {string} */
+  /** @type {string | null} */
   let activeCameraPreset = "iso";
+
+  function clearCameraPresetHighlight() {
+    if (activeCameraPreset == null) return;
+    activeCameraPreset = null;
+    const host = document.getElementById("cams");
+    host?.querySelectorAll("button").forEach((el) => {
+      el.classList.remove("is-active");
+    });
+  }
 
   function buildCameraButtons() {
     const host = document.getElementById("cams");
@@ -527,6 +536,10 @@ export function mountViewer(canvas, glbBuffer) {
 
   // Spawn a draft after the user finishes orbiting/panning — not on every
   // damping `change`, which would rebuild the cut UI mid-slider-drag.
+  // `start` is user-gesture only (programmatic framing does not fire it).
+  controls.addEventListener("start", () => {
+    clearCameraPresetHighlight();
+  });
   controls.addEventListener("end", () => {
     if (suppressCameraChange) return;
     maybeSpawnDraftFromCamera();

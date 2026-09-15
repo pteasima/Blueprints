@@ -8,22 +8,22 @@ export const MATERIAL_MODE_KEY = "blueprints.materialMode";
 export const MODE_SOLID = "solid";
 export const MODE_REALISTIC = "realistic";
 
-/** @type {Record<string, [number, number, number]>} 0–255 RGB */
+/** @type {Record<string, [number, number, number]>} 0–255 RGB — high contrast */
 export const SOLID_COLORS = {
-  podlaha: [196, 158, 98],
-  eps: [168, 220, 120],
-  zdivo: [198, 148, 112],
-  omitka: [236, 220, 196],
-  nabytek: [232, 176, 72],
-  pozednice: [204, 140, 64],
-  koruna: [204, 140, 64],
-  predstena: [96, 196, 224],
-  pouzdro: [220, 200, 168],
-  krov: [204, 140, 64],
-  vata: [148, 208, 112],
-  soffit: [96, 176, 48],
-  podhled: [40, 128, 196],
-  krytina: [180, 48, 36],
+  podlaha: [210, 130, 45],
+  eps: [100, 215, 50],
+  zdivo: [200, 95, 60],
+  omitka: [245, 215, 160],
+  nabytek: [255, 165, 30],
+  pozednice: [185, 105, 30],
+  koruna: [185, 105, 30],
+  predstena: [30, 185, 230],
+  pouzdro: [210, 175, 120],
+  krov: [185, 105, 30],
+  vata: [70, 200, 140],
+  soffit: [55, 160, 25],
+  podhled: [25, 110, 220],
+  krytina: [215, 30, 25],
 };
 
 /**
@@ -40,31 +40,31 @@ export const SOLID_COLORS = {
 /** @type {Record<string, RealisticPreset>} */
 export const REALISTIC_PRESETS = {
   podlaha: {
-    color: [196, 158, 98],
+    color: [210, 130, 45],
     roughness: 0.68,
     metalness: 0.0,
     map: "wood",
   },
   eps: {
-    color: [168, 220, 120],
+    color: [100, 215, 50],
     roughness: 0.94,
     metalness: 0.0,
     map: "foam",
   },
   zdivo: {
-    color: [198, 148, 112],
+    color: [200, 95, 60],
     roughness: 0.9,
     metalness: 0.0,
     map: "masonry",
   },
   omitka: {
-    color: [236, 220, 196],
+    color: [245, 215, 160],
     roughness: 0.92,
     metalness: 0.0,
     map: "plaster",
   },
   nabytek: {
-    color: [232, 176, 72],
+    color: [255, 165, 30],
     roughness: 0.38,
     metalness: 0.0,
     clearcoat: 0.35,
@@ -72,55 +72,55 @@ export const REALISTIC_PRESETS = {
     map: "wood",
   },
   pozednice: {
-    color: [204, 140, 64],
+    color: [185, 105, 30],
     roughness: 0.55,
     metalness: 0.0,
     map: "wood",
   },
   koruna: {
-    color: [204, 140, 64],
+    color: [185, 105, 30],
     roughness: 0.55,
     metalness: 0.0,
     map: "wood",
   },
   predstena: {
-    color: [96, 196, 224],
+    color: [30, 185, 230],
     roughness: 0.84,
     metalness: 0.0,
     map: "plaster",
   },
   pouzdro: {
-    color: [220, 200, 168],
+    color: [210, 175, 120],
     roughness: 0.7,
     metalness: 0.0,
     map: "plaster",
   },
   krov: {
-    color: [204, 140, 64],
+    color: [185, 105, 30],
     roughness: 0.55,
     metalness: 0.0,
     map: "wood",
   },
   vata: {
-    color: [148, 208, 112],
+    color: [70, 200, 140],
     roughness: 0.97,
     metalness: 0.0,
     map: "wool",
   },
   soffit: {
-    color: [96, 176, 48],
+    color: [55, 160, 25],
     roughness: 0.72,
     metalness: 0.0,
     map: "plaster",
   },
   podhled: {
-    color: [40, 128, 196],
+    color: [25, 110, 220],
     roughness: 0.78,
     metalness: 0.08,
     map: "plaster",
   },
   krytina: {
-    color: [180, 48, 36],
+    color: [215, 30, 25],
     roughness: 0.32,
     metalness: 0.45,
     map: "metal",
