@@ -426,6 +426,57 @@ export function applyMaterialMode(partsMap, mode, opts = {}) {
 }
 
 /**
+ * Three.js USDZExporter only emits MeshStandardMaterial meshes; Solid mode uses
+ * MeshBasicMaterial (unlit) which would otherwise produce an empty USDZ.
+ * Clone into a Quick Look–friendly standard material for AR export.
+ *
+ * @param {THREE.Material | THREE.Material[]} material
+ * @param {THREE.BufferGeometry} [geometry] — re-box-UV when keeping a map
+ * @returns {THREE.Material | THREE.Material[]}
+ */
+export function toArExportMaterial(material, geometry) {
+  const list = Array.isArray(material) ? material : [material];
+  const out = list.map((src) => {
+    if (!src) {
+      return new THREE.MeshStandardMaterial({
+        color: 0xcccccc,
+        roughness: 0.65,
+        metalness: 0.0,
+        side: THREE.FrontSide,
+      });
+    }
+
+    const color = src.color ? src.color.clone() : new THREE.Color(0xcccccc);
+    const roughness = typeof src.roughness === "number" ? src.roughness : 0.65;
+    const metalness = typeof src.metalness === "number" ? src.metalness : 0.0;
+
+    /** @type {THREE.Texture | null} */
+    let map = null;
+    if (src.map && geometry) {
+      ensureBoxUVs(geometry);
+      // Clone so export dispose does not tear down the live viewer map.
+      map = src.map.clone();
+      map.needsUpdate = true;
+    }
+
+    const mat = new THREE.MeshStandardMaterial({
+      color,
+      map,
+      roughness,
+      metalness,
+      // USDZ / Quick Look do not support double-sided materials.
+      side: THREE.FrontSide,
+      transparent: Boolean(src.transparent),
+      opacity: typeof src.opacity === "number" ? src.opacity : 1,
+    });
+    mat.clippingPlanes = null;
+    mat.clipIntersection = false;
+    return mat;
+  });
+  return Array.isArray(material) ? out : out[0];
+}
+
+/**
  * @returns {string}
  */
 export function loadMaterialMode() {
