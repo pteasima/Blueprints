@@ -743,22 +743,21 @@ _VIEWER_HTML = """<!DOCTYPE html>
 <body>
 <nav id="top-chrome" class="top-chrome" aria-label="Viewer">
   <button type="button" id="ar" class="chrome-btn" hidden>AR</button>
-  <button type="button" id="sheet-toggle" class="chrome-btn" aria-expanded="false" aria-controls="sheet" aria-label="Controls">⋯</button>
 </nav>
-<aside id="sheet" class="sheet" data-collapsed="true">
-  <button type="button" class="sheet-handle" id="sheet-handle" aria-label="Toggle controls"></button>
-  <div class="sheet-scroll">
-    <section class="sheet-section">
+<aside id="sheet" class="sheet" data-detent="peek">
+  <button type="button" class="sheet-handle" id="sheet-handle" aria-label="Drag controls sheet"></button>
+  <div class="sheet-scroll" id="sheet-scroll">
+    <section class="sheet-section" id="section-view">
       <h2 class="sheet-title">View</h2>
       <div id="cams" class="seg"></div>
     </section>
-    <section class="sheet-section">
-      <h2 class="sheet-title">Parts</h2>
-      <div id="parts" class="parts"></div>
-    </section>
-    <section class="sheet-section">
+    <section class="sheet-section" id="section-cuts">
       <h2 class="sheet-title">Sections</h2>
       <div id="cuts" class="cuts"></div>
+    </section>
+    <section class="sheet-section" id="section-parts">
+      <h2 class="sheet-title">Parts</h2>
+      <div id="parts" class="parts"></div>
     </section>
   </div>
 </aside>

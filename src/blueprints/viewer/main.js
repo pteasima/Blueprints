@@ -19,7 +19,10 @@ export function mountViewer(canvas, glbBuffer) {
   let scene = null;
   let sceneBg = BG_DARK;
 
-  initSheetChrome((isDark) => {
+  /** @type {ReturnType<typeof initSheetChrome> | null} */
+  let chromeApi = null;
+
+  chromeApi = initSheetChrome((isDark) => {
     sceneBg = isDark ? BG_DARK : BG_LIGHT;
     if (scene) scene.background = new THREE.Color(sceneBg);
     document.documentElement.style.colorScheme = isDark ? "dark" : "light";
@@ -110,6 +113,7 @@ export function mountViewer(canvas, glbBuffer) {
       ensureDraftCut();
       buildCutUI();
       applyClipping();
+      chromeApi?.refreshPartialHeight();
       showArButton();
     },
     (err) => {
@@ -353,6 +357,7 @@ export function mountViewer(canvas, glbBuffer) {
     }
     applyClipping();
     buildCutUI();
+    chromeApi?.refreshPartialHeight();
   }
 
   function projectBoxOntoNormal(normal) {
@@ -462,6 +467,7 @@ export function mountViewer(canvas, glbBuffer) {
 
       host.append(row);
     }
+    chromeApi?.refreshPartialHeight();
   }
 
   // Spawn a draft after the user finishes orbiting/panning — not on every
@@ -471,15 +477,33 @@ export function mountViewer(canvas, glbBuffer) {
     maybeSpawnDraftFromCamera();
   });
 
+  function applySafeViewOffset() {
+    if (!chromeApi) return;
+    const { bottom, right } = chromeApi.getSafeInsets();
+    const w = Math.max(1, canvas.clientWidth);
+    const h = Math.max(1, canvas.clientHeight);
+    withSuppressedCameraChange(() => {
+      if (bottom > 0 || right > 0) {
+        camera.setViewOffset(w, h, 0, 0, Math.max(1, w - right), Math.max(1, h - bottom));
+      } else {
+        camera.clearViewOffset();
+      }
+      camera.updateProjectionMatrix();
+    });
+  }
+
   function resize() {
     const w = Math.max(1, canvas.clientWidth);
     const h = Math.max(1, canvas.clientHeight);
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
-    camera.updateProjectionMatrix();
+    applySafeViewOffset();
   }
   resize();
   window.addEventListener("resize", resize);
+  chromeApi?.onDetentChange(() => {
+    applySafeViewOffset();
+  });
 
   /** @type {HTMLButtonElement | null} */
   const arBtn = document.getElementById("ar");

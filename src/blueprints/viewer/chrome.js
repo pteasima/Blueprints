@@ -1,5 +1,5 @@
 /**
- * Liquid-glass viewer chrome: styles, sheet collapse, light/dark scene sync.
+ * Liquid-glass viewer chrome: detents, drag, light/dark scene sync.
  */
 
 export const BG_LIGHT = 0xe8e8ed;
@@ -14,22 +14,24 @@ const CHROME_CSS = /* css */ `
   --safe-l: env(safe-area-inset-left, 0px);
   --bg: #e8e8ed;
   --fg: #1c1c1e;
-  --fg-secondary: rgba(60, 60, 67, 0.72);
-  --glass: rgba(255, 255, 255, 0.48);
+  --fg-secondary: rgba(60, 60, 67, 0.78);
+  --glass: rgba(255, 255, 255, 0.28);
   --glass-strong: rgba(255, 255, 255, 0.72);
-  --glass-border: rgba(255, 255, 255, 0.62);
-  --hairline: rgba(60, 60, 67, 0.18);
-  --fill: rgba(120, 120, 128, 0.16);
-  --fill-active: rgba(120, 120, 128, 0.28);
+  --glass-border: rgba(255, 255, 255, 0.55);
+  --hairline: rgba(60, 60, 67, 0.16);
+  --fill: rgba(120, 120, 128, 0.18);
+  --fill-active: rgba(120, 120, 128, 0.32);
   --accent: #007aff;
   --accent-fg: #fff;
   --danger-fg: #ff3b30;
-  --shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow: 0 10px 36px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.05);
   --radius: 20px;
   --radius-sm: 12px;
-  --blur: 28px;
+  --blur: 40px;
   --sheet-w: min(22rem, 42vw);
-  --sheet-h: min(52vh, 28rem);
+  --sheet-partial-h: 40vh;
+  --sheet-full-h: calc(100dvh - var(--safe-t) - 4.5rem);
+  --sheet-peek-h: 2.15rem;
   --chrome-pad: 12px;
 }
 
@@ -37,14 +39,14 @@ const CHROME_CSS = /* css */ `
   :root {
     --bg: #1c1c1e;
     --fg: #f5f5f7;
-    --fg-secondary: rgba(235, 235, 245, 0.6);
-    --glass: rgba(36, 36, 38, 0.55);
-    --glass-strong: rgba(58, 58, 60, 0.78);
-    --glass-border: rgba(255, 255, 255, 0.16);
-    --hairline: rgba(84, 84, 88, 0.65);
+    --fg-secondary: rgba(235, 235, 245, 0.68);
+    --glass: rgba(28, 28, 30, 0.38);
+    --glass-strong: rgba(58, 58, 60, 0.82);
+    --glass-border: rgba(255, 255, 255, 0.14);
+    --hairline: rgba(84, 84, 88, 0.55);
     --fill: rgba(120, 120, 128, 0.28);
     --fill-active: rgba(120, 120, 128, 0.42);
-    --shadow: 0 10px 36px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.28);
   }
 }
 
@@ -103,8 +105,8 @@ canvas {
   text-decoration: none;
   cursor: pointer;
   box-shadow: var(--shadow);
-  -webkit-backdrop-filter: blur(var(--blur)) saturate(1.4);
-  backdrop-filter: blur(var(--blur)) saturate(1.4);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(1.6);
+  backdrop-filter: blur(var(--blur)) saturate(1.6);
   transition: background 0.15s ease, transform 0.12s ease;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
@@ -123,31 +125,44 @@ canvas {
   background: var(--glass);
   border: 1px solid var(--glass-border);
   box-shadow: var(--shadow);
-  -webkit-backdrop-filter: blur(var(--blur)) saturate(1.55);
-  backdrop-filter: blur(var(--blur)) saturate(1.55);
-  transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1),
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(1.7);
+  backdrop-filter: blur(var(--blur)) saturate(1.7);
+  transition: transform 0.34s cubic-bezier(0.32, 0.72, 0, 1),
+    height 0.34s cubic-bezier(0.32, 0.72, 0, 1),
+    max-height 0.34s cubic-bezier(0.32, 0.72, 0, 1),
     opacity 0.24s ease;
+  will-change: transform, height;
+}
+
+.sheet.is-dragging {
+  transition: none;
 }
 
 .sheet-handle {
   appearance: none;
   flex: 0 0 auto;
   align-self: center;
-  width: 2.25rem;
-  height: 1.15rem;
-  margin: 0.35rem 0 0.15rem;
-  padding: 0;
+  width: 100%;
+  max-width: 100%;
+  height: 1.35rem;
+  margin: 0;
+  padding: 0.4rem 0 0.15rem;
   border: 0;
   background: transparent;
-  cursor: pointer;
+  cursor: grab;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
+
+.sheet-handle:active { cursor: grabbing; }
 
 .sheet-handle::after {
   content: "";
   display: block;
-  width: 2.25rem;
-  height: 0.3rem;
-  margin: 0.35rem auto 0;
+  width: 2.35rem;
+  height: 0.32rem;
+  margin: 0 auto;
   border-radius: 999px;
   background: var(--fg-secondary);
   opacity: 0.55;
@@ -158,8 +173,13 @@ canvas {
   min-height: 0;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 0.25rem 1rem calc(1rem + var(--safe-b));
+  padding: 0.15rem 1rem calc(1rem + var(--safe-b));
   overscroll-behavior: contain;
+}
+
+.sheet[data-detent="peek"] .sheet-scroll {
+  pointer-events: none;
+  opacity: 0;
 }
 
 .sheet-section + .sheet-section {
@@ -183,18 +203,18 @@ canvas {
     left: calc(var(--safe-l) + 10px);
     right: calc(var(--safe-r) + 10px);
     bottom: calc(var(--safe-b) + 10px);
-    max-height: var(--sheet-h);
+    height: var(--sheet-peek-h);
+    max-height: var(--sheet-full-h);
     border-radius: var(--radius);
   }
-  .sheet[data-collapsed="true"] {
-    transform: translateY(calc(100% - 2.1rem));
+  .sheet[data-detent="peek"] {
+    height: var(--sheet-peek-h);
   }
-  .sheet[data-collapsed="true"] .sheet-scroll {
-    pointer-events: none;
-    opacity: 0;
+  .sheet[data-detent="partial"] {
+    height: var(--sheet-partial-h);
   }
-  body.sheet-open .top-chrome #sheet-toggle {
-    background: var(--fill-active);
+  .sheet[data-detent="full"] {
+    height: var(--sheet-full-h);
   }
 }
 
@@ -206,19 +226,36 @@ canvas {
     bottom: calc(var(--safe-b) + 12px);
     width: var(--sheet-w);
     border-radius: var(--radius);
+    height: auto;
   }
-  .sheet-handle { display: none; }
+  .sheet-handle {
+    position: absolute;
+    left: -0.15rem;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 1.5rem;
+    height: 3.5rem;
+    padding: 0;
+    margin: 0;
+    z-index: 1;
+  }
+  .sheet-handle::after {
+    width: 0.28rem;
+    height: 2.25rem;
+    margin: 0.625rem auto 0;
+  }
   .sheet-scroll { padding-top: 0.85rem; }
-  .sheet[data-collapsed="true"] {
-    transform: translateX(calc(100% + 24px));
-    opacity: 0;
+  .sheet[data-detent="closed"] {
+    transform: translateX(calc(100% + 28px));
+    opacity: 0.96;
     pointer-events: none;
   }
-  body:not(.sheet-open) #sheet-toggle {
-    /* closed: default */
+  .sheet[data-detent="closed"] .sheet-handle {
+    pointer-events: auto;
   }
-  body.sheet-open #sheet-toggle {
-    background: var(--fill-active);
+  .sheet[data-detent="open"] {
+    transform: translateX(0);
+    opacity: 1;
   }
 }
 
@@ -280,7 +317,6 @@ label.part .part-name {
   white-space: nowrap;
 }
 
-/* iOS-like switch */
 label.part input {
   appearance: none;
   position: relative;
@@ -409,35 +445,275 @@ export function initSheetChrome(onTheme) {
   injectChromeStyles();
 
   const sheet = document.getElementById("sheet");
-  const toggle = document.getElementById("sheet-toggle");
   const handle = document.getElementById("sheet-handle");
+  const scroll = document.getElementById("sheet-scroll");
   const wideMq = window.matchMedia("(min-width: 768px)");
   const darkMq = window.matchMedia("(prefers-color-scheme: dark)");
 
-  function setOpen(open) {
-    if (!sheet) return;
-    sheet.dataset.collapsed = open ? "false" : "true";
-    document.body.classList.toggle("sheet-open", open);
-    if (toggle) toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  /** @type {((detent: string) => void)[]} */
+  const listeners = [];
+  /** @type {string} */
+  let detent = "peek";
+
+  function isWide() {
+    return wideMq.matches;
   }
 
-  function isOpen() {
-    return sheet?.dataset.collapsed !== "true";
+  function getDetent() {
+    return detent;
+  }
+
+  function notify() {
+    for (const cb of listeners) cb(detent);
+  }
+
+  /**
+   * @param {(detent: string) => void} cb
+   */
+  function onDetentChange(cb) {
+    listeners.push(cb);
+    cb(detent);
+  }
+
+  function measurePartialHeight() {
+    if (!sheet || !scroll) return;
+    const view = document.getElementById("section-view");
+    const cutsSec = document.getElementById("section-cuts");
+    const handleH = handle?.offsetHeight || 22;
+    const padBottom = 16;
+    let content = 0;
+    if (view) content += view.offsetHeight;
+    if (cutsSec) {
+      // Prefer fitting title + first cut row exactly.
+      const title = cutsSec.querySelector(".sheet-title");
+      const firstRow = cutsSec.querySelector(".cut-row");
+      const sep = 16 + 16; // margin-top + padding-top of section
+      content += sep;
+      if (title) content += title.offsetHeight + 8;
+      if (firstRow) content += firstRow.offsetHeight;
+      else content += cutsSec.offsetHeight;
+    }
+    const raw = handleH + content + padBottom;
+    const vh = window.innerHeight || 640;
+    const minH = Math.round(vh * 0.28);
+    const maxH = Math.round(vh * 0.45);
+    const clamped = Math.max(minH, Math.min(maxH, Math.round(raw)));
+    sheet.style.setProperty("--sheet-partial-h", `${clamped}px`);
+    return clamped;
+  }
+
+  function refreshPartialHeight() {
+    measurePartialHeight();
+    if (!isWide() && detent === "partial") notify();
+  }
+
+  /**
+   * Insets used for camera framing. Only partial (phone) / open (wide).
+   * @returns {{ top: number, right: number, bottom: number, left: number }}
+   */
+  function getSafeInsets() {
+    const zero = { top: 0, right: 0, bottom: 0, left: 0 };
+    if (!sheet) return zero;
+    if (isWide()) {
+      if (detent !== "open") return zero;
+      const rect = sheet.getBoundingClientRect();
+      const gap = 12;
+      return {
+        top: 0,
+        right: Math.max(0, Math.round(window.innerWidth - rect.left + gap)),
+        bottom: 0,
+        left: 0,
+      };
+    }
+    if (detent !== "partial") return zero;
+    const rect = sheet.getBoundingClientRect();
+    const gap = 10;
+    return {
+      top: 0,
+      right: 0,
+      bottom: Math.max(0, Math.round(window.innerHeight - rect.top + gap)),
+      left: 0,
+    };
+  }
+
+  /**
+   * @param {string} next
+   * @param {{ silent?: boolean }} [opts]
+   */
+  function setDetent(next, opts = {}) {
+    if (!sheet) return;
+    const allowed = isWide()
+      ? ["closed", "open"]
+      : ["peek", "partial", "full"];
+    if (!allowed.includes(next)) {
+      next = isWide() ? "open" : "peek";
+    }
+    detent = next;
+    sheet.dataset.detent = next;
+    sheet.classList.toggle("sheet-open", next !== "peek" && next !== "closed");
+    document.body.classList.toggle(
+      "sheet-open",
+      next !== "peek" && next !== "closed",
+    );
+    if (!opts.silent) notify();
   }
 
   function applyDefaultForViewport() {
-    // Wide: open by default; narrow: collapsed.
-    setOpen(wideMq.matches);
+    if (isWide()) setDetent("open");
+    else setDetent("peek");
+    measurePartialHeight();
   }
 
-  function toggleSheet() {
-    setOpen(!isOpen());
+  // --- Drag (narrow: vertical height; wide: horizontal translate) ---
+  let dragging = false;
+  let startY = 0;
+  let startX = 0;
+  let startH = 0;
+  let startTX = 0;
+  let lastY = 0;
+  let lastX = 0;
+  let lastT = 0;
+  let velY = 0;
+  let velX = 0;
+
+  function peekH() {
+    // Prefer measured handle; CSS rem tokens don't parse as px via parseFloat.
+    return Math.max(handle?.offsetHeight || 34, 34);
+  }
+  function partialH() {
+    return measurePartialHeight() || window.innerHeight * 0.38;
+  }
+  function fullH() {
+    const vh = window.innerHeight || 640;
+    return Math.min(vh * 0.92, vh - 72);
   }
 
-  toggle?.addEventListener("click", toggleSheet);
-  handle?.addEventListener("click", toggleSheet);
+  function onPointerDown(ev) {
+    if (!sheet || !handle) return;
+    if (ev.target !== handle && !handle.contains(/** @type {Node} */ (ev.target))) {
+      // Allow dragging from the top padding of the sheet near the handle only.
+      if (!(ev.target === sheet)) return;
+    }
+    dragging = true;
+    sheet.classList.add("is-dragging");
+    startY = ev.clientY;
+    startX = ev.clientX;
+    lastY = startY;
+    lastX = startX;
+    lastT = performance.now();
+    velY = 0;
+    velX = 0;
+    if (isWide()) {
+      const m = /translateX\(([-\d.]+)px\)/.exec(sheet.style.transform || "");
+      startTX = m ? parseFloat(m[1]) : detent === "closed" ? sheet.offsetWidth + 28 : 0;
+      sheet.style.transform = `translateX(${startTX}px)`;
+      sheet.style.opacity = "1";
+      sheet.style.pointerEvents = "auto";
+    } else {
+      startH = sheet.getBoundingClientRect().height;
+    }
+    try {
+      handle.setPointerCapture(ev.pointerId);
+    } catch (_) {
+      /* ignore */
+    }
+    ev.preventDefault();
+  }
 
-  const onWideChange = () => applyDefaultForViewport();
+  function onPointerMove(ev) {
+    if (!dragging || !sheet) return;
+    const now = performance.now();
+    const dt = Math.max(1, now - lastT);
+    if (isWide()) {
+      const dx = ev.clientX - startX;
+      velX = ((ev.clientX - lastX) / dt) * 1000;
+      lastX = ev.clientX;
+      lastT = now;
+      const w = sheet.offsetWidth + 28;
+      const x = Math.max(0, Math.min(w, startTX + dx));
+      sheet.style.transform = `translateX(${x}px)`;
+    } else {
+      const dy = startY - ev.clientY; // up = taller
+      velY = ((lastY - ev.clientY) / dt) * 1000;
+      lastY = ev.clientY;
+      lastT = now;
+      const minH = peekH();
+      const maxH = fullH();
+      const h = Math.max(minH, Math.min(maxH, startH + dy));
+      sheet.style.height = `${h}px`;
+    }
+  }
+
+  function nearestNarrow(h, v) {
+    const targets = [
+      { name: "peek", h: peekH() },
+      { name: "partial", h: partialH() },
+      { name: "full", h: fullH() },
+    ];
+    let idx = 0;
+    let bestD = Math.abs(h - targets[0].h);
+    for (let i = 1; i < targets.length; i++) {
+      const d = Math.abs(h - targets[i].h);
+      if (d < bestD) {
+        bestD = d;
+        idx = i;
+      }
+    }
+    if (v > 650 && idx < targets.length - 1) idx += 1;
+    else if (v < -650 && idx > 0) idx -= 1;
+    return targets[idx].name;
+  }
+
+  function nearestWide(x, v) {
+    const w = sheet.offsetWidth + 28;
+    if (v > 500) return "closed";
+    if (v < -500) return "open";
+    return x > w * 0.45 ? "closed" : "open";
+  }
+
+  function onPointerUp() {
+    if (!dragging || !sheet) return;
+    dragging = false;
+    sheet.classList.remove("is-dragging");
+    if (isWide()) {
+      const m = /translateX\(([-\d.]+)px\)/.exec(sheet.style.transform || "");
+      const x = m ? parseFloat(m[1]) : 0;
+      sheet.style.transform = "";
+      sheet.style.opacity = "";
+      sheet.style.pointerEvents = "";
+      setDetent(nearestWide(x, velX));
+    } else {
+      const h = sheet.getBoundingClientRect().height;
+      sheet.style.height = "";
+      setDetent(nearestNarrow(h, velY));
+    }
+  }
+
+  handle?.addEventListener("pointerdown", onPointerDown);
+  handle?.addEventListener("pointermove", onPointerMove);
+  handle?.addEventListener("pointerup", onPointerUp);
+  handle?.addEventListener("pointercancel", onPointerUp);
+  // Double-tap handle: cycle peek → partial → full (narrow) / toggle (wide)
+  let lastTap = 0;
+  handle?.addEventListener("click", () => {
+    const now = performance.now();
+    if (now - lastTap > 350) {
+      lastTap = now;
+      return;
+    }
+    lastTap = 0;
+    if (isWide()) {
+      setDetent(detent === "open" ? "closed" : "open");
+    } else if (detent === "peek") setDetent("partial");
+    else if (detent === "partial") setDetent("full");
+    else setDetent("peek");
+  });
+
+  const onWideChange = () => {
+    sheet && (sheet.style.height = "");
+    sheet && (sheet.style.transform = "");
+    applyDefaultForViewport();
+  };
   if (wideMq.addEventListener) wideMq.addEventListener("change", onWideChange);
   else wideMq.addListener(onWideChange);
 
@@ -448,7 +724,18 @@ export function initSheetChrome(onTheme) {
   if (darkMq.addEventListener) darkMq.addEventListener("change", syncTheme);
   else darkMq.addListener(syncTheme);
 
+  window.addEventListener("resize", () => {
+    measurePartialHeight();
+    notify();
+  });
+
   applyDefaultForViewport();
 
-  return { setOpen, isOpen, toggleSheet };
+  return {
+    getDetent,
+    getSafeInsets,
+    onDetentChange,
+    refreshPartialHeight,
+    setDetent,
+  };
 }
