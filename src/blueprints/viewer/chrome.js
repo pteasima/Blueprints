@@ -571,6 +571,7 @@ export function initSheetChrome(onTheme) {
 
   // --- Drag (narrow: vertical height; wide: horizontal translate) ---
   let dragging = false;
+  let didDrag = false;
   let startY = 0;
   let startX = 0;
   let startH = 0;
@@ -581,6 +582,7 @@ export function initSheetChrome(onTheme) {
   let lastT = 0;
   let velY = 0;
   let velX = 0;
+  const TAP_SLOP_PX = 12;
 
   function peekH() {
     return Math.max(handle?.offsetHeight || 34, 34) + 8;
@@ -593,12 +595,24 @@ export function initSheetChrome(onTheme) {
     return Math.min(vh * 0.92, vh - 72);
   }
 
+  function cycleDetent() {
+    if (isWide()) {
+      setDetent(detent === "open" ? "closed" : "open");
+      return;
+    }
+    // closed (peek) → small (partial) → full → closed
+    if (detent === "peek") setDetent("partial");
+    else if (detent === "partial") setDetent("full");
+    else setDetent("peek");
+  }
+
   function onPointerDown(ev) {
     if (!sheet || !handle) return;
     if (ev.target !== handle && !handle.contains(/** @type {Node} */ (ev.target))) {
       if (!(ev.target === sheet)) return;
     }
     dragging = true;
+    didDrag = false;
     startDetent = detent;
     sheet.classList.add("is-dragging");
     startY = ev.clientY;
@@ -629,6 +643,8 @@ export function initSheetChrome(onTheme) {
     if (!dragging || !sheet) return;
     const now = performance.now();
     const dt = Math.max(1, now - lastT);
+    const dist = Math.hypot(ev.clientX - startX, ev.clientY - startY);
+    if (dist > TAP_SLOP_PX) didDrag = true;
     if (isWide()) {
       const dx = ev.clientX - startX;
       velX = ((ev.clientX - lastX) / dt) * 1000;
@@ -695,6 +711,18 @@ export function initSheetChrome(onTheme) {
     if (!dragging || !sheet) return;
     dragging = false;
     sheet.classList.remove("is-dragging");
+    if (!didDrag) {
+      // Tap: cycle closed → small → full (narrow) / closed ↔ open (wide).
+      if (isWide()) {
+        sheet.style.transform = "";
+        sheet.style.opacity = "";
+        sheet.style.pointerEvents = "";
+      } else {
+        sheet.style.height = "";
+      }
+      cycleDetent();
+      return;
+    }
     if (isWide()) {
       const m = /translateX\(([-\d.]+)px\)/.exec(sheet.style.transform || "");
       const x = m ? parseFloat(m[1]) : 0;
@@ -713,21 +741,12 @@ export function initSheetChrome(onTheme) {
   handle?.addEventListener("pointermove", onPointerMove);
   handle?.addEventListener("pointerup", onPointerUp);
   handle?.addEventListener("pointercancel", onPointerUp);
-  // Double-tap handle: cycle peek → partial → full (narrow) / toggle (wide)
-  let lastTap = 0;
-  handle?.addEventListener("click", () => {
-    const now = performance.now();
-    if (now - lastTap > 350) {
-      lastTap = now;
-      return;
-    }
-    lastTap = 0;
-    if (isWide()) {
-      setDetent(detent === "open" ? "closed" : "open");
-    } else if (detent === "peek") setDetent("partial");
-    else if (detent === "partial") setDetent("full");
-    else setDetent("peek");
-  });
+  if (handle) {
+    handle.setAttribute(
+      "aria-label",
+      "Sheet handle — tap to resize, drag to adjust",
+    );
+  }
 
   const onWideChange = () => {
     sheet && (sheet.style.height = "");
