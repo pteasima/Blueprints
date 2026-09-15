@@ -7,6 +7,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { USDZExporter } from "three/addons/exporters/USDZExporter.js";
 import { meshToClippedExportMesh } from "./clipGeometry.js";
+import { applyArPlacement, computeArPlacement } from "./arPlacement.js";
 
 /**
  * @param {HTMLCanvasElement} canvas
@@ -463,16 +464,26 @@ export function mountViewer(canvas, glbBuffer) {
     if (!root) return null;
     root.updateWorldMatrix(true, true);
     const planes = lockedCuts().map((c) => planeForCut(c));
-    const group = new THREE.Group();
-    group.name = "ARExport";
+    const content = new THREE.Group();
+    content.name = "ARContent";
 
     root.traverse((obj) => {
       if (!obj.isMesh || !obj.visible) return;
       const clipped = meshToClippedExportMesh(obj, planes);
-      if (clipped) group.add(clipped);
+      if (clipped) content.add(clipped);
     });
 
-    return group.children.length ? group : null;
+    if (!content.children.length) return null;
+
+    // Meshes are already in world space from clipping; reset local xforms.
+    content.updateMatrixWorld(true);
+    const placement = computeArPlacement(content);
+    const group = new THREE.Group();
+    group.name = "ARExport";
+    group.add(content);
+    applyArPlacement(content, placement);
+    group.userData.arPlacement = placement;
+    return group;
   }
 
   async function openArQuickLook() {
