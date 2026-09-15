@@ -738,8 +738,9 @@ _VIEWER_HTML = """<!DOCTYPE html>
   #bar { position: fixed; top: 0; left: 0; right: 0; z-index: 2;
     display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
     padding: 10px 12px; background: rgba(0,0,0,.78); font-size: 13px; }
-  #bar button, #ql { font: inherit; padding: 8px 12px; border: 0; border-radius: 8px;
+  #bar button, #ar { font: inherit; padding: 8px 12px; border: 0; border-radius: 8px;
     background: #eee; color: #111; cursor: pointer; }
+  #ar:disabled { opacity: .55; cursor: wait; }
   #cams, #parts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
   #parts { max-width: 100%; max-height: 5.5rem; overflow: auto; }
   label.part { display: inline-flex; gap: 4px; align-items: center;
@@ -761,7 +762,7 @@ _VIEWER_HTML = """<!DOCTYPE html>
 </head>
 <body>
 <div id="bar">
-  <button type="button" id="ql" hidden>Open in Quick Look</button>
+  <button type="button" id="ar" hidden>View in AR</button>
   <div id="cams"></div>
   <div id="parts"></div>
   <span class="hint">Drag orbit · scroll zoom · section sliders below</span>
@@ -782,10 +783,7 @@ _VIEWER_HTML = """<!DOCTYPE html>
   }
   const canvas = document.getElementById('c');
   const glb = b64ToBuf("%%GLB_B64%%");
-  const usdzB64 = "%%USDZ_B64%%";
-  BlueprintsViewerBundle.mountViewer(canvas, glb, {
-    usdzBase64: usdzB64 || undefined,
-  });
+  BlueprintsViewerBundle.mountViewer(canvas, glb);
 })();
 </script>
 </body>

@@ -5,13 +5,14 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { USDZExporter } from "three/addons/exporters/USDZExporter.js";
+import { meshToClippedExportMesh } from "./clipGeometry.js";
 
 /**
  * @param {HTMLCanvasElement} canvas
  * @param {ArrayBuffer} glbBuffer
- * @param {{ usdzBase64?: string }} [options]
  */
-export function mountViewer(canvas, glbBuffer, options = {}) {
+export function mountViewer(canvas, glbBuffer) {
   const renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: true,
@@ -97,6 +98,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       ensureDraftCut();
       buildCutUI();
       applyClipping();
+      showArButton();
     },
     (err) => {
       fail(String(err?.message || err));
@@ -449,25 +451,79 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   resize();
   window.addEventListener("resize", resize);
 
-  const ql = document.getElementById("ql");
-  if (ql && options.usdzBase64) {
-    ql.hidden = false;
-    ql.addEventListener("click", () => {
-      const bin = atob(options.usdzBase64);
-      const bytes = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-      const blob = new Blob([bytes], { type: "model/vnd.usdz+zip" });
+  /** @type {HTMLButtonElement | null} */
+  const arBtn = document.getElementById("ar");
+  let arBusy = false;
+
+  function showArButton() {
+    if (arBtn) arBtn.hidden = false;
+  }
+
+  function buildArExportScene() {
+    if (!root) return null;
+    root.updateWorldMatrix(true, true);
+    const planes = lockedCuts().map((c) => planeForCut(c));
+    const group = new THREE.Group();
+    group.name = "ARExport";
+
+    root.traverse((obj) => {
+      if (!obj.isMesh || !obj.visible) return;
+      const clipped = meshToClippedExportMesh(obj, planes);
+      if (clipped) group.add(clipped);
+    });
+
+    return group.children.length ? group : null;
+  }
+
+  async function openArQuickLook() {
+    if (arBusy || !root) return;
+    arBusy = true;
+    const label = arBtn?.textContent || "View in AR";
+    if (arBtn) {
+      arBtn.disabled = true;
+      arBtn.textContent = "Generating…";
+    }
+    try {
+      const exportScene = buildArExportScene();
+      if (!exportScene) {
+        throw new Error("Nothing visible to export. Show at least one part.");
+      }
+      const exporter = new USDZExporter();
+      const arrayBuffer = await exporter.parseAsync(exportScene, {
+        quickLookCompatible: true,
+        includeAnchoringProperties: true,
+        ar: {
+          anchoring: { type: "plane" },
+          planeAnchoring: { alignment: "horizontal" },
+        },
+      });
+      const blob = new Blob([arrayBuffer], { type: "model/vnd.usdz+zip" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.rel = "ar";
       a.href = url;
-      a.download = "model.usdz";
+      a.download = "view.usdz";
       const img = document.createElement("img");
       img.alt = "AR";
       a.appendChild(img);
       document.body.appendChild(a);
       a.click();
       a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      fail(String(err?.message || err));
+    } finally {
+      arBusy = false;
+      if (arBtn) {
+        arBtn.disabled = false;
+        arBtn.textContent = label;
+      }
+    }
+  }
+
+  if (arBtn) {
+    arBtn.addEventListener("click", () => {
+      void openArQuickLook();
     });
   }
 
@@ -483,6 +539,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     setCutT,
     removeCut,
     frameIso,
+    openArQuickLook,
+    buildArExportScene,
   };
   window.BlueprintsViewer = api;
 
