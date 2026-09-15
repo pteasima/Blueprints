@@ -47,6 +47,9 @@ export function mountViewer(canvas, glbBuffer) {
     canvas,
     antialias: true,
     alpha: false,
+    // Room-scale models in metres need better depth precision than a fixed
+    // 24-bit buffer — coplanar CAD faces otherwise flicker while orbiting.
+    logarithmicDepthBuffer: true,
   });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -153,6 +156,16 @@ export function mountViewer(canvas, glbBuffer) {
     box.getCenter(center);
   }
 
+  /** Keep near/far tight around the model so depth precision stays usable. */
+  function updateCameraClipPlanes() {
+    const span = Math.max(size.x, size.y, size.z, 0.01);
+    const dist = camera.position.distanceTo(controls.target);
+    // Pull near plane in when close; keep far just past the far side of the model.
+    camera.near = Math.min(Math.max(dist / 200, span / 5000, 0.001), dist / 10);
+    camera.far = Math.max(dist + span * 4, span * 8, 10);
+    camera.updateProjectionMatrix();
+  }
+
   function withSuppressedCameraChange(fn) {
     suppressCameraChange = true;
     try {
@@ -171,14 +184,12 @@ export function mountViewer(canvas, glbBuffer) {
       controls.target.copy(center);
       const span = Math.max(size.x, size.y, size.z, 1);
       const dist = span * 1.85;
-      camera.near = Math.max(span / 1000, 0.01);
-      camera.far = Math.max(span * 100, 1000);
       camera.position.set(
         center.x + dist * 0.75,
         center.y + dist * 0.55,
         center.z + dist * 0.75,
       );
-      camera.updateProjectionMatrix();
+      updateCameraClipPlanes();
       controls.update();
     });
     maybeSpawnDraftFromCamera();
@@ -203,7 +214,7 @@ export function mountViewer(canvas, glbBuffer) {
         camera.position.set(c.x + dist, c.y + span * 0.15, c.z);
       }
       controls.target.copy(c);
-      camera.updateProjectionMatrix();
+      updateCameraClipPlanes();
       controls.update();
     });
     maybeSpawnDraftFromCamera();
@@ -759,6 +770,9 @@ export function mountViewer(canvas, glbBuffer) {
     const now = performance.now();
     stepFrameAnim(now);
     controls.update();
+    // Orbit damping keeps the camera moving briefly after release — refresh
+    // clip planes so depth precision tracks the current view distance.
+    if (root) updateCameraClipPlanes();
     renderer.render(scene, camera);
     requestAnimationFrame(tick);
   }
