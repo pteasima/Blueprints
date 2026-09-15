@@ -54,10 +54,13 @@ def test_3d_matches_section_and_elevation_masses():
 
     kitchen, living = sorted(_labeled(shape, "predstena"), key=lambda s: s.bounding_box().min.Y)
     kbb, lbb = kitchen.bounding_box(), living.bounding_box()
-    assert abs(kbb.size.Y - p.predstena_kitchen) < 1e-6
-    assert abs(lbb.size.Y - p.predstena_living) < 1e-6
-    assert abs(kbb.min.Y - 0.0) < 1e-6
-    assert abs(lbb.max.Y - p.room_length) < 1e-6
+    # Faces are inset by a hairline so they do not share plaster planes (z-fight).
+    assert kbb.min.Y > 0.0
+    assert kbb.min.Y < 1.0
+    assert abs(kbb.size.Y - (p.predstena_kitchen - kbb.min.Y)) < 1e-6
+    assert lbb.max.Y < p.room_length
+    assert lbb.max.Y > p.room_length - 1.0
+    assert abs(lbb.size.Y - p.predstena_living + (p.room_length - lbb.max.Y)) < 1e-6
     assert abs(kbb.min.Z - p.predstena_bottom_z) < 1.0
     assert abs(kbb.max.Z - g.z_false) < 1.0
 

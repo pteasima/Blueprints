@@ -63,53 +63,138 @@ def _extrude_y(face, y0: float, y1: float, label: str):
     return _paint(solid, label)
 
 
+# Hairline gap (mm) so abutting solids do not share a GPU-identical face.
+# Large enough for float32 at room scale once glTF is in metres; small enough
+# not to read as a crack in the viewer.
+_FACE_SEP = 0.4
+
+
 def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
-    y0, y1 = g.yl_eps, g.yr_eps
+    # Gables own the end walls (full X). Eave runs clear of gable plaster and
+    # is inset by _FACE_SEP so end faces are not GPU-coplanar with the gable.
+    sep = _FACE_SEP
+    y_e0, y_e1 = sep, p.room_length - sep
     parts: list = []
 
-    parts.append(_box(g.xl_eps, y0, -p.floor_t, g.xr_eps - g.xl_eps, y1 - y0, p.floor_t, "podlaha"))
+    # Slab is the clear floor only — walls own the perimeter below z=0.
+    parts.append(
+        _box(sep, sep, -p.floor_t, p.room_width - 2 * sep, p.room_length - 2 * sep, p.floor_t, "podlaha")
+    )
 
-    # Eave walls (panel A), full length including gable corners.
-    for x_eps, x_mas, x_pls in (
-        (g.xl_eps, g.xl_mas, -p.wall_plaster),
-        (g.xr_mas, p.room_width + p.wall_plaster, p.room_width),
+    # Eave layer stack: leave sep at each eps↔zdivo↔omitka interface.
+    for x_eps, x_mas, x_pls, inward in (
+        (g.xl_eps, g.xl_mas, -p.wall_plaster, 1.0),
+        (g.xr_mas, p.room_width + p.wall_plaster, p.room_width, -1.0),
     ):
-        parts.append(_box(x_eps, y0, -p.floor_t, p.wall_eps, y1 - y0, p.eave_wall_z + p.floor_t, "eps"))
-        parts.append(
-            _box(x_mas, y0, -p.floor_t, p.wall_mason, y1 - y0, p.eave_wall_z + p.floor_t, "zdivo")
-        )
-        parts.append(_box(x_pls, y0, 0.0, p.wall_plaster, y1 - y0, p.eave_wall_z, "omitka"))
+        # inward: +1 when layers grow toward +X (left wall), -1 for right wall.
+        if inward > 0:
+            parts.append(
+                _box(
+                    x_eps,
+                    y_e0,
+                    -p.floor_t,
+                    p.wall_eps - sep,
+                    y_e1 - y_e0,
+                    p.eave_wall_z + p.floor_t,
+                    "eps",
+                )
+            )
+            parts.append(
+                _box(
+                    x_mas,
+                    y_e0,
+                    -p.floor_t,
+                    p.wall_mason - sep,
+                    y_e1 - y_e0,
+                    p.eave_wall_z + p.floor_t,
+                    "zdivo",
+                )
+            )
+            parts.append(
+                _box(x_pls, y_e0, 0.0, p.wall_plaster, y_e1 - y_e0, p.eave_wall_z, "omitka")
+            )
+        else:
+            parts.append(
+                _box(
+                    x_pls,
+                    y_e0,
+                    0.0,
+                    p.wall_plaster,
+                    y_e1 - y_e0,
+                    p.eave_wall_z,
+                    "omitka",
+                )
+            )
+            parts.append(
+                _box(
+                    x_mas + sep,
+                    y_e0,
+                    -p.floor_t,
+                    p.wall_mason - sep,
+                    y_e1 - y_e0,
+                    p.eave_wall_z + p.floor_t,
+                    "zdivo",
+                )
+            )
+            parts.append(
+                _box(
+                    x_eps + sep,
+                    y_e0,
+                    -p.floor_t,
+                    p.wall_eps - sep,
+                    y_e1 - y_e0,
+                    p.eave_wall_z + p.floor_t,
+                    "eps",
+                )
+            )
 
-    parts.append(_box(g.poz_l0, y0, p.eave_wall_z, p.plate_w, y1 - y0, p.plate_h, "pozednice"))
-    parts.append(_box(g.poz_r0, y0, p.eave_wall_z, p.plate_w, y1 - y0, p.plate_h, "pozednice"))
+    parts.append(_box(g.poz_l0, y_e0, p.eave_wall_z, p.plate_w, y_e1 - y_e0, p.plate_h, "pozednice"))
+    parts.append(_box(g.poz_r0, y_e0, p.eave_wall_z, p.plate_w, y_e1 - y_e0, p.plate_h, "pozednice"))
 
-    # Gable walls (panel B): 40° rake, peak at ridge.
-    for ya, yb in ((g.yl_eps, g.yl_mas), (g.yr_mas, g.yr_eps)):
+    # Gable walls (panel B): 40° rake, peak at ridge. Span full X including eaves.
+    # Y ranges leave sep at eps↔zdivo↔omitka so stacked faces do not z-fight.
+    for ya, yb in ((g.yl_eps, g.yl_mas - sep), (g.yr_mas + sep, g.yr_eps)):
         parts.append(
             _extrude_y(xz_face(g.gable_wall_pts(g.xl_eps, g.xr_eps, -p.floor_t), "eps"), ya, yb, "eps")
         )
-    for ya, yb in ((g.yl_mas, -p.wall_plaster), (p.room_length + p.wall_plaster, g.yr_mas)):
+    for ya, yb in (
+        (g.yl_mas, -p.wall_plaster - sep),
+        (p.room_length + p.wall_plaster + sep, g.yr_mas),
+    ):
         parts.append(
             _extrude_y(
                 xz_face(g.gable_wall_pts(g.xl_mas, g.xr_mas, -p.floor_t), "zdivo"), ya, yb, "zdivo"
             )
         )
-    for ya, yb in ((-p.wall_plaster, 0.0), (p.room_length, p.room_length + p.wall_plaster)):
+    for ya, yb in (
+        (-p.wall_plaster, -sep),
+        (p.room_length + sep, p.room_length + p.wall_plaster),
+    ):
         parts.append(
             _extrude_y(
                 xz_face(g.gable_wall_pts(0.0, p.room_width, 0.0), "omitka"), ya, yb, "omitka"
             )
         )
-    for ya, yb in ((g.yl_mas, 0.0), (p.room_length, g.yr_mas)):
-        parts.append(
-            _extrude_y(
-                xz_face(g.gable_crown_pts(g.xl_mas, g.xr_mas), "koruna"), ya, yb, "koruna"
-            )
-        )
+    for ya, yb in ((g.yl_mas, -sep), (p.room_length + sep, g.yr_mas)):
+        crown = [(x, z + sep) for x, z in g.gable_crown_pts(g.xl_mas, g.xr_mas)]
+        parts.append(_extrude_y(xz_face(crown, "koruna"), ya, yb, "koruna"))
 
-    parts.append(_extrude_y(xz_face(g.krov_pts(), "krov"), g.y_roof0, g.y_roof1, "krov"))
-    parts.append(_extrude_y(xz_face(g.krytina_pts(), "krytina"), g.y_roof0, g.y_roof1, "krytina"))
-    parts.append(_extrude_y(xz_face(g.vata_pts(), "vata"), 0.0, p.room_length, "vata"))
+    # Roof stack: pull mating faces apart slightly (vata↔krov, krov↔krytina).
+    krov_pts = [(x, z - sep * 0.5) for x, z in g.krov_pts()]
+    krytina_pts = [(x, z + sep * 0.5) for x, z in g.krytina_pts()]
+    vata_pts = list(g.vata_pts())
+    # Lower the rafter-touching top edge of vata (last three pts run along z_raf).
+    vata_pts = [
+        (x, z - sep if i >= len(vata_pts) - 3 else z) for i, (x, z) in enumerate(vata_pts)
+    ]
+    # Keep vata clear of eave plaster planes at x=0 / room_width.
+    vata_pts = [
+        (min(max(x, sep), p.room_width - sep), z) for x, z in vata_pts
+    ]
+
+    parts.append(_extrude_y(xz_face(krov_pts, "krov"), g.y_roof0, g.y_roof1, "krov"))
+    parts.append(_extrude_y(xz_face(krytina_pts, "krytina"), g.y_roof0, g.y_roof1, "krytina"))
+    parts.append(_extrude_y(xz_face(vata_pts, "vata"), sep, p.room_length - sep, "vata"))
     parts.append(_extrude_y(xz_face(g.podhled_pts(), "podhled"), g.y_furn0, g.y_furn1, "podhled"))
 
     parts.append(
@@ -135,20 +220,33 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         )
     )
 
-    pred = xz_face(g.predstena_pts(), "predstena")
-    parts.append(_extrude_y(pred, 0.0, p.predstena_kitchen, "predstena"))
-    parts.append(_extrude_y(pred, g.y_pred_r, p.room_length, "predstena"))
+    # Inset from gable + eave plaster so predstěna does not share those planes.
+    pred_pts = [
+        (min(max(x, sep), p.room_width - sep), z) for x, z in g.predstena_pts()
+    ]
+    pred = xz_face(pred_pts, "predstena")
+    parts.append(_extrude_y(pred, sep, p.predstena_kitchen, "predstena"))
+    parts.append(_extrude_y(pred, g.y_pred_r, p.room_length - sep, "predstena"))
 
+    # Pouzdro under predstěna; hairline off plaster planes.
     parts.append(
-        _box(0.0, 0.0, 0.0, p.room_width, p.pouzdro_d, p.predstena_bottom_z, "pouzdro")
+        _box(
+            sep,
+            sep,
+            0.0,
+            p.room_width - 2 * sep,
+            p.pouzdro_d - sep,
+            p.predstena_bottom_z,
+            "pouzdro",
+        )
     )
     parts.append(
         _box(
-            0.0,
+            sep,
             p.room_length - p.pouzdro_d,
             0.0,
-            p.room_width,
-            p.pouzdro_d,
+            p.room_width - 2 * sep,
+            p.pouzdro_d - sep,
             p.predstena_bottom_z,
             "pouzdro",
         )
