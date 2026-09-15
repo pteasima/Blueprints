@@ -4110,6 +4110,8 @@ canvas {
   touch-action: none;
   -webkit-user-select: none;
   user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
 }
 
 .sheet-handle:active { cursor: grabbing; }
@@ -4123,6 +4125,12 @@ canvas {
   border-radius: 999px;
   background: var(--fg-secondary);
   opacity: 0.55;
+  transition: opacity 0.12s ease, background 0.12s ease;
+}
+
+.sheet-handle:active::after {
+  opacity: 0.95;
+  background: var(--fg);
 }
 
 .sheet-scroll {
