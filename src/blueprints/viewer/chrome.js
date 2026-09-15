@@ -15,9 +15,9 @@ const CHROME_CSS = /* css */ `
   --bg: #e8e8ed;
   --fg: #1c1c1e;
   --fg-secondary: rgba(60, 60, 67, 0.72);
-  --glass: rgba(255, 255, 255, 0.62);
-  --glass-strong: rgba(255, 255, 255, 0.78);
-  --glass-border: rgba(255, 255, 255, 0.55);
+  --glass: rgba(255, 255, 255, 0.48);
+  --glass-strong: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.62);
   --hairline: rgba(60, 60, 67, 0.18);
   --fill: rgba(120, 120, 128, 0.16);
   --fill-active: rgba(120, 120, 128, 0.28);
@@ -38,9 +38,9 @@ const CHROME_CSS = /* css */ `
     --bg: #1c1c1e;
     --fg: #f5f5f7;
     --fg-secondary: rgba(235, 235, 245, 0.6);
-    --glass: rgba(44, 44, 46, 0.72);
-    --glass-strong: rgba(58, 58, 60, 0.82);
-    --glass-border: rgba(255, 255, 255, 0.14);
+    --glass: rgba(36, 36, 38, 0.55);
+    --glass-strong: rgba(58, 58, 60, 0.78);
+    --glass-border: rgba(255, 255, 255, 0.16);
     --hairline: rgba(84, 84, 88, 0.65);
     --fill: rgba(120, 120, 128, 0.28);
     --fill-active: rgba(120, 120, 128, 0.42);

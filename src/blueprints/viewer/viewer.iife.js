@@ -3972,9 +3972,9 @@ ${r.join(`
   --bg: #e8e8ed;
   --fg: #1c1c1e;
   --fg-secondary: rgba(60, 60, 67, 0.72);
-  --glass: rgba(255, 255, 255, 0.62);
-  --glass-strong: rgba(255, 255, 255, 0.78);
-  --glass-border: rgba(255, 255, 255, 0.55);
+  --glass: rgba(255, 255, 255, 0.48);
+  --glass-strong: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.62);
   --hairline: rgba(60, 60, 67, 0.18);
   --fill: rgba(120, 120, 128, 0.16);
   --fill-active: rgba(120, 120, 128, 0.28);

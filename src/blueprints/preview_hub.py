@@ -26,9 +26,9 @@ _HUB_HTML = """<!DOCTYPE html>
     --bg2: #e8eef8;
     --fg: #1c1c1e;
     --fg-secondary: rgba(60, 60, 67, 0.7);
-    --glass: rgba(255, 255, 255, 0.55);
-    --glass-border: rgba(255, 255, 255, 0.65);
-    --row: rgba(255, 255, 255, 0.72);
+    --glass: rgba(255, 255, 255, 0.42);
+    --glass-border: rgba(255, 255, 255, 0.55);
+    --row: rgba(255, 255, 255, 0.55);
     --row-border: rgba(60, 60, 67, 0.12);
     --chevron: rgba(60, 60, 67, 0.35);
     --shadow: 0 18px 50px rgba(40, 55, 80, 0.12);
