@@ -1,8 +1,8 @@
-"""GitHub Pages Quick Look hub (no CAD dependencies — safe for CI)."""
+"""GitHub Pages web-viewer hub (no CAD dependencies — safe for CI)."""
 
 from __future__ import annotations
 
-import base64
+import html
 import json
 import os
 import shutil
@@ -12,84 +12,141 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 PREVIEW_SITE_DIR = REPO_ROOT / "docs"
 DEFAULT_PAGES_URL = "https://pteasima.github.io/Blueprints/"
 
-_PIXEL_GIF = "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
-
 _HUB_HTML = """<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <title>Blueprints</title>
 <style>
+  :root {
+    color-scheme: light dark;
+    --bg0: #dfe7f2;
+    --bg1: #f4f1ec;
+    --bg2: #e8eef8;
+    --fg: #1c1c1e;
+    --fg-secondary: rgba(60, 60, 67, 0.7);
+    --glass: rgba(255, 255, 255, 0.55);
+    --glass-border: rgba(255, 255, 255, 0.65);
+    --row: rgba(255, 255, 255, 0.72);
+    --row-border: rgba(60, 60, 67, 0.12);
+    --chevron: rgba(60, 60, 67, 0.35);
+    --shadow: 0 18px 50px rgba(40, 55, 80, 0.12);
+    --blur: 28px;
+    --safe-t: env(safe-area-inset-top, 0px);
+    --safe-b: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg0: #0b1020;
+      --bg1: #1c1c1e;
+      --bg2: #152033;
+      --fg: #f5f5f7;
+      --fg-secondary: rgba(235, 235, 245, 0.58);
+      --glass: rgba(44, 44, 46, 0.55);
+      --glass-border: rgba(255, 255, 255, 0.12);
+      --row: rgba(58, 58, 60, 0.72);
+      --row-border: rgba(84, 84, 88, 0.55);
+      --chevron: rgba(235, 235, 245, 0.35);
+      --shadow: 0 22px 60px rgba(0, 0, 0, 0.45);
+    }
+  }
   html, body {
     margin: 0;
     min-height: 100%;
-    background: #111;
-    color: #eee;
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    background:
+      radial-gradient(120% 80% at 10% -10%, var(--bg0), transparent 55%),
+      radial-gradient(90% 70% at 100% 0%, var(--bg2), transparent 50%),
+      linear-gradient(165deg, var(--bg1), var(--bg0) 55%, var(--bg2));
+    background-attachment: fixed;
   }
   main {
+    box-sizing: border-box;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 20px;
-    padding: 24px;
-    text-align: center;
-    box-sizing: border-box;
-  }
-  h1 { margin: 0; font-size: 1.5rem; font-weight: 600; }
-  .buttons {
-    display: flex;
-    flex-direction: column;
     align-items: stretch;
-    gap: 12px;
-    width: min(20rem, 100%);
+    justify-content: center;
+    gap: 1.75rem;
+    width: min(26rem, 100%);
+    margin: 0 auto;
+    padding: calc(2rem + var(--safe-t)) 1.25rem calc(2.5rem + var(--safe-b));
   }
-  .model {
+  .brand {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 0.35rem;
+    padding: 0 0.15rem;
   }
-  .model .name {
-    font-size: 0.95rem;
-    opacity: 0.75;
-    text-align: left;
+  h1 {
+    margin: 0;
+    font-size: clamp(2.4rem, 8vw, 3rem);
+    font-weight: 700;
+    letter-spacing: -0.045em;
+    line-height: 1.05;
   }
-  a.ql, a.web {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 3.25rem;
-    padding: 0 1.25rem;
-    border-radius: 12px;
-    background: #f2f2f2;
-    color: #111;
-    text-decoration: none;
+  .tagline {
+    margin: 0;
     font-size: 1.05rem;
-    font-weight: 600;
+    font-weight: 500;
+    letter-spacing: -0.015em;
+    color: var(--fg-secondary);
+  }
+  .models {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    padding: 0.65rem;
+    border-radius: 22px;
+    border: 1px solid var(--glass-border);
+    background: var(--glass);
+    box-shadow: var(--shadow);
+    -webkit-backdrop-filter: blur(var(--blur)) saturate(1.4);
+    backdrop-filter: blur(var(--blur)) saturate(1.4);
   }
   a.web {
-    background: transparent;
-    color: #eee;
-    border: 1px solid #666;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 3.5rem;
+    padding: 0.85rem 1.1rem;
+    border-radius: 14px;
+    border: 1px solid var(--row-border);
+    background: var(--row);
+    color: var(--fg);
+    text-decoration: none;
+    font-size: 1.12rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    transition: transform 0.12s ease, background 0.15s ease;
   }
-  a.ql img {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
+  a.web:active { transform: scale(0.985); }
+  a.web .chevron {
+    color: var(--chevron);
+    font-weight: 500;
+    font-size: 1.25rem;
+    line-height: 1;
   }
-  a.ql span, a.web span { pointer-events: none; }
+  .empty {
+    margin: 0;
+    padding: 1rem 0.5rem;
+    text-align: center;
+    color: var(--fg-secondary);
+    font-size: 0.95rem;
+  }
 </style>
 </head>
 <body>
 <main>
-  <h1>Blueprints</h1>
-  <div class="buttons">
+  <header class="brand">
+    <h1>Blueprints</h1>
+    <p class="tagline">3D models in the browser</p>
+  </header>
+  <div class="models">
 %%BUTTONS%%
   </div>
 </main>
@@ -137,44 +194,26 @@ def upsert_manifest(model_id: str, *, label: str | None = None) -> list[dict[str
             if label is not None:
                 entry["label"] = label
             return entries
-    entries.append({"id": model_id, "label": label or "Quick Look"})
+    entries.append({"id": model_id, "label": label or model_id})
     return entries
 
 
-def _ql_button_html(label: str, usdz_b64: str) -> str:
-    return (
-        f'    <a class="ql" rel="ar" href="data:model/vnd.usdz+zip;base64,{usdz_b64}">\n'
-        f'      <img alt="" width="1" height="1" '
-        f'src="data:image/gif;base64,{_PIXEL_GIF}"/>\n'
-        f"      <span>{label}</span>\n"
-        f"    </a>"
-    )
-
-
-def _web_button_html(model_id: str) -> str:
-    href = f"viewer/?m={model_id}"
+def _web_button_html(model_id: str, label: str) -> str:
+    href = f"viewer/?m={html.escape(model_id, quote=True)}"
+    safe_label = html.escape(label)
     return (
         f'    <a class="web" href="{href}">\n'
-        f"      <span>Web 3D</span>\n"
+        f"      <span>{safe_label}</span>\n"
+        f'      <span class="chevron" aria-hidden="true">›</span>\n'
         f"    </a>"
     )
-
-
-def _model_block_html(model_id: str, label: str, usdz_b64: str | None, *, has_glb: bool) -> str:
-    bits = [f'  <div class="model">', f'    <div class="name">{model_id}</div>']
-    if usdz_b64:
-        bits.append(_ql_button_html(label, usdz_b64))
-    if has_glb:
-        bits.append(_web_button_html(model_id))
-    bits.append("  </div>")
-    return "\n".join(bits)
 
 
 def write_preview_hub(entries: list[dict[str, str]] | None = None) -> Path:
-    """Regenerate docs/index.html from docs/models/manifest.json + assets.
+    """Regenerate docs/index.html from docs/models/manifest.json + GLB assets.
 
     The hub is generated at deploy time (and locally for smoke tests). It is
-    gitignored — do not commit the fat base64 HTML. WebGL lives under docs/viewer/.
+    gitignored. WebGL lives under docs/viewer/.
     """
     if entries is None:
         entries = load_manifest()
@@ -182,24 +221,17 @@ def write_preview_hub(entries: list[dict[str, str]] | None = None) -> Path:
     models = models_dir()
     for entry in entries:
         model_id = entry["id"]
-        label = entry.get("label") or "Quick Look"
-        usdz_path = models / f"{model_id}.usdz"
+        label = entry.get("label") or model_id
         glb_path = models / f"{model_id}.glb"
-        has_usdz = usdz_path.is_file()
-        has_glb = glb_path.is_file()
-        if not has_usdz and not has_glb:
+        if not glb_path.is_file():
             continue
-        usdz_b64 = (
-            base64.b64encode(usdz_path.read_bytes()).decode("ascii") if has_usdz else None
-        )
-        buttons.append(
-            _model_block_html(model_id, label, usdz_b64, has_glb=has_glb)
-        )
-    html = _HUB_HTML.replace("%%BUTTONS%%", "\n".join(buttons) if buttons else "")
+        buttons.append(_web_button_html(model_id, label))
+    body = "\n".join(buttons) if buttons else '    <p class="empty">No models yet</p>'
+    page = _HUB_HTML.replace("%%BUTTONS%%", body)
     PREVIEW_SITE_DIR.mkdir(parents=True, exist_ok=True)
     (PREVIEW_SITE_DIR / ".nojekyll").write_text("", encoding="utf-8")
     index_path = PREVIEW_SITE_DIR / "index.html"
-    index_path.write_text(html, encoding="utf-8")
+    index_path.write_text(page, encoding="utf-8")
     return index_path
 
 
@@ -221,7 +253,6 @@ def ensure_viewer_shell() -> None:
     dst_iife = viewer_dir / "viewer.iife.js"
     if src_iife.is_file():
         shutil.copy2(src_iife, dst_iife)
-    index = viewer_dir / "index.html"
     # index.html is authored in-repo under docs/viewer/; do not overwrite here.
 
 

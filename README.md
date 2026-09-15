@@ -23,7 +23,7 @@ source .venv/bin/activate
 python -m blueprints.export hello_world
 ```
 
-Generated artifacts: `STEP`/`STL` (desktop CAD), `USDZ` (iOS Quick Look via Git LFS under `docs/models/`), `SVG`/`DXF`, and a white-background `PNG` preview. The `pages` GitHub Action builds `docs/index.html` and deploys a rolling site at https://pteasima.github.io/Blueprints/ (see `AGENTS.md` / `docs/README.md`).
+Generated artifacts: `STEP`/`STL` (desktop CAD), `USDZ`/`GLB` (Git LFS under `docs/models/`), `SVG`/`DXF`, and a white-background `PNG` preview. The `pages` GitHub Action builds `docs/index.html` (web-viewer hub) and deploys a rolling site at https://pteasima.github.io/Blueprints/ (see `AGENTS.md` / `docs/README.md`).
 
 ## Layout
 

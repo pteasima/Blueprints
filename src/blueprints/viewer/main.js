@@ -8,6 +8,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { USDZExporter } from "three/addons/exporters/USDZExporter.js";
 import { meshToClippedExportMesh } from "./clipGeometry.js";
 import { applyArPlacement, computeArPlacement } from "./arPlacement.js";
+import { BG_DARK, BG_LIGHT, initSheetChrome } from "./chrome.js";
 
 /**
  * @param {HTMLCanvasElement} canvas
@@ -26,7 +27,13 @@ export function mountViewer(canvas, glbBuffer) {
   renderer.localClippingEnabled = true;
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x111111);
+  scene.background = new THREE.Color(BG_DARK);
+
+  initSheetChrome((isDark) => {
+    const color = isDark ? BG_DARK : BG_LIGHT;
+    scene.background = new THREE.Color(color);
+    document.documentElement.style.colorScheme = isDark ? "dark" : "light";
+  });
 
   const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 1e6);
   const controls = new OrbitControls(camera, canvas);
@@ -192,15 +199,23 @@ export function mountViewer(canvas, glbBuffer) {
       const id = `part-${name}`;
       const label = document.createElement("label");
       label.className = "part";
+      const nameEl = document.createElement("span");
+      nameEl.className = "part-name";
+      nameEl.textContent = name;
       const input = document.createElement("input");
       input.type = "checkbox";
       input.checked = true;
       input.id = id;
+      input.setAttribute("role", "switch");
+      input.setAttribute("aria-label", name);
       input.addEventListener("change", () => setPartVisible(name, input.checked));
-      label.append(input, document.createTextNode(name));
+      label.append(nameEl, input);
       host.append(label);
     }
   }
+
+  /** @type {string} */
+  let activeCameraPreset = "iso";
 
   function buildCameraButtons() {
     const host = document.getElementById("cams");
@@ -214,8 +229,16 @@ export function mountViewer(canvas, glbBuffer) {
     ]) {
       const btn = document.createElement("button");
       btn.type = "button";
+      btn.dataset.preset = id;
       btn.textContent = label;
-      btn.addEventListener("click", () => setCameraPreset(id));
+      if (id === activeCameraPreset) btn.classList.add("is-active");
+      btn.addEventListener("click", () => {
+        activeCameraPreset = id;
+        host.querySelectorAll("button").forEach((el) => {
+          el.classList.toggle("is-active", el.dataset.preset === id);
+        });
+        setCameraPreset(id);
+      });
       host.append(btn);
     }
   }
@@ -269,7 +292,8 @@ export function mountViewer(canvas, glbBuffer) {
       const remove = document.createElement("button");
       remove.type = "button";
       remove.className = "cut-remove";
-      remove.textContent = "Remove";
+      remove.setAttribute("aria-label", "Remove section");
+      remove.textContent = "×";
       remove.addEventListener("click", () => removeCut(cut.id));
       row.append(remove);
     }
@@ -426,7 +450,8 @@ export function mountViewer(canvas, glbBuffer) {
         const remove = document.createElement("button");
         remove.type = "button";
         remove.className = "cut-remove";
-        remove.textContent = "Remove";
+        remove.setAttribute("aria-label", "Remove section");
+        remove.textContent = "×";
         remove.addEventListener("click", () => removeCut(cut.id));
         row.append(remove);
       }
@@ -489,10 +514,10 @@ export function mountViewer(canvas, glbBuffer) {
   async function openArQuickLook() {
     if (arBusy || !root) return;
     arBusy = true;
-    const label = arBtn?.textContent || "View in AR";
+    const label = arBtn?.textContent || "AR";
     if (arBtn) {
       arBtn.disabled = true;
-      arBtn.textContent = "Generating…";
+      arBtn.textContent = "…";
     }
     try {
       const exportScene = buildArExportScene();
