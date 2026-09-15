@@ -56,9 +56,13 @@ html, body {
   color: var(--fg);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
+  position: relative;
 }
 
 canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
   display: block;
   width: 100%;
   height: 100%;
@@ -80,12 +84,14 @@ canvas {
 
 .chrome-btn {
   appearance: none;
+  position: relative;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 2.5rem;
-  height: 2.5rem;
-  padding: 0 0.85rem;
+  min-width: 2.75rem;
+  height: 2.75rem;
+  padding: 0 0.95rem;
   border: 1px solid var(--glass-border);
   border-radius: 999px;
   background: var(--glass);
@@ -100,6 +106,8 @@ canvas {
   -webkit-backdrop-filter: blur(var(--blur)) saturate(1.4);
   backdrop-filter: blur(var(--blur)) saturate(1.4);
   transition: background 0.15s ease, transform 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .chrome-btn:active { transform: scale(0.96); }

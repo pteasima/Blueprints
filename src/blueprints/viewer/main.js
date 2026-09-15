@@ -15,6 +15,16 @@ import { BG_DARK, BG_LIGHT, initSheetChrome } from "./chrome.js";
  * @param {ArrayBuffer} glbBuffer
  */
 export function mountViewer(canvas, glbBuffer) {
+  /** @type {THREE.Scene | null} */
+  let scene = null;
+  let sceneBg = BG_DARK;
+
+  initSheetChrome((isDark) => {
+    sceneBg = isDark ? BG_DARK : BG_LIGHT;
+    if (scene) scene.background = new THREE.Color(sceneBg);
+    document.documentElement.style.colorScheme = isDark ? "dark" : "light";
+  });
+
   const renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: true,
@@ -26,14 +36,8 @@ export function mountViewer(canvas, glbBuffer) {
   renderer.toneMappingExposure = 1.05;
   renderer.localClippingEnabled = true;
 
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(BG_DARK);
-
-  initSheetChrome((isDark) => {
-    const color = isDark ? BG_DARK : BG_LIGHT;
-    scene.background = new THREE.Color(color);
-    document.documentElement.style.colorScheme = isDark ? "dark" : "light";
-  });
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(sceneBg);
 
   const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 1e6);
   const controls = new OrbitControls(camera, canvas);
