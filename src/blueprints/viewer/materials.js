@@ -27,6 +27,28 @@ export const SOLID_COLORS = {
 };
 
 /**
+ * Stable depth bias for stacked layers (outside → inside / below → above).
+ * Higher wins when faces are nearly coplanar (polygonOffset + renderOrder).
+ * @type {Record<string, number>}
+ */
+export const LAYER_DEPTH_BIAS = {
+  podlaha: 0,
+  eps: 1,
+  zdivo: 2,
+  omitka: 3,
+  pouzdro: 4,
+  predstena: 5,
+  nabytek: 6,
+  soffit: 7,
+  pozednice: 8,
+  koruna: 9,
+  vata: 10,
+  krov: 11,
+  krytina: 12,
+  podhled: 13,
+};
+
+/**
  * @typedef {{
  *   color: [number, number, number],
  *   roughness: number,
@@ -262,9 +284,21 @@ function colorForLabel(label) {
 /**
  * @param {THREE.Material} mat
  * @param {THREE.Plane[] | null | undefined} planes
+ * @param {number} depthBias
  */
-function finishMaterial(mat, planes) {
+function finishMaterial(mat, planes, depthBias = 0) {
   mat.side = THREE.DoubleSide;
+  // Bias nested/abutting CAD faces so one layer consistently wins in the
+  // depth buffer (cuts make coplanar interfaces much more visible).
+  if (depthBias > 0) {
+    mat.polygonOffset = true;
+    mat.polygonOffsetFactor = -depthBias;
+    mat.polygonOffsetUnits = -depthBias * 2;
+  } else {
+    mat.polygonOffset = false;
+    mat.polygonOffsetFactor = 0;
+    mat.polygonOffsetUnits = 0;
+  }
   if (planes) {
     mat.clippingPlanes = planes;
     mat.clipIntersection = false;
@@ -353,6 +387,7 @@ export function applyMaterialMode(partsMap, mode, opts = {}) {
 
   for (const [label, meshes] of partsMap) {
     const rgb = colorForLabel(label);
+    const depthBias = LAYER_DEPTH_BIAS[label] ?? 0;
     let spanMm = 1000;
     if (realistic) {
       for (const mesh of meshes) {
@@ -398,7 +433,7 @@ export function applyMaterialMode(partsMap, mode, opts = {}) {
         color: solidColor(rgb),
       });
     }
-    finishMaterial(mat, planes);
+    finishMaterial(mat, planes, depthBias);
 
     /** @type {Set<THREE.Material>} */
     const previous = new Set();
@@ -410,6 +445,7 @@ export function applyMaterialMode(partsMap, mode, opts = {}) {
         for (const m of list) previous.add(m);
       }
       mesh.material = mat;
+      mesh.renderOrder = depthBias;
     }
     for (const m of previous) {
       if (m === mat) continue;

@@ -2,11 +2,13 @@
 
 World: X eave↔eave (5350), Y kitchen↔living (11100), Z up.
 
-- Eave walls, krov, vata, cabinets and soffit: panel A extruded along Y.
-- Gable walls, koruna, pouzdra, předstěny: panel B, thickness along Y, span along X.
-- Předstěny 190 / 450 follow the section ceiling in X (not a constant Z_SOFFIT slab).
-- Cabinet run is not on either sheet; default is the clear span between předstěny.
-- No texts, hangers, or bass-trap layer stacks.
+Physical assembly rules (also keep the web viewer free of z-fighting):
+- Each labelled solid has real thickness from the section params.
+- Different materials never share a plane and never interpenetrate; mates get a
+  1 mm clearance (still reads as "touching" at room scale).
+- Gables own the end walls (full X). Eave runs only the clear mid-span so
+  corner volumes are not drawn twice.
+- Floor slab is the clear room only; perimeter walls own the strip below z=0.
 
     python -m blueprints.export obyvak
 
@@ -25,6 +27,10 @@ from obyvak_geom import ObyvakLayout, ObyvakParams, xz_face
 MODEL_NAME = "obyvak"
 EXPORT_KIND = "solid"
 PARAMS = asdict(ObyvakParams())
+
+# Clearance between distinct solids (mm). Large enough for float32 metres in glTF;
+# small enough not to read as a gap in the viewer.
+FACE_GAP = 1.0
 
 
 def _layer_color(label: str) -> Color:
@@ -48,6 +54,8 @@ def _box(x: float, y: float, z: float, dx: float, dy: float, dz: float, label: s
         y, dy = y + dy, -dy
     if dz < 0:
         z, dz = z + dz, -dz
+    if dx <= 0 or dy <= 0 or dz <= 0:
+        raise ValueError(f"non-positive box for {label}: {(dx, dy, dz)}")
     solid = Box(dx, dy, dz, align=(Align.MIN, Align.MIN, Align.MIN))
     solid = Location((x, y, z)) * solid
     return _paint(solid, label)
@@ -55,6 +63,8 @@ def _box(x: float, y: float, z: float, dx: float, dy: float, dz: float, label: s
 
 def _extrude_y(face, y0: float, y1: float, label: str):
     ya, yb = (y0, y1) if y1 >= y0 else (y1, y0)
+    if yb - ya <= 0:
+        raise ValueError(f"non-positive extrude for {label}: {y0}→{y1}")
     placed = face.moved(Location((0.0, ya, 0.0)))
     try:
         solid = Solid.extrude(placed, (0.0, yb - ya, 0.0))
@@ -63,93 +73,187 @@ def _extrude_y(face, y0: float, y1: float, label: str):
     return _paint(solid, label)
 
 
+def _shrink_band(pts: list[tuple[float, float]], top_n: int, gap: float) -> list[tuple[float, float]]:
+    """Pull the first top_n vertices down and the rest up (thin a roof band)."""
+    out = []
+    for i, (x, z) in enumerate(pts):
+        out.append((x, z - gap if i < top_n else z + gap))
+    return out
+
+
+def _cut_away(solid: Solid, tools: list, label: str) -> Solid:
+    """Remove tool volumes so roof packs sit on walls instead of through them."""
+    out = solid
+    for tool in tools:
+        try:
+            out = out.cut(tool)
+        except Exception:
+            continue
+    return _paint(out, label)
+
+
 def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
-    y0, y1 = g.yl_eps, g.yr_eps
-    parts: list = []
+    gap = FACE_GAP
+    # Room-clear eave run: gable plaster owns y∈[-plaster,0] and [L, L+plaster].
+    y0, y1 = gap, p.room_length - gap
+    ey = y1 - y0
+    structure: list = []
 
-    parts.append(_box(g.xl_eps, y0, -p.floor_t, g.xr_eps - g.xl_eps, y1 - y0, p.floor_t, "podlaha"))
+    # --- Floor: clear slab only (walls own the perimeter strip below z=0). ---
+    structure.append(
+        _box(gap, gap, -p.floor_t, p.room_width - 2 * gap, p.room_length - 2 * gap, p.floor_t, "podlaha")
+    )
 
-    # Eave walls (panel A), full length including gable corners.
-    for x_eps, x_mas, x_pls in (
-        (g.xl_eps, g.xl_mas, -p.wall_plaster),
-        (g.xr_mas, p.room_width + p.wall_plaster, p.room_width),
+    # --- Eave walls (panel A): mid-span only. Layer stack outside → inside. ---
+    structure.append(
+        _box(g.xl_eps, y0, -p.floor_t, p.wall_eps - gap, ey, p.eave_wall_z + p.floor_t, "eps")
+    )
+    structure.append(
+        _box(g.xl_mas, y0, -p.floor_t, p.wall_mason - gap, ey, p.eave_wall_z + p.floor_t, "zdivo")
+    )
+    structure.append(_box(-p.wall_plaster, y0, 0.0, p.wall_plaster, ey, p.eave_wall_z, "omitka"))
+
+    structure.append(_box(p.room_width, y0, 0.0, p.wall_plaster, ey, p.eave_wall_z, "omitka"))
+    structure.append(
+        _box(
+            p.room_width + p.wall_plaster + gap,
+            y0,
+            -p.floor_t,
+            p.wall_mason - gap,
+            ey,
+            p.eave_wall_z + p.floor_t,
+            "zdivo",
+        )
+    )
+    structure.append(
+        _box(
+            g.xr_mas + gap,
+            y0,
+            -p.floor_t,
+            p.wall_eps - gap,
+            ey,
+            p.eave_wall_z + p.floor_t,
+            "eps",
+        )
+    )
+
+    # Wall plates sit on masonry (not on plaster), clear of gables.
+    structure.append(
+        _box(g.poz_l0, y0, p.eave_wall_z + gap, p.plate_w, ey, p.plate_h - gap, "pozednice")
+    )
+    structure.append(
+        _box(g.poz_r0, y0, p.eave_wall_z + gap, p.plate_w, ey, p.plate_h - gap, "pozednice")
+    )
+
+    # --- Gable walls (panel B): full X, own the corners. ---
+    for ya, yb in ((g.yl_eps, g.yl_mas - gap), (g.yr_mas + gap, g.yr_eps)):
+        structure.append(
+            _extrude_y(
+                xz_face(g.gable_wall_pts(g.xl_eps, g.xr_eps, -p.floor_t), "eps"), ya, yb, "eps"
+            )
+        )
+    for ya, yb in (
+        (g.yl_mas, -p.wall_plaster - gap),
+        (p.room_length + p.wall_plaster + gap, g.yr_mas),
     ):
-        parts.append(_box(x_eps, y0, -p.floor_t, p.wall_eps, y1 - y0, p.eave_wall_z + p.floor_t, "eps"))
-        parts.append(
-            _box(x_mas, y0, -p.floor_t, p.wall_mason, y1 - y0, p.eave_wall_z + p.floor_t, "zdivo")
-        )
-        parts.append(_box(x_pls, y0, 0.0, p.wall_plaster, y1 - y0, p.eave_wall_z, "omitka"))
-
-    parts.append(_box(g.poz_l0, y0, p.eave_wall_z, p.plate_w, y1 - y0, p.plate_h, "pozednice"))
-    parts.append(_box(g.poz_r0, y0, p.eave_wall_z, p.plate_w, y1 - y0, p.plate_h, "pozednice"))
-
-    # Gable walls (panel B): 40° rake, peak at ridge.
-    for ya, yb in ((g.yl_eps, g.yl_mas), (g.yr_mas, g.yr_eps)):
-        parts.append(
-            _extrude_y(xz_face(g.gable_wall_pts(g.xl_eps, g.xr_eps, -p.floor_t), "eps"), ya, yb, "eps")
-        )
-    for ya, yb in ((g.yl_mas, -p.wall_plaster), (p.room_length + p.wall_plaster, g.yr_mas)):
-        parts.append(
+        structure.append(
             _extrude_y(
                 xz_face(g.gable_wall_pts(g.xl_mas, g.xr_mas, -p.floor_t), "zdivo"), ya, yb, "zdivo"
             )
         )
-    for ya, yb in ((-p.wall_plaster, 0.0), (p.room_length, p.room_length + p.wall_plaster)):
-        parts.append(
+    for ya, yb in (
+        (-p.wall_plaster, -gap),
+        (p.room_length + gap, p.room_length + p.wall_plaster),
+    ):
+        structure.append(
             _extrude_y(
                 xz_face(g.gable_wall_pts(0.0, p.room_width, 0.0), "omitka"), ya, yb, "omitka"
             )
         )
-    for ya, yb in ((g.yl_mas, 0.0), (p.room_length, g.yr_mas)):
-        parts.append(
-            _extrude_y(
-                xz_face(g.gable_crown_pts(g.xl_mas, g.xr_mas), "koruna"), ya, yb, "koruna"
-            )
-        )
+    for ya, yb in ((g.yl_mas, -gap), (p.room_length + gap, g.yr_mas)):
+        crown = [(x, z + gap) for x, z in g.gable_crown_pts(g.xl_mas, g.xr_mas)]
+        structure.append(_extrude_y(xz_face(crown, "koruna"), ya, yb, "koruna"))
 
-    parts.append(_extrude_y(xz_face(g.krov_pts(), "krov"), g.y_roof0, g.y_roof1, "krov"))
-    parts.append(_extrude_y(xz_face(g.krytina_pts(), "krytina"), g.y_roof0, g.y_roof1, "krytina"))
-    parts.append(_extrude_y(xz_face(g.vata_pts(), "vata"), 0.0, p.room_length, "vata"))
-    parts.append(_extrude_y(xz_face(g.podhled_pts(), "podhled"), g.y_furn0, g.y_furn1, "podhled"))
+    # Cutters: everything the roof must not occupy (walls, plates, crown).
+    roof_cutters = [s for s in structure if s.label != "podlaha"]
 
-    parts.append(
-        _box(
-            g.x_furn,
-            g.y_furn0,
-            0.0,
-            p.furniture_width,
-            g.y_furn1 - g.y_furn0,
-            p.furniture_height,
-            "nabytek",
-        )
+    # --- Roof: krytina above krov above vata; thinned, then notched around walls. ---
+    krov_pts = _shrink_band(g.krov_pts(), top_n=3, gap=gap)
+    krytina_pts = [(x, z + gap if i < 3 else z) for i, (x, z) in enumerate(g.krytina_pts())]
+    vata_pts = [
+        (min(max(x, gap), p.room_width - gap), z + gap if i < 4 else z - gap)
+        for i, (x, z) in enumerate(g.vata_pts())
+    ]
+
+    krov = _cut_away(
+        _extrude_y(xz_face(krov_pts, "krov"), g.y_roof0, g.y_roof1, "krov"),
+        roof_cutters,
+        "krov",
     )
+    krytina = _cut_away(
+        _extrude_y(xz_face(krytina_pts, "krytina"), g.y_roof0, g.y_roof1, "krytina"),
+        roof_cutters,
+        "krytina",
+    )
+    # Vata is the attic fill: keep it inside the room and clear of předstěny later.
+    vata = _extrude_y(xz_face(vata_pts, "vata"), gap, p.room_length - gap, "vata")
+
+    parts: list = list(structure)
+    parts.extend([krov, krytina, vata])
+
+    # Ceiling board under the ceiling line (below vata).
+    podhled_pts = [(x, z - gap) for x, z in g.podhled_pts()]
+    parts.append(
+        _extrude_y(xz_face(podhled_pts, "podhled"), g.y_furn0 + gap, g.y_furn1 - gap, "podhled")
+    )
+
+    # --- Cabinets + bulkhead: clear of right plaster and of the ceiling board. ---
+    furn_w = p.furniture_width - gap
+    furn_y0, furn_y1 = g.y_furn0 + gap, g.y_furn1 - gap
+    parts.append(
+        _box(g.x_furn, furn_y0, 0.0, furn_w, furn_y1 - furn_y0, p.furniture_height, "nabytek")
+    )
+    soffit_z0 = g.z_nabeh_bot + gap
+    soffit_z1 = g.z_gkf_horiz - p.soffit_hint_t - 2 * gap
     parts.append(
         _box(
             g.x_furn,
-            g.y_furn0,
-            g.z_nabeh_bot,
-            p.furniture_width,
-            g.y_furn1 - g.y_furn0,
-            g.z_gkf_horiz - g.z_nabeh_bot,
+            furn_y0,
+            soffit_z0,
+            furn_w,
+            furn_y1 - furn_y0,
+            max(soffit_z1 - soffit_z0, gap),
             "soffit",
         )
     )
 
-    pred = xz_face(g.predstena_pts(), "predstena")
-    parts.append(_extrude_y(pred, 0.0, p.predstena_kitchen, "predstena"))
-    parts.append(_extrude_y(pred, g.y_pred_r, p.room_length, "predstena"))
+    # --- Předstěny + pouzdra: inset from plaster and from each other. ---
+    pred_pts = []
+    for i, (x, z) in enumerate(g.predstena_pts()):
+        x = min(max(x, gap), p.room_width - gap)
+        z = z + gap if i < 2 else z - gap
+        pred_pts.append((x, z))
+    pred = xz_face(pred_pts, "predstena")
+    pred_k = _extrude_y(pred, gap, p.predstena_kitchen - gap, "predstena")
+    pred_l = _extrude_y(pred, g.y_pred_r + gap, p.room_length - gap, "predstena")
+    parts.extend([pred_k, pred_l])
 
+    # Attic wool stops at the předstěny (they own that bay).
+    vata_cut = _cut_away(vata, [pred_k, pred_l], "vata")
+    parts[parts.index(vata)] = vata_cut
+
+    pouzdro_h = p.predstena_bottom_z - gap
     parts.append(
-        _box(0.0, 0.0, 0.0, p.room_width, p.pouzdro_d, p.predstena_bottom_z, "pouzdro")
+        _box(gap, gap, 0.0, p.room_width - 2 * gap, p.pouzdro_d - gap, pouzdro_h, "pouzdro")
     )
     parts.append(
         _box(
+            gap,
+            p.room_length - p.pouzdro_d + gap,
             0.0,
-            p.room_length - p.pouzdro_d,
-            0.0,
-            p.room_width,
-            p.pouzdro_d,
-            p.predstena_bottom_z,
+            p.room_width - 2 * gap,
+            p.pouzdro_d - gap,
+            pouzdro_h,
             "pouzdro",
         )
     )
@@ -174,6 +278,7 @@ def _meta(p: ObyvakParams, g: ObyvakLayout) -> dict:
             "y_furn1": g.y_furn1,
             "room_width": p.room_width,
             "room_length": p.room_length,
+            "face_gap": FACE_GAP,
         },
     }
 
