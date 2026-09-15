@@ -30,7 +30,7 @@ const CHROME_CSS = /* css */ `
   --blur: 40px;
   --sheet-w: min(22rem, 42vw);
   --sheet-partial-h: 40vh;
-  --sheet-full-h: calc(100dvh - var(--safe-t) - 4.5rem);
+  --sheet-full-h: calc(100dvh - var(--safe-t) - 3.5rem);
   --sheet-peek-h: 2.15rem;
   --chrome-pad: 12px;
 }
@@ -177,9 +177,14 @@ canvas {
   overscroll-behavior: contain;
 }
 
-.sheet[data-detent="peek"] .sheet-scroll {
+.sheet[data-detent="peek"]:not(.is-dragging) .sheet-scroll {
   pointer-events: none;
   opacity: 0;
+}
+
+.sheet.is-dragging .sheet-scroll {
+  opacity: 1;
+  pointer-events: none;
 }
 
 .sheet-section + .sheet-section {
@@ -197,21 +202,22 @@ canvas {
   color: var(--fg-secondary);
 }
 
-/* Narrow: bottom sheet */
+/* Narrow: bottom sheet — flush to bottom, only top corners rounded */
 @media (max-width: 767px) {
   .sheet {
-    left: calc(var(--safe-l) + 10px);
-    right: calc(var(--safe-r) + 10px);
-    bottom: calc(var(--safe-b) + 10px);
+    left: 0;
+    right: 0;
+    bottom: 0;
     height: var(--sheet-peek-h);
     max-height: var(--sheet-full-h);
-    border-radius: var(--radius);
+    border-radius: var(--radius) var(--radius) 0 0;
+    border-bottom: 0;
   }
   .sheet[data-detent="peek"] {
-    height: var(--sheet-peek-h);
+    height: calc(var(--sheet-peek-h) + var(--safe-b));
   }
   .sheet[data-detent="partial"] {
-    height: var(--sheet-partial-h);
+    height: calc(var(--sheet-partial-h) + var(--safe-b));
   }
   .sheet[data-detent="full"] {
     height: var(--sheet-full-h);
@@ -527,11 +533,10 @@ export function initSheetChrome(onTheme) {
     }
     if (detent !== "partial") return zero;
     const rect = sheet.getBoundingClientRect();
-    const gap = 10;
     return {
       top: 0,
       right: 0,
-      bottom: Math.max(0, Math.round(window.innerHeight - rect.top + gap)),
+      bottom: Math.max(0, Math.round(window.innerHeight - rect.top)),
       left: 0,
     };
   }
@@ -570,6 +575,7 @@ export function initSheetChrome(onTheme) {
   let startX = 0;
   let startH = 0;
   let startTX = 0;
+  let startDetent = "peek";
   let lastY = 0;
   let lastX = 0;
   let lastT = 0;
@@ -577,8 +583,7 @@ export function initSheetChrome(onTheme) {
   let velX = 0;
 
   function peekH() {
-    // Prefer measured handle; CSS rem tokens don't parse as px via parseFloat.
-    return Math.max(handle?.offsetHeight || 34, 34);
+    return Math.max(handle?.offsetHeight || 34, 34) + 8;
   }
   function partialH() {
     return measurePartialHeight() || window.innerHeight * 0.38;
@@ -591,10 +596,10 @@ export function initSheetChrome(onTheme) {
   function onPointerDown(ev) {
     if (!sheet || !handle) return;
     if (ev.target !== handle && !handle.contains(/** @type {Node} */ (ev.target))) {
-      // Allow dragging from the top padding of the sheet near the handle only.
       if (!(ev.target === sheet)) return;
     }
     dragging = true;
+    startDetent = detent;
     sheet.classList.add("is-dragging");
     startY = ev.clientY;
     startX = ev.clientX;
@@ -650,24 +655,39 @@ export function initSheetChrome(onTheme) {
       { name: "partial", h: partialH() },
       { name: "full", h: fullH() },
     ];
-    let idx = 0;
-    let bestD = Math.abs(h - targets[0].h);
-    for (let i = 1; i < targets.length; i++) {
-      const d = Math.abs(h - targets[i].h);
-      if (d < bestD) {
-        bestD = d;
-        idx = i;
-      }
+    const startIdx = Math.max(
+      0,
+      targets.findIndex((t) => t.name === startDetent),
+    );
+    const startTargetH = targets[startIdx].h;
+    // Tiny moves / light flings stay put (native sheet feel).
+    if (Math.abs(h - startTargetH) < 36 && Math.abs(v) < 1100) {
+      return startDetent;
     }
-    if (v > 650 && idx < targets.length - 1) idx += 1;
-    else if (v < -650 && idx > 0) idx -= 1;
+    // Light velocity projection — short flings barely move the decision point.
+    const projected = h + v * 0.05;
+    const mid01 = (targets[0].h + targets[1].h) / 2;
+    const mid12 = (targets[1].h + targets[2].h) / 2;
+    let idx = projected < mid01 ? 0 : projected < mid12 ? 1 : 2;
+    // Never skip a detent in one gesture.
+    if (idx > startIdx + 1) idx = startIdx + 1;
+    if (idx < startIdx - 1) idx = startIdx - 1;
+    // Reaching full requires crossing well past the partial↔full midpoint
+    // or a strong sustained fling from partial — not a short flick from peek.
+    if (idx === 2 && startIdx < 2) {
+      const need = mid12 + (targets[2].h - mid12) * 0.25;
+      if (h < need && v < 1400) idx = 1;
+    }
     return targets[idx].name;
   }
 
   function nearestWide(x, v) {
     const w = sheet.offsetWidth + 28;
-    if (v > 500) return "closed";
-    if (v < -500) return "open";
+    if (Math.abs(x - (startDetent === "closed" ? w : 0)) < 28 && Math.abs(v) < 800) {
+      return startDetent;
+    }
+    if (v > 900) return "closed";
+    if (v < -900) return "open";
     return x > w * 0.45 ? "closed" : "open";
   }
 

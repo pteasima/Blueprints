@@ -477,19 +477,90 @@ export function mountViewer(canvas, glbBuffer) {
     maybeSpawnDraftFromCamera();
   });
 
-  function applySafeViewOffset() {
-    if (!chromeApi) return;
-    const { bottom, right } = chromeApi.getSafeInsets();
+  /** Animated safe-area framing: shift into uncovered rect + slight zoom-out. */
+  let frameZoom = 1;
+  let frameOffX = 0;
+  let frameOffY = 0;
+  let frameZoomT = 1;
+  let frameOffXT = 0;
+  let frameOffYT = 0;
+  let frameAnimFromZoom = 1;
+  let frameAnimFromX = 0;
+  let frameAnimFromY = 0;
+  let frameAnim = 0;
+  const FRAME_MS = 280;
+
+  function computeFrameTargets() {
     const w = Math.max(1, canvas.clientWidth);
     const h = Math.max(1, canvas.clientHeight);
+    if (!chromeApi) {
+      return { zoom: 1, offX: 0, offY: 0, w, h };
+    }
+    const { bottom, right } = chromeApi.getSafeInsets();
+    if (bottom <= 0 && right <= 0) {
+      return { zoom: 1, offX: 0, offY: 0, w, h };
+    }
+    const safeW = Math.max(1, w - right);
+    const safeH = Math.max(1, h - bottom);
+    // Zoom out so the previous full-frame content still fits in the safe rect.
+    const zoom = Math.min(safeW / w, safeH / h);
+    // Positive offsetY moves the frustum window down → content appears higher
+    // (above the sheet). Same idea for a right-side sheet (offsetX).
+    const offX = right / 2;
+    const offY = bottom / 2;
+    return { zoom, offX, offY, w, h };
+  }
+
+  function applyFrameProjection(w, h) {
     withSuppressedCameraChange(() => {
-      if (bottom > 0 || right > 0) {
-        camera.setViewOffset(w, h, 0, 0, Math.max(1, w - right), Math.max(1, h - bottom));
+      if (
+        Math.abs(frameOffX) > 0.05 ||
+        Math.abs(frameOffY) > 0.05 ||
+        Math.abs(frameZoom - 1) > 0.001
+      ) {
+        camera.zoom = frameZoom;
+        camera.setViewOffset(w, h, frameOffX, frameOffY, w, h);
       } else {
         camera.clearViewOffset();
+        camera.zoom = 1;
+        frameZoom = 1;
+        frameOffX = 0;
+        frameOffY = 0;
       }
       camera.updateProjectionMatrix();
     });
+  }
+
+  function applySafeViewOffset(animate = true) {
+    const { zoom, offX, offY, w, h } = computeFrameTargets();
+    frameZoomT = zoom;
+    frameOffXT = offX;
+    frameOffYT = offY;
+    if (!animate) {
+      frameZoom = zoom;
+      frameOffX = offX;
+      frameOffY = offY;
+      frameAnim = 0;
+      applyFrameProjection(w, h);
+      return;
+    }
+    frameAnimFromZoom = frameZoom;
+    frameAnimFromX = frameOffX;
+    frameAnimFromY = frameOffY;
+    frameAnim = performance.now();
+  }
+
+  function stepFrameAnim(now) {
+    if (!frameAnim) return;
+    const t = Math.min(1, (now - frameAnim) / FRAME_MS);
+    const e = 1 - (1 - t) ** 3;
+    frameZoom = frameAnimFromZoom + (frameZoomT - frameAnimFromZoom) * e;
+    frameOffX = frameAnimFromX + (frameOffXT - frameAnimFromX) * e;
+    frameOffY = frameAnimFromY + (frameOffYT - frameAnimFromY) * e;
+    const w = Math.max(1, canvas.clientWidth);
+    const h = Math.max(1, canvas.clientHeight);
+    applyFrameProjection(w, h);
+    if (t >= 1) frameAnim = 0;
   }
 
   function resize() {
@@ -497,12 +568,12 @@ export function mountViewer(canvas, glbBuffer) {
     const h = Math.max(1, canvas.clientHeight);
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
-    applySafeViewOffset();
+    applySafeViewOffset(false);
   }
   resize();
   window.addEventListener("resize", resize);
   chromeApi?.onDetentChange(() => {
-    applySafeViewOffset();
+    applySafeViewOffset(true);
   });
 
   /** @type {HTMLButtonElement | null} */
@@ -609,6 +680,8 @@ export function mountViewer(canvas, glbBuffer) {
   window.BlueprintsViewer = api;
 
   function tick() {
+    const now = performance.now();
+    stepFrameAnim(now);
     controls.update();
     renderer.render(scene, camera);
     requestAnimationFrame(tick);
