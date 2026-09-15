@@ -746,6 +746,15 @@ _VIEWER_HTML = """<!DOCTYPE html>
     padding: 4px 8px; border-radius: 6px; background: #222; }
   #err { display: none; position: fixed; top: 56px; left: 12px; right: 12px; z-index: 2;
     background: #4a1010; color: #fcc; padding: 10px; border-radius: 8px; white-space: pre-wrap; }
+  #cuts { position: fixed; left: 0; right: 0; bottom: 0; z-index: 2;
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 10px 12px; background: rgba(0,0,0,.78); font-size: 13px;
+    max-height: 40vh; overflow: auto; }
+  .cut-row { display: flex; gap: 8px; align-items: center; min-height: 2rem; }
+  .cut-label { min-width: 7.5rem; opacity: .9; font-variant-numeric: tabular-nums; }
+  .cut-row input[type=range] { flex: 1; min-width: 0; height: 1.75rem; cursor: pointer; }
+  .cut-remove { font: inherit; padding: 6px 10px; border: 0; border-radius: 8px;
+    background: #eee; color: #111; cursor: pointer; }
   canvas { display: block; width: 100%; height: 100%; touch-action: none; }
   .hint { opacity: .7; }
 </style>
@@ -755,8 +764,9 @@ _VIEWER_HTML = """<!DOCTYPE html>
   <button type="button" id="ql" hidden>Open in Quick Look</button>
   <div id="cams"></div>
   <div id="parts"></div>
-  <span class="hint">Drag orbit · scroll zoom</span>
+  <span class="hint">Drag orbit · scroll zoom · section sliders below</span>
 </div>
+<div id="cuts"></div>
 <pre id="err"></pre>
 <canvas id="c"></canvas>
 <script>

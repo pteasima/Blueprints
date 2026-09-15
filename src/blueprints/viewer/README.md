@@ -2,6 +2,11 @@
 
 Custom offline viewer shell (not a third-party app). Three.js is bundled only as a renderer/loader.
 
+## Features
+
+- Part visibility toggles and camera presets (Iso / Front / Side / Top)
+- **Section cuts**: bottom sliders clip the model with planes locked to the view direction at first interaction (architectural: near side removed). Multiple locked cuts AND together. After a cut is locked, orbiting the camera adds another draft slider for a new plane. Left end of each slider = no cut; right = fully past the model.
+
 ## Rebuild the IIFE (after editing `main.js`)
 
 ```bash
@@ -10,4 +15,4 @@ npm ci
 npm run build
 ```
 
-`viewer.iife.js` is committed so Python export does not need Node at runtime.
+`viewer.iife.js` is committed so Python export does not need Node at runtime. Copy/sync into `docs/viewer/` via `ensure_viewer_shell()` on publish, or copy manually after build.
