@@ -3,6 +3,7 @@
  * Used to bake WebGL section cuts into meshes for USDZ export.
  */
 import * as THREE from "three";
+import { toArExportMaterial } from "./materials.js";
 
 const EPS = 1e-5;
 
@@ -152,18 +153,9 @@ export function meshToClippedExportMesh(mesh, planes) {
   if (clipped.length === 0) return null;
 
   const geom = trianglesToGeometry(clipped);
-  const mat = mesh.material;
-  const exportMat = Array.isArray(mat)
-    ? mat.map((m) => {
-        const c = m.clone();
-        c.clippingPlanes = null;
-        return c;
-      })
-    : (() => {
-        const c = mat.clone();
-        c.clippingPlanes = null;
-        return c;
-      })();
+  // MeshBasic (Solid) and other non-standard mats must become MeshStandardMaterial
+  // or THREE.USDZExporter silently drops the mesh → empty/broken AR.
+  const exportMat = toArExportMaterial(mesh.material, geom);
   const out = new THREE.Mesh(geom, exportMat);
   out.name = mesh.name;
   return out;
