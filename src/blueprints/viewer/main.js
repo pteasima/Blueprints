@@ -226,6 +226,14 @@ export function mountViewer(canvas, glbBuffer) {
       isDark: isDarkTheme,
       clippingPlanes: lockedClipPlanes(),
     });
+    // Solid uses unlit MeshBasicMaterial — skip ACES so chroma stays punchy.
+    if (materialMode === MODE_REALISTIC) {
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.05;
+    } else {
+      renderer.toneMapping = THREE.NoToneMapping;
+      renderer.toneMappingExposure = 1;
+    }
   }
 
   function buildMaterialToggle() {

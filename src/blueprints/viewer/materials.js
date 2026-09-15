@@ -8,22 +8,22 @@ export const MATERIAL_MODE_KEY = "blueprints.materialMode";
 export const MODE_SOLID = "solid";
 export const MODE_REALISTIC = "realistic";
 
-/** @type {Record<string, [number, number, number]>} 0–255 RGB — high contrast */
+/** @type {Record<string, [number, number, number]>} 0–255 RGB — near-max chroma */
 export const SOLID_COLORS = {
-  podlaha: [210, 130, 45],
-  eps: [100, 215, 50],
-  zdivo: [200, 95, 60],
-  omitka: [245, 215, 160],
-  nabytek: [255, 165, 30],
-  pozednice: [185, 105, 30],
-  koruna: [185, 105, 30],
-  predstena: [30, 185, 230],
-  pouzdro: [210, 175, 120],
-  krov: [185, 105, 30],
-  vata: [70, 200, 140],
-  soffit: [55, 160, 25],
-  podhled: [25, 110, 220],
-  krytina: [215, 30, 25],
+  podlaha: [230, 115, 20],
+  eps: [70, 230, 25],
+  zdivo: [225, 70, 40],
+  omitka: [255, 225, 120],
+  nabytek: [255, 150, 0],
+  pozednice: [200, 85, 10],
+  koruna: [200, 85, 10],
+  predstena: [0, 195, 245],
+  pouzdro: [235, 185, 80],
+  krov: [200, 85, 10],
+  vata: [0, 210, 155],
+  soffit: [35, 175, 15],
+  podhled: [15, 85, 245],
+  krytina: [235, 15, 15],
 };
 
 /**
@@ -40,31 +40,31 @@ export const SOLID_COLORS = {
 /** @type {Record<string, RealisticPreset>} */
 export const REALISTIC_PRESETS = {
   podlaha: {
-    color: [210, 130, 45],
+    color: [230, 115, 20],
     roughness: 0.68,
     metalness: 0.0,
     map: "wood",
   },
   eps: {
-    color: [100, 215, 50],
+    color: [70, 230, 25],
     roughness: 0.94,
     metalness: 0.0,
     map: "foam",
   },
   zdivo: {
-    color: [200, 95, 60],
+    color: [225, 70, 40],
     roughness: 0.9,
     metalness: 0.0,
     map: "masonry",
   },
   omitka: {
-    color: [245, 215, 160],
+    color: [255, 225, 120],
     roughness: 0.92,
     metalness: 0.0,
     map: "plaster",
   },
   nabytek: {
-    color: [255, 165, 30],
+    color: [255, 150, 0],
     roughness: 0.38,
     metalness: 0.0,
     clearcoat: 0.35,
@@ -72,55 +72,55 @@ export const REALISTIC_PRESETS = {
     map: "wood",
   },
   pozednice: {
-    color: [185, 105, 30],
+    color: [200, 85, 10],
     roughness: 0.55,
     metalness: 0.0,
     map: "wood",
   },
   koruna: {
-    color: [185, 105, 30],
+    color: [200, 85, 10],
     roughness: 0.55,
     metalness: 0.0,
     map: "wood",
   },
   predstena: {
-    color: [30, 185, 230],
+    color: [0, 195, 245],
     roughness: 0.84,
     metalness: 0.0,
     map: "plaster",
   },
   pouzdro: {
-    color: [210, 175, 120],
+    color: [235, 185, 80],
     roughness: 0.7,
     metalness: 0.0,
     map: "plaster",
   },
   krov: {
-    color: [185, 105, 30],
+    color: [200, 85, 10],
     roughness: 0.55,
     metalness: 0.0,
     map: "wood",
   },
   vata: {
-    color: [70, 200, 140],
+    color: [0, 210, 155],
     roughness: 0.97,
     metalness: 0.0,
     map: "wool",
   },
   soffit: {
-    color: [55, 160, 25],
+    color: [35, 175, 15],
     roughness: 0.72,
     metalness: 0.0,
     map: "plaster",
   },
   podhled: {
-    color: [25, 110, 220],
+    color: [15, 85, 245],
     roughness: 0.78,
     metalness: 0.08,
     map: "plaster",
   },
   krytina: {
-    color: [215, 30, 25],
+    color: [235, 15, 15],
     roughness: 0.32,
     metalness: 0.45,
     map: "metal",
@@ -245,18 +245,10 @@ function getMapTexture(kind) {
 
 /**
  * @param {[number, number, number]} rgb
- * @param {boolean} isDark
  * @returns {THREE.Color}
  */
-function solidColor(rgb, isDark) {
-  const c = new THREE.Color(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255);
-  if (isDark) {
-    // Slight lift so mid-chroma solids stay vivid on dark glass chrome.
-    c.offsetHSL(0, 0.02, 0.04);
-  } else {
-    c.offsetHSL(0, 0.03, -0.02);
-  }
-  return c;
+function solidColor(rgb) {
+  return new THREE.Color(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255);
 }
 
 /**
@@ -356,7 +348,6 @@ function mapForSpan(kind, spanMm) {
  * @param {{ isDark?: boolean, clippingPlanes?: THREE.Plane[] | null }} [opts]
  */
 export function applyMaterialMode(partsMap, mode, opts = {}) {
-  const isDark = Boolean(opts.isDark);
   const planes = opts.clippingPlanes ?? null;
   const realistic = mode === MODE_REALISTIC;
 
@@ -380,7 +371,7 @@ export function applyMaterialMode(partsMap, mode, opts = {}) {
         metalness: 0.0,
         map: "none",
       };
-      const color = solidColor(preset.color, isDark);
+      const color = solidColor(preset.color);
       const map = mapForSpan(preset.map || "none", spanMm);
       if (preset.clearcoat) {
         mat = new THREE.MeshPhysicalMaterial({
@@ -402,11 +393,9 @@ export function applyMaterialMode(partsMap, mode, opts = {}) {
         });
       }
     } else {
-      mat = new THREE.MeshStandardMaterial({
-        color: solidColor(rgb, isDark),
-        roughness: 0.78,
-        metalness: 0.0,
-        envMapIntensity: 0.25,
+      // Unlit: ACES + Standard lighting was washing the diagrammatic palette.
+      mat = new THREE.MeshBasicMaterial({
+        color: solidColor(rgb),
       });
     }
     finishMaterial(mat, planes);
