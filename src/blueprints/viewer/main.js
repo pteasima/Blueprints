@@ -9,6 +9,13 @@ import { USDZExporter } from "three/addons/exporters/USDZExporter.js";
 import { meshToClippedExportMesh } from "./clipGeometry.js";
 import { applyArPlacement, computeArPlacement } from "./arPlacement.js";
 import { BG_DARK, BG_LIGHT, initSheetChrome } from "./chrome.js";
+import {
+  MODE_REALISTIC,
+  MODE_SOLID,
+  applyMaterialMode,
+  loadMaterialMode,
+  saveMaterialMode,
+} from "./materials.js";
 
 /**
  * @param {HTMLCanvasElement} canvas
@@ -18,14 +25,21 @@ export function mountViewer(canvas, glbBuffer) {
   /** @type {THREE.Scene | null} */
   let scene = null;
   let sceneBg = BG_DARK;
+  let isDarkTheme = true;
+  /** @type {string} */
+  let materialMode = loadMaterialMode();
+  /** @type {Map<string, THREE.Object3D[]>} */
+  const parts = new Map();
 
   /** @type {ReturnType<typeof initSheetChrome> | null} */
   let chromeApi = null;
 
   chromeApi = initSheetChrome((isDark) => {
+    isDarkTheme = isDark;
     sceneBg = isDark ? BG_DARK : BG_LIGHT;
     if (scene) scene.background = new THREE.Color(sceneBg);
     document.documentElement.style.colorScheme = isDark ? "dark" : "light";
+    if (parts.size) refreshMaterials();
   });
 
   const renderer = new THREE.WebGLRenderer({
@@ -56,8 +70,6 @@ export function mountViewer(canvas, glbBuffer) {
   fill.position.set(-0.5, 0.2, -0.6);
   scene.add(fill);
 
-  /** @type {Map<string, THREE.Object3D[]>} */
-  const parts = new Map();
   /** @type {THREE.Object3D | null} */
   let root = null;
   const box = new THREE.Box3();
@@ -108,11 +120,12 @@ export function mountViewer(canvas, glbBuffer) {
         }
       });
       frameIso();
+      buildMaterialToggle();
       buildPartToggles();
       buildCameraButtons();
       ensureDraftCut();
       buildCutUI();
-      applyClipping();
+      refreshMaterials();
       chromeApi?.refreshPartialHeight();
       showArButton();
     },
@@ -196,6 +209,43 @@ export function mountViewer(canvas, glbBuffer) {
     for (const obj of list) obj.visible = visible;
     updateBox();
     applyClipping();
+  }
+
+  function lockedClipPlanes() {
+    return cuts.filter((c) => c.locked).map((c) => planeForCut(c));
+  }
+
+  function refreshMaterials() {
+    if (!parts.size) return;
+    applyMaterialMode(parts, materialMode, {
+      isDark: isDarkTheme,
+      clippingPlanes: lockedClipPlanes(),
+    });
+  }
+
+  function buildMaterialToggle() {
+    const host = document.getElementById("mats");
+    if (!host) return;
+    host.replaceChildren();
+    for (const [id, label] of [
+      [MODE_SOLID, "Solid"],
+      [MODE_REALISTIC, "Realistic"],
+    ]) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.dataset.mode = id;
+      btn.textContent = label;
+      if (id === materialMode) btn.classList.add("is-active");
+      btn.addEventListener("click", () => {
+        materialMode = id;
+        saveMaterialMode(id);
+        host.querySelectorAll("button").forEach((el) => {
+          el.classList.toggle("is-active", el.dataset.mode === id);
+        });
+        refreshMaterials();
+      });
+      host.append(btn);
+    }
   }
 
   function buildPartToggles() {
@@ -392,7 +442,7 @@ export function mountViewer(canvas, glbBuffer) {
   }
 
   function applyClipping() {
-    const planes = cuts.filter((c) => c.locked).map((c) => planeForCut(c));
+    const planes = lockedClipPlanes();
     if (!root) return;
     root.traverse((obj) => {
       if (!obj.isMesh || !obj.material) return;

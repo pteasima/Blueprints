@@ -40,91 +40,122 @@ SECTION_HEAVY_WEIGHT = 22.0
 SECTION_PNG_WIDTH = 1800
 
 # SVG fill/line colours (0–255 RGB) keyed by Face/Wire.label from the section model.
+# Mid-luminance, higher-chroma solids so layers read on both light and dark glass chrome.
+# Optional roughness/metallic feed UsdPreviewSurface (viewer Realistic mode is separate).
+# Keep SOLID_COLORS in src/blueprints/viewer/materials.js in sync with fill/line RGB.
 SECTION_LAYERS: dict[str, dict[str, Any]] = {
     "podlaha": {
-        "fill": (200, 194, 180),
-        "line": (85, 85, 85),
-        "dxf": ColorIndex.GRAY,
+        "fill": (196, 158, 98),
+        "line": (92, 64, 32),
+        "dxf": ColorIndex.YELLOW,
         "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.72,
+        "metallic": 0.0,
     },
     "eps": {
-        "fill": (217, 232, 200),
-        "line": (90, 122, 58),
+        "fill": (168, 220, 120),
+        "line": (64, 122, 40),
         "dxf": ColorIndex.GREEN,
         "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.92,
+        "metallic": 0.0,
     },
     "zdivo": {
-        "fill": (207, 200, 188),
-        "line": (85, 85, 85),
-        "dxf": ColorIndex.GRAY,
+        "fill": (198, 148, 112),
+        "line": (110, 72, 48),
+        "dxf": ColorIndex.YELLOW,
         "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.88,
+        "metallic": 0.0,
     },
     "omitka": {
-        "fill": (232, 228, 220),
-        "line": (136, 136, 136),
+        "fill": (236, 220, 196),
+        "line": (140, 124, 100),
         "dxf": ColorIndex.LIGHT_GRAY,
         "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.9,
+        "metallic": 0.0,
     },
     "nabytek": {
-        "fill": (232, 213, 163),
-        "line": (138, 106, 42),
+        "fill": (232, 176, 72),
+        "line": (138, 96, 28),
         "dxf": ColorIndex.YELLOW,
         "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.45,
+        "metallic": 0.0,
     },
     "pozednice": {
-        "fill": (196, 165, 116),
-        "line": (107, 79, 42),
+        "fill": (204, 140, 64),
+        "line": (112, 68, 28),
         "dxf": ColorIndex.YELLOW,
         "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.58,
+        "metallic": 0.0,
     },
     "koruna": {
-        "fill": (196, 165, 116),
-        "line": (107, 79, 42),
+        "fill": (204, 140, 64),
+        "line": (112, 68, 28),
         "dxf": ColorIndex.YELLOW,
         "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.58,
+        "metallic": 0.0,
     },
     "predstena": {
-        "fill": (200, 232, 240),
-        "line": (26, 122, 154),
+        "fill": (96, 196, 224),
+        "line": (20, 110, 140),
         "dxf": ColorIndex.CYAN,
         "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.82,
+        "metallic": 0.0,
     },
     "pouzdro": {
-        "fill": (232, 224, 208),
-        "line": (102, 102, 102),
+        "fill": (220, 200, 168),
+        "line": (120, 100, 72),
         "dxf": ColorIndex.GRAY,
         "weight": SECTION_LINE_WEIGHT,
         "dashed": True,
+        "roughness": 0.7,
+        "metallic": 0.0,
     },
     "krov": {
-        "fill": (196, 165, 116),
-        "line": (107, 79, 42),
+        "fill": (204, 140, 64),
+        "line": (112, 68, 28),
         "dxf": ColorIndex.YELLOW,
         "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.58,
+        "metallic": 0.0,
     },
     "vata": {
-        "fill": (217, 232, 200),
-        "line": (90, 122, 58),
+        "fill": (148, 208, 112),
+        "line": (56, 118, 40),
         "dxf": ColorIndex.GREEN,
         "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.95,
+        "metallic": 0.0,
     },
     "soffit": {
-        "fill": (122, 171, 69),
-        "line": (61, 107, 30),
+        "fill": (96, 176, 48),
+        "line": (48, 100, 24),
         "dxf": ColorIndex.GREEN,
         "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.75,
+        "metallic": 0.0,
     },
     "podhled": {
         "fill": None,
-        "line": (26, 95, 138),
+        "line": (40, 128, 196),
         "dxf": ColorIndex.BLUE,
         "weight": SECTION_HEAVY_WEIGHT,
+        "roughness": 0.8,
+        "metallic": 0.05,
     },
     "krytina": {
         "fill": None,
-        "line": (139, 46, 26),
+        "line": (180, 48, 36),
         "dxf": ColorIndex.RED,
         "weight": SECTION_HEAVY_WEIGHT,
+        "roughness": 0.38,
+        "metallic": 0.35,
     },
 }
 
@@ -589,15 +620,26 @@ def _tessellate_colored_parts(
     return parts
 
 
-def _bind_preview_material(stage, mesh, path: str, rgb: tuple[float, float, float]) -> None:
+def _bind_preview_material(
+    stage,
+    mesh,
+    path: str,
+    rgb: tuple[float, float, float],
+    *,
+    label: str | None = None,
+) -> None:
     from pxr import Gf, Sdf, UsdShade
+
+    style = SECTION_LAYERS.get(label or "", {})
+    roughness = float(style.get("roughness", 0.65))
+    metallic = float(style.get("metallic", 0.0))
 
     material = UsdShade.Material.Define(stage, path)
     shader = UsdShade.Shader.Define(stage, f"{path}/PreviewSurface")
     shader.CreateIdAttr("UsdPreviewSurface")
     shader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).Set(Gf.Vec3f(*rgb))
-    shader.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(0.6)
-    shader.CreateInput("metallic", Sdf.ValueTypeNames.Float).Set(0.0)
+    shader.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(roughness)
+    shader.CreateInput("metallic", Sdf.ValueTypeNames.Float).Set(metallic)
     material.CreateSurfaceOutput().ConnectToSource(shader.ConnectableAPI(), "surface")
     UsdShade.MaterialBindingAPI.Apply(mesh.GetPrim())
     UsdShade.MaterialBindingAPI(mesh).Bind(material)
@@ -635,7 +677,7 @@ def _write_mesh_prim(
     )
     mesh.CreateDisplayColorAttr([Gf.Vec3f(*rgb)])
     mat_name = path.rsplit("/", 1)[-1]
-    _bind_preview_material(stage, mesh, f"/Model/Looks/{mat_name}", rgb)
+    _bind_preview_material(stage, mesh, f"/Model/Looks/{mat_name}", rgb, label=mat_name)
 
 
 def _write_arkit_usdz(
@@ -749,6 +791,7 @@ _VIEWER_HTML = """<!DOCTYPE html>
   <div class="sheet-scroll" id="sheet-scroll">
     <section class="sheet-section" id="section-view">
       <h2 class="sheet-title">View</h2>
+      <div id="mats" class="seg" role="group" aria-label="Materials"></div>
       <div id="cams" class="seg"></div>
     </section>
     <section class="sheet-section" id="section-cuts">
