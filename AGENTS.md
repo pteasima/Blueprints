@@ -80,8 +80,11 @@ source .venv/bin/activate
 python -m pytest
 ```
 
+Default to **asking the human to test UI changes manually** (especially phone / Safari / Quick Look). Do **not** start `computerUse` / GUI walkthroughs unless the human asks for that, or a non-UI bug needs interactive reproduction after automated checks fail. Prefer `pytest`, export smoke, and the live Pages URL for verification.
+
 ## Cursor Cloud specific instructions
 
 - `install` must finish with a working `.venv` that can `import build123d`, `import cairosvg` (PNG), and `from pxr import Usd` (ARKit USDZ), plus `git lfs`.
 - Do not assume `python3 -m venv` works on the base image; install `python3.12-venv` first (`scripts/cloud-agent-install.sh`).
 - `libcairo2` is required at runtime for CairoSVG PNG export.
+- Skip computer-use / screen-recording demos by default (see Tests); they are slow and block the human. Ask them to try the Pages preview instead.
