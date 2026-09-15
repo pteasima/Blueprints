@@ -281,6 +281,10 @@ canvas {
   background: var(--fill);
 }
 
+.seg + .seg {
+  margin-top: 0.55rem;
+}
+
 .seg button {
   appearance: none;
   flex: 1 1 0;

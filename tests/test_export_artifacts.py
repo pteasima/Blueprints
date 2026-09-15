@@ -224,13 +224,13 @@ def test_obyvak_usdz_has_layer_materials(tmp_path, monkeypatch):
     assert stage is not None
 
     expected = {
-        "eps": (217 / 255, 232 / 255, 200 / 255),
-        "zdivo": (207 / 255, 200 / 255, 188 / 255),
-        "krov": (196 / 255, 165 / 255, 116 / 255),
-        "predstena": (200 / 255, 232 / 255, 240 / 255),
-        "krytina": (139 / 255, 46 / 255, 26 / 255),  # stroke used when fill is None
-        "vata": (217 / 255, 232 / 255, 200 / 255),
-        "nabytek": (232 / 255, 213 / 255, 163 / 255),
+        "eps": (70 / 255, 230 / 255, 25 / 255),
+        "zdivo": (225 / 255, 70 / 255, 40 / 255),
+        "krov": (200 / 255, 85 / 255, 10 / 255),
+        "predstena": (0 / 255, 195 / 255, 245 / 255),
+        "krytina": (235 / 255, 15 / 255, 15 / 255),  # stroke used when fill is None
+        "vata": (0 / 255, 210 / 255, 155 / 255),
+        "nabytek": (255 / 255, 150 / 255, 0 / 255),
     }
     for name, rgb in expected.items():
         mesh_prim = stage.GetPrimAtPath(f"/Model/Geom/{name}")

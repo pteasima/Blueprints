@@ -5,10 +5,18 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { USDZExporter } from "three/addons/exporters/USDZExporter.js";
 import { meshToClippedExportMesh } from "./clipGeometry.js";
 import { applyArPlacement, computeArPlacement } from "./arPlacement.js";
 import { BG_DARK, BG_LIGHT, initSheetChrome } from "./chrome.js";
+import {
+  MODE_REALISTIC,
+  MODE_SOLID,
+  applyMaterialMode,
+  loadMaterialMode,
+  saveMaterialMode,
+} from "./materials.js";
 
 /**
  * @param {HTMLCanvasElement} canvas
@@ -18,14 +26,21 @@ export function mountViewer(canvas, glbBuffer) {
   /** @type {THREE.Scene | null} */
   let scene = null;
   let sceneBg = BG_DARK;
+  let isDarkTheme = true;
+  /** @type {string} */
+  let materialMode = loadMaterialMode();
+  /** @type {Map<string, THREE.Object3D[]>} */
+  const parts = new Map();
 
   /** @type {ReturnType<typeof initSheetChrome> | null} */
   let chromeApi = null;
 
   chromeApi = initSheetChrome((isDark) => {
+    isDarkTheme = isDark;
     sceneBg = isDark ? BG_DARK : BG_LIGHT;
     if (scene) scene.background = new THREE.Color(sceneBg);
     document.documentElement.style.colorScheme = isDark ? "dark" : "light";
+    if (parts.size) refreshMaterials();
   });
 
   const renderer = new THREE.WebGLRenderer({
@@ -48,16 +63,18 @@ export function mountViewer(canvas, glbBuffer) {
   controls.dampingFactor = 0.08;
   controls.screenSpacePanning = true;
 
-  scene.add(new THREE.AmbientLight(0xffffff, 0.55));
-  const key = new THREE.DirectionalLight(0xffffff, 1.05);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+  const key = new THREE.DirectionalLight(0xffffff, 1.15);
   key.position.set(0.6, 1.0, 0.4);
   scene.add(key);
-  const fill = new THREE.DirectionalLight(0xffffff, 0.35);
+  const fill = new THREE.DirectionalLight(0xffffff, 0.4);
   fill.position.set(-0.5, 0.2, -0.6);
   scene.add(fill);
+  // Soft IBL so Realistic metal/clearcoat/roughness differences read clearly.
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  pmrem.dispose();
 
-  /** @type {Map<string, THREE.Object3D[]>} */
-  const parts = new Map();
   /** @type {THREE.Object3D | null} */
   let root = null;
   const box = new THREE.Box3();
@@ -108,11 +125,12 @@ export function mountViewer(canvas, glbBuffer) {
         }
       });
       frameIso();
+      buildMaterialToggle();
       buildPartToggles();
       buildCameraButtons();
       ensureDraftCut();
       buildCutUI();
-      applyClipping();
+      refreshMaterials();
       chromeApi?.refreshPartialHeight();
       showArButton();
     },
@@ -198,6 +216,51 @@ export function mountViewer(canvas, glbBuffer) {
     applyClipping();
   }
 
+  function lockedClipPlanes() {
+    return cuts.filter((c) => c.locked).map((c) => planeForCut(c));
+  }
+
+  function refreshMaterials() {
+    if (!parts.size) return;
+    applyMaterialMode(parts, materialMode, {
+      isDark: isDarkTheme,
+      clippingPlanes: lockedClipPlanes(),
+    });
+    // Solid uses unlit MeshBasicMaterial — skip ACES so chroma stays punchy.
+    if (materialMode === MODE_REALISTIC) {
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.05;
+    } else {
+      renderer.toneMapping = THREE.NoToneMapping;
+      renderer.toneMappingExposure = 1;
+    }
+  }
+
+  function buildMaterialToggle() {
+    const host = document.getElementById("mats");
+    if (!host) return;
+    host.replaceChildren();
+    for (const [id, label] of [
+      [MODE_SOLID, "Solid"],
+      [MODE_REALISTIC, "Realistic"],
+    ]) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.dataset.mode = id;
+      btn.textContent = label;
+      if (id === materialMode) btn.classList.add("is-active");
+      btn.addEventListener("click", () => {
+        materialMode = id;
+        saveMaterialMode(id);
+        host.querySelectorAll("button").forEach((el) => {
+          el.classList.toggle("is-active", el.dataset.mode === id);
+        });
+        refreshMaterials();
+      });
+      host.append(btn);
+    }
+  }
+
   function buildPartToggles() {
     const host = document.getElementById("parts");
     if (!host) return;
@@ -222,8 +285,17 @@ export function mountViewer(canvas, glbBuffer) {
     }
   }
 
-  /** @type {string} */
+  /** @type {string | null} */
   let activeCameraPreset = "iso";
+
+  function clearCameraPresetHighlight() {
+    if (activeCameraPreset == null) return;
+    activeCameraPreset = null;
+    const host = document.getElementById("cams");
+    host?.querySelectorAll("button").forEach((el) => {
+      el.classList.remove("is-active");
+    });
+  }
 
   function buildCameraButtons() {
     const host = document.getElementById("cams");
@@ -392,7 +464,7 @@ export function mountViewer(canvas, glbBuffer) {
   }
 
   function applyClipping() {
-    const planes = cuts.filter((c) => c.locked).map((c) => planeForCut(c));
+    const planes = lockedClipPlanes();
     if (!root) return;
     root.traverse((obj) => {
       if (!obj.isMesh || !obj.material) return;
@@ -472,6 +544,10 @@ export function mountViewer(canvas, glbBuffer) {
 
   // Spawn a draft after the user finishes orbiting/panning — not on every
   // damping `change`, which would rebuild the cut UI mid-slider-drag.
+  // `start` is user-gesture only (programmatic framing does not fire it).
+  controls.addEventListener("start", () => {
+    clearCameraPresetHighlight();
+  });
   controls.addEventListener("end", () => {
     if (suppressCameraChange) return;
     maybeSpawnDraftFromCamera();
