@@ -47,12 +47,12 @@ Only those `src` values are rewritten to a public artifact URL. **Do not** put `
 
 After a 3D export, still write `{model}_3d.usdz` into `/opt/cursor/artifacts/`. Do not attach STEP unless the user asks.
 
-### Quick Look from chat (required after every 3D change)
+### Preview site from chat (required after every 3D change)
 
 Cursor chat cannot open a USDZ tile or an artifact path. Export updates the Pages **inputs** (not the live site by itself):
 
-- `docs/models/<id>.usdz` — Git LFS (overwrite in place; do not version-stack copies)
-- `docs/models/manifest.json` — button labels / order
+- `docs/models/<id>.glb` (+ `.usdz`) — Git LFS (overwrite in place; do not version-stack copies)
+- `docs/models/manifest.json` — hub labels / order
 - `docs/index.html` — **generated locally and by CI; gitignored** — do not commit it
 
 The `pages` GitHub Action rebuilds the hub and deploys a **rolling** site (last push to `main` or `cursor/**` wins):
@@ -61,13 +61,13 @@ The `pages` GitHub Action rebuilds the hub and deploys a **rolling** site (last 
 preview_url: https://pteasima.github.io/Blueprints/
 ```
 
-After `git push`, wait for the `pages` workflow to go green, then paste that URL in chat (tappable on Cursor iOS). Safari → **Quick Look**.
+After `git push`, wait for the `pages` workflow to go green, then paste that URL in chat (tappable on Cursor iOS). The hub links to **web viewers** (`/viewer/?m=<id>`). In Safari, use the viewer’s **AR** control for Quick Look.
 
 One-time enable: https://github.com/pteasima/Blueprints/settings/pages → Source = **GitHub Actions** → Save. Then open **Settings → Environments → github-pages → Deployment branches** and allow `cursor/**` (or All branches) — by default only `main` can deploy, which blocks unmerged agent previews. Cloud agent tokens cannot change this (API 403). Override the printed URL with `BLUEPRINTS_PAGES_URL` if needed. Skip site file updates with `BLUEPRINTS_SKIP_PREVIEW_SITE=1`.
 
-Add more buttons later (sectional cuts, other models) via more USDZs/GLBs + manifest rows — one hub page. **Web 3D** opens `/viewer/?m=<id>` (GLB + custom Three.js shell); Quick Look stays USDZ-only.
+Add more models later via more GLBs (+ USDZs) and manifest rows — one hub page. Hub entries are web-viewer links only.
 
-USDZ is a zip **container** of a binary `.usdc` crate (`UsdUtils.CreateNewARKitUsdzPackage`). Quick Look opens the `.usdz` file itself — never unzip it. The hub embeds USDZ as a `data:model/vnd.usdz+zip;base64,…` `rel="ar"` link so Safari does not depend on GitHub’s USDZ MIME type.
+USDZ is a zip **container** of a binary `.usdc` crate (`UsdUtils.CreateNewARKitUsdzPackage`). Quick Look opens the `.usdz` file itself — never unzip it. The **viewer** can generate a view-matched USDZ in-browser for Safari AR; the hub does not embed USDZ.
 
 Author USDZ in **metres** (`metersPerUnit = 1`) with the mesh sitting on Y=0. RealityKit often ignores `metersPerUnit`, so millimetre CAD numbers look like kilometres in AR (Object mode still auto-fits). Models whose real span exceeds 2 m are uniformly scaled to a ~0.45 m tabletop so iPad AR can find a plane; add Apple's `Preliminary_AnchoringAPI` (horizontal plane).
 
@@ -80,8 +80,11 @@ source .venv/bin/activate
 python -m pytest
 ```
 
+Default to **asking the human to test UI changes manually** (especially phone / Safari / Quick Look). Do **not** start `computerUse` / GUI walkthroughs unless the human asks for that, or a non-UI bug needs interactive reproduction after automated checks fail. Prefer `pytest`, export smoke, and the live Pages URL for verification.
+
 ## Cursor Cloud specific instructions
 
 - `install` must finish with a working `.venv` that can `import build123d`, `import cairosvg` (PNG), and `from pxr import Usd` (ARKit USDZ), plus `git lfs`.
 - Do not assume `python3 -m venv` works on the base image; install `python3.12-venv` first (`scripts/cloud-agent-install.sh`).
 - `libcairo2` is required at runtime for CairoSVG PNG export.
+- Skip computer-use / screen-recording demos by default (see Tests); they are slow and block the human. Ask them to try the Pages preview instead.

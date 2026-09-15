@@ -8,12 +8,26 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { USDZExporter } from "three/addons/exporters/USDZExporter.js";
 import { meshToClippedExportMesh } from "./clipGeometry.js";
 import { applyArPlacement, computeArPlacement } from "./arPlacement.js";
+import { BG_DARK, BG_LIGHT, initSheetChrome } from "./chrome.js";
 
 /**
  * @param {HTMLCanvasElement} canvas
  * @param {ArrayBuffer} glbBuffer
  */
 export function mountViewer(canvas, glbBuffer) {
+  /** @type {THREE.Scene | null} */
+  let scene = null;
+  let sceneBg = BG_DARK;
+
+  /** @type {ReturnType<typeof initSheetChrome> | null} */
+  let chromeApi = null;
+
+  chromeApi = initSheetChrome((isDark) => {
+    sceneBg = isDark ? BG_DARK : BG_LIGHT;
+    if (scene) scene.background = new THREE.Color(sceneBg);
+    document.documentElement.style.colorScheme = isDark ? "dark" : "light";
+  });
+
   const renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: true,
@@ -25,8 +39,8 @@ export function mountViewer(canvas, glbBuffer) {
   renderer.toneMappingExposure = 1.05;
   renderer.localClippingEnabled = true;
 
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x111111);
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(sceneBg);
 
   const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 1e6);
   const controls = new OrbitControls(camera, canvas);
@@ -99,6 +113,7 @@ export function mountViewer(canvas, glbBuffer) {
       ensureDraftCut();
       buildCutUI();
       applyClipping();
+      chromeApi?.refreshPartialHeight();
       showArButton();
     },
     (err) => {
@@ -192,15 +207,23 @@ export function mountViewer(canvas, glbBuffer) {
       const id = `part-${name}`;
       const label = document.createElement("label");
       label.className = "part";
+      const nameEl = document.createElement("span");
+      nameEl.className = "part-name";
+      nameEl.textContent = name;
       const input = document.createElement("input");
       input.type = "checkbox";
       input.checked = true;
       input.id = id;
+      input.setAttribute("role", "switch");
+      input.setAttribute("aria-label", name);
       input.addEventListener("change", () => setPartVisible(name, input.checked));
-      label.append(input, document.createTextNode(name));
+      label.append(nameEl, input);
       host.append(label);
     }
   }
+
+  /** @type {string} */
+  let activeCameraPreset = "iso";
 
   function buildCameraButtons() {
     const host = document.getElementById("cams");
@@ -214,8 +237,16 @@ export function mountViewer(canvas, glbBuffer) {
     ]) {
       const btn = document.createElement("button");
       btn.type = "button";
+      btn.dataset.preset = id;
       btn.textContent = label;
-      btn.addEventListener("click", () => setCameraPreset(id));
+      if (id === activeCameraPreset) btn.classList.add("is-active");
+      btn.addEventListener("click", () => {
+        activeCameraPreset = id;
+        host.querySelectorAll("button").forEach((el) => {
+          el.classList.toggle("is-active", el.dataset.preset === id);
+        });
+        setCameraPreset(id);
+      });
       host.append(btn);
     }
   }
@@ -269,7 +300,8 @@ export function mountViewer(canvas, glbBuffer) {
       const remove = document.createElement("button");
       remove.type = "button";
       remove.className = "cut-remove";
-      remove.textContent = "Remove";
+      remove.setAttribute("aria-label", "Remove section");
+      remove.textContent = "×";
       remove.addEventListener("click", () => removeCut(cut.id));
       row.append(remove);
     }
@@ -325,6 +357,7 @@ export function mountViewer(canvas, glbBuffer) {
     }
     applyClipping();
     buildCutUI();
+    chromeApi?.refreshPartialHeight();
   }
 
   function projectBoxOntoNormal(normal) {
@@ -426,13 +459,15 @@ export function mountViewer(canvas, glbBuffer) {
         const remove = document.createElement("button");
         remove.type = "button";
         remove.className = "cut-remove";
-        remove.textContent = "Remove";
+        remove.setAttribute("aria-label", "Remove section");
+        remove.textContent = "×";
         remove.addEventListener("click", () => removeCut(cut.id));
         row.append(remove);
       }
 
       host.append(row);
     }
+    chromeApi?.refreshPartialHeight();
   }
 
   // Spawn a draft after the user finishes orbiting/panning — not on every
@@ -442,15 +477,104 @@ export function mountViewer(canvas, glbBuffer) {
     maybeSpawnDraftFromCamera();
   });
 
+  /** Animated safe-area framing: shift into uncovered rect + slight zoom-out. */
+  let frameZoom = 1;
+  let frameOffX = 0;
+  let frameOffY = 0;
+  let frameZoomT = 1;
+  let frameOffXT = 0;
+  let frameOffYT = 0;
+  let frameAnimFromZoom = 1;
+  let frameAnimFromX = 0;
+  let frameAnimFromY = 0;
+  let frameAnim = 0;
+  const FRAME_MS = 280;
+
+  function computeFrameTargets() {
+    const w = Math.max(1, canvas.clientWidth);
+    const h = Math.max(1, canvas.clientHeight);
+    if (!chromeApi) {
+      return { zoom: 1, offX: 0, offY: 0, w, h };
+    }
+    const { bottom, right } = chromeApi.getSafeInsets();
+    if (bottom <= 0 && right <= 0) {
+      return { zoom: 1, offX: 0, offY: 0, w, h };
+    }
+    const safeW = Math.max(1, w - right);
+    const safeH = Math.max(1, h - bottom);
+    // Zoom out so the previous full-frame content still fits in the safe rect.
+    const zoom = Math.min(safeW / w, safeH / h);
+    // Positive offsetY moves the frustum window down → content appears higher
+    // (above the sheet). Same idea for a right-side sheet (offsetX).
+    const offX = right / 2;
+    const offY = bottom / 2;
+    return { zoom, offX, offY, w, h };
+  }
+
+  function applyFrameProjection(w, h) {
+    withSuppressedCameraChange(() => {
+      if (
+        Math.abs(frameOffX) > 0.05 ||
+        Math.abs(frameOffY) > 0.05 ||
+        Math.abs(frameZoom - 1) > 0.001
+      ) {
+        camera.zoom = frameZoom;
+        camera.setViewOffset(w, h, frameOffX, frameOffY, w, h);
+      } else {
+        camera.clearViewOffset();
+        camera.zoom = 1;
+        frameZoom = 1;
+        frameOffX = 0;
+        frameOffY = 0;
+      }
+      camera.updateProjectionMatrix();
+    });
+  }
+
+  function applySafeViewOffset(animate = true) {
+    const { zoom, offX, offY, w, h } = computeFrameTargets();
+    frameZoomT = zoom;
+    frameOffXT = offX;
+    frameOffYT = offY;
+    if (!animate) {
+      frameZoom = zoom;
+      frameOffX = offX;
+      frameOffY = offY;
+      frameAnim = 0;
+      applyFrameProjection(w, h);
+      return;
+    }
+    frameAnimFromZoom = frameZoom;
+    frameAnimFromX = frameOffX;
+    frameAnimFromY = frameOffY;
+    frameAnim = performance.now();
+  }
+
+  function stepFrameAnim(now) {
+    if (!frameAnim) return;
+    const t = Math.min(1, (now - frameAnim) / FRAME_MS);
+    const e = 1 - (1 - t) ** 3;
+    frameZoom = frameAnimFromZoom + (frameZoomT - frameAnimFromZoom) * e;
+    frameOffX = frameAnimFromX + (frameOffXT - frameAnimFromX) * e;
+    frameOffY = frameAnimFromY + (frameOffYT - frameAnimFromY) * e;
+    const w = Math.max(1, canvas.clientWidth);
+    const h = Math.max(1, canvas.clientHeight);
+    applyFrameProjection(w, h);
+    if (t >= 1) frameAnim = 0;
+  }
+
   function resize() {
     const w = Math.max(1, canvas.clientWidth);
     const h = Math.max(1, canvas.clientHeight);
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
-    camera.updateProjectionMatrix();
+    applySafeViewOffset(false);
   }
   resize();
   window.addEventListener("resize", resize);
+  chromeApi?.onDetentChange(() => {
+    applySafeViewOffset(true);
+  });
 
   /** @type {HTMLButtonElement | null} */
   const arBtn = document.getElementById("ar");
@@ -489,10 +613,10 @@ export function mountViewer(canvas, glbBuffer) {
   async function openArQuickLook() {
     if (arBusy || !root) return;
     arBusy = true;
-    const label = arBtn?.textContent || "View in AR";
+    const label = arBtn?.textContent || "AR";
     if (arBtn) {
       arBtn.disabled = true;
-      arBtn.textContent = "Generating…";
+      arBtn.textContent = "…";
     }
     try {
       const exportScene = buildArExportScene();
@@ -556,6 +680,8 @@ export function mountViewer(canvas, glbBuffer) {
   window.BlueprintsViewer = api;
 
   function tick() {
+    const now = performance.now();
+    stepFrameAnim(now);
     controls.update();
     renderer.render(scene, camera);
     requestAnimationFrame(tick);

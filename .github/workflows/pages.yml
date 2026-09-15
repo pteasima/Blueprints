@@ -35,7 +35,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Build Quick Look hub
+      - name: Build web-viewer hub
         run: python scripts/build-preview-hub.py
       - uses: actions/configure-pages@v5
         with:

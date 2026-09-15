@@ -730,44 +730,37 @@ _VIEWER_HTML = """<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"/>
 <title>Blueprints viewer</title>
 <style>
-  html, body { margin: 0; height: 100%; background: #111; color: #eee;
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
-  #bar { position: fixed; top: 0; left: 0; right: 0; z-index: 2;
-    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
-    padding: 10px 12px; background: rgba(0,0,0,.78); font-size: 13px; }
-  #bar button, #ar { font: inherit; padding: 8px 12px; border: 0; border-radius: 8px;
-    background: #eee; color: #111; cursor: pointer; }
-  #ar:disabled { opacity: .55; cursor: wait; }
-  #cams, #parts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-  #parts { max-width: 100%; max-height: 5.5rem; overflow: auto; }
-  label.part { display: inline-flex; gap: 4px; align-items: center;
-    padding: 4px 8px; border-radius: 6px; background: #222; }
-  #err { display: none; position: fixed; top: 56px; left: 12px; right: 12px; z-index: 2;
-    background: #4a1010; color: #fcc; padding: 10px; border-radius: 8px; white-space: pre-wrap; }
-  #cuts { position: fixed; left: 0; right: 0; bottom: 0; z-index: 2;
-    display: flex; flex-direction: column; gap: 8px;
-    padding: 10px 12px; background: rgba(0,0,0,.78); font-size: 13px;
-    max-height: 40vh; overflow: auto; }
-  .cut-row { display: flex; gap: 8px; align-items: center; min-height: 2rem; }
-  .cut-label { min-width: 7.5rem; opacity: .9; font-variant-numeric: tabular-nums; }
-  .cut-row input[type=range] { flex: 1; min-width: 0; height: 1.75rem; cursor: pointer; }
-  .cut-remove { font: inherit; padding: 6px 10px; border: 0; border-radius: 8px;
-    background: #eee; color: #111; cursor: pointer; }
+  html, body { margin: 0; height: 100%; overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+    background: #1c1c1e; color: #f5f5f7; }
   canvas { display: block; width: 100%; height: 100%; touch-action: none; }
-  .hint { opacity: .7; }
+  #err { display: none; }
 </style>
 </head>
 <body>
-<div id="bar">
-  <button type="button" id="ar" hidden>View in AR</button>
-  <div id="cams"></div>
-  <div id="parts"></div>
-  <span class="hint">Drag orbit · scroll zoom · section sliders below</span>
-</div>
-<div id="cuts"></div>
+<nav id="top-chrome" class="top-chrome" aria-label="Viewer">
+  <button type="button" id="ar" class="chrome-btn" hidden>AR</button>
+</nav>
+<aside id="sheet" class="sheet" data-detent="peek">
+  <button type="button" class="sheet-handle" id="sheet-handle" aria-label="Drag controls sheet"></button>
+  <div class="sheet-scroll" id="sheet-scroll">
+    <section class="sheet-section" id="section-view">
+      <h2 class="sheet-title">View</h2>
+      <div id="cams" class="seg"></div>
+    </section>
+    <section class="sheet-section" id="section-cuts">
+      <h2 class="sheet-title">Sections</h2>
+      <div id="cuts" class="cuts"></div>
+    </section>
+    <section class="sheet-section" id="section-parts">
+      <h2 class="sheet-title">Parts</h2>
+      <div id="parts" class="parts"></div>
+    </section>
+  </div>
+</aside>
 <pre id="err"></pre>
 <canvas id="c"></canvas>
 <script>
