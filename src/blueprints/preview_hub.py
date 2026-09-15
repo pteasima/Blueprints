@@ -246,14 +246,36 @@ def preview_site_enabled() -> bool:
 
 
 def ensure_viewer_shell() -> None:
-    """Keep docs/viewer/ in sync with the packaged Three.js IIFE."""
+    """Keep docs/viewer/ in sync with the packaged Three.js IIFE.
+
+    Also stamps a content-hash query on the script src in index.html so Safari
+    / CDN caches cannot serve a stale IIFE after a chrome CSS/JS change.
+    """
+    import hashlib
+    import re
+
     viewer_dir = PREVIEW_SITE_DIR / "viewer"
     viewer_dir.mkdir(parents=True, exist_ok=True)
     src_iife = REPO_ROOT / "src" / "blueprints" / "viewer" / "viewer.iife.js"
     dst_iife = viewer_dir / "viewer.iife.js"
     if src_iife.is_file():
         shutil.copy2(src_iife, dst_iife)
-    # index.html is authored in-repo under docs/viewer/; do not overwrite here.
+    iife_path = dst_iife if dst_iife.is_file() else src_iife
+    if not iife_path.is_file():
+        return
+    digest = hashlib.sha256(iife_path.read_bytes()).hexdigest()[:10]
+    index = viewer_dir / "index.html"
+    if not index.is_file():
+        return
+    html = index.read_text(encoding="utf-8")
+    updated, n = re.subn(
+        r'(src=["\'])viewer\.iife\.js(?:\?[^"\']*)?(["\'])',
+        rf"\1viewer.iife.js?v={digest}\2",
+        html,
+        count=1,
+    )
+    if n and updated != html:
+        index.write_text(updated, encoding="utf-8")
 
 
 def publish_to_preview_site(

@@ -132,6 +132,31 @@ def test_build_preview_hub_script(tmp_path, monkeypatch):
     assert "data:model/vnd.usdz+zip;base64," not in html
 
 
+def test_ensure_viewer_shell_cache_busts_iife(tmp_path, monkeypatch):
+    import blueprints.preview_hub as ph
+
+    monkeypatch.setattr(ph, "PREVIEW_SITE_DIR", tmp_path)
+    monkeypatch.setattr(ph, "REPO_ROOT", tmp_path)
+    viewer_src = tmp_path / "src" / "blueprints" / "viewer"
+    viewer_src.mkdir(parents=True)
+    (viewer_src / "viewer.iife.js").write_text("/* iife v1 */", encoding="utf-8")
+    docs_viewer = tmp_path / "viewer"
+    docs_viewer.mkdir()
+    (docs_viewer / "index.html").write_text(
+        '<script src="viewer.iife.js"></script>\n', encoding="utf-8"
+    )
+    ph.ensure_viewer_shell()
+    html = (docs_viewer / "index.html").read_text(encoding="utf-8")
+    assert 'src="viewer.iife.js?v=' in html
+    assert (docs_viewer / "viewer.iife.js").read_text(encoding="utf-8") == "/* iife v1 */"
+    # Second stamp with changed IIFE updates the query.
+    (viewer_src / "viewer.iife.js").write_text("/* iife v2 */", encoding="utf-8")
+    ph.ensure_viewer_shell()
+    html2 = (docs_viewer / "index.html").read_text(encoding="utf-8")
+    assert html2 != html
+    assert 'src="viewer.iife.js?v=' in html2
+
+
 def test_stl_to_usdz_roundtrip(tmp_path, monkeypatch):
     import blueprints.export_utils as eu
 
