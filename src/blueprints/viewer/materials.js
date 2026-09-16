@@ -130,6 +130,7 @@ export function collectLeafIds(node) {
 
 /**
  * Apply opacity to meshes. opacity 0 → hidden (visible=false) for perf / AR omit.
+ * Translucent meshes are rendered via weighted blended OIT (see wboit.js).
  * @param {THREE.Object3D[]} meshes
  * @param {number} opacity 0–1
  */
@@ -149,16 +150,20 @@ export function applyOpacityToMeshes(meshes, opacity) {
       if (o < 1) {
         mat.transparent = true;
         mat.opacity = o;
-        // depthWrite off so faded layers can show through each other. Expect
-        // classic transparent-sorting artifacts on coplanar CAD stacks; we are
-        // trying this path deliberately (no opacity threshold).
+        // Depth writes off; OIT composite resolves layering. FrontSide avoids
+        // double-counting backfaces in the accumulation buffer.
         mat.depthWrite = false;
+        mat.depthTest = true;
         mat.side = THREE.FrontSide;
+        // Lazy import-free patch: caller also patches after material mode.
+        mat.userData.needsWboit = true;
       } else {
         mat.transparent = false;
         mat.opacity = 1;
         mat.depthWrite = true;
+        mat.depthTest = true;
         mat.side = THREE.DoubleSide;
+        mat.userData.needsWboit = false;
       }
       mat.needsUpdate = true;
     }
