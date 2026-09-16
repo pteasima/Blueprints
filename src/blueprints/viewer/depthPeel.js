@@ -774,7 +774,9 @@ export function createDepthPeelRenderer(renderer) {
       renderer.autoClear = true;
 
       // Sparse probe before colour pass — skip empty layers early.
-      const peelWrote = viewZWroteGeometry(peelViewZRT, 4);
+      // Peel 0 needs a denser probe: thin CAD shells (e.g. eps) often miss a
+      // 4×4 grid at half-res and would false-abort to sorted alpha.
+      const peelWrote = viewZWroteGeometry(peelViewZRT, peel === 0 ? 12 : 4);
       if (!peelWrote) {
         if (peel === 0) return abortToStandard();
         break;
