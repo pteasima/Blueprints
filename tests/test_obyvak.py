@@ -94,11 +94,16 @@ def test_3d_matches_section_and_elevation_masses():
     assert abs(lbb.size.Y - (p.pouzdro_d - 2 * FACE_GAP)) < 1e-6
     assert abs(lbb.max.Z - (p.pocket_door_h - FACE_GAP)) <= 1.0
 
-    # Door openings cut through both gable masonry shells.
-    kitchen_doors = [d for d in p.pocket_doors if d[0] == "kitchen"]
+    # Door openings: chodba+zádveří at window-eave corner (X≈0); spíž inset from cabinets.
+    kitchen_doors = sorted(
+        [d for d in p.pocket_doors if d[0] == "kitchen"], key=lambda d: d[1]
+    )
     living_doors = [d for d in p.pocket_doors if d[0] == "living"]
     assert len(kitchen_doors) == 2
     assert len(living_doors) == 1
+    assert kitchen_doors[0][1] == 0.0  # chodba
+    assert abs(kitchen_doors[1][1] - (p.room_width - p.pocket_spiz_inset - 1000.0)) < 1e-6
+    assert living_doors[0][1] == 0.0  # zádveří
     gable_walls = [
         c
         for c in _labeled(shape, "zdivo")

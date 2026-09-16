@@ -55,12 +55,15 @@ class ObyvakParams:
     predstena_bottom_z: float = 2450.0
     pouzdro_d: float = 120.0
     pocket_door_h: float = 2450.0
-    # (gable, x0, width) — gable "kitchen" = Y=0 štít (západ), "living" = Y=L (východ / zádveří).
-    # D.1.1.03: 1.03 spíž 1000, 1.05 chodba 1000, 1.01 zádveří 1100; vše Z=2450.
+    # Clearance from the kitchen-cabinet eave (X=room_width) to the spíž opening.
+    pocket_spiz_inset: float = 650.0
+    # (gable, x0, width) — "kitchen"=Y=0, "living"=Y=L.
+    # Window/terrace eave = X=0; kitchen cabinets on X=room_width.
+    # Chodba + zádveří in the window-eave corner; spíž inset from the cabinet eave.
     pocket_doors: tuple[tuple[str, float, float], ...] = (
-        ("kitchen", 3950.0, 1000.0),  # spíž — severní konec Y=0 štítu
-        ("kitchen", 400.0, 1000.0),  # chodba — jižní konec Y=0 štítu
-        ("living", 2125.0, 1100.0),  # zádveří — střed Y=L štítu
+        ("kitchen", 0.0, 1000.0),  # chodba
+        ("kitchen", 3700.0, 1000.0),  # spíž: 5350 − 650 − 1000
+        ("living", 0.0, 1100.0),  # zádveří
     )
     soffit_hint_t: float = 30.0
     ridge_runout: float = 200.0
