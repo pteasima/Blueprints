@@ -110,26 +110,26 @@ def test_3d_matches_section_and_elevation_masses():
     assert l_sdk.max.Y <= min(part.bounding_box().min.Y for part in l_pouzdra) + 1e-6
     # Walk-through door holes only: SDK volume well below a solid full-width board.
     full_sdk_vol = (p.room_width - 2 * FACE_GAP) * face_t * (p.pocket_door_h - FACE_GAP)
-    assert sdk_faces[0].volume < full_sdk_vol * 0.9  # one kitchen door hole (chodba)
-    assert sdk_faces[1].volume < full_sdk_vol * 0.75  # two living door holes (spíž + zádveří)
+    assert sdk_faces[0].volume < full_sdk_vol * 0.75  # two kitchen door holes (chodba + spíž)
+    assert sdk_faces[1].volume < full_sdk_vol * 0.9  # one living door hole (zádveří)
     # Předstěny depths immutable.
     assert p.predstena_kitchen == 190.0
     assert p.predstena_living == 450.0
 
-    # Door openings: chodba on kitchen; spíž on opposite (living) gable; zádveří on living.
-    kitchen_doors = [d for d in p.pocket_doors if d[0] == "kitchen"]
-    living_doors = sorted(
-        [d for d in p.pocket_doors if d[0] == "living"], key=lambda d: d[1]
+    # Door openings: chodba+spíž on kitchen (cabinet-side spíž); zádveří on living.
+    kitchen_doors = sorted(
+        [d for d in p.pocket_doors if d[0] == "kitchen"], key=lambda d: d[1]
     )
-    assert len(kitchen_doors) == 1
-    assert len(living_doors) == 2
+    living_doors = [d for d in p.pocket_doors if d[0] == "living"]
+    assert len(kitchen_doors) == 2
+    assert len(living_doors) == 1
     assert kitchen_doors[0][1] == 0.0  # chodba · window corner
+    assert abs(kitchen_doors[1][1] - (p.room_width - p.pocket_spiz_inset - 1000.0)) < 1e-6
     assert living_doors[0][1] == 0.0  # zádveří · window corner
-    assert abs(living_doors[1][1] - (p.room_width - p.pocket_spiz_inset - 1000.0)) < 1e-6
     kitchen_pouzdra = [part for part in pouzdra if part.bounding_box().max.Y < p.room_length / 2]
     living_pouzdra = [part for part in pouzdra if part.bounding_box().min.Y > p.room_length / 2]
-    assert len(kitchen_pouzdra) == 1  # chodba only
-    assert len(living_pouzdra) == 2  # spíž + zádveří
+    assert len(kitchen_pouzdra) == 2  # spíž + chodba
+    assert len(living_pouzdra) == 1  # zádveří only
     glass = _labeled(shape, "sklo")
     assert len(glass) == len(p.eave_windows)
     for (y0, width), pane in zip(

@@ -9,7 +9,7 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
 - Gables own the end walls (full X). Eave runs only the clear mid-span so
   corner volumes are not drawn twice.
 - Obývák-only scope: no koruna (exterior gables are in adjacent rooms), no EPS
-  on gable shells, three gable pocket doors (chodba on Y=0; spíž + zádveří on Y=L),
+  on gable shells, three gable pocket doors (spíž + chodba on Y=0, zádveří on Y=L),
   and terrace glazing on the X=0 eave (opposite cabinets).
 - Floor slab is the clear room only; perimeter walls own the strip below z=0.
 
