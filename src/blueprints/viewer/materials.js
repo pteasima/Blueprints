@@ -19,11 +19,13 @@ export const SOLID_COLORS = {
   koruna: [200, 85, 10],
   predstena: [0, 195, 245],
   pouzdro: [235, 185, 80],
+  sdk: [230, 230, 235],
   krov: [200, 85, 10],
   vata: [0, 210, 155],
   soffit: [35, 175, 15],
   podhled: [15, 85, 245],
   krytina: [235, 15, 15],
+  sklo: [140, 210, 255],
 };
 
 /**
@@ -37,6 +39,7 @@ export const LAYER_DEPTH_BIAS = {
   zdivo: 2,
   omitka: 3,
   pouzdro: 4,
+  sdk: 4,
   predstena: 5,
   nabytek: 6,
   soffit: 7,
@@ -46,6 +49,7 @@ export const LAYER_DEPTH_BIAS = {
   krov: 11,
   krytina: 12,
   podhled: 13,
+  sklo: 14,
 };
 
 /**
@@ -117,6 +121,12 @@ export const REALISTIC_PRESETS = {
     metalness: 0.0,
     map: "plaster",
   },
+  sdk: {
+    color: [230, 230, 235],
+    roughness: 0.88,
+    metalness: 0.0,
+    map: "plaster",
+  },
   krov: {
     color: [200, 85, 10],
     roughness: 0.55,
@@ -146,6 +156,12 @@ export const REALISTIC_PRESETS = {
     roughness: 0.32,
     metalness: 0.45,
     map: "metal",
+  },
+  sklo: {
+    color: [140, 210, 255],
+    roughness: 0.08,
+    metalness: 0.05,
+    map: "none",
   },
 };
 

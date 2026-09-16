@@ -2,7 +2,8 @@
 
 X v tomto výkrese = světlá délka kuchyně↔obývák (v 3D to bude Y).
 Z up. Podhled je vodorovný pod hřebenem — žádný A-rám vlevo/vpravo.
-Předstěny 190 (KK) a 450 (obývák) od Z=2450 k podhledu; pouzdra dveří jen jako hmota.
+Předstěny 190 (KK) a 450 (obývák) od Z=2450 k podhledu — sizes unchanged.
+Below: SDK face + local pouzdro pockets (not full-wall pouzdro).
 
     python -m blueprints.export obyvak_elevation
 
@@ -40,27 +41,22 @@ def build(params: ObyvakParams | None = None):
     parts: list = []
 
     parts.append(xz_rect(xl_eps, -p.floor_t, xr_eps - xl_eps, p.floor_t, "podlaha"))
-    parts.append(xz_rect(xl_eps, -p.floor_t, p.wall_eps, h_gable + p.floor_t, "eps"))
+    # No gable EPS / koruna — obyvák-only interior shells.
     parts.append(xz_rect(xl_mas, -p.floor_t, p.wall_mason, h_gable + p.floor_t, "zdivo"))
     parts.append(xz_rect(-p.wall_plaster, 0.0, p.wall_plaster, h_gable, "omitka"))
     parts.append(xz_rect(span, 0.0, p.wall_plaster, h_gable, "omitka"))
     parts.append(
         xz_rect(span + p.wall_plaster, -p.floor_t, p.wall_mason, h_gable + p.floor_t, "zdivo")
     )
-    parts.append(xz_rect(xr_mas, -p.floor_t, p.wall_eps, h_gable + p.floor_t, "eps"))
 
-    parts.append(
-        xz_rect(xl_mas, h_gable, p.wall_mason + p.wall_plaster, p.gable_crown_h, "koruna")
-    )
-    parts.append(
-        xz_rect(span, h_gable, p.wall_plaster + p.wall_mason, p.gable_crown_h, "koruna")
-    )
+    # Low SDK in front of pouzdro (covers pocket); předstěny above stay 190 / 450.
+    face_t = max(p.sdk_t, 12.5)
+    parts.append(xz_rect(p.pouzdro_d, 0.0, face_t, p.pocket_door_h, "sdk"))
+    parts.append(xz_rect(span - p.pouzdro_d - face_t, 0.0, face_t, p.pocket_door_h, "sdk"))
+    parts.append(xz_rect(0.0, 0.0, p.pouzdro_d, p.pocket_door_h, "pouzdro"))
+    parts.append(xz_rect(span - p.pouzdro_d, 0.0, p.pouzdro_d, p.pocket_door_h, "pouzdro"))
 
-    parts.append(xz_rect(0.0, 0.0, p.pouzdro_d, p.predstena_bottom_z, "pouzdro"))
-    parts.append(
-        xz_rect(span - p.pouzdro_d, 0.0, p.pouzdro_d, p.predstena_bottom_z, "pouzdro")
-    )
-
+    # Předstěny — never resize (190 kitchen / 450 living).
     parts.append(
         xz_rect(
             0.0,

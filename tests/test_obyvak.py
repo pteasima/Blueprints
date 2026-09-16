@@ -48,10 +48,12 @@ def test_3d_matches_section_and_elevation_masses():
         "soffit",
         "predstena",
         "pouzdro",
-        "koruna",
+        "sdk",
         "podhled",
+        "sklo",
     ):
         assert name in labels
+    assert "koruna" not in labels
 
     kitchen, living = sorted(_labeled(shape, "predstena"), key=lambda s: s.bounding_box().min.Y)
     kbb, lbb = kitchen.bounding_box(), living.bounding_box()
@@ -75,6 +77,84 @@ def test_3d_matches_section_and_elevation_masses():
     ]
     assert eave_eps, "expected eave EPS strips with full insulation thickness"
     assert abs(eave_eps[0].bounding_box().size.X - (p.wall_eps - FACE_GAP)) < 1e-6
+
+    gable_eps = [
+        c
+        for c in _labeled(shape, "eps")
+        if c.bounding_box().size.Y < p.wall_mason + p.wall_plaster + 1.0
+    ]
+    assert gable_eps == []
+
+    pouzdra = sorted(_labeled(shape, "pouzdro"), key=lambda s: (s.bounding_box().min.Y, s.bounding_box().min.X))
+    assert len(pouzdra) == len(p.pocket_doors)
+    sdk_faces = sorted(_labeled(shape, "sdk"), key=lambda s: s.bounding_box().min.Y)
+    assert len(sdk_faces) == 2
+    face_t = max(p.sdk_t, 12.5)
+    for face in sdk_faces:
+        bb = face.bounding_box()
+        assert abs(bb.size.Y - face_t) < 1e-6
+        assert abs(bb.max.Z - (p.pocket_door_h - FACE_GAP)) <= 1.0
+    # Local pouzdro sits beside openings, behind SDK (covered, not cut out of SDK).
+    for part in pouzdra:
+        bb = part.bounding_box()
+        assert bb.size.X < p.room_width * 0.5
+        assert abs(bb.max.Z - (p.pocket_door_h - FACE_GAP)) <= 1.0
+    # SDK sits in front of pouzdro (into the room), not flush with cutouts for pockets.
+    k_sdk = sdk_faces[0].bounding_box()
+    l_sdk = sdk_faces[1].bounding_box()
+    k_pouzdra = [part for part in pouzdra if part.bounding_box().max.Y < p.room_length / 2]
+    l_pouzdra = [part for part in pouzdra if part.bounding_box().min.Y > p.room_length / 2]
+    assert k_pouzdra and l_pouzdra
+    assert abs(k_sdk.min.Y - (FACE_GAP + p.pouzdro_d)) < 1e-6
+    assert k_sdk.min.Y >= max(part.bounding_box().max.Y for part in k_pouzdra) - 1e-6
+    assert l_sdk.max.Y <= min(part.bounding_box().min.Y for part in l_pouzdra) + 1e-6
+    # Walk-through door holes only: SDK volume well below a solid full-width board.
+    full_sdk_vol = (p.room_width - 2 * FACE_GAP) * face_t * (p.pocket_door_h - FACE_GAP)
+    assert sdk_faces[0].volume < full_sdk_vol * 0.9  # one kitchen door hole (chodba)
+    assert sdk_faces[1].volume < full_sdk_vol * 0.75  # two living door holes (spíž + zádveří)
+    # Předstěny depths immutable.
+    assert p.predstena_kitchen == 190.0
+    assert p.predstena_living == 450.0
+
+    # Spíž on far gable (Y=L) with zádveří; chodba alone on near gable (Y=0).
+    kitchen_doors = [d for d in p.pocket_doors if d[0] == "kitchen"]
+    living_doors = sorted(
+        [d for d in p.pocket_doors if d[0] == "living"], key=lambda d: d[1]
+    )
+    assert len(kitchen_doors) == 1
+    assert len(living_doors) == 2
+    assert kitchen_doors[0][1] == 0.0  # chodba · window corner · Y=0
+    assert living_doors[0][1] == 0.0  # zádveří · window corner · Y=L
+    assert abs(living_doors[1][1] - (p.room_width - p.pocket_spiz_inset - 1000.0)) < 1e-6
+    kitchen_pouzdra = [part for part in pouzdra if part.bounding_box().max.Y < p.room_length / 2]
+    living_pouzdra = [part for part in pouzdra if part.bounding_box().min.Y > p.room_length / 2]
+    assert len(kitchen_pouzdra) == 1
+    assert len(living_pouzdra) == 2
+    # Explicit: pantry pouzdro is on the living/far gable, not kitchen/near.
+    spiz = [
+        part
+        for part in living_pouzdra
+        if part.bounding_box().min.X > p.room_width * 0.4
+    ]
+    assert len(spiz) == 1
+    glass = _labeled(shape, "sklo")
+    assert len(glass) == len(p.eave_windows)
+    for (y0, width), pane in zip(
+        sorted(p.eave_windows, key=lambda w: w[0]),
+        sorted(glass, key=lambda s: s.bounding_box().min.Y),
+        strict=True,
+    ):
+        bb = pane.bounding_box()
+        assert bb.max.X < 0.0  # window eave opposite cabinets
+        assert abs(bb.min.Y - (y0 + FACE_GAP)) < 1e-6
+        assert abs(bb.size.Y - (width - 2 * FACE_GAP)) < 1e-6
+        assert abs(bb.max.Z - (p.window_h - FACE_GAP)) <= 1.0
+    gable_walls = [
+        c
+        for c in _labeled(shape, "zdivo")
+        if c.bounding_box().size.X > p.room_width * 0.5
+    ]
+    assert len(gable_walls) == 2
 
     bb = shape.bounding_box()
     assert bb.min.X < 0
@@ -124,20 +204,23 @@ def test_obyvak_3d_exports(tmp_path, monkeypatch):
     import blueprints.export_utils as eu
 
     monkeypatch.setattr(eu, "EXPORTS_DIR", tmp_path)
-    shape, _meta = build()
+    p = ObyvakParams()
+    shape, _meta = build(p)
     paths = export_shape(shape, "obyvak", formats=("step", "stl", "svg", "png"))
     assert paths["step"].stat().st_size > 0
     assert paths["stl"].stat().st_size > 0
     assert paths["png"].stat().st_size > 0
-    preview, _ = build_preview()
+    preview, _ = build_preview(p)
     full_n = len(shape.children)
     assert len(preview.children) < full_n
-    left_eave = [
+    furn_eave = [
         c
         for c in preview.children
-        if c.label in {"eps", "zdivo", "omitka", "pozednice"} and c.bounding_box().max.X <= 1.0
+        if c.label in {"eps", "zdivo", "omitka", "pozednice", "nabytek"}
+        and c.bounding_box().min.X >= p.room_width - 1.0
     ]
-    assert left_eave == []
+    assert furn_eave == []
+    assert any(c.label == "sklo" for c in preview.children)
     cut = export_shape(preview, "obyvak", stem="cutaway", formats=("svg", "png"))
     assert cut["png"].stat().st_size > 0
 
@@ -151,8 +234,8 @@ def test_obyvak_3d_exports(tmp_path, monkeypatch):
     elev, _ = build_elevation_slice()
     elev_labels = {c.label for c in elev.children}
     assert "predstena" in elev_labels
-    assert "pouzdro" in elev_labels
-    assert "koruna" in elev_labels
+    assert "sdk" in elev_labels
+    assert "koruna" not in elev_labels
     from blueprints.export_utils import export_section as _export_section
 
     sliced = _export_section(sec, "obyvak", stem="slice_section")

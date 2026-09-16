@@ -54,7 +54,27 @@ class ObyvakParams:
     predstena_living: float = 450.0
     predstena_bottom_z: float = 2450.0
     pouzdro_d: float = 120.0
-    gable_crown_h: float = 80.0
+    pocket_door_h: float = 2450.0
+    # Clearance from the kitchen-cabinet eave (X=room_width) to the spíž opening.
+    pocket_spiz_inset: float = 650.0
+    # (gable, x0, width) — "kitchen"=Y=0 (předstěna 190), "living"=Y=L (předstěna 450).
+    # Cutaway camera is at −X,−Y: near/right gable = Y=0, far/left gable = Y=L.
+    # Spíž must sit on the far gable (Y=L), not on the near/right wall with chodba.
+    # Chodba stays Y=0 window corner; zádveří stays Y=L window corner; spíž Y=L cabinet inset.
+    pocket_doors: tuple[tuple[str, float, float], ...] = (
+        ("kitchen", 0.0, 1000.0),  # chodba · roh u oken · near gable Y=0
+        ("living", 3700.0, 1000.0),  # spíž · far gable Y=L · 5350 − 650 − 1000
+        ("living", 0.0, 1100.0),  # zádveří · roh u oken · far gable Y=L
+    )
+    # Window wall (X=0, opposite cabinets): 2× HS 2500 + fixed 4500, h=2500 (D.1.1.03).
+    window_h: float = 2500.0
+    # (y0, width) along Y from kitchen→living; ~200 mm piers between bays.
+    eave_windows: tuple[tuple[float, float], ...] = (
+        (550.0, 2500.0),  # HS portal · kuchyně / chodba
+        (3250.0, 4500.0),  # velké fixní / posuvné sklo
+        (7950.0, 2500.0),  # HS portal · obývák / zádveří
+    )
+    glass_t: float = 20.0
     soffit_hint_t: float = 30.0
     ridge_runout: float = 200.0
 
@@ -206,16 +226,6 @@ class ObyvakLayout:
         top_xs.append(x0)
         pts.extend((x, self.z_gable_top(x)) for x in top_xs)
         return pts
-
-    def gable_crown_pts(self, x0: float, x1: float) -> list[tuple[float, float]]:
-        h = self.p.gable_crown_h
-        xs = [x0]
-        if min(x0, x1) < self.x_ridge < max(x0, x1):
-            xs.append(self.x_ridge)
-        xs.append(x1)
-        top = [(x, self.z_gable_top(x)) for x in xs]
-        return top + [(x, z + h) for x, z in reversed(top)]
-
 
 def build_layout(params: ObyvakParams | None = None) -> ObyvakLayout:
     return ObyvakLayout(params or ObyvakParams())

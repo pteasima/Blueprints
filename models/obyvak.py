@@ -8,6 +8,9 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
   1 mm clearance (still reads as "touching" at room scale).
 - Gables own the end walls (full X). Eave runs only the clear mid-span so
   corner volumes are not drawn twice.
+- Obývák-only scope: no koruna (exterior gables are in adjacent rooms), no EPS
+  on gable shells, three gable pocket doors (chodba on Y=0; spíž + zádveří on Y=L),
+  and terrace glazing on the X=0 eave (opposite cabinets).
 - Floor slab is the clear room only; perimeter walls own the strip below z=0.
 
     python -m blueprints.export obyvak
@@ -92,6 +95,146 @@ def _cut_away(solid: Solid, tools: list, label: str) -> Solid:
     return _paint(out, label)
 
 
+def _aabb_hit(a, b) -> bool:
+    ba, bb = a.bounding_box(), b.bounding_box()
+    return (
+        min(ba.max.X, bb.max.X) > max(ba.min.X, bb.min.X)
+        and min(ba.max.Y, bb.max.Y) > max(ba.min.Y, bb.min.Y)
+        and min(ba.max.Z, bb.max.Z) > max(ba.min.Z, bb.min.Z)
+    )
+
+
+def _pocket_door_cutters(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
+    """Through-openings for posuvné dveře in Y=0 / Y=L gables (D.1.1.03).
+
+    Extends far enough into the room to clear masonry, pouzdro bay, and the SDK
+    face that sits in front of the pocket (people walk through this hole).
+    """
+    face_t = max(p.sdk_t, 12.5)
+    # pouzdro against gable + clearance + SDK in front of pouzdro.
+    depth = p.pouzdro_d + face_t + 2 * gap + 2.0
+    cutters = []
+    for spec in p.pocket_doors:
+        gable, x0, width = spec
+        xa, xb = x0 + gap, x0 + width - gap
+        if xb <= xa:
+            continue
+        if gable == "kitchen":
+            ya, yb = g.yl_eps - 1.0, gap + depth
+        elif gable == "living":
+            ya, yb = p.room_length - gap - depth, g.yr_eps + 1.0
+        else:
+            raise ValueError(f"unknown pocket door gable: {gable!r}")
+        cutters.append(
+            _box(
+                xa,
+                min(ya, yb),
+                -1.0,
+                xb - xa,
+                abs(yb - ya),
+                p.pocket_door_h + 2 * gap + 2.0,
+                "_door_cut",
+            )
+        )
+    return cutters
+
+
+def _eave_window_cutters(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
+    """Through-openings in the X=0 eave (terrace: 2× HS + fixed glass)."""
+    cutters = []
+    for y0, width in p.eave_windows:
+        ya, yb = y0 + gap, y0 + width - gap
+        if yb <= ya:
+            continue
+        cutters.append(
+            _box(
+                g.xl_eps - 1.0,
+                ya,
+                -1.0,
+                -g.xl_eps + p.wall_plaster + 2.0,
+                yb - ya,
+                p.window_h + 2 * gap + 2.0,
+                "_window_cut",
+            )
+        )
+    return cutters
+
+
+def _cut_wall_openings(parts: list, cutters: list) -> list:
+    if not cutters:
+        return parts
+    out = []
+    for part in parts:
+        if part.label not in {"eps", "zdivo", "omitka", "sdk"}:
+            out.append(part)
+            continue
+        cut = part
+        for tool in cutters:
+            if _aabb_hit(part, tool):
+                cut = _cut_away(cut, [tool], part.label)
+        out.append(cut)
+    return out
+
+
+def _gable_sdk_and_pouzdra(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
+    """Local pouzdro pockets against the gable, SDK skin in front covering them.
+
+    Stack (kitchen Y=0 → into room): gable → pouzdro bay → thin SDK face.
+    SDK is pierced only for walk-through door openings — never for pouzdro bays.
+    Does not touch or resize předstěny (Z≥2450, depths 190 / 450).
+    """
+    h = p.pocket_door_h - gap
+    face_t = max(p.sdk_t, 12.5)
+    # Full pocket depth against the gable; SDK sits clearly in front (into the room).
+    pocket_d = max(p.pouzdro_d - gap, gap)
+    pouzdra: list = []
+    sdk_parts: list = []
+
+    for end, _y_wall in (("kitchen", gap), ("living", p.room_length - gap)):
+        if end == "kitchen":
+            y_pocket = gap
+            y_sdk = gap + p.pouzdro_d
+        else:
+            y_sdk = p.room_length - gap - face_t - p.pouzdro_d
+            y_pocket = p.room_length - gap - pocket_d
+        sdk_parts.append(
+            _box(gap, y_sdk, gap, p.room_width - 2 * gap, face_t, h, "sdk")
+        )
+        for gable, x0, width in p.pocket_doors:
+            if gable != end:
+                continue
+            if x0 < p.room_width / 2.0:
+                px0 = x0 + width + gap
+            else:
+                px0 = x0 - width + gap
+            px0 = min(max(px0, gap), p.room_width - width - gap)
+            pouzdra.append(_box(px0, y_pocket, gap, width - 2 * gap, pocket_d, h, "pouzdro"))
+
+    # Walk-through openings only (not pouzdro bays).
+    door_cutters = _pocket_door_cutters(p, g, gap)
+    sdk_parts = _cut_wall_openings(sdk_parts, door_cutters)
+    return pouzdra + sdk_parts
+
+
+def _glass_panes(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
+    """Thin glass fills in the X=0 eave openings."""
+    panes = []
+    x_glass = g.xl_mas + (p.wall_mason - p.glass_t) / 2.0
+    for y0, width in p.eave_windows:
+        panes.append(
+            _box(
+                x_glass,
+                y0 + gap,
+                gap,
+                p.glass_t,
+                width - 2 * gap,
+                p.window_h - gap,
+                "sklo",
+            )
+        )
+    return panes
+
+
 def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     gap = FACE_GAP
     # Room-clear eave run: gable plaster owns y∈[-plaster,0] and [L, L+plaster].
@@ -145,13 +288,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         _box(g.poz_r0, y0, p.eave_wall_z + gap, p.plate_w, ey, p.plate_h - gap, "pozednice")
     )
 
-    # --- Gable walls (panel B): full X, own the corners. ---
-    for ya, yb in ((g.yl_eps, g.yl_mas - gap), (g.yr_mas + gap, g.yr_eps)):
-        structure.append(
-            _extrude_y(
-                xz_face(g.gable_wall_pts(g.xl_eps, g.xr_eps, -p.floor_t), "eps"), ya, yb, "eps"
-            )
-        )
+    # --- Gable walls (panel B): full X, own the corners; interior shells only (no EPS). ---
     for ya, yb in (
         (g.yl_mas, -p.wall_plaster - gap),
         (p.room_length + p.wall_plaster + gap, g.yr_mas),
@@ -170,11 +307,12 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
                 xz_face(g.gable_wall_pts(0.0, p.room_width, 0.0), "omitka"), ya, yb, "omitka"
             )
         )
-    for ya, yb in ((g.yl_mas, -gap), (p.room_length + gap, g.yr_mas)):
-        crown = [(x, z + gap) for x, z in g.gable_crown_pts(g.xl_mas, g.xr_mas)]
-        structure.append(_extrude_y(xz_face(crown, "koruna"), ya, yb, "koruna"))
 
-    # Cutters: everything the roof must not occupy (walls, plates, crown).
+    door_cutters = _pocket_door_cutters(p, g, gap)
+    window_cutters = _eave_window_cutters(p, g, gap)
+    structure = _cut_wall_openings(structure, door_cutters + window_cutters)
+
+    # Cutters: everything the roof must not occupy (walls, plates).
     roof_cutters = [s for s in structure if s.label != "podlaha"]
 
     # --- Roof: krytina above krov above vata; thinned, then notched around walls. ---
@@ -199,6 +337,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     vata = _extrude_y(xz_face(vata_pts, "vata"), gap, p.room_length - gap, "vata")
 
     parts: list = list(structure)
+    parts.extend(_glass_panes(p, g, gap))
     parts.extend([krov, krytina, vata])
 
     # Ceiling board under the ceiling line (below vata).
@@ -242,21 +381,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     vata_cut = _cut_away(vata, [pred_k, pred_l], "vata")
     parts[parts.index(vata)] = vata_cut
 
-    pouzdro_h = p.predstena_bottom_z - gap
-    parts.append(
-        _box(gap, gap, 0.0, p.room_width - 2 * gap, p.pouzdro_d - gap, pouzdro_h, "pouzdro")
-    )
-    parts.append(
-        _box(
-            gap,
-            p.room_length - p.pouzdro_d + gap,
-            0.0,
-            p.room_width - 2 * gap,
-            p.pouzdro_d - gap,
-            pouzdro_h,
-            "pouzdro",
-        )
-    )
+    parts.extend(_gable_sdk_and_pouzdra(p, g, gap))
     return parts
 
 
@@ -290,7 +415,7 @@ def build(params: ObyvakParams | None = None):
 
 
 def build_preview(params: ObyvakParams | None = None):
-    """Dollhouse cutaway: drop roof, window eave, and kitchen gable."""
+    """Dollhouse cutaway: drop roof and furniture eave — keep window wall + both gables."""
     p = params or ObyvakParams()
     g = ObyvakLayout(p)
     kept = []
@@ -298,8 +423,9 @@ def build_preview(params: ObyvakParams | None = None):
         bb = part.bounding_box()
         if part.label in {"krov", "krytina", "vata", "podhled"}:
             continue
-        if part.label in {"eps", "zdivo", "omitka", "pozednice", "koruna"}:
-            if bb.max.X <= 1.0 or bb.max.Y <= 1.0:
+        if part.label in {"eps", "zdivo", "omitka", "pozednice", "nabytek", "soffit"}:
+            # Open the cabinet eave only; keep gables so pocket doors read correctly.
+            if bb.min.X >= p.room_width - 1.0:
                 continue
         kept.append(part)
     return _compound(kept, label=f"{MODEL_NAME}_cutaway"), _meta(p, g)

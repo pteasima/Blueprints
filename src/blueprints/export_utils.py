@@ -92,14 +92,6 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "roughness": 0.58,
         "metallic": 0.0,
     },
-    "koruna": {
-        "fill": (200, 85, 10),
-        "line": (110, 40, 0),
-        "dxf": ColorIndex.YELLOW,
-        "weight": SECTION_LINE_WEIGHT,
-        "roughness": 0.58,
-        "metallic": 0.0,
-    },
     "predstena": {
         "fill": (0, 195, 245),
         "line": (0, 100, 150),
@@ -115,6 +107,14 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "weight": SECTION_LINE_WEIGHT,
         "dashed": True,
         "roughness": 0.7,
+        "metallic": 0.0,
+    },
+    "sdk": {
+        "fill": (230, 230, 235),
+        "line": (120, 120, 130),
+        "dxf": ColorIndex.CYAN,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.88,
         "metallic": 0.0,
     },
     "krov": {
@@ -157,6 +157,14 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "roughness": 0.38,
         "metallic": 0.35,
     },
+    "sklo": {
+        "fill": (140, 210, 255),
+        "line": (40, 120, 180),
+        "dxf": ColorIndex.CYAN,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.12,
+        "metallic": 0.05,
+    },
 }
 
 SECTION_LAYER_ORDER = [
@@ -167,11 +175,12 @@ SECTION_LAYER_ORDER = [
     "vata",
     "nabytek",
     "pouzdro",
+    "sdk",
     "pozednice",
-    "koruna",
     "krov",
     "soffit",
     "predstena",
+    "sklo",
     "podhled",
     "krytina",
 ]
