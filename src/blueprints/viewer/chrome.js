@@ -76,13 +76,24 @@ canvas {
   z-index: 4;
   top: calc(var(--safe-t) + var(--chrome-pad));
   left: calc(var(--safe-l) + var(--chrome-pad));
+  right: calc(var(--safe-r) + var(--chrome-pad));
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.top-chrome-start,
+.top-chrome-end {
   display: flex;
   gap: 8px;
   align-items: center;
   pointer-events: none;
 }
 
-.top-chrome > * { pointer-events: auto; }
+.top-chrome-start > *,
+.top-chrome-end > * { pointer-events: auto; }
 
 .chrome-btn {
   appearance: none;
@@ -115,6 +126,13 @@ canvas {
 .chrome-btn:active { transform: scale(0.96); }
 .chrome-btn:disabled { opacity: 0.55; cursor: wait; }
 #ar:not([hidden]) { min-width: auto; }
+
+/* After .chrome-btn so display:none wins on narrow viewports */
+.sheet-toggle { display: none; }
+
+@media (min-width: 768px) {
+  .sheet-toggle { display: inline-flex; }
+}
 
 .sheet {
   position: fixed;
@@ -232,44 +250,36 @@ canvas {
   }
 }
 
-/* Wide: right sheet */
+/* Wide: classic right pane (no grabber) */
 @media (min-width: 768px) {
   .sheet {
-    top: calc(var(--safe-t) + 4.25rem);
-    right: calc(var(--safe-r) + 12px);
-    bottom: calc(var(--safe-b) + 12px);
+    top: 0;
+    right: 0;
+    bottom: 0;
     width: var(--sheet-w);
-    border-radius: var(--radius);
+    border-radius: 0;
+    border-right: 0;
     height: auto;
+    padding-top: calc(var(--safe-t) + 4.25rem);
   }
-  .sheet-handle {
-    position: absolute;
-    left: -0.15rem;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: 1.5rem;
-    height: 3.5rem;
-    padding: 0;
-    margin: 0;
-    z-index: 1;
+  .sheet-handle { display: none; }
+  .sheet-scroll {
+    padding-top: 0.35rem;
+    padding-right: calc(1rem + var(--safe-r));
+    padding-bottom: calc(1rem + var(--safe-b));
+    touch-action: pan-y;
   }
-  .sheet-handle::after {
-    width: 0.28rem;
-    height: 2.25rem;
-    margin: 0.625rem auto 0;
-  }
-  .sheet-scroll { padding-top: 0.85rem; }
   .sheet[data-detent="closed"] {
-    transform: translateX(calc(100% + 28px));
-    opacity: 0.96;
+    transform: translateX(100%);
+    opacity: 1;
     pointer-events: none;
-  }
-  .sheet[data-detent="closed"] .sheet-handle {
-    pointer-events: auto;
   }
   .sheet[data-detent="open"] {
     transform: translateX(0);
     opacity: 1;
+  }
+  .sheet.is-dragging {
+    pointer-events: auto;
   }
 }
 
@@ -545,12 +555,10 @@ export function initSheetChrome(onTheme) {
     if (!sheet) return zero;
     if (isWide()) {
       if (detent !== "open") return zero;
-      const gap = 12;
       const w = sheet.offsetWidth || 0;
-      const safeR = readSafeInset("r");
       return {
         top: 0,
-        right: Math.max(0, Math.round(w + gap + safeR + 12)),
+        right: Math.max(0, Math.round(w)),
         bottom: 0,
         left: 0,
       };
@@ -585,6 +593,7 @@ export function initSheetChrome(onTheme) {
       "sheet-open",
       next !== "peek" && next !== "closed",
     );
+    syncToggle();
     if (!opts.silent) notify();
   }
 
@@ -594,8 +603,49 @@ export function initSheetChrome(onTheme) {
     measurePartialHeight();
   }
 
-  // --- Drag (narrow: vertical height; wide: horizontal translate) ---
+  // --- Toggle (wide only) ---
+  const topChrome = document.getElementById("top-chrome");
+  let toggle = document.getElementById("sheet-toggle");
+  if (!toggle && topChrome) {
+    let end = topChrome.querySelector(".top-chrome-end");
+    if (!end) {
+      end = document.createElement("div");
+      end.className = "top-chrome-end";
+      topChrome.append(end);
+    }
+    toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.id = "sheet-toggle";
+    toggle.className = "chrome-btn sheet-toggle";
+    end.append(toggle);
+  }
+
+  function syncToggle() {
+    if (!toggle) return;
+    const open = detent === "open";
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    toggle.setAttribute(
+      "aria-label",
+      open ? "Hide controls" : "Show controls",
+    );
+    toggle.title = open ? "Hide controls" : "Show controls";
+    toggle.textContent = open ? "›" : "‹";
+  }
+
+  toggle?.addEventListener("click", () => {
+    if (!isWide()) return;
+    setDetent(detent === "open" ? "closed" : "open");
+  });
+
+  // --- Drag ---
+  // Narrow: vertical height via grabber.
+  // Wide: edge swipe to open; horizontal dismiss swipe on pane body
+  // (not sliders / buttons / other controls); toggle button as above.
   let dragging = false;
+  /** @type {"narrow" | "wide-open" | "wide-close" | null} */
+  let dragKind = null;
+  /** pending until direction resolves (wide-close only) */
+  let pendingWideClose = false;
   let didDrag = false;
   let startY = 0;
   let startX = 0;
@@ -607,7 +657,11 @@ export function initSheetChrome(onTheme) {
   let lastT = 0;
   let velY = 0;
   let velX = 0;
+  let activePointerId = null;
   const TAP_SLOP_PX = 12;
+  const EDGE_OPEN_PX = 28;
+  const WIDE_INTERACTIVE =
+    'input, button, a, textarea, select, label, .seg, [role="slider"], [data-no-sheet-drag]';
 
   function peekH() {
     return Math.max(handle?.offsetHeight || 34, 34) + 8;
@@ -618,6 +672,18 @@ export function initSheetChrome(onTheme) {
   function fullH() {
     const vh = window.innerHeight || 640;
     return Math.min(vh * 0.92, vh - 72);
+  }
+
+  function wideSheetWidth() {
+    return sheet?.offsetWidth || 0;
+  }
+
+  /**
+   * @param {EventTarget | null} target
+   */
+  function isWideInteractiveTarget(target) {
+    if (!(target instanceof Element)) return false;
+    return Boolean(target.closest(WIDE_INTERACTIVE));
   }
 
   function cycleDetent() {
@@ -631,12 +697,50 @@ export function initSheetChrome(onTheme) {
     else setDetent("peek");
   }
 
-  function onPointerDown(ev) {
+  function clearInlineWide() {
+    if (!sheet) return;
+    sheet.style.transform = "";
+    sheet.style.opacity = "";
+    sheet.style.pointerEvents = "";
+  }
+
+  function beginWideDrag(ev, kind, tx) {
+    if (!sheet) return;
+    dragging = true;
+    pendingWideClose = false;
+    dragKind = kind;
+    didDrag = false;
+    startDetent = detent;
+    startY = ev.clientY;
+    startX = ev.clientX;
+    lastY = startY;
+    lastX = startX;
+    lastT = performance.now();
+    velY = 0;
+    velX = 0;
+    startTX = tx;
+    activePointerId = ev.pointerId;
+    sheet.classList.add("is-dragging");
+    sheet.style.transform = `translateX(${startTX}px)`;
+    sheet.style.pointerEvents = "auto";
+    try {
+      sheet.setPointerCapture(ev.pointerId);
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
+  function onNarrowPointerDown(ev) {
     if (!sheet || !handle) return;
-    if (ev.target !== handle && !handle.contains(/** @type {Node} */ (ev.target))) {
-      if (!(ev.target === sheet)) return;
+    if (
+      ev.target !== handle &&
+      !handle.contains(/** @type {Node} */ (ev.target))
+    ) {
+      if (ev.target !== sheet) return;
     }
     dragging = true;
+    pendingWideClose = false;
+    dragKind = "narrow";
     didDrag = false;
     startDetent = detent;
     sheet.classList.add("is-dragging");
@@ -647,15 +751,8 @@ export function initSheetChrome(onTheme) {
     lastT = performance.now();
     velY = 0;
     velX = 0;
-    if (isWide()) {
-      const m = /translateX\(([-\d.]+)px\)/.exec(sheet.style.transform || "");
-      startTX = m ? parseFloat(m[1]) : detent === "closed" ? sheet.offsetWidth + 28 : 0;
-      sheet.style.transform = `translateX(${startTX}px)`;
-      sheet.style.opacity = "1";
-      sheet.style.pointerEvents = "auto";
-    } else {
-      startH = sheet.getBoundingClientRect().height;
-    }
+    startH = sheet.getBoundingClientRect().height;
+    activePointerId = ev.pointerId;
     try {
       handle.setPointerCapture(ev.pointerId);
     } catch (_) {
@@ -664,21 +761,85 @@ export function initSheetChrome(onTheme) {
     ev.preventDefault();
   }
 
+  function onWidePointerDown(ev) {
+    if (!sheet) return;
+    if (ev.pointerType === "mouse" && ev.button !== 0) return;
+    // Don't steal events from the toggle / other chrome buttons.
+    if (ev.target instanceof Element && ev.target.closest(".chrome-btn")) {
+      return;
+    }
+
+    const w = wideSheetWidth();
+    if (detent === "closed") {
+      const edgeLeft = window.innerWidth - EDGE_OPEN_PX - readSafeInset("r");
+      if (ev.clientX < edgeLeft) return;
+      beginWideDrag(ev, "wide-open", w);
+      ev.preventDefault();
+      return;
+    }
+
+    // Open: dismiss swipe must start on the pane, not on controls.
+    if (!sheet.contains(/** @type {Node} */ (ev.target))) return;
+    if (isWideInteractiveTarget(ev.target)) return;
+
+    dragging = true;
+    pendingWideClose = true;
+    dragKind = "wide-close";
+    didDrag = false;
+    startDetent = detent;
+    startY = ev.clientY;
+    startX = ev.clientX;
+    lastY = startY;
+    lastX = startX;
+    lastT = performance.now();
+    velY = 0;
+    velX = 0;
+    startTX = 0;
+    activePointerId = ev.pointerId;
+    // Don't capture yet — wait until horizontal intent is clear so
+    // vertical scrolling in the pane still works.
+  }
+
+  function onPointerDown(ev) {
+    if (isWide()) onWidePointerDown(ev);
+    else onNarrowPointerDown(ev);
+  }
+
   function onPointerMove(ev) {
     if (!dragging || !sheet) return;
+    if (activePointerId != null && ev.pointerId !== activePointerId) return;
     const now = performance.now();
     const dt = Math.max(1, now - lastT);
     const dist = Math.hypot(ev.clientX - startX, ev.clientY - startY);
-    if (dist > TAP_SLOP_PX) didDrag = true;
-    if (isWide()) {
+
+    if (pendingWideClose) {
+      if (dist <= TAP_SLOP_PX) return;
       const dx = ev.clientX - startX;
-      velX = ((ev.clientX - lastX) / dt) * 1000;
-      lastX = ev.clientX;
-      lastT = now;
-      const w = sheet.offsetWidth + 28;
-      const x = Math.max(0, Math.min(w, startTX + dx));
-      sheet.style.transform = `translateX(${x}px)`;
-    } else {
+      const dy = ev.clientY - startY;
+      // Vertical scroll wins unless the gesture is clearly horizontal
+      // and moving toward dismiss (right).
+      if (Math.abs(dx) < Math.abs(dy) * 1.15 || dx <= 0) {
+        dragging = false;
+        pendingWideClose = false;
+        dragKind = null;
+        activePointerId = null;
+        return;
+      }
+      pendingWideClose = false;
+      didDrag = true;
+      sheet.classList.add("is-dragging");
+      if (scroll) scroll.style.overflow = "hidden";
+      try {
+        sheet.setPointerCapture(ev.pointerId);
+      } catch (_) {
+        /* ignore */
+      }
+      ev.preventDefault();
+    }
+
+    if (dist > TAP_SLOP_PX) didDrag = true;
+
+    if (dragKind === "narrow") {
       const dy = startY - ev.clientY; // up = taller
       velY = ((lastY - ev.clientY) / dt) * 1000;
       lastY = ev.clientY;
@@ -687,7 +848,17 @@ export function initSheetChrome(onTheme) {
       const maxH = fullH();
       const h = Math.max(minH, Math.min(maxH, startH + dy));
       sheet.style.height = `${h}px`;
+      return;
     }
+
+    // Wide horizontal
+    const dx = ev.clientX - startX;
+    velX = ((ev.clientX - lastX) / dt) * 1000;
+    lastX = ev.clientX;
+    lastT = now;
+    const w = wideSheetWidth();
+    const x = Math.max(0, Math.min(w, startTX + dx));
+    sheet.style.transform = `translateX(${x}px)`;
   }
 
   function nearestNarrow(h, v) {
@@ -723,7 +894,8 @@ export function initSheetChrome(onTheme) {
   }
 
   function nearestWide(x, v) {
-    const w = sheet.offsetWidth + 28;
+    const w = wideSheetWidth();
+    if (w <= 0) return startDetent;
     if (Math.abs(x - (startDetent === "closed" ? w : 0)) < 28 && Math.abs(v) < 800) {
       return startDetent;
     }
@@ -732,37 +904,55 @@ export function initSheetChrome(onTheme) {
     return x > w * 0.45 ? "closed" : "open";
   }
 
-  function onPointerUp() {
+  function onPointerUp(ev) {
     if (!dragging || !sheet) return;
+    if (activePointerId != null && ev.pointerId !== activePointerId) return;
+    const kind = dragKind;
+    const wasPending = pendingWideClose;
     dragging = false;
+    pendingWideClose = false;
+    dragKind = null;
+    activePointerId = null;
     sheet.classList.remove("is-dragging");
-    if (!didDrag) {
-      // Tap: cycle closed → small → full (narrow) / closed ↔ open (wide).
-      if (isWide()) {
-        sheet.style.transform = "";
-        sheet.style.opacity = "";
-        sheet.style.pointerEvents = "";
-      } else {
-        sheet.style.height = "";
-      }
-      cycleDetent();
+    if (scroll) scroll.style.overflow = "";
+
+    if (wasPending && !didDrag) {
+      // Tap on non-interactive pane chrome — ignore.
       return;
     }
-    if (isWide()) {
-      const m = /translateX\(([-\d.]+)px\)/.exec(sheet.style.transform || "");
-      const x = m ? parseFloat(m[1]) : 0;
-      sheet.style.transform = "";
-      sheet.style.opacity = "";
-      sheet.style.pointerEvents = "";
-      setDetent(nearestWide(x, velX));
-    } else {
+
+    if (!didDrag) {
+      if (kind === "narrow") {
+        sheet.style.height = "";
+        cycleDetent();
+      } else if (kind === "wide-open") {
+        // Tap on the edge hit zone opens the pane.
+        clearInlineWide();
+        setDetent("open");
+      } else {
+        clearInlineWide();
+      }
+      return;
+    }
+
+    if (kind === "narrow") {
       const h = sheet.getBoundingClientRect().height;
       sheet.style.height = "";
       setDetent(nearestNarrow(h, velY));
+      return;
     }
+
+    const m = /translateX\(([-\d.]+)px\)/.exec(sheet.style.transform || "");
+    const x = m ? parseFloat(m[1]) : 0;
+    clearInlineWide();
+    setDetent(nearestWide(x, velX));
   }
 
-  handle?.addEventListener("pointerdown", onPointerDown);
+  // Narrow: grabber only. Wide: document-level so edge-open works while closed.
+  handle?.addEventListener("pointerdown", (ev) => {
+    if (isWide()) return;
+    onPointerDown(ev);
+  });
   handle?.addEventListener("pointermove", onPointerMove);
   handle?.addEventListener("pointerup", onPointerUp);
   handle?.addEventListener("pointercancel", onPointerUp);
@@ -773,9 +963,22 @@ export function initSheetChrome(onTheme) {
     );
   }
 
+  document.addEventListener(
+    "pointerdown",
+    (ev) => {
+      if (!isWide()) return;
+      onWidePointerDown(ev);
+    },
+    { capture: true },
+  );
+  document.addEventListener("pointermove", onPointerMove, { capture: true });
+  document.addEventListener("pointerup", onPointerUp, { capture: true });
+  document.addEventListener("pointercancel", onPointerUp, { capture: true });
+
   const onWideChange = () => {
     sheet && (sheet.style.height = "");
-    sheet && (sheet.style.transform = "");
+    clearInlineWide();
+    if (scroll) scroll.style.overflow = "";
     applyDefaultForViewport();
   };
   if (wideMq.addEventListener) wideMq.addEventListener("change", onWideChange);
@@ -794,6 +997,7 @@ export function initSheetChrome(onTheme) {
   });
 
   applyDefaultForViewport();
+  syncToggle();
 
   return {
     getDetent,
