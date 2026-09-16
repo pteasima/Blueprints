@@ -8,6 +8,8 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
   1 mm clearance (still reads as "touching" at room scale).
 - Gables own the end walls (full X). Eave runs only the clear mid-span so
   corner volumes are not drawn twice.
+- Obývák-only scope: no koruna (exterior gables are in adjacent rooms), no EPS
+  on gable shells, three west-wall pocket doors into spíž / TM / chodba.
 - Floor slab is the clear room only; perimeter walls own the strip below z=0.
 
     python -m blueprints.export obyvak
@@ -92,6 +94,52 @@ def _cut_away(solid: Solid, tools: list, label: str) -> Solid:
     return _paint(out, label)
 
 
+def _aabb_hit(a, b) -> bool:
+    ba, bb = a.bounding_box(), b.bounding_box()
+    return (
+        min(ba.max.X, bb.max.X) > max(ba.min.X, bb.min.X)
+        and min(ba.max.Y, bb.max.Y) > max(ba.min.Y, bb.min.Y)
+        and min(ba.max.Z, bb.max.Z) > max(ba.min.Z, bb.min.Z)
+    )
+
+
+def _pocket_door_cutters(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
+    """Through-openings for posuvné dveře on the west eave wall (X≈0)."""
+    cutters = []
+    for y0, width in p.pocket_doors:
+        ya, yb = y0 + gap, y0 + width - gap
+        if yb <= ya:
+            continue
+        cutters.append(
+            _box(
+                g.xl_eps - 1.0,
+                ya,
+                -1.0,
+                g.xr_int + p.wall_plaster + 2.0,
+                yb - ya,
+                p.pocket_door_h + 2 * gap + 2.0,
+                "_door_cut",
+            )
+        )
+    return cutters
+
+
+def _cut_pocket_doors(parts: list, cutters: list) -> list:
+    if not cutters:
+        return parts
+    out = []
+    for part in parts:
+        if part.label not in {"eps", "zdivo", "omitka"}:
+            out.append(part)
+            continue
+        cut = part
+        for tool in cutters:
+            if _aabb_hit(part, tool):
+                cut = _cut_away(cut, [tool], part.label)
+        out.append(cut)
+    return out
+
+
 def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     gap = FACE_GAP
     # Room-clear eave run: gable plaster owns y∈[-plaster,0] and [L, L+plaster].
@@ -145,13 +193,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         _box(g.poz_r0, y0, p.eave_wall_z + gap, p.plate_w, ey, p.plate_h - gap, "pozednice")
     )
 
-    # --- Gable walls (panel B): full X, own the corners. ---
-    for ya, yb in ((g.yl_eps, g.yl_mas - gap), (g.yr_mas + gap, g.yr_eps)):
-        structure.append(
-            _extrude_y(
-                xz_face(g.gable_wall_pts(g.xl_eps, g.xr_eps, -p.floor_t), "eps"), ya, yb, "eps"
-            )
-        )
+    # --- Gable walls (panel B): full X, own the corners; interior shells only (no EPS). ---
     for ya, yb in (
         (g.yl_mas, -p.wall_plaster - gap),
         (p.room_length + p.wall_plaster + gap, g.yr_mas),
@@ -170,11 +212,11 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
                 xz_face(g.gable_wall_pts(0.0, p.room_width, 0.0), "omitka"), ya, yb, "omitka"
             )
         )
-    for ya, yb in ((g.yl_mas, -gap), (p.room_length + gap, g.yr_mas)):
-        crown = [(x, z + gap) for x, z in g.gable_crown_pts(g.xl_mas, g.xr_mas)]
-        structure.append(_extrude_y(xz_face(crown, "koruna"), ya, yb, "koruna"))
 
-    # Cutters: everything the roof must not occupy (walls, plates, crown).
+    door_cutters = _pocket_door_cutters(p, g, gap)
+    structure = _cut_pocket_doors(structure, door_cutters)
+
+    # Cutters: everything the roof must not occupy (walls, plates).
     roof_cutters = [s for s in structure if s.label != "podlaha"]
 
     # --- Roof: krytina above krov above vata; thinned, then notched around walls. ---
@@ -242,21 +284,19 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     vata_cut = _cut_away(vata, [pred_k, pred_l], "vata")
     parts[parts.index(vata)] = vata_cut
 
-    pouzdro_h = p.predstena_bottom_z - gap
-    parts.append(
-        _box(gap, gap, 0.0, p.room_width - 2 * gap, p.pouzdro_d - gap, pouzdro_h, "pouzdro")
-    )
-    parts.append(
-        _box(
-            gap,
-            p.room_length - p.pouzdro_d + gap,
-            0.0,
-            p.room_width - 2 * gap,
-            p.pouzdro_d - gap,
-            pouzdro_h,
-            "pouzdro",
+    pouzdro_h = p.pocket_door_h - gap
+    for y0, width in p.pocket_doors:
+        parts.append(
+            _box(
+                -p.wall_plaster - p.pouzdro_d + gap,
+                y0 + gap,
+                gap,
+                p.pouzdro_d - gap,
+                width - 2 * gap,
+                pouzdro_h,
+                "pouzdro",
+            )
         )
-    )
     return parts
 
 
@@ -298,7 +338,7 @@ def build_preview(params: ObyvakParams | None = None):
         bb = part.bounding_box()
         if part.label in {"krov", "krytina", "vata", "podhled"}:
             continue
-        if part.label in {"eps", "zdivo", "omitka", "pozednice", "koruna"}:
+        if part.label in {"eps", "zdivo", "omitka", "pozednice"}:
             if bb.max.X <= 1.0 or bb.max.Y <= 1.0:
                 continue
         kept.append(part)

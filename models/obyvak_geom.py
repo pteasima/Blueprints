@@ -54,7 +54,13 @@ class ObyvakParams:
     predstena_living: float = 450.0
     predstena_bottom_z: float = 2450.0
     pouzdro_d: float = 120.0
-    gable_crown_h: float = 80.0
+    pocket_door_h: float = 2450.0
+    # y0 along Y on the west eave wall (X=0); widths from D.1.1.03 (1.03 spíž, 1.04 TM, chodba).
+    pocket_doors: tuple[tuple[float, float], ...] = (
+        (500.0, 1100.0),
+        (2750.0, 1100.0),
+        (5050.0, 1000.0),
+    )
     soffit_hint_t: float = 30.0
     ridge_runout: float = 200.0
 
@@ -206,16 +212,6 @@ class ObyvakLayout:
         top_xs.append(x0)
         pts.extend((x, self.z_gable_top(x)) for x in top_xs)
         return pts
-
-    def gable_crown_pts(self, x0: float, x1: float) -> list[tuple[float, float]]:
-        h = self.p.gable_crown_h
-        xs = [x0]
-        if min(x0, x1) < self.x_ridge < max(x0, x1):
-            xs.append(self.x_ridge)
-        xs.append(x1)
-        top = [(x, self.z_gable_top(x)) for x in xs]
-        return top + [(x, z + h) for x, z in reversed(top)]
-
 
 def build_layout(params: ObyvakParams | None = None) -> ObyvakLayout:
     return ObyvakLayout(params or ObyvakParams())

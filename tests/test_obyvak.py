@@ -48,10 +48,10 @@ def test_3d_matches_section_and_elevation_masses():
         "soffit",
         "predstena",
         "pouzdro",
-        "koruna",
         "podhled",
     ):
         assert name in labels
+    assert "koruna" not in labels
 
     kitchen, living = sorted(_labeled(shape, "predstena"), key=lambda s: s.bounding_box().min.Y)
     kbb, lbb = kitchen.bounding_box(), living.bounding_box()
@@ -75,6 +75,21 @@ def test_3d_matches_section_and_elevation_masses():
     ]
     assert eave_eps, "expected eave EPS strips with full insulation thickness"
     assert abs(eave_eps[0].bounding_box().size.X - (p.wall_eps - FACE_GAP)) < 1e-6
+
+    gable_eps = [
+        c
+        for c in _labeled(shape, "eps")
+        if c.bounding_box().size.Y < p.wall_mason + p.wall_plaster + 1.0
+    ]
+    assert gable_eps == []
+
+    pouzdra = sorted(_labeled(shape, "pouzdro"), key=lambda s: s.bounding_box().min.Y)
+    assert len(pouzdra) == len(p.pocket_doors)
+    for (y0, width), part in zip(p.pocket_doors, pouzdra, strict=True):
+        bb = part.bounding_box()
+        assert abs(bb.min.Y - (y0 + FACE_GAP)) < 1e-6
+        assert abs(bb.size.Y - (width - 2 * FACE_GAP)) < 1e-6
+        assert abs(bb.max.Z - (p.pocket_door_h - FACE_GAP)) <= 1.0
 
     bb = shape.bounding_box()
     assert bb.min.X < 0
@@ -151,8 +166,8 @@ def test_obyvak_3d_exports(tmp_path, monkeypatch):
     elev, _ = build_elevation_slice()
     elev_labels = {c.label for c in elev.children}
     assert "predstena" in elev_labels
-    assert "pouzdro" in elev_labels
-    assert "koruna" in elev_labels
+    assert "pouzdro" not in elev_labels
+    assert "koruna" not in elev_labels
     from blueprints.export_utils import export_section as _export_section
 
     sliced = _export_section(sec, "obyvak", stem="slice_section")
