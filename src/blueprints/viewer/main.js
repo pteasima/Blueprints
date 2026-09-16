@@ -879,9 +879,9 @@ export function mountViewer(canvas, glbBuffer) {
   let peelPointerDown = false;
   /** @type {"fast" | "high"} */
   let lastPeelQuality = "high";
-  const PEEL_SETTLE_MS = 400;
-  /** Squared metres — ignore sub-mm float/damping noise. */
-  const PEEL_MOVE_EPS2 = 1e-6;
+  const PEEL_SETTLE_MS = 120;
+  /** Squared metres — ignore residual damping / float noise. */
+  const PEEL_MOVE_EPS2 = 1e-5;
   const peelCamPos = new THREE.Vector3();
   const peelCamTarget = new THREE.Vector3();
   let peelCamInited = false;
