@@ -26,8 +26,8 @@ export const USE_DEPTH_PEEL = true;
 
 /** Fast-path peel layers while the camera is moving. */
 export const MAX_PEELS_FAST = 5;
-/** Settled-path peel layers (deeper CAD stacks, sharper edges). */
-export const MAX_PEELS_HIGH = 10;
+/** Settled path — match proven main-branch layer count. */
+export const MAX_PEELS_HIGH = 12;
 /** @deprecated use MAX_PEELS_FAST / MAX_PEELS_HIGH — kept as the high cap. */
 export const MAX_PEELS = MAX_PEELS_HIGH;
 
@@ -504,6 +504,46 @@ export function createDepthPeelRenderer(renderer) {
 
   const copyProbeBuf = new Float32Array(4);
 
+  const copyMat = new THREE.ShaderMaterial({
+    uniforms: { tSrc: { value: null } },
+    vertexShader: /* glsl */ `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = vec4(position.xy, 0.0, 1.0);
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform sampler2D tSrc;
+      varying vec2 vUv;
+      void main() {
+        gl_FragColor = texture2D(tSrc, vUv);
+      }
+    `,
+    depthTest: false,
+    depthWrite: false,
+    toneMapped: false,
+    blending: THREE.NoBlending,
+  });
+  const copyQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), copyMat);
+  const copyScene = new THREE.Scene();
+  copyScene.add(copyQuad);
+
+  /**
+   * @param {THREE.WebGLRenderTarget} src
+   * @param {THREE.WebGLRenderTarget} dst
+   */
+  function copyColorRT(src, dst) {
+    copyMat.uniforms.tSrc.value = src.texture;
+    const prevAuto = renderer.autoClear;
+    renderer.setRenderTarget(dst);
+    renderer.setClearColor(0x000000, 1);
+    renderer.clear();
+    renderer.autoClear = false;
+    renderer.render(copyScene, compositeCamera);
+    renderer.autoClear = prevAuto;
+  }
+
   /**
    * Sparse float view-Z probe (avoid dense readPixels sync every peel).
    * @param {THREE.WebGLRenderTarget} rt
@@ -796,9 +836,47 @@ export function createDepthPeelRenderer(renderer) {
       renderer.render(scene, camera);
       renderer.autoClear = true;
 
-      // Sparse probe before colour pass — skip empty layers early.
-      // Peel 0 needs a denser probe: thin CAD shells (e.g. eps) often miss a
-      // 4×4 grid at half-res and would false-abort to sorted alpha.
+      peelUniforms.tPeelViewZ.value = peelViewZRT.texture;
+
+      if (highQuality) {
+        // Settled path: same as main — colour every peel, no early-out.
+        peelStageUniform.value = 2;
+        for (const { mat } of matBackup) {
+          mat.depthWrite = false;
+          mat.depthTest = false;
+          mat.colorWrite = true;
+          mat.transparent = true;
+          mat.forceSinglePass = true;
+          applyBlend(mat, {
+            blending: THREE.NormalBlending,
+            blendSrc: THREE.SrcAlphaFactor,
+            blendDst: THREE.OneMinusSrcAlphaFactor,
+            blendSrcAlpha: THREE.OneFactor,
+            blendDstAlpha: THREE.OneMinusSrcAlphaFactor,
+            blendEquation: THREE.AddEquation,
+          });
+          syncPeelUniforms(mat);
+        }
+        renderer.setRenderTarget(layerRT);
+        renderer.setClearColor(0x000000, 0);
+        renderer.clear();
+        renderer.render(scene, camera);
+
+        const peelWrote = viewZWroteGeometry(peelViewZRT, 12);
+        if (peel === 0 && !peelWrote) return abortToStandard();
+        if (peelWrote) anyLayerWritten = true;
+
+        blitMat.uniforms.tSrc.value = layerRT.texture;
+        renderer.setRenderTarget(accumRT);
+        renderer.autoClear = false;
+        renderer.render(blitScene, compositeCamera);
+        renderer.autoClear = true;
+
+        copyColorRT(peelViewZRT, prevViewZRT);
+        continue;
+      }
+
+      // Fast path: sparse probe + early-out + ping-pong (approx while moving).
       const peelWrote = viewZWroteGeometry(peelViewZRT, peel === 0 ? 12 : 4);
       if (!peelWrote) {
         if (peel === 0) return abortToStandard();
@@ -806,9 +884,6 @@ export function createDepthPeelRenderer(renderer) {
       }
       anyLayerWritten = true;
 
-      peelUniforms.tPeelViewZ.value = peelViewZRT.texture;
-
-      // Colour peel into layer, then under-blend into accum.
       peelStageUniform.value = 2;
       for (const { mat } of matBackup) {
         mat.depthWrite = false;
@@ -837,7 +912,6 @@ export function createDepthPeelRenderer(renderer) {
       renderer.render(blitScene, compositeCamera);
       renderer.autoClear = true;
 
-      // Ping-pong: next prev is this peel’s view-Z (no full-screen copy).
       const swap = prevViewZRT;
       prevViewZRT = peelViewZRT;
       peelViewZRT = swap;
@@ -889,6 +963,8 @@ export function createDepthPeelRenderer(renderer) {
     clearViewZMat.dispose();
     clearViewZQuad.geometry.dispose();
     opaqueViewZMat.dispose();
+    copyMat.dispose();
+    copyQuad.geometry.dispose();
   }
 
   return {

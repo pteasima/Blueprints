@@ -872,10 +872,18 @@ export function mountViewer(canvas, glbBuffer) {
   // Spawn a draft after the user finishes orbiting/panning — not on every
   // damping `change`, which would rebuild the cut UI mid-slider-drag.
   // `start` is user-gesture only (programmatic framing does not fire it).
+  let peelOrbiting = false;
+  /** After orbit `end`, stay on fast peels until damping has settled. */
+  let peelHighAfterMs = 0;
+  const PEEL_SETTLE_MS = 320;
+
   controls.addEventListener("start", () => {
     clearCameraPresetHighlight();
+    peelOrbiting = true;
   });
   controls.addEventListener("end", () => {
+    peelOrbiting = false;
+    peelHighAfterMs = performance.now() + PEEL_SETTLE_MS;
     if (suppressCameraChange) return;
     maybeSpawnDraftFromCamera();
   });
@@ -1145,16 +1153,6 @@ export function mountViewer(canvas, glbBuffer) {
 
   let prevUsedPeel = false;
 
-  // Fast peels while orbiting; full-res peels once the camera (and framing
-  // anim / cut drag) has been still for a few frames.
-  const settleCamPos = new THREE.Vector3();
-  const settleTarget = new THREE.Vector3();
-  let settleInited = false;
-  let stillFrames = 0;
-  /** Squared metres — ignore sub-mm damping jitter. */
-  const STILL_EPS2 = 1e-8;
-  const STILL_FRAMES = 4;
-
   function tick() {
     const now = performance.now();
     stepFrameAnim(now);
@@ -1164,20 +1162,14 @@ export function mountViewer(canvas, glbBuffer) {
     if (root) updateCameraClipPlanes();
     measureTool?.update();
 
-    if (!settleInited) {
-      settleCamPos.copy(camera.position);
-      settleTarget.copy(controls.target);
-      settleInited = true;
-    }
-    const camMoved =
-      camera.position.distanceToSquared(settleCamPos) > STILL_EPS2 ||
-      controls.target.distanceToSquared(settleTarget) > STILL_EPS2;
-    settleCamPos.copy(camera.position);
-    settleTarget.copy(controls.target);
-    const busy = camMoved || frameAnim !== 0 || cutSliderActive;
-    if (busy) stillFrames = 0;
-    else stillFrames += 1;
-    const peelQuality = stillFrames >= STILL_FRAMES ? "high" : "fast";
+    // Fast while dragging / damping / framing; high once settled (matches
+    // main-branch peel algorithm — not the half-res early-out path).
+    const peelBusy =
+      peelOrbiting ||
+      now < peelHighAfterMs ||
+      frameAnim !== 0 ||
+      cutSliderActive;
+    const peelQuality = peelBusy ? "fast" : "high";
 
     const usedPeel = depthPeel.render(scene, camera, root, anyPartFaded, {
       quality: peelQuality,
