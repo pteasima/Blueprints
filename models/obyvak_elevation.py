@@ -2,8 +2,8 @@
 
 X v tomto výkrese = světlá délka kuchyně↔obývák (v 3D to bude Y).
 Z up. Podhled je vodorovný pod hřebenem — žádný A-rám vlevo/vpravo.
-Předstěny 190 (KK) a 450 (obývák) od Z=2450 k podhledu. Pod kastlíky: SDK před
-štítem s otvory na soupačky; pouzdro jen jako kastlík na křídlo (ne přes celou stěnu).
+Předstěny 190 (KK) a 450 (obývák) od Z=2450 k podhledu — sizes unchanged.
+Below: SDK face + local pouzdro pockets (not full-wall pouzdro).
 
     python -m blueprints.export obyvak_elevation
 
@@ -41,6 +41,7 @@ def build(params: ObyvakParams | None = None):
     parts: list = []
 
     parts.append(xz_rect(xl_eps, -p.floor_t, xr_eps - xl_eps, p.floor_t, "podlaha"))
+    # No gable EPS / koruna — obyvák-only interior shells.
     parts.append(xz_rect(xl_mas, -p.floor_t, p.wall_mason, h_gable + p.floor_t, "zdivo"))
     parts.append(xz_rect(-p.wall_plaster, 0.0, p.wall_plaster, h_gable, "omitka"))
     parts.append(xz_rect(span, 0.0, p.wall_plaster, h_gable, "omitka"))
@@ -48,14 +49,16 @@ def build(params: ObyvakParams | None = None):
         xz_rect(span + p.wall_plaster, -p.floor_t, p.wall_mason, h_gable + p.floor_t, "zdivo")
     )
 
-    # SDK face under předstěny; pouzdro only as local pocket schematic (not full-wall).
-    parts.append(xz_rect(0.0, 0.0, p.pouzdro_d, p.pocket_door_h, "sdk"))
-    parts.append(xz_rect(span - p.pouzdro_d, 0.0, p.pouzdro_d, p.pocket_door_h, "sdk"))
-    parts.append(xz_rect(p.pouzdro_d * 0.25, 0.0, p.pouzdro_d * 0.5, p.pocket_door_h, "pouzdro"))
+    # Low SDK face (covers pouzdro); local pouzdro pocket schematic behind it.
+    face_t = max(p.sdk_t, 12.5)
+    parts.append(xz_rect(0.0, 0.0, face_t, p.pocket_door_h, "sdk"))
+    parts.append(xz_rect(span - face_t, 0.0, face_t, p.pocket_door_h, "sdk"))
+    parts.append(xz_rect(face_t, 0.0, p.pouzdro_d - face_t, p.pocket_door_h, "pouzdro"))
     parts.append(
-        xz_rect(span - p.pouzdro_d * 0.75, 0.0, p.pouzdro_d * 0.5, p.pocket_door_h, "pouzdro")
+        xz_rect(span - p.pouzdro_d, 0.0, p.pouzdro_d - face_t, p.pocket_door_h, "pouzdro")
     )
 
+    # Předstěny — unchanged sizes (190 / 450).
     parts.append(
         xz_rect(
             0.0,

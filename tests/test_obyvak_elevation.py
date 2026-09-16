@@ -70,11 +70,12 @@ def test_elevation_geometry_is_horizontal_not_aframe():
 
     sdk = _faces(shape, "sdk")
     assert len(sdk) == 2
+    assert abs(sdk[0].bounding_box().size.X - max(p.sdk_t, 12.5)) < 1e-6
     pouzdra = _faces(shape, "pouzdro")
     assert len(pouzdra) == 2
-    for face in pouzdra:
-        # Local pocket schematic — narrower than the full SDK face depth.
-        assert face.bounding_box().size.X < p.pouzdro_d
+    # Předstěny unchanged.
+    assert p.predstena_kitchen == 190.0
+    assert p.predstena_living == 450.0
 
     soffit = _faces(shape, "podhled")
     assert len(soffit) == 1

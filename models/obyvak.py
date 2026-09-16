@@ -105,7 +105,12 @@ def _aabb_hit(a, b) -> bool:
 
 
 def _pocket_door_cutters(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
-    """Through-openings for posuvné dveře in Y=0 / Y=L gables (D.1.1.03)."""
+    """Through-openings for posuvné dveře in Y=0 / Y=L gables (D.1.1.03).
+
+    Extends far enough into the room to clear masonry, pouzdro bay, and SDK face.
+    """
+    face_t = max(p.sdk_t, 12.5)
+    depth = p.pouzdro_d + face_t + 2.0
     cutters = []
     for spec in p.pocket_doors:
         gable, x0, width = spec
@@ -113,9 +118,9 @@ def _pocket_door_cutters(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
         if xb <= xa:
             continue
         if gable == "kitchen":
-            ya, yb = g.yl_eps - 1.0, gap + 1.0
+            ya, yb = g.yl_eps - 1.0, gap + depth
         elif gable == "living":
-            ya, yb = p.room_length - gap - 1.0, g.yr_eps + 1.0
+            ya, yb = p.room_length - gap - depth, g.yr_eps + 1.0
         else:
             raise ValueError(f"unknown pocket door gable: {gable!r}")
         cutters.append(
@@ -170,47 +175,44 @@ def _cut_wall_openings(parts: list, cutters: list) -> list:
 
 
 def _gable_sdk_and_pouzdra(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
-    """SDK face in front of each gable (with door openings) + local pouzdro boxes.
+    """Local pouzdro pockets against the gable, SDK skin in front covering them.
 
-    Pouzdro is only the leaf pocket beside each opening — not a full-width strip.
-    SDK is cut out where the pouzdro sits so solids do not interpenetrate.
+    SDK gets walk-through door openings only — never cut out the pouzdro bays
+    (people walk through the door hole; the pocket stays behind the board).
+    Does not touch předstěny (Z≥2450).
     """
     h = p.pocket_door_h - gap
-    d = p.pouzdro_d - 2 * gap
-    sdk_parts: list = [
-        _box(gap, gap, gap, p.room_width - 2 * gap, d, h, "sdk"),
-        _box(gap, p.room_length - p.pouzdro_d + gap, gap, p.room_width - 2 * gap, d, h, "sdk"),
-    ]
+    face_t = max(p.sdk_t, 12.5)
+    # Pocket box depth sits behind the SDK face within pouzdro_d.
+    pocket_d = max(p.pouzdro_d - face_t - gap, gap)
     pouzdra: list = []
-    pocket_cutters: list = []
+    sdk_parts: list = []
 
-    for gable, x0, width in p.pocket_doors:
-        # Pocket beside the opening, toward room centre along X.
-        if x0 < p.room_width / 2.0:
-            px0 = x0 + width + gap
+    for end, y_wall in (("kitchen", gap), ("living", p.room_length - gap)):
+        # SDK in front of pouzdro, into the room.
+        if end == "kitchen":
+            y_sdk = gap + pocket_d
+            y_pocket = gap
         else:
-            px0 = x0 - width + gap
-        px0 = min(max(px0, gap), p.room_width - width - gap)
-        if gable == "kitchen":
-            py0 = gap
-        else:
-            py0 = p.room_length - p.pouzdro_d + gap
-        pouzdra.append(_box(px0, py0, gap, width - 2 * gap, d, h, "pouzdro"))
-        pocket_cutters.append(
-            _box(
-                px0 - gap,
-                py0 - 1.0,
-                -1.0,
-                width,
-                d + 2.0,
-                h + 2 * gap + 2.0,
-                "_pocket_cut",
-            )
+            y_sdk = p.room_length - gap - face_t - pocket_d
+            y_pocket = p.room_length - gap - pocket_d
+        sdk_parts.append(
+            _box(gap, y_sdk, gap, p.room_width - 2 * gap, face_t, h, "sdk")
         )
+        for gable, x0, width in p.pocket_doors:
+            if gable != end:
+                continue
+            if x0 < p.room_width / 2.0:
+                px0 = x0 + width + gap
+            else:
+                px0 = x0 - width + gap
+            px0 = min(max(px0, gap), p.room_width - width - gap)
+            pouzdra.append(_box(px0, y_pocket, gap, width - 2 * gap, pocket_d, h, "pouzdro"))
 
+    # Walk-through openings only (not pouzdro bays).
     door_cutters = _pocket_door_cutters(p, g, gap)
-    sdk_parts = _cut_wall_openings(sdk_parts, door_cutters + pocket_cutters)
-    return sdk_parts + pouzdra
+    sdk_parts = _cut_wall_openings(sdk_parts, door_cutters)
+    return pouzdra + sdk_parts
 
 
 def _glass_panes(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:

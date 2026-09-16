@@ -89,15 +89,21 @@ def test_3d_matches_section_and_elevation_masses():
     assert len(pouzdra) == len(p.pocket_doors)
     sdk_faces = sorted(_labeled(shape, "sdk"), key=lambda s: s.bounding_box().min.Y)
     assert len(sdk_faces) == 2
+    face_t = max(p.sdk_t, 12.5)
     for face in sdk_faces:
         bb = face.bounding_box()
-        assert abs(bb.size.Y - (p.pouzdro_d - 2 * FACE_GAP)) < 1e-6
+        assert abs(bb.size.Y - face_t) < 1e-6
         assert abs(bb.max.Z - (p.pocket_door_h - FACE_GAP)) <= 1.0
-    # Local pouzdro sits beside openings, not spanning the full gable width.
+    # Local pouzdro sits beside openings, behind SDK (covered, not cut out of SDK).
     for part in pouzdra:
         bb = part.bounding_box()
         assert bb.size.X < p.room_width * 0.5
         assert abs(bb.max.Z - (p.pocket_door_h - FACE_GAP)) <= 1.0
+    # SDK in front of pouzdro on kitchen end.
+    k_sdk = sdk_faces[0].bounding_box()
+    k_pouzdra = [part for part in pouzdra if part.bounding_box().max.Y < p.room_length / 2]
+    assert k_pouzdra
+    assert k_sdk.min.Y >= max(part.bounding_box().max.Y for part in k_pouzdra) - 1e-6
 
     # Door openings: chodba+spíž on kitchen gable; zádveří on living; window-corner vs inset.
     kitchen_doors = sorted(

@@ -57,13 +57,13 @@ class ObyvakParams:
     pocket_door_h: float = 2450.0
     # Clearance from the kitchen-cabinet eave (X=room_width) to the spíž opening.
     pocket_spiz_inset: float = 650.0
-    # (gable, x0, width) — "kitchen"=Y=0, "living"=Y=L.
+    # (gable, x0, width) — "kitchen"=Y=0 (předstěna 190), "living"=Y=L (předstěna 450).
     # Window/terrace eave = X=0; kitchen cabinets on X=room_width.
-    # Chodba + zádveří in the window-eave corner; spíž inset from the cabinet eave.
+    # Chodba + spíž on kitchen gable; zádveří on living gable.
     pocket_doors: tuple[tuple[str, float, float], ...] = (
-        ("kitchen", 0.0, 1000.0),  # chodba
-        ("kitchen", 3700.0, 1000.0),  # spíž: 5350 − 650 − 1000
-        ("living", 0.0, 1100.0),  # zádveří
+        ("kitchen", 0.0, 1000.0),  # chodba · roh u oken
+        ("kitchen", 3700.0, 1000.0),  # spíž · 5350 − 650 − 1000
+        ("living", 0.0, 1100.0),  # zádveří · roh u oken
     )
     # Window wall (X=0, opposite cabinets): 2× HS 2500 + fixed 4500, h=2500 (D.1.1.03).
     window_h: float = 2500.0
