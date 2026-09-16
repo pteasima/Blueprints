@@ -20,3 +20,4 @@ npm run build
 ```
 
 `viewer.iife.js` is committed so Python export does not need Node at runtime. Copy/sync into `docs/viewer/` via `ensure_viewer_shell()` on publish, or copy manually after build.
+
