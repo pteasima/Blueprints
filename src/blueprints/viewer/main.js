@@ -1145,6 +1145,16 @@ export function mountViewer(canvas, glbBuffer) {
 
   let prevUsedPeel = false;
 
+  // Fast peels while orbiting; full-res peels once the camera (and framing
+  // anim / cut drag) has been still for a few frames.
+  const settleCamPos = new THREE.Vector3();
+  const settleTarget = new THREE.Vector3();
+  let settleInited = false;
+  let stillFrames = 0;
+  /** Squared metres — ignore sub-mm damping jitter. */
+  const STILL_EPS2 = 1e-8;
+  const STILL_FRAMES = 4;
+
   function tick() {
     const now = performance.now();
     stepFrameAnim(now);
@@ -1153,7 +1163,25 @@ export function mountViewer(canvas, glbBuffer) {
     // clip planes so depth precision tracks the current view distance.
     if (root) updateCameraClipPlanes();
     measureTool?.update();
-    const usedPeel = depthPeel.render(scene, camera, root, anyPartFaded);
+
+    if (!settleInited) {
+      settleCamPos.copy(camera.position);
+      settleTarget.copy(controls.target);
+      settleInited = true;
+    }
+    const camMoved =
+      camera.position.distanceToSquared(settleCamPos) > STILL_EPS2 ||
+      controls.target.distanceToSquared(settleTarget) > STILL_EPS2;
+    settleCamPos.copy(camera.position);
+    settleTarget.copy(controls.target);
+    const busy = camMoved || frameAnim !== 0 || cutSliderActive;
+    if (busy) stillFrames = 0;
+    else stillFrames += 1;
+    const peelQuality = stillFrames >= STILL_FRAMES ? "high" : "fast";
+
+    const usedPeel = depthPeel.render(scene, camera, root, anyPartFaded, {
+      quality: peelQuality,
+    });
     // Re-apply slider opacities when leaving peel mode so materials cannot
     // stay stuck translucent / depthWrite-off after a 100% scrub.
     if (prevUsedPeel && !usedPeel) healOpacitiesFromState();

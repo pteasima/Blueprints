@@ -10,7 +10,13 @@ import {
   collectLeafIds,
   resolvePartOutline,
 } from "./materials.js";
-import { MAX_PEELS, USE_DEPTH_PEEL, VIEW_Z_EPSILON } from "./depthPeel.js";
+import {
+  MAX_PEELS,
+  MAX_PEELS_FAST,
+  MAX_PEELS_HIGH,
+  USE_DEPTH_PEEL,
+  VIEW_Z_EPSILON,
+} from "./depthPeel.js";
 
 // --- Outline ---
 const outline = resolvePartOutline([
@@ -75,8 +81,9 @@ assert.equal(mat.userData.needsDepthPeel, false);
 assert.equal(mat.forceSinglePass, false);
 assert.equal(mesh.renderOrder, 12, "opaque restores stored depth bias");
 
-assert.ok(MAX_PEELS >= 4);
-assert.ok(MAX_PEELS <= 8, "keep peel count modest for perf");
+assert.ok(MAX_PEELS_FAST >= 4 && MAX_PEELS_FAST <= 8);
+assert.ok(MAX_PEELS_HIGH >= MAX_PEELS_FAST);
+assert.equal(MAX_PEELS, MAX_PEELS_HIGH);
 assert.ok(VIEW_Z_EPSILON > 0 && VIEW_Z_EPSILON < 0.01);
 assert.equal(USE_DEPTH_PEEL, true, "hardened peels are the fade path");
 
