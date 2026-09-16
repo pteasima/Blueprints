@@ -22,8 +22,8 @@ import * as THREE from "three";
  */
 export const USE_DEPTH_PEEL = true;
 
-/** Max transparent layers per pixel. */
-export const MAX_PEELS = 12;
+/** Max transparent layers per pixel (CAD stacks are a handful of shells). */
+export const MAX_PEELS = 5;
 
 /** Absolute eye-space Z epsilon (metres). */
 export const VIEW_Z_EPSILON = 1e-3;
@@ -326,13 +326,25 @@ export function createDepthPeelRenderer(renderer) {
   }
 
   /**
-   * @param {number} width
-   * @param {number} height
+   * Full-res opaque colour; half-res float view-Z + translucent accum.
+   * @param {number} width drawing-buffer width
+   * @param {number} height drawing-buffer height
    */
   function ensureTargets(width, height) {
     const w = Math.max(1, Math.floor(width));
     const h = Math.max(1, Math.floor(height));
-    if (opaqueRT && opaqueRT.width === w && opaqueRT.height === h) return;
+    const pw = Math.max(1, Math.floor(w / 2));
+    const ph = Math.max(1, Math.floor(h / 2));
+    if (
+      opaqueRT &&
+      opaqueRT.width === w &&
+      opaqueRT.height === h &&
+      peelViewZRT &&
+      peelViewZRT.width === pw &&
+      peelViewZRT.height === ph
+    ) {
+      return;
+    }
 
     disposeTargets();
 
@@ -344,6 +356,7 @@ export function createDepthPeelRenderer(renderer) {
       stencilBuffer: false,
     });
 
+    // Both ping-pong slots need depth so we can swap without a full-screen copy.
     const viewZWithDepth = {
       format: THREE.RGBAFormat,
       type: THREE.FloatType,
@@ -352,38 +365,34 @@ export function createDepthPeelRenderer(renderer) {
       magFilter: THREE.NearestFilter,
       minFilter: THREE.NearestFilter,
     };
-    opaqueViewZRT = new THREE.WebGLRenderTarget(w, h, viewZWithDepth);
-    peelViewZRT = new THREE.WebGLRenderTarget(w, h, viewZWithDepth);
+    opaqueViewZRT = new THREE.WebGLRenderTarget(pw, ph, viewZWithDepth);
+    peelViewZRT = new THREE.WebGLRenderTarget(pw, ph, viewZWithDepth);
+    prevViewZRT = new THREE.WebGLRenderTarget(pw, ph, viewZWithDepth);
 
-    // Prev peel Z is only sampled as a colour texture (no depth needed).
-    prevViewZRT = new THREE.WebGLRenderTarget(w, h, {
-      format: THREE.RGBAFormat,
-      type: THREE.FloatType,
-      depthBuffer: false,
-      stencilBuffer: false,
-      magFilter: THREE.NearestFilter,
-      minFilter: THREE.NearestFilter,
-    });
-
-    accumRT = new THREE.WebGLRenderTarget(w, h, {
+    accumRT = new THREE.WebGLRenderTarget(pw, ph, {
       format: THREE.RGBAFormat,
       type: THREE.HalfFloatType,
       colorSpace: THREE.SRGBColorSpace,
       depthBuffer: false,
       stencilBuffer: false,
+      magFilter: THREE.LinearFilter,
+      minFilter: THREE.LinearFilter,
     });
-    layerRT = new THREE.WebGLRenderTarget(w, h, {
+    layerRT = new THREE.WebGLRenderTarget(pw, ph, {
       format: THREE.RGBAFormat,
       type: THREE.HalfFloatType,
       colorSpace: THREE.SRGBColorSpace,
       depthBuffer: false,
       stencilBuffer: false,
+      magFilter: THREE.LinearFilter,
+      minFilter: THREE.LinearFilter,
     });
 
     compositeMat.uniforms.tOpaque.value = opaqueRT.texture;
     compositeMat.uniforms.tAccum.value = accumRT.texture;
     peelUniforms.tOpaqueViewZ.value = opaqueViewZRT.texture;
-    peelUniforms.uResolution.value.set(w, h);
+    // Must match gl_FragCoord while drawing into half-res peel targets.
+    peelUniforms.uResolution.value.set(pw, ph);
   }
 
   /**
@@ -475,50 +484,14 @@ export function createDepthPeelRenderer(renderer) {
     renderer.autoClear = prevAutoClear;
   }
 
-  const copyMat = new THREE.ShaderMaterial({
-    uniforms: { tSrc: { value: null } },
-    vertexShader: /* glsl */ `
-      varying vec2 vUv;
-      void main() {
-        vUv = uv;
-        gl_Position = vec4(position.xy, 0.0, 1.0);
-      }
-    `,
-    fragmentShader: /* glsl */ `
-      uniform sampler2D tSrc;
-      varying vec2 vUv;
-      void main() {
-        gl_FragColor = texture2D(tSrc, vUv);
-      }
-    `,
-    depthTest: false,
-    depthWrite: false,
-    toneMapped: false,
-    blending: THREE.NoBlending,
-  });
-  const copyQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), copyMat);
-  const copyScene = new THREE.Scene();
-  copyScene.add(copyQuad);
+  const copyProbeBuf = new Float32Array(4);
 
   /**
-   * @param {THREE.WebGLRenderTarget} src
-   * @param {THREE.WebGLRenderTarget} dst
+   * Sparse float view-Z probe (avoid dense readPixels sync every peel).
+   * @param {THREE.WebGLRenderTarget} rt
+   * @param {number} [grid]
    */
-  function copyColorRT(src, dst) {
-    copyMat.uniforms.tSrc.value = src.texture;
-    const prevAuto = renderer.autoClear;
-    renderer.setRenderTarget(dst);
-    renderer.setClearColor(0x000000, 1);
-    renderer.clear();
-    renderer.autoClear = false;
-    renderer.render(copyScene, compositeCamera);
-    renderer.autoClear = prevAuto;
-  }
-
-
-  /** True if any texel in a coarse grid has view-Z below the FAR sentinel. */
-  function viewZWroteGeometry(rt, grid = 12) {
-    const buf = new Float32Array(4);
+  function viewZWroteGeometry(rt, grid = 4) {
     const w = rt.width;
     const h = rt.height;
     const farCut = VIEW_Z_FAR * 0.5;
@@ -527,16 +500,17 @@ export function createDepthPeelRenderer(renderer) {
         const x = Math.min(w - 1, Math.floor(((ix + 0.5) / grid) * w));
         const y = Math.min(h - 1, Math.floor(((iy + 0.5) / grid) * h));
         try {
-          renderer.readRenderTargetPixels(rt, x, y, 1, 1, buf);
+          renderer.readRenderTargetPixels(rt, x, y, 1, 1, copyProbeBuf);
         } catch {
           continue;
         }
-        if (Number.isFinite(buf[0]) && buf[0] < farCut) return true;
+        if (Number.isFinite(copyProbeBuf[0]) && copyProbeBuf[0] < farCut) {
+          return true;
+        }
       }
     }
     return false;
   }
-
 
   /**
    * @param {THREE.Scene} scene
@@ -718,7 +692,7 @@ export function createDepthPeelRenderer(renderer) {
       return false;
     }
 
-    // --- Opaque colour ---
+    // --- Opaque colour (full-res) ---
     setMeshesVisible(transparent, false);
     setMeshesVisible(opaque, true);
     renderer.setRenderTarget(opaqueRT);
@@ -726,15 +700,13 @@ export function createDepthPeelRenderer(renderer) {
     renderer.clear();
     renderer.render(scene, camera);
 
-    // --- Opaque linear view-Z (nearest via depth LESS) ---
+    // --- Opaque linear view-Z at peel resolution ---
     renderer.setRenderTarget(opaqueViewZRT);
     renderer.setClearColor(0x000000, 1);
-    // Clear colour via draw (float far), then depth.
     clearViewZTarget(opaqueViewZRT, VIEW_Z_FAR, { clearDepth: true });
 
     // Fail-safe: after clear-to-FAR (before opaque draw), a corner pixel must
-    // still read ~FAR. Sampling after geometry can false-abort when a solid
-    // covers the corner. ~0 means float clear/RT failed → peels would discard.
+    // still read ~FAR. ~0 means float clear/RT failed → peels would discard.
     {
       const corner = new Float32Array(4);
       try {
@@ -772,7 +744,6 @@ export function createDepthPeelRenderer(renderer) {
     for (let peel = 0; peel < MAX_PEELS; peel++) {
       peelUniforms.tPrevViewZ.value = prevViewZRT.texture;
       // Feedback-free: while rendering INTO peelViewZRT, do not also sample it.
-      // Point tPeelViewZ at prev (unused in stage 1) until stage 1 completes.
       peelUniforms.tPeelViewZ.value = prevViewZRT.texture;
 
       // Depth peel: nearest remaining layer via hardware depth LESS.
@@ -802,6 +773,14 @@ export function createDepthPeelRenderer(renderer) {
       renderer.render(scene, camera);
       renderer.autoClear = true;
 
+      // Sparse probe before colour pass — skip empty layers early.
+      const peelWrote = viewZWroteGeometry(peelViewZRT, 4);
+      if (!peelWrote) {
+        if (peel === 0) return abortToStandard();
+        break;
+      }
+      anyLayerWritten = true;
+
       peelUniforms.tPeelViewZ.value = peelViewZRT.texture;
 
       // Colour peel into layer, then under-blend into accum.
@@ -827,23 +806,16 @@ export function createDepthPeelRenderer(renderer) {
       renderer.clear();
       renderer.render(scene, camera);
 
-      // Never trust HalfFloat layer alpha via Float32 readPixels (WebGL2
-      // INVALID_OPERATION). Judge peel success from float32 view-Z instead.
-      const peelWrote = viewZWroteGeometry(peelViewZRT, 12);
-      if (peel === 0 && !peelWrote) {
-        // First peel wrote no near view-Z → peels failed.
-        return abortToStandard();
-      }
-      if (peelWrote) anyLayerWritten = true;
-
       blitMat.uniforms.tSrc.value = layerRT.texture;
       renderer.setRenderTarget(accumRT);
       renderer.autoClear = false;
       renderer.render(blitScene, compositeCamera);
       renderer.autoClear = true;
 
-      // Next peel’s “prev” is this peel’s view-Z colour.
-      copyColorRT(peelViewZRT, prevViewZRT);
+      // Ping-pong: next prev is this peel’s view-Z (no full-screen copy).
+      const swap = prevViewZRT;
+      prevViewZRT = peelViewZRT;
+      peelViewZRT = swap;
     }
 
     if (!anyLayerWritten) {
@@ -892,8 +864,6 @@ export function createDepthPeelRenderer(renderer) {
     clearViewZMat.dispose();
     clearViewZQuad.geometry.dispose();
     opaqueViewZMat.dispose();
-    copyMat.dispose();
-    copyQuad.geometry.dispose();
   }
 
   return { render, dispose, MAX_PEELS, VIEW_Z_EPSILON, USE_DEPTH_PEEL };
