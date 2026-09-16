@@ -6,15 +6,15 @@
  * so coplanar CAD stacks fade continuously instead of tearing / punching.
  *
  * Approximate (weights are heuristic); good enough for part-opacity fading.
+ *
+ * Depth vs opaque geometry uses a *shared* DepthTexture attachment (hardware
+ * depth test). Sampling the depth texture in-shader breaks with
+ * logarithmicDepthBuffer and made solids punch through at any fade.
  */
 import * as THREE from "three";
 
 /** Shared across all patched materials; set per pass (0=off, 1=accum, 2=reveal). */
 export const wboitStageUniform = { value: 0 };
-/** Opaque-pass depth texture for manual depth test in accum/reveal. */
-export const wboitOpaqueDepthUniform = { value: null };
-/** Drawing-buffer size in pixels (for depth UV). */
-export const wboitResolutionUniform = { value: new THREE.Vector2(1, 1) };
 
 /**
  * Patch a material so its fragment can emit WBOIT accumulation / reveal.
@@ -27,20 +27,15 @@ export function patchMaterialForWboit(mat) {
 
   const prevCacheKey = mat.customProgramCacheKey?.bind(mat);
   mat.customProgramCacheKey = () =>
-    `${prevCacheKey ? prevCacheKey() : mat.type}|wboit2`;
+    `${prevCacheKey ? prevCacheKey() : mat.type}|wboit3`;
 
   const prevCompile = mat.onBeforeCompile?.bind(mat);
   mat.onBeforeCompile = (shader, renderer) => {
     prevCompile?.(shader, renderer);
     shader.uniforms.uWboitStage = wboitStageUniform;
-    shader.uniforms.tOpaqueDepth = wboitOpaqueDepthUniform;
-    shader.uniforms.uWboitResolution = wboitResolutionUniform;
     shader.fragmentShader = shader.fragmentShader.replace(
       "void main() {",
-      `uniform float uWboitStage;
-uniform sampler2D tOpaqueDepth;
-uniform vec2 uWboitResolution;
-void main() {`,
+      "uniform float uWboitStage;\nvoid main() {",
     );
     shader.fragmentShader = shader.fragmentShader.replace(
       "#include <dithering_fragment>",
@@ -48,15 +43,13 @@ void main() {`,
 	if (uWboitStage > 0.5) {
 		float alpha = gl_FragColor.a;
 		if (alpha < 1e-4) discard;
-		// Depth-test against the opaque buffer (shared depth attachments are flaky).
-		vec2 depthUv = gl_FragCoord.xy / uWboitResolution;
-		float opaqueZ = texture2D(tOpaqueDepth, depthUv).r;
-		if (gl_FragCoord.z > opaqueZ + 1e-5) discard;
 		if (uWboitStage < 1.5) {
+			// Accumulation: color*alpha*weight, alpha*weight (McGuire).
 			float z = gl_FragCoord.z;
 			float weight = alpha * max(0.01, 3000.0 * pow(max(0.0, 1.0 - z), 3.0));
 			gl_FragColor = vec4(gl_FragColor.rgb * alpha, alpha) * weight;
 		} else {
+			// Revealage: surface alpha; blend ZERO, ONE_MINUS_SRC_ALPHA → ∏(1−α).
 			gl_FragColor = vec4(alpha);
 		}
 	}`,
@@ -124,7 +117,6 @@ export function createWboitRenderer(renderer) {
     opaqueRT = null;
     accumRT = null;
     revealRT = null;
-    wboitOpaqueDepthUniform.value = null;
   }
 
   function ensureTargets(width, height) {
@@ -134,6 +126,8 @@ export function createWboitRenderer(renderer) {
 
     disposeTargets();
 
+    // One depth buffer shared by opaque + translucent passes so hardware
+    // depthTest matches logarithmicDepthBuffer encoding (manual sampling does not).
     const depthTexture = new THREE.DepthTexture(w, h);
     depthTexture.format = THREE.DepthFormat;
     depthTexture.type = THREE.UnsignedIntType;
@@ -150,7 +144,8 @@ export function createWboitRenderer(renderer) {
     accumRT = new THREE.WebGLRenderTarget(w, h, {
       format: THREE.RGBAFormat,
       type: THREE.HalfFloatType,
-      depthBuffer: false,
+      depthTexture,
+      depthBuffer: true,
       stencilBuffer: false,
     });
     accumRT.texture.colorSpace = THREE.NoColorSpace;
@@ -158,7 +153,8 @@ export function createWboitRenderer(renderer) {
     revealRT = new THREE.WebGLRenderTarget(w, h, {
       format: THREE.RGBAFormat,
       type: THREE.HalfFloatType,
-      depthBuffer: false,
+      depthTexture,
+      depthBuffer: true,
       stencilBuffer: false,
     });
     revealRT.texture.colorSpace = THREE.NoColorSpace;
@@ -166,8 +162,6 @@ export function createWboitRenderer(renderer) {
     compositeMat.uniforms.tOpaque.value = opaqueRT.texture;
     compositeMat.uniforms.tAccum.value = accumRT.texture;
     compositeMat.uniforms.tReveal.value = revealRT.texture;
-    wboitOpaqueDepthUniform.value = depthTexture;
-    wboitResolutionUniform.value.set(w, h);
   }
 
   /**
@@ -255,7 +249,7 @@ export function createWboitRenderer(renderer) {
       }
     }
 
-    // --- Opaque ---
+    // --- Opaque (writes color + depth) ---
     for (const mesh of transparent) mesh.visible = false;
     wboitStageUniform.value = 0;
     renderer.toneMapping = THREE.NoToneMapping;
@@ -268,7 +262,7 @@ export function createWboitRenderer(renderer) {
     renderer.clear();
     renderer.render(scene, camera);
 
-    // --- Prepare translucent-only scene ---
+    // --- Translucent-only scene ---
     for (const mesh of transparent) mesh.visible = true;
     /** @type {THREE.Object3D[]} */
     const hiddenOpaque = [];
@@ -282,7 +276,7 @@ export function createWboitRenderer(renderer) {
     }
     scene.background = null;
 
-    // --- Accumulation (additive) ---
+    // --- Accumulation (additive); depth-test vs opaque, do not write depth ---
     wboitStageUniform.value = 1;
     for (const { mat } of blendBackup) {
       applyBlend(mat, {
@@ -294,11 +288,12 @@ export function createWboitRenderer(renderer) {
         blendEquation: THREE.AddEquation,
       });
       mat.depthWrite = false;
-      mat.depthTest = false; // manual depth vs opaque texture
+      mat.depthTest = true;
     }
     renderer.setRenderTarget(accumRT);
     renderer.setClearColor(0x000000, 0);
-    renderer.clear();
+    // Color only — keep opaque depth for testing.
+    renderer.clear(true, false, false);
     renderer.render(scene, camera);
 
     // --- Revealage ∏(1−α) ---
@@ -313,11 +308,11 @@ export function createWboitRenderer(renderer) {
         blendEquation: THREE.AddEquation,
       });
       mat.depthWrite = false;
-      mat.depthTest = false;
+      mat.depthTest = true;
     }
     renderer.setRenderTarget(revealRT);
     renderer.setClearColor(0xffffff, 1);
-    renderer.clear();
+    renderer.clear(true, false, false);
     renderer.render(scene, camera);
 
     // Restore

@@ -163,6 +163,7 @@ export function applyOpacityToMeshes(meshes, opacity) {
         mat.depthWrite = true;
         mat.depthTest = true;
         mat.side = THREE.DoubleSide;
+        mat.blending = THREE.NormalBlending;
         mat.userData.needsWboit = false;
       }
       mat.needsUpdate = true;
