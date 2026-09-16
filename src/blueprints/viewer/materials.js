@@ -155,7 +155,8 @@ export function collectLeafIds(node) {
 
 /**
  * Apply opacity to meshes. opacity 0 → hidden (visible=false) for perf / AR omit.
- * Translucent meshes are composited via depth peeling (see depthPeel.js).
+ * Translucent: standard alpha (`transparent` + depthWrite:false). Optional
+ * depth peels live in depthPeel.js behind USE_DEPTH_PEEL (default off).
  * @param {THREE.Object3D[]} meshes
  * @param {number} opacity 0–1
  */
@@ -175,8 +176,8 @@ export function applyOpacityToMeshes(meshes, opacity) {
       if (o < 1) {
         mat.transparent = true;
         mat.opacity = o;
-        // Depth writes off; peels resolve layering. DoubleSide so thin CAD
-        // shells (podhled, soffit) do not punch holes when faded.
+        // Depth writes off for correct-ish sorted alpha; DoubleSide so thin
+        // CAD shells (podhled, soffit) do not punch holes when faded.
         mat.depthWrite = false;
         mat.depthTest = true;
         mat.side = THREE.DoubleSide;

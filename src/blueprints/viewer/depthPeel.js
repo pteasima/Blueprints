@@ -1,9 +1,14 @@
 /**
  * Multi-pass depth peeling (Everitt-style) for part opacity.
  *
- * Fast path: all visible meshes opaque → single normal render.
- * Peel path: opaque colour + linear eye-space Z, then N peels ordered by
- * hardware depth (LESS) while recording linear view-Z for the next peel.
+ * Default path: standard Three.js transparency (`applyOpacityToMeshes` sets
+ * `transparent` + opacity + `depthWrite:false`). Depth peels are opt-in via
+ * {@link USE_DEPTH_PEEL} — leave false until a verified GPU path works; broken
+ * peels hide translucent meshes in the opaque pass and composite an empty
+ * accum, so faded parts vanish entirely.
+ *
+ * When peels are enabled: opaque colour + linear eye-space Z, then N peels
+ * ordered by hardware depth (LESS) while recording linear view-Z.
  *
  * Do **not** sample the logarithmic DepthTexture against gl_FragCoord.z —
  * that comparison is invalid with logarithmicDepthBuffer and discards every
@@ -13,6 +18,13 @@
  * Literal material opacity — no crush, no SOLID_ALPHA&lt;1 stand-in.
  */
 import * as THREE from "three";
+
+/**
+ * Opt-in Everitt peels. Keep false: sorted alpha from applyOpacityToMeshes
+ * is visible; peels currently risk vanishing faded parts when view-Z / stage
+ * inject fails.
+ */
+export const USE_DEPTH_PEEL = false;
 
 /** Max transparent layers per pixel. */
 export const MAX_PEELS = 12;
@@ -486,17 +498,38 @@ export function createDepthPeelRenderer(renderer) {
   }
 
   /**
+   * Sample R (or A) from a float/half RT at the center pixel.
+   * @param {THREE.WebGLRenderTarget} rt
+   * @param {"r"|"a"} channel
+   * @returns {number}
+   */
+  function sampleCenter(rt, channel = "r") {
+    const buf = new Float32Array(4);
+    const cx = Math.max(0, Math.floor(rt.width / 2));
+    const cy = Math.max(0, Math.floor(rt.height / 2));
+    try {
+      renderer.readRenderTargetPixels(rt, cx, cy, 1, 1, buf);
+    } catch {
+      return Number.NaN;
+    }
+    return channel === "a" ? buf[3] : buf[0];
+  }
+
+  /**
    * @param {THREE.Scene} scene
    * @param {THREE.Camera} camera
    * @param {THREE.Object3D | null} root
    * @param {boolean | (() => boolean)} shouldPeel
-   * @returns {boolean}
+   * @returns {boolean} true if peel compositing was used this frame
    */
   function render(scene, camera, root, shouldPeel) {
-    const usePeel =
-      typeof shouldPeel === "function" ? shouldPeel() : Boolean(shouldPeel);
+    const wantPeel =
+      USE_DEPTH_PEEL &&
+      (typeof shouldPeel === "function" ? shouldPeel() : Boolean(shouldPeel));
 
-    if (!usePeel) {
+    // Safe default: materials already have transparent + opacity + depthWrite
+    // off from applyOpacityToMeshes — one standard sorted-alpha render.
+    if (!wantPeel) {
       peelStageUniform.value = 0;
       renderer.setRenderTarget(null);
       renderer.render(scene, camera);
@@ -590,6 +623,40 @@ export function createDepthPeelRenderer(renderer) {
       child.visible = false;
     }
 
+    /**
+     * Restore mesh/material/scene state and draw with standard alpha so
+     * faded parts never stay hidden after a failed peel attempt.
+     */
+    function abortToStandard() {
+      for (const { mat, snap } of matBackup) {
+        applyBlend(mat, /** @type {any} */ (snap));
+        mat.blendEquationAlpha = snap.blendEquationAlpha;
+        mat.depthWrite = snap.depthWrite;
+        mat.depthTest = snap.depthTest;
+        mat.transparent = snap.transparent;
+        mat.opacity = snap.opacity;
+        mat.colorWrite = snap.colorWrite !== false;
+        mat.side = snap.side;
+        mat.forceSinglePass = snap.forceSinglePass;
+        mat.needsUpdate = true;
+      }
+      for (const { mesh, visible } of visBackup) {
+        mesh.visible = visible;
+      }
+      for (const { obj, visible } of extraBackup) {
+        obj.visible = visible;
+      }
+      peelStageUniform.value = 0;
+      scene.background = prevBg;
+      scene.overrideMaterial = null;
+      renderer.toneMapping = prevTone;
+      renderer.setRenderTarget(null);
+      renderer.autoClear = true;
+      renderer.render(scene, camera);
+      renderer.autoClear = prevAutoClear;
+      return false;
+    }
+
     // --- Opaque colour ---
     setMeshesVisible(transparent, false);
     setMeshesVisible(opaque, true);
@@ -612,6 +679,20 @@ export function createDepthPeelRenderer(renderer) {
     scene.overrideMaterial = prevOverride;
     peelUniforms.tOpaqueViewZ.value = opaqueViewZRT.texture;
 
+    // Fail-safe: after clear-to-FAR, a corner pixel must still read ~FAR.
+    // ~0 means float clear/RT failed → peel shader would discard all frags.
+    {
+      const corner = new Float32Array(4);
+      try {
+        renderer.readRenderTargetPixels(opaqueViewZRT, 2, 2, 1, 1, corner);
+      } catch {
+        corner[0] = 0;
+      }
+      if (!Number.isFinite(corner[0]) || corner[0] < VIEW_Z_FAR * 0.5) {
+        return abortToStandard();
+      }
+    }
+
     // --- Accum empty ---
     renderer.setRenderTarget(accumRT);
     renderer.setClearColor(0x000000, 0);
@@ -622,6 +703,8 @@ export function createDepthPeelRenderer(renderer) {
 
     setMeshesVisible(opaque, false);
     setMeshesVisible(transparent, true);
+
+    let anyLayerWritten = false;
 
     for (let peel = 0; peel < MAX_PEELS; peel++) {
       peelUniforms.tPrevViewZ.value = prevViewZRT.texture;
@@ -676,8 +759,19 @@ export function createDepthPeelRenderer(renderer) {
       renderer.clear();
       renderer.render(scene, camera);
 
+      const layerA = sampleCenter(layerRT, "a");
+      const peelZ = sampleCenter(peelViewZRT, "r");
+      if (
+        peel === 0 &&
+        (!Number.isFinite(layerA) || layerA < 1e-4) &&
+        (!Number.isFinite(peelZ) || peelZ > VIEW_Z_FAR * 0.5)
+      ) {
+        // First peel wrote neither colour nor a near view-Z → peels failed.
+        return abortToStandard();
+      }
+      if (Number.isFinite(layerA) && layerA > 1e-4) anyLayerWritten = true;
+
       blitMat.uniforms.tSrc.value = layerRT.texture;
-      // Ensure under-blend fragment shader (in case it was swapped).
       renderer.setRenderTarget(accumRT);
       renderer.autoClear = false;
       renderer.render(blitScene, compositeCamera);
@@ -685,6 +779,10 @@ export function createDepthPeelRenderer(renderer) {
 
       // Next peel’s “prev” is this peel’s view-Z colour.
       copyColorRT(peelViewZRT, prevViewZRT);
+    }
+
+    if (!anyLayerWritten) {
+      return abortToStandard();
     }
 
     for (const { mat, snap } of matBackup) {
@@ -732,5 +830,5 @@ export function createDepthPeelRenderer(renderer) {
     copyQuad.geometry.dispose();
   }
 
-  return { render, dispose, MAX_PEELS, VIEW_Z_EPSILON };
+  return { render, dispose, MAX_PEELS, VIEW_Z_EPSILON, USE_DEPTH_PEEL };
 }

@@ -10,7 +10,7 @@ import {
   collectLeafIds,
   resolvePartOutline,
 } from "./materials.js";
-import { MAX_PEELS, VIEW_Z_EPSILON } from "./depthPeel.js";
+import { MAX_PEELS, USE_DEPTH_PEEL, VIEW_Z_EPSILON } from "./depthPeel.js";
 
 // --- Outline ---
 const outline = resolvePartOutline([
@@ -71,5 +71,6 @@ assert.equal(mat.userData.needsDepthPeel, false);
 
 assert.ok(MAX_PEELS >= 8);
 assert.ok(VIEW_Z_EPSILON > 0 && VIEW_Z_EPSILON < 0.01);
+assert.equal(USE_DEPTH_PEEL, false, "peels default off until verified");
 
 console.log("partOpacity.test.mjs: ok");
