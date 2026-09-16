@@ -130,7 +130,9 @@ export function collectLeafIds(node) {
 
 /**
  * Apply opacity to meshes. opacity 0 → hidden (visible=false) for perf / AR omit.
- * Translucent meshes are rendered via weighted blended OIT (see wboit.js).
+ * Translucent meshes keep depthWrite so nearer surfaces still occlude (no
+ * punch-through). Tradeoff: you will not see a faded layer *behind* another
+ * faded layer until the front one is hidden — true OIT was too unstable here.
  * @param {THREE.Object3D[]} meshes
  * @param {number} opacity 0–1
  */
@@ -150,13 +152,10 @@ export function applyOpacityToMeshes(meshes, opacity) {
       if (o < 1) {
         mat.transparent = true;
         mat.opacity = o;
-        // Depth writes off; OIT composite resolves layering. FrontSide avoids
-        // double-counting backfaces in the accumulation buffer.
-        mat.depthWrite = false;
+        mat.depthWrite = true;
         mat.depthTest = true;
-        mat.side = THREE.FrontSide;
-        // Lazy import-free patch: caller also patches after material mode.
-        mat.userData.needsWboit = true;
+        mat.side = THREE.DoubleSide;
+        mat.blending = THREE.NormalBlending;
       } else {
         mat.transparent = false;
         mat.opacity = 1;
@@ -164,7 +163,6 @@ export function applyOpacityToMeshes(meshes, opacity) {
         mat.depthTest = true;
         mat.side = THREE.DoubleSide;
         mat.blending = THREE.NormalBlending;
-        mat.userData.needsWboit = false;
       }
       mat.needsUpdate = true;
     }

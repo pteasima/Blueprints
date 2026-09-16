@@ -20,7 +20,6 @@ import {
   resolvePartOutline,
   saveMaterialMode,
 } from "./materials.js";
-import { createWboitRenderer, patchMaterialForWboit } from "./wboit.js";
 
 /**
  * @param {HTMLCanvasElement} canvas
@@ -72,8 +71,6 @@ export function mountViewer(canvas, glbBuffer) {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
   renderer.localClippingEnabled = true;
-
-  const wboit = createWboitRenderer(renderer);
 
   scene = new THREE.Scene();
   scene.background = new THREE.Color(sceneBg);
@@ -248,13 +245,6 @@ export function mountViewer(canvas, glbBuffer) {
     partOpacity.set(name, o);
     if (o > 0) partLastNonZero.set(name, o);
     applyOpacityToMeshes(parts.get(name) || [], o);
-    for (const mesh of parts.get(name) || []) {
-      if (!mesh?.isMesh) continue;
-      const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-      for (const mat of list) {
-        if (mat?.userData?.needsWboit) patchMaterialForWboit(mat);
-      }
-    }
     updateBox();
     applyClipping();
     if (!opts.skipUi) syncPartOpacityUi();
@@ -272,13 +262,6 @@ export function mountViewer(canvas, glbBuffer) {
       partOpacity.set(id, o);
       if (o > 0) partLastNonZero.set(id, o);
       applyOpacityToMeshes(parts.get(id) || [], o);
-      for (const mesh of parts.get(id) || []) {
-        if (!mesh?.isMesh) continue;
-        const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-        for (const mat of list) {
-          if (mat?.userData?.needsWboit) patchMaterialForWboit(mat);
-        }
-      }
     }
     updateBox();
     applyClipping();
@@ -346,16 +329,6 @@ export function mountViewer(canvas, glbBuffer) {
       clippingPlanes: lockedClipPlanes(),
       opacityByLabel: partOpacity,
     });
-    // Ensure translucent mats have WBOIT shader hooks after material rebuild.
-    for (const [, meshes] of parts) {
-      for (const mesh of meshes) {
-        if (!mesh?.isMesh) continue;
-        const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-        for (const mat of list) {
-          if (mat?.userData?.needsWboit) patchMaterialForWboit(mat);
-        }
-      }
-    }
     // Solid uses unlit MeshBasicMaterial — skip ACES so chroma stays punchy.
     if (materialMode === MODE_REALISTIC) {
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -1129,22 +1102,6 @@ export function mountViewer(canvas, glbBuffer) {
   };
   window.BlueprintsViewer = api;
 
-  let prevUsedWboit = false;
-
-  function healOpacitiesFromState() {
-    for (const [name, meshes] of parts) {
-      const o = partOpacity.get(name) ?? 1;
-      applyOpacityToMeshes(meshes, o);
-      for (const mesh of meshes) {
-        if (!mesh?.isMesh) continue;
-        const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-        for (const mat of list) {
-          if (mat?.userData?.needsWboit) patchMaterialForWboit(mat);
-        }
-      }
-    }
-  }
-
   function tick() {
     const now = performance.now();
     stepFrameAnim(now);
@@ -1152,11 +1109,7 @@ export function mountViewer(canvas, glbBuffer) {
     // Orbit damping keeps the camera moving briefly after release — refresh
     // clip planes so depth precision tracks the current view distance.
     if (root) updateCameraClipPlanes();
-    const usedWboit = wboit.render(scene, camera, root);
-    // Leaving WBOIT: re-apply slider state so a mid-frame restore cannot leave
-    // meshes stuck at the temporary SOLID_ALPHA translucent settings.
-    if (prevUsedWboit && !usedWboit) healOpacitiesFromState();
-    prevUsedWboit = usedWboit;
+    renderer.render(scene, camera);
     requestAnimationFrame(tick);
   }
   tick();
