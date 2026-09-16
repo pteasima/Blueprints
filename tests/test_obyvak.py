@@ -83,25 +83,28 @@ def test_3d_matches_section_and_elevation_masses():
     ]
     assert gable_eps == []
 
-    pouzdra = sorted(_labeled(shape, "pouzdro"), key=lambda s: (s.bounding_box().min.Y, s.bounding_box().min.X))
-    assert len(pouzdra) == len(p.pocket_doors)
-    kitchen = [part for part in pouzdra if part.bounding_box().max.Y < p.room_length / 2]
-    living = [part for part in pouzdra if part.bounding_box().min.Y > p.room_length / 2]
-    assert len(kitchen) == 2
-    assert len(living) == 1
-    for (gable, x0, width), part in zip(
-        sorted(p.pocket_doors, key=lambda d: (0 if d[0] == "kitchen" else 1, d[1])),
-        pouzdra,
-        strict=True,
-    ):
-        bb = part.bounding_box()
-        assert abs(bb.min.X - (x0 + FACE_GAP)) < 1e-6
-        assert abs(bb.size.X - (width - 2 * FACE_GAP)) < 1e-6
-        assert abs(bb.max.Z - (p.pocket_door_h - FACE_GAP)) <= 1.0
-        if gable == "kitchen":
-            assert bb.max.Y <= FACE_GAP + 1.0
-        else:
-            assert bb.min.Y >= p.room_length - FACE_GAP - 1.0
+    pouzdra = sorted(_labeled(shape, "pouzdro"), key=lambda s: s.bounding_box().min.Y)
+    assert len(pouzdra) == 2
+    kitchen_p, living_p = pouzdra
+    kbb, lbb = kitchen_p.bounding_box(), living_p.bounding_box()
+    assert abs(kbb.min.Y - FACE_GAP) < 1e-6
+    assert abs(kbb.size.Y - (p.pouzdro_d - 2 * FACE_GAP)) < 1e-6
+    assert abs(kbb.max.Z - (p.pocket_door_h - FACE_GAP)) <= 1.0
+    assert abs(lbb.max.Y - (p.room_length - FACE_GAP)) < 1e-6
+    assert abs(lbb.size.Y - (p.pouzdro_d - 2 * FACE_GAP)) < 1e-6
+    assert abs(lbb.max.Z - (p.pocket_door_h - FACE_GAP)) <= 1.0
+
+    # Door openings cut through both gable masonry shells.
+    kitchen_doors = [d for d in p.pocket_doors if d[0] == "kitchen"]
+    living_doors = [d for d in p.pocket_doors if d[0] == "living"]
+    assert len(kitchen_doors) == 2
+    assert len(living_doors) == 1
+    gable_walls = [
+        c
+        for c in _labeled(shape, "zdivo")
+        if c.bounding_box().size.X > p.room_width * 0.5
+    ]
+    assert len(gable_walls) == 2
 
     bb = shape.bounding_box()
     assert bb.min.X < 0

@@ -292,22 +292,21 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     parts[parts.index(vata)] = vata_cut
 
     pouzdro_h = p.pocket_door_h - gap
-    for gable, x0, width in p.pocket_doors:
-        if gable == "kitchen":
-            y_pouch = -p.wall_plaster - p.pouzdro_d + gap
-        else:
-            y_pouch = p.room_length + gap
-        parts.append(
-            _box(
-                x0 + gap,
-                y_pouch,
-                gap,
-                width - 2 * gap,
-                p.pouzdro_d - gap,
-                pouzdro_h,
-                "pouzdro",
-            )
+    # Full-width pocket-door mass in front of each gable, under the předstěna kastlík.
+    parts.append(
+        _box(gap, gap, gap, p.room_width - 2 * gap, p.pouzdro_d - 2 * gap, pouzdro_h, "pouzdro")
+    )
+    parts.append(
+        _box(
+            gap,
+            p.room_length - p.pouzdro_d + gap,
+            gap,
+            p.room_width - 2 * gap,
+            p.pouzdro_d - 2 * gap,
+            pouzdro_h,
+            "pouzdro",
         )
+    )
     return parts
 
 

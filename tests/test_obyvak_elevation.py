@@ -69,9 +69,19 @@ def test_elevation_geometry_is_horizontal_not_aframe():
         assert abs(bb.max.Z - meta["derived"]["z_soffit"]) < 1e-6
 
     pouzdra = _faces(shape, "pouzdro")
-    assert len(pouzdra) == 1
-    assert abs(pouzdra[0].bounding_box().min.X - p.room_length) < 1e-6
-    assert abs(pouzdra[0].bounding_box().max.Z - p.pocket_door_h) < 1e-6
+    assert len(pouzdra) == 2
+    boxes = sorted((c.bounding_box().min.X, c.bounding_box().max.X) for c in pouzdra)
+    assert abs(boxes[0][0] - 0.0) < 1e-6
+    assert abs(boxes[0][1] - p.pouzdro_d) < 1e-6
+    assert abs(boxes[1][0] - (p.room_length - p.pouzdro_d)) < 1e-6
+    assert abs(boxes[1][1] - p.room_length) < 1e-6
+    for face in pouzdra:
+        bb = face.bounding_box()
+        assert abs(bb.min.Z - 0.0) < 1e-6
+        assert abs(bb.max.Z - p.pocket_door_h) < 1e-6
+        # Under the SDK kastlík, not outside the masonry.
+        assert bb.min.X >= -1e-6
+        assert bb.max.X <= p.room_length + 1e-6
 
     soffit = _faces(shape, "podhled")
     assert len(soffit) == 1

@@ -2,8 +2,8 @@
 
 X v tomto výkrese = světlá délka kuchyně↔obývák (v 3D to bude Y).
 Z up. Podhled je vodorovný pod hřebenem — žádný A-rám vlevo/vpravo.
-Předstěny 190 (KK) a 450 (obývák) od Z=2450 k podhledu. Posuvné dveře: spíž + chodba
-na Y=0 štítu (mimo řez); zádveří na Y=L — pouzdro viditelné zde.
+Předstěny 190 (KK) a 450 (obývák) od Z=2450 k podhledu; pouzdra posuvných dveří
+před zdí pod kastlíky (Z=0→2450) na obou štítech.
 
     python -m blueprints.export obyvak_elevation
 
@@ -48,8 +48,9 @@ def build(params: ObyvakParams | None = None):
         xz_rect(span + p.wall_plaster, -p.floor_t, p.wall_mason, h_gable + p.floor_t, "zdivo")
     )
 
-    if any(g == "living" for g, _, _ in p.pocket_doors):
-        parts.append(xz_rect(span, 0.0, p.pouzdro_d, p.pocket_door_h, "pouzdro"))
+    # Pouzdra before the masonry face, under the SDK kastlíky (both gables).
+    parts.append(xz_rect(0.0, 0.0, p.pouzdro_d, p.pocket_door_h, "pouzdro"))
+    parts.append(xz_rect(span - p.pouzdro_d, 0.0, p.pouzdro_d, p.pocket_door_h, "pouzdro"))
 
     parts.append(
         xz_rect(
