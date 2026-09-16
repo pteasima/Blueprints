@@ -14,8 +14,14 @@
 </head>
 <body>
 <nav id="top-chrome" class="top-chrome" aria-label="Viewer">
-  <a id="home" class="chrome-btn" href="../" aria-label="Back to hub">←</a>
-  <button type="button" id="ar" class="chrome-btn" hidden>AR</button>
+  <div class="top-chrome-start">
+    <a id="home" class="chrome-btn" href="../" aria-label="Back to hub">←</a>
+    <button type="button" id="ar" class="chrome-btn" hidden>AR</button>
+    <button type="button" id="measure" class="chrome-btn" hidden aria-pressed="false">Measure</button>
+  </div>
+  <div class="top-chrome-end">
+    <button type="button" id="sheet-toggle" class="chrome-btn sheet-toggle" aria-expanded="true" aria-label="Hide controls" title="Hide controls">›</button>
+  </div>
 </nav>
 <aside id="sheet" class="sheet" data-detent="peek">
   <button type="button" class="sheet-handle" id="sheet-handle" aria-label="Drag controls sheet"></button>
@@ -40,7 +46,7 @@
 </aside>
 <pre id="err"></pre>
 <canvas id="c"></canvas>
-<script src="viewer.iife.js?v=c994d69d08"></script>
+<script src="viewer.iife.js?v=186187be6f"></script>
 <script>
 (function () {
   const errEl = document.getElementById("err");

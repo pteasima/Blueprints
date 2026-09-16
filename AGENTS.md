@@ -37,6 +37,8 @@ Example: `python -m blueprints.export hello_world`
 
 Exports land in `exports/<model>/` (`model.png`, plus STEP/STL/USDZ/GLB/HTML/SVG/DXF). **PNG is required** in the reply. The HTML viewer is a self-contained offline WebGL page (embedded GLB + custom Three.js shell) with part toggles and camera presets; USDZ remains for Quick Look/AR.
 
+The viewer **Measure** tool (top bar, next to AR) is **experimental** and will be developed further — do not treat its current UX/snap behavior as a stable contract when changing the viewer. See `src/blueprints/viewer/README.md`.
+
 Chat on iOS **and** web only *renders* `<img>` and `<video>`. Copy PNG (and optional orbit video) to `/opt/cursor/artifacts/` and embed with:
 
 ```html
