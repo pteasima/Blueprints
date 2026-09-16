@@ -1,14 +1,11 @@
 /**
  * Multi-pass depth peeling (Everitt-style) for part opacity.
  *
- * Default path: standard Three.js transparency (`applyOpacityToMeshes` sets
- * `transparent` + opacity + `depthWrite:false`). Depth peels are opt-in via
- * {@link USE_DEPTH_PEEL} — leave false until a verified GPU path works; broken
- * peels hide translucent meshes in the opaque pass and composite an empty
- * accum, so faded parts vanish entirely.
- *
- * When peels are enabled: opaque colour + linear eye-space Z, then N peels
- * ordered by hardware depth (LESS) while recording linear view-Z.
+ * Fade path when {@link USE_DEPTH_PEEL} is true: opaque colour + float32
+ * linear eye-space Z, then N peels ordered by hardware depth (LESS) while
+ * recording linear view-Z into float colour targets. On any fail-safe abort,
+ * restore visibility and fall back to one full `renderer.render` with standard
+ * alpha so faded parts never vanish for a frame.
  *
  * Do **not** sample the logarithmic DepthTexture against gl_FragCoord.z —
  * that comparison is invalid with logarithmicDepthBuffer and discards every
@@ -20,11 +17,10 @@
 import * as THREE from "three";
 
 /**
- * Opt-in Everitt peels. Keep false: sorted alpha from applyOpacityToMeshes
- * is visible; peels currently risk vanishing faded parts when view-Z / stage
- * inject fails.
+ * Everitt peels for CAD shell stacking. Sorted alpha remains the emergency
+ * fallback via {@link createDepthPeelRenderer}'s abortToStandard.
  */
-export const USE_DEPTH_PEEL = false;
+export const USE_DEPTH_PEEL = true;
 
 /** Max transparent layers per pixel. */
 export const MAX_PEELS = 12;
@@ -52,13 +48,32 @@ const peelUniforms = {
 /**
  * @param {THREE.Material} mat
  */
+/**
+ * Push shared peel uniforms into a compiled material program for this draw.
+ * Three may keep stale texture/stage values unless we refresh every pass.
+ * @param {THREE.Material} mat
+ */
+function syncPeelUniforms(mat) {
+  const shader = mat?.userData?.shader;
+  if (!shader?.uniforms) return;
+  const u = shader.uniforms;
+  if (u.uPeelStage) u.uPeelStage.value = peelStageUniform.value;
+  if (u.tPrevViewZ) u.tPrevViewZ.value = peelUniforms.tPrevViewZ.value;
+  if (u.tPeelViewZ) u.tPeelViewZ.value = peelUniforms.tPeelViewZ.value;
+  if (u.tOpaqueViewZ) u.tOpaqueViewZ.value = peelUniforms.tOpaqueViewZ.value;
+  if (u.uViewZEps) u.uViewZEps.value = peelUniforms.uViewZEps.value;
+  if (u.uResolution) {
+    u.uResolution.value.copy(peelUniforms.uResolution.value);
+  }
+}
+
 export function patchMaterialForDepthPeel(mat) {
   if (!mat || mat.userData.depthPeelPatched) return;
   mat.userData.depthPeelPatched = true;
 
   const prevCacheKey = mat.customProgramCacheKey?.bind(mat);
   mat.customProgramCacheKey = () =>
-    `${prevCacheKey ? prevCacheKey() : mat.type}|depthPeel3`;
+    `${prevCacheKey ? prevCacheKey() : mat.type}|depthPeel4`;
 
   const prevCompile = mat.onBeforeCompile?.bind(mat);
   mat.onBeforeCompile = (shader, renderer) => {
@@ -69,6 +84,8 @@ export function patchMaterialForDepthPeel(mat) {
     shader.uniforms.tOpaqueViewZ = peelUniforms.tOpaqueViewZ;
     shader.uniforms.uViewZEps = peelUniforms.uViewZEps;
     shader.uniforms.uResolution = peelUniforms.uResolution;
+    // Keep a live handle so onBeforeRender can refresh .value each peel pass.
+    mat.userData.shader = shader;
 
     shader.vertexShader = shader.vertexShader.replace(
       "#include <common>",
@@ -100,8 +117,9 @@ varying float vPeelViewZ;`,
 		float opaqueZ = texture2D(tOpaqueViewZ, peelUv).r;
 		float prevZ = texture2D(tPrevViewZ, peelUv).r;
 		float eps = max(uViewZEps, 1e-3 * max(vPeelViewZ, 1.0));
-		// Behind an opaque solid (linear eye-space Z).
-		if (vPeelViewZ >= opaqueZ - eps) discard;
+		// Behind an opaque solid (linear eye-space Z). Skip when opaqueZ is
+		// ~0 (dead clear / failed float RT) so we do not discard every frag.
+		if (opaqueZ > 1e-4 && vPeelViewZ >= opaqueZ - eps) discard;
 		// Already peeled (at or in front of previous layer).
 		if (vPeelViewZ <= prevZ + eps) discard;
 		if (uPeelStage < 1.5) {
@@ -586,6 +604,37 @@ export function createDepthPeelRenderer(renderer) {
       });
     }
 
+    /** @type {Map<THREE.Mesh, Function | null | undefined>} */
+    const onBeforeRenderBackup = new Map();
+    for (const mesh of transparent) {
+      onBeforeRenderBackup.set(mesh, mesh.onBeforeRender);
+      mesh.onBeforeRender = function peelUniformSync(
+        rendererArg,
+        sceneArg,
+        cameraArg,
+        geometry,
+        material,
+        group,
+      ) {
+        const mats = Array.isArray(material) ? material : [material];
+        for (const m of mats) {
+          if (m) syncPeelUniforms(m);
+        }
+        const prev = onBeforeRenderBackup.get(mesh);
+        if (typeof prev === "function") {
+          prev.call(
+            this,
+            rendererArg,
+            sceneArg,
+            cameraArg,
+            geometry,
+            material,
+            group,
+          );
+        }
+      };
+    }
+
     let clipPlanes = null;
     for (const mat of transMats) {
       if (mat.clippingPlanes?.length) {
@@ -623,6 +672,12 @@ export function createDepthPeelRenderer(renderer) {
       child.visible = false;
     }
 
+    function restoreOnBeforeRender() {
+      for (const [mesh, prev] of onBeforeRenderBackup) {
+        mesh.onBeforeRender = prev;
+      }
+    }
+
     /**
      * Restore mesh/material/scene state and draw with standard alpha so
      * faded parts never stay hidden after a failed peel attempt.
@@ -646,6 +701,7 @@ export function createDepthPeelRenderer(renderer) {
       for (const { obj, visible } of extraBackup) {
         obj.visible = visible;
       }
+      restoreOnBeforeRender();
       peelStageUniform.value = 0;
       scene.background = prevBg;
       scene.overrideMaterial = null;
@@ -670,17 +726,10 @@ export function createDepthPeelRenderer(renderer) {
     renderer.setClearColor(0x000000, 1);
     // Clear colour via draw (float far), then depth.
     clearViewZTarget(opaqueViewZRT, VIEW_Z_FAR, { clearDepth: true });
-    const prevOverride = scene.overrideMaterial;
-    scene.overrideMaterial = opaqueViewZMat;
-    renderer.setRenderTarget(opaqueViewZRT);
-    renderer.autoClear = false;
-    renderer.render(scene, camera);
-    renderer.autoClear = true;
-    scene.overrideMaterial = prevOverride;
-    peelUniforms.tOpaqueViewZ.value = opaqueViewZRT.texture;
 
-    // Fail-safe: after clear-to-FAR, a corner pixel must still read ~FAR.
-    // ~0 means float clear/RT failed → peel shader would discard all frags.
+    // Fail-safe: after clear-to-FAR (before opaque draw), a corner pixel must
+    // still read ~FAR. Sampling after geometry can false-abort when a solid
+    // covers the corner. ~0 means float clear/RT failed → peels would discard.
     {
       const corner = new Float32Array(4);
       try {
@@ -692,6 +741,15 @@ export function createDepthPeelRenderer(renderer) {
         return abortToStandard();
       }
     }
+
+    const prevOverride = scene.overrideMaterial;
+    scene.overrideMaterial = opaqueViewZMat;
+    renderer.setRenderTarget(opaqueViewZRT);
+    renderer.autoClear = false;
+    renderer.render(scene, camera);
+    renderer.autoClear = true;
+    scene.overrideMaterial = prevOverride;
+    peelUniforms.tOpaqueViewZ.value = opaqueViewZRT.texture;
 
     // --- Accum empty ---
     renderer.setRenderTarget(accumRT);
@@ -725,6 +783,7 @@ export function createDepthPeelRenderer(renderer) {
           blendDstAlpha: THREE.ZeroFactor,
           blendEquation: THREE.AddEquation,
         });
+        syncPeelUniforms(mat);
       }
       renderer.setRenderTarget(peelViewZRT);
       renderer.setClearColor(0x000000, 1);
@@ -753,6 +812,7 @@ export function createDepthPeelRenderer(renderer) {
           blendDstAlpha: THREE.OneMinusSrcAlphaFactor,
           blendEquation: THREE.AddEquation,
         });
+        syncPeelUniforms(mat);
       }
       renderer.setRenderTarget(layerRT);
       renderer.setClearColor(0x000000, 0);
@@ -803,6 +863,7 @@ export function createDepthPeelRenderer(renderer) {
     for (const { obj, visible } of extraBackup) {
       obj.visible = visible;
     }
+    restoreOnBeforeRender();
 
     peelStageUniform.value = 0;
     scene.background = prevBg;
