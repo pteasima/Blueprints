@@ -1187,7 +1187,7 @@ export function mountViewer(canvas, glbBuffer) {
     if (root) updateCameraClipPlanes();
     measureTool?.update();
 
-    // Fast while pointer-down or camera still damping; high after ~400ms still.
+    // Fast while pointer-down or camera still damping; high after ~120ms still.
     // Settled path matches main-branch peels (full-res, 12 layers, no early-out).
     if (!peelCamInited) {
       peelCamPos.copy(camera.position);
