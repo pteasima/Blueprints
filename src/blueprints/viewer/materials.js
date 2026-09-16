@@ -130,9 +130,7 @@ export function collectLeafIds(node) {
 
 /**
  * Apply opacity to meshes. opacity 0 → hidden (visible=false) for perf / AR omit.
- * Translucent meshes keep depthWrite so nearer surfaces still occlude (no
- * punch-through). Tradeoff: you will not see a faded layer *behind* another
- * faded layer until the front one is hidden — true OIT was too unstable here.
+ * Translucent meshes are rendered via weighted blended OIT (see wboit.js).
  * @param {THREE.Object3D[]} meshes
  * @param {number} opacity 0–1
  */
@@ -152,10 +150,12 @@ export function applyOpacityToMeshes(meshes, opacity) {
       if (o < 1) {
         mat.transparent = true;
         mat.opacity = o;
-        mat.depthWrite = true;
+        // Depth writes off; WBOIT composite resolves layering. DoubleSide so
+        // thin CAD shells (podhled, soffit) do not punch holes when faded.
+        mat.depthWrite = false;
         mat.depthTest = true;
         mat.side = THREE.DoubleSide;
-        mat.blending = THREE.NormalBlending;
+        mat.userData.needsWboit = true;
       } else {
         mat.transparent = false;
         mat.opacity = 1;
@@ -163,6 +163,7 @@ export function applyOpacityToMeshes(meshes, opacity) {
         mat.depthTest = true;
         mat.side = THREE.DoubleSide;
         mat.blending = THREE.NormalBlending;
+        mat.userData.needsWboit = false;
       }
       mat.needsUpdate = true;
     }
