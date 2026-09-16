@@ -77,7 +77,7 @@ One-time enable:
 
 1. https://github.com/pteasima/Blueprints/settings/pages → Source = **GitHub Actions** → Save.
 2. **Settings → Actions → General → Workflow permissions** → **Read and write** (so `pages-content` can update the `pages-site` branch).
-3. **Settings → Environments → github-pages → Deployment branches** → allow `pages-site` (or All branches). Production deploy runs from that content branch only.
+3. **Settings → Environments → github-pages → Deployment branches** → **All branches** (PR preview deploys run from `pull_request` jobs; a `main`-only allowlist blocks them).
 
 Cloud agent tokens cannot change those settings (API 403). Override the printed production URL with `BLUEPRINTS_PAGES_URL` if needed. Skip site file updates with `BLUEPRINTS_SKIP_PREVIEW_SITE=1`.
 

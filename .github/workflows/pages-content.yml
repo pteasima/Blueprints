@@ -1,9 +1,10 @@
-# Update the pages-site content branch:
+# Update the pages-site content branch and deploy GitHub Pages:
 # - push to main → site root (keeps pr-preview/)
 # - PR open/sync → pr-preview/pr-<N>/
 # - PR closed (merge or close) → delete pr-preview/pr-<N>/
 #
-# Actual GitHub Pages publish is pages.yml on push to pages-site.
+# Deploy runs in this workflow (GITHUB_TOKEN cannot workflow_dispatch
+# pages.yml from pull_request events).
 name: pages-content
 
 on:
@@ -37,6 +38,8 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: pages-site
@@ -113,12 +116,21 @@ jobs:
       - name: Push pages-site
         run: bash scripts/push_pages_site.sh pages-site "${{ steps.merge.outputs.message }}"
 
-      - name: Trigger Pages deploy
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Stage deploy tree
         run: |
-          # Pushing with GITHUB_TOKEN does not start other workflows; dispatch explicitly.
-          gh workflow run pages.yml --ref pages-site
+          set -euo pipefail
+          rm -rf _deploy
+          mkdir _deploy
+          # Exclude .git from the Pages artifact.
+          tar -C pages-site --exclude .git -cf - . | tar -C _deploy -xf -
+
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _deploy
 
       - name: Comment on PR
         if: steps.merge.outputs.pr != ''
@@ -130,3 +142,13 @@ jobs:
           bash scripts/comment_pr_preview.sh \
             "${{ steps.merge.outputs.pr }}" \
             "$COMMENT_ACTION"
+
+  deploy:
+    needs: update
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
