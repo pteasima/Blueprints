@@ -125,7 +125,19 @@ canvas {
 
 .chrome-btn:active { transform: scale(0.96); }
 .chrome-btn:disabled { opacity: 0.55; cursor: wait; }
-#ar:not([hidden]) { min-width: auto; }
+.chrome-btn.is-active {
+  background: var(--glass-strong);
+  box-shadow: inset 0 0 0 1.5px var(--accent), var(--shadow);
+  color: var(--accent);
+}
+.chrome-btn.is-live {
+  min-width: 5.5rem;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  letter-spacing: -0.02em;
+}
+#ar:not([hidden]),
+#measure:not([hidden]) { min-width: auto; }
 
 /* After .chrome-btn so display:none wins on narrow viewports */
 .sheet-toggle { display: none; }
