@@ -6,6 +6,10 @@
  *
  * Touch: tap alone does nothing; drag places a cursor slightly above the
  * finger; lift keeps it; a later tap anywhere confirms without re-picking.
+ *
+ * Second-point placement stays on mesh snaps (line always connects endpoints).
+ * Across a rectangular face, parallel-edge width snap drops a perpendicular
+ * foot onto the opposite edge and shows a right-angle mark.
  */
 import * as THREE from "three";
 
@@ -13,12 +17,16 @@ const DRAG_PX = 8;
 const TOUCH_OFFSET_PX = 56;
 const VERTEX_PX = 14;
 const EDGE_PX = 11;
-const AXIS_ALIGN_DOT = 0.82;
 const AXIS_MIN_MM = 0.5;
 const CLIP_EPS = 1e-4;
 const LABEL_PX = 128;
 const LABEL_HEIGHT_WORLD_FRAC = 0.028;
 const MARKER_PX = 5;
+const PARALLEL_DOT = 0.995;
+const COPLANAR_DOT = 0.999;
+const PERP_ACCEPT_PX = 18;
+const RIGHT_ANGLE_PX = 22;
+const EDGE_ON_TOL_PX = 14;
 
 const _ndc = new THREE.Vector2();
 const _raycaster = new THREE.Raycaster();
@@ -31,15 +39,9 @@ const _screenA = new THREE.Vector3();
 const _screenB = new THREE.Vector3();
 const _proj = new THREE.Vector3();
 const _delta = new THREE.Vector3();
-const _axis = new THREE.Vector3();
 const _look = new THREE.Vector3();
-const _normA = new THREE.Vector3();
-
-const WORLD_AXES = [
-  new THREE.Vector3(1, 0, 0),
-  new THREE.Vector3(0, 1, 0),
-  new THREE.Vector3(0, 0, 1),
-];
+const _n = new THREE.Vector3();
+const _plane = new THREE.Plane();
 
 /**
  * @param {number} metres
@@ -109,10 +111,13 @@ export function createMeasureTool(opts) {
   let aimY = 0;
   /** @type {THREE.Vector3 | null} */
   let cursorWorld = null;
-  /** @type {'vertex' | 'edge' | 'face' | null} */
+  /** @type {'vertex' | 'edge' | 'face' | 'perp' | null} */
   let snapKind = null;
   /** @type {THREE.Vector3 | null} */
   let snapEdgeDir = null;
+  /** Edge direction for the active perpendicular width snap (right-angle mark). */
+  /** @type {THREE.Vector3 | null} */
+  let perpEdgeDir = null;
 
   /** Confirmed first endpoint. */
   /** @type {THREE.Vector3 | null} */
@@ -141,10 +146,12 @@ export function createMeasureTool(opts) {
   const snapMarker = makeMarker(0xffd60a);
   const lockedMarker = makeMarker(0x34c759);
   const draftLine = makeLine(0xffd60a, 0.75);
-  overlay.add(snapMarker, lockedMarker, draftLine);
+  const rightAngle = makeRightAngleLine(0xffd60a);
+  overlay.add(snapMarker, lockedMarker, draftLine, rightAngle);
   snapMarker.visible = false;
   lockedMarker.visible = false;
   draftLine.visible = false;
+  rightAngle.visible = false;
 
   const crosshair = ensureCrosshairEl(canvas);
 
@@ -171,7 +178,6 @@ export function createMeasureTool(opts) {
       resetCursor();
       pointA = null;
       axisHintA = null;
-      // Trackpad / mouse: crosshair appears immediately at view center.
       if (deviceHasFinePointer()) {
         const w = Math.max(1, canvas.clientWidth);
         const h = Math.max(1, canvas.clientHeight);
@@ -200,6 +206,7 @@ export function createMeasureTool(opts) {
     cursorWorld = null;
     snapKind = null;
     snapEdgeDir = null;
+    perpEdgeDir = null;
   }
 
   function syncChrome() {
@@ -213,6 +220,7 @@ export function createMeasureTool(opts) {
   function hideCursorUi() {
     crosshair.hidden = true;
     snapMarker.visible = false;
+    rightAngle.visible = false;
   }
 
   /**
@@ -226,36 +234,35 @@ export function createMeasureTool(opts) {
     cursorPlaced = true;
     const snap = pickSnap(sx, sy);
     if (snap) {
-      let world = snap.point;
+      let world = snap.point.clone();
+      let kind = snap.kind;
+      let edgeDir = snap.edgeDir;
+      perpEdgeDir = null;
+
       if (phase === "placeSecond" && pointA) {
-        world = inferAxisPoint(pointA, snap.point, snap.edgeDir);
-        if (snap.kind === "vertex" || snap.kind === "edge") {
-          _delta.copy(snap.point).sub(pointA);
-          if (_delta.lengthSq() > 1e-16) {
-            _normA.copy(_delta).normalize();
-            _tmp.copy(world).sub(pointA);
-            if (_tmp.lengthSq() > 1e-16) {
-              const along = Math.abs(_tmp.normalize().dot(_normA));
-              if (along > 0.985) world = snap.point.clone();
-            }
-          } else {
-            world = snap.point.clone();
-          }
+        const perp = tryPerpendicularSnap(pointA, axisHintA, snap);
+        if (perp) {
+          world = perp.foot;
+          kind = "perp";
+          edgeDir = perp.edgeDir;
+          perpEdgeDir = perp.edgeDir.clone();
         }
       }
+
       cursorWorld = world;
-      snapKind = snap.kind;
-      snapEdgeDir = snap.edgeDir;
+      snapKind = kind;
+      snapEdgeDir = edgeDir;
     } else if (forcePlace) {
-      // Keep last good snap if any; otherwise no world lock yet.
       if (!cursorWorld) {
         snapKind = null;
         snapEdgeDir = null;
+        perpEdgeDir = null;
       }
     } else {
       cursorWorld = null;
       snapKind = null;
       snapEdgeDir = null;
+      perpEdgeDir = null;
     }
     updateDraftVisuals();
     syncChrome();
@@ -275,6 +282,7 @@ export function createMeasureTool(opts) {
       hideCursorUi();
       lockedMarker.visible = false;
       draftLine.visible = false;
+      rightAngle.visible = false;
       return;
     }
 
@@ -307,6 +315,19 @@ export function createMeasureTool(opts) {
     } else {
       draftLine.visible = false;
     }
+
+    if (
+      phase === "placeSecond" &&
+      snapKind === "perp" &&
+      pointA &&
+      cursorWorld &&
+      perpEdgeDir
+    ) {
+      updateRightAngle(rightAngle, pointA, cursorWorld, perpEdgeDir, worldPerPixel);
+      rightAngle.visible = true;
+    } else {
+      rightAngle.visible = false;
+    }
   }
 
   /**
@@ -322,7 +343,6 @@ export function createMeasureTool(opts) {
   }
 
   /**
-   * Touch aims slightly above the finger so the point stays visible.
    * @param {number} x
    * @param {number} y
    * @param {string} type
@@ -373,6 +393,9 @@ export function createMeasureTool(opts) {
    *   point: THREE.Vector3,
    *   kind: 'vertex' | 'edge' | 'face',
    *   edgeDir: THREE.Vector3 | null,
+   *   mesh: THREE.Mesh | null,
+   *   triVerts: THREE.Vector3[] | null,
+   *   faceNormal: THREE.Vector3 | null,
    * } | null}
    */
   function pickSnap(sx, sy) {
@@ -398,7 +421,14 @@ export function createMeasureTool(opts) {
     const mesh = /** @type {THREE.Mesh} */ (hit.object);
     const geom = mesh.geometry;
     if (!geom?.getAttribute("position")) {
-      return { point: hit.point.clone(), kind: "face", edgeDir: null };
+      return {
+        point: hit.point.clone(),
+        kind: "face",
+        edgeDir: null,
+        mesh,
+        triVerts: null,
+        faceNormal: null,
+      };
     }
 
     mesh.updateWorldMatrix(true, false);
@@ -435,6 +465,16 @@ export function createMeasureTool(opts) {
       triVerts.push(_v0.clone(), _v1.clone(), _v2.clone());
     }
 
+    /** @type {THREE.Vector3 | null} */
+    let faceNormal = null;
+    if (triVerts.length === 3) {
+      faceNormal = new THREE.Vector3()
+        .subVectors(triVerts[1], triVerts[0])
+        .cross(_tmp.subVectors(triVerts[2], triVerts[0]))
+        .normalize();
+      if (faceNormal.lengthSq() < 1e-12) faceNormal = null;
+    }
+
     const cx = sx;
     const cy = sy;
     /** @type {{ point: THREE.Vector3, distPx: number } | null} */
@@ -465,7 +505,14 @@ export function createMeasureTool(opts) {
     }
 
     if (bestVert) {
-      return { point: bestVert.point, kind: "vertex", edgeDir: null };
+      return {
+        point: bestVert.point,
+        kind: "vertex",
+        edgeDir: null,
+        mesh,
+        triVerts: triVerts.length ? triVerts : null,
+        faceNormal,
+      };
     }
 
     /** @type {{ point: THREE.Vector3, distPx: number, dir: THREE.Vector3 } | null} */
@@ -515,63 +562,186 @@ export function createMeasureTool(opts) {
     }
 
     if (bestEdge) {
-      return { point: bestEdge.point, kind: "edge", edgeDir: bestEdge.dir };
+      return {
+        point: bestEdge.point,
+        kind: "edge",
+        edgeDir: bestEdge.dir,
+        mesh,
+        triVerts: triVerts.length ? triVerts : null,
+        faceNormal,
+      };
     }
 
-    return { point: hit.point.clone(), kind: "face", edgeDir: null };
+    return {
+      point: hit.point.clone(),
+      kind: "face",
+      edgeDir: null,
+      mesh,
+      triVerts: triVerts.length ? triVerts : null,
+      faceNormal,
+    };
   }
 
   /**
+   * If A lies on an edge of a rectangular face and the free snap is near the
+   * perpendicular foot on a parallel opposite edge, snap to that foot.
+   *
    * @param {THREE.Vector3} a
-   * @param {THREE.Vector3} freeB
-   * @param {THREE.Vector3 | null} edgeDir
+   * @param {THREE.Vector3 | null} hintDir
+   * @param {{
+   *   point: THREE.Vector3,
+   *   mesh: THREE.Mesh | null,
+   *   triVerts: THREE.Vector3[] | null,
+   *   faceNormal: THREE.Vector3 | null,
+   * }} snap
+   * @returns {{ foot: THREE.Vector3, edgeDir: THREE.Vector3 } | null}
    */
-  function inferAxisPoint(a, freeB, edgeDir) {
-    _delta.copy(freeB).sub(a);
-    const freeLen = _delta.length();
-    if (freeLen * 1000 < AXIS_MIN_MM) return freeB.clone();
+  function tryPerpendicularSnap(a, hintDir, snap) {
+    if (!snap.mesh || !snap.triVerts || snap.triVerts.length !== 3) return null;
+    if (!snap.faceNormal || snap.faceNormal.lengthSq() < 1e-12) return null;
 
-    /** @type {THREE.Vector3[]} */
-    const axes = [...WORLD_AXES];
-    if (edgeDir && edgeDir.lengthSq() > 1e-8) axes.push(edgeDir.clone().normalize());
-    if (axisHintA && axisHintA.lengthSq() > 1e-8) {
-      axes.push(axisHintA.clone().normalize());
+    const wpp = worldPerPixel(a);
+    const onEdgeTol = wpp * EDGE_ON_TOL_PX;
+    const planeTol = Math.max(wpp * 2, 1e-5);
+    if (Math.abs(signedPlaneDist(a, snap.triVerts[0], snap.faceNormal)) > planeTol) {
+      return null;
     }
 
-    projectToScreen(a, _screenA);
-    projectToScreen(freeB, _screenB);
-    const sdx = _screenB.x - _screenA.x;
-    const sdy = _screenB.y - _screenA.y;
-    const sLen = Math.hypot(sdx, sdy);
-    if (sLen < 4) return freeB.clone();
+    const edges = collectCoplanarEdges(
+      snap.mesh,
+      snap.triVerts[0],
+      snap.faceNormal,
+      planeTol,
+    );
+    if (!edges.length) return null;
 
-    let bestScore = AXIS_ALIGN_DOT;
-    /** @type {THREE.Vector3 | null} */
-    let bestAxis = null;
-    let bestT = 0;
+    /** @type {THREE.Vector3[]} */
+    const dirsAtA = [];
+    for (const e of edges) {
+      const d = distPointToSegment(a, e.a, e.b);
+      if (d <= onEdgeTol) dirsAtA.push(e.dir.clone());
+    }
+    if (hintDir && hintDir.lengthSq() > 1e-12) {
+      dirsAtA.push(hintDir.clone().normalize());
+    }
+    if (!dirsAtA.length) return null;
 
-    for (const axis of axes) {
-      for (const sign of [1, -1]) {
-        _axis.copy(axis).multiplyScalar(sign);
-        _tmp.copy(a).addScaledVector(_axis, Math.max(freeLen, worldPerPixel(a) * 40));
-        projectToScreen(_tmp, _proj);
-        const ax = _proj.x - _screenA.x;
-        const ay = _proj.y - _screenA.y;
-        const aLen = Math.hypot(ax, ay);
-        if (aLen < 1e-3) continue;
-        const align = (sdx * ax + sdy * ay) / (sLen * aLen);
-        const screenWeight = Math.min(1, aLen / 40);
-        const score = align * (0.75 + 0.25 * screenWeight);
-        if (score > bestScore) {
-          bestScore = score;
-          bestAxis = _axis.clone();
-          bestT = _delta.dot(_axis);
+    const acceptWorld = wpp * PERP_ACCEPT_PX;
+    /** @type {{ foot: THREE.Vector3, edgeDir: THREE.Vector3, score: number } | null} */
+    let best = null;
+
+    for (const D of dirsAtA) {
+      if (D.lengthSq() < 1e-12) continue;
+      D.normalize();
+      for (const e of edges) {
+        if (Math.abs(e.dir.dot(D)) < PARALLEL_DOT) continue;
+        // Skip the edge A sits on.
+        if (distPointToSegment(a, e.a, e.b) <= onEdgeTol) continue;
+
+        const foot = closestPointOnSegment(a, e.a, e.b);
+        if (!passesClip(foot)) continue;
+
+        // Require a real width (not a zero / collinear miss).
+        const width = a.distanceTo(foot);
+        if (width * 1000 < AXIS_MIN_MM) continue;
+
+        // Measure direction must be nearly perpendicular to D.
+        _delta.copy(foot).sub(a);
+        if (_delta.lengthSq() < 1e-16) continue;
+        _delta.normalize();
+        if (Math.abs(_delta.dot(D)) > 0.08) continue;
+
+        const freeDist = snap.point.distanceTo(foot);
+        projectToScreen(snap.point, _screenA);
+        projectToScreen(foot, _screenB);
+        const freePx = Math.hypot(_screenA.x - _screenB.x, _screenA.y - _screenB.y);
+        if (freeDist > acceptWorld * 1.35 && freePx > PERP_ACCEPT_PX) continue;
+
+        const score = freePx + freeDist / Math.max(wpp, 1e-9);
+        if (!best || score < best.score) {
+          best = { foot: foot.clone(), edgeDir: D.clone(), score };
         }
       }
     }
 
-    if (!bestAxis || Math.abs(bestT) * 1000 < AXIS_MIN_MM) return freeB.clone();
-    return a.clone().addScaledVector(bestAxis, bestT);
+    return best ? { foot: best.foot, edgeDir: best.edgeDir } : null;
+  }
+
+  /**
+   * @param {THREE.Mesh} mesh
+   * @param {THREE.Vector3} planePoint
+   * @param {THREE.Vector3} planeNormal
+   * @param {number} planeTol
+   * @returns {Array<{ a: THREE.Vector3, b: THREE.Vector3, dir: THREE.Vector3 }>}
+   */
+  function collectCoplanarEdges(mesh, planePoint, planeNormal, planeTol) {
+    const geom = mesh.geometry;
+    const pos = geom?.getAttribute("position");
+    if (!pos) return [];
+    mesh.updateWorldMatrix(true, false);
+    const index = geom.getIndex();
+    /** @type {Map<string, { a: THREE.Vector3, b: THREE.Vector3, dir: THREE.Vector3 }>} */
+    const map = new Map();
+    const quant = Math.max(planeTol * 0.25, 1e-5);
+
+    /**
+     * @param {THREE.Vector3} p0
+     * @param {THREE.Vector3} p1
+     * @param {THREE.Vector3} p2
+     */
+    function considerTri(p0, p1, p2) {
+      _n.subVectors(p1, p0).cross(_tmp.subVectors(p2, p0));
+      if (_n.lengthSq() < 1e-16) return;
+      _n.normalize();
+      if (Math.abs(_n.dot(planeNormal)) < COPLANAR_DOT) return;
+      if (Math.abs(signedPlaneDist(p0, planePoint, planeNormal)) > planeTol) return;
+      if (Math.abs(signedPlaneDist(p1, planePoint, planeNormal)) > planeTol) return;
+      if (Math.abs(signedPlaneDist(p2, planePoint, planeNormal)) > planeTol) return;
+      addEdge(p0, p1);
+      addEdge(p1, p2);
+      addEdge(p2, p0);
+    }
+
+    /**
+     * @param {THREE.Vector3} a
+     * @param {THREE.Vector3} b
+     */
+    function addEdge(a, b) {
+      _delta.copy(b).sub(a);
+      if (_delta.lengthSq() < 1e-16) return;
+      const key = edgeKey(a, b, quant);
+      if (map.has(key)) return;
+      map.set(key, {
+        a: a.clone(),
+        b: b.clone(),
+        dir: _delta.clone().normalize(),
+      });
+    }
+
+    const triCount = index ? index.count / 3 : pos.count / 3;
+    const maxTris = 12000;
+    const step = triCount > maxTris ? Math.ceil(triCount / maxTris) : 1;
+    for (let t = 0; t < triCount; t += step) {
+      let i0;
+      let i1;
+      let i2;
+      if (index) {
+        const base = t * 3;
+        i0 = index.getX(base);
+        i1 = index.getX(base + 1);
+        i2 = index.getX(base + 2);
+      } else {
+        i0 = t * 3;
+        i1 = t * 3 + 1;
+        i2 = t * 3 + 2;
+      }
+      _v0.fromBufferAttribute(pos, i0).applyMatrix4(mesh.matrixWorld);
+      _v1.fromBufferAttribute(pos, i1).applyMatrix4(mesh.matrixWorld);
+      _v2.fromBufferAttribute(pos, i2).applyMatrix4(mesh.matrixWorld);
+      considerTri(_v0, _v1, _v2);
+    }
+
+    return [...map.values()];
   }
 
   function confirmCurrent() {
@@ -581,11 +751,8 @@ export function createMeasureTool(opts) {
       pointA = cursorWorld.clone();
       axisHintA = snapEdgeDir ? snapEdgeDir.clone() : null;
       phase = "placeSecond";
-      // CAD: after locking A, cursor stays visible and keeps driving B.
-      // Touch users re-drag; fine pointer keeps hovering from the same spot.
+      perpEdgeDir = null;
       if (isTouchPointer({ pointerType }) || !deviceHasFinePointer()) {
-        // Leave locked A marker; require a new drag for B (tap alone still no-op
-        // until drag places the second cursor).
         cursorPlaced = false;
         cursorWorld = null;
         snapKind = null;
@@ -654,6 +821,15 @@ export function createMeasureTool(opts) {
     if (cursorPlaced) {
       positionCrosshair(crosshair, canvas, aimX, aimY, snapKind);
     }
+    if (
+      rightAngle.visible &&
+      pointA &&
+      cursorWorld &&
+      perpEdgeDir &&
+      snapKind === "perp"
+    ) {
+      updateRightAngle(rightAngle, pointA, cursorWorld, perpEdgeDir, worldPerPixel);
+    }
     for (const dim of committed) {
       const line = /** @type {THREE.Line} */ (dim.group.children[0]);
       const pos = line.geometry.getAttribute("position");
@@ -664,7 +840,6 @@ export function createMeasureTool(opts) {
   }
 
   /**
-   * Hover tracking for trackpad / mouse (no buttons).
    * @param {PointerEvent} ev
    */
   function onHoverMove(ev) {
@@ -696,12 +871,10 @@ export function createMeasureTool(opts) {
       /* ignore */
     }
 
-    // Fine pointer: pressing already aims at the pointer (cursor was hovering).
     if (isFinePointer(ev)) {
       const aim = aimFromPointer(x, y, pointerType);
       placeCursorAt(aim.x, aim.y, true);
     }
-    // Touch: do nothing until drag threshold — tap alone is a no-op / confirm.
     ev.preventDefault();
   }
 
@@ -711,7 +884,6 @@ export function createMeasureTool(opts) {
   function onPointerMove(ev) {
     if (!active) return;
 
-    // Hover path when not in a captured gesture.
     if (pointerId === null) {
       onHoverMove(ev);
       return;
@@ -756,10 +928,8 @@ export function createMeasureTool(opts) {
 
     if (isTouchPointer(ev)) {
       if (gestureMoved) {
-        // Drag finished — cursor stays where it was; no confirm.
         dragDriving = false;
       } else {
-        // Tap: confirm existing cursor only. Never re-pick at the tap point.
         dragDriving = false;
         if (cursorPlaced && cursorWorld) confirmCurrent();
       }
@@ -767,7 +937,6 @@ export function createMeasureTool(opts) {
       return;
     }
 
-    // Mouse / pen click: confirm current aim (already updated on move/down).
     if (!gestureMoved && cursorWorld) {
       confirmCurrent();
     }
@@ -798,6 +967,65 @@ export function createMeasureTool(opts) {
 }
 
 /**
+ * @param {THREE.Vector3} p
+ * @param {THREE.Vector3} planePoint
+ * @param {THREE.Vector3} planeNormal
+ */
+function signedPlaneDist(p, planePoint, planeNormal) {
+  return _plane.setFromNormalAndCoplanarPoint(planeNormal, planePoint).distanceToPoint(p);
+}
+
+/**
+ * @param {THREE.Vector3} p
+ * @param {THREE.Vector3} a
+ * @param {THREE.Vector3} b
+ */
+function distPointToSegment(p, a, b) {
+  _delta.copy(b).sub(a);
+  const len2 = _delta.lengthSq();
+  if (len2 < 1e-18) return p.distanceTo(a);
+  let t = _tmp.copy(p).sub(a).dot(_delta) / len2;
+  t = Math.min(1, Math.max(0, t));
+  return _tmp2.copy(a).addScaledVector(_delta, t).distanceTo(p);
+}
+
+/**
+ * @param {THREE.Vector3} p
+ * @param {THREE.Vector3} a
+ * @param {THREE.Vector3} b
+ */
+function closestPointOnSegment(p, a, b) {
+  _delta.copy(b).sub(a);
+  const len2 = _delta.lengthSq();
+  if (len2 < 1e-18) return a.clone();
+  let t = _tmp.copy(p).sub(a).dot(_delta) / len2;
+  t = Math.min(1, Math.max(0, t));
+  return a.clone().addScaledVector(_delta, t);
+}
+
+/**
+ * @param {THREE.Vector3} a
+ * @param {THREE.Vector3} b
+ * @param {number} quant
+ */
+function edgeKey(a, b, quant) {
+  const ax = Math.round(a.x / quant);
+  const ay = Math.round(a.y / quant);
+  const az = Math.round(a.z / quant);
+  const bx = Math.round(b.x / quant);
+  const by = Math.round(b.y / quant);
+  const bz = Math.round(b.z / quant);
+  if (
+    ax < bx ||
+    (ax === bx && ay < by) ||
+    (ax === bx && ay === by && az <= bz)
+  ) {
+    return `${ax},${ay},${az}|${bx},${by},${bz}`;
+  }
+  return `${bx},${by},${bz}|${ax},${ay},${az}`;
+}
+
+/**
  * @param {HTMLCanvasElement} canvas
  */
 function ensureCrosshairEl(canvas) {
@@ -810,7 +1038,6 @@ function ensureCrosshairEl(canvas) {
   el.setAttribute("aria-hidden", "true");
   el.innerHTML =
     '<span class="measure-crosshair-h"></span><span class="measure-crosshair-v"></span><span class="measure-crosshair-dot"></span>';
-  // Sit above the canvas, below sheet chrome (z-index 3/4).
   const parent = canvas.parentElement || document.body;
   parent.appendChild(el);
   return /** @type {HTMLDivElement} */ (el);
@@ -821,7 +1048,7 @@ function ensureCrosshairEl(canvas) {
  * @param {HTMLCanvasElement} canvas
  * @param {number} sx
  * @param {number} sy
- * @param {'vertex' | 'edge' | 'face' | null} kind
+ * @param {'vertex' | 'edge' | 'face' | 'perp' | null} kind
  */
 function positionCrosshair(el, canvas, sx, sy, kind) {
   const rect = canvas.getBoundingClientRect();
@@ -850,12 +1077,12 @@ function makeMarker(color) {
 
 /**
  * @param {THREE.Mesh} marker
- * @param {'vertex' | 'edge' | 'face' | null} kind
+ * @param {'vertex' | 'edge' | 'face' | 'perp' | null} kind
  */
 function colorMarker(marker, kind) {
   const mat = /** @type {THREE.MeshBasicMaterial} */ (marker.material);
   if (kind === "vertex") mat.color.setHex(0xff453a);
-  else if (kind === "edge") mat.color.setHex(0xffd60a);
+  else if (kind === "edge" || kind === "perp") mat.color.setHex(0xffd60a);
   else mat.color.setHex(0x64d2ff);
 }
 
@@ -879,6 +1106,61 @@ function makeLine(color, opacity) {
   line.frustumCulled = false;
   line.visible = false;
   return line;
+}
+
+/**
+ * L-shaped polyline: 3 points (leg along edge, corner at B, leg toward A).
+ * @param {number} color
+ */
+function makeRightAngleLine(color) {
+  const geo = new THREE.BufferGeometry();
+  const positions = new Float32Array(9);
+  geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  const mat = new THREE.LineBasicMaterial({
+    color,
+    depthTest: false,
+    depthWrite: false,
+    transparent: true,
+    opacity: 0.95,
+  });
+  const line = new THREE.Line(geo, mat);
+  line.renderOrder = 22;
+  line.frustumCulled = false;
+  line.visible = false;
+  return line;
+}
+
+/**
+ * @param {THREE.Line} line
+ * @param {THREE.Vector3} a
+ * @param {THREE.Vector3} b
+ * @param {THREE.Vector3} edgeDir
+ * @param {(w: THREE.Vector3) => number} worldPerPixelFn
+ */
+function updateRightAngle(line, a, b, edgeDir, worldPerPixelFn) {
+  const s = worldPerPixelFn(b) * RIGHT_ANGLE_PX;
+  _delta.copy(a).sub(b);
+  if (_delta.lengthSq() < 1e-16) {
+    line.visible = false;
+    return;
+  }
+  _delta.normalize();
+  _tmp.copy(edgeDir).normalize();
+  // Orient the edge leg so the L opens into the measured angle.
+  _n.crossVectors(_tmp, _delta);
+  if (_n.lengthSq() < 1e-12) {
+    line.visible = false;
+    return;
+  }
+  _v0.copy(b).addScaledVector(_tmp, s);
+  _v1.copy(b);
+  _v2.copy(b).addScaledVector(_delta, s);
+  const pos = line.geometry.getAttribute("position");
+  pos.setXYZ(0, _v0.x, _v0.y, _v0.z);
+  pos.setXYZ(1, _v1.x, _v1.y, _v1.z);
+  pos.setXYZ(2, _v2.x, _v2.y, _v2.z);
+  pos.needsUpdate = true;
+  line.geometry.computeBoundingSphere();
 }
 
 /**

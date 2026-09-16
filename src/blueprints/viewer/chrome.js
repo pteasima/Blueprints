@@ -181,7 +181,9 @@ canvas {
   background: rgba(255, 69, 58, 0.95);
 }
 .measure-crosshair[data-snap="edge"] .measure-crosshair-h,
-.measure-crosshair[data-snap="edge"] .measure-crosshair-v {
+.measure-crosshair[data-snap="edge"] .measure-crosshair-v,
+.measure-crosshair[data-snap="perp"] .measure-crosshair-h,
+.measure-crosshair[data-snap="perp"] .measure-crosshair-v {
   background: rgba(255, 214, 10, 0.95);
 }
 .measure-crosshair[data-snap="face"] .measure-crosshair-h,
