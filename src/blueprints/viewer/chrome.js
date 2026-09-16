@@ -525,8 +525,19 @@ export function initSheetChrome(onTheme) {
     if (!isWide() && detent === "partial") notify();
   }
 
+  /** @param {"t" | "r" | "b" | "l"} side */
+  function readSafeInset(side) {
+    const raw = getComputedStyle(document.documentElement)
+      .getPropertyValue(`--safe-${side}`)
+      .trim();
+    const px = parseFloat(raw);
+    return Number.isFinite(px) ? px : 0;
+  }
+
   /**
    * Insets used for camera framing. Only partial (phone) / open (wide).
+   * Uses target detent sizes — never live drag geometry — so framing does
+   * not depend on where the finger released.
    * @returns {{ top: number, right: number, bottom: number, left: number }}
    */
   function getSafeInsets() {
@@ -534,21 +545,23 @@ export function initSheetChrome(onTheme) {
     if (!sheet) return zero;
     if (isWide()) {
       if (detent !== "open") return zero;
-      const rect = sheet.getBoundingClientRect();
       const gap = 12;
+      const w = sheet.offsetWidth || 0;
+      const safeR = readSafeInset("r");
       return {
         top: 0,
-        right: Math.max(0, Math.round(window.innerWidth - rect.left + gap)),
+        right: Math.max(0, Math.round(w + gap + safeR + 12)),
         bottom: 0,
         left: 0,
       };
     }
     if (detent !== "partial") return zero;
-    const rect = sheet.getBoundingClientRect();
+    // Match CSS: height: calc(var(--sheet-partial-h) + var(--safe-b))
+    const bottom = Math.round(partialH() + readSafeInset("b"));
     return {
       top: 0,
       right: 0,
-      bottom: Math.max(0, Math.round(window.innerHeight - rect.top)),
+      bottom: Math.max(0, Math.min(window.innerHeight - 80, bottom)),
       left: 0,
     };
   }
