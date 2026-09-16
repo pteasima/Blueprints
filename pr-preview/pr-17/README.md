@@ -7,9 +7,9 @@ PR previews: https://pteasima.github.io/Blueprints/pr-preview/pr-\<N\>/ (removed
 
 1. https://github.com/pteasima/Blueprints/settings/pages → Source = **GitHub Actions** → Save.
 2. https://github.com/pteasima/Blueprints/settings/actions → **General** → Workflow permissions → **Read and write**.
-3. https://github.com/pteasima/Blueprints/settings/environments → **github-pages** → Deployment branches → allow `pages-site` (or All branches).
+3. https://github.com/pteasima/Blueprints/settings/environments → **github-pages** → Deployment branches → **All branches** (required for PR preview deploys).
 
-`pages-content` updates the `pages-site` content branch (root on `main`, `pr-preview/pr-<N>/` on PRs, delete on PR close). `pages` deploys that branch to GitHub Pages.
+`pages-content` updates the `pages-site` content branch (root on `main`, `pr-preview/pr-<N>/` on PRs, delete on PR close) and deploys it. `pages` is a manual fallback redeploy only.
 
 ## Layout
 
