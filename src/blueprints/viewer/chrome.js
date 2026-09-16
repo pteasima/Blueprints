@@ -386,62 +386,166 @@ canvas {
 .parts {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0;
 }
 
-label.part {
+.part-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.part-children {
+  display: flex;
+  flex-direction: column;
+}
+
+.part-children[hidden] {
+  display: none;
+}
+
+.part-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
+  gap: 0.45rem;
   min-height: 2.65rem;
-  padding: 0.2rem 0.15rem;
+  padding: 0.15rem 0.15rem 0.15rem calc(0.15rem + var(--part-depth, 0) * 0.95rem);
   font-size: 0.95rem;
   font-weight: 500;
   letter-spacing: -0.01em;
-  cursor: pointer;
   user-select: none;
+  -webkit-user-select: none;
 }
 
-label.part .part-name {
+.part-group-row {
+  cursor: pointer;
+  border-radius: 0.45rem;
+}
+
+.part-group-row:active {
+  background: var(--fill);
+}
+
+.part-disclosure {
+  appearance: none;
+  flex: 0 0 auto;
+  width: 1.35rem;
+  height: 1.35rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0.3rem;
+  background: transparent;
+  color: var(--fg-secondary);
+  cursor: pointer;
+  position: relative;
+}
+
+.part-disclosure::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.42rem;
+  height: 0.42rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translate(-60%, -60%) rotate(-45deg);
+  transition: transform 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.part-group.is-expanded > .part-group-row > .part-disclosure::before {
+  transform: translate(-50%, -70%) rotate(45deg);
+}
+
+.part-row .part-name {
+  flex: 0 0 var(--part-name-col, auto);
+  width: var(--part-name-col, auto);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-label.part input {
-  appearance: none;
-  position: relative;
+.part-group-row .part-name {
+  font-weight: 600;
+}
+
+.part-disclosure-spacer {
   flex: 0 0 auto;
-  width: 3.1rem;
-  height: 1.9rem;
+  width: 1.35rem;
+  height: 1.35rem;
+  pointer-events: none;
+}
+
+.part-opacity-wrap {
+  flex: 1 1 0;
+  min-width: 5rem;
+  display: flex;
+  align-items: center;
+  /* Tall hit area; thumb stays visually moderate. */
+  min-height: 2.85rem;
   margin: 0;
+}
+
+.part-row input.part-opacity {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 2.85rem;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+  touch-action: none;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+
+.part-row input.part-opacity:focus {
+  outline: none;
+}
+
+.part-row input.part-opacity:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 0.35rem;
+}
+
+.part-row input.part-opacity::-webkit-slider-runnable-track {
+  height: 0.28rem;
   border-radius: 999px;
   background: var(--fill-active);
-  cursor: pointer;
-  transition: background 0.2s ease;
 }
 
-label.part input::after {
-  content: "";
-  position: absolute;
-  top: 0.15rem;
-  left: 0.15rem;
-  width: 1.6rem;
-  height: 1.6rem;
+.part-row input.part-opacity::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 1.55rem;
+  height: 1.55rem;
+  margin-top: calc((0.28rem - 1.55rem) / 2);
   border-radius: 50%;
+  border: 0;
   background: #fff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.22);
-  transition: transform 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+  /* Invisible padding enlarges the grab target beyond the visible knob. */
+  cursor: pointer;
 }
 
-label.part input:checked {
-  background: var(--accent);
+.part-row input.part-opacity::-moz-range-track {
+  height: 0.28rem;
+  border-radius: 999px;
+  background: var(--fill-active);
+  border: 0;
 }
 
-label.part input:checked::after {
-  transform: translateX(1.2rem);
+.part-row input.part-opacity::-moz-range-thumb {
+  width: 1.55rem;
+  height: 1.55rem;
+  border-radius: 50%;
+  border: 0;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+  cursor: pointer;
 }
 
 .cuts {

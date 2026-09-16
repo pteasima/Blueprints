@@ -15,9 +15,13 @@ import {
   MODE_REALISTIC,
   MODE_SOLID,
   applyMaterialMode,
+  applyOpacityToMeshes,
+  collectLeafIds,
   loadMaterialMode,
+  resolvePartOutline,
   saveMaterialMode,
 } from "./materials.js";
+import { createDepthPeelRenderer } from "./depthPeel.js";
 import { createMeasureTool } from "./measure.js";
 
 /**
@@ -33,6 +37,14 @@ export function mountViewer(canvas, glbBuffer) {
   let materialMode = loadMaterialMode();
   /** @type {Map<string, THREE.Object3D[]>} */
   const parts = new Map();
+  /** Current opacity 0–1 per leaf label. */
+  const partOpacity = new Map();
+  /** Last non-zero opacity per leaf (for tap-toggle). */
+  const partLastNonZero = new Map();
+  /** Last opacity written via a group slider (when children diverge). */
+  const groupSliderOpacity = new Map();
+  /** Expanded disclosure group ids. */
+  const expandedGroups = new Set();
 
   /** @type {ReturnType<typeof initSheetChrome> | null} */
   let chromeApi = null;
@@ -58,6 +70,8 @@ export function mountViewer(canvas, glbBuffer) {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
   renderer.localClippingEnabled = true;
+
+  const depthPeel = createDepthPeelRenderer(renderer);
 
   scene = new THREE.Scene();
   scene.background = new THREE.Color(sceneBg);
@@ -223,11 +237,82 @@ export function mountViewer(canvas, glbBuffer) {
     maybeSpawnDraftFromCamera();
   }
 
-  function setPartVisible(name, visible) {
-    const list = parts.get(name) || [];
-    for (const obj of list) obj.visible = visible;
+  function setPartOpacity(name, opacity, opts = {}) {
+    const o = Math.max(0, Math.min(1, Number(opacity) || 0));
+    partOpacity.set(name, o);
+    if (o > 0) partLastNonZero.set(name, o);
+    applyOpacityToMeshes(parts.get(name) || [], o);
     updateBox();
     applyClipping();
+    if (!opts.skipUi) syncPartOpacityUi();
+  }
+
+  /**
+   * @param {string[]} leafIds
+   * @param {number} opacity 0–1
+   * @param {string} [groupId]
+   */
+  function setGroupOpacity(leafIds, opacity, groupId) {
+    const o = Math.max(0, Math.min(1, Number(opacity) || 0));
+    if (groupId) groupSliderOpacity.set(groupId, o);
+    for (const id of leafIds) {
+      partOpacity.set(id, o);
+      if (o > 0) partLastNonZero.set(id, o);
+      applyOpacityToMeshes(parts.get(id) || [], o);
+    }
+    updateBox();
+    applyClipping();
+    syncPartOpacityUi();
+  }
+
+  /**
+   * @param {string[]} leafIds
+   * @returns {number}
+   */
+  function commonOpacity(leafIds) {
+    if (!leafIds.length) return 1;
+    const first = partOpacity.get(leafIds[0]) ?? 1;
+    for (let i = 1; i < leafIds.length; i++) {
+      const v = partOpacity.get(leafIds[i]) ?? 1;
+      if (Math.abs(v - first) > 1e-4) return NaN;
+    }
+    return first;
+  }
+
+  /**
+   * @param {string} groupId
+   * @param {string[]} leafIds
+   * @returns {number}
+   */
+  function groupDisplayOpacity(groupId, leafIds) {
+    const common = commonOpacity(leafIds);
+    if (!Number.isNaN(common)) return common;
+    return groupSliderOpacity.get(groupId) ?? 1;
+  }
+
+  function syncPartOpacityUi() {
+    const host = document.getElementById("parts");
+    if (!host) return;
+    host.querySelectorAll("input.part-opacity[data-leaf]").forEach((el) => {
+      if (!(el instanceof HTMLInputElement)) return;
+      const id = el.dataset.leaf;
+      if (!id) return;
+      const pct = Math.round((partOpacity.get(id) ?? 1) * 100);
+      el.value = String(pct);
+      el.setAttribute("aria-valuenow", String(pct));
+    });
+    host.querySelectorAll("input.part-opacity[data-group]").forEach((el) => {
+      if (!(el instanceof HTMLInputElement)) return;
+      const gid = el.dataset.group;
+      if (!gid) return;
+      const leaves = (el.dataset.leaves || "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const pct = Math.round(groupDisplayOpacity(gid, leaves) * 100);
+      el.value = String(pct);
+      el.setAttribute("aria-valuenow", String(pct));
+    });
   }
 
   function lockedClipPlanes() {
@@ -239,6 +324,7 @@ export function mountViewer(canvas, glbBuffer) {
     applyMaterialMode(parts, materialMode, {
       isDark: isDarkTheme,
       clippingPlanes: lockedClipPlanes(),
+      opacityByLabel: partOpacity,
     });
     // Solid uses unlit MeshBasicMaterial — skip ACES so chroma stays punchy.
     if (materialMode === MODE_REALISTIC) {
@@ -275,28 +361,267 @@ export function mountViewer(canvas, glbBuffer) {
     }
   }
 
+  /**
+   * Tap without drag toggles 0 ↔ lastNonZero; drag/scrub adjusts opacity.
+   * Do not setPointerCapture — it breaks native trackpad/mouse scrubbing
+   * (same issue as section cut ranges).
+   * @param {HTMLInputElement} range
+   * @param {() => number} getLastNonZero 0–1
+   * @param {(opacity: number) => void} apply
+   */
+  function bindOpacitySlider(range, getLastNonZero, apply) {
+    let pointerDown = false;
+    let startX = 0;
+    let startY = 0;
+    let startVal = 0;
+    let moved = false;
+    let inputCount = 0;
+    const MOVE_PX = 6;
+
+    /** @param {PointerEvent} ev */
+    const onWinMove = (ev) => {
+      if (!pointerDown || moved) return;
+      if (
+        Math.abs(ev.clientX - startX) > MOVE_PX ||
+        Math.abs(ev.clientY - startY) > MOVE_PX
+      ) {
+        moved = true;
+      }
+    };
+
+    range.addEventListener("pointerdown", (ev) => {
+      pointerDown = true;
+      moved = false;
+      inputCount = 0;
+      startX = ev.clientX;
+      startY = ev.clientY;
+      startVal = Number(range.value) || 0;
+      window.addEventListener("pointermove", onWinMove);
+      const end = (upEv) => {
+        window.removeEventListener("pointermove", onWinMove);
+        if (!pointerDown) return;
+        if (upEv.pointerType === "mouse" && upEv.button !== 0) {
+          pointerDown = false;
+          return;
+        }
+        pointerDown = false;
+        if (moved) {
+          apply((Number(range.value) || 0) / 100);
+          return;
+        }
+        // Pure tap: undo click-seek and toggle 0 ↔ last non-zero.
+        if (startVal > 0) apply(0);
+        else {
+          const last = getLastNonZero();
+          apply(last > 0 ? last : 1);
+        }
+      };
+      window.addEventListener("pointerup", end, { once: true });
+      window.addEventListener("pointercancel", end, { once: true });
+    });
+
+    range.addEventListener("input", () => {
+      inputCount += 1;
+      // First input while down may be click-to-seek; wait for drag or a
+      // second input (trackpad/mouse scrub) before committing.
+      if (pointerDown && !moved) {
+        if (inputCount <= 1) return;
+        moved = true;
+      }
+      apply((Number(range.value) || 0) / 100);
+    });
+  }
+
+  /**
+   * @param {string} aria
+   * @param {number} pct0to100
+   * @returns {{ wrap: HTMLDivElement, range: HTMLInputElement }}
+   */
+  function makeOpacityRange(aria, pct0to100) {
+    const wrap = document.createElement("div");
+    wrap.className = "part-opacity-wrap";
+    const range = document.createElement("input");
+    range.type = "range";
+    range.className = "part-opacity";
+    range.min = "0";
+    range.max = "100";
+    range.step = "1";
+    range.value = String(Math.round(pct0to100));
+    range.setAttribute("aria-label", aria);
+    range.setAttribute("role", "slider");
+    wrap.append(range);
+    return { wrap, range };
+  }
+
+  /**
+   * Size the name column to the longest visible label; sliders fill the rest.
+   */
+  function relayoutPartNameColumn() {
+    const host = document.getElementById("parts");
+    if (!host) return;
+    host.style.removeProperty("--part-name-col");
+    let max = 0;
+    for (const el of host.querySelectorAll(".part-name")) {
+      const nest = el.closest(".part-children");
+      if (nest?.hidden) continue;
+      // Force intrinsic width so overflow:hidden does not shrink scrollWidth.
+      const prev = el.style.width;
+      el.style.width = "max-content";
+      max = Math.max(max, Math.ceil(el.getBoundingClientRect().width));
+      el.style.width = prev;
+    }
+    if (max > 0) {
+      host.style.setProperty("--part-name-col", `${max}px`);
+    }
+  }
+
+  /**
+   * @param {import("./materials.js").OutlineNode} node
+   * @param {HTMLElement} parent
+   * @param {number} depth
+   */
+  function appendOutlineNode(node, parent, depth) {
+    if (node.type === "leaf") {
+      const row = document.createElement("div");
+      row.className = "part-row part-leaf";
+      row.style.setProperty("--part-depth", String(depth));
+      row.dataset.leaf = node.id;
+
+      const spacer = document.createElement("span");
+      spacer.className = "part-disclosure-spacer";
+      spacer.setAttribute("aria-hidden", "true");
+
+      const nameEl = document.createElement("span");
+      nameEl.className = "part-name";
+      nameEl.textContent = node.label;
+
+      const { wrap, range } = makeOpacityRange(
+        `${node.label} opacity`,
+        (partOpacity.get(node.id) ?? 1) * 100,
+      );
+      range.dataset.leaf = node.id;
+
+      bindOpacitySlider(
+        range,
+        () => partLastNonZero.get(node.id) ?? 1,
+        (o) => setPartOpacity(node.id, o),
+      );
+
+      row.append(spacer, nameEl, wrap);
+      parent.append(row);
+      return;
+    }
+
+    const leafIds = collectLeafIds(node);
+    const groupWrap = document.createElement("div");
+    groupWrap.className = "part-group";
+    groupWrap.dataset.group = node.id;
+
+    const row = document.createElement("div");
+    row.className = "part-row part-group-row";
+    row.style.setProperty("--part-depth", String(depth));
+    row.setAttribute("role", "button");
+    row.tabIndex = 0;
+
+    const disclosure = document.createElement("button");
+    disclosure.type = "button";
+    disclosure.className = "part-disclosure";
+    disclosure.setAttribute("aria-label", `Expand ${node.label}`);
+    disclosure.setAttribute("aria-expanded", "false");
+
+    const nameEl = document.createElement("span");
+    nameEl.className = "part-name";
+    nameEl.textContent = node.label;
+
+    const { wrap, range } = makeOpacityRange(
+      `${node.label} opacity`,
+      groupDisplayOpacity(node.id, leafIds) * 100,
+    );
+    range.dataset.group = node.id;
+    range.dataset.leaves = leafIds.join(",");
+
+    /** Last non-zero for the group slider itself. */
+    let groupLastNonZero = groupDisplayOpacity(node.id, leafIds) || 1;
+    if (groupLastNonZero <= 0) groupLastNonZero = 1;
+
+    bindOpacitySlider(
+      range,
+      () => groupLastNonZero,
+      (o) => {
+        if (o > 0) groupLastNonZero = o;
+        setGroupOpacity(leafIds, o, node.id);
+      },
+    );
+
+    // Stop row toggle when interacting with the slider.
+    wrap.addEventListener("click", (ev) => ev.stopPropagation());
+    wrap.addEventListener("pointerdown", (ev) => ev.stopPropagation());
+
+    const children = document.createElement("div");
+    children.className = "part-children";
+    children.hidden = true;
+
+    function setExpanded(open) {
+      if (open) expandedGroups.add(node.id);
+      else expandedGroups.delete(node.id);
+      children.hidden = !open;
+      groupWrap.classList.toggle("is-expanded", open);
+      disclosure.setAttribute("aria-expanded", open ? "true" : "false");
+      disclosure.setAttribute(
+        "aria-label",
+        open ? `Collapse ${node.label}` : `Expand ${node.label}`,
+      );
+      requestAnimationFrame(() => relayoutPartNameColumn());
+    }
+
+    function toggleExpanded() {
+      setExpanded(!expandedGroups.has(node.id));
+    }
+
+    disclosure.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      toggleExpanded();
+    });
+    row.addEventListener("click", (ev) => {
+      if (ev.target === range || wrap.contains(/** @type {Node} */ (ev.target))) {
+        return;
+      }
+      toggleExpanded();
+    });
+    row.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter" || ev.key === " ") {
+        ev.preventDefault();
+        toggleExpanded();
+      }
+    });
+
+    row.append(disclosure, nameEl, wrap);
+    groupWrap.append(row, children);
+    parent.append(groupWrap);
+
+    for (const child of node.children) {
+      appendOutlineNode(child, children, depth + 1);
+    }
+
+    // Restore expand state if rebuilding; default collapsed.
+    setExpanded(expandedGroups.has(node.id));
+  }
+
   function buildPartToggles() {
     const host = document.getElementById("parts");
     if (!host) return;
     host.replaceChildren();
-    const names = [...parts.keys()].sort((a, b) => a.localeCompare(b));
-    for (const name of names) {
-      const id = `part-${name}`;
-      const label = document.createElement("label");
-      label.className = "part";
-      const nameEl = document.createElement("span");
-      nameEl.className = "part-name";
-      nameEl.textContent = name;
-      const input = document.createElement("input");
-      input.type = "checkbox";
-      input.checked = true;
-      input.id = id;
-      input.setAttribute("role", "switch");
-      input.setAttribute("aria-label", name);
-      input.addEventListener("change", () => setPartVisible(name, input.checked));
-      label.append(nameEl, input);
-      host.append(label);
+
+    for (const name of parts.keys()) {
+      if (!partOpacity.has(name)) partOpacity.set(name, 1);
+      if (!partLastNonZero.has(name)) partLastNonZero.set(name, 1);
     }
+
+    const outline = resolvePartOutline(parts.keys());
+    for (const node of outline) {
+      appendOutlineNode(node, host, 0);
+    }
+    requestAnimationFrame(() => relayoutPartNameColumn());
   }
 
   /** @type {string | null} */
@@ -792,8 +1117,9 @@ export function mountViewer(canvas, glbBuffer) {
     camera,
     controls,
     parts,
+    partOpacity,
     cuts,
-    setPartVisible,
+    setPartOpacity,
     setCameraPreset,
     setCutT,
     removeCut,
@@ -803,6 +1129,13 @@ export function mountViewer(canvas, glbBuffer) {
   };
   window.BlueprintsViewer = api;
 
+  function anyPartFaded() {
+    for (const o of partOpacity.values()) {
+      if (o < 1 - 1e-4) return true;
+    }
+    return false;
+  }
+
   function tick() {
     const now = performance.now();
     stepFrameAnim(now);
@@ -811,7 +1144,7 @@ export function mountViewer(canvas, glbBuffer) {
     // clip planes so depth precision tracks the current view distance.
     if (root) updateCameraClipPlanes();
     measureTool?.update();
-    renderer.render(scene, camera);
+    depthPeel.render(scene, camera, root, anyPartFaded);
     requestAnimationFrame(tick);
   }
   tick();
