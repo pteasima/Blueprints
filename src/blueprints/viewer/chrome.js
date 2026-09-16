@@ -392,12 +392,9 @@ canvas {
   transform: translate(-50%, -70%) rotate(45deg);
 }
 
-.part-leaf .part-name {
-  padding-left: 1.35rem;
-}
-
 .part-row .part-name {
-  flex: 1;
+  flex: 0 0 var(--part-name-col, auto);
+  width: var(--part-name-col, auto);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -408,9 +405,17 @@ canvas {
   font-weight: 600;
 }
 
-.part-row input.part-opacity {
+.part-disclosure-spacer {
   flex: 0 0 auto;
-  width: 5.5rem;
+  width: 1.35rem;
+  height: 1.35rem;
+  pointer-events: none;
+}
+
+.part-row input.part-opacity {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 4.5rem;
   height: 1.75rem;
   margin: 0;
   accent-color: var(--accent);

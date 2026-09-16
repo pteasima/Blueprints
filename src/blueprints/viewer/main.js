@@ -437,6 +437,24 @@ export function mountViewer(canvas, glbBuffer) {
   }
 
   /**
+   * Size the name column to the longest visible label; sliders fill the rest.
+   */
+  function relayoutPartNameColumn() {
+    const host = document.getElementById("parts");
+    if (!host) return;
+    host.style.removeProperty("--part-name-col");
+    let max = 0;
+    for (const el of host.querySelectorAll(".part-name")) {
+      const nest = el.closest(".part-children");
+      if (nest?.hidden) continue;
+      max = Math.max(max, el.scrollWidth);
+    }
+    if (max > 0) {
+      host.style.setProperty("--part-name-col", `${Math.ceil(max)}px`);
+    }
+  }
+
+  /**
    * @param {import("./materials.js").OutlineNode} node
    * @param {HTMLElement} parent
    * @param {number} depth
@@ -447,6 +465,10 @@ export function mountViewer(canvas, glbBuffer) {
       row.className = "part-row part-leaf";
       row.style.setProperty("--part-depth", String(depth));
       row.dataset.leaf = node.id;
+
+      const spacer = document.createElement("span");
+      spacer.className = "part-disclosure-spacer";
+      spacer.setAttribute("aria-hidden", "true");
 
       const nameEl = document.createElement("span");
       nameEl.className = "part-name";
@@ -469,7 +491,7 @@ export function mountViewer(canvas, glbBuffer) {
         (o) => setPartOpacity(node.id, o),
       );
 
-      row.append(nameEl, range);
+      row.append(spacer, nameEl, range);
       parent.append(row);
       return;
     }
@@ -540,6 +562,7 @@ export function mountViewer(canvas, glbBuffer) {
         "aria-label",
         open ? `Collapse ${node.label}` : `Expand ${node.label}`,
       );
+      requestAnimationFrame(() => relayoutPartNameColumn());
     }
 
     function toggleExpanded() {
@@ -589,6 +612,7 @@ export function mountViewer(canvas, glbBuffer) {
     for (const node of outline) {
       appendOutlineNode(node, host, 0);
     }
+    requestAnimationFrame(() => relayoutPartNameColumn());
   }
 
   /** @type {string | null} */
