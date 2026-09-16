@@ -17,6 +17,7 @@ import {
   loadMaterialMode,
   saveMaterialMode,
 } from "./materials.js";
+import { createMeasureTool } from "./measure.js";
 
 /**
  * @param {HTMLCanvasElement} canvas
@@ -136,6 +137,7 @@ export function mountViewer(canvas, glbBuffer) {
       refreshMaterials();
       chromeApi?.refreshPartialHeight();
       showArButton();
+      showMeasureButton();
     },
     (err) => {
       fail(String(err?.message || err));
@@ -669,10 +671,56 @@ export function mountViewer(canvas, glbBuffer) {
 
   /** @type {HTMLButtonElement | null} */
   const arBtn = document.getElementById("ar");
+  /** @type {HTMLButtonElement | null} */
+  const measureBtn = document.getElementById("measure");
   let arBusy = false;
+  const MEASURE_LABEL = "Measure";
 
   function showArButton() {
     if (arBtn) arBtn.hidden = false;
+  }
+
+  function showMeasureButton() {
+    if (measureBtn) measureBtn.hidden = false;
+  }
+
+  /** @type {ReturnType<typeof createMeasureTool> | null} */
+  let measureTool = null;
+  if (scene) {
+    measureTool = createMeasureTool({
+      scene,
+      canvas,
+      camera,
+      controls,
+      getRoot: () => root,
+      getClipPlanes: () => lockedClipPlanes(),
+      onLiveLength: (label) => {
+        if (!measureBtn) return;
+        if (label) {
+          measureBtn.textContent = label;
+          measureBtn.classList.add("is-live");
+        } else {
+          measureBtn.textContent = MEASURE_LABEL;
+          measureBtn.classList.remove("is-live");
+        }
+      },
+      onActiveChange: (on) => {
+        if (!measureBtn) return;
+        measureBtn.classList.toggle("is-active", on);
+        measureBtn.setAttribute("aria-pressed", on ? "true" : "false");
+        if (!on) {
+          measureBtn.textContent = MEASURE_LABEL;
+          measureBtn.classList.remove("is-live");
+        }
+      },
+    });
+  }
+
+  if (measureBtn) {
+    measureBtn.addEventListener("click", () => {
+      if (!measureTool) return;
+      measureTool.setActive(!measureTool.isActive());
+    });
   }
 
   function buildArExportScene() {
@@ -777,6 +825,7 @@ export function mountViewer(canvas, glbBuffer) {
     // Orbit damping keeps the camera moving briefly after release — refresh
     // clip planes so depth precision tracks the current view distance.
     if (root) updateCameraClipPlanes();
+    measureTool?.update();
     renderer.render(scene, camera);
     requestAnimationFrame(tick);
   }
