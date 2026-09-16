@@ -1,9 +1,16 @@
 /**
- * CAD-style confirm + SketchUp-ish snap measure tool for the WebGL viewer.
+ * AutoCAD-mobile-style measure tool: snap cursor + explicit confirm.
+ *
+ * Trackpad / fine pointer: crosshair appears on enable; move updates snap;
+ * click confirms the current cursor point.
+ *
+ * Touch: tap alone does nothing; drag places a cursor slightly above the
+ * finger; lift keeps it; a later tap anywhere confirms without re-picking.
  */
 import * as THREE from "three";
 
 const DRAG_PX = 8;
+const TOUCH_OFFSET_PX = 56;
 const VERTEX_PX = 14;
 const EDGE_PX = 11;
 const AXIS_ALIGN_DOT = 0.82;
@@ -11,7 +18,7 @@ const AXIS_MIN_MM = 0.5;
 const CLIP_EPS = 1e-4;
 const LABEL_PX = 128;
 const LABEL_HEIGHT_WORLD_FRAC = 0.028;
-const MARKER_PX = 7;
+const MARKER_PX = 5;
 
 const _ndc = new THREE.Vector2();
 const _raycaster = new THREE.Raycaster();
@@ -47,6 +54,27 @@ export function formatMm(metres) {
 }
 
 /**
+ * @param {PointerEvent | { pointerType?: string }} ev
+ */
+function isTouchPointer(ev) {
+  return ev.pointerType === "touch";
+}
+
+/**
+ * @param {PointerEvent | { pointerType?: string }} ev
+ */
+function isFinePointer(ev) {
+  return ev.pointerType === "mouse" || ev.pointerType === "pen";
+}
+
+function deviceHasFinePointer() {
+  return (
+    typeof window !== "undefined" &&
+    window.matchMedia?.("(hover: hover) and (pointer: fine)").matches
+  );
+}
+
+/**
  * @param {{
  *   scene: THREE.Scene,
  *   canvas: HTMLCanvasElement,
@@ -70,23 +98,36 @@ export function createMeasureTool(opts) {
     onActiveChange,
   } = opts;
 
-  /** @type {'idle' | 'pickFirst' | 'pickSecond'} */
+  /** @type {'idle' | 'placeFirst' | 'placeSecond'} */
   let phase = "idle";
   let active = false;
+
+  /** Cursor has been shown / positioned for the current point. */
+  let cursorPlaced = false;
+  /** Canvas-local aim position (after touch offset). */
+  let aimX = 0;
+  let aimY = 0;
+  /** @type {THREE.Vector3 | null} */
+  let cursorWorld = null;
+  /** @type {'vertex' | 'edge' | 'face' | null} */
+  let snapKind = null;
+  /** @type {THREE.Vector3 | null} */
+  let snapEdgeDir = null;
+
+  /** Confirmed first endpoint. */
   /** @type {THREE.Vector3 | null} */
   let pointA = null;
   /** @type {THREE.Vector3 | null} */
-  let pointB = null;
-  /** @type {THREE.Vector3 | null} */
-  let faceAxisA = null;
-  /** @type {THREE.Vector3 | null} */
-  let faceAxisB = null;
+  let axisHintA = null;
 
   let pointerId = null;
+  /** @type {string} */
+  let pointerType = "mouse";
   let downX = 0;
   let downY = 0;
   let gestureMoved = false;
-  let hadCandidateAtDown = false;
+  /** True while a drag is actively driving the cursor (touch). */
+  let dragDriving = false;
 
   const overlay = new THREE.Group();
   overlay.name = "MeasureOverlay";
@@ -97,11 +138,15 @@ export function createMeasureTool(opts) {
   dims.name = "MeasureDimensions";
   scene.add(dims);
 
-  const draftA = makeMarker(0x34c759);
-  const draftB = makeMarker(0x007aff);
-  const draftLine = makeLine(0xffd60a, 0.65);
-  overlay.add(draftA, draftB, draftLine);
-  hideDraft();
+  const snapMarker = makeMarker(0xffd60a);
+  const lockedMarker = makeMarker(0x34c759);
+  const draftLine = makeLine(0xffd60a, 0.75);
+  overlay.add(snapMarker, lockedMarker, draftLine);
+  snapMarker.visible = false;
+  lockedMarker.visible = false;
+  draftLine.visible = false;
+
+  const crosshair = ensureCrosshairEl(canvas);
 
   /** @type {Array<{ group: THREE.Group, sprite: THREE.Sprite, mid: THREE.Vector3, span: number }>} */
   const committed = [];
@@ -122,39 +167,98 @@ export function createMeasureTool(opts) {
     active = next;
     if (active) {
       controls.enabled = false;
-      phase = "pickFirst";
+      phase = "placeFirst";
+      resetCursor();
       pointA = null;
-      pointB = null;
-      faceAxisA = null;
-      faceAxisB = null;
-      hideDraft();
+      axisHintA = null;
+      // Trackpad / mouse: crosshair appears immediately at view center.
+      if (deviceHasFinePointer()) {
+        const w = Math.max(1, canvas.clientWidth);
+        const h = Math.max(1, canvas.clientHeight);
+        placeCursorAt(w * 0.5, h * 0.5, true);
+      } else {
+        hideCursorUi();
+      }
     } else {
       controls.enabled = true;
       phase = "idle";
+      resetCursor();
       pointA = null;
-      pointB = null;
-      faceAxisA = null;
-      faceAxisB = null;
-      hideDraft();
+      axisHintA = null;
       pointerId = null;
+      dragDriving = false;
+      hideCursorUi();
       onLiveLength?.(null);
     }
     onActiveChange?.(active);
     syncChrome();
+    updateDraftVisuals();
+  }
+
+  function resetCursor() {
+    cursorPlaced = false;
+    cursorWorld = null;
+    snapKind = null;
+    snapEdgeDir = null;
   }
 
   function syncChrome() {
-    if (phase === "pickSecond" && pointA && pointB) {
-      onLiveLength?.(formatMm(pointA.distanceTo(pointB)));
+    if (phase === "placeSecond" && pointA && cursorWorld) {
+      onLiveLength?.(formatMm(pointA.distanceTo(cursorWorld)));
     } else if (active) {
       onLiveLength?.(null);
     }
   }
 
-  function hideDraft() {
-    draftA.visible = false;
-    draftB.visible = false;
-    draftLine.visible = false;
+  function hideCursorUi() {
+    crosshair.hidden = true;
+    snapMarker.visible = false;
+  }
+
+  /**
+   * @param {number} sx canvas-local x (aim)
+   * @param {number} sy canvas-local y (aim)
+   * @param {boolean} [forcePlace]
+   */
+  function placeCursorAt(sx, sy, forcePlace = false) {
+    aimX = sx;
+    aimY = sy;
+    cursorPlaced = true;
+    const snap = pickSnap(sx, sy);
+    if (snap) {
+      let world = snap.point;
+      if (phase === "placeSecond" && pointA) {
+        world = inferAxisPoint(pointA, snap.point, snap.edgeDir);
+        if (snap.kind === "vertex" || snap.kind === "edge") {
+          _delta.copy(snap.point).sub(pointA);
+          if (_delta.lengthSq() > 1e-16) {
+            _normA.copy(_delta).normalize();
+            _tmp.copy(world).sub(pointA);
+            if (_tmp.lengthSq() > 1e-16) {
+              const along = Math.abs(_tmp.normalize().dot(_normA));
+              if (along > 0.985) world = snap.point.clone();
+            }
+          } else {
+            world = snap.point.clone();
+          }
+        }
+      }
+      cursorWorld = world;
+      snapKind = snap.kind;
+      snapEdgeDir = snap.edgeDir;
+    } else if (forcePlace) {
+      // Keep last good snap if any; otherwise no world lock yet.
+      if (!cursorWorld) {
+        snapKind = null;
+        snapEdgeDir = null;
+      }
+    } else {
+      cursorWorld = null;
+      snapKind = null;
+      snapEdgeDir = null;
+    }
+    updateDraftVisuals();
+    syncChrome();
   }
 
   /**
@@ -167,28 +271,41 @@ export function createMeasureTool(opts) {
   }
 
   function updateDraftVisuals() {
-    if (phase === "pickFirst" && pointA) {
-      draftA.visible = true;
-      draftA.position.copy(pointA);
-      scaleMarker(draftA, pointA);
-      draftB.visible = false;
+    if (!active) {
+      hideCursorUi();
+      lockedMarker.visible = false;
       draftLine.visible = false;
-    } else if (phase === "pickSecond" && pointA) {
-      draftA.visible = true;
-      draftA.position.copy(pointA);
-      scaleMarker(draftA, pointA);
-      if (pointB) {
-        draftB.visible = true;
-        draftB.position.copy(pointB);
-        scaleMarker(draftB, pointB);
-        setLineEndpoints(draftLine, pointA, pointB);
-        draftLine.visible = true;
+      return;
+    }
+
+    if (pointA) {
+      lockedMarker.visible = true;
+      lockedMarker.position.copy(pointA);
+      scaleMarker(lockedMarker, pointA);
+    } else {
+      lockedMarker.visible = false;
+    }
+
+    if (cursorPlaced) {
+      crosshair.hidden = false;
+      positionCrosshair(crosshair, canvas, aimX, aimY, snapKind);
+      if (cursorWorld) {
+        snapMarker.visible = true;
+        snapMarker.position.copy(cursorWorld);
+        scaleMarker(snapMarker, cursorWorld);
+        colorMarker(snapMarker, snapKind);
       } else {
-        draftB.visible = false;
-        draftLine.visible = false;
+        snapMarker.visible = false;
       }
     } else {
-      hideDraft();
+      hideCursorUi();
+    }
+
+    if (phase === "placeSecond" && pointA && cursorWorld) {
+      setLineEndpoints(draftLine, pointA, cursorWorld);
+      draftLine.visible = true;
+    } else {
+      draftLine.visible = false;
     }
   }
 
@@ -205,8 +322,18 @@ export function createMeasureTool(opts) {
   }
 
   /**
+   * Touch aims slightly above the finger so the point stays visible.
+   * @param {number} x
+   * @param {number} y
+   * @param {string} type
+   */
+  function aimFromPointer(x, y, type) {
+    if (type === "touch") return { x, y: y - TOUCH_OFFSET_PX };
+    return { x, y };
+  }
+
+  /**
    * @param {THREE.Vector3} world
-   * @returns {boolean}
    */
   function passesClip(world) {
     const planes = getClipPlanes() || [];
@@ -240,23 +367,12 @@ export function createMeasureTool(opts) {
   }
 
   /**
-   * @param {THREE.Intersection} hit
-   * @returns {THREE.Vector3 | null}
-   */
-  function faceNormalFromHit(hit) {
-    const mesh = /** @type {THREE.Mesh} */ (hit.object);
-    if (!hit.face) return null;
-    return hit.face.normal.clone().transformDirection(mesh.matrixWorld).normalize();
-  }
-
-  /**
-   * @param {number} sx canvas-local x
-   * @param {number} sy canvas-local y
+   * @param {number} sx
+   * @param {number} sy
    * @returns {{
    *   point: THREE.Vector3,
    *   kind: 'vertex' | 'edge' | 'face',
    *   edgeDir: THREE.Vector3 | null,
-   *   faceNormal: THREE.Vector3 | null,
    * } | null}
    */
   function pickSnap(sx, sy) {
@@ -281,16 +397,14 @@ export function createMeasureTool(opts) {
 
     const mesh = /** @type {THREE.Mesh} */ (hit.object);
     const geom = mesh.geometry;
-    const faceN = faceNormalFromHit(hit);
     if (!geom?.getAttribute("position")) {
-      return { point: hit.point.clone(), kind: "face", edgeDir: null, faceNormal: faceN };
+      return { point: hit.point.clone(), kind: "face", edgeDir: null };
     }
 
     mesh.updateWorldMatrix(true, false);
     const wpp = worldPerPixel(hit.point);
     const vertR = wpp * VERTEX_PX;
     const edgeR = wpp * EDGE_PX;
-
     const pos = geom.getAttribute("position");
     const index = geom.getIndex();
     const faceIdx = hit.faceIndex;
@@ -323,7 +437,6 @@ export function createMeasureTool(opts) {
 
     const cx = sx;
     const cy = sy;
-
     /** @type {{ point: THREE.Vector3, distPx: number } | null} */
     let bestVert = null;
 
@@ -342,7 +455,6 @@ export function createMeasureTool(opts) {
     }
 
     for (const v of triVerts) considerVert(v);
-
     const ballR2 = vertR * vertR * 4;
     const count = pos.count;
     const step = count > 8000 ? 2 : 1;
@@ -353,12 +465,7 @@ export function createMeasureTool(opts) {
     }
 
     if (bestVert) {
-      return {
-        point: bestVert.point,
-        kind: "vertex",
-        edgeDir: null,
-        faceNormal: faceN,
-      };
+      return { point: bestVert.point, kind: "vertex", edgeDir: null };
     }
 
     /** @type {{ point: THREE.Vector3, distPx: number, dir: THREE.Vector3 } | null} */
@@ -408,42 +515,28 @@ export function createMeasureTool(opts) {
     }
 
     if (bestEdge) {
-      return {
-        point: bestEdge.point,
-        kind: "edge",
-        edgeDir: bestEdge.dir,
-        faceNormal: faceN,
-      };
+      return { point: bestEdge.point, kind: "edge", edgeDir: bestEdge.dir };
     }
 
-    return {
-      point: hit.point.clone(),
-      kind: "face",
-      edgeDir: null,
-      faceNormal: faceN,
-    };
+    return { point: hit.point.clone(), kind: "face", edgeDir: null };
   }
 
   /**
    * @param {THREE.Vector3} a
    * @param {THREE.Vector3} freeB
    * @param {THREE.Vector3 | null} edgeDir
-   * @returns {THREE.Vector3}
    */
   function inferAxisPoint(a, freeB, edgeDir) {
     _delta.copy(freeB).sub(a);
     const freeLen = _delta.length();
     if (freeLen * 1000 < AXIS_MIN_MM) return freeB.clone();
 
-    camera.getWorldDirection(_look);
-    _camRight.crossVectors(camera.up, _look).normalize();
-    if (_camRight.lengthSq() < 1e-8) _camRight.set(1, 0, 0);
-
     /** @type {THREE.Vector3[]} */
     const axes = [...WORLD_AXES];
     if (edgeDir && edgeDir.lengthSq() > 1e-8) axes.push(edgeDir.clone().normalize());
-    if (faceAxisA && faceAxisA.lengthSq() > 1e-8) axes.push(faceAxisA.clone().normalize());
-    if (faceAxisB && faceAxisB.lengthSq() > 1e-8) axes.push(faceAxisB.clone().normalize());
+    if (axisHintA && axisHintA.lengthSq() > 1e-8) {
+      axes.push(axisHintA.clone().normalize());
+    }
 
     projectToScreen(a, _screenA);
     projectToScreen(freeB, _screenB);
@@ -481,64 +574,32 @@ export function createMeasureTool(opts) {
     return a.clone().addScaledVector(bestAxis, bestT);
   }
 
-  /**
-   * @param {number} sx
-   * @param {number} sy
-   */
-  function updateCandidateFromPointer(sx, sy) {
-    const snap = pickSnap(sx, sy);
-    if (!snap) {
-      updateDraftVisuals();
-      syncChrome();
-      return;
-    }
+  function confirmCurrent() {
+    if (!cursorWorld) return;
 
-    if (phase === "pickFirst") {
-      pointA = snap.point;
-      faceAxisA = snap.edgeDir;
-      updateDraftVisuals();
-      syncChrome();
-      return;
-    }
-
-    if (phase === "pickSecond" && pointA) {
-      faceAxisB = snap.edgeDir;
-      const inferred = inferAxisPoint(pointA, snap.point, snap.edgeDir);
-      if (snap.kind === "vertex" || snap.kind === "edge") {
-        _delta.copy(snap.point).sub(pointA);
-        const freeLen = _delta.length();
-        if (freeLen > 1e-9) {
-          _normA.copy(_delta).normalize();
-          _tmp.copy(inferred).sub(pointA);
-          if (_tmp.lengthSq() > 1e-16) {
-            const along = Math.abs(_tmp.normalize().dot(_normA));
-            pointB = along > 0.985 ? snap.point.clone() : inferred;
-          } else {
-            pointB = snap.point.clone();
-          }
-        } else {
-          pointB = snap.point.clone();
-        }
-      } else {
-        pointB = inferred;
+    if (phase === "placeFirst") {
+      pointA = cursorWorld.clone();
+      axisHintA = snapEdgeDir ? snapEdgeDir.clone() : null;
+      phase = "placeSecond";
+      // CAD: after locking A, cursor stays visible and keeps driving B.
+      // Touch users re-drag; fine pointer keeps hovering from the same spot.
+      if (isTouchPointer({ pointerType }) || !deviceHasFinePointer()) {
+        // Leave locked A marker; require a new drag for B (tap alone still no-op
+        // until drag places the second cursor).
+        cursorPlaced = false;
+        cursorWorld = null;
+        snapKind = null;
+        snapEdgeDir = null;
+        hideCursorUi();
       }
       updateDraftVisuals();
       syncChrome();
-    }
-  }
-
-  function confirmCurrent() {
-    if (phase === "pickFirst") {
-      if (!pointA) return;
-      phase = "pickSecond";
-      pointB = null;
-      updateDraftVisuals();
-      syncChrome();
       return;
     }
-    if (phase === "pickSecond") {
-      if (!pointA || !pointB) return;
-      commitDimension(pointA, pointB);
+
+    if (phase === "placeSecond" && pointA) {
+      if (pointA.distanceTo(cursorWorld) * 1000 < AXIS_MIN_MM) return;
+      commitDimension(pointA, cursorWorld);
       setActive(false);
     }
   }
@@ -579,9 +640,7 @@ export function createMeasureTool(opts) {
     }
     _delta.normalize();
     _tmp.crossVectors(_delta, _look);
-    if (_tmp.lengthSq() < 1e-10) {
-      _tmp.copy(camera.up);
-    }
+    if (_tmp.lengthSq() < 1e-10) _tmp.copy(camera.up);
     _tmp.normalize();
     const lift = Math.max(span * LABEL_HEIGHT_WORLD_FRAC, worldPerPixel(mid) * 18);
     sprite.position.copy(mid).addScaledVector(_tmp, lift);
@@ -590,8 +649,11 @@ export function createMeasureTool(opts) {
   }
 
   function update() {
-    if (draftA.visible) scaleMarker(draftA, draftA.position);
-    if (draftB.visible) scaleMarker(draftB, draftB.position);
+    if (lockedMarker.visible && pointA) scaleMarker(lockedMarker, pointA);
+    if (snapMarker.visible && cursorWorld) scaleMarker(snapMarker, cursorWorld);
+    if (cursorPlaced) {
+      positionCrosshair(crosshair, canvas, aimX, aimY, snapKind);
+    }
     for (const dim of committed) {
       const line = /** @type {THREE.Line} */ (dim.group.children[0]);
       const pos = line.geometry.getAttribute("position");
@@ -602,6 +664,19 @@ export function createMeasureTool(opts) {
   }
 
   /**
+   * Hover tracking for trackpad / mouse (no buttons).
+   * @param {PointerEvent} ev
+   */
+  function onHoverMove(ev) {
+    if (!active || phase === "idle") return;
+    if (!isFinePointer(ev)) return;
+    if (pointerId !== null) return;
+    const { x, y } = canvasPos(ev);
+    const aim = aimFromPointer(x, y, ev.pointerType);
+    placeCursorAt(aim.x, aim.y, true);
+  }
+
+  /**
    * @param {PointerEvent} ev
    */
   function onPointerDown(ev) {
@@ -609,18 +684,24 @@ export function createMeasureTool(opts) {
     if (ev.button !== undefined && ev.button !== 0) return;
     if (pointerId !== null) return;
     pointerId = ev.pointerId;
+    pointerType = ev.pointerType || "mouse";
     const { x, y } = canvasPos(ev);
     downX = x;
     downY = y;
     gestureMoved = false;
-    hadCandidateAtDown =
-      (phase === "pickFirst" && !!pointA) || (phase === "pickSecond" && !!pointB);
+    dragDriving = false;
     try {
       canvas.setPointerCapture(ev.pointerId);
     } catch {
       /* ignore */
     }
-    updateCandidateFromPointer(x, y);
+
+    // Fine pointer: pressing already aims at the pointer (cursor was hovering).
+    if (isFinePointer(ev)) {
+      const aim = aimFromPointer(x, y, pointerType);
+      placeCursorAt(aim.x, aim.y, true);
+    }
+    // Touch: do nothing until drag threshold — tap alone is a no-op / confirm.
     ev.preventDefault();
   }
 
@@ -628,10 +709,30 @@ export function createMeasureTool(opts) {
    * @param {PointerEvent} ev
    */
   function onPointerMove(ev) {
-    if (!active || pointerId !== ev.pointerId) return;
+    if (!active) return;
+
+    // Hover path when not in a captured gesture.
+    if (pointerId === null) {
+      onHoverMove(ev);
+      return;
+    }
+    if (pointerId !== ev.pointerId) return;
+
     const { x, y } = canvasPos(ev);
-    if (Math.hypot(x - downX, y - downY) >= DRAG_PX) gestureMoved = true;
-    updateCandidateFromPointer(x, y);
+    const dist = Math.hypot(x - downX, y - downY);
+    if (dist >= DRAG_PX) {
+      gestureMoved = true;
+      dragDriving = true;
+    }
+
+    if (isTouchPointer(ev)) {
+      if (!dragDriving) return;
+      const aim = aimFromPointer(x, y, "touch");
+      placeCursorAt(aim.x, aim.y, true);
+    } else if (isFinePointer(ev)) {
+      const aim = aimFromPointer(x, y, pointerType);
+      placeCursorAt(aim.x, aim.y, true);
+    }
     ev.preventDefault();
   }
 
@@ -641,17 +742,36 @@ export function createMeasureTool(opts) {
   function onPointerUp(ev) {
     if (!active || pointerId !== ev.pointerId) return;
     const { x, y } = canvasPos(ev);
-    if (Math.hypot(x - downX, y - downY) >= DRAG_PX) gestureMoved = true;
-    updateCandidateFromPointer(x, y);
+    if (Math.hypot(x - downX, y - downY) >= DRAG_PX) {
+      gestureMoved = true;
+      dragDriving = true;
+    }
+
     pointerId = null;
     try {
       canvas.releasePointerCapture(ev.pointerId);
     } catch {
       /* ignore */
     }
-    if (!gestureMoved && hadCandidateAtDown) {
+
+    if (isTouchPointer(ev)) {
+      if (gestureMoved) {
+        // Drag finished — cursor stays where it was; no confirm.
+        dragDriving = false;
+      } else {
+        // Tap: confirm existing cursor only. Never re-pick at the tap point.
+        dragDriving = false;
+        if (cursorPlaced && cursorWorld) confirmCurrent();
+      }
+      ev.preventDefault();
+      return;
+    }
+
+    // Mouse / pen click: confirm current aim (already updated on move/down).
+    if (!gestureMoved && cursorWorld) {
       confirmCurrent();
     }
+    dragDriving = false;
     ev.preventDefault();
   }
 
@@ -661,6 +781,7 @@ export function createMeasureTool(opts) {
   function onPointerCancel(ev) {
     if (pointerId !== ev.pointerId) return;
     pointerId = null;
+    dragDriving = false;
   }
 
   canvas.addEventListener("pointerdown", onPointerDown);
@@ -674,6 +795,39 @@ export function createMeasureTool(opts) {
     update,
     formatMm,
   };
+}
+
+/**
+ * @param {HTMLCanvasElement} canvas
+ */
+function ensureCrosshairEl(canvas) {
+  let el = document.getElementById("measure-crosshair");
+  if (el) return /** @type {HTMLDivElement} */ (el);
+  el = document.createElement("div");
+  el.id = "measure-crosshair";
+  el.className = "measure-crosshair";
+  el.hidden = true;
+  el.setAttribute("aria-hidden", "true");
+  el.innerHTML =
+    '<span class="measure-crosshair-h"></span><span class="measure-crosshair-v"></span><span class="measure-crosshair-dot"></span>';
+  // Sit above the canvas, below sheet chrome (z-index 3/4).
+  const parent = canvas.parentElement || document.body;
+  parent.appendChild(el);
+  return /** @type {HTMLDivElement} */ (el);
+}
+
+/**
+ * @param {HTMLDivElement} el
+ * @param {HTMLCanvasElement} canvas
+ * @param {number} sx
+ * @param {number} sy
+ * @param {'vertex' | 'edge' | 'face' | null} kind
+ */
+function positionCrosshair(el, canvas, sx, sy, kind) {
+  const rect = canvas.getBoundingClientRect();
+  el.style.left = `${rect.left + sx}px`;
+  el.style.top = `${rect.top + sy}px`;
+  el.dataset.snap = kind || "none";
 }
 
 /**
@@ -692,6 +846,17 @@ function makeMarker(color) {
   mesh.renderOrder = 20;
   mesh.visible = false;
   return mesh;
+}
+
+/**
+ * @param {THREE.Mesh} marker
+ * @param {'vertex' | 'edge' | 'face' | null} kind
+ */
+function colorMarker(marker, kind) {
+  const mat = /** @type {THREE.MeshBasicMaterial} */ (marker.material);
+  if (kind === "vertex") mat.color.setHex(0xff453a);
+  else if (kind === "edge") mat.color.setHex(0xffd60a);
+  else mat.color.setHex(0x64d2ff);
 }
 
 /**

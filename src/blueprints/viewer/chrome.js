@@ -139,6 +139,56 @@ canvas {
 #ar:not([hidden]),
 #measure:not([hidden]) { min-width: auto; }
 
+.measure-crosshair {
+  position: fixed;
+  z-index: 2;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+.measure-crosshair-h,
+.measure-crosshair-v {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background: rgba(255, 214, 10, 0.95);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+.measure-crosshair-h {
+  width: 28px;
+  height: 2px;
+  transform: translate(-50%, -50%);
+}
+.measure-crosshair-v {
+  width: 2px;
+  height: 28px;
+  transform: translate(-50%, -50%);
+}
+.measure-crosshair-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1.5px solid rgba(0, 0, 0, 0.45);
+  transform: translate(-50%, -50%);
+}
+.measure-crosshair[data-snap="vertex"] .measure-crosshair-h,
+.measure-crosshair[data-snap="vertex"] .measure-crosshair-v {
+  background: rgba(255, 69, 58, 0.95);
+}
+.measure-crosshair[data-snap="edge"] .measure-crosshair-h,
+.measure-crosshair[data-snap="edge"] .measure-crosshair-v {
+  background: rgba(255, 214, 10, 0.95);
+}
+.measure-crosshair[data-snap="face"] .measure-crosshair-h,
+.measure-crosshair[data-snap="face"] .measure-crosshair-v {
+  background: rgba(100, 210, 255, 0.95);
+}
+
 /* After .chrome-btn so display:none wins on narrow viewports */
 .sheet-toggle { display: none; }
 
