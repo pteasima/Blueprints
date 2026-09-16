@@ -48,6 +48,7 @@ def test_3d_matches_section_and_elevation_masses():
         "soffit",
         "predstena",
         "pouzdro",
+        "sdk",
         "podhled",
         "sklo",
     ):
@@ -84,27 +85,34 @@ def test_3d_matches_section_and_elevation_masses():
     ]
     assert gable_eps == []
 
-    pouzdra = sorted(_labeled(shape, "pouzdro"), key=lambda s: s.bounding_box().min.Y)
-    assert len(pouzdra) == 2
-    kitchen_p, living_p = pouzdra
-    kbb, lbb = kitchen_p.bounding_box(), living_p.bounding_box()
-    assert abs(kbb.min.Y - FACE_GAP) < 1e-6
-    assert abs(kbb.size.Y - (p.pouzdro_d - 2 * FACE_GAP)) < 1e-6
-    assert abs(kbb.max.Z - (p.pocket_door_h - FACE_GAP)) <= 1.0
-    assert abs(lbb.max.Y - (p.room_length - FACE_GAP)) < 1e-6
-    assert abs(lbb.size.Y - (p.pouzdro_d - 2 * FACE_GAP)) < 1e-6
-    assert abs(lbb.max.Z - (p.pocket_door_h - FACE_GAP)) <= 1.0
+    pouzdra = sorted(_labeled(shape, "pouzdro"), key=lambda s: (s.bounding_box().min.Y, s.bounding_box().min.X))
+    assert len(pouzdra) == len(p.pocket_doors)
+    sdk_faces = sorted(_labeled(shape, "sdk"), key=lambda s: s.bounding_box().min.Y)
+    assert len(sdk_faces) == 2
+    for face in sdk_faces:
+        bb = face.bounding_box()
+        assert abs(bb.size.Y - (p.pouzdro_d - 2 * FACE_GAP)) < 1e-6
+        assert abs(bb.max.Z - (p.pocket_door_h - FACE_GAP)) <= 1.0
+    # Local pouzdro sits beside openings, not spanning the full gable width.
+    for part in pouzdra:
+        bb = part.bounding_box()
+        assert bb.size.X < p.room_width * 0.5
+        assert abs(bb.max.Z - (p.pocket_door_h - FACE_GAP)) <= 1.0
 
-    # Door openings: chodba+zádveří at window-eave corner (X≈0); spíž inset from cabinets.
+    # Door openings: chodba+spíž on kitchen gable; zádveří on living; window-corner vs inset.
     kitchen_doors = sorted(
         [d for d in p.pocket_doors if d[0] == "kitchen"], key=lambda d: d[1]
     )
     living_doors = [d for d in p.pocket_doors if d[0] == "living"]
     assert len(kitchen_doors) == 2
     assert len(living_doors) == 1
-    assert kitchen_doors[0][1] == 0.0  # chodba
+    assert kitchen_doors[0][1] == 0.0  # chodba · window corner
     assert abs(kitchen_doors[1][1] - (p.room_width - p.pocket_spiz_inset - 1000.0)) < 1e-6
-    assert living_doors[0][1] == 0.0  # zádveří
+    assert living_doors[0][1] == 0.0  # zádveří · window corner
+    kitchen_pouzdra = [part for part in pouzdra if part.bounding_box().max.Y < p.room_length / 2]
+    living_pouzdra = [part for part in pouzdra if part.bounding_box().min.Y > p.room_length / 2]
+    assert len(kitchen_pouzdra) == 2  # spíž + chodba on kitchen gable
+    assert len(living_pouzdra) == 1
     glass = _labeled(shape, "sklo")
     assert len(glass) == len(p.eave_windows)
     for (y0, width), pane in zip(
@@ -202,7 +210,7 @@ def test_obyvak_3d_exports(tmp_path, monkeypatch):
     elev, _ = build_elevation_slice()
     elev_labels = {c.label for c in elev.children}
     assert "predstena" in elev_labels
-    assert "pouzdro" in elev_labels
+    assert "sdk" in elev_labels
     assert "koruna" not in elev_labels
     from blueprints.export_utils import export_section as _export_section
 

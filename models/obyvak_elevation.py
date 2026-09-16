@@ -2,8 +2,8 @@
 
 X v tomto výkrese = světlá délka kuchyně↔obývák (v 3D to bude Y).
 Z up. Podhled je vodorovný pod hřebenem — žádný A-rám vlevo/vpravo.
-Předstěny 190 (KK) a 450 (obývák) od Z=2450 k podhledu; pouzdra posuvných dveří
-před zdí pod kastlíky (Z=0→2450) na obou štítech.
+Předstěny 190 (KK) a 450 (obývák) od Z=2450 k podhledu. Pod kastlíky: SDK před
+štítem s otvory na soupačky; pouzdro jen jako kastlík na křídlo (ne přes celou stěnu).
 
     python -m blueprints.export obyvak_elevation
 
@@ -48,9 +48,13 @@ def build(params: ObyvakParams | None = None):
         xz_rect(span + p.wall_plaster, -p.floor_t, p.wall_mason, h_gable + p.floor_t, "zdivo")
     )
 
-    # Pouzdra before the masonry face, under the SDK kastlíky (both gables).
-    parts.append(xz_rect(0.0, 0.0, p.pouzdro_d, p.pocket_door_h, "pouzdro"))
-    parts.append(xz_rect(span - p.pouzdro_d, 0.0, p.pouzdro_d, p.pocket_door_h, "pouzdro"))
+    # SDK face under předstěny; pouzdro only as local pocket schematic (not full-wall).
+    parts.append(xz_rect(0.0, 0.0, p.pouzdro_d, p.pocket_door_h, "sdk"))
+    parts.append(xz_rect(span - p.pouzdro_d, 0.0, p.pouzdro_d, p.pocket_door_h, "sdk"))
+    parts.append(xz_rect(p.pouzdro_d * 0.25, 0.0, p.pouzdro_d * 0.5, p.pocket_door_h, "pouzdro"))
+    parts.append(
+        xz_rect(span - p.pouzdro_d * 0.75, 0.0, p.pouzdro_d * 0.5, p.pocket_door_h, "pouzdro")
+    )
 
     parts.append(
         xz_rect(

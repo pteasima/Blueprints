@@ -109,6 +109,14 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "roughness": 0.7,
         "metallic": 0.0,
     },
+    "sdk": {
+        "fill": (230, 230, 235),
+        "line": (120, 120, 130),
+        "dxf": ColorIndex.CYAN,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.88,
+        "metallic": 0.0,
+    },
     "krov": {
         "fill": (200, 85, 10),
         "line": (110, 40, 0),
@@ -167,6 +175,7 @@ SECTION_LAYER_ORDER = [
     "vata",
     "nabytek",
     "pouzdro",
+    "sdk",
     "pozednice",
     "krov",
     "soffit",

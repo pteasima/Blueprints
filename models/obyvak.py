@@ -158,7 +158,7 @@ def _cut_wall_openings(parts: list, cutters: list) -> list:
         return parts
     out = []
     for part in parts:
-        if part.label not in {"eps", "zdivo", "omitka"}:
+        if part.label not in {"eps", "zdivo", "omitka", "sdk"}:
             out.append(part)
             continue
         cut = part
@@ -167,6 +167,50 @@ def _cut_wall_openings(parts: list, cutters: list) -> list:
                 cut = _cut_away(cut, [tool], part.label)
         out.append(cut)
     return out
+
+
+def _gable_sdk_and_pouzdra(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
+    """SDK face in front of each gable (with door openings) + local pouzdro boxes.
+
+    Pouzdro is only the leaf pocket beside each opening — not a full-width strip.
+    SDK is cut out where the pouzdro sits so solids do not interpenetrate.
+    """
+    h = p.pocket_door_h - gap
+    d = p.pouzdro_d - 2 * gap
+    sdk_parts: list = [
+        _box(gap, gap, gap, p.room_width - 2 * gap, d, h, "sdk"),
+        _box(gap, p.room_length - p.pouzdro_d + gap, gap, p.room_width - 2 * gap, d, h, "sdk"),
+    ]
+    pouzdra: list = []
+    pocket_cutters: list = []
+
+    for gable, x0, width in p.pocket_doors:
+        # Pocket beside the opening, toward room centre along X.
+        if x0 < p.room_width / 2.0:
+            px0 = x0 + width + gap
+        else:
+            px0 = x0 - width + gap
+        px0 = min(max(px0, gap), p.room_width - width - gap)
+        if gable == "kitchen":
+            py0 = gap
+        else:
+            py0 = p.room_length - p.pouzdro_d + gap
+        pouzdra.append(_box(px0, py0, gap, width - 2 * gap, d, h, "pouzdro"))
+        pocket_cutters.append(
+            _box(
+                px0 - gap,
+                py0 - 1.0,
+                -1.0,
+                width,
+                d + 2.0,
+                h + 2 * gap + 2.0,
+                "_pocket_cut",
+            )
+        )
+
+    door_cutters = _pocket_door_cutters(p, g, gap)
+    sdk_parts = _cut_wall_openings(sdk_parts, door_cutters + pocket_cutters)
+    return sdk_parts + pouzdra
 
 
 def _glass_panes(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
@@ -334,22 +378,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     vata_cut = _cut_away(vata, [pred_k, pred_l], "vata")
     parts[parts.index(vata)] = vata_cut
 
-    pouzdro_h = p.pocket_door_h - gap
-    # Full-width pocket-door mass in front of each gable, under the předstěna kastlík.
-    parts.append(
-        _box(gap, gap, gap, p.room_width - 2 * gap, p.pouzdro_d - 2 * gap, pouzdro_h, "pouzdro")
-    )
-    parts.append(
-        _box(
-            gap,
-            p.room_length - p.pouzdro_d + gap,
-            gap,
-            p.room_width - 2 * gap,
-            p.pouzdro_d - 2 * gap,
-            pouzdro_h,
-            "pouzdro",
-        )
-    )
+    parts.extend(_gable_sdk_and_pouzdra(p, g, gap))
     return parts
 
 
@@ -383,7 +412,7 @@ def build(params: ObyvakParams | None = None):
 
 
 def build_preview(params: ObyvakParams | None = None):
-    """Dollhouse cutaway: drop roof, furniture eave, and kitchen gable — keep windows."""
+    """Dollhouse cutaway: drop roof and furniture eave — keep window wall + both gables."""
     p = params or ObyvakParams()
     g = ObyvakLayout(p)
     kept = []
@@ -392,8 +421,8 @@ def build_preview(params: ObyvakParams | None = None):
         if part.label in {"krov", "krytina", "vata", "podhled"}:
             continue
         if part.label in {"eps", "zdivo", "omitka", "pozednice", "nabytek", "soffit"}:
-            # Open the cabinet eave and kitchen gable; window wall (X≈0) stays.
-            if bb.min.X >= p.room_width - 1.0 or bb.max.Y <= 1.0:
+            # Open the cabinet eave only; keep gables so pocket doors read correctly.
+            if bb.min.X >= p.room_width - 1.0:
                 continue
         kept.append(part)
     return _compound(kept, label=f"{MODEL_NAME}_cutaway"), _meta(p, g)

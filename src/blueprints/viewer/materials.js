@@ -19,6 +19,7 @@ export const SOLID_COLORS = {
   koruna: [200, 85, 10],
   predstena: [0, 195, 245],
   pouzdro: [235, 185, 80],
+  sdk: [230, 230, 235],
   krov: [200, 85, 10],
   vata: [0, 210, 155],
   soffit: [35, 175, 15],
@@ -38,6 +39,7 @@ export const LAYER_DEPTH_BIAS = {
   zdivo: 2,
   omitka: 3,
   pouzdro: 4,
+  sdk: 4,
   predstena: 5,
   nabytek: 6,
   soffit: 7,
@@ -116,6 +118,12 @@ export const REALISTIC_PRESETS = {
   pouzdro: {
     color: [235, 185, 80],
     roughness: 0.7,
+    metalness: 0.0,
+    map: "plaster",
+  },
+  sdk: {
+    color: [230, 230, 235],
+    roughness: 0.88,
     metalness: 0.0,
     map: "plaster",
   },
