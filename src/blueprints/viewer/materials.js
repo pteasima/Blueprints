@@ -129,6 +129,13 @@ export function collectLeafIds(node) {
 }
 
 /**
+ * Near-opaque translucency keeps depth writes (avoids coplanar tears in wall
+ * stacks). Below this, depth write is off so another faded group can show
+ * through — standard real-time transparency tradeoff (no full OIT).
+ */
+const DEPTH_WRITE_MIN_OPACITY = 0.9;
+
+/**
  * Apply opacity to meshes. opacity 0 → hidden (visible=false) for perf / AR omit.
  * @param {THREE.Object3D[]} meshes
  * @param {number} opacity 0–1
@@ -149,11 +156,9 @@ export function applyOpacityToMeshes(meshes, opacity) {
       if (o < 1) {
         mat.transparent = true;
         mat.opacity = o;
-        // Keep depthWrite: stacked wall layers (eps/zdivo/omitka) are nearly
-        // coplanar; depthWrite:false + several translucents at once produces
-        // triangular holes. Individual fades look fine because neighbors stay
-        // opaque and still write depth.
-        mat.depthWrite = true;
+        // depthWrite true  → solid-ish fade, no holes, occludes what's behind
+        // depthWrite false → can see other transparent groups (may soft-sort)
+        mat.depthWrite = o >= DEPTH_WRITE_MIN_OPACITY;
         mat.side = THREE.FrontSide;
       } else {
         mat.transparent = false;
