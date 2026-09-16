@@ -57,15 +57,29 @@ Cursor chat cannot open a USDZ tile or an artifact path. Export updates the Page
 - `docs/models/manifest.json` — hub labels / order
 - `docs/index.html` — **generated locally and by CI; gitignored** — do not commit it
 
-The `pages` GitHub Action rebuilds the hub and deploys a **rolling** site (last push to `main` or `cursor/**` wins):
+**Production** (pushes to `main` only):
 
 ```text
 preview_url: https://pteasima.github.io/Blueprints/
 ```
 
-After `git push`, wait for the `pages` workflow to go green, then paste that URL in chat (tappable on Cursor iOS). The hub links to **web viewers** (`/viewer/?m=<id>`). In Safari, use the viewer’s **AR** control for Quick Look.
+**PR / agent previews** (one URL per open PR; does not overwrite other agents):
 
-One-time enable: https://github.com/pteasima/Blueprints/settings/pages → Source = **GitHub Actions** → Save. Then open **Settings → Environments → github-pages → Deployment branches** and allow `cursor/**` (or All branches) — by default only `main` can deploy, which blocks unmerged agent previews. Cloud agent tokens cannot change this (API 403). Override the printed URL with `BLUEPRINTS_PAGES_URL` if needed. Skip site file updates with `BLUEPRINTS_SKIP_PREVIEW_SITE=1`.
+```text
+https://pteasima.github.io/Blueprints/pr-preview/pr-<N>/
+```
+
+After `git push` + open PR, wait for `pages-content` then `pages` to go green. Use the sticky **Blueprints preview** comment on the PR (tappable on Cursor iOS), or paste `…/pr-preview/pr-<N>/` in chat. When the PR is merged or closed, that preview folder is deleted automatically. Export’s printed `preview_url` is still the production root (no PR context locally).
+
+Hub links open **web viewers** (`viewer/?m=<id>`). In Safari, use the viewer’s **AR** control for Quick Look.
+
+One-time enable:
+
+1. https://github.com/pteasima/Blueprints/settings/pages → Source = **GitHub Actions** → Save.
+2. **Settings → Actions → General → Workflow permissions** → **Read and write** (so `pages-content` can update the `pages-site` branch).
+3. **Settings → Environments → github-pages → Deployment branches** → allow `pages-site` (or All branches). Production deploy runs from that content branch only.
+
+Cloud agent tokens cannot change those settings (API 403). Override the printed production URL with `BLUEPRINTS_PAGES_URL` if needed. Skip site file updates with `BLUEPRINTS_SKIP_PREVIEW_SITE=1`.
 
 Add more models later via more GLBs (+ USDZs) and manifest rows — one hub page. Hub entries are web-viewer links only.
 
