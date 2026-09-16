@@ -149,10 +149,11 @@ export function applyOpacityToMeshes(meshes, opacity) {
       if (o < 1) {
         mat.transparent = true;
         mat.opacity = o;
-        // Nested DoubleSide CAD solids + depthWrite:false sort badly: only one
-        // shell survives when a whole group goes translucent at once. FrontSide
-        // keeps each layer visible while still blending.
-        mat.depthWrite = false;
+        // Keep depthWrite: stacked wall layers (eps/zdivo/omitka) are nearly
+        // coplanar; depthWrite:false + several translucents at once produces
+        // triangular holes. Individual fades look fine because neighbors stay
+        // opaque and still write depth.
+        mat.depthWrite = true;
         mat.side = THREE.FrontSide;
       } else {
         mat.transparent = false;

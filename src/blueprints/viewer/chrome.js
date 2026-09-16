@@ -412,13 +412,74 @@ canvas {
   pointer-events: none;
 }
 
-.part-row input.part-opacity {
+.part-opacity-wrap {
   flex: 1 1 0;
-  width: auto;
-  min-width: 4.5rem;
-  height: 1.75rem;
+  min-width: 5rem;
+  display: flex;
+  align-items: center;
+  /* Tall hit area; thumb stays visually moderate. */
+  min-height: 2.85rem;
   margin: 0;
+}
+
+.part-row input.part-opacity {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 2.85rem;
+  margin: 0;
+  padding: 0;
   accent-color: var(--accent);
+  cursor: pointer;
+  touch-action: none;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+
+.part-row input.part-opacity:focus {
+  outline: none;
+}
+
+.part-row input.part-opacity:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 0.35rem;
+}
+
+.part-row input.part-opacity::-webkit-slider-runnable-track {
+  height: 0.28rem;
+  border-radius: 999px;
+  background: var(--fill-active);
+}
+
+.part-row input.part-opacity::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 1.55rem;
+  height: 1.55rem;
+  margin-top: calc((0.28rem - 1.55rem) / 2);
+  border-radius: 50%;
+  border: 0;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+  /* Invisible padding enlarges the grab target beyond the visible knob. */
+  cursor: pointer;
+}
+
+.part-row input.part-opacity::-moz-range-track {
+  height: 0.28rem;
+  border-radius: 999px;
+  background: var(--fill-active);
+  border: 0;
+}
+
+.part-row input.part-opacity::-moz-range-thumb {
+  width: 1.55rem;
+  height: 1.55rem;
+  border-radius: 50%;
+  border: 0;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
   cursor: pointer;
 }
 

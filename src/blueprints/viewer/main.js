@@ -365,7 +365,9 @@ export function mountViewer(canvas, glbBuffer) {
   }
 
   /**
-   * Tap without drag on a range toggles 0 ↔ lastNonZero; drag adjusts opacity.
+   * Tap without drag toggles 0 ↔ lastNonZero; drag/scrub adjusts opacity.
+   * Do not setPointerCapture — it breaks native trackpad/mouse scrubbing
+   * (same issue as section cut ranges).
    * @param {HTMLInputElement} range
    * @param {() => number} getLastNonZero 0–1
    * @param {(opacity: number) => void} apply
@@ -376,64 +378,82 @@ export function mountViewer(canvas, glbBuffer) {
     let startY = 0;
     let startVal = 0;
     let moved = false;
+    let inputCount = 0;
     const MOVE_PX = 6;
 
-    range.addEventListener("pointerdown", (ev) => {
-      pointerDown = true;
-      moved = false;
-      startX = ev.clientX;
-      startY = ev.clientY;
-      startVal = Number(range.value) || 0;
-      try {
-        range.setPointerCapture(ev.pointerId);
-      } catch {
-        /* ignore */
-      }
-    });
-
-    range.addEventListener("pointermove", (ev) => {
+    /** @param {PointerEvent} ev */
+    const onWinMove = (ev) => {
       if (!pointerDown || moved) return;
       if (
         Math.abs(ev.clientX - startX) > MOVE_PX ||
         Math.abs(ev.clientY - startY) > MOVE_PX
       ) {
         moved = true;
-        // Click-to-seek may have moved the thumb before drag confirmed — apply now.
-        apply((Number(range.value) || 0) / 100);
       }
-    });
+    };
 
-    range.addEventListener("pointerup", (ev) => {
-      if (!pointerDown) return;
-      pointerDown = false;
-      try {
-        range.releasePointerCapture(ev.pointerId);
-      } catch {
-        /* ignore */
-      }
-      if (moved) {
-        apply((Number(range.value) || 0) / 100);
-        return;
-      }
-      // Tap: ignore seek-to-position; toggle 0 ↔ last non-zero.
-      range.value = String(startVal);
-      if (startVal > 0) apply(0);
-      else {
-        const last = getLastNonZero();
-        apply(last > 0 ? last : 1);
-      }
-    });
-
-    range.addEventListener("pointercancel", () => {
-      pointerDown = false;
+    range.addEventListener("pointerdown", (ev) => {
+      pointerDown = true;
       moved = false;
+      inputCount = 0;
+      startX = ev.clientX;
+      startY = ev.clientY;
+      startVal = Number(range.value) || 0;
+      window.addEventListener("pointermove", onWinMove);
+      const end = (upEv) => {
+        window.removeEventListener("pointermove", onWinMove);
+        if (!pointerDown) return;
+        if (upEv.pointerType === "mouse" && upEv.button !== 0) {
+          pointerDown = false;
+          return;
+        }
+        pointerDown = false;
+        if (moved) {
+          apply((Number(range.value) || 0) / 100);
+          return;
+        }
+        // Pure tap: undo click-seek and toggle 0 ↔ last non-zero.
+        if (startVal > 0) apply(0);
+        else {
+          const last = getLastNonZero();
+          apply(last > 0 ? last : 1);
+        }
+      };
+      window.addEventListener("pointerup", end, { once: true });
+      window.addEventListener("pointercancel", end, { once: true });
     });
 
     range.addEventListener("input", () => {
-      // While pointer is down but not yet a drag, ignore provisional seek.
-      if (pointerDown && !moved) return;
+      inputCount += 1;
+      // First input while down may be click-to-seek; wait for drag or a
+      // second input (trackpad/mouse scrub) before committing.
+      if (pointerDown && !moved) {
+        if (inputCount <= 1) return;
+        moved = true;
+      }
       apply((Number(range.value) || 0) / 100);
     });
+  }
+
+  /**
+   * @param {string} aria
+   * @param {number} pct0to100
+   * @returns {{ wrap: HTMLDivElement, range: HTMLInputElement }}
+   */
+  function makeOpacityRange(aria, pct0to100) {
+    const wrap = document.createElement("div");
+    wrap.className = "part-opacity-wrap";
+    const range = document.createElement("input");
+    range.type = "range";
+    range.className = "part-opacity";
+    range.min = "0";
+    range.max = "100";
+    range.step = "1";
+    range.value = String(Math.round(pct0to100));
+    range.setAttribute("aria-label", aria);
+    range.setAttribute("role", "slider");
+    wrap.append(range);
+    return { wrap, range };
   }
 
   /**
@@ -447,10 +467,14 @@ export function mountViewer(canvas, glbBuffer) {
     for (const el of host.querySelectorAll(".part-name")) {
       const nest = el.closest(".part-children");
       if (nest?.hidden) continue;
-      max = Math.max(max, el.scrollWidth);
+      // Force intrinsic width so overflow:hidden does not shrink scrollWidth.
+      const prev = el.style.width;
+      el.style.width = "max-content";
+      max = Math.max(max, Math.ceil(el.getBoundingClientRect().width));
+      el.style.width = prev;
     }
     if (max > 0) {
-      host.style.setProperty("--part-name-col", `${Math.ceil(max)}px`);
+      host.style.setProperty("--part-name-col", `${max}px`);
     }
   }
 
@@ -474,16 +498,11 @@ export function mountViewer(canvas, glbBuffer) {
       nameEl.className = "part-name";
       nameEl.textContent = node.label;
 
-      const range = document.createElement("input");
-      range.type = "range";
-      range.className = "part-opacity";
-      range.min = "0";
-      range.max = "100";
-      range.step = "1";
-      range.value = String(Math.round((partOpacity.get(node.id) ?? 1) * 100));
+      const { wrap, range } = makeOpacityRange(
+        `${node.label} opacity`,
+        (partOpacity.get(node.id) ?? 1) * 100,
+      );
       range.dataset.leaf = node.id;
-      range.setAttribute("aria-label", `${node.label} opacity`);
-      range.setAttribute("role", "slider");
 
       bindOpacitySlider(
         range,
@@ -491,7 +510,7 @@ export function mountViewer(canvas, glbBuffer) {
         (o) => setPartOpacity(node.id, o),
       );
 
-      row.append(spacer, nameEl, range);
+      row.append(spacer, nameEl, wrap);
       parent.append(row);
       return;
     }
@@ -517,19 +536,12 @@ export function mountViewer(canvas, glbBuffer) {
     nameEl.className = "part-name";
     nameEl.textContent = node.label;
 
-    const range = document.createElement("input");
-    range.type = "range";
-    range.className = "part-opacity";
-    range.min = "0";
-    range.max = "100";
-    range.step = "1";
-    range.value = String(
-      Math.round(groupDisplayOpacity(node.id, leafIds) * 100),
+    const { wrap, range } = makeOpacityRange(
+      `${node.label} opacity`,
+      groupDisplayOpacity(node.id, leafIds) * 100,
     );
     range.dataset.group = node.id;
     range.dataset.leaves = leafIds.join(",");
-    range.setAttribute("aria-label", `${node.label} opacity`);
-    range.setAttribute("role", "slider");
 
     /** Last non-zero for the group slider itself. */
     let groupLastNonZero = groupDisplayOpacity(node.id, leafIds) || 1;
@@ -545,8 +557,8 @@ export function mountViewer(canvas, glbBuffer) {
     );
 
     // Stop row toggle when interacting with the slider.
-    range.addEventListener("click", (ev) => ev.stopPropagation());
-    range.addEventListener("pointerdown", (ev) => ev.stopPropagation());
+    wrap.addEventListener("click", (ev) => ev.stopPropagation());
+    wrap.addEventListener("pointerdown", (ev) => ev.stopPropagation());
 
     const children = document.createElement("div");
     children.className = "part-children";
@@ -574,7 +586,7 @@ export function mountViewer(canvas, glbBuffer) {
       toggleExpanded();
     });
     row.addEventListener("click", (ev) => {
-      if (ev.target === range || range.contains(/** @type {Node} */ (ev.target))) {
+      if (ev.target === range || wrap.contains(/** @type {Node} */ (ev.target))) {
         return;
       }
       toggleExpanded();
@@ -586,7 +598,7 @@ export function mountViewer(canvas, glbBuffer) {
       }
     });
 
-    row.append(disclosure, nameEl, range);
+    row.append(disclosure, nameEl, wrap);
     groupWrap.append(row, children);
     parent.append(groupWrap);
 
