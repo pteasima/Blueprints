@@ -73,7 +73,7 @@ export function patchMaterialForDepthPeel(mat) {
 
   const prevCacheKey = mat.customProgramCacheKey?.bind(mat);
   mat.customProgramCacheKey = () =>
-    `${prevCacheKey ? prevCacheKey() : mat.type}|depthPeel4`;
+    `${prevCacheKey ? prevCacheKey() : mat.type}|depthPeel10`;
 
   const prevCompile = mat.onBeforeCompile?.bind(mat);
   mat.onBeforeCompile = (shader, renderer) => {
@@ -127,7 +127,7 @@ varying float vPeelViewZ;`,
 			gl_FragColor = vec4(vPeelViewZ, 0.0, 0.0, 1.0);
 		} else {
 			float peelZ = texture2D(tPeelViewZ, peelUv).r;
-			if (peelZ > ${VIEW_Z_FAR * 0.5}) discard;
+			if (peelZ > ${(VIEW_Z_FAR * 0.5).toFixed(1)}) discard;
 			// Tolerant band: anything from prev..peel that belongs to this layer.
 			float peelEps = max(uViewZEps, 1e-3 * max(peelZ, 1.0));
 			if (vPeelViewZ > peelZ + peelEps) discard;
@@ -515,23 +515,28 @@ export function createDepthPeelRenderer(renderer) {
     renderer.autoClear = prevAuto;
   }
 
-  /**
-   * Sample R (or A) from a float/half RT at the center pixel.
-   * @param {THREE.WebGLRenderTarget} rt
-   * @param {"r"|"a"} channel
-   * @returns {number}
-   */
-  function sampleCenter(rt, channel = "r") {
+
+  /** True if any texel in a coarse grid has view-Z below the FAR sentinel. */
+  function viewZWroteGeometry(rt, grid = 12) {
     const buf = new Float32Array(4);
-    const cx = Math.max(0, Math.floor(rt.width / 2));
-    const cy = Math.max(0, Math.floor(rt.height / 2));
-    try {
-      renderer.readRenderTargetPixels(rt, cx, cy, 1, 1, buf);
-    } catch {
-      return Number.NaN;
+    const w = rt.width;
+    const h = rt.height;
+    const farCut = VIEW_Z_FAR * 0.5;
+    for (let iy = 0; iy < grid; iy++) {
+      for (let ix = 0; ix < grid; ix++) {
+        const x = Math.min(w - 1, Math.floor(((ix + 0.5) / grid) * w));
+        const y = Math.min(h - 1, Math.floor(((iy + 0.5) / grid) * h));
+        try {
+          renderer.readRenderTargetPixels(rt, x, y, 1, 1, buf);
+        } catch {
+          continue;
+        }
+        if (Number.isFinite(buf[0]) && buf[0] < farCut) return true;
+      }
     }
-    return channel === "a" ? buf[3] : buf[0];
+    return false;
   }
+
 
   /**
    * @param {THREE.Scene} scene
@@ -766,6 +771,9 @@ export function createDepthPeelRenderer(renderer) {
 
     for (let peel = 0; peel < MAX_PEELS; peel++) {
       peelUniforms.tPrevViewZ.value = prevViewZRT.texture;
+      // Feedback-free: while rendering INTO peelViewZRT, do not also sample it.
+      // Point tPeelViewZ at prev (unused in stage 1) until stage 1 completes.
+      peelUniforms.tPeelViewZ.value = prevViewZRT.texture;
 
       // Depth peel: nearest remaining layer via hardware depth LESS.
       peelStageUniform.value = 1;
@@ -819,17 +827,14 @@ export function createDepthPeelRenderer(renderer) {
       renderer.clear();
       renderer.render(scene, camera);
 
-      const layerA = sampleCenter(layerRT, "a");
-      const peelZ = sampleCenter(peelViewZRT, "r");
-      if (
-        peel === 0 &&
-        (!Number.isFinite(layerA) || layerA < 1e-4) &&
-        (!Number.isFinite(peelZ) || peelZ > VIEW_Z_FAR * 0.5)
-      ) {
-        // First peel wrote neither colour nor a near view-Z → peels failed.
+      // Never trust HalfFloat layer alpha via Float32 readPixels (WebGL2
+      // INVALID_OPERATION). Judge peel success from float32 view-Z instead.
+      const peelWrote = viewZWroteGeometry(peelViewZRT, 12);
+      if (peel === 0 && !peelWrote) {
+        // First peel wrote no near view-Z → peels failed.
         return abortToStandard();
       }
-      if (Number.isFinite(layerA) && layerA > 1e-4) anyLayerWritten = true;
+      if (peelWrote) anyLayerWritten = true;
 
       blitMat.uniforms.tSrc.value = layerRT.texture;
       renderer.setRenderTarget(accumRT);
