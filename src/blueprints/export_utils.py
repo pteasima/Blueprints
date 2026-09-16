@@ -149,6 +149,14 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "roughness": 0.38,
         "metallic": 0.35,
     },
+    "sklo": {
+        "fill": (140, 210, 255),
+        "line": (40, 120, 180),
+        "dxf": ColorIndex.CYAN,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.12,
+        "metallic": 0.05,
+    },
 }
 
 SECTION_LAYER_ORDER = [
@@ -163,6 +171,7 @@ SECTION_LAYER_ORDER = [
     "krov",
     "soffit",
     "predstena",
+    "sklo",
     "podhled",
     "krytina",
 ]

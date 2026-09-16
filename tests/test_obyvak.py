@@ -49,6 +49,7 @@ def test_3d_matches_section_and_elevation_masses():
         "predstena",
         "pouzdro",
         "podhled",
+        "sklo",
     ):
         assert name in labels
     assert "koruna" not in labels
@@ -104,6 +105,18 @@ def test_3d_matches_section_and_elevation_masses():
     assert kitchen_doors[0][1] == 0.0  # chodba
     assert abs(kitchen_doors[1][1] - (p.room_width - p.pocket_spiz_inset - 1000.0)) < 1e-6
     assert living_doors[0][1] == 0.0  # zádveří
+    glass = _labeled(shape, "sklo")
+    assert len(glass) == len(p.eave_windows)
+    for (y0, width), pane in zip(
+        sorted(p.eave_windows, key=lambda w: w[0]),
+        sorted(glass, key=lambda s: s.bounding_box().min.Y),
+        strict=True,
+    ):
+        bb = pane.bounding_box()
+        assert bb.max.X < 0.0  # window eave opposite cabinets
+        assert abs(bb.min.Y - (y0 + FACE_GAP)) < 1e-6
+        assert abs(bb.size.Y - (width - 2 * FACE_GAP)) < 1e-6
+        assert abs(bb.max.Z - (p.window_h - FACE_GAP)) <= 1.0
     gable_walls = [
         c
         for c in _labeled(shape, "zdivo")
@@ -159,20 +172,23 @@ def test_obyvak_3d_exports(tmp_path, monkeypatch):
     import blueprints.export_utils as eu
 
     monkeypatch.setattr(eu, "EXPORTS_DIR", tmp_path)
-    shape, _meta = build()
+    p = ObyvakParams()
+    shape, _meta = build(p)
     paths = export_shape(shape, "obyvak", formats=("step", "stl", "svg", "png"))
     assert paths["step"].stat().st_size > 0
     assert paths["stl"].stat().st_size > 0
     assert paths["png"].stat().st_size > 0
-    preview, _ = build_preview()
+    preview, _ = build_preview(p)
     full_n = len(shape.children)
     assert len(preview.children) < full_n
-    left_eave = [
+    furn_eave = [
         c
         for c in preview.children
-        if c.label in {"eps", "zdivo", "omitka", "pozednice"} and c.bounding_box().max.X <= 1.0
+        if c.label in {"eps", "zdivo", "omitka", "pozednice", "nabytek"}
+        and c.bounding_box().min.X >= p.room_width - 1.0
     ]
-    assert left_eave == []
+    assert furn_eave == []
+    assert any(c.label == "sklo" for c in preview.children)
     cut = export_shape(preview, "obyvak", stem="cutaway", formats=("svg", "png"))
     assert cut["png"].stat().st_size > 0
 

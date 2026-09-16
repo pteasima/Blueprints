@@ -9,7 +9,8 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
 - Gables own the end walls (full X). Eave runs only the clear mid-span so
   corner volumes are not drawn twice.
 - Obývák-only scope: no koruna (exterior gables are in adjacent rooms), no EPS
-  on gable shells, three gable pocket doors (spíž + chodba on Y=0, zádveří on Y=L).
+  on gable shells, three gable pocket doors (spíž + chodba on Y=0, zádveří on Y=L),
+  and terrace glazing on the X=0 eave (opposite cabinets).
 - Floor slab is the clear room only; perimeter walls own the strip below z=0.
 
     python -m blueprints.export obyvak
@@ -131,7 +132,28 @@ def _pocket_door_cutters(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
     return cutters
 
 
-def _cut_pocket_doors(parts: list, cutters: list) -> list:
+def _eave_window_cutters(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
+    """Through-openings in the X=0 eave (terrace: 2× HS + fixed glass)."""
+    cutters = []
+    for y0, width in p.eave_windows:
+        ya, yb = y0 + gap, y0 + width - gap
+        if yb <= ya:
+            continue
+        cutters.append(
+            _box(
+                g.xl_eps - 1.0,
+                ya,
+                -1.0,
+                -g.xl_eps + p.wall_plaster + 2.0,
+                yb - ya,
+                p.window_h + 2 * gap + 2.0,
+                "_window_cut",
+            )
+        )
+    return cutters
+
+
+def _cut_wall_openings(parts: list, cutters: list) -> list:
     if not cutters:
         return parts
     out = []
@@ -145,6 +167,25 @@ def _cut_pocket_doors(parts: list, cutters: list) -> list:
                 cut = _cut_away(cut, [tool], part.label)
         out.append(cut)
     return out
+
+
+def _glass_panes(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
+    """Thin glass fills in the X=0 eave openings."""
+    panes = []
+    x_glass = g.xl_mas + (p.wall_mason - p.glass_t) / 2.0
+    for y0, width in p.eave_windows:
+        panes.append(
+            _box(
+                x_glass,
+                y0 + gap,
+                gap,
+                p.glass_t,
+                width - 2 * gap,
+                p.window_h - gap,
+                "sklo",
+            )
+        )
+    return panes
 
 
 def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
@@ -221,7 +262,8 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         )
 
     door_cutters = _pocket_door_cutters(p, g, gap)
-    structure = _cut_pocket_doors(structure, door_cutters)
+    window_cutters = _eave_window_cutters(p, g, gap)
+    structure = _cut_wall_openings(structure, door_cutters + window_cutters)
 
     # Cutters: everything the roof must not occupy (walls, plates).
     roof_cutters = [s for s in structure if s.label != "podlaha"]
@@ -248,6 +290,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     vata = _extrude_y(xz_face(vata_pts, "vata"), gap, p.room_length - gap, "vata")
 
     parts: list = list(structure)
+    parts.extend(_glass_panes(p, g, gap))
     parts.extend([krov, krytina, vata])
 
     # Ceiling board under the ceiling line (below vata).
@@ -340,7 +383,7 @@ def build(params: ObyvakParams | None = None):
 
 
 def build_preview(params: ObyvakParams | None = None):
-    """Dollhouse cutaway: drop roof, window eave, and kitchen gable."""
+    """Dollhouse cutaway: drop roof, furniture eave, and kitchen gable — keep windows."""
     p = params or ObyvakParams()
     g = ObyvakLayout(p)
     kept = []
@@ -348,8 +391,9 @@ def build_preview(params: ObyvakParams | None = None):
         bb = part.bounding_box()
         if part.label in {"krov", "krytina", "vata", "podhled"}:
             continue
-        if part.label in {"eps", "zdivo", "omitka", "pozednice"}:
-            if bb.max.X <= 1.0 or bb.max.Y <= 1.0:
+        if part.label in {"eps", "zdivo", "omitka", "pozednice", "nabytek", "soffit"}:
+            # Open the cabinet eave and kitchen gable; window wall (X≈0) stays.
+            if bb.min.X >= p.room_width - 1.0 or bb.max.Y <= 1.0:
                 continue
         kept.append(part)
     return _compound(kept, label=f"{MODEL_NAME}_cutaway"), _meta(p, g)

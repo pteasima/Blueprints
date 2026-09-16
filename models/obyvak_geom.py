@@ -65,6 +65,15 @@ class ObyvakParams:
         ("kitchen", 3700.0, 1000.0),  # spíž: 5350 − 650 − 1000
         ("living", 0.0, 1100.0),  # zádveří
     )
+    # Window wall (X=0, opposite cabinets): 2× HS 2500 + fixed 4500, h=2500 (D.1.1.03).
+    window_h: float = 2500.0
+    # (y0, width) along Y from kitchen→living; ~200 mm piers between bays.
+    eave_windows: tuple[tuple[float, float], ...] = (
+        (550.0, 2500.0),  # HS portal · kuchyně / chodba
+        (3250.0, 4500.0),  # velké fixní / posuvné sklo
+        (7950.0, 2500.0),  # HS portal · obývák / zádveří
+    )
+    glass_t: float = 20.0
     soffit_hint_t: float = 30.0
     ridge_runout: float = 200.0
 

@@ -24,6 +24,7 @@ export const SOLID_COLORS = {
   soffit: [35, 175, 15],
   podhled: [15, 85, 245],
   krytina: [235, 15, 15],
+  sklo: [140, 210, 255],
 };
 
 /**
@@ -46,6 +47,7 @@ export const LAYER_DEPTH_BIAS = {
   krov: 11,
   krytina: 12,
   podhled: 13,
+  sklo: 14,
 };
 
 /**
@@ -146,6 +148,12 @@ export const REALISTIC_PRESETS = {
     roughness: 0.32,
     metalness: 0.45,
     map: "metal",
+  },
+  sklo: {
+    color: [140, 210, 255],
+    roughness: 0.08,
+    metalness: 0.05,
+    map: "none",
   },
 };
 
