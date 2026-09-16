@@ -265,6 +265,8 @@ canvas {
   -webkit-overflow-scrolling: touch;
   padding: 0.15rem 1rem calc(1rem + var(--safe-b));
   overscroll-behavior: contain;
+  /* Vertical pans scroll the sheet; children opt into horizontal (sliders). */
+  touch-action: pan-y;
 }
 
 .sheet[data-detent="peek"]:not(.is-dragging) .sheet-scroll {
@@ -331,7 +333,6 @@ canvas {
     padding-top: 0.35rem;
     padding-right: calc(1rem + var(--safe-r));
     padding-bottom: calc(1rem + var(--safe-b));
-    touch-action: pan-y;
   }
   .sheet[data-detent="closed"] {
     transform: translateX(100%);
@@ -464,13 +465,60 @@ label.part input:checked::after {
   color: var(--fg-secondary);
 }
 
-.cut-row input[type="range"] {
+/* Cooperative horizontal slider: UA scrolls vertically (touch-action: pan-y);
+   JS only scrubs on horizontal drag / tap. Replaces native range, which steals
+   the whole touch on many mobile browsers (esp. iOS). */
+.coop-range {
   flex: 1;
   min-width: 0;
   height: 1.75rem;
   margin: 0;
-  accent-color: var(--accent);
+  padding: 0;
+  display: flex;
+  align-items: center;
+  touch-action: pan-y;
   cursor: pointer;
+  outline: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.coop-range:focus-visible .coop-range-thumb {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.coop-range-track {
+  position: relative;
+  width: 100%;
+  height: 0.28rem;
+  border-radius: 999px;
+  background: var(--fill-active);
+}
+
+.coop-range-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0%;
+  border-radius: inherit;
+  background: var(--accent);
+  pointer-events: none;
+}
+
+.coop-range-thumb {
+  position: absolute;
+  top: 50%;
+  left: 0%;
+  width: 1.35rem;
+  height: 1.35rem;
+  margin-top: -0.675rem;
+  margin-left: -0.675rem;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  pointer-events: none;
 }
 
 .cut-remove {
