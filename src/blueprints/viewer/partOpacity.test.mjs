@@ -50,6 +50,8 @@ assert.ok(allLeafIds.has("krytina"));
 const geom = new THREE.BoxGeometry(1, 1, 1);
 const mat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
 const mesh = new THREE.Mesh(geom, mat);
+mesh.userData.opaqueRenderOrder = 12;
+mesh.renderOrder = 12;
 
 applyOpacityToMeshes([mesh], 0);
 assert.equal(mesh.visible, false);
@@ -61,6 +63,8 @@ assert.equal(mat.opacity, 0.4);
 assert.equal(mat.depthWrite, false);
 assert.equal(mat.userData.needsDepthPeel, true);
 assert.equal(mat.side, THREE.DoubleSide);
+assert.equal(mat.forceSinglePass, true);
+assert.equal(mesh.renderOrder, 0, "faded meshes must not use opaque depth bias");
 
 applyOpacityToMeshes([mesh], 1);
 assert.equal(mesh.visible, true);
@@ -68,9 +72,11 @@ assert.equal(mat.transparent, false);
 assert.equal(mat.opacity, 1);
 assert.equal(mat.depthWrite, true);
 assert.equal(mat.userData.needsDepthPeel, false);
+assert.equal(mat.forceSinglePass, false);
+assert.equal(mesh.renderOrder, 12, "opaque restores stored depth bias");
 
 assert.ok(MAX_PEELS >= 8);
 assert.ok(VIEW_Z_EPSILON > 0 && VIEW_Z_EPSILON < 0.01);
-assert.equal(USE_DEPTH_PEEL, false, "peels default off until verified");
+assert.equal(USE_DEPTH_PEEL, true, "hardened peels are the fade path");
 
 console.log("partOpacity.test.mjs: ok");

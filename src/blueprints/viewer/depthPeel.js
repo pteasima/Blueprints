@@ -1,14 +1,11 @@
 /**
  * Multi-pass depth peeling (Everitt-style) for part opacity.
  *
- * Default path: standard Three.js transparency (`applyOpacityToMeshes` sets
- * `transparent` + opacity + `depthWrite:false`). Depth peels are opt-in via
- * {@link USE_DEPTH_PEEL} — leave false until a verified GPU path works; broken
- * peels hide translucent meshes in the opaque pass and composite an empty
- * accum, so faded parts vanish entirely.
- *
- * When peels are enabled: opaque colour + linear eye-space Z, then N peels
- * ordered by hardware depth (LESS) while recording linear view-Z.
+ * Fade path when {@link USE_DEPTH_PEEL} is true: opaque colour + float32
+ * linear eye-space Z, then N peels ordered by hardware depth (LESS) while
+ * recording linear view-Z into float colour targets. On any fail-safe abort,
+ * restore visibility and fall back to one full `renderer.render` with standard
+ * alpha so faded parts never vanish for a frame.
  *
  * Do **not** sample the logarithmic DepthTexture against gl_FragCoord.z —
  * that comparison is invalid with logarithmicDepthBuffer and discards every
@@ -20,11 +17,10 @@
 import * as THREE from "three";
 
 /**
- * Opt-in Everitt peels. Keep false: sorted alpha from applyOpacityToMeshes
- * is visible; peels currently risk vanishing faded parts when view-Z / stage
- * inject fails.
+ * Everitt peels for CAD shell stacking. Sorted alpha remains the emergency
+ * fallback via {@link createDepthPeelRenderer}'s abortToStandard.
  */
-export const USE_DEPTH_PEEL = false;
+export const USE_DEPTH_PEEL = true;
 
 /** Max transparent layers per pixel. */
 export const MAX_PEELS = 12;
@@ -52,13 +48,32 @@ const peelUniforms = {
 /**
  * @param {THREE.Material} mat
  */
+/**
+ * Push shared peel uniforms into a compiled material program for this draw.
+ * Three may keep stale texture/stage values unless we refresh every pass.
+ * @param {THREE.Material} mat
+ */
+function syncPeelUniforms(mat) {
+  const shader = mat?.userData?.shader;
+  if (!shader?.uniforms) return;
+  const u = shader.uniforms;
+  if (u.uPeelStage) u.uPeelStage.value = peelStageUniform.value;
+  if (u.tPrevViewZ) u.tPrevViewZ.value = peelUniforms.tPrevViewZ.value;
+  if (u.tPeelViewZ) u.tPeelViewZ.value = peelUniforms.tPeelViewZ.value;
+  if (u.tOpaqueViewZ) u.tOpaqueViewZ.value = peelUniforms.tOpaqueViewZ.value;
+  if (u.uViewZEps) u.uViewZEps.value = peelUniforms.uViewZEps.value;
+  if (u.uResolution) {
+    u.uResolution.value.copy(peelUniforms.uResolution.value);
+  }
+}
+
 export function patchMaterialForDepthPeel(mat) {
   if (!mat || mat.userData.depthPeelPatched) return;
   mat.userData.depthPeelPatched = true;
 
   const prevCacheKey = mat.customProgramCacheKey?.bind(mat);
   mat.customProgramCacheKey = () =>
-    `${prevCacheKey ? prevCacheKey() : mat.type}|depthPeel3`;
+    `${prevCacheKey ? prevCacheKey() : mat.type}|depthPeel10`;
 
   const prevCompile = mat.onBeforeCompile?.bind(mat);
   mat.onBeforeCompile = (shader, renderer) => {
@@ -69,6 +84,8 @@ export function patchMaterialForDepthPeel(mat) {
     shader.uniforms.tOpaqueViewZ = peelUniforms.tOpaqueViewZ;
     shader.uniforms.uViewZEps = peelUniforms.uViewZEps;
     shader.uniforms.uResolution = peelUniforms.uResolution;
+    // Keep a live handle so onBeforeRender can refresh .value each peel pass.
+    mat.userData.shader = shader;
 
     shader.vertexShader = shader.vertexShader.replace(
       "#include <common>",
@@ -100,8 +117,9 @@ varying float vPeelViewZ;`,
 		float opaqueZ = texture2D(tOpaqueViewZ, peelUv).r;
 		float prevZ = texture2D(tPrevViewZ, peelUv).r;
 		float eps = max(uViewZEps, 1e-3 * max(vPeelViewZ, 1.0));
-		// Behind an opaque solid (linear eye-space Z).
-		if (vPeelViewZ >= opaqueZ - eps) discard;
+		// Behind an opaque solid (linear eye-space Z). Skip when opaqueZ is
+		// ~0 (dead clear / failed float RT) so we do not discard every frag.
+		if (opaqueZ > 1e-4 && vPeelViewZ >= opaqueZ - eps) discard;
 		// Already peeled (at or in front of previous layer).
 		if (vPeelViewZ <= prevZ + eps) discard;
 		if (uPeelStage < 1.5) {
@@ -109,7 +127,7 @@ varying float vPeelViewZ;`,
 			gl_FragColor = vec4(vPeelViewZ, 0.0, 0.0, 1.0);
 		} else {
 			float peelZ = texture2D(tPeelViewZ, peelUv).r;
-			if (peelZ > ${VIEW_Z_FAR * 0.5}) discard;
+			if (peelZ > ${(VIEW_Z_FAR * 0.5).toFixed(1)}) discard;
 			// Tolerant band: anything from prev..peel that belongs to this layer.
 			float peelEps = max(uViewZEps, 1e-3 * max(peelZ, 1.0));
 			if (vPeelViewZ > peelZ + peelEps) discard;
@@ -497,23 +515,28 @@ export function createDepthPeelRenderer(renderer) {
     renderer.autoClear = prevAuto;
   }
 
-  /**
-   * Sample R (or A) from a float/half RT at the center pixel.
-   * @param {THREE.WebGLRenderTarget} rt
-   * @param {"r"|"a"} channel
-   * @returns {number}
-   */
-  function sampleCenter(rt, channel = "r") {
+
+  /** True if any texel in a coarse grid has view-Z below the FAR sentinel. */
+  function viewZWroteGeometry(rt, grid = 12) {
     const buf = new Float32Array(4);
-    const cx = Math.max(0, Math.floor(rt.width / 2));
-    const cy = Math.max(0, Math.floor(rt.height / 2));
-    try {
-      renderer.readRenderTargetPixels(rt, cx, cy, 1, 1, buf);
-    } catch {
-      return Number.NaN;
+    const w = rt.width;
+    const h = rt.height;
+    const farCut = VIEW_Z_FAR * 0.5;
+    for (let iy = 0; iy < grid; iy++) {
+      for (let ix = 0; ix < grid; ix++) {
+        const x = Math.min(w - 1, Math.floor(((ix + 0.5) / grid) * w));
+        const y = Math.min(h - 1, Math.floor(((iy + 0.5) / grid) * h));
+        try {
+          renderer.readRenderTargetPixels(rt, x, y, 1, 1, buf);
+        } catch {
+          continue;
+        }
+        if (Number.isFinite(buf[0]) && buf[0] < farCut) return true;
+      }
     }
-    return channel === "a" ? buf[3] : buf[0];
+    return false;
   }
+
 
   /**
    * @param {THREE.Scene} scene
@@ -586,6 +609,37 @@ export function createDepthPeelRenderer(renderer) {
       });
     }
 
+    /** @type {Map<THREE.Mesh, Function | null | undefined>} */
+    const onBeforeRenderBackup = new Map();
+    for (const mesh of transparent) {
+      onBeforeRenderBackup.set(mesh, mesh.onBeforeRender);
+      mesh.onBeforeRender = function peelUniformSync(
+        rendererArg,
+        sceneArg,
+        cameraArg,
+        geometry,
+        material,
+        group,
+      ) {
+        const mats = Array.isArray(material) ? material : [material];
+        for (const m of mats) {
+          if (m) syncPeelUniforms(m);
+        }
+        const prev = onBeforeRenderBackup.get(mesh);
+        if (typeof prev === "function") {
+          prev.call(
+            this,
+            rendererArg,
+            sceneArg,
+            cameraArg,
+            geometry,
+            material,
+            group,
+          );
+        }
+      };
+    }
+
     let clipPlanes = null;
     for (const mat of transMats) {
       if (mat.clippingPlanes?.length) {
@@ -623,6 +677,12 @@ export function createDepthPeelRenderer(renderer) {
       child.visible = false;
     }
 
+    function restoreOnBeforeRender() {
+      for (const [mesh, prev] of onBeforeRenderBackup) {
+        mesh.onBeforeRender = prev;
+      }
+    }
+
     /**
      * Restore mesh/material/scene state and draw with standard alpha so
      * faded parts never stay hidden after a failed peel attempt.
@@ -646,6 +706,7 @@ export function createDepthPeelRenderer(renderer) {
       for (const { obj, visible } of extraBackup) {
         obj.visible = visible;
       }
+      restoreOnBeforeRender();
       peelStageUniform.value = 0;
       scene.background = prevBg;
       scene.overrideMaterial = null;
@@ -670,17 +731,10 @@ export function createDepthPeelRenderer(renderer) {
     renderer.setClearColor(0x000000, 1);
     // Clear colour via draw (float far), then depth.
     clearViewZTarget(opaqueViewZRT, VIEW_Z_FAR, { clearDepth: true });
-    const prevOverride = scene.overrideMaterial;
-    scene.overrideMaterial = opaqueViewZMat;
-    renderer.setRenderTarget(opaqueViewZRT);
-    renderer.autoClear = false;
-    renderer.render(scene, camera);
-    renderer.autoClear = true;
-    scene.overrideMaterial = prevOverride;
-    peelUniforms.tOpaqueViewZ.value = opaqueViewZRT.texture;
 
-    // Fail-safe: after clear-to-FAR, a corner pixel must still read ~FAR.
-    // ~0 means float clear/RT failed → peel shader would discard all frags.
+    // Fail-safe: after clear-to-FAR (before opaque draw), a corner pixel must
+    // still read ~FAR. Sampling after geometry can false-abort when a solid
+    // covers the corner. ~0 means float clear/RT failed → peels would discard.
     {
       const corner = new Float32Array(4);
       try {
@@ -692,6 +746,15 @@ export function createDepthPeelRenderer(renderer) {
         return abortToStandard();
       }
     }
+
+    const prevOverride = scene.overrideMaterial;
+    scene.overrideMaterial = opaqueViewZMat;
+    renderer.setRenderTarget(opaqueViewZRT);
+    renderer.autoClear = false;
+    renderer.render(scene, camera);
+    renderer.autoClear = true;
+    scene.overrideMaterial = prevOverride;
+    peelUniforms.tOpaqueViewZ.value = opaqueViewZRT.texture;
 
     // --- Accum empty ---
     renderer.setRenderTarget(accumRT);
@@ -708,6 +771,9 @@ export function createDepthPeelRenderer(renderer) {
 
     for (let peel = 0; peel < MAX_PEELS; peel++) {
       peelUniforms.tPrevViewZ.value = prevViewZRT.texture;
+      // Feedback-free: while rendering INTO peelViewZRT, do not also sample it.
+      // Point tPeelViewZ at prev (unused in stage 1) until stage 1 completes.
+      peelUniforms.tPeelViewZ.value = prevViewZRT.texture;
 
       // Depth peel: nearest remaining layer via hardware depth LESS.
       peelStageUniform.value = 1;
@@ -725,6 +791,7 @@ export function createDepthPeelRenderer(renderer) {
           blendDstAlpha: THREE.ZeroFactor,
           blendEquation: THREE.AddEquation,
         });
+        syncPeelUniforms(mat);
       }
       renderer.setRenderTarget(peelViewZRT);
       renderer.setClearColor(0x000000, 1);
@@ -753,23 +820,21 @@ export function createDepthPeelRenderer(renderer) {
           blendDstAlpha: THREE.OneMinusSrcAlphaFactor,
           blendEquation: THREE.AddEquation,
         });
+        syncPeelUniforms(mat);
       }
       renderer.setRenderTarget(layerRT);
       renderer.setClearColor(0x000000, 0);
       renderer.clear();
       renderer.render(scene, camera);
 
-      const layerA = sampleCenter(layerRT, "a");
-      const peelZ = sampleCenter(peelViewZRT, "r");
-      if (
-        peel === 0 &&
-        (!Number.isFinite(layerA) || layerA < 1e-4) &&
-        (!Number.isFinite(peelZ) || peelZ > VIEW_Z_FAR * 0.5)
-      ) {
-        // First peel wrote neither colour nor a near view-Z → peels failed.
+      // Never trust HalfFloat layer alpha via Float32 readPixels (WebGL2
+      // INVALID_OPERATION). Judge peel success from float32 view-Z instead.
+      const peelWrote = viewZWroteGeometry(peelViewZRT, 12);
+      if (peel === 0 && !peelWrote) {
+        // First peel wrote no near view-Z → peels failed.
         return abortToStandard();
       }
-      if (Number.isFinite(layerA) && layerA > 1e-4) anyLayerWritten = true;
+      if (peelWrote) anyLayerWritten = true;
 
       blitMat.uniforms.tSrc.value = layerRT.texture;
       renderer.setRenderTarget(accumRT);
@@ -803,6 +868,7 @@ export function createDepthPeelRenderer(renderer) {
     for (const { obj, visible } of extraBackup) {
       obj.visible = visible;
     }
+    restoreOnBeforeRender();
 
     peelStageUniform.value = 0;
     scene.background = prevBg;
