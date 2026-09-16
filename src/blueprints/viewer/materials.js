@@ -27,6 +27,140 @@ export const SOLID_COLORS = {
 };
 
 /**
+ * Nested Parts outline. A child is a leaf CAD label (string) or a group
+ * `{ id, label, children }`. Nesting is arbitrary; current data is one group
+ * level plus leaves. Keep leaf ids in sync with SOLID_COLORS / SECTION_LAYERS.
+ *
+ * @typedef {{ id: string, label: string, children: PartTreeNode[] }} PartTreeGroup
+ * @typedef {string | PartTreeGroup} PartTreeNode
+ * @typedef {{ type: "leaf", id: string, label: string }} OutlineLeaf
+ * @typedef {{ type: "group", id: string, label: string, children: OutlineNode[] }} OutlineGroup
+ * @typedef {OutlineLeaf | OutlineGroup} OutlineNode
+ */
+
+/** @type {PartTreeGroup[]} */
+export const PART_GROUPS = [
+  {
+    id: "walls",
+    label: "Walls",
+    children: ["zdivo", "eps", "omitka", "predstena", "pouzdro"],
+  },
+  {
+    id: "roof",
+    label: "Roof",
+    children: [
+      "pozednice",
+      "koruna",
+      "krov",
+      "vata",
+      "soffit",
+      "podhled",
+      "krytina",
+    ],
+  },
+  {
+    id: "interior",
+    label: "Interior",
+    children: ["podlaha", "nabytek"],
+  },
+];
+
+/**
+ * Filter PART_GROUPS to labels present in the loaded GLB; stash leftovers in Other.
+ * @param {Iterable<string>} availableLabels
+ * @returns {OutlineNode[]}
+ */
+export function resolvePartOutline(availableLabels) {
+  const remaining = new Set(availableLabels);
+
+  /**
+   * @param {PartTreeNode[]} nodes
+   * @returns {OutlineNode[]}
+   */
+  function walk(nodes) {
+    /** @type {OutlineNode[]} */
+    const out = [];
+    for (const node of nodes) {
+      if (typeof node === "string") {
+        if (!remaining.has(node)) continue;
+        remaining.delete(node);
+        out.push({ type: "leaf", id: node, label: node });
+        continue;
+      }
+      const kids = walk(node.children || []);
+      if (!kids.length) continue;
+      out.push({
+        type: "group",
+        id: node.id,
+        label: node.label,
+        children: kids,
+      });
+    }
+    return out;
+  }
+
+  const tree = walk(PART_GROUPS);
+  if (remaining.size) {
+    const otherLeaves = [...remaining]
+      .sort((a, b) => a.localeCompare(b))
+      .map((id) => /** @type {OutlineLeaf} */ ({ type: "leaf", id, label: id }));
+    tree.push({
+      type: "group",
+      id: "other",
+      label: "Other",
+      children: otherLeaves,
+    });
+  }
+  return tree;
+}
+
+/**
+ * @param {OutlineNode} node
+ * @returns {string[]}
+ */
+export function collectLeafIds(node) {
+  if (node.type === "leaf") return [node.id];
+  /** @type {string[]} */
+  const ids = [];
+  for (const child of node.children) {
+    ids.push(...collectLeafIds(child));
+  }
+  return ids;
+}
+
+/**
+ * Apply opacity to meshes. opacity 0 → hidden (visible=false) for perf / AR omit.
+ * @param {THREE.Object3D[]} meshes
+ * @param {number} opacity 0–1
+ */
+export function applyOpacityToMeshes(meshes, opacity) {
+  const o = Math.max(0, Math.min(1, Number(opacity) || 0));
+  for (const mesh of meshes) {
+    if (!mesh) continue;
+    if (o <= 0) {
+      mesh.visible = false;
+      continue;
+    }
+    mesh.visible = true;
+    if (!mesh.isMesh) continue;
+    const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    for (const mat of list) {
+      if (!mat) continue;
+      if (o < 1) {
+        mat.transparent = true;
+        mat.opacity = o;
+        mat.depthWrite = false;
+      } else {
+        mat.transparent = false;
+        mat.opacity = 1;
+        mat.depthWrite = true;
+      }
+      mat.needsUpdate = true;
+    }
+  }
+}
+
+/**
  * Stable depth bias for stacked layers (outside → inside / below → above).
  * Higher wins when faces are nearly coplanar (polygonOffset + renderOrder).
  * @type {Record<string, number>}
@@ -379,11 +513,16 @@ function mapForSpan(kind, spanMm) {
 /**
  * @param {Map<string, THREE.Object3D[]>} partsMap
  * @param {string} mode
- * @param {{ isDark?: boolean, clippingPlanes?: THREE.Plane[] | null }} [opts]
+ * @param {{
+ *   isDark?: boolean,
+ *   clippingPlanes?: THREE.Plane[] | null,
+ *   opacityByLabel?: Map<string, number> | Record<string, number> | null,
+ * }} [opts]
  */
 export function applyMaterialMode(partsMap, mode, opts = {}) {
   const planes = opts.clippingPlanes ?? null;
   const realistic = mode === MODE_REALISTIC;
+  const opacityByLabel = opts.opacityByLabel ?? null;
 
   for (const [label, meshes] of partsMap) {
     const rgb = colorForLabel(label);
@@ -458,6 +597,16 @@ export function applyMaterialMode(partsMap, mode, opts = {}) {
       }
       m.dispose?.();
     }
+
+    let opacity = 1;
+    if (opacityByLabel) {
+      if (opacityByLabel instanceof Map) {
+        opacity = opacityByLabel.has(label) ? opacityByLabel.get(label) : 1;
+      } else if (typeof opacityByLabel[label] === "number") {
+        opacity = opacityByLabel[label];
+      }
+    }
+    applyOpacityToMeshes(meshes, opacity);
   }
 }
 

@@ -14,7 +14,10 @@ import {
   MODE_REALISTIC,
   MODE_SOLID,
   applyMaterialMode,
+  applyOpacityToMeshes,
+  collectLeafIds,
   loadMaterialMode,
+  resolvePartOutline,
   saveMaterialMode,
 } from "./materials.js";
 
@@ -31,6 +34,18 @@ export function mountViewer(canvas, glbBuffer) {
   let materialMode = loadMaterialMode();
   /** @type {Map<string, THREE.Object3D[]>} */
   const parts = new Map();
+  /** Current opacity 0–1 per leaf label. */
+  /** @type {Map<string, number>} */
+  const partOpacity = new Map();
+  /** Last non-zero opacity per leaf (for tap-toggle). */
+  /** @type {Map<string, number>} */
+  const partLastNonZero = new Map();
+  /** Last opacity written via a group slider (when children diverge). */
+  /** @type {Map<string, number>} */
+  const groupSliderOpacity = new Map();
+  /** Expanded outline groups (all start collapsed). */
+  /** @type {Set<string>} */
+  const expandedGroups = new Set();
 
   /** @type {ReturnType<typeof initSheetChrome> | null} */
   let chromeApi = null;
@@ -220,11 +235,87 @@ export function mountViewer(canvas, glbBuffer) {
     maybeSpawnDraftFromCamera();
   }
 
-  function setPartVisible(name, visible) {
-    const list = parts.get(name) || [];
-    for (const obj of list) obj.visible = visible;
+  /**
+   * @param {string} name
+   * @param {number} opacity 0–1
+   * @param {{ skipUi?: boolean }} [opts]
+   */
+  function setPartOpacity(name, opacity, opts = {}) {
+    const o = Math.max(0, Math.min(1, Number(opacity) || 0));
+    partOpacity.set(name, o);
+    if (o > 0) partLastNonZero.set(name, o);
+    applyOpacityToMeshes(parts.get(name) || [], o);
     updateBox();
     applyClipping();
+    if (!opts.skipUi) syncPartOpacityUi();
+  }
+
+  /**
+   * @param {string[]} leafIds
+   * @param {number} opacity 0–1
+   * @param {string} [groupId]
+   */
+  function setGroupOpacity(leafIds, opacity, groupId) {
+    const o = Math.max(0, Math.min(1, Number(opacity) || 0));
+    if (groupId) groupSliderOpacity.set(groupId, o);
+    for (const id of leafIds) {
+      partOpacity.set(id, o);
+      if (o > 0) partLastNonZero.set(id, o);
+      applyOpacityToMeshes(parts.get(id) || [], o);
+    }
+    updateBox();
+    applyClipping();
+    syncPartOpacityUi();
+  }
+
+  /**
+   * @param {string[]} leafIds
+   * @returns {number}
+   */
+  function commonOpacity(leafIds) {
+    if (!leafIds.length) return 1;
+    const first = partOpacity.get(leafIds[0]) ?? 1;
+    for (let i = 1; i < leafIds.length; i++) {
+      const v = partOpacity.get(leafIds[i]) ?? 1;
+      if (Math.abs(v - first) > 1e-4) return NaN;
+    }
+    return first;
+  }
+
+  /**
+   * @param {string} groupId
+   * @param {string[]} leafIds
+   * @returns {number}
+   */
+  function groupDisplayOpacity(groupId, leafIds) {
+    const common = commonOpacity(leafIds);
+    if (!Number.isNaN(common)) return common;
+    return groupSliderOpacity.get(groupId) ?? 1;
+  }
+
+  function syncPartOpacityUi() {
+    const host = document.getElementById("parts");
+    if (!host) return;
+    host.querySelectorAll("input.part-opacity[data-leaf]").forEach((el) => {
+      if (!(el instanceof HTMLInputElement)) return;
+      const id = el.dataset.leaf;
+      if (!id) return;
+      const pct = Math.round((partOpacity.get(id) ?? 1) * 100);
+      el.value = String(pct);
+      el.setAttribute("aria-valuenow", String(pct));
+    });
+    host.querySelectorAll("input.part-opacity[data-group]").forEach((el) => {
+      if (!(el instanceof HTMLInputElement)) return;
+      const gid = el.dataset.group;
+      if (!gid) return;
+      const leaves = (el.dataset.leaves || "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const pct = Math.round(groupDisplayOpacity(gid, leaves) * 100);
+      el.value = String(pct);
+      el.setAttribute("aria-valuenow", String(pct));
+    });
   }
 
   function lockedClipPlanes() {
@@ -236,6 +327,7 @@ export function mountViewer(canvas, glbBuffer) {
     applyMaterialMode(parts, materialMode, {
       isDark: isDarkTheme,
       clippingPlanes: lockedClipPlanes(),
+      opacityByLabel: partOpacity,
     });
     // Solid uses unlit MeshBasicMaterial — skip ACES so chroma stays punchy.
     if (materialMode === MODE_REALISTIC) {
@@ -272,27 +364,230 @@ export function mountViewer(canvas, glbBuffer) {
     }
   }
 
+  /**
+   * Tap without drag on a range toggles 0 ↔ lastNonZero; drag adjusts opacity.
+   * @param {HTMLInputElement} range
+   * @param {() => number} getLastNonZero 0–1
+   * @param {(opacity: number) => void} apply
+   */
+  function bindOpacitySlider(range, getLastNonZero, apply) {
+    let pointerDown = false;
+    let startX = 0;
+    let startY = 0;
+    let startVal = 0;
+    let moved = false;
+    const MOVE_PX = 6;
+
+    range.addEventListener("pointerdown", (ev) => {
+      pointerDown = true;
+      moved = false;
+      startX = ev.clientX;
+      startY = ev.clientY;
+      startVal = Number(range.value) || 0;
+      try {
+        range.setPointerCapture(ev.pointerId);
+      } catch {
+        /* ignore */
+      }
+    });
+
+    range.addEventListener("pointermove", (ev) => {
+      if (!pointerDown || moved) return;
+      if (
+        Math.abs(ev.clientX - startX) > MOVE_PX ||
+        Math.abs(ev.clientY - startY) > MOVE_PX
+      ) {
+        moved = true;
+        // Click-to-seek may have moved the thumb before drag confirmed — apply now.
+        apply((Number(range.value) || 0) / 100);
+      }
+    });
+
+    range.addEventListener("pointerup", (ev) => {
+      if (!pointerDown) return;
+      pointerDown = false;
+      try {
+        range.releasePointerCapture(ev.pointerId);
+      } catch {
+        /* ignore */
+      }
+      if (moved) {
+        apply((Number(range.value) || 0) / 100);
+        return;
+      }
+      // Tap: ignore seek-to-position; toggle 0 ↔ last non-zero.
+      range.value = String(startVal);
+      if (startVal > 0) apply(0);
+      else {
+        const last = getLastNonZero();
+        apply(last > 0 ? last : 1);
+      }
+    });
+
+    range.addEventListener("pointercancel", () => {
+      pointerDown = false;
+      moved = false;
+    });
+
+    range.addEventListener("input", () => {
+      // While pointer is down but not yet a drag, ignore provisional seek.
+      if (pointerDown && !moved) return;
+      apply((Number(range.value) || 0) / 100);
+    });
+  }
+
+  /**
+   * @param {import("./materials.js").OutlineNode} node
+   * @param {HTMLElement} parent
+   * @param {number} depth
+   */
+  function appendOutlineNode(node, parent, depth) {
+    if (node.type === "leaf") {
+      const row = document.createElement("div");
+      row.className = "part-row part-leaf";
+      row.style.setProperty("--part-depth", String(depth));
+      row.dataset.leaf = node.id;
+
+      const nameEl = document.createElement("span");
+      nameEl.className = "part-name";
+      nameEl.textContent = node.label;
+
+      const range = document.createElement("input");
+      range.type = "range";
+      range.className = "part-opacity";
+      range.min = "0";
+      range.max = "100";
+      range.step = "1";
+      range.value = String(Math.round((partOpacity.get(node.id) ?? 1) * 100));
+      range.dataset.leaf = node.id;
+      range.setAttribute("aria-label", `${node.label} opacity`);
+      range.setAttribute("role", "slider");
+
+      bindOpacitySlider(
+        range,
+        () => partLastNonZero.get(node.id) ?? 1,
+        (o) => setPartOpacity(node.id, o),
+      );
+
+      row.append(nameEl, range);
+      parent.append(row);
+      return;
+    }
+
+    const leafIds = collectLeafIds(node);
+    const groupWrap = document.createElement("div");
+    groupWrap.className = "part-group";
+    groupWrap.dataset.group = node.id;
+
+    const row = document.createElement("div");
+    row.className = "part-row part-group-row";
+    row.style.setProperty("--part-depth", String(depth));
+    row.setAttribute("role", "button");
+    row.tabIndex = 0;
+
+    const disclosure = document.createElement("button");
+    disclosure.type = "button";
+    disclosure.className = "part-disclosure";
+    disclosure.setAttribute("aria-label", `Expand ${node.label}`);
+    disclosure.setAttribute("aria-expanded", "false");
+
+    const nameEl = document.createElement("span");
+    nameEl.className = "part-name";
+    nameEl.textContent = node.label;
+
+    const range = document.createElement("input");
+    range.type = "range";
+    range.className = "part-opacity";
+    range.min = "0";
+    range.max = "100";
+    range.step = "1";
+    range.value = String(
+      Math.round(groupDisplayOpacity(node.id, leafIds) * 100),
+    );
+    range.dataset.group = node.id;
+    range.dataset.leaves = leafIds.join(",");
+    range.setAttribute("aria-label", `${node.label} opacity`);
+    range.setAttribute("role", "slider");
+
+    /** Last non-zero for the group slider itself. */
+    let groupLastNonZero = groupDisplayOpacity(node.id, leafIds) || 1;
+    if (groupLastNonZero <= 0) groupLastNonZero = 1;
+
+    bindOpacitySlider(
+      range,
+      () => groupLastNonZero,
+      (o) => {
+        if (o > 0) groupLastNonZero = o;
+        setGroupOpacity(leafIds, o, node.id);
+      },
+    );
+
+    // Stop row toggle when interacting with the slider.
+    range.addEventListener("click", (ev) => ev.stopPropagation());
+    range.addEventListener("pointerdown", (ev) => ev.stopPropagation());
+
+    const children = document.createElement("div");
+    children.className = "part-children";
+    children.hidden = true;
+
+    function setExpanded(open) {
+      if (open) expandedGroups.add(node.id);
+      else expandedGroups.delete(node.id);
+      children.hidden = !open;
+      groupWrap.classList.toggle("is-expanded", open);
+      disclosure.setAttribute("aria-expanded", open ? "true" : "false");
+      disclosure.setAttribute(
+        "aria-label",
+        open ? `Collapse ${node.label}` : `Expand ${node.label}`,
+      );
+    }
+
+    function toggleExpanded() {
+      setExpanded(!expandedGroups.has(node.id));
+    }
+
+    disclosure.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      toggleExpanded();
+    });
+    row.addEventListener("click", (ev) => {
+      if (ev.target === range || range.contains(/** @type {Node} */ (ev.target))) {
+        return;
+      }
+      toggleExpanded();
+    });
+    row.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter" || ev.key === " ") {
+        ev.preventDefault();
+        toggleExpanded();
+      }
+    });
+
+    row.append(disclosure, nameEl, range);
+    groupWrap.append(row, children);
+    parent.append(groupWrap);
+
+    for (const child of node.children) {
+      appendOutlineNode(child, children, depth + 1);
+    }
+
+    // Restore expand state if rebuilding; default collapsed.
+    setExpanded(expandedGroups.has(node.id));
+  }
+
   function buildPartToggles() {
     const host = document.getElementById("parts");
     if (!host) return;
     host.replaceChildren();
-    const names = [...parts.keys()].sort((a, b) => a.localeCompare(b));
-    for (const name of names) {
-      const id = `part-${name}`;
-      const label = document.createElement("label");
-      label.className = "part";
-      const nameEl = document.createElement("span");
-      nameEl.className = "part-name";
-      nameEl.textContent = name;
-      const input = document.createElement("input");
-      input.type = "checkbox";
-      input.checked = true;
-      input.id = id;
-      input.setAttribute("role", "switch");
-      input.setAttribute("aria-label", name);
-      input.addEventListener("change", () => setPartVisible(name, input.checked));
-      label.append(nameEl, input);
-      host.append(label);
+
+    for (const name of parts.keys()) {
+      if (!partOpacity.has(name)) partOpacity.set(name, 1);
+      if (!partLastNonZero.has(name)) partLastNonZero.set(name, 1);
+    }
+
+    const outline = resolvePartOutline(parts.keys());
+    for (const node of outline) {
+      appendOutlineNode(node, host, 0);
     }
   }
 
@@ -759,8 +1054,9 @@ export function mountViewer(canvas, glbBuffer) {
     camera,
     controls,
     parts,
+    partOpacity,
     cuts,
-    setPartVisible,
+    setPartOpacity,
     setCameraPreset,
     setCutT,
     removeCut,
