@@ -784,7 +784,12 @@ _VIEWER_HTML = """<!DOCTYPE html>
 </head>
 <body>
 <nav id="top-chrome" class="top-chrome" aria-label="Viewer">
-  <button type="button" id="ar" class="chrome-btn" hidden>AR</button>
+  <div class="top-chrome-start">
+    <button type="button" id="ar" class="chrome-btn" hidden>AR</button>
+  </div>
+  <div class="top-chrome-end">
+    <button type="button" id="sheet-toggle" class="chrome-btn sheet-toggle" aria-expanded="true" aria-label="Hide controls" title="Hide controls">›</button>
+  </div>
 </nav>
 <aside id="sheet" class="sheet" data-detent="peek">
   <button type="button" class="sheet-handle" id="sheet-handle" aria-label="Drag controls sheet"></button>

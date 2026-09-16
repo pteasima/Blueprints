@@ -511,29 +511,33 @@ export function mountViewer(canvas, glbBuffer) {
         "aria-label",
         cut.locked ? `Section ${cut.label}` : "Section cut",
       );
-      range.addEventListener("pointerdown", (ev) => {
-        cutSliderActive = true;
-        try {
-          range.setPointerCapture(ev.pointerId);
-        } catch (_) {
-          /* ignore */
-        }
-        if (!cut.locked) lockCut(cut);
-      });
+      // Do not setPointerCapture on range — it breaks native trackpad/mouse
+      // scrubbing (click-to-focus, then sticky drag until another click).
       const endSlider = () => {
         if (!cutSliderActive) return;
         cutSliderActive = false;
         flushDeferredDraft();
       };
+      const onWinUp = (ev) => {
+        if (!cutSliderActive) return;
+        if (ev.pointerType === "mouse" && ev.button !== 0) return;
+        endSlider();
+      };
+      range.addEventListener("pointerdown", () => {
+        cutSliderActive = true;
+        if (!cut.locked) lockCut(cut);
+        window.addEventListener("pointerup", onWinUp, { once: true });
+        window.addEventListener("pointercancel", onWinUp, { once: true });
+      });
       range.addEventListener("pointerup", endSlider);
       range.addEventListener("pointercancel", endSlider);
-      range.addEventListener("lostpointercapture", endSlider);
       range.addEventListener("input", () => {
         setCutT(cut.id, range.value);
       });
       // Also keep the model in sync if the user commits via change (keyboard).
       range.addEventListener("change", () => {
         setCutT(cut.id, range.value);
+        endSlider();
       });
 
       row.append(label, range);
