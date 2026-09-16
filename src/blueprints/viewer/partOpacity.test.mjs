@@ -75,7 +75,8 @@ assert.equal(mat.userData.needsDepthPeel, false);
 assert.equal(mat.forceSinglePass, false);
 assert.equal(mesh.renderOrder, 12, "opaque restores stored depth bias");
 
-assert.ok(MAX_PEELS >= 8);
+assert.ok(MAX_PEELS >= 4);
+assert.ok(MAX_PEELS <= 8, "keep peel count modest for perf");
 assert.ok(VIEW_Z_EPSILON > 0 && VIEW_Z_EPSILON < 0.01);
 assert.equal(USE_DEPTH_PEEL, true, "hardened peels are the fade path");
 
