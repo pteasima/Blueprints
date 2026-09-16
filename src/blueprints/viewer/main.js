@@ -1129,6 +1129,22 @@ export function mountViewer(canvas, glbBuffer) {
   };
   window.BlueprintsViewer = api;
 
+  let prevUsedWboit = false;
+
+  function healOpacitiesFromState() {
+    for (const [name, meshes] of parts) {
+      const o = partOpacity.get(name) ?? 1;
+      applyOpacityToMeshes(meshes, o);
+      for (const mesh of meshes) {
+        if (!mesh?.isMesh) continue;
+        const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        for (const mat of list) {
+          if (mat?.userData?.needsWboit) patchMaterialForWboit(mat);
+        }
+      }
+    }
+  }
+
   function tick() {
     const now = performance.now();
     stepFrameAnim(now);
@@ -1136,7 +1152,11 @@ export function mountViewer(canvas, glbBuffer) {
     // Orbit damping keeps the camera moving briefly after release — refresh
     // clip planes so depth precision tracks the current view distance.
     if (root) updateCameraClipPlanes();
-    wboit.render(scene, camera, root);
+    const usedWboit = wboit.render(scene, camera, root);
+    // Leaving WBOIT: re-apply slider state so a mid-frame restore cannot leave
+    // meshes stuck at the temporary SOLID_ALPHA translucent settings.
+    if (prevUsedWboit && !usedWboit) healOpacitiesFromState();
+    prevUsedWboit = usedWboit;
     requestAnimationFrame(tick);
   }
   tick();

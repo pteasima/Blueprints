@@ -1,26 +1,24 @@
 /**
  * Weighted Blended Order-Independent Transparency (McGuire / Bavoil).
  *
- * Empirically, full-scene WBOIT looks correct when every mesh is translucent,
- * and breaks as soon as any mesh is drawn as a true opaque/α=1 solid (roof
- * self-occlusion, fades punching through solids, etc.).
+ * When nothing is faded → normal opaque render (DoubleSide, depthWrite).
+ * When any part is faded → all visible meshes go through WBOIT. UI-100% meshes
+ * are drawn at SOLID_ALPHA for that frame only (true α=1 inside WBOIT breaks
+ * occlusion). Uses DoubleSide like the opaque path — FrontSide punched holes
+ * through shells and read as “way too transparent.”
  *
- * Strategy: the fast path is a normal render when nothing is faded. When any
- * part is faded, temporarily lift every visible mesh onto the translucent
- * path (solids get α = SOLID_ALPHA < 1 for this frame only) and run one
- * all-translucent WBOIT accumulate + reveal + composite. No opaque/transparent
- * depth split.
+ * render() returns whether WBOIT ran, so the caller can heal materials after
+ * leaving the WBOIT path (restore can race with slider updates).
  */
 import * as THREE from "three";
 
-/** α used for "solid" meshes while WBOIT is active (must be < 1). */
-const SOLID_ALPHA = 0.99;
+/** α for UI-solid meshes while WBOIT is active (must be < 1). */
+export const SOLID_ALPHA = 0.995;
 
 /** Shared across all patched materials; set per pass (0=off, 1=accum, 2=reveal). */
 export const wboitStageUniform = { value: 0 };
 
 /**
- * Patch a material so its fragment can emit WBOIT accumulation / reveal.
  * @param {THREE.Material} mat
  */
 export function patchMaterialForWboit(mat) {
@@ -29,7 +27,7 @@ export function patchMaterialForWboit(mat) {
 
   const prevCacheKey = mat.customProgramCacheKey?.bind(mat);
   mat.customProgramCacheKey = () =>
-    `${prevCacheKey ? prevCacheKey() : mat.type}|wboit6`;
+    `${prevCacheKey ? prevCacheKey() : mat.type}|wboit7`;
 
   const prevCompile = mat.onBeforeCompile?.bind(mat);
   mat.onBeforeCompile = (shader, renderer) => {
@@ -39,6 +37,8 @@ export function patchMaterialForWboit(mat) {
       "void main() {",
       "uniform float uWboitStage;\nvoid main() {",
     );
+    // Emphasize high alpha so 0.99+ reads near-opaque. Depth weight alone is
+    // unreliable with logarithmicDepthBuffer (z clusters near 1).
     shader.fragmentShader = shader.fragmentShader.replace(
       "#include <dithering_fragment>",
       `#include <dithering_fragment>
@@ -47,7 +47,9 @@ export function patchMaterialForWboit(mat) {
 		if (alpha < 1e-4) discard;
 		if (uWboitStage < 1.5) {
 			float z = gl_FragCoord.z;
-			float weight = alpha * max(0.01, 3000.0 * pow(max(0.0, 1.0 - z), 3.0));
+			float dz = max(0.01, 3000.0 * pow(max(0.0, 1.0 - z), 3.0));
+			// Extra bias toward opaque coverage (McGuire eq.9 is too soft here).
+			float weight = alpha * alpha * dz;
 			gl_FragColor = vec4(gl_FragColor.rgb * alpha, alpha) * weight;
 		} else {
 			gl_FragColor = vec4(alpha);
@@ -192,13 +194,14 @@ export function createWboitRenderer(renderer) {
    * @param {THREE.Scene} scene
    * @param {THREE.Camera} camera
    * @param {THREE.Object3D | null} root
+   * @returns {boolean} true if WBOIT ran this frame
    */
   function render(scene, camera, root) {
     if (!anyFaded(root)) {
       wboitStageUniform.value = 0;
       renderer.setRenderTarget(null);
       renderer.render(scene, camera);
-      return;
+      return false;
     }
 
     const meshes = collectVisibleMeshes(root);
@@ -235,7 +238,6 @@ export function createWboitRenderer(renderer) {
             side: mat.side,
           },
         });
-        // Lift solids onto the translucent path that already looks correct.
         const opacity =
           mat.transparent && mat.opacity < 1 - 1e-4
             ? mat.opacity
@@ -244,7 +246,8 @@ export function createWboitRenderer(renderer) {
         mat.opacity = opacity;
         mat.depthWrite = false;
         mat.depthTest = true;
-        mat.side = THREE.FrontSide;
+        // Match the opaque viewer path — FrontSide opened holes in wall/roof shells.
+        mat.side = THREE.DoubleSide;
       }
     }
 
@@ -252,7 +255,6 @@ export function createWboitRenderer(renderer) {
     renderer.toneMapping = THREE.NoToneMapping;
     renderer.autoClear = true;
 
-    // --- Accumulation ---
     wboitStageUniform.value = 1;
     for (const { mat } of backup) {
       applyBlend(mat, {
@@ -269,7 +271,6 @@ export function createWboitRenderer(renderer) {
     renderer.clear();
     renderer.render(scene, camera);
 
-    // --- Revealage ---
     wboitStageUniform.value = 2;
     for (const { mat } of backup) {
       applyBlend(mat, {
@@ -302,6 +303,7 @@ export function createWboitRenderer(renderer) {
     renderer.autoClear = true;
     renderer.render(compositeScene, compositeCamera);
     renderer.autoClear = prevAutoClear;
+    return true;
   }
 
   function dispose() {
