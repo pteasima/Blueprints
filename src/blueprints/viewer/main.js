@@ -10,6 +10,7 @@ import { USDZExporter } from "three/addons/exporters/USDZExporter.js";
 import { meshToClippedExportMesh } from "./clipGeometry.js";
 import { applyArPlacement, computeArPlacement } from "./arPlacement.js";
 import { BG_DARK, BG_LIGHT, initSheetChrome } from "./chrome.js";
+import { createCooperativeRange } from "./coopRange.js";
 import {
   MODE_REALISTIC,
   MODE_SOLID,
@@ -503,46 +504,30 @@ export function mountViewer(canvas, glbBuffer) {
       label.className = "cut-label";
       label.textContent = cut.locked ? cut.label : "Cut";
 
-      const range = document.createElement("input");
-      range.type = "range";
-      range.min = "0";
-      range.max = "1";
-      range.step = "0.001";
-      range.value = String(cut.t);
-      range.setAttribute(
-        "aria-label",
-        cut.locked ? `Section ${cut.label}` : "Section cut",
-      );
-      // Do not setPointerCapture on range — it breaks native trackpad/mouse
-      // scrubbing (click-to-focus, then sticky drag until another click).
       const endSlider = () => {
         if (!cutSliderActive) return;
         cutSliderActive = false;
         flushDeferredDraft();
       };
-      const onWinUp = (ev) => {
-        if (!cutSliderActive) return;
-        if (ev.pointerType === "mouse" && ev.button !== 0) return;
-        endSlider();
-      };
-      range.addEventListener("pointerdown", () => {
-        cutSliderActive = true;
-        if (!cut.locked) lockCut(cut);
-        window.addEventListener("pointerup", onWinUp, { once: true });
-        window.addEventListener("pointercancel", onWinUp, { once: true });
-      });
-      range.addEventListener("pointerup", endSlider);
-      range.addEventListener("pointercancel", endSlider);
-      range.addEventListener("input", () => {
-        setCutT(cut.id, range.value);
-      });
-      // Also keep the model in sync if the user commits via change (keyboard).
-      range.addEventListener("change", () => {
-        setCutT(cut.id, range.value);
-        endSlider();
+      const range = createCooperativeRange({
+        min: 0,
+        max: 1,
+        step: 0.001,
+        value: cut.t,
+        ariaLabel: cut.locked ? `Section ${cut.label}` : "Section cut",
+        onScrubStart: () => {
+          cutSliderActive = true;
+          if (!cut.locked) lockCut(cut);
+        },
+        onScrubEnd: endSlider,
+        onInput: (v) => setCutT(cut.id, v),
+        onChange: (v) => {
+          setCutT(cut.id, v);
+          endSlider();
+        },
       });
 
-      row.append(label, range);
+      row.append(label, range.el);
 
       if (cut.locked) {
         const remove = document.createElement("button");
