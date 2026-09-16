@@ -1,16 +1,11 @@
-# Deploy docs/ to GitHub Pages (rolling URL — last push wins).
+# Manual / fallback deploy of the pages-site content branch.
+# Normal publishes go through pages-content.yml (update + deploy).
 # One-time: Settings → Pages → Source = GitHub Actions.
+# Environments → github-pages → Deployment branches → All branches
+# (needed so pull_request jobs in pages-content can deploy).
 name: pages
 
 on:
-  push:
-    branches: [main, "cursor/**"]
-    paths:
-      - "docs/**"
-      - "src/blueprints/viewer/**"
-      - "src/blueprints/preview_hub.py"
-      - "scripts/build-preview-hub.py"
-      - ".github/workflows/pages.yml"
   workflow_dispatch:
 
 permissions:
@@ -19,8 +14,8 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
-  cancel-in-progress: true
+  group: pages-site
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -31,17 +26,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          lfs: true
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Build web-viewer hub
-        run: python scripts/build-preview-hub.py
+          ref: pages-site
+          lfs: false
+      - name: Stage deploy tree
+        run: |
+          set -euo pipefail
+          rm -rf _deploy
+          mkdir _deploy
+          tar -C . --exclude .git -cf - . | tar -C _deploy -xf -
       - uses: actions/configure-pages@v5
         with:
           enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: docs
+          path: _deploy
       - id: deployment
         uses: actions/deploy-pages@v4

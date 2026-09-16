@@ -1,12 +1,15 @@
 # GitHub Pages hub (web viewers)
 
-Rolling site: https://pteasima.github.io/Blueprints/  
-Last successful `pages` workflow deploy wins (pushes to `main` or `cursor/**`).
+Production: https://pteasima.github.io/Blueprints/ (from `main`)  
+PR previews: https://pteasima.github.io/Blueprints/pr-preview/pr-\<N\>/ (removed when the PR closes)
 
 ## Enable once
 
 1. https://github.com/pteasima/Blueprints/settings/pages → Source = **GitHub Actions** → Save.
-2. https://github.com/pteasima/Blueprints/settings/environments → **github-pages** → Deployment branches → allow `cursor/**` (or All branches). Default is `main` only, which blocks unmerged agent previews.
+2. https://github.com/pteasima/Blueprints/settings/actions → **General** → Workflow permissions → **Read and write**.
+3. https://github.com/pteasima/Blueprints/settings/environments → **github-pages** → Deployment branches → **All branches** (required for PR preview deploys).
+
+`pages-content` updates the `pages-site` content branch (root on `main`, `pr-preview/pr-<N>/` on PRs, delete on PR close) and deploys it. `pages` is a manual fallback redeploy only.
 
 ## Layout
 
@@ -20,6 +23,8 @@ Last successful `pages` workflow deploy wins (pushes to `main` or `cursor/**`).
 | `.nojekyll` | Keep Pages from running Jekyll |
 | `previews/` | Small PNG/SVG review stills for chat |
 
-`python -m blueprints.export <model>` updates USDZ/GLB + manifest + viewer shell. The Action rebuilds the hub and deploys. Do not commit `index.html`.
+On the live site only (content branch `pages-site`, not in `main`): `pr-preview/pr-<N>/` holds isolated copies of the hub for open PRs.
+
+`python -m blueprints.export <model>` updates USDZ/GLB + manifest + viewer shell. CI rebuilds the hub and publishes. Do not commit `index.html`.
 
 Hub buttons open **web viewers** only (`/viewer/?m=<id>`). Safari AR / Quick Look is available from the viewer’s **AR** control (client-generated USDZ), not from the landing page.

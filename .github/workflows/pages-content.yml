@@ -1,0 +1,170 @@
+# Update the pages-site content branch and deploy GitHub Pages:
+# - push to main → site root (keeps pr-preview/)
+# - PR open/sync → pr-preview/pr-<N>/
+# - PR closed (merge or close) → delete pr-preview/pr-<N>/
+#
+# Deploy runs in this workflow (GITHUB_TOKEN cannot workflow_dispatch
+# pages.yml from pull_request events).
+name: pages-content
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "src/blueprints/viewer/**"
+      - "src/blueprints/preview_hub.py"
+      - "scripts/build-preview-hub.py"
+      - "scripts/merge_pages_site.py"
+      - "scripts/checkout_pages_site.sh"
+      - "scripts/push_pages_site.sh"
+      - "src/blueprints/pages_site.py"
+      - ".github/workflows/pages-content.yml"
+  # No path filters on pull_request so closed always cleans up pr-preview/pr-<N>/.
+  pull_request:
+    types: [opened, reopened, synchronize, closed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Optional PR number to republish or remove"
+        required: false
+        type: string
+      action:
+        description: "preview (default) or remove"
+        required: false
+        default: preview
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-site
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    # Same-repo PRs only (fork tokens cannot push pages-site).
+    if: >
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Closed PRs only need scripts (head branch may already be deleted).
+          lfs: ${{ !(github.event_name == 'pull_request' && github.event.action == 'closed') }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.pull_request.head.sha || github.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build web-viewer hub
+        if: >
+          github.event_name != 'pull_request' ||
+          github.event.action != 'closed'
+        run: python scripts/build-preview-hub.py
+
+      - name: Checkout pages-site content branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash scripts/checkout_pages_site.sh pages-site
+
+      - name: Merge into pages-site
+        id: merge
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_ACTION: ${{ github.event.action || '' }}
+          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number || '' }}
+          DISPATCH_ACTION: ${{ inputs.action || 'preview' }}
+        run: |
+          set -euo pipefail
+          chmod +x scripts/*.sh
+
+          seed_root_from_main_if_needed() {
+            if [[ -f pages-site/index.html ]]; then
+              return 0
+            fi
+            echo "Seeding pages-site root from origin/main"
+            git fetch --depth 1 origin main
+            rm -rf _main_seed
+            mkdir _main_seed
+            git archive origin/main | tar -C _main_seed -xf -
+            (cd _main_seed && python scripts/build-preview-hub.py)
+            python scripts/merge_pages_site.py root _main_seed/docs pages-site
+          }
+
+          if [[ "$EVENT_NAME" == "pull_request" && "$EVENT_ACTION" == "closed" ]]; then
+            python scripts/merge_pages_site.py remove pages-site "$PR_NUMBER"
+            echo "mode=remove" >> "$GITHUB_OUTPUT"
+            echo "pr=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+            echo "message=Remove PR preview pr-${PR_NUMBER}" >> "$GITHUB_OUTPUT"
+          elif [[ "$EVENT_NAME" == "pull_request" ]]; then
+            seed_root_from_main_if_needed
+            python scripts/merge_pages_site.py preview docs pages-site "$PR_NUMBER"
+            echo "mode=preview" >> "$GITHUB_OUTPUT"
+            echo "pr=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+            echo "message=Publish PR preview pr-${PR_NUMBER}" >> "$GITHUB_OUTPUT"
+          elif [[ "$EVENT_NAME" == "workflow_dispatch" && -n "${PR_NUMBER}" ]]; then
+            if [[ "$DISPATCH_ACTION" == "remove" ]]; then
+              python scripts/merge_pages_site.py remove pages-site "$PR_NUMBER"
+              echo "mode=remove" >> "$GITHUB_OUTPUT"
+            else
+              python scripts/build-preview-hub.py
+              seed_root_from_main_if_needed
+              python scripts/merge_pages_site.py preview docs pages-site "$PR_NUMBER"
+              echo "mode=preview" >> "$GITHUB_OUTPUT"
+            fi
+            echo "pr=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+            echo "message=Manual pages-site update pr-${PR_NUMBER}" >> "$GITHUB_OUTPUT"
+          else
+            python scripts/merge_pages_site.py root docs pages-site
+            echo "mode=root" >> "$GITHUB_OUTPUT"
+            echo "pr=" >> "$GITHUB_OUTPUT"
+            echo "message=Publish production Pages root" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push pages-site
+        run: bash scripts/push_pages_site.sh pages-site "${{ steps.merge.outputs.message }}"
+
+      - name: Stage deploy tree
+        run: |
+          set -euo pipefail
+          rm -rf _deploy
+          mkdir _deploy
+          # Exclude .git from the Pages artifact.
+          tar -C pages-site --exclude .git -cf - . | tar -C _deploy -xf -
+
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _deploy
+
+      - name: Comment on PR
+        if: steps.merge.outputs.pr != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          COMMENT_ACTION: ${{ steps.merge.outputs.mode == 'remove' && 'remove' || 'deploy' }}
+        run: |
+          bash scripts/comment_pr_preview.sh \
+            "${{ steps.merge.outputs.pr }}" \
+            "$COMMENT_ACTION"
+
+  deploy:
+    needs: update
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

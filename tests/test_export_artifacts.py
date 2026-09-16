@@ -244,9 +244,11 @@ def test_obyvak_usdz_has_layer_materials(tmp_path, monkeypatch):
         assert diffuse[2] == pytest.approx(rgb[2], abs=1e-5)
 
 
-def test_agents_md_points_at_rolling_pages():
+def test_agents_md_points_at_pages_previews():
     text = AGENTS_MD.read_text(encoding="utf-8")
     assert "pteasima.github.io/Blueprints" in text
+    assert "pr-preview/pr-" in text
+    assert "pages-site" in text
     assert "GitHub Actions" in text
     assert "Git LFS" in text
     assert "catbox" not in text.lower()
