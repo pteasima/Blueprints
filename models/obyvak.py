@@ -9,7 +9,7 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
 - Gables own the end walls (full X). Eave runs only the clear mid-span so
   corner volumes are not drawn twice.
 - Obývák-only scope: no koruna (exterior gables are in adjacent rooms), no EPS
-  on gable shells, three west-wall pocket doors into spíž / TM / chodba.
+  on gable shells, three gable pocket doors (spíž + chodba on Y=0, zádveří on Y=L).
 - Floor slab is the clear room only; perimeter walls own the strip below z=0.
 
     python -m blueprints.export obyvak
@@ -104,19 +104,26 @@ def _aabb_hit(a, b) -> bool:
 
 
 def _pocket_door_cutters(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
-    """Through-openings for posuvné dveře on the west eave wall (X≈0)."""
+    """Through-openings for posuvné dveře in Y=0 / Y=L gables (D.1.1.03)."""
     cutters = []
-    for y0, width in p.pocket_doors:
-        ya, yb = y0 + gap, y0 + width - gap
-        if yb <= ya:
+    for spec in p.pocket_doors:
+        gable, x0, width = spec
+        xa, xb = x0 + gap, x0 + width - gap
+        if xb <= xa:
             continue
+        if gable == "kitchen":
+            ya, yb = g.yl_eps - 1.0, gap + 1.0
+        elif gable == "living":
+            ya, yb = p.room_length - gap - 1.0, g.yr_eps + 1.0
+        else:
+            raise ValueError(f"unknown pocket door gable: {gable!r}")
         cutters.append(
             _box(
-                g.xl_eps - 1.0,
-                ya,
+                xa,
+                min(ya, yb),
                 -1.0,
-                g.xr_int + p.wall_plaster + 2.0,
-                yb - ya,
+                xb - xa,
+                abs(yb - ya),
                 p.pocket_door_h + 2 * gap + 2.0,
                 "_door_cut",
             )
@@ -285,14 +292,18 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     parts[parts.index(vata)] = vata_cut
 
     pouzdro_h = p.pocket_door_h - gap
-    for y0, width in p.pocket_doors:
+    for gable, x0, width in p.pocket_doors:
+        if gable == "kitchen":
+            y_pouch = -p.wall_plaster - p.pouzdro_d + gap
+        else:
+            y_pouch = p.room_length + gap
         parts.append(
             _box(
-                -p.wall_plaster - p.pouzdro_d + gap,
-                y0 + gap,
+                x0 + gap,
+                y_pouch,
                 gap,
-                p.pouzdro_d - gap,
                 width - 2 * gap,
+                p.pouzdro_d - gap,
                 pouzdro_h,
                 "pouzdro",
             )

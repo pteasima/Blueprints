@@ -54,7 +54,7 @@ def test_elevation_geometry_is_horizontal_not_aframe():
         assert name in labels
     assert "eps" not in labels
     assert "koruna" not in labels
-    assert "pouzdro" not in labels
+    assert "pouzdro" in labels
 
     pred = _faces(shape, "predstena")
     assert len(pred) == 2
@@ -67,6 +67,11 @@ def test_elevation_geometry_is_horizontal_not_aframe():
         bb = face.bounding_box()
         assert abs(bb.min.Z - p.predstena_bottom_z) < 1e-6
         assert abs(bb.max.Z - meta["derived"]["z_soffit"]) < 1e-6
+
+    pouzdra = _faces(shape, "pouzdro")
+    assert len(pouzdra) == 1
+    assert abs(pouzdra[0].bounding_box().min.X - p.room_length) < 1e-6
+    assert abs(pouzdra[0].bounding_box().max.Z - p.pocket_door_h) < 1e-6
 
     soffit = _faces(shape, "podhled")
     assert len(soffit) == 1
@@ -91,5 +96,6 @@ def test_obyvak_elevation_exports(tmp_path, monkeypatch):
     assert paths["png"].stat().st_size > 0
     svg = paths["svg"].read_text()
     assert "predstena" in svg
-    assert "pouzdro" not in svg
+    assert "pouzdro" in svg
     assert "koruna" not in svg
+    assert "stroke-dasharray" in svg

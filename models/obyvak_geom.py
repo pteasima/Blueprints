@@ -55,11 +55,12 @@ class ObyvakParams:
     predstena_bottom_z: float = 2450.0
     pouzdro_d: float = 120.0
     pocket_door_h: float = 2450.0
-    # y0 along Y on the west eave wall (X=0); widths from D.1.1.03 (1.03 spíž, 1.04 TM, chodba).
-    pocket_doors: tuple[tuple[float, float], ...] = (
-        (500.0, 1100.0),
-        (2750.0, 1100.0),
-        (5050.0, 1000.0),
+    # (gable, x0, width) — gable "kitchen" = Y=0 štít (západ), "living" = Y=L (východ / zádveří).
+    # D.1.1.03: 1.03 spíž 1000, 1.05 chodba 1000, 1.01 zádveří 1100; vše Z=2450.
+    pocket_doors: tuple[tuple[str, float, float], ...] = (
+        ("kitchen", 3950.0, 1000.0),  # spíž — severní konec Y=0 štítu
+        ("kitchen", 400.0, 1000.0),  # chodba — jižní konec Y=0 štítu
+        ("living", 2125.0, 1100.0),  # zádveří — střed Y=L štítu
     )
     soffit_hint_t: float = 30.0
     ridge_runout: float = 200.0
