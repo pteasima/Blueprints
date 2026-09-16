@@ -58,14 +58,13 @@ class ObyvakParams:
     # Clearance from the kitchen-cabinet eave (X=room_width) to the spíž opening.
     pocket_spiz_inset: float = 650.0
     # (gable, x0, width) — "kitchen"=Y=0 (předstěna 190), "living"=Y=L (předstěna 450).
-    # Window/terrace eave = X=0; kitchen cabinets on X=room_width.
-    # Spíž + chodba on kitchen gable (spíž inset from cabinets); zádveří on living.
-    # Viewer: move pantry off the two-door gable onto the empty cabinet side of the
-    # one-door (kitchen) gable — not the opposite gable.
+    # Cutaway camera is at −X,−Y: near/right gable = Y=0, far/left gable = Y=L.
+    # Spíž must sit on the far gable (Y=L), not on the near/right wall with chodba.
+    # Chodba stays Y=0 window corner; zádveří stays Y=L window corner; spíž Y=L cabinet inset.
     pocket_doors: tuple[tuple[str, float, float], ...] = (
-        ("kitchen", 0.0, 1000.0),  # chodba · roh u oken
-        ("kitchen", 3700.0, 1000.0),  # spíž · 5350 − 650 − 1000 · cabinet side
-        ("living", 0.0, 1100.0),  # zádveří · roh u oken
+        ("kitchen", 0.0, 1000.0),  # chodba · roh u oken · near gable Y=0
+        ("living", 3700.0, 1000.0),  # spíž · far gable Y=L · 5350 − 650 − 1000
+        ("living", 0.0, 1100.0),  # zádveří · roh u oken · far gable Y=L
     )
     # Window wall (X=0, opposite cabinets): 2× HS 2500 + fixed 4500, h=2500 (D.1.1.03).
     window_h: float = 2500.0
