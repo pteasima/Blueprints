@@ -872,18 +872,41 @@ export function mountViewer(canvas, glbBuffer) {
   // Spawn a draft after the user finishes orbiting/panning — not on every
   // damping `change`, which would rebuild the cut UI mid-slider-drag.
   // `start` is user-gesture only (programmatic framing does not fire it).
-  let peelOrbiting = false;
-  /** After orbit `end`, stay on fast peels until damping has settled. */
-  let peelHighAfterMs = 0;
-  const PEEL_SETTLE_MS = 320;
+  //
+  // Peel quality: OrbitControls `end` is unreliable on some touch/Safari
+  // paths (pointercancel without end → stuck in fast forever). Drive settle
+  // from canvas pointer lifecycle + window up/cancel instead.
+  let peelPointerDown = false;
+  /** @type {"fast" | "high"} */
+  let lastPeelQuality = "high";
+  const PEEL_SETTLE_MS = 400;
+  /** Squared metres — ignore sub-mm float/damping noise. */
+  const PEEL_MOVE_EPS2 = 1e-6;
+  const peelCamPos = new THREE.Vector3();
+  const peelCamTarget = new THREE.Vector3();
+  let peelCamInited = false;
+  let peelLastMoveMs = 0;
+
+  function notePeelPointerDown() {
+    peelPointerDown = true;
+  }
+  function notePeelPointerUp() {
+    peelPointerDown = false;
+    peelLastMoveMs = performance.now();
+  }
+
+  canvas.addEventListener("pointerdown", notePeelPointerDown, { capture: true });
+  window.addEventListener("pointerup", notePeelPointerUp, { capture: true });
+  window.addEventListener("pointercancel", notePeelPointerUp, { capture: true });
+  window.addEventListener("touchend", notePeelPointerUp, { capture: true });
+  window.addEventListener("touchcancel", notePeelPointerUp, { capture: true });
 
   controls.addEventListener("start", () => {
     clearCameraPresetHighlight();
-    peelOrbiting = true;
+    notePeelPointerDown();
   });
   controls.addEventListener("end", () => {
-    peelOrbiting = false;
-    peelHighAfterMs = performance.now() + PEEL_SETTLE_MS;
+    notePeelPointerUp();
     if (suppressCameraChange) return;
     maybeSpawnDraftFromCamera();
   });
@@ -1134,6 +1157,8 @@ export function mountViewer(canvas, glbBuffer) {
     frameIso,
     openArQuickLook,
     buildArExportScene,
+    /** @returns {"fast" | "high"} */
+    getPeelQuality: () => lastPeelQuality,
   };
   window.BlueprintsViewer = api;
 
@@ -1162,17 +1187,30 @@ export function mountViewer(canvas, glbBuffer) {
     if (root) updateCameraClipPlanes();
     measureTool?.update();
 
-    // Fast while dragging / damping / framing; high once settled (matches
-    // main-branch peel algorithm — not the half-res early-out path).
+    // Fast while pointer-down or camera still damping; high after ~400ms still.
+    // Settled path matches main-branch peels (full-res, 12 layers, no early-out).
+    if (!peelCamInited) {
+      peelCamPos.copy(camera.position);
+      peelCamTarget.copy(controls.target);
+      peelCamInited = true;
+      peelLastMoveMs = now;
+    }
+    const camMoved =
+      camera.position.distanceToSquared(peelCamPos) > PEEL_MOVE_EPS2 ||
+      controls.target.distanceToSquared(peelCamTarget) > PEEL_MOVE_EPS2;
+    peelCamPos.copy(camera.position);
+    peelCamTarget.copy(controls.target);
+    if (peelPointerDown || camMoved) peelLastMoveMs = now;
+
     const peelBusy =
-      peelOrbiting ||
-      now < peelHighAfterMs ||
+      peelPointerDown ||
+      now - peelLastMoveMs < PEEL_SETTLE_MS ||
       frameAnim !== 0 ||
       cutSliderActive;
-    const peelQuality = peelBusy ? "fast" : "high";
+    lastPeelQuality = peelBusy ? "fast" : "high";
 
     const usedPeel = depthPeel.render(scene, camera, root, anyPartFaded, {
-      quality: peelQuality,
+      quality: lastPeelQuality,
     });
     // Re-apply slider opacities when leaving peel mode so materials cannot
     // stay stuck translucent / depthWrite-off after a 100% scrub.
