@@ -78,8 +78,7 @@ export function mountViewer(canvas, glbBuffer) {
 
   const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 1e6);
   const controls = new OrbitControls(camera, canvas);
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.08;
+  controls.enableDamping = false;
   controls.screenSpacePanning = true;
 
   scene.add(new THREE.AmbientLight(0xffffff, 0.45));
@@ -879,8 +878,8 @@ export function mountViewer(canvas, glbBuffer) {
   let peelPointerDown = false;
   /** @type {"fast" | "high"} */
   let lastPeelQuality = "high";
-  const PEEL_SETTLE_MS = 120;
-  /** Squared metres — ignore residual damping / float noise. */
+  const PEEL_SETTLE_MS = 10;
+  /** Squared metres — ignore float noise only (no orbit damping). */
   const PEEL_MOVE_EPS2 = 1e-5;
   const peelCamPos = new THREE.Vector3();
   const peelCamTarget = new THREE.Vector3();
@@ -1182,12 +1181,11 @@ export function mountViewer(canvas, glbBuffer) {
     const now = performance.now();
     stepFrameAnim(now);
     controls.update();
-    // Orbit damping keeps the camera moving briefly after release — refresh
-    // clip planes so depth precision tracks the current view distance.
+    // Keep near/far tight as orbit distance changes.
     if (root) updateCameraClipPlanes();
     measureTool?.update();
 
-    // Fast while pointer-down or camera still damping; high after ~120ms still.
+    // Fast while pointer-down or camera moving; high ~10ms after last move.
     // Settled path matches main-branch peels (full-res, 12 layers, no early-out).
     if (!peelCamInited) {
       peelCamPos.copy(camera.position);
