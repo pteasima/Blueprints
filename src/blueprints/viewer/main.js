@@ -1136,6 +1136,15 @@ export function mountViewer(canvas, glbBuffer) {
     return false;
   }
 
+  function healOpacitiesFromState() {
+    for (const [name, meshes] of parts) {
+      const o = partOpacity.get(name) ?? 1;
+      applyOpacityToMeshes(meshes, o);
+    }
+  }
+
+  let prevUsedPeel = false;
+
   function tick() {
     const now = performance.now();
     stepFrameAnim(now);
@@ -1144,7 +1153,11 @@ export function mountViewer(canvas, glbBuffer) {
     // clip planes so depth precision tracks the current view distance.
     if (root) updateCameraClipPlanes();
     measureTool?.update();
-    depthPeel.render(scene, camera, root, anyPartFaded);
+    const usedPeel = depthPeel.render(scene, camera, root, anyPartFaded);
+    // Re-apply slider opacities when leaving peel mode so materials cannot
+    // stay stuck translucent / depthWrite-off after a 100% scrub.
+    if (prevUsedPeel && !usedPeel) healOpacitiesFromState();
+    prevUsedPeel = usedPeel;
     requestAnimationFrame(tick);
   }
   tick();
