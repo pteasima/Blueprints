@@ -78,8 +78,7 @@ export function mountViewer(canvas, glbBuffer) {
 
   const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 1e6);
   const controls = new OrbitControls(camera, canvas);
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.08;
+  controls.enableDamping = false;
   controls.screenSpacePanning = true;
 
   scene.add(new THREE.AmbientLight(0xffffff, 0.45));
@@ -872,10 +871,41 @@ export function mountViewer(canvas, glbBuffer) {
   // Spawn a draft after the user finishes orbiting/panning — not on every
   // damping `change`, which would rebuild the cut UI mid-slider-drag.
   // `start` is user-gesture only (programmatic framing does not fire it).
+  //
+  // Peel quality: OrbitControls `end` is unreliable on some touch/Safari
+  // paths (pointercancel without end → stuck in fast forever). Drive settle
+  // from canvas pointer lifecycle + window up/cancel instead.
+  let peelPointerDown = false;
+  /** @type {"fast" | "high"} */
+  let lastPeelQuality = "high";
+  const PEEL_SETTLE_MS = 10;
+  /** Squared metres — ignore float noise only (no orbit damping). */
+  const PEEL_MOVE_EPS2 = 1e-5;
+  const peelCamPos = new THREE.Vector3();
+  const peelCamTarget = new THREE.Vector3();
+  let peelCamInited = false;
+  let peelLastMoveMs = 0;
+
+  function notePeelPointerDown() {
+    peelPointerDown = true;
+  }
+  function notePeelPointerUp() {
+    peelPointerDown = false;
+    peelLastMoveMs = performance.now();
+  }
+
+  canvas.addEventListener("pointerdown", notePeelPointerDown, { capture: true });
+  window.addEventListener("pointerup", notePeelPointerUp, { capture: true });
+  window.addEventListener("pointercancel", notePeelPointerUp, { capture: true });
+  window.addEventListener("touchend", notePeelPointerUp, { capture: true });
+  window.addEventListener("touchcancel", notePeelPointerUp, { capture: true });
+
   controls.addEventListener("start", () => {
     clearCameraPresetHighlight();
+    notePeelPointerDown();
   });
   controls.addEventListener("end", () => {
+    notePeelPointerUp();
     if (suppressCameraChange) return;
     maybeSpawnDraftFromCamera();
   });
@@ -1126,6 +1156,8 @@ export function mountViewer(canvas, glbBuffer) {
     frameIso,
     openArQuickLook,
     buildArExportScene,
+    /** @returns {"fast" | "high"} */
+    getPeelQuality: () => lastPeelQuality,
   };
   window.BlueprintsViewer = api;
 
@@ -1149,11 +1181,35 @@ export function mountViewer(canvas, glbBuffer) {
     const now = performance.now();
     stepFrameAnim(now);
     controls.update();
-    // Orbit damping keeps the camera moving briefly after release — refresh
-    // clip planes so depth precision tracks the current view distance.
+    // Keep near/far tight as orbit distance changes.
     if (root) updateCameraClipPlanes();
     measureTool?.update();
-    const usedPeel = depthPeel.render(scene, camera, root, anyPartFaded);
+
+    // Fast while pointer-down or camera moving; high ~10ms after last move.
+    // Settled path matches main-branch peels (full-res, 12 layers, no early-out).
+    if (!peelCamInited) {
+      peelCamPos.copy(camera.position);
+      peelCamTarget.copy(controls.target);
+      peelCamInited = true;
+      peelLastMoveMs = now;
+    }
+    const camMoved =
+      camera.position.distanceToSquared(peelCamPos) > PEEL_MOVE_EPS2 ||
+      controls.target.distanceToSquared(peelCamTarget) > PEEL_MOVE_EPS2;
+    peelCamPos.copy(camera.position);
+    peelCamTarget.copy(controls.target);
+    if (peelPointerDown || camMoved) peelLastMoveMs = now;
+
+    const peelBusy =
+      peelPointerDown ||
+      now - peelLastMoveMs < PEEL_SETTLE_MS ||
+      frameAnim !== 0 ||
+      cutSliderActive;
+    lastPeelQuality = peelBusy ? "fast" : "high";
+
+    const usedPeel = depthPeel.render(scene, camera, root, anyPartFaded, {
+      quality: lastPeelQuality,
+    });
     // Re-apply slider opacities when leaving peel mode so materials cannot
     // stay stuck translucent / depthWrite-off after a 100% scrub.
     if (prevUsedPeel && !usedPeel) healOpacitiesFromState();
