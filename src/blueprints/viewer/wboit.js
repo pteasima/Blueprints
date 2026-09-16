@@ -1,16 +1,20 @@
 /**
  * Weighted Blended Order-Independent Transparency (McGuire / Bavoil).
  *
- * When any part is faded:
- *  1. Solids (α≈1) draw first with depthWrite — establish occlusion.
- *  2. Fades draw with depthTest, depthWrite off — OIT among themselves,
- *     cannot paint over nearer solids.
+ * Empirically, full-scene WBOIT looks correct when every mesh is translucent,
+ * and breaks as soon as any mesh is drawn as a true opaque/α=1 solid (roof
+ * self-occlusion, fades punching through solids, etc.).
  *
- * Both steps target the *same* render target so depth is the native FBO
- * buffer (no shared DepthTexture across FBOs — that was unreliable with
- * logarithmicDepthBuffer).
+ * Strategy: the fast path is a normal render when nothing is faded. When any
+ * part is faded, temporarily lift every visible mesh onto the translucent
+ * path (solids get α = SOLID_ALPHA < 1 for this frame only) and run one
+ * all-translucent WBOIT accumulate + reveal + composite. No opaque/transparent
+ * depth split.
  */
 import * as THREE from "three";
+
+/** α used for "solid" meshes while WBOIT is active (must be < 1). */
+const SOLID_ALPHA = 0.99;
 
 /** Shared across all patched materials; set per pass (0=off, 1=accum, 2=reveal). */
 export const wboitStageUniform = { value: 0 };
@@ -25,7 +29,7 @@ export function patchMaterialForWboit(mat) {
 
   const prevCacheKey = mat.customProgramCacheKey?.bind(mat);
   mat.customProgramCacheKey = () =>
-    `${prevCacheKey ? prevCacheKey() : mat.type}|wboit5`;
+    `${prevCacheKey ? prevCacheKey() : mat.type}|wboit6`;
 
   const prevCompile = mat.onBeforeCompile?.bind(mat);
   mat.onBeforeCompile = (shader, renderer) => {
@@ -52,18 +56,6 @@ export function patchMaterialForWboit(mat) {
     );
   };
   mat.needsUpdate = true;
-}
-
-/**
- * @param {THREE.Material | THREE.Material[] | undefined} material
- * @returns {boolean}
- */
-function materialIsFaded(material) {
-  const mats = Array.isArray(material) ? material : [material];
-  for (const m of mats) {
-    if (m && m.transparent && m.opacity < 1 - 1e-4) return true;
-  }
-  return false;
 }
 
 /**
@@ -132,7 +124,7 @@ export function createWboitRenderer(renderer) {
     accumRT = new THREE.WebGLRenderTarget(w, h, {
       format: THREE.RGBAFormat,
       type: THREE.HalfFloatType,
-      depthBuffer: true,
+      depthBuffer: false,
       stencilBuffer: false,
     });
     accumRT.texture.colorSpace = THREE.NoColorSpace;
@@ -140,7 +132,7 @@ export function createWboitRenderer(renderer) {
     revealRT = new THREE.WebGLRenderTarget(w, h, {
       format: THREE.RGBAFormat,
       type: THREE.HalfFloatType,
-      depthBuffer: true,
+      depthBuffer: false,
       stencilBuffer: false,
     });
     revealRT.texture.colorSpace = THREE.NoColorSpace;
@@ -157,36 +149,30 @@ export function createWboitRenderer(renderer) {
     let found = false;
     root.traverse((obj) => {
       if (found || !obj.isMesh || !obj.visible) return;
-      if (materialIsFaded(obj.material)) found = true;
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      for (const m of mats) {
+        if (m && m.transparent && m.opacity < 1 - 1e-4) {
+          found = true;
+          return;
+        }
+      }
     });
     return found;
   }
 
   /**
    * @param {THREE.Object3D | null} root
-   * @returns {{ solids: THREE.Mesh[], fades: THREE.Mesh[] }}
+   * @returns {THREE.Mesh[]}
    */
-  function partitionMeshes(root) {
+  function collectVisibleMeshes(root) {
     /** @type {THREE.Mesh[]} */
-    const solids = [];
-    /** @type {THREE.Mesh[]} */
-    const fades = [];
-    if (!root) return { solids, fades };
+    const list = [];
+    if (!root) return list;
     root.traverse((obj) => {
       if (!obj.isMesh || !obj.visible) return;
-      const mesh = /** @type {THREE.Mesh} */ (obj);
-      if (materialIsFaded(mesh.material)) fades.push(mesh);
-      else solids.push(mesh);
+      list.push(/** @type {THREE.Mesh} */ (obj));
     });
-    return { solids, fades };
-  }
-
-  /**
-   * @param {THREE.Mesh[]} meshes
-   * @param {boolean} visible
-   */
-  function setVisible(meshes, visible) {
-    for (const m of meshes) m.visible = visible;
+    return list;
   }
 
   /**
@@ -203,39 +189,6 @@ export function createWboitRenderer(renderer) {
   }
 
   /**
-   * @param {THREE.Material[]} mats
-   * @param {"accum" | "reveal"} mode
-   * @param {boolean} depthWrite
-   */
-  function prepMats(mats, mode, depthWrite) {
-    for (const mat of mats) {
-      if (mode === "accum") {
-        applyBlend(mat, {
-          blending: THREE.CustomBlending,
-          blendSrc: THREE.OneFactor,
-          blendDst: THREE.OneFactor,
-          blendSrcAlpha: THREE.OneFactor,
-          blendDstAlpha: THREE.OneFactor,
-          blendEquation: THREE.AddEquation,
-        });
-      } else {
-        applyBlend(mat, {
-          blending: THREE.CustomBlending,
-          blendSrc: THREE.ZeroFactor,
-          blendDst: THREE.OneMinusSrcAlphaFactor,
-          blendSrcAlpha: THREE.ZeroFactor,
-          blendDstAlpha: THREE.OneMinusSrcAlphaFactor,
-          blendEquation: THREE.AddEquation,
-        });
-      }
-      mat.transparent = true;
-      mat.depthWrite = depthWrite;
-      mat.depthTest = true;
-      mat.side = THREE.FrontSide;
-    }
-  }
-
-  /**
    * @param {THREE.Scene} scene
    * @param {THREE.Camera} camera
    * @param {THREE.Object3D | null} root
@@ -248,7 +201,7 @@ export function createWboitRenderer(renderer) {
       return;
     }
 
-    const { solids, fades } = partitionMeshes(root);
+    const meshes = collectVisibleMeshes(root);
     renderer.getDrawingBufferSize(size);
     ensureTargets(size.x, size.y);
 
@@ -260,16 +213,13 @@ export function createWboitRenderer(renderer) {
     compositeMat.uniforms.uBackground.value.copy(bgColor);
 
     /** @type {{ mat: THREE.Material, snap: object }[]} */
-    const blendBackup = [];
-    /** @type {THREE.Material[]} */
-    const allMats = [];
-    for (const mesh of [...solids, ...fades]) {
+    const backup = [];
+    for (const mesh of meshes) {
       const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
       for (const mat of mats) {
         if (!mat) continue;
         patchMaterialForWboit(mat);
-        allMats.push(mat);
-        blendBackup.push({
+        backup.push({
           mat,
           snap: {
             blending: mat.blending,
@@ -281,47 +231,67 @@ export function createWboitRenderer(renderer) {
             depthWrite: mat.depthWrite,
             depthTest: mat.depthTest,
             transparent: mat.transparent,
+            opacity: mat.opacity,
             side: mat.side,
           },
         });
+        // Lift solids onto the translucent path that already looks correct.
+        const opacity =
+          mat.transparent && mat.opacity < 1 - 1e-4
+            ? mat.opacity
+            : SOLID_ALPHA;
+        mat.transparent = true;
+        mat.opacity = opacity;
+        mat.depthWrite = false;
+        mat.depthTest = true;
+        mat.side = THREE.FrontSide;
       }
     }
 
     scene.background = null;
     renderer.toneMapping = THREE.NoToneMapping;
-    renderer.autoClear = false;
+    renderer.autoClear = true;
 
-    function drawAccumReveal(rt, clearColor, clearAlpha, stage) {
-      wboitStageUniform.value = stage;
-      const mode = stage < 1.5 ? "accum" : "reveal";
-      renderer.setRenderTarget(rt);
-      renderer.setClearColor(clearColor, clearAlpha);
-      renderer.clear(true, true, false);
-
-      // Solids first — write depth so fades cannot draw through them.
-      setVisible(fades, false);
-      setVisible(solids, true);
-      prepMats(allMats, mode, true);
-      renderer.render(scene, camera);
-
-      // Fades — test against solid depth, do not write depth; OIT among fades.
-      setVisible(solids, false);
-      setVisible(fades, true);
-      prepMats(allMats, mode, false);
-      renderer.render(scene, camera);
-
-      setVisible(solids, true);
-      setVisible(fades, true);
+    // --- Accumulation ---
+    wboitStageUniform.value = 1;
+    for (const { mat } of backup) {
+      applyBlend(mat, {
+        blending: THREE.CustomBlending,
+        blendSrc: THREE.OneFactor,
+        blendDst: THREE.OneFactor,
+        blendSrcAlpha: THREE.OneFactor,
+        blendDstAlpha: THREE.OneFactor,
+        blendEquation: THREE.AddEquation,
+      });
     }
+    renderer.setRenderTarget(accumRT);
+    renderer.setClearColor(0x000000, 0);
+    renderer.clear();
+    renderer.render(scene, camera);
 
-    drawAccumReveal(accumRT, 0x000000, 0, 1);
-    drawAccumReveal(revealRT, 0xffffff, 1, 2);
+    // --- Revealage ---
+    wboitStageUniform.value = 2;
+    for (const { mat } of backup) {
+      applyBlend(mat, {
+        blending: THREE.CustomBlending,
+        blendSrc: THREE.ZeroFactor,
+        blendDst: THREE.OneMinusSrcAlphaFactor,
+        blendSrcAlpha: THREE.ZeroFactor,
+        blendDstAlpha: THREE.OneMinusSrcAlphaFactor,
+        blendEquation: THREE.AddEquation,
+      });
+    }
+    renderer.setRenderTarget(revealRT);
+    renderer.setClearColor(0xffffff, 1);
+    renderer.clear();
+    renderer.render(scene, camera);
 
-    for (const { mat, snap } of blendBackup) {
+    for (const { mat, snap } of backup) {
       applyBlend(mat, /** @type {any} */ (snap));
       mat.depthWrite = snap.depthWrite;
       mat.depthTest = snap.depthTest;
       mat.transparent = snap.transparent;
+      mat.opacity = snap.opacity;
       mat.side = snap.side;
     }
     scene.background = prevBg;
@@ -340,5 +310,5 @@ export function createWboitRenderer(renderer) {
     compositeQuad.geometry.dispose();
   }
 
-  return { render, dispose };
+  return { render, dispose, SOLID_ALPHA };
 }
