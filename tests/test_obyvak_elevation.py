@@ -68,12 +68,16 @@ def test_elevation_geometry_is_horizontal_not_aframe():
         assert abs(bb.min.Z - p.predstena_bottom_z) < 1e-6
         assert abs(bb.max.Z - meta["derived"]["z_soffit"]) < 1e-6
 
-    sdk = _faces(shape, "sdk")
+    sdk = sorted(_faces(shape, "sdk"), key=lambda s: s.bounding_box().min.X)
     assert len(sdk) == 2
-    assert abs(sdk[0].bounding_box().size.X - max(p.sdk_t, 12.5)) < 1e-6
-    pouzdra = _faces(shape, "pouzdro")
+    face_t = max(p.sdk_t, 12.5)
+    assert abs(sdk[0].bounding_box().size.X - face_t) < 1e-6
+    assert abs(sdk[0].bounding_box().min.X - p.pouzdro_d) < 1e-6  # in front of pocket
+    assert abs(sdk[1].bounding_box().max.X - (p.room_length - p.pouzdro_d)) < 1e-6
+    pouzdra = sorted(_faces(shape, "pouzdro"), key=lambda s: s.bounding_box().min.X)
     assert len(pouzdra) == 2
-    # Předstěny unchanged.
+    assert abs(pouzdra[0].bounding_box().size.X - p.pouzdro_d) < 1e-6
+    # Předstěny unchanged (never touch high plasterboard sizes).
     assert p.predstena_kitchen == 190.0
     assert p.predstena_living == 450.0
 

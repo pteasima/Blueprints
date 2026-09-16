@@ -99,11 +99,22 @@ def test_3d_matches_section_and_elevation_masses():
         bb = part.bounding_box()
         assert bb.size.X < p.room_width * 0.5
         assert abs(bb.max.Z - (p.pocket_door_h - FACE_GAP)) <= 1.0
-    # SDK in front of pouzdro on kitchen end.
+    # SDK sits in front of pouzdro (into the room), not flush with cutouts for pockets.
     k_sdk = sdk_faces[0].bounding_box()
+    l_sdk = sdk_faces[1].bounding_box()
     k_pouzdra = [part for part in pouzdra if part.bounding_box().max.Y < p.room_length / 2]
-    assert k_pouzdra
+    l_pouzdra = [part for part in pouzdra if part.bounding_box().min.Y > p.room_length / 2]
+    assert k_pouzdra and l_pouzdra
+    assert abs(k_sdk.min.Y - (FACE_GAP + p.pouzdro_d)) < 1e-6
     assert k_sdk.min.Y >= max(part.bounding_box().max.Y for part in k_pouzdra) - 1e-6
+    assert l_sdk.max.Y <= min(part.bounding_box().min.Y for part in l_pouzdra) + 1e-6
+    # Walk-through door holes only: SDK volume well below a solid full-width board.
+    full_sdk_vol = (p.room_width - 2 * FACE_GAP) * face_t * (p.pocket_door_h - FACE_GAP)
+    assert sdk_faces[0].volume < full_sdk_vol * 0.75  # two kitchen door holes
+    assert sdk_faces[1].volume < full_sdk_vol * 0.9  # one living door hole
+    # Předstěny depths immutable.
+    assert p.predstena_kitchen == 190.0
+    assert p.predstena_living == 450.0
 
     # Door openings: chodba+spíž on kitchen gable; zádveří on living; window-corner vs inset.
     kitchen_doors = sorted(

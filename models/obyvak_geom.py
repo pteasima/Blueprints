@@ -59,11 +59,12 @@ class ObyvakParams:
     pocket_spiz_inset: float = 650.0
     # (gable, x0, width) — "kitchen"=Y=0 (předstěna 190), "living"=Y=L (předstěna 450).
     # Window/terrace eave = X=0; kitchen cabinets on X=room_width.
-    # Chodba + spíž on kitchen gable; zádveří on living gable.
+    # Spíž + chodba on the kitchen gable only; zádveří on the living gable.
+    # Do not put the pantry opening on the living gable.
     pocket_doors: tuple[tuple[str, float, float], ...] = (
-        ("kitchen", 0.0, 1000.0),  # chodba · roh u oken
-        ("kitchen", 3700.0, 1000.0),  # spíž · 5350 − 650 − 1000
-        ("living", 0.0, 1100.0),  # zádveří · roh u oken
+        ("kitchen", 0.0, 1000.0),  # chodba · roh u oken · Y=0 kitchen
+        ("kitchen", 3700.0, 1000.0),  # spíž · 5350 − 650 − 1000 · Y=0 kitchen
+        ("living", 0.0, 1100.0),  # zádveří · roh u oken · Y=L living
     )
     # Window wall (X=0, opposite cabinets): 2× HS 2500 + fixed 4500, h=2500 (D.1.1.03).
     window_h: float = 2500.0

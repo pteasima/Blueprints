@@ -107,10 +107,12 @@ def _aabb_hit(a, b) -> bool:
 def _pocket_door_cutters(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
     """Through-openings for posuvné dveře in Y=0 / Y=L gables (D.1.1.03).
 
-    Extends far enough into the room to clear masonry, pouzdro bay, and SDK face.
+    Extends far enough into the room to clear masonry, pouzdro bay, and the SDK
+    face that sits in front of the pocket (people walk through this hole).
     """
     face_t = max(p.sdk_t, 12.5)
-    depth = p.pouzdro_d + face_t + 2.0
+    # pouzdro against gable + clearance + SDK in front of pouzdro.
+    depth = p.pouzdro_d + face_t + 2 * gap + 2.0
     cutters = []
     for spec in p.pocket_doors:
         gable, x0, width = spec
@@ -177,24 +179,23 @@ def _cut_wall_openings(parts: list, cutters: list) -> list:
 def _gable_sdk_and_pouzdra(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
     """Local pouzdro pockets against the gable, SDK skin in front covering them.
 
-    SDK gets walk-through door openings only — never cut out the pouzdro bays
-    (people walk through the door hole; the pocket stays behind the board).
-    Does not touch předstěny (Z≥2450).
+    Stack (kitchen Y=0 → into room): gable → pouzdro bay → thin SDK face.
+    SDK is pierced only for walk-through door openings — never for pouzdro bays.
+    Does not touch or resize předstěny (Z≥2450, depths 190 / 450).
     """
     h = p.pocket_door_h - gap
     face_t = max(p.sdk_t, 12.5)
-    # Pocket box depth sits behind the SDK face within pouzdro_d.
-    pocket_d = max(p.pouzdro_d - face_t - gap, gap)
+    # Full pocket depth against the gable; SDK sits clearly in front (into the room).
+    pocket_d = max(p.pouzdro_d - gap, gap)
     pouzdra: list = []
     sdk_parts: list = []
 
-    for end, y_wall in (("kitchen", gap), ("living", p.room_length - gap)):
-        # SDK in front of pouzdro, into the room.
+    for end, _y_wall in (("kitchen", gap), ("living", p.room_length - gap)):
         if end == "kitchen":
-            y_sdk = gap + pocket_d
             y_pocket = gap
+            y_sdk = gap + p.pouzdro_d
         else:
-            y_sdk = p.room_length - gap - face_t - pocket_d
+            y_sdk = p.room_length - gap - face_t - p.pouzdro_d
             y_pocket = p.room_length - gap - pocket_d
         sdk_parts.append(
             _box(gap, y_sdk, gap, p.room_width - 2 * gap, face_t, h, "sdk")

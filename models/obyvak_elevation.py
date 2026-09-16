@@ -49,16 +49,14 @@ def build(params: ObyvakParams | None = None):
         xz_rect(span + p.wall_plaster, -p.floor_t, p.wall_mason, h_gable + p.floor_t, "zdivo")
     )
 
-    # Low SDK face (covers pouzdro); local pouzdro pocket schematic behind it.
+    # Low SDK in front of pouzdro (covers pocket); předstěny above stay 190 / 450.
     face_t = max(p.sdk_t, 12.5)
-    parts.append(xz_rect(0.0, 0.0, face_t, p.pocket_door_h, "sdk"))
-    parts.append(xz_rect(span - face_t, 0.0, face_t, p.pocket_door_h, "sdk"))
-    parts.append(xz_rect(face_t, 0.0, p.pouzdro_d - face_t, p.pocket_door_h, "pouzdro"))
-    parts.append(
-        xz_rect(span - p.pouzdro_d, 0.0, p.pouzdro_d - face_t, p.pocket_door_h, "pouzdro")
-    )
+    parts.append(xz_rect(p.pouzdro_d, 0.0, face_t, p.pocket_door_h, "sdk"))
+    parts.append(xz_rect(span - p.pouzdro_d - face_t, 0.0, face_t, p.pocket_door_h, "sdk"))
+    parts.append(xz_rect(0.0, 0.0, p.pouzdro_d, p.pocket_door_h, "pouzdro"))
+    parts.append(xz_rect(span - p.pouzdro_d, 0.0, p.pouzdro_d, p.pocket_door_h, "pouzdro"))
 
-    # Předstěny — unchanged sizes (190 / 450).
+    # Předstěny — never resize (190 kitchen / 450 living).
     parts.append(
         xz_rect(
             0.0,
