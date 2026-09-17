@@ -4,7 +4,8 @@
  * Native <input type="range"> often monopolizes the touch (especially iOS),
  * so vertical pans that begin on the thumb never scroll the sheet. A div with
  * `touch-action: pan-y` lets the UA own vertical panning (like UIKit gesture
- * failure); we only consume horizontal drags and taps.
+ * failure); we only consume horizontal drags. Taps do not seek — callers may
+ * use `onTap` for toggle behavior (e.g. FOV ↔ ISO).
  *
  * @param {object} opts
  * @param {number} [opts.min]
@@ -12,10 +13,12 @@
  * @param {number} [opts.step]
  * @param {number} [opts.value]
  * @param {string} [opts.ariaLabel]
+ * @param {(value: number) => string} [opts.formatAriaValue]
  * @param {(value: number) => void} [opts.onInput]
  * @param {(value: number) => void} [opts.onChange]
  * @param {() => void} [opts.onScrubStart]
  * @param {() => void} [opts.onScrubEnd]
+ * @param {() => void} [opts.onTap]
  */
 export function createCooperativeRange(opts = {}) {
   const min = opts.min ?? 0;
@@ -56,7 +59,8 @@ export function createCooperativeRange(opts = {}) {
     fill.style.width = pct;
     thumb.style.left = pct;
     root.setAttribute("aria-valuenow", String(value));
-    root.setAttribute("aria-valuetext", String(value));
+    const text = opts.formatAriaValue?.(value) ?? String(value);
+    root.setAttribute("aria-valuetext", text);
   }
 
   /**
@@ -92,7 +96,7 @@ export function createCooperativeRange(opts = {}) {
     axisLocked = false;
     scrubbing = false;
     if (wasScrubbing) opts.onScrubEnd?.();
-    if (commit) opts.onChange?.(value);
+    if (commit && wasScrubbing) opts.onChange?.(value);
   }
 
   /**
@@ -105,21 +109,10 @@ export function createCooperativeRange(opts = {}) {
     startX = ev.clientX;
     startY = ev.clientY;
     moved = false;
-    axisLocked = ev.pointerType === "mouse" || ev.pointerType === "pen";
-    // Mouse/pen: scrub immediately. Touch waits for horizontal intent so the
-    // UA can claim vertical pans via touch-action: pan-y.
-    if (axisLocked) {
-      scrubbing = true;
-      opts.onScrubStart?.();
-      setValue(valueFromClientX(ev.clientX), "input");
-      // Capture only for mouse/pen — touch capture before axis lock would
-      // steal the gesture from sheet scrolling.
-      try {
-        root.setPointerCapture(ev.pointerId);
-      } catch (_) {
-        /* ignore */
-      }
-    }
+    axisLocked = false;
+    scrubbing = false;
+    // Wait for horizontal drag past slop before seeking (mouse and touch).
+    // Immediate seek on down is click-to-scrub; we do not want that.
   }
 
   /**
@@ -133,8 +126,8 @@ export function createCooperativeRange(opts = {}) {
 
     if (!axisLocked) {
       if (!moved) return;
-      // Vertical wins → abandon; browser scrolls the sheet.
-      if (Math.abs(dy) >= Math.abs(dx)) {
+      // Vertical wins → abandon; browser scrolls the sheet (touch).
+      if (ev.pointerType === "touch" && Math.abs(dy) >= Math.abs(dx)) {
         endScrub(false);
         return;
       }
@@ -157,11 +150,13 @@ export function createCooperativeRange(opts = {}) {
    */
   function onPointerUp(ev) {
     if (pointerId !== ev.pointerId) return;
-    // Tap (no drag): jump thumb to tap position.
+    // Tap (no drag): do not seek; optional toggle callback.
     if (!moved && !scrubbing) {
-      scrubbing = true;
-      opts.onScrubStart?.();
-      setValue(valueFromClientX(ev.clientX), "input");
+      pointerId = null;
+      axisLocked = false;
+      scrubbing = false;
+      opts.onTap?.();
+      return;
     }
     endScrub(true);
   }
@@ -204,6 +199,11 @@ export function createCooperativeRange(opts = {}) {
       case "End":
         next = max;
         break;
+      case "Enter":
+      case " ":
+        ev.preventDefault();
+        opts.onTap?.();
+        return;
       default:
         return;
     }
@@ -226,6 +226,10 @@ export function createCooperativeRange(opts = {}) {
     },
     set value(v) {
       setValue(v, "silent");
+    },
+    /** Re-run aria-valuetext / fill sync (e.g. after external format change). */
+    refresh() {
+      syncDom();
     },
   };
 }
