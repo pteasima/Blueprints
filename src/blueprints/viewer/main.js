@@ -302,6 +302,12 @@ export function mountViewer(canvas, glbBuffer) {
   }
 
   function enterOrtho() {
+    // Known issues (see viewer README “Known ISO issues”):
+    // - Steep angles: opaque coplanar/near-coplanar faces can Z-fight (e.g.
+    //   interior podlehy bleeding through roof) even with no transparency.
+    // - FOV → ISO: sometimes a phantom near-plane clip looks like a section
+    //   cut with no cut active; orbiting alone in ISO usually does not.
+    //   Likely near/far or frustum handoff below — not fixed yet.
     if (projection === "ortho") return;
     lastHFovDeg = hFovDeg;
     const dist = camera.position.distanceTo(controls.target);
