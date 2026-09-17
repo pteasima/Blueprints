@@ -61,13 +61,28 @@ function installDomStub() {
       this.defaultPrevented = true;
     }
   };
+  globalThis.PointerEvent = class PointerEvent {
+    constructor(type, init = {}) {
+      this.type = type;
+      this.pointerId = init.pointerId ?? 1;
+      this.pointerType = init.pointerType ?? "mouse";
+      this.button = init.button ?? 0;
+      this.clientX = init.clientX ?? 0;
+      this.clientY = init.clientY ?? 0;
+      this.bubbles = !!init.bubbles;
+      this.defaultPrevented = false;
+    }
+    preventDefault() {
+      this.defaultPrevented = true;
+    }
+  };
 }
 
 installDomStub();
 
 const { createCooperativeRange } = await import("./coopRange.js");
 
-const calls = { input: [], change: [], start: 0, end: 0 };
+const calls = { input: [], change: [], start: 0, end: 0, tap: 0 };
 const range = createCooperativeRange({
   min: 0,
   max: 1,
@@ -81,6 +96,9 @@ const range = createCooperativeRange({
   },
   onScrubEnd: () => {
     calls.end += 1;
+  },
+  onTap: () => {
+    calls.tap += 1;
   },
 });
 
@@ -107,5 +125,38 @@ range.el.dispatchEvent(
 );
 assert.equal(range.value, 0);
 assert.deepEqual(calls.change, [0.8, 0]);
+
+// Tap must not seek; it fires onTap only.
+const inputBeforeTap = calls.input.length;
+const changeBeforeTap = calls.change.length;
+range.el.dispatchEvent(
+  new PointerEvent("pointerdown", {
+    pointerId: 1,
+    pointerType: "mouse",
+    button: 0,
+    clientX: 80,
+    clientY: 10,
+  }),
+);
+range.el.dispatchEvent(
+  new PointerEvent("pointerup", {
+    pointerId: 1,
+    pointerType: "mouse",
+    button: 0,
+    clientX: 80,
+    clientY: 10,
+  }),
+);
+assert.equal(range.value, 0, "tap must not seek");
+assert.equal(calls.tap, 1);
+assert.equal(calls.input.length, inputBeforeTap, "tap must not emit input");
+assert.equal(calls.change.length, changeBeforeTap, "tap must not emit change");
+assert.equal(calls.start, 0);
+assert.equal(calls.end, 0);
+
+range.el.dispatchEvent(
+  new KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
+);
+assert.equal(calls.tap, 2);
 
 console.log("coopRange.test.mjs: ok");

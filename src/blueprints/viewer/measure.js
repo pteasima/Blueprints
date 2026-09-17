@@ -80,7 +80,7 @@ function deviceHasFinePointer() {
  * @param {{
  *   scene: THREE.Scene,
  *   canvas: HTMLCanvasElement,
- *   camera: THREE.PerspectiveCamera,
+ *   getCamera: () => THREE.Camera,
  *   controls: { enabled: boolean },
  *   getRoot: () => THREE.Object3D | null,
  *   getClipPlanes: () => THREE.Plane[],
@@ -92,7 +92,7 @@ export function createMeasureTool(opts) {
   const {
     scene,
     canvas,
-    camera,
+    getCamera,
     controls,
     getRoot,
     getClipPlanes,
@@ -367,9 +367,15 @@ export function createMeasureTool(opts) {
    * @param {THREE.Vector3} world
    */
   function worldPerPixel(world) {
+    const camera = getCamera();
+    const h = Math.max(1, canvas.clientHeight);
+    if (camera.isOrthographicCamera) {
+      const halfH =
+        (camera.top - camera.bottom) / (2 * Math.max(camera.zoom, 1e-6));
+      return (2 * halfH) / h;
+    }
     const dist = camera.position.distanceTo(world);
     const vFov = (camera.fov * Math.PI) / 180;
-    const h = Math.max(1, canvas.clientHeight);
     return (2 * Math.tan(vFov / 2) * dist) / h / Math.max(camera.zoom, 1e-6);
   }
 
@@ -378,7 +384,7 @@ export function createMeasureTool(opts) {
    * @param {THREE.Vector3} out
    */
   function projectToScreen(world, out) {
-    out.copy(world).project(camera);
+    out.copy(world).project(getCamera());
     const w = Math.max(1, canvas.clientWidth);
     const h = Math.max(1, canvas.clientHeight);
     out.x = (out.x * 0.5 + 0.5) * w;
@@ -406,7 +412,7 @@ export function createMeasureTool(opts) {
     _ndc.x = (sx / Math.max(1, rect.width)) * 2 - 1;
     _ndc.y = -(sy / Math.max(1, rect.height)) * 2 + 1;
 
-    _raycaster.setFromCamera(_ndc, camera);
+    _raycaster.setFromCamera(_ndc, getCamera());
     const hits = _raycaster.intersectObject(root, true);
     /** @type {THREE.Intersection | null} */
     let hit = null;
@@ -799,6 +805,7 @@ export function createMeasureTool(opts) {
    * @param {number} span
    */
   function placeLabel(sprite, a, b, mid, span) {
+    const camera = getCamera();
     camera.getWorldDirection(_look);
     _delta.copy(b).sub(a);
     if (_delta.lengthSq() < 1e-16) {

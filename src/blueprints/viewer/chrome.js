@@ -570,8 +570,8 @@ canvas {
 }
 
 /* Cooperative horizontal slider: UA scrolls vertically (touch-action: pan-y);
-   JS only scrubs on horizontal drag / tap. Replaces native range, which steals
-   the whole touch on many mobile browsers (esp. iOS). */
+   JS only scrubs on horizontal drag (no tap-to-seek). Replaces native range,
+   which steals the whole touch on many mobile browsers (esp. iOS). */
 .coop-range {
   flex: 1;
   min-width: 0;
@@ -622,6 +622,44 @@ canvas {
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  pointer-events: none;
+}
+
+.fov {
+  margin-top: 0.65rem;
+}
+
+.fov-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 2rem;
+}
+
+.fov-label,
+.fov-value {
+  flex: 0 0 auto;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-secondary);
+}
+
+.fov-value {
+  min-width: 2.6rem;
+  text-align: right;
+  color: var(--fg);
+}
+
+.fov-range .fov-detent {
+  position: absolute;
+  top: 50%;
+  width: 2px;
+  height: 0.55rem;
+  margin-top: -0.275rem;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--fg-secondary);
+  opacity: 0.55;
   pointer-events: none;
 }
 

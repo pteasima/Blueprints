@@ -76,10 +76,34 @@ export function mountViewer(canvas, glbBuffer) {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(sceneBg);
 
-  const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 1e6);
+  /** Horizontal FOV degrees (user-facing). Three.js uses vertical FOV. */
+  const FOV_MIN = 30;
+  const FOV_MAX = 120;
+  const FOV_DEFAULT = 75;
+  /** Slider value past FOV_MAX — orthographic ISO detent. */
+  const ISO_SLIDER = 125;
+
+  /** @type {"perspective" | "ortho"} */
+  let projection = "perspective";
+  let hFovDeg = FOV_DEFAULT;
+  let lastHFovDeg = FOV_DEFAULT;
+  /** Orbit dolly zoom for ortho (perspective keeps this at 1). */
+  let viewZoom = 1;
+  /** True while applying sheet frame / FOV so OrbitControls zoom sync is ignored. */
+  let suppressViewZoomSync = false;
+
+  const perspCamera = new THREE.PerspectiveCamera(45, 1, 0.01, 1e6);
+  const orthoCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 1e6);
+  /** @type {THREE.PerspectiveCamera | THREE.OrthographicCamera} */
+  let camera = perspCamera;
   const controls = new OrbitControls(camera, canvas);
   controls.enableDamping = false;
   controls.screenSpacePanning = true;
+
+  /** @type {ReturnType<typeof createCooperativeRange> | null} */
+  let fovRange = null;
+  /** @type {HTMLElement | null} */
+  let fovValueEl = null;
 
   scene.add(new THREE.AmbientLight(0xffffff, 0.45));
   const key = new THREE.DirectionalLight(0xffffff, 1.15);
@@ -146,6 +170,7 @@ export function mountViewer(canvas, glbBuffer) {
       buildMaterialToggle();
       buildPartToggles();
       buildCameraButtons();
+      buildFovControl();
       ensureDraftCut();
       buildCutUI();
       refreshMaterials();
@@ -172,6 +197,271 @@ export function mountViewer(canvas, glbBuffer) {
     box.getCenter(center);
   }
 
+  function canvasAspect() {
+    const w = Math.max(1, canvas.clientWidth);
+    const h = Math.max(1, canvas.clientHeight);
+    return w / h;
+  }
+
+  /**
+   * Horizontal FOV (deg) → vertical FOV (rad) for Three.js PerspectiveCamera.
+   * @param {number} hDeg
+   * @param {number} aspect
+   */
+  function hFovDegToVFovRad(hDeg, aspect) {
+    const hRad = (hDeg * Math.PI) / 180;
+    return 2 * Math.atan(Math.tan(hRad / 2) / Math.max(aspect, 1e-6));
+  }
+
+  /** Apply stored horizontal FOV onto the perspective camera. */
+  function applyPerspFovFromState() {
+    const aspect = canvasAspect();
+    perspCamera.aspect = aspect;
+    perspCamera.fov = (hFovDegToVFovRad(hFovDeg, aspect) * 180) / Math.PI;
+    perspCamera.updateProjectionMatrix();
+  }
+
+  /**
+   * Size ortho frustum so visible height at `dist` matches perspective FOV.
+   * @param {number} dist
+   * @param {number} vFovRad
+   */
+  function sizeOrthoFrustum(dist, vFovRad) {
+    const aspect = canvasAspect();
+    const halfH = Math.max(dist, 1e-6) * Math.tan(vFovRad / 2);
+    const halfW = halfH * aspect;
+    orthoCamera.left = -halfW;
+    orthoCamera.right = halfW;
+    orthoCamera.top = halfH;
+    orthoCamera.bottom = -halfH;
+    orthoCamera.updateProjectionMatrix();
+  }
+
+  /** Keep ortho width/height ratio after resize (preserve half-height). */
+  function refreshOrthoAspect() {
+    const aspect = canvasAspect();
+    const halfH = Math.max(orthoCamera.top, 1e-6);
+    const halfW = halfH * aspect;
+    orthoCamera.left = -halfW;
+    orthoCamera.right = halfW;
+    orthoCamera.updateProjectionMatrix();
+  }
+
+  /**
+   * Move camera along the look vector so distance to target becomes `dist`.
+   * @param {number} dist
+   */
+  function setCameraDistance(dist) {
+    const d = Math.max(dist, 1e-4);
+    const dir = _look.copy(camera.position).sub(controls.target);
+    if (dir.lengthSq() < 1e-12) dir.set(0, 0, 1);
+    else dir.normalize();
+    camera.position.copy(controls.target).addScaledVector(dir, d);
+  }
+
+  /**
+   * @param {THREE.PerspectiveCamera | THREE.OrthographicCamera} next
+   */
+  function setActiveCamera(next) {
+    if (next === camera) return;
+    next.position.copy(camera.position);
+    next.quaternion.copy(camera.quaternion);
+    next.up.copy(camera.up);
+    next.near = camera.near;
+    next.far = camera.far;
+    camera = next;
+    controls.object = camera;
+    controls.update();
+  }
+
+  function combinedZoom() {
+    const fz =
+      Math.abs(frameOffX) > 0.05 ||
+      Math.abs(frameOffY) > 0.05 ||
+      Math.abs(frameZoom - 1) > 0.001
+        ? frameZoom
+        : 1;
+    return viewZoom * fz;
+  }
+
+  function applyCombinedZoom() {
+    camera.zoom = combinedZoom();
+    camera.updateProjectionMatrix();
+  }
+
+  function syncViewZoomFromCamera() {
+    if (suppressViewZoomSync || suppressCameraChange) return;
+    if (!camera.isOrthographicCamera) return;
+    const fz =
+      Math.abs(frameOffX) > 0.05 ||
+      Math.abs(frameOffY) > 0.05 ||
+      Math.abs(frameZoom - 1) > 0.001
+        ? frameZoom
+        : 1;
+    viewZoom = Math.max(camera.zoom / Math.max(fz, 1e-6), 1e-6);
+  }
+
+  function enterOrtho() {
+    if (projection === "ortho") return;
+    lastHFovDeg = hFovDeg;
+    const dist = camera.position.distanceTo(controls.target);
+    const vFovRad = hFovDegToVFovRad(hFovDeg, canvasAspect());
+    sizeOrthoFrustum(dist, vFovRad);
+    viewZoom = 1;
+    withSuppressedCameraChange(() => {
+      suppressViewZoomSync = true;
+      setActiveCamera(orthoCamera);
+      projection = "ortho";
+      applyCombinedZoom();
+      suppressViewZoomSync = false;
+    });
+    syncFovUi();
+  }
+
+  /**
+   * @param {number} [restoreHFov]
+   */
+  function leaveOrtho(restoreHFov) {
+    if (projection !== "ortho") return;
+    const targetFov = clampFov(
+      restoreHFov != null ? restoreHFov : lastHFovDeg,
+    );
+    const halfH = Math.max(orthoCamera.top, 1e-6) / Math.max(viewZoom, 1e-6);
+    const vFovRad = hFovDegToVFovRad(targetFov, canvasAspect());
+    const dist = halfH / Math.max(Math.tan(vFovRad / 2), 1e-8);
+    hFovDeg = targetFov;
+    lastHFovDeg = targetFov;
+    viewZoom = 1;
+    withSuppressedCameraChange(() => {
+      suppressViewZoomSync = true;
+      setActiveCamera(perspCamera);
+      projection = "perspective";
+      applyPerspFovFromState();
+      setCameraDistance(dist);
+      applyCombinedZoom();
+      updateCameraClipPlanes();
+      controls.update();
+      suppressViewZoomSync = false;
+    });
+    syncFovUi();
+  }
+
+  /**
+   * @param {number} deg
+   * @param {{ reframe?: boolean }} [opts]
+   */
+  function setHFov(deg, opts = {}) {
+    const next = clampFov(deg);
+    if (projection === "ortho") {
+      leaveOrtho(next);
+      return;
+    }
+    const aspect = canvasAspect();
+    const oldV = hFovDegToVFovRad(hFovDeg, aspect);
+    const newV = hFovDegToVFovRad(next, aspect);
+    const dist = camera.position.distanceTo(controls.target);
+    hFovDeg = next;
+    lastHFovDeg = next;
+    withSuppressedCameraChange(() => {
+      applyPerspFovFromState();
+      if (opts.reframe !== false) {
+        const scale = Math.tan(oldV / 2) / Math.max(Math.tan(newV / 2), 1e-8);
+        setCameraDistance(dist * scale);
+        updateCameraClipPlanes();
+        controls.update();
+      }
+      applyCombinedZoom();
+    });
+    syncFovUi();
+  }
+
+  function toggleFovIso() {
+    if (projection === "ortho") leaveOrtho(lastHFovDeg);
+    else enterOrtho();
+  }
+
+  /**
+   * @param {number} v
+   */
+  function clampFov(v) {
+    return Math.min(FOV_MAX, Math.max(FOV_MIN, v));
+  }
+
+  function sliderValueFromState() {
+    return projection === "ortho" ? ISO_SLIDER : hFovDeg;
+  }
+
+  function formatFovSlider(v) {
+    if (v > FOV_MAX) return "ISO";
+    return `${Math.round(v)}°`;
+  }
+
+  function syncFovUi() {
+    if (fovRange) fovRange.value = sliderValueFromState();
+    if (fovValueEl) {
+      fovValueEl.textContent =
+        projection === "ortho" ? "ISO" : `${Math.round(hFovDeg)}°`;
+    }
+    fovRange?.refresh();
+  }
+
+  /**
+   * @param {number} v
+   */
+  function applyFovSliderValue(v) {
+    if (v > FOV_MAX) {
+      if (projection !== "ortho") enterOrtho();
+      else syncFovUi();
+      return;
+    }
+    const fov = clampFov(v);
+    if (projection === "ortho") leaveOrtho(fov);
+    else setHFov(fov, { reframe: true });
+  }
+
+  function buildFovControl() {
+    const host = document.getElementById("fov");
+    if (!host) return;
+    host.replaceChildren();
+
+    const row = document.createElement("div");
+    row.className = "fov-row";
+
+    const label = document.createElement("span");
+    label.className = "fov-label";
+    label.textContent = "FOV";
+
+    fovValueEl = document.createElement("span");
+    fovValueEl.className = "fov-value";
+    fovValueEl.textContent = `${Math.round(hFovDeg)}°`;
+
+    fovRange = createCooperativeRange({
+      min: FOV_MIN,
+      max: ISO_SLIDER,
+      step: 1,
+      value: sliderValueFromState(),
+      ariaLabel: "Field of view",
+      formatAriaValue: formatFovSlider,
+      onInput: (v) => applyFovSliderValue(v),
+      onChange: (v) => applyFovSliderValue(v),
+      onTap: () => toggleFovIso(),
+    });
+    fovRange.el.classList.add("fov-range");
+
+    // Visual detent mark at the FOV→ISO boundary.
+    const detent = document.createElement("div");
+    detent.className = "fov-detent";
+    detent.setAttribute("aria-hidden", "true");
+    const t = (FOV_MAX - FOV_MIN) / (ISO_SLIDER - FOV_MIN);
+    detent.style.left = `${t * 100}%`;
+    const track = fovRange.el.querySelector(".coop-range-track");
+    track?.append(detent);
+
+    row.append(label, fovRange.el, fovValueEl);
+    host.append(row);
+    syncFovUi();
+  }
+
   /** Keep near/far tight around the model so depth precision stays usable. */
   function updateCameraClipPlanes() {
     const span = Math.max(size.x, size.y, size.z, 0.01);
@@ -192,6 +482,9 @@ export function mountViewer(canvas, glbBuffer) {
       });
     }
   }
+
+  // Default FOV before first frame / GLB load.
+  applyPerspFovFromState();
 
   function frameIso() {
     if (!root) return;
@@ -904,6 +1197,9 @@ export function mountViewer(canvas, glbBuffer) {
     clearCameraPresetHighlight();
     notePeelPointerDown();
   });
+  controls.addEventListener("change", () => {
+    syncViewZoomFromCamera();
+  });
   controls.addEventListener("end", () => {
     notePeelPointerUp();
     if (suppressCameraChange) return;
@@ -946,21 +1242,23 @@ export function mountViewer(canvas, glbBuffer) {
 
   function applyFrameProjection(w, h) {
     withSuppressedCameraChange(() => {
+      suppressViewZoomSync = true;
       if (
         Math.abs(frameOffX) > 0.05 ||
         Math.abs(frameOffY) > 0.05 ||
         Math.abs(frameZoom - 1) > 0.001
       ) {
-        camera.zoom = frameZoom;
+        camera.zoom = viewZoom * frameZoom;
         camera.setViewOffset(w, h, frameOffX, frameOffY, w, h);
       } else {
         camera.clearViewOffset();
-        camera.zoom = 1;
+        camera.zoom = viewZoom;
         frameZoom = 1;
         frameOffX = 0;
         frameOffY = 0;
       }
       camera.updateProjectionMatrix();
+      suppressViewZoomSync = false;
     });
   }
 
@@ -1000,7 +1298,11 @@ export function mountViewer(canvas, glbBuffer) {
     const w = Math.max(1, canvas.clientWidth);
     const h = Math.max(1, canvas.clientHeight);
     renderer.setSize(w, h, false);
-    camera.aspect = w / h;
+    if (projection === "perspective") {
+      applyPerspFovFromState();
+    } else {
+      refreshOrthoAspect();
+    }
     applySafeViewOffset(false);
   }
   resize();
@@ -1030,7 +1332,7 @@ export function mountViewer(canvas, glbBuffer) {
     measureTool = createMeasureTool({
       scene,
       canvas,
-      camera,
+      getCamera: () => camera,
       controls,
       getRoot: () => root,
       getClipPlanes: () => lockedClipPlanes(),
@@ -1144,13 +1446,23 @@ export function mountViewer(canvas, glbBuffer) {
   // Public hook for future agent-driven features (flyover, blink, …).
   const api = {
     scene,
-    camera,
+    get camera() {
+      return camera;
+    },
     controls,
     parts,
     partOpacity,
     cuts,
     setPartOpacity,
     setCameraPreset,
+    setHFov,
+    toggleFovIso,
+    get projection() {
+      return projection;
+    },
+    get hFovDeg() {
+      return hFovDeg;
+    },
     setCutT,
     removeCut,
     frameIso,
