@@ -27,8 +27,12 @@ import { createMeasureTool } from "./measure.js";
 /**
  * @param {HTMLCanvasElement} canvas
  * @param {ArrayBuffer} glbBuffer
+ * @param {{ scenes?: object[] }} [options]
  */
-export function mountViewer(canvas, glbBuffer) {
+export function mountViewer(canvas, glbBuffer, options = {}) {
+  /** Custom named scenes (model-specific); shown alongside Iso/Front/Side/Top. */
+  const customScenes = Array.isArray(options.scenes) ? options.scenes : [];
+
   /** @type {THREE.Scene | null} */
   let scene = null;
   let sceneBg = BG_DARK;
@@ -245,6 +249,30 @@ export function mountViewer(canvas, glbBuffer) {
     orthoCamera.left = -halfW;
     orthoCamera.right = halfW;
     orthoCamera.updateProjectionMatrix();
+  }
+
+  /**
+   * Size ortho frustum to cover content half-extents (metres) with letterboxing.
+   * @param {number} contentHalfW
+   * @param {number} contentHalfH
+   */
+  function sizeOrthoToContent(contentHalfW, contentHalfH) {
+    const aspect = canvasAspect();
+    const wantW = Math.max(contentHalfW, 1e-6);
+    const wantH = Math.max(contentHalfH, 1e-6);
+    let halfH = wantH;
+    let halfW = halfH * aspect;
+    if (halfW < wantW) {
+      halfW = wantW;
+      halfH = halfW / Math.max(aspect, 1e-6);
+    }
+    viewZoom = 1;
+    orthoCamera.left = -halfW;
+    orthoCamera.right = halfW;
+    orthoCamera.top = halfH;
+    orthoCamera.bottom = -halfH;
+    orthoCamera.updateProjectionMatrix();
+    applyCombinedZoom();
   }
 
   /**
@@ -512,6 +540,8 @@ export function mountViewer(canvas, glbBuffer) {
 
   function setCameraPreset(name) {
     if (!root) return;
+    // Builtin presets assume default world-up (Three Y).
+    camera.up.set(0, 1, 0);
     if (name === "iso") {
       frameIso();
       return;
@@ -532,6 +562,113 @@ export function mountViewer(canvas, glbBuffer) {
       updateCameraClipPlanes();
       controls.update();
     });
+    maybeSpawnDraftFromCamera();
+  }
+
+  /**
+   * Apply a named custom scene (camera, optional FOV/ISO, cuts, opacities).
+   * @param {object} spec
+   */
+  function applyScene(spec) {
+    if (!root || !spec) return;
+
+    const hasOpacity =
+      spec.opacityDefault != null ||
+      (spec.opacity && typeof spec.opacity === "object");
+    if (hasOpacity) {
+      const def =
+        spec.opacityDefault != null ? Number(spec.opacityDefault) : 1;
+      const overrides =
+        spec.opacity && typeof spec.opacity === "object" ? spec.opacity : {};
+      for (const name of parts.keys()) {
+        const raw =
+          Object.prototype.hasOwnProperty.call(overrides, name)
+            ? overrides[name]
+            : def;
+        setPartOpacity(name, raw, { skipUi: true });
+      }
+      syncPartOpacityUi();
+    }
+
+    if (Object.prototype.hasOwnProperty.call(spec, "cuts")) {
+      const list = Array.isArray(spec.cuts) ? spec.cuts : [];
+      cuts.length = 0;
+      for (const c of list) {
+        const n = c?.normal;
+        if (!Array.isArray(n) || n.length < 3) continue;
+        const normal = new THREE.Vector3(
+          Number(n[0]) || 0,
+          Number(n[1]) || 0,
+          Number(n[2]) || 0,
+        );
+        if (normal.lengthSq() < 1e-12) continue;
+        normal.normalize();
+        const t = Math.min(1, Math.max(0, Number(c.t) || 0));
+        cuts.push({
+          id: nextCutId++,
+          normal,
+          t,
+          locked: true,
+          label: formatAngleLabel(normal),
+        });
+      }
+      cameraMovedSinceLock = false;
+      applyClipping();
+      ensureDraftCut();
+      buildCutUI();
+      chromeApi?.refreshPartialHeight();
+    }
+
+    if (spec.projection === "ortho") {
+      if (projection !== "ortho") enterOrtho();
+      else syncFovUi();
+    } else if (spec.hFovDeg != null && Number.isFinite(Number(spec.hFovDeg))) {
+      setHFov(Number(spec.hFovDeg), { reframe: false });
+    }
+
+    const cam = spec.camera;
+    if (cam && Array.isArray(cam.target) && Array.isArray(cam.position)) {
+      withSuppressedCameraChange(() => {
+        suppressViewZoomSync = true;
+        if (Array.isArray(cam.up) && cam.up.length >= 3) {
+          camera.up.set(
+            Number(cam.up[0]) || 0,
+            Number(cam.up[1]) || 0,
+            Number(cam.up[2]) || 0,
+          );
+          if (camera.up.lengthSq() < 1e-12) camera.up.set(0, 1, 0);
+          else camera.up.normalize();
+        } else {
+          camera.up.set(0, 1, 0);
+        }
+        controls.target.set(
+          Number(cam.target[0]) || 0,
+          Number(cam.target[1]) || 0,
+          Number(cam.target[2]) || 0,
+        );
+        camera.position.set(
+          Number(cam.position[0]) || 0,
+          Number(cam.position[1]) || 0,
+          Number(cam.position[2]) || 0,
+        );
+        camera.lookAt(controls.target);
+        if (
+          projection === "ortho" &&
+          Array.isArray(cam.orthoFit) &&
+          cam.orthoFit.length >= 2
+        ) {
+          sizeOrthoToContent(
+            Number(cam.orthoFit[0]) || 0.1,
+            Number(cam.orthoFit[1]) || 0.1,
+          );
+        }
+        updateBox();
+        updateCameraClipPlanes();
+        controls.update();
+        suppressViewZoomSync = false;
+      });
+    }
+
     maybeSpawnDraftFromCamera();
   }
 
@@ -938,12 +1075,9 @@ export function mountViewer(canvas, glbBuffer) {
     const host = document.getElementById("cams");
     if (!host) return;
     host.replaceChildren();
-    for (const [id, label] of [
-      ["iso", "Iso"],
-      ["front", "Front"],
-      ["side", "Side"],
-      ["top", "Top"],
-    ]) {
+
+    /** @param {string} id @param {string} label @param {() => void} onClick */
+    function addBtn(id, label, onClick) {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.dataset.preset = id;
@@ -954,9 +1088,24 @@ export function mountViewer(canvas, glbBuffer) {
         host.querySelectorAll("button").forEach((el) => {
           el.classList.toggle("is-active", el.dataset.preset === id);
         });
-        setCameraPreset(id);
+        onClick();
       });
       host.append(btn);
+    }
+
+    for (const [id, label] of [
+      ["iso", "Iso"],
+      ["front", "Front"],
+      ["side", "Side"],
+      ["top", "Top"],
+    ]) {
+      addBtn(id, label, () => setCameraPreset(id));
+    }
+    for (const spec of customScenes) {
+      const id = String(spec?.id || "").trim();
+      if (!id) continue;
+      const label = String(spec.label || id);
+      addBtn(`scene:${id}`, label, () => applyScene(spec));
     }
   }
 
@@ -1459,8 +1608,10 @@ export function mountViewer(canvas, glbBuffer) {
     parts,
     partOpacity,
     cuts,
+    scenes: customScenes,
     setPartOpacity,
     setCameraPreset,
+    applyScene,
     setHFov,
     toggleFovIso,
     get projection() {
