@@ -39,12 +39,14 @@ def test_soffit_scene_recipe():
     assert s["opacity"] == {"soffit": 1, "podhled": 1, "omitka": 1}
     assert len(s["cuts"]) == 1
     assert s["cuts"][0]["t"] == 0.5
-    assert s["cuts"][0]["normal"] == [0.0, 1.0, 0.0]
+    assert s["cuts"][0]["normal"] == [1.0, 0.0, 0.0]
     cam = s["camera"]
     assert cam["up"] == [0.0, 0.0, 1.0]
     assert len(cam["target"]) == 3
     assert len(cam["position"]) == 3
-    assert cam["position"][1] < cam["target"][1]  # look along +Y
+    assert cam["position"][1] < cam["target"][1]  # look along +Y (soffit run)
+    assert abs(cam["position"][0] - cam["target"][0]) < 1e-9
+    assert abs(cam["position"][2] - cam["target"][2]) < 1e-9
     assert len(cam["orthoFit"]) == 2
     assert cam["orthoFit"][0] > 0 and cam["orthoFit"][1] > 0
     # Target sits in the cabinet soffit bay (metres).

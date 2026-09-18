@@ -478,8 +478,9 @@ def build_elevation_slice(params: ObyvakParams | None = None):
 def scenes(params: ObyvakParams | None = None) -> list[dict]:
     """Named WebGL viewer scenes (see blueprints.scenes).
 
-    Soffit: orthographic cross-section looking along room length from the
-    kitchen gable, mid-length cut, soffit leaves opaque / rest translucent.
+    Soffit: orthographic XZ cross-section of the cabinet soffit. Cut from the
+    window (front) wall toward the cabinets so half the room depth is removed;
+    camera looks along the soffit run (Y) with Z up.
     """
     from blueprints.scenes import cad_mm_to_m
 
@@ -494,14 +495,20 @@ def scenes(params: ObyvakParams | None = None) -> list[dict]:
     cx = 0.5 * (sx0 + sx1)
     cy = 0.5 * (sy0 + sy1)
     cz = 0.5 * (sz0 + sz1)
-    pad = 1.2
-    half_w = 0.5 * (sx1 - sx0) * pad * 0.001
-    half_h = 0.5 * max(sz1 - sz0, gap) * pad * 0.001
-    # Look along +Y (kitchen → living). Camera sits on the near side.
-    look = (0.0, 1.0, 0.0)
-    dist_m = max(half_w, half_h, 0.25) * 4.0
+    # Frame the eave stack in the view plane (X width × Z height), with padding.
+    pad = 1.25
+    frame_x0 = g.x_furn - 250.0
+    frame_x1 = p.room_width + p.wall_plaster + 50.0
+    frame_z0 = p.furniture_height - 150.0
+    frame_z1 = g.z_gkf_horiz + 200.0
+    half_w = 0.5 * (frame_x1 - frame_x0) * pad * 0.001
+    half_h = 0.5 * (frame_z1 - frame_z0) * pad * 0.001
+    # Look along +Y (along the soffit run) so the view plane is XZ.
+    dist_m = max(half_w, half_h, 0.35) * 5.0
     target = cad_mm_to_m((cx, cy, cz))
     position = [target[0], target[1] - dist_m, target[2]]
+    # Cut from the window wall (X=0) toward cabinets (+X); near half removed.
+    cut_normal = (1.0, 0.0, 0.0)
     return [
         {
             "id": "soffit",
@@ -513,7 +520,7 @@ def scenes(params: ObyvakParams | None = None) -> list[dict]:
                 "orthoFit": [half_w, half_h],
             },
             "projection": "ortho",
-            "cuts": [{"normal": list(look), "t": 0.5}],
+            "cuts": [{"normal": list(cut_normal), "t": 0.5}],
             "opacity": {"soffit": 1, "podhled": 1, "omitka": 1},
             "opacityDefault": 0.5,
         }

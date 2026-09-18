@@ -541,6 +541,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   function setCameraPreset(name) {
     if (!root) return;
     // Builtin presets assume default world-up (Three Y).
+    perspCamera.up.set(0, 1, 0);
+    orthoCamera.up.set(0, 1, 0);
     camera.up.set(0, 1, 0);
     if (name === "iso") {
       frameIso();
@@ -630,17 +632,20 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     if (cam && Array.isArray(cam.target) && Array.isArray(cam.position)) {
       withSuppressedCameraChange(() => {
         suppressViewZoomSync = true;
+        const up = new THREE.Vector3(0, 1, 0);
         if (Array.isArray(cam.up) && cam.up.length >= 3) {
-          camera.up.set(
+          up.set(
             Number(cam.up[0]) || 0,
             Number(cam.up[1]) || 0,
             Number(cam.up[2]) || 0,
           );
-          if (camera.up.lengthSq() < 1e-12) camera.up.set(0, 1, 0);
-          else camera.up.normalize();
-        } else {
-          camera.up.set(0, 1, 0);
+          if (up.lengthSq() < 1e-12) up.set(0, 1, 0);
+          else up.normalize();
         }
+        // Keep both projection cameras in sync — enterOrtho switches objects.
+        perspCamera.up.copy(up);
+        orthoCamera.up.copy(up);
+        camera.up.copy(up);
         controls.target.set(
           Number(cam.target[0]) || 0,
           Number(cam.target[1]) || 0,
