@@ -1,0 +1,44 @@
+[
+  {
+    "id": "soffit",
+    "label": "Soffit",
+    "camera": {
+      "target": [
+        5.125,
+        5.42,
+        2.664848997845677
+      ],
+      "position": [
+        5.125,
+        4.34,
+        2.664848997845677
+      ],
+      "up": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "orthoFit": [
+        0.27,
+        0.23261879741481223
+      ]
+    },
+    "projection": "ortho",
+    "cuts": [
+      {
+        "normal": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "t": 0.5
+      }
+    ],
+    "opacity": {
+      "soffit": 1,
+      "podhled": 1,
+      "omitka": 1
+    },
+    "opacityDefault": 0.5
+  }
+]
