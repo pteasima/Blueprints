@@ -81,6 +81,24 @@ assert.equal(mat.userData.needsDepthPeel, false);
 assert.equal(mat.forceSinglePass, false);
 assert.equal(mesh.renderOrder, 12, "opaque restores stored depth bias");
 
+// Edge overlays must fade with the parent mesh.
+const edgeMat = new THREE.LineBasicMaterial({ color: 0x000000 });
+const edge = new THREE.LineSegments(
+  new THREE.BufferGeometry(),
+  edgeMat,
+);
+edge.userData.isEdgeOverlay = true;
+mesh.add(edge);
+
+applyOpacityToMeshes([mesh], 0.35);
+assert.equal(edgeMat.transparent, true);
+assert.equal(edgeMat.opacity, 0.35);
+assert.equal(edgeMat.depthWrite, false);
+
+applyOpacityToMeshes([mesh], 1);
+assert.equal(edgeMat.transparent, false);
+assert.equal(edgeMat.opacity, 1);
+
 assert.ok(MAX_PEELS_FAST >= 4 && MAX_PEELS_FAST <= 8);
 assert.ok(MAX_PEELS_HIGH >= MAX_PEELS_FAST);
 assert.equal(MAX_PEELS, MAX_PEELS_HIGH);

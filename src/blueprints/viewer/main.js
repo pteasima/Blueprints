@@ -58,6 +58,17 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   const partLastNonZero = new Map();
   /** Last opacity written via a group slider (when children diverge). */
   const groupSliderOpacity = new Map();
+  /**
+   * Leaf ids whose opacity was edited independently of their parent group.
+   * Group slider skips these until the user taps Sync.
+   */
+  const detachedLeaves = new Set();
+  /** @type {Map<string, ReturnType<typeof createCooperativeRange>>} */
+  const leafOpacityRanges = new Map();
+  /** @type {Map<string, ReturnType<typeof createCooperativeRange>>} */
+  const groupOpacityRanges = new Map();
+  /** @type {Map<string, HTMLButtonElement>} */
+  const leafSyncButtons = new Map();
   /** Expanded disclosure group ids. */
   const expandedGroups = new Set();
 
@@ -689,10 +700,16 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     maybeSpawnDraftFromCamera();
   }
 
+  /**
+   * @param {string} name
+   * @param {number} opacity
+   * @param {{ skipUi?: boolean, detach?: boolean }} [opts]
+   */
   function setPartOpacity(name, opacity, opts = {}) {
     const o = Math.max(0, Math.min(1, Number(opacity) || 0));
     partOpacity.set(name, o);
     if (o > 0) partLastNonZero.set(name, o);
+    if (opts.detach) detachedLeaves.add(name);
     applyOpacityToMeshes(parts.get(name) || [], o);
     updateBox();
     applyClipping();
@@ -708,10 +725,29 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     const o = Math.max(0, Math.min(1, Number(opacity) || 0));
     if (groupId) groupSliderOpacity.set(groupId, o);
     for (const id of leafIds) {
+      if (detachedLeaves.has(id)) continue;
       partOpacity.set(id, o);
       if (o > 0) partLastNonZero.set(id, o);
       applyOpacityToMeshes(parts.get(id) || [], o);
     }
+    updateBox();
+    applyClipping();
+    syncPartOpacityUi();
+  }
+
+  /**
+   * Reattach a leaf to its parent group and match the group's current opacity.
+   * @param {string} leafId
+   * @param {string} groupId
+   * @param {string[]} groupLeafIds
+   */
+  function syncLeafToGroup(leafId, groupId, groupLeafIds) {
+    detachedLeaves.delete(leafId);
+    const attached = groupLeafIds.filter((id) => !detachedLeaves.has(id));
+    const o = groupDisplayOpacity(groupId, attached);
+    partOpacity.set(leafId, o);
+    if (o > 0) partLastNonZero.set(leafId, o);
+    applyOpacityToMeshes(parts.get(leafId) || [], o);
     updateBox();
     applyClipping();
     syncPartOpacityUi();
@@ -737,34 +773,28 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
    * @returns {number}
    */
   function groupDisplayOpacity(groupId, leafIds) {
-    const common = commonOpacity(leafIds);
+    const attached = leafIds.filter((id) => !detachedLeaves.has(id));
+    const common = commonOpacity(attached.length ? attached : leafIds);
     if (!Number.isNaN(common)) return common;
     return groupSliderOpacity.get(groupId) ?? 1;
   }
 
   function syncPartOpacityUi() {
-    const host = document.getElementById("parts");
-    if (!host) return;
-    host.querySelectorAll("input.part-opacity[data-leaf]").forEach((el) => {
-      if (!(el instanceof HTMLInputElement)) return;
-      const id = el.dataset.leaf;
-      if (!id) return;
-      const pct = Math.round((partOpacity.get(id) ?? 1) * 100);
-      el.value = String(pct);
-      el.setAttribute("aria-valuenow", String(pct));
-    });
-    host.querySelectorAll("input.part-opacity[data-group]").forEach((el) => {
-      if (!(el instanceof HTMLInputElement)) return;
-      const gid = el.dataset.group;
-      if (!gid) return;
-      const leaves = (el.dataset.leaves || "")
+    for (const [id, range] of leafOpacityRanges) {
+      range.value = (partOpacity.get(id) ?? 1) * 100;
+    }
+    for (const [gid, range] of groupOpacityRanges) {
+      const leaves = (range.el.dataset.leaves || "")
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean);
-      const pct = Math.round(groupDisplayOpacity(gid, leaves) * 100);
-      el.value = String(pct);
-      el.setAttribute("aria-valuenow", String(pct));
-    });
+      range.value = groupDisplayOpacity(gid, leaves) * 100;
+    }
+    for (const [id, btn] of leafSyncButtons) {
+      const detached = detachedLeaves.has(id);
+      btn.hidden = !detached;
+      btn.setAttribute("aria-hidden", detached ? "false" : "true");
+    }
   }
 
   function lockedClipPlanes() {
@@ -853,94 +883,43 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   }
 
   /**
-   * Tap without drag toggles 0 ↔ lastNonZero; drag/scrub adjusts opacity.
-   * Do not setPointerCapture — it breaks native trackpad/mouse scrubbing
-   * (same issue as section cut ranges).
-   * @param {HTMLInputElement} range
+   * Tap toggles 0 ↔ lastNonZero; horizontal drag on the thumb scrubs.
+   * Uses cooperative range (no native click-to-seek).
+   * @param {string} aria
+   * @param {number} pct0to100
    * @param {() => number} getLastNonZero 0–1
    * @param {(opacity: number) => void} apply
+   * @returns {{ wrap: HTMLDivElement, range: ReturnType<typeof createCooperativeRange> }}
    */
-  function bindOpacitySlider(range, getLastNonZero, apply) {
-    let pointerDown = false;
-    let startX = 0;
-    let startY = 0;
-    let startVal = 0;
-    let moved = false;
-    let inputCount = 0;
-    const MOVE_PX = 6;
+  function makeOpacityRange(aria, pct0to100, getLastNonZero, apply) {
+    const wrap = document.createElement("div");
+    wrap.className = "part-opacity-wrap";
 
-    /** @param {PointerEvent} ev */
-    const onWinMove = (ev) => {
-      if (!pointerDown || moved) return;
-      if (
-        Math.abs(ev.clientX - startX) > MOVE_PX ||
-        Math.abs(ev.clientY - startY) > MOVE_PX
-      ) {
-        moved = true;
+    /** @type {ReturnType<typeof createCooperativeRange>} */
+    let range;
+    const toggle = () => {
+      const cur = range.value / 100;
+      if (cur > 0) apply(0);
+      else {
+        const last = getLastNonZero();
+        apply(last > 0 ? last : 1);
       }
     };
 
-    range.addEventListener("pointerdown", (ev) => {
-      pointerDown = true;
-      moved = false;
-      inputCount = 0;
-      startX = ev.clientX;
-      startY = ev.clientY;
-      startVal = Number(range.value) || 0;
-      window.addEventListener("pointermove", onWinMove);
-      const end = (upEv) => {
-        window.removeEventListener("pointermove", onWinMove);
-        if (!pointerDown) return;
-        if (upEv.pointerType === "mouse" && upEv.button !== 0) {
-          pointerDown = false;
-          return;
-        }
-        pointerDown = false;
-        if (moved) {
-          apply((Number(range.value) || 0) / 100);
-          return;
-        }
-        // Pure tap: undo click-seek and toggle 0 ↔ last non-zero.
-        if (startVal > 0) apply(0);
-        else {
-          const last = getLastNonZero();
-          apply(last > 0 ? last : 1);
-        }
-      };
-      window.addEventListener("pointerup", end, { once: true });
-      window.addEventListener("pointercancel", end, { once: true });
+    range = createCooperativeRange({
+      min: 0,
+      max: 100,
+      step: 1,
+      value: Math.round(pct0to100),
+      ariaLabel: aria,
+      formatAriaValue: (v) => `${Math.round(v)}%`,
+      thumbScrubOnly: true,
+      onInput: (v) => apply(v / 100),
+      onChange: (v) => apply(v / 100),
+      onTap: toggle,
     });
-
-    range.addEventListener("input", () => {
-      inputCount += 1;
-      // First input while down may be click-to-seek; wait for drag or a
-      // second input (trackpad/mouse scrub) before committing.
-      if (pointerDown && !moved) {
-        if (inputCount <= 1) return;
-        moved = true;
-      }
-      apply((Number(range.value) || 0) / 100);
-    });
-  }
-
-  /**
-   * @param {string} aria
-   * @param {number} pct0to100
-   * @returns {{ wrap: HTMLDivElement, range: HTMLInputElement }}
-   */
-  function makeOpacityRange(aria, pct0to100) {
-    const wrap = document.createElement("div");
-    wrap.className = "part-opacity-wrap";
-    const range = document.createElement("input");
-    range.type = "range";
-    range.className = "part-opacity";
-    range.min = "0";
-    range.max = "100";
-    range.step = "1";
-    range.value = String(Math.round(pct0to100));
-    range.setAttribute("aria-label", aria);
-    range.setAttribute("role", "slider");
-    wrap.append(range);
+    range.el.classList.add("part-opacity");
+    wrap.append(range.el);
     return { wrap, range };
   }
 
@@ -970,8 +949,9 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
    * @param {import("./materials.js").OutlineNode} node
    * @param {HTMLElement} parent
    * @param {number} depth
+   * @param {{ groupId: string, leafIds: string[] } | null} [parentGroup]
    */
-  function appendOutlineNode(node, parent, depth) {
+  function appendOutlineNode(node, parent, depth, parentGroup = null) {
     if (node.type === "leaf") {
       const row = document.createElement("div");
       row.className = "part-row part-leaf";
@@ -989,16 +969,39 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       const { wrap, range } = makeOpacityRange(
         `${node.label} opacity`,
         (partOpacity.get(node.id) ?? 1) * 100,
-      );
-      range.dataset.leaf = node.id;
-
-      bindOpacitySlider(
-        range,
         () => partLastNonZero.get(node.id) ?? 1,
-        (o) => setPartOpacity(node.id, o),
+        (o) =>
+          setPartOpacity(node.id, o, {
+            detach: Boolean(parentGroup),
+          }),
       );
+      range.el.dataset.leaf = node.id;
+      leafOpacityRanges.set(node.id, range);
 
-      row.append(spacer, nameEl, wrap);
+      /** @type {HTMLButtonElement | null} */
+      let syncBtn = null;
+      if (parentGroup) {
+        syncBtn = document.createElement("button");
+        syncBtn.type = "button";
+        syncBtn.className = "part-sync";
+        syncBtn.textContent = "Sync";
+        syncBtn.setAttribute("aria-label", `Sync ${node.label} to group`);
+        const detached = detachedLeaves.has(node.id);
+        syncBtn.hidden = !detached;
+        syncBtn.setAttribute("aria-hidden", detached ? "false" : "true");
+        syncBtn.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          syncLeafToGroup(
+            node.id,
+            parentGroup.groupId,
+            parentGroup.leafIds,
+          );
+        });
+        leafSyncButtons.set(node.id, syncBtn);
+      }
+
+      if (syncBtn) row.append(spacer, nameEl, syncBtn, wrap);
+      else row.append(spacer, nameEl, wrap);
       parent.append(row);
       return;
     }
@@ -1024,25 +1027,22 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     nameEl.className = "part-name";
     nameEl.textContent = node.label;
 
-    const { wrap, range } = makeOpacityRange(
-      `${node.label} opacity`,
-      groupDisplayOpacity(node.id, leafIds) * 100,
-    );
-    range.dataset.group = node.id;
-    range.dataset.leaves = leafIds.join(",");
-
     /** Last non-zero for the group slider itself. */
     let groupLastNonZero = groupDisplayOpacity(node.id, leafIds) || 1;
     if (groupLastNonZero <= 0) groupLastNonZero = 1;
 
-    bindOpacitySlider(
-      range,
+    const { wrap, range } = makeOpacityRange(
+      `${node.label} opacity`,
+      groupDisplayOpacity(node.id, leafIds) * 100,
       () => groupLastNonZero,
       (o) => {
         if (o > 0) groupLastNonZero = o;
         setGroupOpacity(leafIds, o, node.id);
       },
     );
+    range.el.dataset.group = node.id;
+    range.el.dataset.leaves = leafIds.join(",");
+    groupOpacityRanges.set(node.id, range);
 
     // Stop row toggle when interacting with the slider.
     wrap.addEventListener("click", (ev) => ev.stopPropagation());
@@ -1074,7 +1074,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       toggleExpanded();
     });
     row.addEventListener("click", (ev) => {
-      if (ev.target === range || wrap.contains(/** @type {Node} */ (ev.target))) {
+      if (wrap.contains(/** @type {Node} */ (ev.target))) {
         return;
       }
       toggleExpanded();
@@ -1090,8 +1090,9 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     groupWrap.append(row, children);
     parent.append(groupWrap);
 
+    const childParent = { groupId: node.id, leafIds };
     for (const child of node.children) {
-      appendOutlineNode(child, children, depth + 1);
+      appendOutlineNode(child, children, depth + 1, childParent);
     }
 
     // Restore expand state if rebuilding; default collapsed.
@@ -1102,6 +1103,9 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     const host = document.getElementById("parts");
     if (!host) return;
     host.replaceChildren();
+    leafOpacityRanges.clear();
+    groupOpacityRanges.clear();
+    leafSyncButtons.clear();
 
     for (const name of parts.keys()) {
       if (!partOpacity.has(name)) partOpacity.set(name, 1);
@@ -1110,7 +1114,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
 
     const outline = resolvePartOutline(parts.keys());
     for (const node of outline) {
-      appendOutlineNode(node, host, 0);
+      appendOutlineNode(node, host, 0, null);
     }
     requestAnimationFrame(() => relayoutPartNameColumn());
   }

@@ -106,12 +106,46 @@ function concatPositions(hard, cut) {
 }
 
 /**
+ * Match fat-line overlay alpha to the parent mesh fade.
+ * @param {THREE.Material | null | undefined} mat
+ * @param {number} opacity 0–1
+ */
+export function applyEdgeMaterialOpacity(mat, opacity) {
+  if (!mat) return;
+  const o = Math.max(0, Math.min(1, Number(opacity) || 0));
+  if (o < 1) {
+    mat.transparent = true;
+    mat.opacity = o;
+    mat.depthWrite = false;
+  } else {
+    mat.transparent = false;
+    mat.opacity = 1;
+  }
+  mat.needsUpdate = true;
+}
+
+/**
+ * Read face opacity from a CAD mesh (first material).
+ * @param {THREE.Mesh} mesh
+ * @returns {number}
+ */
+function meshFaceOpacity(mesh) {
+  if (!mesh?.visible) return 0;
+  const src = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
+  if (!src) return 1;
+  if (src.transparent && typeof src.opacity === "number") return src.opacity;
+  return 1;
+}
+
+/**
  * LineMaterial that wins coplanar depth tests under log-depth / ortho.
  * @param {THREE.Plane[]} planes
  * @param {{ x: number, y: number } | null} res
+ * @param {number} [opacity]
  * @returns {LineMaterial}
  */
-function createEdgeMaterial(planes, res) {
+function createEdgeMaterial(planes, res, opacity = 1) {
+  const o = Math.max(0, Math.min(1, Number(opacity) || 0));
   const mat = new LineMaterial({
     color: EDGE_COLOR,
     linewidth: EDGE_LINEWIDTH_PX,
@@ -119,7 +153,8 @@ function createEdgeMaterial(planes, res) {
     toneMapped: false,
     depthTest: true,
     depthWrite: false,
-    transparent: false,
+    transparent: o < 1,
+    opacity: o < 1 ? o : 1,
     clippingPlanes: planes,
     clipIntersection: false,
   });
@@ -291,8 +326,10 @@ export function syncEdgeOverlays(partsMap, enabled, opts = {}) {
         overlay = null;
       }
 
+      const faceOpacity = meshFaceOpacity(mesh);
+
       if (!overlay) {
-        const mat = createEdgeMaterial(planes, res);
+        const mat = createEdgeMaterial(planes, res, faceOpacity);
         const geom = new LineSegmentsGeometry();
         overlay = new LineSegments2(geom, mat);
         overlay.name = `${label}__edges`;
@@ -306,7 +343,7 @@ export function syncEdgeOverlays(partsMap, enabled, opts = {}) {
         // Recreate if this overlay predates the FragDepth bias patch.
         if (!mat || typeof mat.customProgramCacheKey !== "function") {
           disposeOverlay(overlay);
-          const mat2 = createEdgeMaterial(planes, res);
+          const mat2 = createEdgeMaterial(planes, res, faceOpacity);
           const geom2 = new LineSegmentsGeometry();
           overlay = new LineSegments2(geom2, mat2);
           overlay.name = `${label}__edges`;
@@ -323,6 +360,7 @@ export function syncEdgeOverlays(partsMap, enabled, opts = {}) {
           mat.clippingPlanes = planes;
           mat.clipIntersection = false;
           if (res && mat.resolution) mat.resolution.set(res.x, res.y);
+          applyEdgeMaterialOpacity(mat, faceOpacity);
           mat.needsUpdate = true;
         }
       }

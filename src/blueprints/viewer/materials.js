@@ -167,10 +167,38 @@ export function collectLeafIds(node) {
 }
 
 /**
+ * Match CAD edge overlay alpha to the parent mesh fade (hard edges + cuts).
+ * @param {THREE.Object3D} mesh
+ * @param {number} opacity 0–1
+ */
+function applyOpacityToEdgeOverlays(mesh, opacity) {
+  const o = Math.max(0, Math.min(1, Number(opacity) || 0));
+  for (const child of mesh.children || []) {
+    if (!child?.userData?.isEdgeOverlay || !child.material) continue;
+    const mats = Array.isArray(child.material)
+      ? child.material
+      : [child.material];
+    for (const mat of mats) {
+      if (!mat) continue;
+      if (o < 1) {
+        mat.transparent = true;
+        mat.opacity = o;
+        mat.depthWrite = false;
+      } else {
+        mat.transparent = false;
+        mat.opacity = 1;
+      }
+      mat.needsUpdate = true;
+    }
+  }
+}
+
+/**
  * Apply opacity to meshes. opacity 0 → hidden (visible=false) for perf / AR omit.
  * Translucent: standard alpha flags + depth peels when USE_DEPTH_PEEL is on.
  * Do **not** reuse opaque LAYER_DEPTH_BIAS as renderOrder while faded — higher
  * bias paints later in Three’s transparent queue (e.g. NaturHeld 140 over krytina).
+ * Edge overlays fade with the same alpha so outlines do not stay fully opaque.
  * @param {THREE.Object3D[]} meshes
  * @param {number} opacity 0–1
  */
@@ -217,6 +245,7 @@ export function applyOpacityToMeshes(meshes, opacity) {
       mesh.userData.opaqueRenderOrder = mesh.renderOrder || 0;
     }
     mesh.renderOrder = o < 1 ? 0 : mesh.userData.opaqueRenderOrder;
+    applyOpacityToEdgeOverlays(mesh, o);
   }
 }
 

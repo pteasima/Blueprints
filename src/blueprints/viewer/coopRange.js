@@ -19,11 +19,15 @@
  * @param {() => void} [opts.onScrubStart]
  * @param {() => void} [opts.onScrubEnd]
  * @param {() => void} [opts.onTap]
+ * @param {boolean} [opts.thumbScrubOnly] When true, horizontal scrub starts only
+ *   if the pointer went down on/near the thumb. Track taps still fire onTap;
+ *   dragging the track does not seek (avoids click-to-scrub).
  */
 export function createCooperativeRange(opts = {}) {
   const min = opts.min ?? 0;
   const max = opts.max ?? 1;
   const step = opts.step ?? 0.001;
+  const thumbScrubOnly = Boolean(opts.thumbScrubOnly);
   let value = clamp(opts.value ?? min, min, max);
 
   const root = document.createElement("div");
@@ -44,6 +48,8 @@ export function createCooperativeRange(opts = {}) {
   root.append(track);
 
   const TAP_SLOP_PX = 10;
+  /** Extra hit padding around the visible thumb for grab / thumbScrubOnly. */
+  const THUMB_HIT_PAD_PX = 14;
 
   /** @type {number | null} */
   let pointerId = null;
@@ -52,6 +58,8 @@ export function createCooperativeRange(opts = {}) {
   let axisLocked = false;
   let scrubbing = false;
   let moved = false;
+  /** False when thumbScrubOnly and down missed the thumb — tap ok, scrub blocked. */
+  let allowScrub = true;
 
   function syncDom() {
     const t = max === min ? 0 : (value - min) / (max - min);
@@ -61,6 +69,27 @@ export function createCooperativeRange(opts = {}) {
     root.setAttribute("aria-valuenow", String(value));
     const text = opts.formatAriaValue?.(value) ?? String(value);
     root.setAttribute("aria-valuetext", text);
+  }
+
+  /**
+   * @param {number} clientX
+   * @param {number} clientY
+   */
+  function pointerNearThumb(clientX, clientY) {
+    const rect =
+      typeof thumb.getBoundingClientRect === "function"
+        ? thumb.getBoundingClientRect()
+        : null;
+    if (!rect || !(rect.width > 0) || !(rect.height > 0)) {
+      // No layout (tests / hidden): treat as on-thumb so scrub still works.
+      return true;
+    }
+    return (
+      clientX >= rect.left - THUMB_HIT_PAD_PX &&
+      clientX <= rect.right + THUMB_HIT_PAD_PX &&
+      clientY >= rect.top - THUMB_HIT_PAD_PX &&
+      clientY <= rect.bottom + THUMB_HIT_PAD_PX
+    );
   }
 
   /**
@@ -95,6 +124,7 @@ export function createCooperativeRange(opts = {}) {
     pointerId = null;
     axisLocked = false;
     scrubbing = false;
+    allowScrub = true;
     if (wasScrubbing) opts.onScrubEnd?.();
     if (commit && wasScrubbing) opts.onChange?.(value);
   }
@@ -111,6 +141,7 @@ export function createCooperativeRange(opts = {}) {
     moved = false;
     axisLocked = false;
     scrubbing = false;
+    allowScrub = !thumbScrubOnly || pointerNearThumb(ev.clientX, ev.clientY);
     // Wait for horizontal drag past slop before seeking (mouse and touch).
     // Immediate seek on down is click-to-scrub; we do not want that.
   }
@@ -128,6 +159,11 @@ export function createCooperativeRange(opts = {}) {
       if (!moved) return;
       // Vertical wins → abandon; browser scrolls the sheet (touch).
       if (ev.pointerType === "touch" && Math.abs(dy) >= Math.abs(dx)) {
+        endScrub(false);
+        return;
+      }
+      if (!allowScrub) {
+        // Horizontal drag on the track with thumbScrubOnly — do not seek.
         endScrub(false);
         return;
       }
@@ -155,6 +191,7 @@ export function createCooperativeRange(opts = {}) {
       pointerId = null;
       axisLocked = false;
       scrubbing = false;
+      allowScrub = true;
       opts.onTap?.();
       return;
     }

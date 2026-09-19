@@ -159,4 +159,81 @@ range.el.dispatchEvent(
 );
 assert.equal(calls.tap, 2);
 
+// thumbScrubOnly: drag that did not start on the thumb must not seek.
+const thumbOnlyCalls = { input: [], tap: 0 };
+const thumbOnly = createCooperativeRange({
+  min: 0,
+  max: 100,
+  step: 1,
+  value: 50,
+  thumbScrubOnly: true,
+  onInput: (v) => thumbOnlyCalls.input.push(v),
+  onTap: () => {
+    thumbOnlyCalls.tap += 1;
+  },
+});
+const thumbEl = thumbOnly.el.querySelector(".coop-range-thumb");
+assert.ok(thumbEl);
+// Layout stub: far-from-thumb hit box so pointerNearThumb returns false.
+thumbEl.getBoundingClientRect = () => ({
+  left: 0,
+  right: 10,
+  top: 0,
+  bottom: 10,
+  width: 10,
+  height: 10,
+});
+thumbOnly.el.dispatchEvent(
+  new PointerEvent("pointerdown", {
+    pointerId: 2,
+    pointerType: "mouse",
+    button: 0,
+    clientX: 200,
+    clientY: 10,
+  }),
+);
+thumbOnly.el.dispatchEvent(
+  new PointerEvent("pointermove", {
+    pointerId: 2,
+    pointerType: "mouse",
+    button: 0,
+    clientX: 240,
+    clientY: 10,
+  }),
+);
+thumbOnly.el.dispatchEvent(
+  new PointerEvent("pointerup", {
+    pointerId: 2,
+    pointerType: "mouse",
+    button: 0,
+    clientX: 240,
+    clientY: 10,
+  }),
+);
+assert.equal(thumbOnly.value, 50, "track drag must not scrub when thumbScrubOnly");
+assert.equal(thumbOnlyCalls.input.length, 0);
+assert.equal(thumbOnlyCalls.tap, 0, "moved drag must not tap");
+
+// Tap still toggles when thumbScrubOnly.
+thumbOnly.el.dispatchEvent(
+  new PointerEvent("pointerdown", {
+    pointerId: 3,
+    pointerType: "mouse",
+    button: 0,
+    clientX: 200,
+    clientY: 10,
+  }),
+);
+thumbOnly.el.dispatchEvent(
+  new PointerEvent("pointerup", {
+    pointerId: 3,
+    pointerType: "mouse",
+    button: 0,
+    clientX: 200,
+    clientY: 10,
+  }),
+);
+assert.equal(thumbOnlyCalls.tap, 1);
+assert.equal(thumbOnly.value, 50, "tap must not seek");
+
 console.log("coopRange.test.mjs: ok");
