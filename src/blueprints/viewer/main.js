@@ -36,14 +36,51 @@ import {
 import { createDepthPeelRenderer } from "./depthPeel.js";
 import { createMeasureTool } from "./measure.js";
 
+/** Query param for a named custom scene (`?m=<id>&scene=<sceneId>`). */
+const SCENE_QUERY = "scene";
+
+/**
+ * @returns {string}
+ */
+function readSceneQuery() {
+  try {
+    return (new URLSearchParams(location.search).get(SCENE_QUERY) || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Keep the address bar in sync so a selected scene is copy-paste shareable.
+ * Builtin presets / orbit clear the param (same lifetime as the View highlight).
+ * @param {string | null | undefined} sceneId
+ */
+function writeSceneQuery(sceneId) {
+  try {
+    const url = new URL(location.href);
+    const id = sceneId != null ? String(sceneId).trim() : "";
+    if (id) url.searchParams.set(SCENE_QUERY, id);
+    else url.searchParams.delete(SCENE_QUERY);
+    const next = `${url.pathname}${url.search}${url.hash}`;
+    const cur = `${location.pathname}${location.search}${location.hash}`;
+    if (next !== cur) history.replaceState(null, "", next);
+  } catch {
+    /* file:// or opaque origins may reject history writes */
+  }
+}
+
 /**
  * @param {HTMLCanvasElement} canvas
  * @param {ArrayBuffer} glbBuffer
- * @param {{ scenes?: object[] }} [options]
+ * @param {{ scenes?: object[], scene?: string }} [options]
  */
 export function mountViewer(canvas, glbBuffer, options = {}) {
   /** Custom named scenes (model-specific); shown alongside Iso/Front/Side/Top. */
   const customScenes = Array.isArray(options.scenes) ? options.scenes : [];
+  /** Prefer explicit option; otherwise `?scene=` from the current URL. */
+  const initialSceneId = String(
+    options.scene != null ? options.scene : readSceneQuery(),
+  ).trim();
 
   /** @type {THREE.Scene | null} */
   let scene = null;
@@ -199,11 +236,19 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       buildMaterialToggle();
       buildEdgesToggle();
       buildPartToggles();
+      // Resolve ?scene= / options.scene before building View buttons so the
+      // matching custom scene starts highlighted.
+      const initialSpec = findCustomScene(initialSceneId);
+      if (initialSpec) {
+        activeCameraPreset = `scene:${String(initialSpec.id).trim()}`;
+      }
       buildCameraButtons();
       buildFovControl();
       ensureDraftCut();
       buildCutUI();
       refreshMaterials();
+      if (initialSpec) applyScene(initialSpec);
+      syncSceneUrl();
       chromeApi?.refreshPartialHeight();
       showArButton();
       showMeasureButton();
@@ -1135,6 +1180,29 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   /** @type {string | null} */
   let activeCameraPreset = "iso";
 
+  /**
+   * @param {string} sceneId
+   * @returns {object | null}
+   */
+  function findCustomScene(sceneId) {
+    const want = String(sceneId || "").trim();
+    if (!want) return null;
+    for (const spec of customScenes) {
+      if (String(spec?.id || "").trim() === want) return spec;
+    }
+    return null;
+  }
+
+  /** Mirror the active custom scene (or lack of one) into `?scene=`. */
+  function syncSceneUrl() {
+    const preset = activeCameraPreset;
+    if (preset && preset.startsWith("scene:")) {
+      writeSceneQuery(preset.slice("scene:".length));
+    } else {
+      writeSceneQuery(null);
+    }
+  }
+
   function clearCameraPresetHighlight() {
     if (activeCameraPreset == null) return;
     activeCameraPreset = null;
@@ -1142,6 +1210,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     host?.querySelectorAll("button").forEach((el) => {
       el.classList.remove("is-active");
     });
+    syncSceneUrl();
   }
 
   function buildCameraButtons() {
@@ -1162,6 +1231,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
           el.classList.toggle("is-active", el.dataset.preset === id);
         });
         onClick();
+        syncSceneUrl();
       });
       host.append(btn);
     }
