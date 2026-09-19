@@ -214,7 +214,7 @@ def test_soffit_hangs_from_cd_not_furniture_or_pozednice():
 
 def test_soffit_scene_recipe():
     specs = scenes()
-    assert len(specs) == 1
+    assert len(specs) == 2
     s = specs[0]
     assert s["id"] == "soffit"
     assert s["label"] == "Soffit"
@@ -252,10 +252,51 @@ def test_soffit_scene_recipe():
     assert abs(cad_mm_to_gltf_m((0, 1000, 0))[2] - (-1.0)) < 1e-12
 
 
+def test_gable_scene_recipe():
+    """Gable: ISO length cut framed on the full šikminy (not soffit-zoomed)."""
+    specs = {s["id"]: s for s in scenes()}
+    assert "gable" in specs
+    s = specs["gable"]
+    assert s["label"] == "Gable"
+    assert s["projection"] == "ortho"
+    assert s["opacityDefault"] == 0.5
+    assert s["opacity"] == {
+        LABEL_FLEX: 1,
+        LABEL_NATURHELD: 1,
+        LABEL_ROST: 1,
+        "omitka": 1,
+    }
+    assert len(s["cuts"]) == 1
+    assert s["cuts"][0]["t"] == 0.5
+    assert s["cuts"][0]["normal"] == [0.0, 0.0, -1.0]
+    cam = s["camera"]
+    assert cam["up"] == [0.0, 1.0, 0.0]
+    # Look along −Z (kitchen → living); camera on the kitchen side.
+    assert cam["position"][2] > cam["target"][2]
+    assert abs(cam["position"][0] - cam["target"][0]) < 1e-9
+    assert abs(cam["position"][1] - cam["target"][1]) < 1e-9
+    assert cam["orthoFit"][0] > 0 and cam["orthoFit"][1] > 0
+    p = ObyvakParams()
+    g = build_layout(p)
+    tx, ty, tz = cam["target"]
+    # Target near room mid-width / mid-height of the pitched pack.
+    assert 0.0 <= tx <= p.room_width * 0.001
+    assert (p.furniture_height - 150.0) * 0.001 <= ty <= (p.ridge_z + 100.0) * 0.001
+    assert -g.y_furn1 * 0.001 <= tz <= -g.y_furn0 * 0.001
+    # Span covers both eaves (orthoFit half-widths in metres).
+    assert cam["orthoFit"][0] * 2 > p.room_width * 0.001
+    assert cam["orthoFit"][1] * 2 > (p.ridge_z - p.furniture_height) * 0.001
+    # Distinct from Soffit zoom (wider framing).
+    soffit_fit = specs["soffit"]["camera"]["orthoFit"]
+    assert cam["orthoFit"][0] > soffit_fit[0]
+    assert cam["orthoFit"][1] > soffit_fit[1]
+
+
 def test_write_scenes_json(tmp_path):
     path = write_scenes_json("obyvak", scenes(), tmp_path / "obyvak.scenes.json")
     data = path.read_text(encoding="utf-8")
     assert '"soffit"' in data
+    assert '"gable"' in data
     assert path.stat().st_size > 0
 
 

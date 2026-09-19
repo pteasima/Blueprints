@@ -868,56 +868,92 @@ def build_elevation_slice(params: ObyvakParams | None = None):
 def scenes(params: ObyvakParams | None = None) -> list[dict]:
     """Named WebGL viewer scenes (see blueprints.scenes).
 
-    Soffit: orthographic cross-section of the cabinet soffit. GLB is glTF Y-up
-    (CAD Z→Y, CAD Y→−Z). Cut along room length from the kitchen gable; camera
-    looks straight along that axis at the soffit with Y up.
+    Each scene owns its camera / cut / opacity recipe — values may match today
+    (e.g. both ISO along kitchen→living) but are free to diverge later.
+
+    GLB is glTF Y-up (CAD Z→Y, CAD Y→−Z). View plane for these length cuts is
+    glTF XY (= CAD X width × CAD Z height).
     """
     from blueprints.scenes import cad_mm_to_gltf_m
 
     p = params or ObyvakParams()
     g = ObyvakLayout(p)
     gap = FACE_GAP
-    # Match the soffit box bay (cabinet run, NH L + Flex cavity).
+
+    # --- Soffit: orthographic cross-section zoomed on the cabinet soffit bay. ---
     sx0, sx1 = g.x_furn, g.x_furn + p.furniture_width
     sy0, sy1 = g.y_furn0 + gap, g.y_furn1 - gap
     sz0 = g.z_nabeh_bot + gap
     sz1 = g.z_gkf_horiz - gap
-    cx = 0.5 * (sx0 + sx1)
-    cy = 0.5 * (sy0 + sy1)
-    cz = 0.5 * (sz0 + sz1)
-    # View plane is glTF XY (= CAD X width × CAD Z height).
-    pad = 1.25
-    frame_x0 = g.x_furn - 250.0
-    frame_x1 = p.room_width + p.wall_plaster + 50.0
-    frame_z0 = p.furniture_height - 150.0
-    frame_z1 = g.z_gkf_horiz + 200.0
-    half_w = 0.5 * (frame_x1 - frame_x0) * pad * 0.001
-    half_h = 0.5 * (frame_z1 - frame_z0) * pad * 0.001
-    dist_m = max(half_w, half_h, 0.35) * 5.0
-    target = cad_mm_to_gltf_m((cx, cy, cz))
+    scx = 0.5 * (sx0 + sx1)
+    scy = 0.5 * (sy0 + sy1)
+    scz = 0.5 * (sz0 + sz1)
+    spad = 1.25
+    s_frame_x0 = g.x_furn - 250.0
+    s_frame_x1 = p.room_width + p.wall_plaster + 50.0
+    s_frame_z0 = p.furniture_height - 150.0
+    s_frame_z1 = g.z_gkf_horiz + 200.0
+    s_half_w = 0.5 * (s_frame_x1 - s_frame_x0) * spad * 0.001
+    s_half_h = 0.5 * (s_frame_z1 - s_frame_z0) * spad * 0.001
+    s_dist_m = max(s_half_w, s_half_h, 0.35) * 5.0
+    s_target = cad_mm_to_gltf_m((scx, scy, scz))
     # CAD +Y (kitchen→living) → glTF −Z. Camera on the kitchen side.
-    look = (0.0, 0.0, -1.0)
-    position = [
-        target[0] - look[0] * dist_m,
-        target[1] - look[1] * dist_m,
-        target[2] - look[2] * dist_m,
+    s_look = (0.0, 0.0, -1.0)
+    s_position = [
+        s_target[0] - s_look[0] * s_dist_m,
+        s_target[1] - s_look[1] * s_dist_m,
+        s_target[2] - s_look[2] * s_dist_m,
     ]
-    return [
-        {
-            "id": "soffit",
-            "label": "Soffit",
-            "camera": {
-                "target": target,
-                "position": position,
-                "up": [0.0, 1.0, 0.0],
-                "orthoFit": [half_w, half_h],
-            },
-            "projection": "ortho",
-            "cuts": [{"normal": list(look), "t": 0.5}],
-            "opacity": {LABEL_FLEX: 1, LABEL_NATURHELD: 1, LABEL_ROST: 1, "omitka": 1},
-            "opacityDefault": 0.5,
-        }
+    soffit = {
+        "id": "soffit",
+        "label": "Soffit",
+        "camera": {
+            "target": s_target,
+            "position": s_position,
+            "up": [0.0, 1.0, 0.0],
+            "orthoFit": [s_half_w, s_half_h],
+        },
+        "projection": "ortho",
+        "cuts": [{"normal": list(s_look), "t": 0.5}],
+        "opacity": {LABEL_FLEX: 1, LABEL_NATURHELD: 1, LABEL_ROST: 1, "omitka": 1},
+        "opacityDefault": 0.5,
+    }
+
+    # --- Gable: full šikminy (eave↔eave), currently same ISO / look / cut idea. ---
+    gy0, gy1 = g.y_furn0 + gap, g.y_furn1 - gap
+    g_frame_x0 = -p.wall_plaster - 50.0
+    g_frame_x1 = p.room_width + p.wall_plaster + 50.0
+    g_frame_z0 = p.furniture_height - 150.0
+    g_frame_z1 = p.ridge_z + 100.0
+    gcx = 0.5 * (g_frame_x0 + g_frame_x1)
+    gcy = 0.5 * (gy0 + gy1)
+    gcz = 0.5 * (g_frame_z0 + g_frame_z1)
+    gpad = 1.25
+    g_half_w = 0.5 * (g_frame_x1 - g_frame_x0) * gpad * 0.001
+    g_half_h = 0.5 * (g_frame_z1 - g_frame_z0) * gpad * 0.001
+    g_dist_m = max(g_half_w, g_half_h, 0.35) * 5.0
+    g_target = cad_mm_to_gltf_m((gcx, gcy, gcz))
+    g_look = (0.0, 0.0, -1.0)
+    g_position = [
+        g_target[0] - g_look[0] * g_dist_m,
+        g_target[1] - g_look[1] * g_dist_m,
+        g_target[2] - g_look[2] * g_dist_m,
     ]
+    gable = {
+        "id": "gable",
+        "label": "Gable",
+        "camera": {
+            "target": g_target,
+            "position": g_position,
+            "up": [0.0, 1.0, 0.0],
+            "orthoFit": [g_half_w, g_half_h],
+        },
+        "projection": "ortho",
+        "cuts": [{"normal": list(g_look), "t": 0.5}],
+        "opacity": {LABEL_FLEX: 1, LABEL_NATURHELD: 1, LABEL_ROST: 1, "omitka": 1},
+        "opacityDefault": 0.5,
+    }
+    return [soffit, gable]
 
 
 def extra_exports(params: ObyvakParams | None = None):
