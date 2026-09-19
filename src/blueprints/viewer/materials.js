@@ -167,15 +167,50 @@ export function collectLeafIds(node) {
 }
 
 /**
+ * Match CAD edge overlay alpha to the parent mesh fade (hard edges + cuts).
+ * @param {THREE.Object3D} mesh
+ * @param {number} opacity 0–1 face opacity
+ * @param {"none" | "transparent" | "opaque"} [edgeMode]
+ */
+function applyOpacityToEdgeOverlays(mesh, opacity, edgeMode = "transparent") {
+  if (edgeMode === "none") return;
+  const o =
+    edgeMode === "opaque"
+      ? 1
+      : Math.max(0, Math.min(1, Number(opacity) || 0));
+  for (const child of mesh.children || []) {
+    if (!child?.userData?.isEdgeOverlay || !child.material) continue;
+    const mats = Array.isArray(child.material)
+      ? child.material
+      : [child.material];
+    for (const mat of mats) {
+      if (!mat) continue;
+      if (o < 1) {
+        mat.transparent = true;
+        mat.opacity = o;
+        mat.depthWrite = false;
+      } else {
+        mat.transparent = false;
+        mat.opacity = 1;
+      }
+      mat.needsUpdate = true;
+    }
+  }
+}
+
+/**
  * Apply opacity to meshes. opacity 0 → hidden (visible=false) for perf / AR omit.
  * Translucent: standard alpha flags + depth peels when USE_DEPTH_PEEL is on.
  * Do **not** reuse opaque LAYER_DEPTH_BIAS as renderOrder while faded — higher
  * bias paints later in Three’s transparent queue (e.g. NaturHeld 140 over krytina).
+ * Edge overlays follow `edgeMode`: match face alpha, stay opaque, or skip.
  * @param {THREE.Object3D[]} meshes
  * @param {number} opacity 0–1
+ * @param {{ edgeMode?: "none" | "transparent" | "opaque" }} [opts]
  */
-export function applyOpacityToMeshes(meshes, opacity) {
+export function applyOpacityToMeshes(meshes, opacity, opts = {}) {
   const o = Math.max(0, Math.min(1, Number(opacity) || 0));
+  const edgeMode = opts.edgeMode ?? "transparent";
   for (const mesh of meshes) {
     if (!mesh) continue;
     if (o <= 0) {
@@ -217,6 +252,7 @@ export function applyOpacityToMeshes(meshes, opacity) {
       mesh.userData.opaqueRenderOrder = mesh.renderOrder || 0;
     }
     mesh.renderOrder = o < 1 ? 0 : mesh.userData.opaqueRenderOrder;
+    applyOpacityToEdgeOverlays(mesh, o, edgeMode);
   }
 }
 
@@ -598,6 +634,7 @@ export function applyMaterialMode(partsMap, mode, opts = {}) {
   const planes = opts.clippingPlanes ?? null;
   const realistic = mode === MODE_REALISTIC;
   const opacityByLabel = opts.opacityByLabel ?? null;
+  const edgeMode = opts.edgeMode ?? "transparent";
 
   for (const [label, meshes] of partsMap) {
     const rgb = colorForLabel(label);
@@ -694,7 +731,7 @@ export function applyMaterialMode(partsMap, mode, opts = {}) {
       0,
       Math.min(1, presetOpacity * (Number(uiOpacity) || 0)),
     );
-    applyOpacityToMeshes(meshes, effective);
+    applyOpacityToMeshes(meshes, effective, { edgeMode });
   }
 }
 

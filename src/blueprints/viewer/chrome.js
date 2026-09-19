@@ -360,6 +360,21 @@ canvas {
   margin-top: 0.55rem;
 }
 
+.edges-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.55rem;
+}
+
+.edges-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg-secondary);
+}
+
 .seg button {
   appearance: none;
   flex: 1 1 0;
@@ -487,65 +502,36 @@ canvas {
   margin: 0;
 }
 
-.part-row input.part-opacity {
+.part-opacity-wrap .coop-range.part-opacity {
   flex: 1 1 auto;
   width: 100%;
   height: 2.85rem;
-  margin: 0;
-  padding: 0;
-  accent-color: var(--accent);
-  cursor: pointer;
-  touch-action: none;
-  -webkit-appearance: none;
+}
+
+.part-sync {
   appearance: none;
-  background: transparent;
-}
-
-.part-row input.part-opacity:focus {
-  outline: none;
-}
-
-.part-row input.part-opacity:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  flex: 0 0 auto;
+  margin: 0 0 0 0.35rem;
+  padding: 0.2rem 0.45rem;
+  border: 0;
   border-radius: 0.35rem;
+  background: var(--fill);
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.part-row input.part-opacity::-webkit-slider-runnable-track {
-  height: 0.28rem;
-  border-radius: 999px;
+.part-sync:active {
   background: var(--fill-active);
 }
 
-.part-row input.part-opacity::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 1.55rem;
-  height: 1.55rem;
-  margin-top: calc((0.28rem - 1.55rem) / 2);
-  border-radius: 50%;
-  border: 0;
-  background: #fff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
-  /* Invisible padding enlarges the grab target beyond the visible knob. */
-  cursor: pointer;
-}
-
-.part-row input.part-opacity::-moz-range-track {
-  height: 0.28rem;
-  border-radius: 999px;
-  background: var(--fill-active);
-  border: 0;
-}
-
-.part-row input.part-opacity::-moz-range-thumb {
-  width: 1.55rem;
-  height: 1.55rem;
-  border-radius: 50%;
-  border: 0;
-  background: #fff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
-  cursor: pointer;
+.part-sync[hidden] {
+  display: none !important;
 }
 
 .cuts {

@@ -13,7 +13,18 @@ import {
   worldPlanesToLocal,
 } from "./clipGeometry.js";
 
-export const EDGE_OVERLAY_KEY = "blueprints.edgesEnabled";
+export const EDGE_OVERLAY_KEY = "blueprints.edgeMode";
+/** @deprecated Migrated to EDGE_OVERLAY_KEY on first load. */
+const EDGE_OVERLAY_KEY_LEGACY = "blueprints.edgesEnabled";
+
+/** No CAD edge overlay. */
+export const EDGE_MODE_NONE = "none";
+/** Edges fade with parent part opacity. */
+export const EDGE_MODE_TRANSPARENT = "transparent";
+/** Edges stay fully opaque while faces fade. */
+export const EDGE_MODE_OPAQUE = "opaque";
+
+/** @typedef {typeof EDGE_MODE_NONE | typeof EDGE_MODE_TRANSPARENT | typeof EDGE_MODE_OPAQUE} EdgeMode */
 
 /** Dihedral threshold (°): hide coplanar triangulation edges, keep CAD creases. */
 export const EDGE_THRESHOLD_DEG = 20;
@@ -42,28 +53,61 @@ const EDGE_FRAG_DEPTH_BIAS = 5e-4;
 const EDGE_BIAS_SHADER_REV = 2;
 
 /**
- * @returns {boolean}
+ * @param {unknown} v
+ * @returns {EdgeMode | null}
  */
-export function loadEdgesEnabled() {
+function parseEdgeMode(v) {
+  if (v === EDGE_MODE_NONE || v === EDGE_MODE_TRANSPARENT || v === EDGE_MODE_OPAQUE) {
+    return v;
+  }
+  if (v === "1" || v === "true") return EDGE_MODE_TRANSPARENT;
+  if (v === "0" || v === "false") return EDGE_MODE_NONE;
+  return null;
+}
+
+/**
+ * @returns {EdgeMode}
+ */
+export function loadEdgeMode() {
   try {
-    const v = localStorage.getItem(EDGE_OVERLAY_KEY);
-    if (v === "1" || v === "true") return true;
-    if (v === "0" || v === "false") return false;
+    const cur = parseEdgeMode(localStorage.getItem(EDGE_OVERLAY_KEY));
+    if (cur) return cur;
+    const legacy = parseEdgeMode(localStorage.getItem(EDGE_OVERLAY_KEY_LEGACY));
+    if (legacy) {
+      saveEdgeMode(legacy);
+      return legacy;
+    }
   } catch {
     /* ignore */
   }
-  return true;
+  return EDGE_MODE_TRANSPARENT;
+}
+
+/**
+ * @param {EdgeMode} mode
+ */
+export function saveEdgeMode(mode) {
+  try {
+    localStorage.setItem(EDGE_OVERLAY_KEY, mode);
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * @returns {boolean}
+ * @deprecated Prefer loadEdgeMode().
+ */
+export function loadEdgesEnabled() {
+  return loadEdgeMode() !== EDGE_MODE_NONE;
 }
 
 /**
  * @param {boolean} on
+ * @deprecated Prefer saveEdgeMode().
  */
 export function saveEdgesEnabled(on) {
-  try {
-    localStorage.setItem(EDGE_OVERLAY_KEY, on ? "1" : "0");
-  } catch {
-    /* ignore */
-  }
+  saveEdgeMode(on ? EDGE_MODE_TRANSPARENT : EDGE_MODE_NONE);
 }
 
 /**
@@ -106,12 +150,58 @@ function concatPositions(hard, cut) {
 }
 
 /**
+ * Match fat-line overlay alpha to the parent mesh fade.
+ * @param {THREE.Material | null | undefined} mat
+ * @param {number} opacity 0–1
+ */
+export function applyEdgeMaterialOpacity(mat, opacity) {
+  if (!mat) return;
+  const o = Math.max(0, Math.min(1, Number(opacity) || 0));
+  if (o < 1) {
+    mat.transparent = true;
+    mat.opacity = o;
+    mat.depthWrite = false;
+  } else {
+    mat.transparent = false;
+    mat.opacity = 1;
+  }
+  mat.needsUpdate = true;
+}
+
+/**
+ * Read face opacity from a CAD mesh (first material).
+ * @param {THREE.Mesh} mesh
+ * @returns {number}
+ */
+function meshFaceOpacity(mesh) {
+  if (!mesh?.visible) return 0;
+  const src = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
+  if (!src) return 1;
+  if (src.transparent && typeof src.opacity === "number") return src.opacity;
+  return 1;
+}
+
+/**
+ * Overlay alpha for the current edge mode.
+ * @param {THREE.Mesh} mesh
+ * @param {EdgeMode} [mode]
+ * @returns {number}
+ */
+function overlayOpacityForMesh(mesh, mode = EDGE_MODE_TRANSPARENT) {
+  if (mode === EDGE_MODE_NONE) return 0;
+  if (mode === EDGE_MODE_OPAQUE) return mesh?.visible === false ? 0 : 1;
+  return meshFaceOpacity(mesh);
+}
+
+/**
  * LineMaterial that wins coplanar depth tests under log-depth / ortho.
  * @param {THREE.Plane[]} planes
  * @param {{ x: number, y: number } | null} res
+ * @param {number} [opacity]
  * @returns {LineMaterial}
  */
-function createEdgeMaterial(planes, res) {
+function createEdgeMaterial(planes, res, opacity = 1) {
+  const o = Math.max(0, Math.min(1, Number(opacity) || 0));
   const mat = new LineMaterial({
     color: EDGE_COLOR,
     linewidth: EDGE_LINEWIDTH_PX,
@@ -119,7 +209,8 @@ function createEdgeMaterial(planes, res) {
     toneMapped: false,
     depthTest: true,
     depthWrite: false,
-    transparent: false,
+    transparent: o < 1,
+    opacity: o < 1 ? o : 1,
     clippingPlanes: planes,
     clipIntersection: false,
   });
@@ -261,11 +352,13 @@ function rebuildOverlayGeometry(mesh, overlay, worldPlanes) {
  * @param {{
  *   clippingPlanes?: THREE.Plane[] | null,
  *   resolution?: { x: number, y: number } | null,
+ *   edgeMode?: EdgeMode,
  * }} [opts]
  */
 export function syncEdgeOverlays(partsMap, enabled, opts = {}) {
   const planes = opts.clippingPlanes ?? [];
   const res = opts.resolution || null;
+  const edgeMode = opts.edgeMode ?? EDGE_MODE_TRANSPARENT;
 
   for (const [label, meshes] of partsMap) {
     for (const mesh of meshes) {
@@ -291,8 +384,10 @@ export function syncEdgeOverlays(partsMap, enabled, opts = {}) {
         overlay = null;
       }
 
+      const faceOpacity = overlayOpacityForMesh(mesh, edgeMode);
+
       if (!overlay) {
-        const mat = createEdgeMaterial(planes, res);
+        const mat = createEdgeMaterial(planes, res, faceOpacity);
         const geom = new LineSegmentsGeometry();
         overlay = new LineSegments2(geom, mat);
         overlay.name = `${label}__edges`;
@@ -306,7 +401,7 @@ export function syncEdgeOverlays(partsMap, enabled, opts = {}) {
         // Recreate if this overlay predates the FragDepth bias patch.
         if (!mat || typeof mat.customProgramCacheKey !== "function") {
           disposeOverlay(overlay);
-          const mat2 = createEdgeMaterial(planes, res);
+          const mat2 = createEdgeMaterial(planes, res, faceOpacity);
           const geom2 = new LineSegmentsGeometry();
           overlay = new LineSegments2(geom2, mat2);
           overlay.name = `${label}__edges`;
@@ -323,6 +418,7 @@ export function syncEdgeOverlays(partsMap, enabled, opts = {}) {
           mat.clippingPlanes = planes;
           mat.clipIntersection = false;
           if (res && mat.resolution) mat.resolution.set(res.x, res.y);
+          applyEdgeMaterialOpacity(mat, faceOpacity);
           mat.needsUpdate = true;
         }
       }
