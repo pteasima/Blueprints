@@ -35,8 +35,9 @@
       }
     ],
     "opacity": {
-      "soffit": 1,
-      "podhled": 1,
+      "NaturHeld Flex 50": 1,
+      "NaturHeld 140": 1,
+      "dreveny_rost": 1,
       "omitka": 1
     },
     "opacityDefault": 0.5

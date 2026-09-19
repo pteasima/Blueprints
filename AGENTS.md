@@ -12,7 +12,10 @@ These are **building assemblies**, not decorative meshes. Before coding solids, 
 - Do not invent geometry that cannot be built, hang, or drain. If a detail is load-bearing, say what carries it (rafters, hangers, masonry) and what must *not* carry it (e.g. furniture under a self-supporting soffit).
 - Acoustic faces (e.g. NaturHeld + StoSilent on šikminy) are continuous room-facing layers with stated thickness — not paint on a zero-thickness shell.
 - When transferring from a řez/detail sheet: if clearances, hangers, vapour order, or bearing are inconsistent, **push back** and say what must change in the structure before modelling. If the sheet is coherent, transfer the stack and tweak later.
-- Prefer labelled solids that match contractor language (`podhled`, `soffit`/Flex, `sdk`, `vata`, `krov`) over anonymous blobs.
+- Prefer labelled solids that match contractor language (`NaturHeld 140`,
+  `NaturHeld Flex 50`, `dreveny_rost`, `sdk`, `vata`, `krov`) over anonymous blobs.
+  Keep `krov` (krokve / roof timber mass) separate from `dreveny_rost` (interior
+  latě holding NaturHeld on šikminy and in the soffit).
 
 ## Environment
 

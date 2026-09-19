@@ -5,7 +5,13 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "models"))
 
 from obyvak import FACE_GAP, build, build_elevation_slice, build_preview, build_section_slice, scenes  # noqa: E402
-from obyvak_geom import ObyvakParams, build_layout  # noqa: E402
+from obyvak_geom import (  # noqa: E402
+    LABEL_FLEX,
+    LABEL_NATURHELD,
+    LABEL_ROST,
+    ObyvakParams,
+    build_layout,
+)
 from obyvak_section import build as build_section  # noqa: E402
 from blueprints.export_utils import export_shape  # noqa: E402
 from blueprints.scenes import cad_mm_to_gltf_m, write_scenes_json  # noqa: E402
@@ -36,19 +42,21 @@ def test_layout_ceiling_and_gable():
 
 
 def test_sikminy_and_soffit_stack_in_3d():
-    """Šikminy NH/Flex/GKF and self-supporting soffit box are distinct solids."""
+    """Šikminy NH / rost / Flex and self-supporting soffit box are distinct solids."""
     p = ObyvakParams()
     g = build_layout(p)
     shape, _ = build(p)
-    podhled = _labeled(shape, "podhled")
-    soffit = _labeled(shape, "soffit")
-    assert len(podhled) >= 2  # slope NH + soffit L
-    assert len(soffit) >= 2  # slope Flex + box Flex
+    nh = _labeled(shape, LABEL_NATURHELD)
+    flex = _labeled(shape, LABEL_FLEX)
+    rost = _labeled(shape, LABEL_ROST)
+    assert len(nh) >= 2  # slope NH + soffit L
+    assert len(flex) >= 2  # slope Flex + box Flex
+    assert len(rost) >= 8  # slope latě + soffit frame
     # Room-facing NH on slopes sits at H_START.
-    slope_nh = min(podhled, key=lambda s: s.bounding_box().min.X)
+    slope_nh = min(nh, key=lambda s: s.bounding_box().min.X)
     assert abs(slope_nh.bounding_box().min.Z - (g.h_start + FACE_GAP)) < 2.0
     # Soffit box underside clears the cabinets by furniture_gap.
-    box_nh = max(podhled, key=lambda s: s.bounding_box().min.X)
+    box_nh = max(nh, key=lambda s: s.bounding_box().min.X)
     assert abs(box_nh.bounding_box().min.Z - (g.z_nabeh_bot + FACE_GAP)) < 2.0
     assert box_nh.bounding_box().min.Z >= p.furniture_height + p.furniture_gap - 1.0
     furn = _labeled(shape, "nabytek")[0].bounding_box()
@@ -62,6 +70,14 @@ def test_sikminy_and_soffit_stack_in_3d():
     ]
     assert len(lids) == 1
     assert abs(lids[0].bounding_box().size.Z - (p.sdk_t - 2 * FACE_GAP)) < 1e-3
+    # krov is roof timber only — soffit-frame latě use dreveny_rost.
+    for part in _labeled(shape, "krov"):
+        bb = part.bounding_box()
+        assert not (bb.min.X >= g.x_furn - 1.0 and bb.max.Z <= g.z_gkf_horiz + 1.0)
+    # Slope latě are discrete (not a solid wood slab).
+    slope_rost = [c for c in rost if c.bounding_box().max.X < g.x_furn]
+    assert len(slope_rost) >= 5
+    assert all(c.bounding_box().size.X < p.rost_spacing for c in slope_rost)
 
 
 def test_soffit_scene_recipe():
@@ -72,7 +88,12 @@ def test_soffit_scene_recipe():
     assert s["label"] == "Soffit"
     assert s["projection"] == "ortho"
     assert s["opacityDefault"] == 0.5
-    assert s["opacity"] == {"soffit": 1, "podhled": 1, "omitka": 1}
+    assert s["opacity"] == {
+        LABEL_FLEX: 1,
+        LABEL_NATURHELD: 1,
+        LABEL_ROST: 1,
+        "omitka": 1,
+    }
     assert len(s["cuts"]) == 1
     assert s["cuts"][0]["t"] == 0.5
     # glTF −Z ← CAD +Y (length); half the room length removed from kitchen side.
@@ -124,15 +145,18 @@ def test_3d_matches_section_and_elevation_masses():
         "krytina",
         "vata",
         "nabytek",
-        "soffit",
+        LABEL_FLEX,
         "predstena",
         "pouzdro",
         "sdk",
-        "podhled",
+        LABEL_NATURHELD,
         "sklo",
+        LABEL_ROST,
     ):
         assert name in labels
     assert "koruna" not in labels
+    assert "podhled" not in labels
+    assert "soffit" not in labels
 
     kitchen, living = sorted(_labeled(shape, "predstena"), key=lambda s: s.bounding_box().min.Y)
     kbb, lbb = kitchen.bounding_box(), living.bounding_box()
@@ -314,7 +338,10 @@ def test_obyvak_3d_exports(tmp_path, monkeypatch):
     sec, _ = build_section_slice()
     sec_labels = {c.label for c in sec.children}
     assert "nabytek" in sec_labels
-    assert "soffit" in sec_labels
+    assert "soffit" not in sec_labels
+    assert LABEL_FLEX in sec_labels
+    assert LABEL_NATURHELD in sec_labels
+    assert LABEL_ROST in sec_labels
     assert "krov" in sec_labels
     assert "predstena" not in sec_labels
 

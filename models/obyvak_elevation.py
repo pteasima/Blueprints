@@ -17,7 +17,7 @@ from dataclasses import asdict
 
 from build123d import Compound
 
-from obyvak_geom import ObyvakLayout, ObyvakParams, xz_line, xz_rect
+from obyvak_geom import LABEL_NATURHELD, ObyvakLayout, ObyvakParams, xz_line, xz_rect
 
 
 MODEL_NAME = "obyvak_elevation"
@@ -77,7 +77,7 @@ def build(params: ObyvakParams | None = None):
     )
 
     parts.append(
-        xz_rect(0.0, g.z_soffit, span, g.t_nh_face, "podhled")
+        xz_rect(0.0, g.z_soffit, span, g.t_nh_face, LABEL_NATURHELD)
     )
     parts.append(
         xz_rect(x0, g.z_raf_inner_ridge, x1 - x0, g.z_raf_top - g.z_raf_inner_ridge, "krov")

@@ -11,17 +11,19 @@ World:
 Šikminy + soffit stack (interior → attic, thicknesses perpendicular to the face
 except where noted) matches the contractor řez (NaturHeld acoustics):
 
-  StoSilent Top Finish + Top Basic + NaturHeld 140 (40)     → room face (`podhled`)
-  Isover Flex 50 (60) between 60×40 battens @ ~625         → `soffit` (flex fill)
+  StoSilent Top Finish + Top Basic + NaturHeld 140 (40)     → `NaturHeld 140`
+  dřevěný rošt: latě KVH 60×40 @ ~625 (perp. to rafters)  → `dreveny_rost`
+  NaturHeld Flex 50 / Isover Flex 50 (60) between latě     → `NaturHeld Flex 50`
   vapour foil (~1) + GKF/RF 12.5                            → `sdk`
   CD 60×27 + Nonius/direct hangers + Domo Plus plenum       → lumped into `vata`
-  rafters 100/160 @ ~875 + MW between                       → `krov` / `vata`
+  rafters 100/160 (mass) + MW between                       → `krov` / `vata`
+  (střešní latě / kontralatě above rafters stay in krytina build-up, not discrete)
 
 Right eave: slope runs to the furniture line, then a self-supporting soffit box
-(450 deep, NH face continuous on vertical + underside, Flex cavity, 20 mm gap
-above cabinets — furniture is not structural). Horizontal GKF lid at Z≈H_START
-under the pozednice (~309 mm clear). Box hangs from the ceiling grid / rafters,
-not from the wall plate.
+(450 deep, NH face continuous on vertical + underside, Flex cavity + rost inside,
+20 mm gap above cabinets — furniture is not structural). Horizontal GKF lid at
+Z≈H_START under the pozednice (~309 mm clear). Box hangs from the ceiling grid /
+rafters, not from the wall plate.
 """
 
 from __future__ import annotations
@@ -30,6 +32,11 @@ import math
 from dataclasses import dataclass
 
 from build123d import Edge, Face, Vector, Wire
+
+# CAD / viewer part labels (human-readable where the contractor sheet names products).
+LABEL_NATURHELD = "NaturHeld 140"
+LABEL_FLEX = "NaturHeld Flex 50"
+LABEL_ROST = "dreveny_rost"
 
 
 @dataclass(frozen=True)
@@ -90,8 +97,11 @@ class ObyvakParams:
         (7950.0, 2500.0),  # HS portal · obývák / zádveří
     )
     glass_t: float = 20.0
-    # Hidden KVH 60×40 face size inside the soffit Flex cavity (schematic).
-    soffit_frame_t: float = 40.0
+    # Interior acoustic rost (latě holding NaturHeld) — not roof krov.
+    rost_w: float = 60.0
+    rost_d: float = 40.0
+    rost_spacing: float = 625.0
+    rost_first_inset: float = 90.0
     ridge_runout: float = 200.0
 
 
@@ -213,7 +223,7 @@ class ObyvakLayout:
         return self._slope_band_pts(0.0, self.t_nh_face)
 
     def sikmina_flex_pts(self) -> list[tuple[float, float]]:
-        """Isover Flex 50 (+ foil) behind NH on the slopes."""
+        """Flex 50 (+ foil) zone behind NH on the slopes — latě sit inside this band."""
         t0 = self.t_nh_face
         return self._slope_band_pts(t0, t0 + self.t_flex_pack)
 
@@ -221,6 +231,79 @@ class ObyvakLayout:
         """GKF/RF board on the slopes, outside the Flex pack."""
         t0 = self.t_nh_face + self.t_flex_pack
         return self._slope_band_pts(t0, t0 + self.p.sdk_t)
+
+    def _sikmina_segments(self) -> list[tuple[tuple[float, float], tuple[float, float]]]:
+        """Ceiling polyline segments on the šikminy (room face), left then right."""
+        a = (0.0, self.h_start)
+        b = (self.x_false, self.z_false)
+        c = (self.x_furn, self.z_gkf_horiz)
+        return [(a, b), (b, c)]
+
+    def sikmina_batten_stations(
+        self,
+    ) -> list[tuple[float, float, float, float, float, float]]:
+        """Centers of interior latě along the šikminy.
+
+        Returns (x, z, tx, tz, nx, nz) on the *room* face: unit tangent along the
+        slope and unit normal into the build-up (attic). Spacing measured along the
+        slope face (contractor @ ~625 mm).
+        """
+        p = self.p
+        stations: list[tuple[float, float, float, float, float, float]] = []
+        cursor = p.rost_first_inset
+        for (x0, z0), (x1, z1) in self._sikmina_segments():
+            dx, dz = x1 - x0, z1 - z0
+            length = math.hypot(dx, dz)
+            if length < 1.0:
+                continue
+            tx, tz = dx / length, dz / length
+            # Into attic / build-up (rotate tangent toward +Z).
+            nx, nz = -tz, tx
+            if nz < 0:
+                nx, nz = -nx, -nz
+            while cursor <= length - p.rost_w * 0.35:
+                s = cursor
+                x = x0 + tx * s
+                z = z0 + tz * s
+                stations.append((x, z, tx, tz, nx, nz))
+                cursor += p.rost_spacing
+            cursor -= length
+        return stations
+
+    def sikmina_batten_quad(
+        self,
+        x: float,
+        z: float,
+        tx: float,
+        tz: float,
+        nx: float,
+        nz: float,
+    ) -> list[tuple[float, float]]:
+        """XZ rectangle for one lať in the Flex zone (behind NaturHeld)."""
+        p = self.p
+        # Start on the outer face of NaturHeld (into Flex).
+        cx = x + nx * self.t_nh_face
+        cz = z + nz * self.t_nh_face
+        hw = p.rost_w * 0.5
+        d = p.rost_d
+        return [
+            (cx - tx * hw, cz - tz * hw),
+            (cx + tx * hw, cz + tz * hw),
+            (cx + tx * hw + nx * d, cz + tz * hw + nz * d),
+            (cx - tx * hw + nx * d, cz - tz * hw + nz * d),
+        ]
+
+    def sikmina_batten_quads(self) -> list[list[tuple[float, float]]]:
+        """Latě fully inside the clear šikmina span (no wall / break penetration)."""
+        quads = []
+        x_lo, x_hi = 1.0, self.x_furn - 1.0
+        for st in self.sikmina_batten_stations():
+            quad = self.sikmina_batten_quad(*st)
+            xs = [pt[0] for pt in quad]
+            if min(xs) < x_lo or max(xs) > x_hi:
+                continue
+            quads.append(quad)
+        return quads
 
     def soffit_nh_pts(self) -> list[tuple[float, float]]:
         """L-shaped NH+StoSilent on the soffit box: vertical face + underside.

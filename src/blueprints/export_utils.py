@@ -134,21 +134,29 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "roughness": 0.95,
         "metallic": 0.0,
     },
-    "soffit": {
+    "NaturHeld Flex 50": {
         "fill": (35, 175, 15),
         "line": (15, 90, 5),
         "dxf": ColorIndex.GREEN,
         "weight": SECTION_LINE_WEIGHT,
-        "roughness": 0.75,
+        "roughness": 0.92,
         "metallic": 0.0,
     },
-    "podhled": {
-        "fill": None,
-        "line": (15, 85, 245),
+    "NaturHeld 140": {
+        "fill": (15, 85, 245),
+        "line": (10, 50, 160),
         "dxf": ColorIndex.BLUE,
         "weight": SECTION_HEAVY_WEIGHT,
         "roughness": 0.8,
         "metallic": 0.05,
+    },
+    "dreveny_rost": {
+        "fill": (160, 100, 30),
+        "line": (90, 50, 10),
+        "dxf": ColorIndex.YELLOW,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.58,
+        "metallic": 0.0,
     },
     "krytina": {
         "fill": None,
@@ -179,10 +187,11 @@ SECTION_LAYER_ORDER = [
     "sdk",
     "pozednice",
     "krov",
-    "soffit",
+    "dreveny_rost",
+    "NaturHeld Flex 50",
     "predstena",
     "sklo",
-    "podhled",
+    "NaturHeld 140",
     "krytina",
 ]
 

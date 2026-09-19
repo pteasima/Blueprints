@@ -22,9 +22,10 @@ export const SOLID_COLORS = {
   pouzdro: [235, 185, 80],
   sdk: [230, 230, 235],
   krov: [200, 85, 10],
+  dreveny_rost: [160, 100, 30],
   vata: [0, 210, 155],
-  soffit: [35, 175, 15],
-  podhled: [15, 85, 245],
+  "NaturHeld Flex 50": [35, 175, 15],
+  "NaturHeld 140": [15, 85, 245],
   krytina: [235, 15, 15],
   sklo: [140, 210, 255],
 };
@@ -43,13 +44,14 @@ export const LAYER_DEPTH_BIAS = {
   sdk: 4,
   predstena: 5,
   nabytek: 6,
-  soffit: 7,
-  pozednice: 8,
+  "NaturHeld Flex 50": 7,
+  dreveny_rost: 8,
+  pozednice: 9,
   koruna: 9,
   vata: 10,
   krov: 11,
   krytina: 12,
-  podhled: 13,
+  "NaturHeld 140": 13,
   sklo: 14,
 };
 
@@ -78,9 +80,10 @@ export const PART_GROUPS = [
       "pozednice",
       "koruna",
       "krov",
+      "dreveny_rost",
       "vata",
-      "soffit",
-      "podhled",
+      "NaturHeld Flex 50",
+      "NaturHeld 140",
       "krytina",
     ],
   },
@@ -158,7 +161,7 @@ export function collectLeafIds(node) {
  * Apply opacity to meshes. opacity 0 → hidden (visible=false) for perf / AR omit.
  * Translucent: standard alpha flags + depth peels when USE_DEPTH_PEEL is on.
  * Do **not** reuse opaque LAYER_DEPTH_BIAS as renderOrder while faded — higher
- * bias paints later in Three’s transparent queue (e.g. podhled over krytina).
+ * bias paints later in Three’s transparent queue (e.g. NaturHeld 140 over krytina).
  * @param {THREE.Object3D[]} meshes
  * @param {number} opacity 0–1
  */
@@ -179,7 +182,7 @@ export function applyOpacityToMeshes(meshes, opacity) {
         mat.transparent = true;
         mat.opacity = o;
         // Depth writes off for sorted-alpha fallback; DoubleSide so thin CAD
-        // shells (podhled, soffit) do not punch holes when faded.
+        // shells (NaturHeld, Flex) do not punch holes when faded.
         mat.depthWrite = false;
         mat.depthTest = true;
         mat.side = THREE.DoubleSide;
@@ -296,17 +299,23 @@ export const REALISTIC_PRESETS = {
     metalness: 0.0,
     map: "wool",
   },
-  soffit: {
+  "NaturHeld Flex 50": {
     color: [35, 175, 15],
-    roughness: 0.72,
+    roughness: 0.92,
     metalness: 0.0,
-    map: "plaster",
+    map: "wool",
   },
-  podhled: {
+  "NaturHeld 140": {
     color: [15, 85, 245],
     roughness: 0.78,
     metalness: 0.08,
     map: "plaster",
+  },
+  dreveny_rost: {
+    color: [160, 100, 30],
+    roughness: 0.55,
+    metalness: 0.0,
+    map: "wood",
   },
   krytina: {
     color: [235, 15, 15],

@@ -6,6 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "models"))
 
 from obyvak_section import ObyvakParams, build, build_layout  # noqa: E402
+from obyvak_geom import LABEL_FLEX, LABEL_NATURHELD, LABEL_ROST  # noqa: E402
 from blueprints.export_utils import export_section  # noqa: E402
 
 
@@ -44,8 +45,21 @@ def test_obyvak_section_builds_and_exports(tmp_path, monkeypatch):
     assert shape is not None
     assert meta["kind"] == "section"
     labels = {c.label for c in shape.children}
-    for name in ("zdivo", "eps", "krov", "vata", "soffit", "nabytek", "podhled", "krytina", "sdk"):
+    for name in (
+        "zdivo",
+        "eps",
+        "krov",
+        "vata",
+        LABEL_FLEX,
+        "nabytek",
+        LABEL_NATURHELD,
+        "krytina",
+        "sdk",
+        LABEL_ROST,
+    ):
         assert name in labels
+    assert "podhled" not in labels
+    assert "soffit" not in labels
     paths = export_section(shape, "obyvak_section")
     assert paths["svg"].exists()
     assert paths["dxf"].exists()

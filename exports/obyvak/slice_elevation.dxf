@@ -493,7 +493,7 @@ $SKPOLY
   9
 $TDCREATE
  40
-2461303.2669675928
+2461303.2794212964
   9
 $TDUCREATE
  40
@@ -501,7 +501,7 @@ $TDUCREATE
   9
 $TDUPDATE
  40
-2461303.2669675928
+2461303.2794212964
   9
 $TDUUPDATE
  40
@@ -933,11 +933,11 @@ $PSTYLEMODE
   9
 $FINGERPRINTGUID
   2
-{998BC8F8-A474-42D4-BEC4-D9781CB81485}
+{F0EE2124-C321-44F8-84FE-52ECE9142FD0}
   9
 $VERSIONGUID
   2
-{CE271BC8-26EE-44B4-9016-7ABABEAC36B1}
+{5747587E-237F-4CF0-B9A1-5F62A9EEEDBE}
   9
 $EXTNAMES
 290
@@ -1327,9 +1327,9 @@ ISM
   0
 CLASS
   1
-ACDBPLACEHOLDER
+LAYOUT
   2
-AcDbPlaceHolder
+AcDbLayout
   3
 ObjectDBX Classes
  90
@@ -1343,9 +1343,9 @@ ObjectDBX Classes
   0
 CLASS
   1
-LAYOUT
+ACDBPLACEHOLDER
   2
-AcDbLayout
+AcDbPlaceHolder
   3
 ObjectDBX Classes
  90
@@ -1779,7 +1779,7 @@ AcDbSymbolTableRecord
 100
 AcDbLayerTableRecord
   2
-soffit
+NaturHeld Flex 50
  70
 0
  62
@@ -1827,7 +1827,7 @@ AcDbSymbolTableRecord
 100
 AcDbLayerTableRecord
   2
-podhled
+NaturHeld 140
  70
 0
  62
@@ -3255,11 +3255,11 @@ LINE
 100
 AcDbEntity
   8
-soffit
+NaturHeld Flex 50
 100
 AcDbLine
  10
-10649.0
+191.0
  20
 4816.132595791421
  30
@@ -3267,7 +3267,7 @@ AcDbLine
  11
 191.0
  21
-4816.132595791421
+4893.762440440691
  31
 0.0
   0
@@ -3279,17 +3279,17 @@ LINE
 100
 AcDbEntity
   8
-soffit
+NaturHeld Flex 50
 100
 AcDbLine
  10
 191.0
  20
-4816.132595791421
+4893.762440440691
  30
 0.0
  11
-191.0
+10649.0
  21
 4893.762440440691
  31
@@ -3303,11 +3303,11 @@ LINE
 100
 AcDbEntity
   8
-soffit
+NaturHeld Flex 50
 100
 AcDbLine
  10
-191.0
+10649.0
  20
 4893.762440440691
  30
@@ -3315,7 +3315,7 @@ AcDbLine
  11
 10649.0
  21
-4893.762440440691
+4816.132595791421
  31
 0.0
   0
@@ -3327,17 +3327,17 @@ LINE
 100
 AcDbEntity
   8
-soffit
+NaturHeld Flex 50
 100
 AcDbLine
  10
 10649.0
  20
-4893.762440440691
+4816.132595791421
  30
 0.0
  11
-10649.0
+191.0
  21
 4816.132595791421
  31
@@ -3543,7 +3543,7 @@ LINE
 100
 AcDbEntity
   8
-podhled
+NaturHeld 140
 100
 AcDbLine
  10
@@ -3567,7 +3567,7 @@ LINE
 100
 AcDbEntity
   8
-podhled
+NaturHeld 140
 100
 AcDbLine
  10
@@ -3591,7 +3591,7 @@ LINE
 100
 AcDbEntity
   8
-podhled
+NaturHeld 140
 100
 AcDbLine
  10
@@ -3615,7 +3615,7 @@ LINE
 100
 AcDbEntity
   8
-podhled
+NaturHeld 140
 100
 AcDbLine
  10
@@ -4729,7 +4729,7 @@ DictionaryVariables
 280
 0
   1
-1.4.4 @ 2026-09-19T06:24:26.550511+00:00
+1.4.4 @ 2026-09-19T06:42:22.840868+00:00
   0
 DICTIONARYVAR
   5
@@ -4741,7 +4741,7 @@ DictionaryVariables
 280
 0
   1
-1.4.4 @ 2026-09-19T06:24:26.555559+00:00
+1.4.4 @ 2026-09-19T06:42:22.846414+00:00
   0
 ENDSEC
   0
