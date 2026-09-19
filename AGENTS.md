@@ -16,6 +16,9 @@ These are **building assemblies**, not decorative meshes. Before coding solids, 
   `NaturHeld Flex 50`, `dreveny_rost`, `cd`, `zaves`, `paska`, `sdk`, `vata`, `krov`)
   over anonymous blobs. On šikminy: latě // krokvím (⊥ CD); CD ⊥ krokvím; hangers
   CD→krokve; pásky on rafter faces. Keep `krov` separate from `dreveny_rost`.
+  Soffit bay: GKF breaks to horizontal at X_FURN; horizontal CD + Nonius from
+  krokve; latový rost hangs from that CD and braces to the eave wall — not from
+  furniture or pozednice.
 
 ## Environment
 
