@@ -1,8 +1,9 @@
 """Obývák 1.02 — příčný řez (panel A), parametrické 2D profily v Plane.XZ.
 
 Šikminy: NaturHeld 140, latě // krokvím, Flex, SDK, CD ⊥ krokvím, závěsy,
-pásky (3D: 45° X; zde jen průřez). Soffit: latový rost hung from horizontal CD
-+ wall brace; GKF zlom @ X_FURN. 3D: `models/obyvak.py`.
+pásky (3D: 45° X; zde jen průřez). Soffit: continuous GKF (slope past X_FURN →
+vertical return on shared CD/UD → lid); latový rost hung from horizontal CD
++ wall brace. 3D: `models/obyvak.py`.
 
     python -m blueprints.export obyvak_section
 """
@@ -129,6 +130,7 @@ def build(params: ObyvakParams | None = None):
         )
     )
     parts.append(xz_face(g.soffit_sdk_lid_pts(), "sdk"))
+    parts.append(xz_face(g.soffit_sdk_vertical_pts(), "sdk"))
     for xc in g.horiz_cd_x_stations():
         parts.append(xz_face(g.horiz_cd_quad(xc), LABEL_CD))
         z0 = g.horiz_hanger_bot_z()
@@ -140,8 +142,9 @@ def build(params: ObyvakParams | None = None):
     parts.append(xz_face(g.horiz_break_ud_pts(), LABEL_CD))
     parts.append(xz_face(g.horiz_wall_ud_pts(), LABEL_CD))
     # Drop hanger through GKF (schematic) + wall angle under the lať.
-    if g.horiz_cd_x_stations():
-        xc = g.horiz_cd_x_stations()[0]
+    drop_xs = list(g.horiz_cd_x_stations()) + [g.x_sdk_break + p.sdk_t + p.cd_t * 0.5]
+    if drop_xs:
+        xc = drop_xs[0]
         parts.append(
             xz_rect(
                 xc - p.soffit_drop_w * 0.5,
@@ -206,6 +209,7 @@ def build(params: ObyvakParams | None = None):
             "z_false": g.z_false,
             "z_nabeh_bot": g.z_nabeh_bot,
             "z_gkf_horiz": g.z_gkf_horiz,
+            "x_sdk_break": g.x_sdk_break,
             "t_nh_face": g.t_nh_face,
             "l_hanger_right": g.l_hanger_right,
             "cd_count": len(g.sikmina_cd_quads()),

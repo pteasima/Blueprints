@@ -14,8 +14,9 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
 - Floor slab is the clear room only; perimeter walls own the strip below z=0.
 - Šikminy: NaturHeld 140 → latě // krokvím + Flex between → SDK → CD ⊥ krokvím
   → závěsy → MW plenum → krov + pásky. `krov` = roof timber; `dreveny_rost` = NH latě.
-- Soffit box: NH L over cabinets (20 mm gap); Flex + latový rost; GKF lid;
-  horizontal CD + Nonius from krokve; rost hung from CD and braced to the eave wall.
+- Soffit box: NH L over cabinets (20 mm gap); Flex + latový rost; continuous GKF
+  (slope past X_FURN → vertical return on shared horizontal CD/UD → lid);
+  Nonius from krokve; rost hung from CD and braced to the eave wall.
   Furniture and pozednice are not structural.
 
     python -m blueprints.export obyvak
@@ -553,6 +554,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     ]
     parts.append(_extrude_y(xz_face(soffit_nh, LABEL_NATURHELD), y_ceil0, y_ceil1, LABEL_NATURHELD))
 
+    # Soffit Flex: main box below Z_GKF + wedge under continued slope GKF.
     flex_box = [
         (g.x_nh_inner + gap, g.z_nabeh_bot + t + gap),
         (p.room_width - gap, g.z_nabeh_bot + t + gap),
@@ -560,19 +562,46 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         (g.x_nh_inner + gap, g.z_gkf_horiz - gap),
     ]
     flex_solid = _extrude_y(xz_face(flex_box, LABEL_FLEX), y_ceil0, y_ceil1, LABEL_FLEX)
-
-    # Horizontal GKF at the break (šikmina → vodorovně ke zdi), continuous with slope SDK.
-    lid_solid = None
-    if p.sdk_t > 2 * gap:
-        lid = [
+    t_sdk0 = g.t_nh_face + g.t_flex_pack
+    xb = g.x_sdk_break
+    z_br = g.z_slope_plane_offset(xb, t_sdk0)
+    z_fu = g.z_slope_plane_offset(g.x_furn, t_sdk0)
+    if xb - g.x_furn > 4 * gap and z_br > g.z_gkf_horiz + 4 * gap:
+        flex_wedge = [
             (g.x_furn + gap, g.z_gkf_horiz + gap),
+            (xb - gap, g.z_gkf_horiz + gap),
+            (xb - gap, z_br - gap),
+            (g.x_furn + gap, z_fu - gap),
+        ]
+        wedge_solid = _extrude_y(xz_face(flex_wedge, LABEL_FLEX), y_ceil0, y_ceil1, LABEL_FLEX)
+        try:
+            flex_solid = _paint(flex_solid.fuse(wedge_solid), LABEL_FLEX)
+        except Exception:
+            parts.append(wedge_solid)
+
+    # Continuous GKF: slope (already added) → vertical return → horizontal lid.
+    lid_solid = None
+    vert_solid = None
+    if p.sdk_t > 2 * gap:
+        z_bot = g.z_gkf_horiz + p.sdk_t
+        z_top = g.z_slope_plane_offset(xb, t_sdk0)
+        if z_top - z_bot > 2 * gap:
+            vert = [
+                (xb + gap, z_bot + gap),
+                (xb + p.sdk_t - gap, z_bot + gap),
+                (xb + p.sdk_t - gap, z_top - gap),
+                (xb + gap, z_top - gap),
+            ]
+            vert_solid = _extrude_y(xz_face(vert, "sdk"), y_ceil0, y_ceil1, "sdk")
+        lid = [
+            (xb + gap, g.z_gkf_horiz + gap),
             (p.room_width - gap, g.z_gkf_horiz + gap),
             (p.room_width - gap, g.z_gkf_horiz + p.sdk_t - gap),
-            (g.x_furn + gap, g.z_gkf_horiz + p.sdk_t - gap),
+            (xb + gap, g.z_gkf_horiz + p.sdk_t - gap),
         ]
         lid_solid = _extrude_y(xz_face(lid, "sdk"), y_ceil0, y_ceil1, "sdk")
 
-    # Horizontal CD on the lid + UD at break and eave wall.
+    # Horizontal CD on the lid + UD at break (attic face of vertical) and eave wall.
     horiz_cd_parts: list = []
     for xc in g.horiz_cd_x_stations():
         horiz_cd_parts.append(
@@ -656,7 +685,8 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
             z_drop1 = g.z_gkf_horiz + p.sdk_t  # underside of CD
             drop_h = z_drop1 - z_drop0
             if drop_h > gap:
-                drop_xs = list(cd_xs) + [g.x_furn + p.cd_t * 0.5]
+                break_ud_x = g.x_sdk_break + p.sdk_t + p.cd_t * 0.5
+                drop_xs = list(cd_xs) + [break_ud_x]
                 for xc in drop_xs:
                     drop_parts.append(
                         _box(
@@ -691,7 +721,9 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     else:
         parts.append(flex_solid)
 
-    # GKF lid last so drop hangers can pierce it (FACE_GAP mates).
+    # GKF lid + vertical return last so drop hangers can pierce the lid (FACE_GAP mates).
+    if vert_solid is not None:
+        parts.append(vert_solid)
     if lid_solid is not None:
         if drop_parts:
             lid_solid = _cut_away(lid_solid, drop_parts, "sdk")
