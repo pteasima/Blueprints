@@ -47,7 +47,7 @@
 </aside>
 <pre id="err"></pre>
 <canvas id="c"></canvas>
-<script src="viewer.iife.js?v=004a6c0db9"></script>
+<script src="viewer.iife.js?v=55db3d31c5"></script>
 <script>
 (function () {
   const errEl = document.getElementById("err");
@@ -63,13 +63,24 @@
   }
   document.title = id + " · Blueprints";
   const canvas = document.getElementById("c");
-  fetch("../models/" + encodeURIComponent(id) + ".glb")
-    .then(function (r) {
+  const scenesUrl = "../models/" + encodeURIComponent(id) + ".scenes.json";
+  Promise.all([
+    fetch("../models/" + encodeURIComponent(id) + ".glb").then(function (r) {
       if (!r.ok) throw new Error("GLB HTTP " + r.status);
       return r.arrayBuffer();
-    })
-    .then(function (glb) {
-      BlueprintsViewerBundle.mountViewer(canvas, glb);
+    }),
+    fetch(scenesUrl).then(function (r) {
+      if (r.status === 404) return [];
+      if (!r.ok) throw new Error("scenes HTTP " + r.status);
+      return r.json().then(function (data) {
+        return Array.isArray(data) ? data : [];
+      });
+    }).catch(function () {
+      return [];
+    }),
+  ])
+    .then(function (pair) {
+      BlueprintsViewerBundle.mountViewer(canvas, pair[0], { scenes: pair[1] });
     })
     .catch(function (e) {
       fail(String(e && e.message ? e.message : e));
