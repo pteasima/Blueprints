@@ -1,7 +1,7 @@
 /**
  * Solid vs Realistic material modes for the WebGL viewer.
  * SOLID_COLORS must stay in sync with SECTION_LAYERS fill RGB in export_utils.py.
- * Edge line colours live in edges.js (SOLID_LINE_COLORS ↔ SECTION_LAYERS line).
+ * Screen edge overlays use black fat lines (see edges.js), not section line colours.
  */
 import * as THREE from "three";
 

@@ -24,8 +24,10 @@ import {
 import {
   applyEdgeClipping,
   clearEdgeOverlays,
+  isEdgeOverlay,
   loadEdgesEnabled,
   saveEdgesEnabled,
+  setEdgeOverlayResolution,
   syncEdgeOverlays,
 } from "./edges.js";
 import { createDepthPeelRenderer } from "./depthPeel.js";
@@ -769,6 +771,12 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     return cuts.filter((c) => c.locked).map((c) => planeForCut(c));
   }
 
+  function edgeResolution() {
+    const size = new THREE.Vector2();
+    renderer.getDrawingBufferSize(size);
+    return { x: size.x, y: size.y };
+  }
+
   function refreshEdges() {
     if (!parts.size) return;
     if (!edgesEnabled) {
@@ -776,8 +784,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       return;
     }
     syncEdgeOverlays(parts, true, {
-      isDark: isDarkTheme,
       clippingPlanes: lockedClipPlanes(),
+      resolution: edgeResolution(),
     });
   }
 
@@ -1508,6 +1516,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       refreshOrthoAspect();
     }
     applySafeViewOffset(false);
+    const buf = edgeResolution();
+    setEdgeOverlayResolution(root, buf.x, buf.y);
   }
   resize();
   window.addEventListener("resize", resize);
@@ -1578,6 +1588,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
 
     root.traverse((obj) => {
       if (!obj.isMesh || !obj.visible) return;
+      if (isEdgeOverlay(obj)) return;
       const clipped = meshToClippedExportMesh(obj, planes);
       if (clipped) content.add(clipped);
     });

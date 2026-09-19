@@ -17,7 +17,7 @@
  * Literal material opacity — no crush, no SOLID_ALPHA&lt;1 stand-in.
  */
 import * as THREE from "three";
-import { setEdgeOverlaysVisible } from "./edges.js";
+import { isEdgeOverlay, setEdgeOverlaysVisible } from "./edges.js";
 
 /**
  * Everitt peels for CAD shell stacking. Sorted alpha remains the emergency
@@ -426,6 +426,7 @@ export function createDepthPeelRenderer(renderer) {
     if (!root) return { opaque, transparent };
     root.traverse((obj) => {
       if (!obj.isMesh || !obj.visible) return;
+      if (isEdgeOverlay(obj)) return;
       const mesh = /** @type {THREE.Mesh} */ (obj);
       const mats = Array.isArray(mesh.material)
         ? mesh.material

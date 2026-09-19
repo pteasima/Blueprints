@@ -1,33 +1,23 @@
 /**
  * CAD edge overlay (hard edges on top of faces) for the WebGL viewer.
- * SOLID_LINE_COLORS must stay in sync with SECTION_LAYERS line RGB in export_utils.py.
+ * Uses Three.js fat lines (LineSegments2) — native GL linewidth is ignored on
+ * most platforms, so LineBasicMaterial edges were effectively invisible.
  */
 import * as THREE from "three";
+import { LineSegments2 } from "three/addons/lines/LineSegments2.js";
+import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js";
+import { LineMaterial } from "three/addons/lines/LineMaterial.js";
 
 export const EDGE_OVERLAY_KEY = "blueprints.edgesEnabled";
 
 /** Dihedral threshold (°): hide coplanar triangulation edges, keep CAD creases. */
 export const EDGE_THRESHOLD_DEG = 20;
 
-/** @type {Record<string, [number, number, number]>} 0–255 RGB — diagrammatic line colours */
-export const SOLID_LINE_COLORS = {
-  podlaha: [120, 50, 0],
-  eps: [25, 120, 10],
-  zdivo: [130, 30, 15],
-  omitka: [170, 140, 50],
-  nabytek: [160, 80, 0],
-  pozednice: [110, 40, 0],
-  koruna: [110, 40, 0],
-  predstena: [0, 100, 150],
-  pouzdro: [140, 100, 30],
-  sdk: [120, 120, 130],
-  krov: [110, 40, 0],
-  vata: [0, 110, 75],
-  soffit: [15, 90, 5],
-  podhled: [15, 85, 245],
-  krytina: [235, 15, 15],
-  sklo: [40, 120, 180],
-};
+/** Screen-space stroke width (px). Native GL lines cannot do this. */
+export const EDGE_LINEWIDTH_PX = 3.5;
+
+/** Always black for contrast on Solid / Realistic faces. */
+export const EDGE_COLOR = 0x000000;
 
 /**
  * @returns {boolean}
@@ -63,16 +53,22 @@ export function isEdgeOverlay(obj) {
 }
 
 /**
- * @param {string} label
- * @param {boolean} isDark
- * @returns {THREE.Color}
+ * @param {THREE.BufferGeometry} meshGeometry
+ * @returns {LineSegmentsGeometry}
  */
-function lineColorForLabel(label, isDark) {
-  const rgb = SOLID_LINE_COLORS[label];
-  if (rgb) {
-    return new THREE.Color(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255);
-  }
-  return new THREE.Color(isDark ? 0xe8e8ed : 0x2c2c2e);
+function fatGeometryFromMesh(meshGeometry) {
+  const edges = new THREE.EdgesGeometry(meshGeometry, EDGE_THRESHOLD_DEG);
+  const pos = edges.getAttribute("position");
+  const arr =
+    pos && pos.array
+      ? pos.array instanceof Float32Array
+        ? pos.array
+        : new Float32Array(pos.array)
+      : new Float32Array(0);
+  edges.dispose();
+  const geom = new LineSegmentsGeometry();
+  if (arr.length >= 6) geom.setPositions(arr);
+  return geom;
 }
 
 /**
@@ -118,7 +114,26 @@ export function setEdgeOverlaysVisible(root, visible) {
 }
 
 /**
- * Apply clipping planes to edge line materials (and mesh materials are separate).
+ * Keep fat-line resolution in sync with the drawing buffer.
+ * @param {THREE.Object3D | null | undefined} root
+ * @param {number} width
+ * @param {number} height
+ */
+export function setEdgeOverlayResolution(root, width, height) {
+  if (!root) return;
+  const w = Math.max(1, width);
+  const h = Math.max(1, height);
+  root.traverse((obj) => {
+    if (!isEdgeOverlay(obj) || !obj.material) return;
+    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+    for (const m of mats) {
+      if (m?.resolution) m.resolution.set(w, h);
+    }
+  });
+}
+
+/**
+ * Apply clipping planes to edge line materials.
  * @param {THREE.Object3D | null | undefined} root
  * @param {THREE.Plane[]} planes
  */
@@ -138,27 +153,29 @@ export function applyEdgeClipping(root, planes) {
 }
 
 /**
- * Ensure each mesh has a matching EdgesGeometry child when enabled.
+ * Ensure each mesh has a matching fat-line edge child when enabled.
  * @param {Map<string, THREE.Object3D[]>} partsMap
  * @param {boolean} enabled
  * @param {{
- *   isDark?: boolean,
  *   clippingPlanes?: THREE.Plane[] | null,
+ *   resolution?: { x: number, y: number } | null,
  * }} [opts]
  */
 export function syncEdgeOverlays(partsMap, enabled, opts = {}) {
-  const isDark = Boolean(opts.isDark);
   const planes = opts.clippingPlanes ?? [];
+  const res = opts.resolution || null;
 
   for (const [label, meshes] of partsMap) {
     for (const mesh of meshes) {
       if (!mesh || !mesh.isMesh || !mesh.geometry) continue;
+      // Fat overlays are Mesh subclasses — never nest edges under an overlay.
+      if (isEdgeOverlay(mesh)) continue;
 
-      /** @type {THREE.LineSegments | null} */
+      /** @type {THREE.Object3D | null} */
       let overlay = null;
       for (const child of mesh.children) {
-        if (isEdgeOverlay(child) && child.isLineSegments) {
-          overlay = /** @type {THREE.LineSegments} */ (child);
+        if (isEdgeOverlay(child)) {
+          overlay = child;
           break;
         }
       }
@@ -168,11 +185,18 @@ export function syncEdgeOverlays(partsMap, enabled, opts = {}) {
         continue;
       }
 
-      const color = lineColorForLabel(label, isDark);
+      // Upgrade thin GL lines / stale overlays to fat LineSegments2.
+      if (overlay && !overlay.isLineSegments2) {
+        disposeOverlay(overlay);
+        overlay = null;
+      }
+
       if (!overlay) {
-        const geom = new THREE.EdgesGeometry(mesh.geometry, EDGE_THRESHOLD_DEG);
-        const mat = new THREE.LineBasicMaterial({
-          color,
+        const geom = fatGeometryFromMesh(mesh.geometry);
+        const mat = new LineMaterial({
+          color: EDGE_COLOR,
+          linewidth: EDGE_LINEWIDTH_PX,
+          worldUnits: false,
           toneMapped: false,
           depthTest: true,
           depthWrite: false,
@@ -180,11 +204,12 @@ export function syncEdgeOverlays(partsMap, enabled, opts = {}) {
           clippingPlanes: planes,
           clipIntersection: false,
         });
-        // Prefer edges slightly in front of coplanar faces.
         mat.polygonOffset = true;
         mat.polygonOffsetFactor = -1;
         mat.polygonOffsetUnits = -2;
-        overlay = new THREE.LineSegments(geom, mat);
+        if (res) mat.resolution.set(res.x, res.y);
+        overlay = new LineSegments2(geom, mat);
+        overlay.computeLineDistances();
         overlay.name = `${label}__edges`;
         overlay.userData.isEdgeOverlay = true;
         overlay.userData.edgeLabel = label;
@@ -194,10 +219,14 @@ export function syncEdgeOverlays(partsMap, enabled, opts = {}) {
         mesh.add(overlay);
       } else {
         const mat = overlay.material;
-        if (mat && mat.color) mat.color.copy(color);
         if (mat) {
+          if (mat.color) mat.color.setHex(EDGE_COLOR);
+          if (typeof mat.linewidth === "number") {
+            mat.linewidth = EDGE_LINEWIDTH_PX;
+          }
           mat.clippingPlanes = planes;
           mat.clipIntersection = false;
+          if (res && mat.resolution) mat.resolution.set(res.x, res.y);
           mat.needsUpdate = true;
         }
       }
