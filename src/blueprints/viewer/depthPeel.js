@@ -17,6 +17,7 @@
  * Literal material opacity — no crush, no SOLID_ALPHA&lt;1 stand-in.
  */
 import * as THREE from "three";
+import { isEdgeOverlay, renderEdgeOverlayPass, setEdgeOverlaysVisible } from "./edges.js";
 
 /**
  * Everitt peels for CAD shell stacking. Sorted alpha remains the emergency
@@ -425,6 +426,7 @@ export function createDepthPeelRenderer(renderer) {
     if (!root) return { opaque, transparent };
     root.traverse((obj) => {
       if (!obj.isMesh || !obj.visible) return;
+      if (isEdgeOverlay(obj)) return;
       const mesh = /** @type {THREE.Mesh} */ (obj);
       const mats = Array.isArray(mesh.material)
         ? mesh.material
@@ -571,6 +573,21 @@ export function createDepthPeelRenderer(renderer) {
   }
 
   /**
+   * Faces first (edges hidden), then the depth-aware edge overlay pass.
+   * Drawing fat lines in the same pass as coplanar CAD faces fails the depth
+   * test on most opaque views; the soffit/peel path already used this split.
+   * @param {THREE.Scene} scene
+   * @param {THREE.Camera} camera
+   * @param {THREE.Object3D | null} root
+   */
+  function renderFacesThenEdges(scene, camera, root) {
+    setEdgeOverlaysVisible(root, false);
+    renderer.setRenderTarget(null);
+    renderer.render(scene, camera);
+    renderEdgeOverlayPass(renderer, scene, camera, root);
+  }
+
+  /**
    * @param {THREE.Scene} scene
    * @param {THREE.Camera} camera
    * @param {THREE.Object3D | null} root
@@ -587,16 +604,14 @@ export function createDepthPeelRenderer(renderer) {
     // off from applyOpacityToMeshes — one standard sorted-alpha render.
     if (!wantPeel) {
       peelStageUniform.value = 0;
-      renderer.setRenderTarget(null);
-      renderer.render(scene, camera);
+      renderFacesThenEdges(scene, camera, root);
       return false;
     }
 
     const { opaque, transparent } = collectMeshes(root);
     if (!transparent.length) {
       peelStageUniform.value = 0;
-      renderer.setRenderTarget(null);
-      renderer.render(scene, camera);
+      renderFacesThenEdges(scene, camera, root);
       return false;
     }
 
@@ -750,14 +765,17 @@ export function createDepthPeelRenderer(renderer) {
       renderer.toneMapping = prevTone;
       renderer.setRenderTarget(null);
       renderer.autoClear = true;
-      renderer.render(scene, camera);
+      renderFacesThenEdges(scene, camera, root);
       renderer.autoClear = prevAutoClear;
       return false;
     }
 
     // --- Opaque colour (full-res) ---
+    // Edge overlays stay off during peel RTs (mesh shaders / parent fades).
+    // They are drawn once after composite via renderEdgeOverlayPass.
     setMeshesVisible(transparent, false);
     setMeshesVisible(opaque, true);
+    setEdgeOverlaysVisible(root, false);
     renderer.setRenderTarget(opaqueRT);
     renderer.setClearColor(0x000000, 0);
     renderer.clear();
@@ -801,6 +819,8 @@ export function createDepthPeelRenderer(renderer) {
 
     setMeshesVisible(opaque, false);
     setMeshesVisible(transparent, true);
+    // Transparent peels also use mesh shaders; keep edge lines off.
+    setEdgeOverlaysVisible(root, false);
 
     let anyLayerWritten = false;
 
@@ -940,6 +960,7 @@ export function createDepthPeelRenderer(renderer) {
       obj.visible = visible;
     }
     restoreOnBeforeRender();
+    setEdgeOverlaysVisible(root, true);
 
     peelStageUniform.value = 0;
     scene.background = prevBg;
@@ -949,6 +970,8 @@ export function createDepthPeelRenderer(renderer) {
     renderer.autoClear = true;
     renderer.render(compositeScene, compositeCamera);
 
+    // CAD edges (incl. faded parts) + gizmos on top of the composite.
+    renderEdgeOverlayPass(renderer, scene, camera, root);
     renderOverlays(scene, camera, root);
     renderer.autoClear = prevAutoClear;
     return true;

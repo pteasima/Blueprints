@@ -821,6 +821,7 @@ _VIEWER_HTML = """<!DOCTYPE html>
     <section class="sheet-section" id="section-materials">
       <h2 class="sheet-title">Materials</h2>
       <div id="mats" class="seg" role="group" aria-label="Materials"></div>
+      <div id="edges" class="seg" role="group" aria-label="Edges"></div>
     </section>
   </div>
 </aside>
