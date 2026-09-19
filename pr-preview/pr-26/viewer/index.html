@@ -42,13 +42,16 @@
     <section class="sheet-section" id="section-materials">
       <h2 class="sheet-title">Materials</h2>
       <div id="mats" class="seg" role="group" aria-label="Materials"></div>
-      <div id="edges" class="seg" role="group" aria-label="Edges"></div>
+      <div class="edges-block">
+        <span class="edges-label">Edges</span>
+        <div id="edges" class="seg" role="group" aria-label="Edges"></div>
+      </div>
     </section>
   </div>
 </aside>
 <pre id="err"></pre>
 <canvas id="c"></canvas>
-<script src="viewer.iife.js?v=f9f3aae593"></script>
+<script src="viewer.iife.js?v=7955d00ffb"></script>
 <script>
 (function () {
   const errEl = document.getElementById("err");
