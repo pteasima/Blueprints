@@ -21,10 +21,13 @@ World:
   zavětrovací pásky 40×2 @ 45° X across krokve (racking)    → `paska`
   (střešní latě / kontralatě above rafters stay in krytina build-up)
 
-Right eave soffit box: NH L, Flex cavity + latový rost (latě @625, Flex between),
-GKF lid at Z≈H_start, horizontal CD @625 above the lid, Nonius CD→krokve.
-Soffit rost hangs from that CD (drop hangers) and is braced to the eave wall
-(angle brackets). Furniture and pozednice are not structural.
+Right eave soffit box: NH L, Flex cavity + latový rost (latě @625, Flex between).
+GKF is continuous for acoustics and copies the wooden lattice edge: slope GKF
+runs to `x_nh_inner` (rost front), a vertical return with a slope-cut top seats
+on the lid (lid extends past the front CD for a proper L), and that front CD
+hangs the box at the lattice edge. Horizontal CD @625 + Nonius above the lid;
+rost drop-hung from that grid and braced to the eave wall. Furniture /
+pozednice are not structural.
 """
 
 from __future__ import annotations
@@ -163,6 +166,9 @@ class ObyvakLayout:
         # Vertical NH outer face flush with slope NH ∩ furniture plane; thickness into box.
         self.x_nh_outer = self.x_furn
         self.x_nh_inner = self.x_furn + self.t_nh_face
+        # GKF zlom flush with the wooden rost front: slope board meets a vertical
+        # return here, lid runs to the wall, break CD hangs the lattice at its edge.
+        self.x_sdk_break = self.x_nh_inner
 
         self.xl_eps = -p.wall_plaster - p.wall_mason - p.wall_eps
         self.xl_mas = -p.wall_plaster - p.wall_mason
@@ -220,6 +226,17 @@ class ObyvakLayout:
         """Vertical Z of a surface parallel to the šikmina, t_perp above the room face."""
         return self.z_ceil(x) + t_perp / self.cos
 
+    def z_slope_plane_offset(self, x: float, t_perp: float) -> float:
+        """Parallel offset on the right-slope plane, continued past X_FURN for GKF.
+
+        NH / Flex still break at the furniture line; only GKF follows this plane
+        into the soffit bay so the membrane can drop vertically onto the lid.
+        """
+        if x <= self.x_furn:
+            return self.z_slope_offset(x, t_perp)
+        z_room = self.z_gkf_horiz - (x - self.x_furn) * self.tan
+        return z_room + t_perp / self.cos
+
     def ceil_pts(self) -> list[tuple[float, float]]:
         p = self.p
         return [
@@ -232,11 +249,31 @@ class ObyvakLayout:
     def _sikmina_xs(self) -> list[float]:
         return [0.0, self.x_false, self.x_furn]
 
+    def _sikmina_sdk_xs(self) -> list[float]:
+        """Slope GKF runs past X_FURN to the vertical return at x_sdk_break."""
+        return [0.0, self.x_false, self.x_furn, self.x_sdk_break]
+
     def _slope_band_pts(self, t0: float, t1: float) -> list[tuple[float, float]]:
         """Closed XZ band on the šikminy (0→X_FURN) between two parallel offsets."""
         xs = self._sikmina_xs()
         inner = [(x, self.z_slope_offset(x, t0)) for x in xs]
         outer = [(x, self.z_slope_offset(x, t1)) for x in xs]
+        return inner + list(reversed(outer))
+
+    def _slope_sdk_band_pts(self, t0: float, t1: float) -> list[tuple[float, float]]:
+        """GKF band on the slope plane to x_sdk_break, with a mitered right-hand end.
+
+        The terminal edge is cut ⊥ to the board (along the attic normal) so it
+        seats on the vertical return's slope-cut top instead of ending as a
+        blunt vertical face.
+        """
+        xs = self._sikmina_sdk_xs()
+        inner = [(x, self.z_slope_plane_offset(x, t0)) for x in xs]
+        outer = [(x, self.z_slope_plane_offset(x, t1)) for x in xs]
+        # Right-slope attic normal (up-left): end face = thickness along that normal.
+        dt = t1 - t0
+        x_i, z_i = inner[-1]
+        outer[-1] = (x_i - dt * self.sin, z_i + dt * self.cos)
         return inner + list(reversed(outer))
 
     def sikmina_nh_pts(self) -> list[tuple[float, float]]:
@@ -249,9 +286,9 @@ class ObyvakLayout:
         return self._slope_band_pts(t0, t0 + self.t_flex_pack)
 
     def sikmina_sdk_pts(self) -> list[tuple[float, float]]:
-        """GKF/RF board on the slopes, outside the Flex pack."""
+        """GKF/RF on the slopes, continued past X_FURN to the vertical acoustic return."""
         t0 = self.t_nh_face + self.t_flex_pack
-        return self._slope_band_pts(t0, t0 + self.p.sdk_t)
+        return self._slope_sdk_band_pts(t0, t0 + self.p.sdk_t)
 
     def _sikmina_segments(self) -> list[tuple[tuple[float, float], tuple[float, float]]]:
         """Ceiling polyline segments on the šikminy (room face), left then right."""
@@ -430,25 +467,66 @@ class ObyvakLayout:
         ]
 
     def soffit_flex_pts(self) -> list[tuple[float, float]]:
-        """Flex 50 cavity inside the soffit box (behind the NH L, under the GKF lid)."""
+        """Flex cavity in the soffit box + small pack under slope GKF to the return.
+
+        Below Z_GKF: fills the NH L box. Between X_FURN and the vertical GKF
+        the top follows the slope-GKF underside (angled seat on the return).
+        """
         p = self.p
         t = self.t_nh_face
+        t0 = self.t_nh_face + self.t_flex_pack
+        xb = self.x_sdk_break
+        x_vert = xb - p.sdk_t  # room face of vertical GKF (= lid overhang start)
+        z_br = self.z_slope_plane_offset(xb, t0)
+        z_fu = self.z_slope_plane_offset(self.x_furn, t0)
+        z_vert_top = self.z_slope_plane_offset(x_vert, t0)
         return [
             (self.x_nh_inner, self.z_nabeh_bot + t),
             (p.room_width, self.z_nabeh_bot + t),
             (p.room_width, self.z_gkf_horiz),
+            (x_vert, self.z_gkf_horiz),
+            (x_vert, z_vert_top),
+            (self.x_furn, z_fu),
+            (self.x_furn, self.z_gkf_horiz),
             (self.x_nh_inner, self.z_gkf_horiz),
         ]
 
     def soffit_sdk_lid_pts(self) -> list[tuple[float, float]]:
-        """Horizontal GKF lid over the soffit box (fire / ceiling plane at Z≈H_START)."""
+        """Horizontal GKF lid — extends past the front CD to seat the vertical return.
+
+        Runs from the room face of the vertical GKF to the eave wall so the
+        corner is a proper L (lid beyond the CD), not an edge-only touch.
+        """
         p = self.p
         t = p.sdk_t
+        x0 = self.x_sdk_break - p.sdk_t
         return [
-            (self.x_furn, self.z_gkf_horiz),
+            (x0, self.z_gkf_horiz),
             (p.room_width, self.z_gkf_horiz),
             (p.room_width, self.z_gkf_horiz + t),
-            (self.x_furn, self.z_gkf_horiz + t),
+            (x0, self.z_gkf_horiz + t),
+        ]
+
+    def soffit_sdk_vertical_pts(self) -> list[tuple[float, float]]:
+        """Vertical GKF return at the rost front, seated on the lid overhang.
+
+        Attic face at `x_nh_inner` (CD front). Top is cut parallel to the slope
+        GKF underside so the two boards join on that angled face instead of
+        touching only at an edge. Bottom sits on the lid (which extends past CD).
+        """
+        p = self.p
+        t0 = self.t_nh_face + self.t_flex_pack
+        xb = self.x_sdk_break
+        x0 = xb - p.sdk_t
+        z_bot = self.z_gkf_horiz + p.sdk_t
+        # Angled top // slope GKF inner plane (miter seat).
+        z_top_attic = self.z_slope_plane_offset(xb, t0)
+        z_top_room = self.z_slope_plane_offset(x0, t0)
+        return [
+            (x0, z_bot),
+            (xb, z_bot),
+            (xb, z_top_attic),
+            (x0, z_top_room),
         ]
 
     def krov_pts(self) -> list[tuple[float, float]]:
@@ -476,15 +554,16 @@ class ObyvakLayout:
         """MW plenum + between-rafter fill: above CD / GKF lid, below rafters."""
         p = self.p
         t_below = self.t_soft_below_sdk + p.cd_t
-        z_pack = self.z_slope_offset(self.x_furn, t_below)
-        # Horizontal bay: GKF lid + CD, then tall Nonius plenum to the eave rafters.
+        # Follow the slope-GKF plane to the rost-front break, then step to the lid CD.
+        z_pack = self.z_slope_plane_offset(self.x_sdk_break, t_below)
         z_horiz_cd_top = self.z_gkf_horiz + p.sdk_t + p.cd_t
         return [
             (0.0, self.z_slope_offset(0.0, t_below)),
             (self.x_false, self.z_slope_offset(self.x_false, t_below)),
-            (self.x_furn, z_pack),
-            # Step down at the break: slope pack is thicker than the horizontal CD plane.
-            (self.x_furn, z_horiz_cd_top),
+            (self.x_furn, self.z_slope_offset(self.x_furn, t_below)),
+            (self.x_sdk_break, z_pack),
+            # Step down at the rost-front GKF zlom onto the horizontal CD plane.
+            (self.x_sdk_break, z_horiz_cd_top),
             (p.room_width, z_horiz_cd_top),
             (p.room_width, self.z_raf(p.room_width)),
             (self.x_ridge, self.z_raf(self.x_ridge)),
@@ -492,12 +571,17 @@ class ObyvakLayout:
         ]
 
     def horiz_cd_x_stations(self) -> list[float]:
-        """CD centres on the horizontal GKF lid (X_FURN → wall), spaced along X."""
+        """CD centres on the GKF lid: first flush with rost front, then @ spacing."""
         p = self.p
-        x0 = self.x_furn + p.cd_first_inset
-        # Leave room for the wall UD channel against the plaster.
+        # Front face of first CD at x_nh_inner (rost edge) → centre half a CD inboard.
+        front = self.x_sdk_break + p.cd_w * 0.5
         x1 = p.room_width - p.wall_plaster - p.cd_t - p.cd_first_inset
-        return self.y_stations(x0, x1, p.cd_spacing, 0.0)
+        out = [front]
+        x = front + p.cd_spacing
+        while x <= x1:
+            out.append(x)
+            x += p.cd_spacing
+        return out
 
     def horiz_cd_quad(self, x: float) -> list[tuple[float, float]]:
         """XZ section of one horizontal CD sitting on the GKF lid."""
@@ -521,12 +605,12 @@ class ObyvakLayout:
         return [(x0, z0), (x1, z0), (x1, z0 + p.cd_t), (x0, z0 + p.cd_t)]
 
     def horiz_break_ud_pts(self) -> list[tuple[float, float]]:
-        """UD at the šikmina→vodorovný break (X_FURN), same Z as horizontal CD."""
-        p = self.p
-        x0 = self.x_furn
-        x1 = self.x_furn + p.cd_t
-        z0 = self.z_gkf_horiz + p.sdk_t
-        return [(x0, z0), (x1, z0), (x1, z0 + p.cd_t), (x0, z0 + p.cd_t)]
+        """Deprecated alias: front soffit CD is the first horiz_cd station (rost-flush).
+
+        Kept for callers that still ask for a break profile; returns that front CD.
+        """
+        xs = self.horiz_cd_x_stations()
+        return self.horiz_cd_quad(xs[0]) if xs else []
 
     def horiz_hanger_top_z(self, x: float) -> float:
         """Underside of rafter at x (hang point for Nonius over the soffit bay)."""
