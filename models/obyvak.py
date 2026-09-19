@@ -12,6 +12,10 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
   on gable shells, three gable pocket doors (chodba on Y=0; spíž + zádveří on Y=L),
   and terrace glazing on the X=0 eave (opposite cabinets).
 - Floor slab is the clear room only; perimeter walls own the strip below z=0.
+- Šikminy: NaturHeld 140 → latě // krokvím + Flex between → SDK → CD ⊥ krokvím
+  → závěsy → MW plenum → krov + pásky. `krov` = roof timber; `dreveny_rost` = NH latě.
+- Soffit box: NH L over cabinets (20 mm gap); Flex cavity + latový rost (latě @625,
+  Flex between); GKF lid. Hanging TBD later — furniture is not structural.
 
     python -m blueprints.export obyvak
 
@@ -22,9 +26,19 @@ from __future__ import annotations
 
 from dataclasses import asdict
 
-from build123d import Align, Axis, Box, Color, Compound, Location, Plane, Solid
+from build123d import Align, Axis, Box, Color, Compound, Location, Plane, Rotation, Solid
 
-from obyvak_geom import ObyvakLayout, ObyvakParams, xz_face
+from obyvak_geom import (
+    LABEL_CD,
+    LABEL_FLEX,
+    LABEL_NATURHELD,
+    LABEL_PASKA,
+    LABEL_ROST,
+    LABEL_ZAVES,
+    ObyvakLayout,
+    ObyvakParams,
+    xz_face,
+)
 
 
 MODEL_NAME = "obyvak"
@@ -48,6 +62,48 @@ def _paint(shape, label: str):
     shape.label = label
     shape.color = _layer_color(label)
     return shape
+
+
+def _oriented_bar(
+    p0: tuple[float, float, float],
+    p1: tuple[float, float, float],
+    width: float,
+    thick: float,
+    label: str,
+    thin_dir: tuple[float, float, float] | None = None,
+):
+    """Thin rectangular bar from p0→p1 (centreline), width×thick cross-section.
+
+    If ``thin_dir`` is set, the ``thick`` axis follows that direction (projected
+    ⊥ to the bar), so straps sit flat on a face instead of rolling into it.
+    """
+    import math
+
+    dx, dy, dz = p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]
+    length = math.sqrt(dx * dx + dy * dy + dz * dz)
+    if length < 10.0 or width <= 0 or thick <= 0:
+        return None
+    mid = (0.5 * (p0[0] + p1[0]), 0.5 * (p0[1] + p1[1]), 0.5 * (p0[2] + p1[2]))
+    fx, fy, fz = dx / length, dy / length, dz / length
+    solid = Box(length, width, thick, align=(Align.CENTER, Align.CENTER, Align.CENTER))
+    if thin_dir is not None:
+        nx, ny, nz = thin_dir
+        # Project thin_dir onto the plane ⊥ bar axis.
+        dot = nx * fx + ny * fy + nz * fz
+        nx, ny, nz = nx - dot * fx, ny - dot * fy, nz - dot * fz
+        nl = math.sqrt(nx * nx + ny * ny + nz * nz)
+        if nl < 1e-9:
+            # Parallel to bar — fall back to yaw/pitch.
+            thin_dir = None
+        else:
+            nx, ny, nz = nx / nl, ny / nl, nz / nl
+            solid = Plane(origin=mid, x_dir=(fx, fy, fz), z_dir=(nx, ny, nz)) * solid
+            return _paint(solid, label)
+    yaw = math.degrees(math.atan2(fy, fx))
+    hyp = math.hypot(fx, fy)
+    pitch = math.degrees(math.atan2(fz, hyp))
+    solid = Location(mid) * Rotation(Z=yaw) * Rotation(Y=-pitch) * solid
+    return _paint(solid, label)
 
 
 def _box(x: float, y: float, z: float, dx: float, dy: float, dz: float, label: str):
@@ -81,6 +137,21 @@ def _shrink_band(pts: list[tuple[float, float]], top_n: int, gap: float) -> list
     out = []
     for i, (x, z) in enumerate(pts):
         out.append((x, z - gap if i < top_n else z + gap))
+    return out
+
+
+def _shrink_closed_band(pts: list[tuple[float, float]], gap: float) -> list[tuple[float, float]]:
+    """Inset a closed band whose first half is the inner/lower edge, second half the outer."""
+    n = len(pts)
+    if n < 4 or n % 2:
+        return pts
+    half = n // 2
+    out = []
+    for i, (x, z) in enumerate(pts):
+        if i < half:
+            out.append((x, z + gap))
+        else:
+            out.append((x, z - gap))
     return out
 
 
@@ -340,30 +411,207 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     parts.extend(_glass_panes(p, g, gap))
     parts.extend([krov, krytina, vata])
 
-    # Ceiling board under the ceiling line (below vata).
-    podhled_pts = [(x, z - gap) for x, z in g.podhled_pts()]
-    parts.append(
-        _extrude_y(xz_face(podhled_pts, "podhled"), g.y_furn0 + gap, g.y_furn1 - gap, "podhled")
-    )
+    # --- Šikminy: complete acoustic / steel stack (soffit block unchanged below). ---
+    # Y-span matches the clear bay between předstěny (they own the gable ends).
+    y_ceil0, y_ceil1 = g.y_furn0 + gap, g.y_furn1 - gap
 
-    # --- Cabinets + bulkhead: clear of right plaster and of the ceiling board. ---
+    def _add_band(pts: list[tuple[float, float]], label: str):
+        band = _shrink_closed_band(pts, gap)
+        return _extrude_y(xz_face(band, label), y_ceil0, y_ceil1, label)
+
+    # 1) NaturHeld 140 room face
+    parts.append(_add_band(g.sikmina_nh_pts(), LABEL_NATURHELD))
+
+    # 2) Latě // krokvím (spaced along Y) + Flex 50 between them
+    rost_parts: list = []
+    ribbon = g.sikmina_rost_ribbon_pts()
+    half_w = p.rost_w * 0.5
+    for yc in g.sikmina_rost_y_stations(y_ceil0, y_ceil1):
+        ya, yb = yc - half_w, yc + half_w
+        if yb <= ya:
+            continue
+        rost_parts.append(_extrude_y(xz_face(ribbon, LABEL_ROST), ya, yb, LABEL_ROST))
+    flex_slope = _add_band(g.sikmina_flex_pts(), LABEL_FLEX)
+    if rost_parts:
+        flex_slope = _cut_away(flex_slope, rost_parts, LABEL_FLEX)
+    parts.append(flex_slope)
+    parts.extend(rost_parts)
+
+    # 3) SDK
+    parts.append(_add_band(g.sikmina_sdk_pts(), "sdk"))
+
+    # 4) CD ⊥ krokvím (spaced along slope, run along Y)
+    cd_parts: list = []
+    for quad in g.sikmina_cd_quads():
+        cd_parts.append(_extrude_y(xz_face(quad, LABEL_CD), y_ceil0, y_ceil1, LABEL_CD))
+    parts.extend(cd_parts)
+
+    # 5) Závěsy CD→krokev at rafter × CD crossings
+    zaves_parts: list = []
+    rafter_ys = g.rafter_y_stations(y_ceil0, y_ceil1)
+    half_hang = p.hanger_w * 0.5
+    for st in g.sikmina_cd_stations():
+        xs = [pt[0] for pt in g.sikmina_cd_quad(*st)]
+        if min(xs) < 1.0 or max(xs) > g.x_furn - 1.0:
+            continue
+        hang_quad = g.hanger_quad(*st)
+        for yc in rafter_ys:
+            zaves_parts.append(
+                _extrude_y(
+                    xz_face(hang_quad, LABEL_ZAVES),
+                    yc - half_hang,
+                    yc + half_hang,
+                    LABEL_ZAVES,
+                )
+            )
+    parts.extend(zaves_parts)
+
+    # 6) Zavětrovací pásky: long thin 40×2 straps at 45°, crossing into X on each slope.
+    # ~6 per side (3 X pairs) along the 11 m room length — racking restraint along Y.
+    paska_parts: list = []
+    n_x_pairs = 3
+    y_span = y_ceil1 - y_ceil0
+
+    def _add_slope_bracing(
+        s0: float,
+        s1: float,
+        point_at,
+        n_room: tuple[float, float, float],
+    ) -> None:
+        """place 3 X pairs on one slope; s = distance along slope from eave."""
+        slope_len = s1 - s0
+        if slope_len < 200 or y_span < 200:
+            return
+        off = p.strap_t * 0.5 + 2.0 * gap  # clear of shrunk krov underside
+        nx, ny, nz = n_room
+        for i in range(n_x_pairs):
+            y_c = y_ceil0 + (i + 0.5) * y_span / n_x_pairs
+            half = min(y_span / (2 * n_x_pairs) * 0.9, slope_len * 0.42)
+            s_c = 0.5 * (s0 + s1)
+            # Diagonal A: +s with +y ; Diagonal B: +s with -y (45° in the face).
+            # Stack the two legs of each X by strap thickness so they mate, not fuse.
+            for k, sign in enumerate((+1.0, -1.0)):
+                sa, sb = s_c - half, s_c + half
+                ya, yb = y_c - sign * half, y_c + sign * half
+                if ya < y_ceil0 + 50 or yb > y_ceil1 - 50:
+                    continue
+                if sa < s0 + 50 or sb > s1 - 50:
+                    continue
+                layer = off + k * (p.strap_t + gap)
+                p0 = point_at(sa, ya)
+                p1 = point_at(sb, yb)
+                p0 = (p0[0] + nx * layer, p0[1] + ny * layer, p0[2] + nz * layer)
+                p1 = (p1[0] + nx * layer, p1[1] + ny * layer, p1[2] + nz * layer)
+                bar = _oriented_bar(
+                    p0, p1, p.strap_w, p.strap_t, LABEL_PASKA, thin_dir=(nx, ny, nz)
+                )
+                if bar is not None:
+                    paska_parts.append(bar)
+
+    # Left slope: eave→false ridge; room-normal points down-right into the room.
+    def _left_raf(s: float, y: float):
+        x = s * g.cos
+        return (x, y, g.z_raf(x))
+
+    s_left = g.x_false / g.cos
+    _add_slope_bracing(0.0, s_left, _left_raf, (g.sin, 0.0, -g.cos))
+
+    # Right slope: false ridge→furniture line; descending as x grows.
+    def _right_raf(s: float, y: float):
+        # s from false ridge toward eave/furniture along the slope.
+        x = g.x_false + s * g.cos
+        return (x, y, g.z_raf(x))
+
+    s_right = (g.x_furn - g.x_false) / g.cos
+    _add_slope_bracing(0.0, s_right, _right_raf, (-g.sin, 0.0, -g.cos))
+
+    # Guarantee FACE_GAP mates: shave float nicks against krov / hangers.
+    if paska_parts:
+        tools = [krov] + zaves_parts
+        paska_parts = [_cut_away(bar, tools, LABEL_PASKA) for bar in paska_parts]
+
+    parts.extend(paska_parts)
+
+    # MW plenum must not swallow CD / hangers / pásky.
+    if cd_parts or zaves_parts or paska_parts:
+        vata = _cut_away(vata, cd_parts + zaves_parts + paska_parts, "vata")
+        for i, part in enumerate(parts):
+            if part.label == "vata":
+                parts[i] = vata
+                break
+
+    # --- Soffit box: NH L, Flex cavity, latový rost (not solid boards), GKF lid. ---
+    t = g.t_nh_face
+    soffit_nh = [
+        (g.x_nh_outer + gap, g.z_nabeh_bot + gap),
+        (p.room_width - gap, g.z_nabeh_bot + gap),
+        (p.room_width - gap, g.z_nabeh_bot + t - gap),
+        (g.x_nh_inner - gap, g.z_nabeh_bot + t - gap),
+        (g.x_nh_inner - gap, g.z_gkf_horiz - gap),
+        (g.x_nh_outer + gap, g.z_gkf_horiz - gap),
+    ]
+    parts.append(_extrude_y(xz_face(soffit_nh, LABEL_NATURHELD), y_ceil0, y_ceil1, LABEL_NATURHELD))
+
+    flex_box = [
+        (g.x_nh_inner + gap, g.z_nabeh_bot + t + gap),
+        (p.room_width - gap, g.z_nabeh_bot + t + gap),
+        (p.room_width - gap, g.z_gkf_horiz - gap),
+        (g.x_nh_inner + gap, g.z_gkf_horiz - gap),
+    ]
+    flex_solid = _extrude_y(xz_face(flex_box, LABEL_FLEX), y_ceil0, y_ceil1, LABEL_FLEX)
+
+    lid = [
+        (g.x_furn + gap, g.z_gkf_horiz + gap),
+        (p.room_width - gap, g.z_gkf_horiz + gap),
+        (p.room_width - gap, g.z_gkf_horiz + p.sdk_t - gap),
+        (g.x_furn + gap, g.z_gkf_horiz + p.sdk_t - gap),
+    ]
+    if p.sdk_t > 2 * gap:
+        parts.append(_extrude_y(xz_face(lid, "sdk"), y_ceil0, y_ceil1, "sdk"))
+
+    # Latový rost in the soffit cavity (hanging TBD later): vertical face + underside.
+    fm = p.rost_d
+    fw = p.rost_w
+    half_w = fw * 0.5
+    z_wood0 = g.z_nabeh_bot + t + gap
+    z_wood1 = g.z_gkf_horiz - gap
+    face_h = z_wood1 - z_wood0
+    x_front = g.x_nh_inner + gap
+    x_wall = p.room_width - gap - 15.0
+    frame_parts: list = []
+    if face_h > fm + gap and x_wall - (x_front + fm) > gap:
+        for yc in g.sikmina_rost_y_stations(y_ceil0, y_ceil1):
+            ya, yb = yc - half_w, yc + half_w
+            if yb <= ya:
+                continue
+            # Vertical latě behind the NH face (spaced along Y).
+            frame_parts.append(
+                _box(x_front, ya, z_wood0, fm - gap, yb - ya, face_h - gap, LABEL_ROST)
+            )
+            # Underside latě spanning toward the wall (same Y stations).
+            frame_parts.append(
+                _box(
+                    x_front + fm,
+                    ya,
+                    z_wood0,
+                    max(x_wall - (x_front + fm), gap),
+                    yb - ya,
+                    fm - gap,
+                    LABEL_ROST,
+                )
+            )
+    if frame_parts:
+        flex_solid = _cut_away(flex_solid, frame_parts, LABEL_FLEX)
+        parts.append(flex_solid)
+        parts.extend(frame_parts)
+    else:
+        parts.append(flex_solid)
+
+    # --- Cabinets: clear of right plaster; top leaves furniture_gap under the box. ---
     furn_w = p.furniture_width - gap
     furn_y0, furn_y1 = g.y_furn0 + gap, g.y_furn1 - gap
     parts.append(
         _box(g.x_furn, furn_y0, 0.0, furn_w, furn_y1 - furn_y0, p.furniture_height, "nabytek")
-    )
-    soffit_z0 = g.z_nabeh_bot + gap
-    soffit_z1 = g.z_gkf_horiz - p.soffit_hint_t - 2 * gap
-    parts.append(
-        _box(
-            g.x_furn,
-            furn_y0,
-            soffit_z0,
-            furn_w,
-            furn_y1 - furn_y0,
-            max(soffit_z1 - soffit_z0, gap),
-            "soffit",
-        )
     )
 
     # --- Předstěny + pouzdra: inset from plaster and from each other. ---
@@ -421,10 +669,17 @@ def build_preview(params: ObyvakParams | None = None):
     kept = []
     for part in _parts(p, g):
         bb = part.bounding_box()
-        if part.label in {"krov", "krytina", "vata", "podhled"}:
+        if part.label in {"krov", "krytina", "vata", LABEL_CD, LABEL_ZAVES, LABEL_PASKA}:
             continue
-        if part.label in {"eps", "zdivo", "omitka", "pozednice", "nabytek", "soffit"}:
-            # Open the cabinet eave only; keep gables so pocket doors read correctly.
+        if part.label in {LABEL_ROST, LABEL_NATURHELD, LABEL_FLEX}:
+            # Keep cabinet soffit assembly; drop slope pack.
+            if bb.min.X >= g.x_furn - 1.0:
+                kept.append(part)
+            continue
+        if part.label == "sdk" and bb.min.Z >= g.h_start - 50.0:
+            # Slope / lid GKF is roof pack — drop; keep gable pocket SDK.
+            continue
+        if part.label in {"eps", "zdivo", "omitka", "pozednice", "nabytek"}:
             if bb.min.X >= p.room_width - 1.0:
                 continue
         kept.append(part)
@@ -444,10 +699,13 @@ def _labeled_slices(parts: list, plane: Plane):
 
 
 def build_section_slice(params: ObyvakParams | None = None):
-    """XZ slice at mid-length — same station as panel A, taken from the 3D solids."""
+    """XZ slice through a rost lať near mid-length (panel A station from 3D solids)."""
     p = params or ObyvakParams()
     g = ObyvakLayout(p)
-    y_mid = p.room_length / 2.0
+    # Discrete latě miss a pure mid-Y cut; snap to the nearest rost centreline.
+    y_target = p.room_length / 2.0
+    stations = g.sikmina_rost_y_stations(g.y_furn0, g.y_furn1)
+    y_mid = min(stations, key=lambda y: abs(y - y_target)) if stations else y_target
     faces = _labeled_slices(_parts(p, g), Plane.XZ.offset(-y_mid))
     moved = []
     for face in faces:
@@ -487,11 +745,11 @@ def scenes(params: ObyvakParams | None = None) -> list[dict]:
     p = params or ObyvakParams()
     g = ObyvakLayout(p)
     gap = FACE_GAP
-    # Match the soffit solid in `_parts` (cabinet bay, above furniture).
+    # Match the soffit box bay (cabinet run, NH L + Flex cavity).
     sx0, sx1 = g.x_furn, g.x_furn + p.furniture_width
     sy0, sy1 = g.y_furn0 + gap, g.y_furn1 - gap
     sz0 = g.z_nabeh_bot + gap
-    sz1 = g.z_gkf_horiz - p.soffit_hint_t - 2 * gap
+    sz1 = g.z_gkf_horiz - gap
     cx = 0.5 * (sx0 + sx1)
     cy = 0.5 * (sy0 + sy1)
     cz = 0.5 * (sz0 + sz1)
@@ -524,7 +782,7 @@ def scenes(params: ObyvakParams | None = None) -> list[dict]:
             },
             "projection": "ortho",
             "cuts": [{"normal": list(look), "t": 0.5}],
-            "opacity": {"soffit": 1, "podhled": 1, "omitka": 1},
+            "opacity": {LABEL_FLEX: 1, LABEL_NATURHELD: 1, LABEL_ROST: 1, "omitka": 1},
             "opacityDefault": 0.5,
         }
     ]

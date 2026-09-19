@@ -6,7 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "models"))
 
 from obyvak_elevation import build  # noqa: E402
-from obyvak_geom import ObyvakParams, build_layout  # noqa: E402
+from obyvak_geom import LABEL_NATURHELD, ObyvakParams, build_layout  # noqa: E402
 from obyvak_section import build as build_section  # noqa: E402
 from blueprints.export_utils import export_section  # noqa: E402
 
@@ -50,8 +50,9 @@ def test_elevation_geometry_is_horizontal_not_aframe():
     assert meta["derived"]["room_length"] == 11100.0
 
     labels = {c.label for c in shape.children}
-    for name in ("zdivo", "predstena", "podhled", "krov", "krytina", "sdk"):
+    for name in ("zdivo", "predstena", LABEL_NATURHELD, "krov", "krytina", "sdk"):
         assert name in labels
+    assert "podhled" not in labels
     assert "eps" not in labels
     assert "koruna" not in labels
     assert "pouzdro" in labels
@@ -81,13 +82,14 @@ def test_elevation_geometry_is_horizontal_not_aframe():
     assert p.predstena_kitchen == 190.0
     assert p.predstena_living == 450.0
 
-    soffit = _faces(shape, "podhled")
+    soffit = _faces(shape, LABEL_NATURHELD)
     assert len(soffit) == 1
     sbb = soffit[0].bounding_box()
     assert abs(sbb.min.Z - meta["derived"]["z_soffit"]) < 1e-6
     assert abs(sbb.size.X - p.room_length) < 1e-6
     # Horizontal strip, not an A-frame: constant Z thickness, full span.
-    assert abs(sbb.size.Z - p.soffit_hint_t) < 1e-6
+    g = build_layout(p)
+    assert abs(sbb.size.Z - g.t_nh_face) < 1e-6
 
 
 def test_obyvak_elevation_exports(tmp_path, monkeypatch):

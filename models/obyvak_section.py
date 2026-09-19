@@ -1,12 +1,9 @@
 """Obývák 1.02 — příčný řez (panel A), parametrické 2D profily v Plane.XZ.
 
-Hrubý řez místnosti: stěny, krov, podhled, soffit jako hmota (bez detailu skladeb).
-Bez textů a kót. 3D: `models/obyvak.py` (extrude podél Y).
+Šikminy: NaturHeld 140, latě // krokvím, Flex, SDK, CD ⊥ krokvím, závěsy,
+pásky (3D: 45° X; zde jen průřez). Soffit: latový rost. 3D: `models/obyvak.py`.
 
     python -m blueprints.export obyvak_section
-
-Zdroj: inputs/obyvak/make_obyvak_sheet_84d0.py (panel A).
-450 mm u skříní je hloubka u okapové stěny — neplést se štítovou předstěnou 450.
 """
 
 from __future__ import annotations
@@ -15,7 +12,13 @@ from dataclasses import asdict
 
 from build123d import Compound
 
-from obyvak_geom import (  # noqa: F401 — ObyvakParams/build_layout re-exported for tests
+from obyvak_geom import (  # noqa: F401
+    LABEL_CD,
+    LABEL_FLEX,
+    LABEL_NATURHELD,
+    LABEL_PASKA,
+    LABEL_ROST,
+    LABEL_ZAVES,
     ObyvakLayout,
     ObyvakParams,
     build_layout,
@@ -78,42 +81,69 @@ def build(params: ObyvakParams | None = None):
         )
     )
 
-    parts.append(
-        xz_face(
-            [
-                (0.0, g.h_start),
-                (g.x_false, g.z_false),
-                (g.x_furn, g.z_gkf_horiz),
-                (p.room_width, g.z_gkf_horiz),
-                (p.room_width, g.z_raf(p.room_width)),
-                (g.x_ridge, g.z_raf(g.x_ridge)),
-                (0.0, g.z_raf(0.0)),
-            ],
-            "vata",
-        )
-    )
+    parts.append(xz_face(g.vata_pts(), "vata"))
+
+    # Šikminy stack
+    parts.append(xz_face(g.sikmina_nh_pts(), LABEL_NATURHELD))
+    parts.append(xz_face(g.sikmina_flex_pts(), LABEL_FLEX))
+    # Lať // krokvím: continuous ribbon in this transverse cut (section through a lať).
+    parts.append(xz_face(g.sikmina_rost_ribbon_pts(), LABEL_ROST))
+    parts.append(xz_face(g.sikmina_sdk_pts(), "sdk"))
+    for quad in g.sikmina_cd_quads():
+        parts.append(xz_face(quad, LABEL_CD))
+    # Schematic hangers at a few CD stations; pásky = thin sections of 45° X straps.
+    for st in g.sikmina_cd_stations()[::2]:
+        xs = [pt[0] for pt in g.sikmina_cd_quad(*st)]
+        if min(xs) < 1.0 or max(xs) > g.x_furn - 1.0:
+            continue
+        parts.append(xz_face(g.hanger_quad(*st), LABEL_ZAVES))
+    for st in g.sikmina_cd_stations()[1::3]:
+        xs = [pt[0] for pt in g.sikmina_cd_quad(*st)]
+        if min(xs) < 1.0 or max(xs) > g.x_furn - 1.0:
+            continue
+        parts.append(xz_face(g.paska_quad(*st), LABEL_PASKA))
+
+    # Soffit box: NH L, Flex, latový rost (section through a lať), GKF lid.
+    parts.append(xz_face(g.soffit_nh_pts(), LABEL_NATURHELD))
+    parts.append(xz_face(g.soffit_flex_pts(), LABEL_FLEX))
+    fm = p.rost_d
+    z_wood0 = g.z_nabeh_bot + g.t_nh_face
     parts.append(
         xz_rect(
-            g.x_furn,
-            g.z_nabeh_bot,
-            p.furniture_width,
-            g.z_gkf_horiz - g.z_nabeh_bot,
-            "soffit",
+            g.x_nh_inner,
+            z_wood0,
+            fm,
+            max(8.0, g.z_gkf_horiz - z_wood0 - 4),
+            LABEL_ROST,
         )
     )
+    rail_w = max(8.0, p.room_width - 15.0 - (g.x_nh_inner + fm))
+    parts.append(xz_rect(g.x_nh_inner + fm, z_wood0, rail_w, fm, LABEL_ROST))
+    parts.append(xz_face(g.soffit_sdk_lid_pts(), "sdk"))
+    parts.append(
+        xz_polyline(
+            [
+                (g.x_furn, p.furniture_height),
+                (p.room_width, p.furniture_height),
+                (p.room_width, g.z_nabeh_bot),
+                (g.x_furn, g.z_nabeh_bot),
+            ],
+            LABEL_NATURHELD,
+        )
+    )
+
     parts.append(
         xz_polyline(
             [
                 (0.0, g.h_start),
                 (g.x_false, g.z_false),
                 (g.x_furn, g.z_gkf_horiz),
-                (p.room_width, g.z_gkf_horiz),
             ],
-            "podhled",
+            LABEL_NATURHELD,
         )
     )
-    parts.append(xz_line(g.x_furn, g.z_gkf_horiz, g.x_furn, g.z_nabeh_bot, "podhled"))
-    parts.append(xz_line(g.x_furn, g.z_nabeh_bot, p.room_width, g.z_nabeh_bot, "podhled"))
+    parts.append(xz_line(g.x_nh_outer, g.z_gkf_horiz, g.x_nh_outer, g.z_nabeh_bot, LABEL_NATURHELD))
+    parts.append(xz_line(g.x_nh_outer, g.z_nabeh_bot, p.room_width, g.z_nabeh_bot, LABEL_NATURHELD))
 
     shape = Compound(obj=parts, children=parts, label=MODEL_NAME)
     meta = {
@@ -126,6 +156,9 @@ def build(params: ObyvakParams | None = None):
             "z_false": g.z_false,
             "z_nabeh_bot": g.z_nabeh_bot,
             "z_gkf_horiz": g.z_gkf_horiz,
+            "t_nh_face": g.t_nh_face,
+            "l_hanger_right": g.l_hanger_right,
+            "cd_count": len(g.sikmina_cd_quads()),
         },
     }
     return shape, meta

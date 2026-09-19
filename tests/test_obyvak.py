@@ -5,7 +5,13 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "models"))
 
 from obyvak import FACE_GAP, build, build_elevation_slice, build_preview, build_section_slice, scenes  # noqa: E402
-from obyvak_geom import ObyvakParams, build_layout  # noqa: E402
+from obyvak_geom import (  # noqa: E402
+    LABEL_FLEX,
+    LABEL_NATURHELD,
+    LABEL_ROST,
+    ObyvakParams,
+    build_layout,
+)
 from obyvak_section import build as build_section  # noqa: E402
 from blueprints.export_utils import export_shape  # noqa: E402
 from blueprints.scenes import cad_mm_to_gltf_m, write_scenes_json  # noqa: E402
@@ -26,6 +32,81 @@ def test_layout_ceiling_and_gable():
     assert g.z_gable_top(g.x_ridge) > g.z_soffit
     assert g.y_furn0 == p.predstena_kitchen
     assert g.y_furn1 == p.room_length - p.predstena_living
+    # Acoustic face + Flex pack + GKF match the contractor soft stack below CD.
+    assert abs(g.t_nh_face - (p.finish_t + p.basic_t + p.naturheld_t)) < 1e-9
+    assert abs(g.t_soft_below_sdk - 117.5) < 1e-9
+    assert abs(g.t_left - 244.5) < 1e-9
+    assert g.l_hanger_right > g.l_hanger_left
+    assert abs(g.z_nabeh_bot - (p.furniture_height + p.furniture_gap)) < 1e-9
+    assert g.x_nh_inner == g.x_furn + g.t_nh_face
+
+
+def test_sikminy_and_soffit_stack_in_3d():
+    """Šikminy NH / rost // krokvím / CD ⊥ / Flex and soffit box."""
+    p = ObyvakParams()
+    g = build_layout(p)
+    shape, _ = build(p)
+    nh = _labeled(shape, LABEL_NATURHELD)
+    flex = _labeled(shape, LABEL_FLEX)
+    rost = _labeled(shape, LABEL_ROST)
+    cds = _labeled(shape, "cd")
+    zaves = _labeled(shape, "zaves")
+    pasky = _labeled(shape, "paska")
+    assert len(nh) >= 2  # slope NH + soffit L
+    assert len(flex) >= 2  # slope Flex + box Flex
+    assert len(rost) >= 8  # slope latě (along Y) + soffit frame
+    assert len(cds) >= 5  # CD ⊥ krokvím along slope
+    assert len(zaves) >= 10
+    # ~6 straps/side (3 X pairs × 2 diagonals) along the 11 m length.
+    assert len(pasky) >= 10
+    assert len(pasky) <= 14
+    # Pásky are long 45° diagonals (span both X and Y), not short along-rafter clips.
+    for strap in pasky:
+        bb = strap.bounding_box()
+        assert bb.size.Y > 800.0
+        assert bb.size.X > 400.0
+    # Room-facing NH on slopes sits at H_START.
+    slope_nh = min(nh, key=lambda s: s.bounding_box().min.X)
+    assert abs(slope_nh.bounding_box().min.Z - (g.h_start + FACE_GAP)) < 2.0
+    # Soffit box underside clears the cabinets by furniture_gap.
+    box_nh = max(nh, key=lambda s: s.bounding_box().min.X)
+    assert abs(box_nh.bounding_box().min.Z - (g.z_nabeh_bot + FACE_GAP)) < 2.0
+    assert box_nh.bounding_box().min.Z >= p.furniture_height + p.furniture_gap - 1.0
+    furn = _labeled(shape, "nabytek")[0].bounding_box()
+    assert box_nh.bounding_box().min.Z >= furn.max.Z + p.furniture_gap - 2.0
+    # Ceiling GKF lid over the box.
+    lids = [
+        c
+        for c in _labeled(shape, "sdk")
+        if c.bounding_box().min.Z >= g.z_gkf_horiz - 1.0
+        and c.bounding_box().min.X >= g.x_furn - 1.0
+    ]
+    assert len(lids) == 1
+    assert abs(lids[0].bounding_box().size.Z - (p.sdk_t - 2 * FACE_GAP)) < 1e-3
+    # krov is roof timber only — soffit-frame latě use dreveny_rost.
+    for part in _labeled(shape, "krov"):
+        bb = part.bounding_box()
+        assert not (bb.min.X >= g.x_furn - 1.0 and bb.max.Z <= g.z_gkf_horiz + 1.0)
+    # Slope latě are // krokvím: thin in Y, long along the slope (X).
+    slope_rost = [
+        c
+        for c in rost
+        if c.bounding_box().min.X < 100.0 and c.bounding_box().max.X <= g.x_furn + 1.0
+    ]
+    assert len(slope_rost) >= 5
+    assert all(c.bounding_box().size.Y < p.rost_spacing for c in slope_rost)
+    assert all(c.bounding_box().size.X > 500.0 for c in slope_rost)
+    # Soffit rost is a lattice (latě @625), not full-depth solid boards.
+    soffit_rost = [
+        c
+        for c in rost
+        if c.bounding_box().min.X >= g.x_nh_inner - 1.0
+    ]
+    assert len(soffit_rost) >= 10
+    assert all(c.bounding_box().size.Y < p.rost_spacing for c in soffit_rost)
+    # CD are ⊥ krokvím: thin along slope (X), long in Y.
+    assert all(c.bounding_box().size.X < p.cd_spacing for c in cds)
+    assert all(c.bounding_box().size.Y > 1000.0 for c in cds)
 
 
 def test_soffit_scene_recipe():
@@ -36,7 +117,12 @@ def test_soffit_scene_recipe():
     assert s["label"] == "Soffit"
     assert s["projection"] == "ortho"
     assert s["opacityDefault"] == 0.5
-    assert s["opacity"] == {"soffit": 1, "podhled": 1, "omitka": 1}
+    assert s["opacity"] == {
+        LABEL_FLEX: 1,
+        LABEL_NATURHELD: 1,
+        LABEL_ROST: 1,
+        "omitka": 1,
+    }
     assert len(s["cuts"]) == 1
     assert s["cuts"][0]["t"] == 0.5
     # glTF −Z ← CAD +Y (length); half the room length removed from kitchen side.
@@ -88,15 +174,21 @@ def test_3d_matches_section_and_elevation_masses():
         "krytina",
         "vata",
         "nabytek",
-        "soffit",
+        LABEL_FLEX,
         "predstena",
         "pouzdro",
         "sdk",
-        "podhled",
+        LABEL_NATURHELD,
         "sklo",
+        LABEL_ROST,
+        "cd",
+        "zaves",
+        "paska",
     ):
         assert name in labels
     assert "koruna" not in labels
+    assert "podhled" not in labels
+    assert "soffit" not in labels
 
     kitchen, living = sorted(_labeled(shape, "predstena"), key=lambda s: s.bounding_box().min.Y)
     kbb, lbb = kitchen.bounding_box(), living.bounding_box()
@@ -130,7 +222,15 @@ def test_3d_matches_section_and_elevation_masses():
 
     pouzdra = sorted(_labeled(shape, "pouzdro"), key=lambda s: (s.bounding_box().min.Y, s.bounding_box().min.X))
     assert len(pouzdra) == len(p.pocket_doors)
-    sdk_faces = sorted(_labeled(shape, "sdk"), key=lambda s: s.bounding_box().min.Y)
+    # Gable pocket SDK faces only (slope/lid GKF sit much higher).
+    sdk_faces = sorted(
+        [
+            c
+            for c in _labeled(shape, "sdk")
+            if c.bounding_box().max.Z <= p.pocket_door_h + 1.0
+        ],
+        key=lambda s: s.bounding_box().min.Y,
+    )
     assert len(sdk_faces) == 2
     face_t = max(p.sdk_t, 12.5)
     for face in sdk_faces:
@@ -270,7 +370,10 @@ def test_obyvak_3d_exports(tmp_path, monkeypatch):
     sec, _ = build_section_slice()
     sec_labels = {c.label for c in sec.children}
     assert "nabytek" in sec_labels
-    assert "soffit" in sec_labels
+    assert "soffit" not in sec_labels
+    assert LABEL_FLEX in sec_labels
+    assert LABEL_NATURHELD in sec_labels
+    assert LABEL_ROST in sec_labels
     assert "krov" in sec_labels
     assert "predstena" not in sec_labels
 

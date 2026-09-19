@@ -7,6 +7,22 @@ World:
   section X = transverse, elevation X = longitudinal (world Y).
 3D (`models/obyvak.py`) extrudes section profiles along Y and gable profiles along Y
 (thickness) / X (span).
+
+Šikminy stack (interior → attic; thicknesses ⊥ to the face unless noted):
+
+  StoSilent Top Finish + Top Basic + NaturHeld 140 (40)     → `NaturHeld 140`
+  dřevěný rošt: latě KVH 60×40 @ ~625 // krokvím (⊥ CD)   → `dreveny_rost`
+  NaturHeld Flex 50 between those latě (60)                 → `NaturHeld Flex 50`
+  vapour foil (~1) + GKF/RF 12.5                            → `sdk`
+  CD Rigips 60×27 @ ~625 ⊥ krokvím                          → `cd`
+  Nonius / přímý závěs CD→krokve                            → `zaves`
+  Domo Plus plenum                                          → `vata`
+  krokve 100/160 @ ~875 + MW between                        → `krov` / `vata`
+  zavětrovací pásky 40×2 @ 45° X across krokve (racking)    → `paska`
+  (střešní latě / kontralatě above rafters stay in krytina build-up)
+
+Right eave soffit box: NH L, Flex cavity + latový rost (latě @625, Flex between),
+GKF lid, 20 mm gap above cabinets. Hanging TBD later.
 """
 
 from __future__ import annotations
@@ -15,6 +31,14 @@ import math
 from dataclasses import dataclass
 
 from build123d import Edge, Face, Vector, Wire
+
+# CAD / viewer part labels (human-readable where the contractor sheet names products).
+LABEL_NATURHELD = "NaturHeld 140"
+LABEL_FLEX = "NaturHeld Flex 50"
+LABEL_ROST = "dreveny_rost"
+LABEL_CD = "cd"
+LABEL_ZAVES = "zaves"
+LABEL_PASKA = "paska"
 
 
 @dataclass(frozen=True)
@@ -75,7 +99,22 @@ class ObyvakParams:
         (7950.0, 2500.0),  # HS portal · obývák / zádveří
     )
     glass_t: float = 20.0
-    soffit_hint_t: float = 30.0
+    # Interior acoustic rost (latě holding NaturHeld) — // krokvím, ⊥ CD.
+    rost_w: float = 60.0
+    rost_d: float = 40.0
+    rost_spacing: float = 625.0
+    rost_first_inset: float = 90.0
+    # CD grid holding SDK — ⊥ krokvím.
+    cd_w: float = 60.0
+    cd_spacing: float = 625.0
+    cd_first_inset: float = 90.0
+    # Rafters (spacing along Y) + bracing straps on underside.
+    rafter_w: float = 100.0
+    rafter_spacing: float = 875.0
+    rafter_first_inset: float = 200.0
+    strap_w: float = 40.0
+    strap_t: float = 2.0
+    hanger_w: float = 20.0
     ridge_runout: float = 200.0
 
 
@@ -89,10 +128,16 @@ class ObyvakLayout:
         self.cos = math.cos(th)
         self.tan = math.tan(th)
 
-        self.t_soft_below_sdk = (
-            p.finish_t + p.basic_t + p.naturheld_t + p.flex_t + p.foil_t + p.sdk_t
-        )
+        # Room-facing acoustic face (Finish + Basic + NaturHeld 140).
+        self.t_nh_face = p.finish_t + p.basic_t + p.naturheld_t
+        # Flex + foil + GKF behind the NH face (still below the CD grid).
+        self.t_flex_pack = p.flex_t + p.foil_t
+        self.t_soft_below_sdk = self.t_nh_face + self.t_flex_pack + p.sdk_t
         self.t_left = p.plenum_t + p.cd_t + self.t_soft_below_sdk
+        # Right-side hangers are longer: slope continues to X_FURN then drops.
+        self.t_extra = p.furniture_width * self.sin
+        self.l_hanger_left = p.plenum_t
+        self.l_hanger_right = p.plenum_t + self.t_extra
         self.t_above_raf = (
             p.vent_t + p.dhv_t + p.counter_batten_t + p.batten_t + p.tile_t
         )
@@ -107,6 +152,9 @@ class ObyvakLayout:
         self.z_nabeh_bot = p.furniture_height + p.furniture_gap
         self.z_soffit = self.h_start + self.x_ridge * self.tan
         self.z_raf_top = self.z_raf_inner_ridge + p.rafter_t / self.cos
+        # Vertical NH outer face flush with slope NH ∩ furniture plane; thickness into box.
+        self.x_nh_outer = self.x_furn
+        self.x_nh_inner = self.x_furn + self.t_nh_face
 
         self.xl_eps = -p.wall_plaster - p.wall_mason - p.wall_eps
         self.xl_mas = -p.wall_plaster - p.wall_mason
@@ -160,6 +208,10 @@ class ObyvakLayout:
         t = (x - self.x_false) / (self.x_furn - self.x_false)
         return self.z_false + t * (self.z_gkf_horiz - self.z_false)
 
+    def z_slope_offset(self, x: float, t_perp: float) -> float:
+        """Vertical Z of a surface parallel to the šikmina, t_perp above the room face."""
+        return self.z_ceil(x) + t_perp / self.cos
+
     def ceil_pts(self) -> list[tuple[float, float]]:
         p = self.p
         return [
@@ -167,6 +219,228 @@ class ObyvakLayout:
             (self.x_false, self.z_false),
             (self.x_furn, self.z_gkf_horiz),
             (p.room_width, self.z_gkf_horiz),
+        ]
+
+    def _sikmina_xs(self) -> list[float]:
+        return [0.0, self.x_false, self.x_furn]
+
+    def _slope_band_pts(self, t0: float, t1: float) -> list[tuple[float, float]]:
+        """Closed XZ band on the šikminy (0→X_FURN) between two parallel offsets."""
+        xs = self._sikmina_xs()
+        inner = [(x, self.z_slope_offset(x, t0)) for x in xs]
+        outer = [(x, self.z_slope_offset(x, t1)) for x in xs]
+        return inner + list(reversed(outer))
+
+    def sikmina_nh_pts(self) -> list[tuple[float, float]]:
+        """NaturHeld + StoSilent face on the slopes (perp thickness t_nh_face)."""
+        return self._slope_band_pts(0.0, self.t_nh_face)
+
+    def sikmina_flex_pts(self) -> list[tuple[float, float]]:
+        """Flex 50 (+ foil) zone behind NH on the slopes — latě sit inside this band."""
+        t0 = self.t_nh_face
+        return self._slope_band_pts(t0, t0 + self.t_flex_pack)
+
+    def sikmina_sdk_pts(self) -> list[tuple[float, float]]:
+        """GKF/RF board on the slopes, outside the Flex pack."""
+        t0 = self.t_nh_face + self.t_flex_pack
+        return self._slope_band_pts(t0, t0 + self.p.sdk_t)
+
+    def _sikmina_segments(self) -> list[tuple[tuple[float, float], tuple[float, float]]]:
+        """Ceiling polyline segments on the šikminy (room face), left then right."""
+        a = (0.0, self.h_start)
+        b = (self.x_false, self.z_false)
+        c = (self.x_furn, self.z_gkf_horiz)
+        return [(a, b), (b, c)]
+
+    def sikmina_cd_band_pts(self) -> list[tuple[float, float]]:
+        """CD grid zone thickness behind SDK."""
+        t0 = self.t_nh_face + self.t_flex_pack + self.p.sdk_t
+        return self._slope_band_pts(t0, t0 + self.p.cd_t)
+
+    def _path_stations(
+        self, spacing: float, first_inset: float
+    ) -> list[tuple[float, float, float, float, float, float]]:
+        """Stations along the šikmina room face: (x, z, tx, tz, nx, nz)."""
+        stations: list[tuple[float, float, float, float, float, float]] = []
+        cursor = first_inset
+        for (x0, z0), (x1, z1) in self._sikmina_segments():
+            dx, dz = x1 - x0, z1 - z0
+            length = math.hypot(dx, dz)
+            if length < 1.0:
+                continue
+            tx, tz = dx / length, dz / length
+            nx, nz = -tz, tx
+            if nz < 0:
+                nx, nz = -nx, -nz
+            while cursor <= length - spacing * 0.35:
+                s = cursor
+                stations.append((x0 + tx * s, z0 + tz * s, tx, tz, nx, nz))
+                cursor += spacing
+            cursor -= length
+        return stations
+
+    def sikmina_cd_stations(
+        self,
+    ) -> list[tuple[float, float, float, float, float, float]]:
+        """CD centers along the šikmina (⊥ krokvím — spaced along the slope)."""
+        p = self.p
+        return self._path_stations(p.cd_spacing, p.cd_first_inset)
+
+    def sikmina_cd_quad(
+        self,
+        x: float,
+        z: float,
+        tx: float,
+        tz: float,
+        nx: float,
+        nz: float,
+    ) -> list[tuple[float, float]]:
+        """XZ rectangle for one CD profile behind SDK."""
+        p = self.p
+        t0 = self.t_nh_face + self.t_flex_pack + p.sdk_t
+        cx = x + nx * t0
+        cz = z + nz * t0
+        hw = p.cd_w * 0.5
+        d = p.cd_t
+        return [
+            (cx - tx * hw, cz - tz * hw),
+            (cx + tx * hw, cz + tz * hw),
+            (cx + tx * hw + nx * d, cz + tz * hw + nz * d),
+            (cx - tx * hw + nx * d, cz - tz * hw + nz * d),
+        ]
+
+    def sikmina_cd_quads(self) -> list[list[tuple[float, float]]]:
+        """CD profiles fully inside the clear šikmina span."""
+        quads = []
+        x_lo, x_hi = 1.0, self.x_furn - 1.0
+        for st in self.sikmina_cd_stations():
+            quad = self.sikmina_cd_quad(*st)
+            xs = [pt[0] for pt in quad]
+            if min(xs) < x_lo or max(xs) > x_hi:
+                continue
+            quads.append(quad)
+        return quads
+
+    def sikmina_rost_ribbon_pts(self) -> list[tuple[float, float]]:
+        """XZ ribbon of one lať // krokvím (full šikmina run in the Flex zone).
+
+        Latě run eave→ridge (parallel to rafters); spacing is along Y, so a
+        transverse section that cuts a lať shows this continuous ribbon.
+        """
+        return self._slope_band_pts(self.t_nh_face, self.t_nh_face + self.p.rost_d)
+
+    def y_stations(
+        self, y0: float, y1: float, spacing: float, first_inset: float
+    ) -> list[float]:
+        """Centers along Y between y0 and y1."""
+        out: list[float] = []
+        y = y0 + first_inset
+        while y <= y1 - first_inset:
+            out.append(y)
+            y += spacing
+        return out
+
+    def sikmina_rost_y_stations(self, y0: float, y1: float) -> list[float]:
+        p = self.p
+        return self.y_stations(y0, y1, p.rost_spacing, p.rost_first_inset)
+
+    def rafter_y_stations(self, y0: float, y1: float) -> list[float]:
+        p = self.p
+        return self.y_stations(y0, y1, p.rafter_spacing, p.rafter_first_inset)
+
+    def hanger_quad(
+        self,
+        x: float,
+        z: float,
+        tx: float,
+        tz: float,
+        nx: float,
+        nz: float,
+    ) -> list[tuple[float, float]]:
+        """Thin steel hanger prism from CD outer face up toward the rafter."""
+        p = self.p
+        t_cd_outer = self.t_nh_face + self.t_flex_pack + p.sdk_t + p.cd_t
+        # Perp length of plenum / hanger to rafter underside at this x.
+        z_cd = self.z_slope_offset(x, t_cd_outer)
+        z_raf = self.z_raf(x)
+        hang = max((z_raf - z_cd) * self.cos - 2.0, 20.0)
+        cx = x + nx * t_cd_outer
+        cz = z + nz * t_cd_outer
+        hw = p.hanger_w * 0.5
+        return [
+            (cx - tx * hw, cz - tz * hw),
+            (cx + tx * hw, cz + tz * hw),
+            (cx + tx * hw + nx * hang, cz + tz * hw + nz * hang),
+            (cx - tx * hw + nx * hang, cz - tz * hw + nz * hang),
+        ]
+
+    def paska_quad(
+        self,
+        x: float,
+        z: float,
+        tx: float,
+        tz: float,
+        nx: float,
+        nz: float,
+    ) -> list[tuple[float, float]]:
+        """Schematic 40×2 strap cross-section on the rafter underside (2D only).
+
+        3D pásky are long 45° diagonals crossing into X along the room length;
+        a transverse cut only sees a thin section of those straps.
+        """
+        p = self.p
+        z_raf = self.z_raf(x)
+        t_raf = (z_raf - self.z_ceil(x)) * self.cos
+        cx = x + nx * (t_raf - p.strap_t)
+        cz = z + nz * (t_raf - p.strap_t)
+        hw = p.strap_w * 0.5
+        d = p.strap_t
+        return [
+            (cx - tx * hw, cz - tz * hw),
+            (cx + tx * hw, cz + tz * hw),
+            (cx + tx * hw + nx * d, cz + tz * hw + nz * d),
+            (cx - tx * hw + nx * d, cz - tz * hw + nz * d),
+        ]
+
+    def soffit_nh_pts(self) -> list[tuple[float, float]]:
+        """L-shaped NH+StoSilent on the soffit box: vertical face + underside.
+
+        Outer vertical face flush with the slope NH at X_FURN; thickness goes
+        into the box (toward the wall) so the junction has no step into the room.
+        """
+        p = self.p
+        t = self.t_nh_face
+        z0 = self.z_nabeh_bot
+        z1 = self.z_gkf_horiz
+        return [
+            (self.x_nh_outer, z0),
+            (p.room_width, z0),
+            (p.room_width, z0 + t),
+            (self.x_nh_inner, z0 + t),
+            (self.x_nh_inner, z1),
+            (self.x_nh_outer, z1),
+        ]
+
+    def soffit_flex_pts(self) -> list[tuple[float, float]]:
+        """Flex 50 cavity inside the soffit box (behind the NH L, under the GKF lid)."""
+        p = self.p
+        t = self.t_nh_face
+        return [
+            (self.x_nh_inner, self.z_nabeh_bot + t),
+            (p.room_width, self.z_nabeh_bot + t),
+            (p.room_width, self.z_gkf_horiz),
+            (self.x_nh_inner, self.z_gkf_horiz),
+        ]
+
+    def soffit_sdk_lid_pts(self) -> list[tuple[float, float]]:
+        """Horizontal GKF lid over the soffit box (fire / ceiling plane at Z≈H_START)."""
+        p = self.p
+        t = p.sdk_t
+        return [
+            (self.x_furn, self.z_gkf_horiz),
+            (p.room_width, self.z_gkf_horiz),
+            (p.room_width, self.z_gkf_horiz + t),
+            (self.x_furn, self.z_gkf_horiz + t),
         ]
 
     def krov_pts(self) -> list[tuple[float, float]]:
@@ -191,12 +465,18 @@ class ObyvakLayout:
         ]
 
     def vata_pts(self) -> list[tuple[float, float]]:
+        """MW plenum + between-rafter fill: above CD / GKF lid, below rafters."""
         p = self.p
+        t_below = self.t_soft_below_sdk + p.cd_t
+        z_pack = self.z_slope_offset(self.x_furn, t_below)
+        z_lid = self.z_gkf_horiz + p.sdk_t
         return [
-            (0.0, self.h_start),
-            (self.x_false, self.z_false),
-            (self.x_furn, self.z_gkf_horiz),
-            (p.room_width, self.z_gkf_horiz),
+            (0.0, self.z_slope_offset(0.0, t_below)),
+            (self.x_false, self.z_slope_offset(self.x_false, t_below)),
+            (self.x_furn, z_pack),
+            # Step down at the break: slope pack is thicker than the horizontal GKF lid.
+            (self.x_furn, z_lid),
+            (p.room_width, z_lid),
             (p.room_width, self.z_raf(p.room_width)),
             (self.x_ridge, self.z_raf(self.x_ridge)),
             (0.0, self.z_raf(0.0)),
@@ -214,9 +494,8 @@ class ObyvakLayout:
         ]
 
     def podhled_pts(self) -> list[tuple[float, float]]:
-        t = self.p.soffit_hint_t
-        ceil = self.ceil_pts()
-        return ceil + [(x, z - t) for x, z in reversed(ceil)]
+        """Full-room acoustic face outline (slopes + horizontal over cabinets) — for elevation."""
+        return self.sikmina_nh_pts()
 
     def gable_wall_pts(self, x0: float, x1: float, z_bot: float) -> list[tuple[float, float]]:
         pts = [(x0, z_bot), (x1, z_bot)]
