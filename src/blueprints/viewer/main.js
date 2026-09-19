@@ -21,6 +21,13 @@ import {
   resolvePartOutline,
   saveMaterialMode,
 } from "./materials.js";
+import {
+  applyEdgeClipping,
+  clearEdgeOverlays,
+  loadEdgesEnabled,
+  saveEdgesEnabled,
+  syncEdgeOverlays,
+} from "./edges.js";
 import { createDepthPeelRenderer } from "./depthPeel.js";
 import { createMeasureTool } from "./measure.js";
 
@@ -39,6 +46,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   let isDarkTheme = true;
   /** @type {string} */
   let materialMode = loadMaterialMode();
+  /** CAD hard-edge overlay (Faces + Edges). */
+  let edgesEnabled = loadEdgesEnabled();
   /** @type {Map<string, THREE.Object3D[]>} */
   const parts = new Map();
   /** Current opacity 0–1 per leaf label. */
@@ -172,6 +181,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       });
       frameIso();
       buildMaterialToggle();
+      buildEdgesToggle();
       buildPartToggles();
       buildCameraButtons();
       buildFovControl();
@@ -759,6 +769,18 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     return cuts.filter((c) => c.locked).map((c) => planeForCut(c));
   }
 
+  function refreshEdges() {
+    if (!parts.size) return;
+    if (!edgesEnabled) {
+      clearEdgeOverlays(root);
+      return;
+    }
+    syncEdgeOverlays(parts, true, {
+      isDark: isDarkTheme,
+      clippingPlanes: lockedClipPlanes(),
+    });
+  }
+
   function refreshMaterials() {
     if (!parts.size) return;
     applyMaterialMode(parts, materialMode, {
@@ -774,6 +796,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       renderer.toneMapping = THREE.NoToneMapping;
       renderer.toneMappingExposure = 1;
     }
+    refreshEdges();
   }
 
   function buildMaterialToggle() {
@@ -799,6 +822,26 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       });
       host.append(btn);
     }
+  }
+
+  function buildEdgesToggle() {
+    const host = document.getElementById("edges");
+    if (!host) return;
+    host.replaceChildren();
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.dataset.edges = "on";
+    btn.textContent = "Edges";
+    btn.setAttribute("aria-pressed", edgesEnabled ? "true" : "false");
+    if (edgesEnabled) btn.classList.add("is-active");
+    btn.addEventListener("click", () => {
+      edgesEnabled = !edgesEnabled;
+      saveEdgesEnabled(edgesEnabled);
+      btn.classList.toggle("is-active", edgesEnabled);
+      btn.setAttribute("aria-pressed", edgesEnabled ? "true" : "false");
+      refreshEdges();
+    });
+    host.append(btn);
   }
 
   /**
@@ -1266,6 +1309,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         m.needsUpdate = true;
       }
     });
+    applyEdgeClipping(root, planes);
   }
 
   function buildCutUI() {

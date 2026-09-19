@@ -17,6 +17,7 @@
  * Literal material opacity — no crush, no SOLID_ALPHA&lt;1 stand-in.
  */
 import * as THREE from "three";
+import { setEdgeOverlaysVisible } from "./edges.js";
 
 /**
  * Everitt peels for CAD shell stacking. Sorted alpha remains the emergency
@@ -744,6 +745,7 @@ export function createDepthPeelRenderer(renderer) {
         obj.visible = visible;
       }
       restoreOnBeforeRender();
+      setEdgeOverlaysVisible(root, true);
       peelStageUniform.value = 0;
       scene.background = prevBg;
       scene.overrideMaterial = null;
@@ -756,14 +758,18 @@ export function createDepthPeelRenderer(renderer) {
     }
 
     // --- Opaque colour (full-res) ---
+    // Edge overlays (LineSegments children) draw here into the opaque RT.
     setMeshesVisible(transparent, false);
     setMeshesVisible(opaque, true);
+    setEdgeOverlaysVisible(root, true);
     renderer.setRenderTarget(opaqueRT);
     renderer.setClearColor(0x000000, 0);
     renderer.clear();
     renderer.render(scene, camera);
 
     // --- Opaque linear view-Z at peel resolution ---
+    // overrideMaterial is mesh-only; hide line overlays for this pass.
+    setEdgeOverlaysVisible(root, false);
     renderer.setRenderTarget(opaqueViewZRT);
     renderer.setClearColor(0x000000, 1);
     clearViewZTarget(opaqueViewZRT, VIEW_Z_FAR, { clearDepth: true });
@@ -801,6 +807,8 @@ export function createDepthPeelRenderer(renderer) {
 
     setMeshesVisible(opaque, false);
     setMeshesVisible(transparent, true);
+    // Transparent peels also use mesh shaders; keep edge lines off.
+    setEdgeOverlaysVisible(root, false);
 
     let anyLayerWritten = false;
 
@@ -940,6 +948,7 @@ export function createDepthPeelRenderer(renderer) {
       obj.visible = visible;
     }
     restoreOnBeforeRender();
+    setEdgeOverlaysVisible(root, true);
 
     peelStageUniform.value = 0;
     scene.background = prevBg;
