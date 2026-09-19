@@ -19,7 +19,7 @@ export const EDGE_OVERLAY_KEY = "blueprints.edgesEnabled";
 export const EDGE_THRESHOLD_DEG = 20;
 
 /** Screen-space stroke width (px). Native GL lines cannot do this. */
-export const EDGE_LINEWIDTH_PX = 3.5;
+export const EDGE_LINEWIDTH_PX = 2.5;
 
 /** Always black for contrast on Solid / Realistic faces. */
 export const EDGE_COLOR = 0x000000;
@@ -52,7 +52,7 @@ export function loadEdgesEnabled() {
   } catch {
     /* ignore */
   }
-  return false;
+  return true;
 }
 
 /**
