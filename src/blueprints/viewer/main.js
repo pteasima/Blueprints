@@ -24,9 +24,12 @@ import {
 import {
   applyEdgeClipping,
   clearEdgeOverlays,
+  EDGE_MODE_NONE,
+  EDGE_MODE_OPAQUE,
+  EDGE_MODE_TRANSPARENT,
   isEdgeOverlay,
-  loadEdgesEnabled,
-  saveEdgesEnabled,
+  loadEdgeMode,
+  saveEdgeMode,
   setEdgeOverlayResolution,
   syncEdgeOverlays,
 } from "./edges.js";
@@ -48,8 +51,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   let isDarkTheme = true;
   /** @type {string} */
   let materialMode = loadMaterialMode();
-  /** CAD hard-edge overlay (Faces + Edges). */
-  let edgesEnabled = loadEdgesEnabled();
+  /** CAD hard-edge overlay mode: none | transparent | opaque. */
+  let edgeMode = loadEdgeMode();
   /** @type {Map<string, THREE.Object3D[]>} */
   const parts = new Map();
   /** Current opacity 0–1 per leaf label. */
@@ -710,7 +713,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     partOpacity.set(name, o);
     if (o > 0) partLastNonZero.set(name, o);
     if (opts.detach) detachedLeaves.add(name);
-    applyOpacityToMeshes(parts.get(name) || [], o);
+    applyOpacityToMeshes(parts.get(name) || [], o, { edgeMode });
     updateBox();
     applyClipping();
     if (!opts.skipUi) syncPartOpacityUi();
@@ -728,7 +731,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       if (detachedLeaves.has(id)) continue;
       partOpacity.set(id, o);
       if (o > 0) partLastNonZero.set(id, o);
-      applyOpacityToMeshes(parts.get(id) || [], o);
+      applyOpacityToMeshes(parts.get(id) || [], o, { edgeMode });
     }
     updateBox();
     applyClipping();
@@ -747,7 +750,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     const o = groupDisplayOpacity(groupId, attached);
     partOpacity.set(leafId, o);
     if (o > 0) partLastNonZero.set(leafId, o);
-    applyOpacityToMeshes(parts.get(leafId) || [], o);
+    applyOpacityToMeshes(parts.get(leafId) || [], o, { edgeMode });
     updateBox();
     applyClipping();
     syncPartOpacityUi();
@@ -809,13 +812,14 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
 
   function refreshEdges() {
     if (!parts.size) return;
-    if (!edgesEnabled) {
+    if (edgeMode === EDGE_MODE_NONE) {
       clearEdgeOverlays(root);
       return;
     }
     syncEdgeOverlays(parts, true, {
       clippingPlanes: lockedClipPlanes(),
       resolution: edgeResolution(),
+      edgeMode,
     });
   }
 
@@ -825,6 +829,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       isDark: isDarkTheme,
       clippingPlanes: lockedClipPlanes(),
       opacityByLabel: partOpacity,
+      edgeMode,
     });
     // Solid uses unlit MeshBasicMaterial — skip ACES so chroma stays punchy.
     if (materialMode === MODE_REALISTIC) {
@@ -866,20 +871,28 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     const host = document.getElementById("edges");
     if (!host) return;
     host.replaceChildren();
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.dataset.edges = "on";
-    btn.textContent = "Edges";
-    btn.setAttribute("aria-pressed", edgesEnabled ? "true" : "false");
-    if (edgesEnabled) btn.classList.add("is-active");
-    btn.addEventListener("click", () => {
-      edgesEnabled = !edgesEnabled;
-      saveEdgesEnabled(edgesEnabled);
-      btn.classList.toggle("is-active", edgesEnabled);
-      btn.setAttribute("aria-pressed", edgesEnabled ? "true" : "false");
-      refreshEdges();
-    });
-    host.append(btn);
+    for (const [id, label] of [
+      [EDGE_MODE_NONE, "None"],
+      [EDGE_MODE_TRANSPARENT, "Transparent"],
+      [EDGE_MODE_OPAQUE, "Opaque"],
+    ]) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.dataset.edgeMode = id;
+      btn.textContent = label;
+      if (id === edgeMode) btn.classList.add("is-active");
+      btn.addEventListener("click", () => {
+        edgeMode = id;
+        saveEdgeMode(id);
+        host.querySelectorAll("button").forEach((el) => {
+          el.classList.toggle("is-active", el.dataset.edgeMode === id);
+        });
+        // Rebuild overlays then re-apply face opacities so stroke alpha matches mode.
+        refreshEdges();
+        healOpacitiesFromState();
+      });
+      host.append(btn);
+    }
   }
 
   /**
@@ -1000,7 +1013,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         leafSyncButtons.set(node.id, syncBtn);
       }
 
-      if (syncBtn) row.append(spacer, nameEl, syncBtn, wrap);
+      if (syncBtn) row.append(spacer, nameEl, wrap, syncBtn);
       else row.append(spacer, nameEl, wrap);
       parent.append(row);
       return;
@@ -1323,7 +1336,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       }
     });
     // Rebuild hard+cut edge geometry so section faces get silhouette strokes.
-    if (edgesEnabled) refreshEdges();
+    if (edgeMode !== EDGE_MODE_NONE) refreshEdges();
     else applyEdgeClipping(root, planes);
   }
 
@@ -1707,7 +1720,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   function healOpacitiesFromState() {
     for (const [name, meshes] of parts) {
       const o = partOpacity.get(name) ?? 1;
-      applyOpacityToMeshes(meshes, o);
+      applyOpacityToMeshes(meshes, o, { edgeMode });
     }
   }
 

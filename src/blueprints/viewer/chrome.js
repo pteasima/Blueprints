@@ -360,6 +360,21 @@ canvas {
   margin-top: 0.55rem;
 }
 
+.edges-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.55rem;
+}
+
+.edges-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg-secondary);
+}
+
 .seg button {
   appearance: none;
   flex: 1 1 0;
@@ -496,7 +511,7 @@ canvas {
 .part-sync {
   appearance: none;
   flex: 0 0 auto;
-  margin: 0 0.15rem 0 0;
+  margin: 0 0 0 0.35rem;
   padding: 0.2rem 0.45rem;
   border: 0;
   border-radius: 0.35rem;

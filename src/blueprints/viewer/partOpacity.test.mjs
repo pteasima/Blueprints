@@ -95,6 +95,10 @@ assert.equal(edgeMat.transparent, true);
 assert.equal(edgeMat.opacity, 0.35);
 assert.equal(edgeMat.depthWrite, false);
 
+applyOpacityToMeshes([mesh], 0.35, { edgeMode: "opaque" });
+assert.equal(edgeMat.transparent, false);
+assert.equal(edgeMat.opacity, 1, "opaque edge mode keeps full stroke alpha");
+
 applyOpacityToMeshes([mesh], 1);
 assert.equal(edgeMat.transparent, false);
 assert.equal(edgeMat.opacity, 1);
