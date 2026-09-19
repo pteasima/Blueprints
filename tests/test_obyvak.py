@@ -34,7 +34,7 @@ def test_layout_ceiling_and_gable():
     assert g.y_furn1 == p.room_length - p.predstena_living
     # Acoustic face + Flex pack + GKF match the contractor soft stack below CD.
     assert abs(g.t_nh_face - (p.finish_t + p.basic_t + p.naturheld_t)) < 1e-9
-    assert abs(g.t_soft_below_sdk - 117.5) < 1e-9
+    assert abs(g.t_soft_below_sdk - 137.5) < 1e-9
     assert abs(g.t_left - 244.5) < 1e-9
     assert g.l_hanger_right > g.l_hanger_left
     assert abs(g.z_nabeh_bot - (p.furniture_height + p.furniture_gap)) < 1e-9

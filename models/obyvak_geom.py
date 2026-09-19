@@ -10,13 +10,13 @@ World:
 
 Šikminy stack (interior → attic; thicknesses ⊥ to the face unless noted):
 
-  StoSilent Top Finish + Top Basic + NaturHeld 140 (40)     → `NaturHeld 140`
+  StoSilent Top Finish + Top Basic + NaturHeld 140 (60)     → `NaturHeld 140`
   dřevěný rošt: latě KVH 60×40 @ ~625 // krokvím (⊥ CD)   → `dreveny_rost`
   NaturHeld Flex 50 between those latě (60)                 → `NaturHeld Flex 50`
   vapour foil (~1) + GKF/RF 12.5                            → `sdk`
   CD Rigips 60×27 @ ~625 ⊥ krokvím                          → `cd`
   Nonius / přímý závěs CD→krokve                            → `zaves`
-  Domo Plus plenum                                          → `vata`
+  Domo Plus plenum (80)                                     → `vata`
   krokve 100/160 @ ~875 + MW between                        → `krov` / `vata`
   zavětrovací pásky 40×2 @ 45° X across krokve (racking)    → `paska`
   (střešní latě / kontralatě above rafters stay in krytina build-up)
@@ -61,11 +61,11 @@ class ObyvakParams:
     plate_w: float = 140.0
     plate_h: float = 100.0
     rafter_t: float = 160.0
-    plenum_t: float = 100.0
+    plenum_t: float = 80.0
     cd_t: float = 27.0
     finish_t: float = 2.0
     basic_t: float = 2.0
-    naturheld_t: float = 40.0
+    naturheld_t: float = 60.0
     flex_t: float = 60.0
     foil_t: float = 1.0
     sdk_t: float = 12.5
