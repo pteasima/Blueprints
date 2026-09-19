@@ -573,6 +573,21 @@ export function createDepthPeelRenderer(renderer) {
   }
 
   /**
+   * Faces first (edges hidden), then the depth-aware edge overlay pass.
+   * Drawing fat lines in the same pass as coplanar CAD faces fails the depth
+   * test on most opaque views; the soffit/peel path already used this split.
+   * @param {THREE.Scene} scene
+   * @param {THREE.Camera} camera
+   * @param {THREE.Object3D | null} root
+   */
+  function renderFacesThenEdges(scene, camera, root) {
+    setEdgeOverlaysVisible(root, false);
+    renderer.setRenderTarget(null);
+    renderer.render(scene, camera);
+    renderEdgeOverlayPass(renderer, scene, camera, root);
+  }
+
+  /**
    * @param {THREE.Scene} scene
    * @param {THREE.Camera} camera
    * @param {THREE.Object3D | null} root
@@ -589,16 +604,14 @@ export function createDepthPeelRenderer(renderer) {
     // off from applyOpacityToMeshes — one standard sorted-alpha render.
     if (!wantPeel) {
       peelStageUniform.value = 0;
-      renderer.setRenderTarget(null);
-      renderer.render(scene, camera);
+      renderFacesThenEdges(scene, camera, root);
       return false;
     }
 
     const { opaque, transparent } = collectMeshes(root);
     if (!transparent.length) {
       peelStageUniform.value = 0;
-      renderer.setRenderTarget(null);
-      renderer.render(scene, camera);
+      renderFacesThenEdges(scene, camera, root);
       return false;
     }
 
@@ -746,14 +759,13 @@ export function createDepthPeelRenderer(renderer) {
         obj.visible = visible;
       }
       restoreOnBeforeRender();
-      setEdgeOverlaysVisible(root, true);
       peelStageUniform.value = 0;
       scene.background = prevBg;
       scene.overrideMaterial = null;
       renderer.toneMapping = prevTone;
       renderer.setRenderTarget(null);
       renderer.autoClear = true;
-      renderer.render(scene, camera);
+      renderFacesThenEdges(scene, camera, root);
       renderer.autoClear = prevAutoClear;
       return false;
     }

@@ -26,9 +26,10 @@ export const EDGE_COLOR = 0x000000;
 
 /**
  * Pull edge fragments slightly toward the camera so coplanar faces lose the
- * depth test (critical in ISO / orthographic + logarithmicDepthBuffer).
+ * depth test (critical with logarithmicDepthBuffer; polygonOffset is a no-op
+ * once materials write gl_FragDepth).
  */
-const EDGE_FRAG_DEPTH_BIAS = 1e-4;
+const EDGE_FRAG_DEPTH_BIAS = 5e-4;
 
 /**
  * @returns {boolean}
