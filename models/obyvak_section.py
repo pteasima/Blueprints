@@ -139,12 +139,10 @@ def build(params: ObyvakParams | None = None):
             parts.append(
                 xz_rect(xc - p.hanger_w * 0.5, z0, p.hanger_w, z1 - z0, LABEL_ZAVES)
             )
-    parts.append(xz_face(g.horiz_break_ud_pts(), LABEL_CD))
     parts.append(xz_face(g.horiz_wall_ud_pts(), LABEL_CD))
-    # Drop hanger through GKF (schematic) + wall angle under the lať.
-    drop_xs = list(g.horiz_cd_x_stations()) + [g.x_sdk_break + p.sdk_t + p.cd_t * 0.5]
-    if drop_xs:
-        xc = drop_xs[0]
+    # Drop hanger through GKF at the rost-front CD (schematic) + wall angle.
+    if g.horiz_cd_x_stations():
+        xc = g.horiz_cd_x_stations()[0]
         parts.append(
             xz_rect(
                 xc - p.soffit_drop_w * 0.5,

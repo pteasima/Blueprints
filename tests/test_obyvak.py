@@ -39,12 +39,15 @@ def test_layout_ceiling_and_gable():
     assert g.l_hanger_right > g.l_hanger_left
     assert abs(g.z_nabeh_bot - (p.furniture_height + p.furniture_gap)) < 1e-9
     assert g.x_nh_inner == g.x_furn + g.t_nh_face
-    # GKF continues past X_FURN so the vertical return is exactly cd_t tall.
+    # GKF zlom flush with wooden rost front; front CD hangs the lattice there.
+    assert g.x_sdk_break == g.x_nh_inner
     assert g.x_sdk_break > g.x_furn
+    cds = g.horiz_cd_x_stations()
+    assert cds
+    assert abs(cds[0] - (g.x_nh_inner + p.cd_w * 0.5)) < 1e-9
     t0 = g.t_nh_face + g.t_flex_pack
     z_inner = g.z_slope_plane_offset(g.x_sdk_break, t0)
-    assert abs(z_inner - (g.z_gkf_horiz + p.sdk_t + p.cd_t)) < 1e-6
-    assert g.x_sdk_break < p.room_width - p.furniture_width * 0.2
+    assert z_inner > g.z_gkf_horiz + p.sdk_t + 20.0  # vertical return has real height
 
 
 def test_sikminy_and_soffit_stack_in_3d():
@@ -80,14 +83,14 @@ def test_sikminy_and_soffit_stack_in_3d():
     assert box_nh.bounding_box().min.Z >= p.furniture_height + p.furniture_gap - 1.0
     furn = _labeled(shape, "nabytek")[0].bounding_box()
     assert box_nh.bounding_box().min.Z >= furn.max.Z + p.furniture_gap - 2.0
-    # Ceiling GKF: horizontal lid + short vertical return at x_sdk_break (continuous shell).
+    # Ceiling GKF: horizontal lid + vertical return at rost front (continuous shell).
     lids = [
         c
         for c in _labeled(shape, "sdk")
         if c.bounding_box().min.Z >= g.z_gkf_horiz - 1.0
         and c.bounding_box().min.X >= g.x_furn - 1.0
     ]
-    assert len(lids) >= 2  # lid + vertical return (slope SDK also reaches past X_FURN)
+    assert len(lids) >= 2  # lid + vertical return (slope SDK also reaches rost front)
     horiz_lids = [
         c
         for c in lids
@@ -103,16 +106,25 @@ def test_sikminy_and_soffit_stack_in_3d():
         and c.bounding_box().min.Z >= g.z_gkf_horiz + p.sdk_t - 2.0
     ]
     assert len(verts) == 1
-    assert abs(verts[0].bounding_box().size.Z - (p.cd_t - 2 * FACE_GAP)) < 2.0
-    assert abs(verts[0].bounding_box().min.X - (g.x_sdk_break + FACE_GAP)) < 2.0
-    # Break UD sits on the attic face of the vertical return (shared horizontal CD profile).
-    break_uds = [
+    # Attic face of vertical GKF flush with rost front.
+    assert abs(verts[0].bounding_box().max.X - (g.x_nh_inner - FACE_GAP)) < 2.0
+    # Front soffit CD flush with rost edge (front face at x_nh_inner).
+    front_cds = [
         c
         for c in cds
-        if abs(c.bounding_box().min.X - (g.x_sdk_break + p.sdk_t)) < 2.0
+        if abs(c.bounding_box().min.X - g.x_nh_inner) < 2.0
         and c.bounding_box().min.Z >= g.z_gkf_horiz + p.sdk_t - 2.0
     ]
-    assert len(break_uds) >= 1
+    assert len(front_cds) >= 1
+    # Drop hangers exist at the front CD (box hangs at lattice edge, not mid-bay only).
+    front_drops = [
+        c
+        for c in zaves
+        if abs(c.bounding_box().center().X - (g.x_nh_inner + p.cd_w * 0.5)) < p.cd_w
+        and c.bounding_box().min.Z < g.z_gkf_horiz + p.sdk_t
+        and c.bounding_box().max.Z > g.z_gkf_horiz - p.rost_d
+    ]
+    assert len(front_drops) >= 1
     # krov is roof timber only — soffit-frame latě use dreveny_rost.
     for part in _labeled(shape, "krov"):
         bb = part.bounding_box()
