@@ -1,12 +1,17 @@
 /**
- * CAD edge overlay (hard edges on top of faces) for the WebGL viewer.
+ * CAD edge overlay (hard edges + cut silhouettes) for the WebGL viewer.
  * Uses Three.js fat lines (LineSegments2) — native GL linewidth is ignored on
- * most platforms, so LineBasicMaterial edges were effectively invisible.
+ * most platforms. Depth bias is patched into LineMaterial because
+ * polygonOffset is a no-op under logarithmicDepthBuffer (gl_FragDepth rewrite).
  */
 import * as THREE from "three";
 import { LineSegments2 } from "three/addons/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js";
 import { LineMaterial } from "three/addons/lines/LineMaterial.js";
+import {
+  cutEdgeSegmentPositions,
+  worldPlanesToLocal,
+} from "./clipGeometry.js";
 
 export const EDGE_OVERLAY_KEY = "blueprints.edgesEnabled";
 
@@ -18,6 +23,12 @@ export const EDGE_LINEWIDTH_PX = 3.5;
 
 /** Always black for contrast on Solid / Realistic faces. */
 export const EDGE_COLOR = 0x000000;
+
+/**
+ * Pull edge fragments slightly toward the camera so coplanar faces lose the
+ * depth test (critical in ISO / orthographic + logarithmicDepthBuffer).
+ */
+const EDGE_FRAG_DEPTH_BIAS = 1e-4;
 
 /**
  * @returns {boolean}
@@ -54,21 +65,68 @@ export function isEdgeOverlay(obj) {
 
 /**
  * @param {THREE.BufferGeometry} meshGeometry
- * @returns {LineSegmentsGeometry}
+ * @returns {Float32Array}
  */
-function fatGeometryFromMesh(meshGeometry) {
+function hardEdgePositions(meshGeometry) {
   const edges = new THREE.EdgesGeometry(meshGeometry, EDGE_THRESHOLD_DEG);
   const pos = edges.getAttribute("position");
   const arr =
     pos && pos.array
       ? pos.array instanceof Float32Array
-        ? pos.array
-        : new Float32Array(pos.array)
+        ? pos.array.slice()
+        : Float32Array.from(pos.array)
       : new Float32Array(0);
   edges.dispose();
-  const geom = new LineSegmentsGeometry();
-  if (arr.length >= 6) geom.setPositions(arr);
-  return geom;
+  return arr;
+}
+
+/**
+ * @param {Float32Array} hard
+ * @param {Float32Array} cut
+ * @returns {Float32Array}
+ */
+function concatPositions(hard, cut) {
+  if (!cut.length) return hard;
+  if (!hard.length) return cut;
+  const out = new Float32Array(hard.length + cut.length);
+  out.set(hard, 0);
+  out.set(cut, hard.length);
+  return out;
+}
+
+/**
+ * LineMaterial that wins coplanar depth tests under log-depth / ortho.
+ * @param {THREE.Plane[]} planes
+ * @param {{ x: number, y: number } | null} res
+ * @returns {LineMaterial}
+ */
+function createEdgeMaterial(planes, res) {
+  const mat = new LineMaterial({
+    color: EDGE_COLOR,
+    linewidth: EDGE_LINEWIDTH_PX,
+    worldUnits: false,
+    toneMapped: false,
+    depthTest: true,
+    depthWrite: false,
+    transparent: false,
+    clippingPlanes: planes,
+    clipIntersection: false,
+  });
+  // polygonOffset is ineffective once logdepth writes gl_FragDepth — bias after.
+  mat.onBeforeCompile = (shader) => {
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <logdepthbuf_fragment>",
+      `#include <logdepthbuf_fragment>
+			#if defined( USE_LOGDEPTHBUF ) && defined( USE_LOGDEPTHBUF_EXT )
+				gl_FragDepth -= ${EDGE_FRAG_DEPTH_BIAS};
+			#else
+				gl_FragDepth = gl_FragCoord.z - ${EDGE_FRAG_DEPTH_BIAS};
+			#endif`,
+    );
+  };
+  mat.customProgramCacheKey = () => `bp-edge-depth-bias-${EDGE_FRAG_DEPTH_BIAS}`;
+  if (res) mat.resolution.set(res.x, res.y);
+  return mat;
 }
 
 /**
@@ -153,6 +211,30 @@ export function applyEdgeClipping(root, planes) {
 }
 
 /**
+ * Rebuild overlay geometry: hard CAD edges + plane∩mesh cut silhouettes.
+ * @param {THREE.Mesh} mesh
+ * @param {LineSegments2} overlay
+ * @param {THREE.Plane[]} worldPlanes
+ */
+function rebuildOverlayGeometry(mesh, overlay, worldPlanes) {
+  mesh.updateWorldMatrix(true, false);
+  let hard = mesh.userData.bpHardEdgePositions;
+  if (!(hard instanceof Float32Array)) {
+    hard = hardEdgePositions(mesh.geometry);
+    mesh.userData.bpHardEdgePositions = hard;
+  }
+  const localPlanes = worldPlanesToLocal(worldPlanes, mesh.matrixWorld);
+  const cut = cutEdgeSegmentPositions(mesh.geometry, localPlanes);
+  const packed = concatPositions(hard, cut);
+  const geom = new LineSegmentsGeometry();
+  if (packed.length >= 6) geom.setPositions(packed);
+  const prev = overlay.geometry;
+  overlay.geometry = geom;
+  overlay.computeLineDistances();
+  prev?.dispose?.();
+}
+
+/**
  * Ensure each mesh has a matching fat-line edge child when enabled.
  * @param {Map<string, THREE.Object3D[]>} partsMap
  * @param {boolean} enabled
@@ -168,7 +250,6 @@ export function syncEdgeOverlays(partsMap, enabled, opts = {}) {
   for (const [label, meshes] of partsMap) {
     for (const mesh of meshes) {
       if (!mesh || !mesh.isMesh || !mesh.geometry) continue;
-      // Fat overlays are Mesh subclasses — never nest edges under an overlay.
       if (isEdgeOverlay(mesh)) continue;
 
       /** @type {THREE.Object3D | null} */
@@ -185,41 +266,36 @@ export function syncEdgeOverlays(partsMap, enabled, opts = {}) {
         continue;
       }
 
-      // Upgrade thin GL lines / stale overlays to fat LineSegments2.
       if (overlay && !overlay.isLineSegments2) {
         disposeOverlay(overlay);
         overlay = null;
       }
 
       if (!overlay) {
-        const geom = fatGeometryFromMesh(mesh.geometry);
-        const mat = new LineMaterial({
-          color: EDGE_COLOR,
-          linewidth: EDGE_LINEWIDTH_PX,
-          worldUnits: false,
-          toneMapped: false,
-          depthTest: true,
-          depthWrite: false,
-          transparent: false,
-          clippingPlanes: planes,
-          clipIntersection: false,
-        });
-        mat.polygonOffset = true;
-        mat.polygonOffsetFactor = -1;
-        mat.polygonOffsetUnits = -2;
-        if (res) mat.resolution.set(res.x, res.y);
+        const mat = createEdgeMaterial(planes, res);
+        const geom = new LineSegmentsGeometry();
         overlay = new LineSegments2(geom, mat);
-        overlay.computeLineDistances();
         overlay.name = `${label}__edges`;
         overlay.userData.isEdgeOverlay = true;
         overlay.userData.edgeLabel = label;
-        // Measure / picking must ignore overlay lines.
         overlay.raycast = () => {};
         overlay.renderOrder = 1000;
         mesh.add(overlay);
       } else {
         const mat = overlay.material;
-        if (mat) {
+        // Recreate if this overlay predates the FragDepth bias patch.
+        if (!mat || typeof mat.customProgramCacheKey !== "function") {
+          disposeOverlay(overlay);
+          const mat2 = createEdgeMaterial(planes, res);
+          const geom2 = new LineSegmentsGeometry();
+          overlay = new LineSegments2(geom2, mat2);
+          overlay.name = `${label}__edges`;
+          overlay.userData.isEdgeOverlay = true;
+          overlay.userData.edgeLabel = label;
+          overlay.raycast = () => {};
+          overlay.renderOrder = 1000;
+          mesh.add(overlay);
+        } else {
           if (mat.color) mat.color.setHex(EDGE_COLOR);
           if (typeof mat.linewidth === "number") {
             mat.linewidth = EDGE_LINEWIDTH_PX;
@@ -230,6 +306,82 @@ export function syncEdgeOverlays(partsMap, enabled, opts = {}) {
           mat.needsUpdate = true;
         }
       }
+      rebuildOverlayGeometry(mesh, /** @type {any} */ (overlay), planes);
     }
   }
+}
+
+/**
+ * After depth-peel composite: refill depth from CAD meshes, then draw edges.
+ * Edges are omitted from peel colour RTs (mesh shaders / parent visibility),
+ * so this is the only place transparent-part edges appear while peeling.
+ *
+ * @param {THREE.WebGLRenderer} renderer
+ * @param {THREE.Scene} scene
+ * @param {THREE.Camera} camera
+ * @param {THREE.Object3D} root
+ */
+export function renderEdgeOverlayPass(renderer, scene, camera, root) {
+  if (!root) return;
+
+  /** @type {{ mat: THREE.Material, colorWrite: boolean, depthWrite: boolean, depthTest: boolean, transparent: boolean }[]} */
+  const snaps = [];
+  let anyEdge = false;
+  root.traverse((obj) => {
+    if (isEdgeOverlay(obj)) {
+      anyEdge = true;
+      return;
+    }
+    if (!obj.isMesh || !obj.material) return;
+    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+    for (const mat of mats) {
+      if (!mat) continue;
+      snaps.push({
+        mat,
+        colorWrite: mat.colorWrite !== false,
+        depthWrite: mat.depthWrite !== false,
+        depthTest: mat.depthTest !== false,
+        transparent: Boolean(mat.transparent),
+      });
+    }
+  });
+  if (!anyEdge) return;
+
+  const prevAutoClear = renderer.autoClear;
+  const prevBg = scene.background;
+  const prevOverride = scene.overrideMaterial;
+  scene.background = null;
+  scene.overrideMaterial = null;
+  renderer.autoClear = false;
+
+  // 1) Depth prepass of visible CAD meshes (opaque + faded).
+  setEdgeOverlaysVisible(root, false);
+  for (const s of snaps) {
+    s.mat.colorWrite = false;
+    s.mat.depthWrite = true;
+    s.mat.depthTest = true;
+    s.mat.transparent = false;
+  }
+  renderer.clearDepth();
+  renderer.render(scene, camera);
+
+  // 2) Edge colour only — meshes stay colour-silent so faded faces keep composite.
+  setEdgeOverlaysVisible(root, true);
+  for (const s of snaps) {
+    s.mat.colorWrite = false;
+    s.mat.depthWrite = false;
+    s.mat.depthTest = true;
+    s.mat.transparent = false;
+  }
+  renderer.render(scene, camera);
+
+  for (const s of snaps) {
+    s.mat.colorWrite = s.colorWrite;
+    s.mat.depthWrite = s.depthWrite;
+    s.mat.depthTest = s.depthTest;
+    s.mat.transparent = s.transparent;
+  }
+  scene.background = prevBg;
+  scene.overrideMaterial = prevOverride;
+  renderer.autoClear = prevAutoClear;
 }

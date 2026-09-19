@@ -1310,6 +1310,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     if (!root) return;
     root.traverse((obj) => {
       if (!obj.isMesh || !obj.material) return;
+      if (isEdgeOverlay(obj)) return;
       const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
       for (const m of mats) {
         m.clippingPlanes = planes;
@@ -1317,7 +1318,9 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         m.needsUpdate = true;
       }
     });
-    applyEdgeClipping(root, planes);
+    // Rebuild hard+cut edge geometry so section faces get silhouette strokes.
+    if (edgesEnabled) refreshEdges();
+    else applyEdgeClipping(root, planes);
   }
 
   function buildCutUI() {

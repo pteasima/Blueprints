@@ -17,7 +17,7 @@
  * Literal material opacity — no crush, no SOLID_ALPHA&lt;1 stand-in.
  */
 import * as THREE from "three";
-import { isEdgeOverlay, setEdgeOverlaysVisible } from "./edges.js";
+import { isEdgeOverlay, renderEdgeOverlayPass, setEdgeOverlaysVisible } from "./edges.js";
 
 /**
  * Everitt peels for CAD shell stacking. Sorted alpha remains the emergency
@@ -759,18 +759,17 @@ export function createDepthPeelRenderer(renderer) {
     }
 
     // --- Opaque colour (full-res) ---
-    // Edge overlays (LineSegments children) draw here into the opaque RT.
+    // Edge overlays stay off during peel RTs (mesh shaders / parent fades).
+    // They are drawn once after composite via renderEdgeOverlayPass.
     setMeshesVisible(transparent, false);
     setMeshesVisible(opaque, true);
-    setEdgeOverlaysVisible(root, true);
+    setEdgeOverlaysVisible(root, false);
     renderer.setRenderTarget(opaqueRT);
     renderer.setClearColor(0x000000, 0);
     renderer.clear();
     renderer.render(scene, camera);
 
     // --- Opaque linear view-Z at peel resolution ---
-    // overrideMaterial is mesh-only; hide line overlays for this pass.
-    setEdgeOverlaysVisible(root, false);
     renderer.setRenderTarget(opaqueViewZRT);
     renderer.setClearColor(0x000000, 1);
     clearViewZTarget(opaqueViewZRT, VIEW_Z_FAR, { clearDepth: true });
@@ -959,6 +958,8 @@ export function createDepthPeelRenderer(renderer) {
     renderer.autoClear = true;
     renderer.render(compositeScene, compositeCamera);
 
+    // CAD edges (incl. faded parts) + gizmos on top of the composite.
+    renderEdgeOverlayPass(renderer, scene, camera, root);
     renderOverlays(scene, camera, root);
     renderer.autoClear = prevAutoClear;
     return true;
