@@ -22,7 +22,9 @@ World:
   (střešní latě / kontralatě above rafters stay in krytina build-up)
 
 Right eave soffit box: NH L, Flex cavity + latový rost (latě @625, Flex between),
-GKF lid, 20 mm gap above cabinets. Hanging TBD later.
+GKF lid at Z≈H_start, horizontal CD @625 above the lid, Nonius CD→krokve.
+Soffit rost hangs from that CD (drop hangers) and is braced to the eave wall
+(angle brackets). Furniture and pozednice are not structural.
 """
 
 from __future__ import annotations
@@ -115,6 +117,12 @@ class ObyvakParams:
     strap_w: float = 40.0
     strap_t: float = 2.0
     hanger_w: float = 20.0
+    # Short drop hangers: horizontal CD → soffit top rail (through GKF).
+    soffit_drop_w: float = 20.0
+    soffit_drop_t: float = 2.0
+    # Wall angle brackets at the eave (rear support only — not the hang point).
+    wall_bracket_leg: float = 80.0
+    wall_bracket_t: float = 3.0
     ridge_runout: float = 200.0
 
 
@@ -469,18 +477,65 @@ class ObyvakLayout:
         p = self.p
         t_below = self.t_soft_below_sdk + p.cd_t
         z_pack = self.z_slope_offset(self.x_furn, t_below)
-        z_lid = self.z_gkf_horiz + p.sdk_t
+        # Horizontal bay: GKF lid + CD, then tall Nonius plenum to the eave rafters.
+        z_horiz_cd_top = self.z_gkf_horiz + p.sdk_t + p.cd_t
         return [
             (0.0, self.z_slope_offset(0.0, t_below)),
             (self.x_false, self.z_slope_offset(self.x_false, t_below)),
             (self.x_furn, z_pack),
-            # Step down at the break: slope pack is thicker than the horizontal GKF lid.
-            (self.x_furn, z_lid),
-            (p.room_width, z_lid),
+            # Step down at the break: slope pack is thicker than the horizontal CD plane.
+            (self.x_furn, z_horiz_cd_top),
+            (p.room_width, z_horiz_cd_top),
             (p.room_width, self.z_raf(p.room_width)),
             (self.x_ridge, self.z_raf(self.x_ridge)),
             (0.0, self.z_raf(0.0)),
         ]
+
+    def horiz_cd_x_stations(self) -> list[float]:
+        """CD centres on the horizontal GKF lid (X_FURN → wall), spaced along X."""
+        p = self.p
+        x0 = self.x_furn + p.cd_first_inset
+        # Leave room for the wall UD channel against the plaster.
+        x1 = p.room_width - p.wall_plaster - p.cd_t - p.cd_first_inset
+        return self.y_stations(x0, x1, p.cd_spacing, 0.0)
+
+    def horiz_cd_quad(self, x: float) -> list[tuple[float, float]]:
+        """XZ section of one horizontal CD sitting on the GKF lid."""
+        p = self.p
+        z0 = self.z_gkf_horiz + p.sdk_t
+        hw = p.cd_w * 0.5
+        d = p.cd_t
+        return [
+            (x - hw, z0),
+            (x + hw, z0),
+            (x + hw, z0 + d),
+            (x - hw, z0 + d),
+        ]
+
+    def horiz_wall_ud_pts(self) -> list[tuple[float, float]]:
+        """UD/CD perimeter channel on the eave plaster, same Z as horizontal CD."""
+        p = self.p
+        x1 = p.room_width - p.wall_plaster
+        x0 = x1 - p.cd_t
+        z0 = self.z_gkf_horiz + p.sdk_t
+        return [(x0, z0), (x1, z0), (x1, z0 + p.cd_t), (x0, z0 + p.cd_t)]
+
+    def horiz_break_ud_pts(self) -> list[tuple[float, float]]:
+        """UD at the šikmina→vodorovný break (X_FURN), same Z as horizontal CD."""
+        p = self.p
+        x0 = self.x_furn
+        x1 = self.x_furn + p.cd_t
+        z0 = self.z_gkf_horiz + p.sdk_t
+        return [(x0, z0), (x1, z0), (x1, z0 + p.cd_t), (x0, z0 + p.cd_t)]
+
+    def horiz_hanger_top_z(self, x: float) -> float:
+        """Underside of rafter at x (hang point for Nonius over the soffit bay)."""
+        return self.z_raf(x)
+
+    def horiz_hanger_bot_z(self) -> float:
+        """Top of horizontal CD (Nonius seats here)."""
+        p = self.p
+        return self.z_gkf_horiz + p.sdk_t + p.cd_t
 
     def predstena_pts(self) -> list[tuple[float, float]]:
         p = self.p

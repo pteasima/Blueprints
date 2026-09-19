@@ -107,6 +107,61 @@ def test_sikminy_and_soffit_stack_in_3d():
     # CD are ⊥ krokvím: thin along slope (X), long in Y.
     assert all(c.bounding_box().size.X < p.cd_spacing for c in cds)
     assert all(c.bounding_box().size.Y > 1000.0 for c in cds)
+    # Horizontal CD + Nonius over the soffit bay (GKF lid → CD → rafters).
+    horiz_cds = [c for c in cds if c.bounding_box().min.X >= g.x_furn - 1.0]
+    assert len(horiz_cds) >= 2
+    assert all(c.bounding_box().size.Y > 1000.0 for c in horiz_cds)
+    soffit_hangers = [
+        c
+        for c in zaves
+        if c.bounding_box().min.X >= g.x_furn - 1.0
+        and c.bounding_box().min.Z >= g.z_gkf_horiz + p.sdk_t - 1.0
+    ]
+    assert len(soffit_hangers) >= 4
+    # Soffit rost includes top rails under GKF + wall-braced underside latě.
+    soffit_rost = [c for c in rost if c.bounding_box().min.X >= g.x_nh_inner - 1.0]
+    assert len(soffit_rost) >= 15
+    top_rails = [
+        c
+        for c in soffit_rost
+        if c.bounding_box().min.Z >= g.z_gkf_horiz - p.rost_d - 2.0
+        and c.bounding_box().size.X > 200.0
+    ]
+    assert len(top_rails) >= 5
+    wall_braces = [
+        c
+        for c in zaves
+        if c.bounding_box().min.X >= p.room_width - p.wall_plaster - p.wall_bracket_leg - 5.0
+        and c.bounding_box().max.Z <= g.z_nabeh_bot + g.t_nh_face + p.wall_bracket_leg + 5.0
+        and c.bounding_box().min.Z <= g.z_nabeh_bot + g.t_nh_face + 5.0
+    ]
+    assert len(wall_braces) >= 4
+
+
+def test_soffit_hangs_from_cd_not_furniture_or_pozednice():
+    """Soffit load path: krokve → Nonius → CD → drop hangers → rost (wall = brace only)."""
+    p = ObyvakParams()
+    g = build_layout(p)
+    shape, _ = build(p)
+    # No rost/CD/zaves share volume with furniture.
+    furn = _labeled(shape, "nabytek")[0]
+    for label in (LABEL_ROST, "cd", "zaves"):
+        for part in _labeled(shape, label):
+            if part.bounding_box().min.X < g.x_furn - 1.0:
+                continue
+            try:
+                hit = part.intersect(furn)
+            except Exception:
+                continue
+            if not hit:
+                continue
+            shapes = list(hit) if hasattr(hit, "__iter__") and not hasattr(hit, "volume") else [hit]
+            vol = sum(float(getattr(s, "volume", 0) or 0) for s in shapes)
+            assert vol <= 1.0, f"{label} intersects furniture"
+    # Pozednice stays above the hang plane — not a hang point.
+    for poz in _labeled(shape, "pozednice"):
+        assert poz.bounding_box().min.Z >= p.eave_wall_z - 1.0
+        assert poz.bounding_box().min.Z > g.z_gkf_horiz + 50.0
 
 
 def test_soffit_scene_recipe():

@@ -14,8 +14,9 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
 - Floor slab is the clear room only; perimeter walls own the strip below z=0.
 - Šikminy: NaturHeld 140 → latě // krokvím + Flex between → SDK → CD ⊥ krokvím
   → závěsy → MW plenum → krov + pásky. `krov` = roof timber; `dreveny_rost` = NH latě.
-- Soffit box: NH L over cabinets (20 mm gap); Flex cavity + latový rost (latě @625,
-  Flex between); GKF lid. Hanging TBD later — furniture is not structural.
+- Soffit box: NH L over cabinets (20 mm gap); Flex + latový rost; GKF lid;
+  horizontal CD + Nonius from krokve; rost hung from CD and braced to the eave wall.
+  Furniture and pozednice are not structural.
 
     python -m blueprints.export obyvak
 
@@ -540,7 +541,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
                 parts[i] = vata
                 break
 
-    # --- Soffit box: NH L, Flex cavity, latový rost (not solid boards), GKF lid. ---
+    # --- Soffit bay: GKF lid → horizontal CD → Nonius → krokev; box hangs from CD. ---
     t = g.t_nh_face
     soffit_nh = [
         (g.x_nh_outer + gap, g.z_nabeh_bot + gap),
@@ -560,35 +561,85 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     ]
     flex_solid = _extrude_y(xz_face(flex_box, LABEL_FLEX), y_ceil0, y_ceil1, LABEL_FLEX)
 
-    lid = [
-        (g.x_furn + gap, g.z_gkf_horiz + gap),
-        (p.room_width - gap, g.z_gkf_horiz + gap),
-        (p.room_width - gap, g.z_gkf_horiz + p.sdk_t - gap),
-        (g.x_furn + gap, g.z_gkf_horiz + p.sdk_t - gap),
-    ]
+    # Horizontal GKF at the break (šikmina → vodorovně ke zdi), continuous with slope SDK.
+    lid_solid = None
     if p.sdk_t > 2 * gap:
-        parts.append(_extrude_y(xz_face(lid, "sdk"), y_ceil0, y_ceil1, "sdk"))
+        lid = [
+            (g.x_furn + gap, g.z_gkf_horiz + gap),
+            (p.room_width - gap, g.z_gkf_horiz + gap),
+            (p.room_width - gap, g.z_gkf_horiz + p.sdk_t - gap),
+            (g.x_furn + gap, g.z_gkf_horiz + p.sdk_t - gap),
+        ]
+        lid_solid = _extrude_y(xz_face(lid, "sdk"), y_ceil0, y_ceil1, "sdk")
 
-    # Latový rost in the soffit cavity (hanging TBD later): vertical face + underside.
+    # Horizontal CD on the lid + UD at break and eave wall.
+    horiz_cd_parts: list = []
+    for xc in g.horiz_cd_x_stations():
+        horiz_cd_parts.append(
+            _extrude_y(xz_face(g.horiz_cd_quad(xc), LABEL_CD), y_ceil0, y_ceil1, LABEL_CD)
+        )
+    horiz_cd_parts.append(
+        _extrude_y(xz_face(g.horiz_break_ud_pts(), LABEL_CD), y_ceil0, y_ceil1, LABEL_CD)
+    )
+    horiz_cd_parts.append(
+        _extrude_y(xz_face(g.horiz_wall_ud_pts(), LABEL_CD), y_ceil0, y_ceil1, LABEL_CD)
+    )
+    parts.extend(horiz_cd_parts)
+
+    # Nonius: horizontal CD → krokev (tall plenum over the cabinet bay).
+    horiz_zaves: list = []
+    half_hang = p.hanger_w * 0.5
+    z_cd_top = g.horiz_hanger_bot_z()
+    for xc in g.horiz_cd_x_stations():
+        z_top = g.horiz_hanger_top_z(xc) - 2.0 * gap
+        hang_h = z_top - z_cd_top
+        if hang_h < 20.0:
+            continue
+        for yc in rafter_ys:
+            horiz_zaves.append(
+                _box(
+                    xc - half_hang,
+                    yc - half_hang,
+                    z_cd_top,
+                    p.hanger_w,
+                    p.hanger_w,
+                    hang_h,
+                    LABEL_ZAVES,
+                )
+            )
+    if horiz_zaves:
+        horiz_zaves = [_cut_away(z, [krov], LABEL_ZAVES) for z in horiz_zaves]
+    parts.extend(horiz_zaves)
+
+    # Latový rost: top rails under GKF, vertical + underside latě, hung from CD, braced to wall.
     fm = p.rost_d
     fw = p.rost_w
     half_w = fw * 0.5
-    z_wood0 = g.z_nabeh_bot + t + gap
-    z_wood1 = g.z_gkf_horiz - gap
-    face_h = z_wood1 - z_wood0
+    bt = p.wall_bracket_t
+    # Leave a shelf under the underside latě for the wall angle (above NH).
+    z_wood0 = g.z_nabeh_bot + t + gap + bt
+    z_rail = g.z_gkf_horiz - fm
+    face_h = z_rail - z_wood0
     x_front = g.x_nh_inner + gap
-    x_wall = p.room_width - gap - 15.0
+    x_wall = p.room_width - p.wall_plaster - gap
     frame_parts: list = []
+    drop_parts: list = []
+    bracket_parts: list = []
     if face_h > fm + gap and x_wall - (x_front + fm) > gap:
+        cd_xs = g.horiz_cd_x_stations()
         for yc in g.sikmina_rost_y_stations(y_ceil0, y_ceil1):
             ya, yb = yc - half_w, yc + half_w
             if yb <= ya:
                 continue
-            # Vertical latě behind the NH face (spaced along Y).
+            # Top rail under GKF — carries the box; screwed up to CD through the lid.
             frame_parts.append(
-                _box(x_front, ya, z_wood0, fm - gap, yb - ya, face_h - gap, LABEL_ROST)
+                _box(x_front, ya, z_rail, max(x_wall - x_front, gap), yb - ya, fm - gap, LABEL_ROST)
             )
-            # Underside latě spanning toward the wall (same Y stations).
+            # Vertical latě behind the NH face.
+            frame_parts.append(
+                _box(x_front, ya, z_wood0, fm - gap, yb - ya, face_h, LABEL_ROST)
+            )
+            # Underside latě spanning toward the wall.
             frame_parts.append(
                 _box(
                     x_front + fm,
@@ -600,12 +651,59 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
                     LABEL_ROST,
                 )
             )
+            # Drop hangers: horizontal CD + break UD → this top rail (through GKF).
+            z_drop0 = z_rail + fm
+            z_drop1 = g.z_gkf_horiz + p.sdk_t  # underside of CD
+            drop_h = z_drop1 - z_drop0
+            if drop_h > gap:
+                drop_xs = list(cd_xs) + [g.x_furn + p.cd_t * 0.5]
+                for xc in drop_xs:
+                    drop_parts.append(
+                        _box(
+                            xc - p.soffit_drop_w * 0.5,
+                            yc - p.soffit_drop_t * 0.5,
+                            z_drop0,
+                            p.soffit_drop_w,
+                            p.soffit_drop_t,
+                            drop_h,
+                            LABEL_ZAVES,
+                        )
+                    )
+            # Wall angle: horizontal under lať + vertical up the plaster (no shared volume).
+            leg = p.wall_bracket_leg
+            z_br = z_wood0 - bt
+            bracket_parts.append(
+                _box(x_wall - leg, ya, z_br, leg - bt, yb - ya, bt, LABEL_ZAVES)
+            )
+            bracket_parts.append(
+                _box(x_wall - bt, ya, z_br + bt, bt, yb - ya, leg - bt, LABEL_ZAVES)
+            )
     if frame_parts:
-        flex_solid = _cut_away(flex_solid, frame_parts, LABEL_FLEX)
+        # Steel mates against timber with FACE_GAP — shave any float nicks.
+        steel = drop_parts + bracket_parts
+        if steel:
+            frame_parts = [_cut_away(f, steel, LABEL_ROST) for f in frame_parts]
+        flex_solid = _cut_away(flex_solid, frame_parts + steel, LABEL_FLEX)
         parts.append(flex_solid)
         parts.extend(frame_parts)
+        parts.extend(drop_parts)
+        parts.extend(bracket_parts)
     else:
         parts.append(flex_solid)
+
+    # GKF lid last so drop hangers can pierce it (FACE_GAP mates).
+    if lid_solid is not None:
+        if drop_parts:
+            lid_solid = _cut_away(lid_solid, drop_parts, "sdk")
+        parts.append(lid_solid)
+
+    # MW over the soffit bay must clear horizontal CD + Nonius.
+    steel_over_soffit = horiz_cd_parts + horiz_zaves
+    if steel_over_soffit:
+        for i, part in enumerate(parts):
+            if part.label == "vata":
+                parts[i] = _cut_away(part, steel_over_soffit, "vata")
+                break
 
     # --- Cabinets: clear of right plaster; top leaves furniture_gap under the box. ---
     furn_w = p.furniture_width - gap
@@ -626,8 +724,10 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     parts.extend([pred_k, pred_l])
 
     # Attic wool stops at the předstěny (they own that bay).
-    vata_cut = _cut_away(vata, [pred_k, pred_l], "vata")
-    parts[parts.index(vata)] = vata_cut
+    for i, part in enumerate(parts):
+        if part.label == "vata":
+            parts[i] = _cut_away(part, [pred_k, pred_l], "vata")
+            break
 
     parts.extend(_gable_sdk_and_pouzdra(p, g, gap))
     return parts

@@ -1,7 +1,8 @@
 """Obývák 1.02 — příčný řez (panel A), parametrické 2D profily v Plane.XZ.
 
 Šikminy: NaturHeld 140, latě // krokvím, Flex, SDK, CD ⊥ krokvím, závěsy,
-pásky (3D: 45° X; zde jen průřez). Soffit: latový rost. 3D: `models/obyvak.py`.
+pásky (3D: 45° X; zde jen průřez). Soffit: latový rost hung from horizontal CD
++ wall brace; GKF zlom @ X_FURN. 3D: `models/obyvak.py`.
 
     python -m blueprints.export obyvak_section
 """
@@ -103,23 +104,72 @@ def build(params: ObyvakParams | None = None):
             continue
         parts.append(xz_face(g.paska_quad(*st), LABEL_PASKA))
 
-    # Soffit box: NH L, Flex, latový rost (section through a lať), GKF lid.
+    # Soffit bay: NH L, Flex, latový rost (hung from CD + wall brace), GKF lid,
+    # horizontal CD + Nonius, UD at break and eave.
     parts.append(xz_face(g.soffit_nh_pts(), LABEL_NATURHELD))
     parts.append(xz_face(g.soffit_flex_pts(), LABEL_FLEX))
     fm = p.rost_d
-    z_wood0 = g.z_nabeh_bot + g.t_nh_face
+    z_wood0 = g.z_nabeh_bot + g.t_nh_face + p.wall_bracket_t
+    z_rail = g.z_gkf_horiz - fm
+    x_wall = p.room_width - p.wall_plaster
+    # Vertical lať + top rail + underside (section through a rost station).
+    parts.append(
+        xz_rect(g.x_nh_inner, z_wood0, fm, max(8.0, z_rail - z_wood0), LABEL_ROST)
+    )
+    parts.append(
+        xz_rect(g.x_nh_inner, z_rail, max(8.0, x_wall - g.x_nh_inner), fm, LABEL_ROST)
+    )
     parts.append(
         xz_rect(
-            g.x_nh_inner,
+            g.x_nh_inner + fm,
             z_wood0,
+            max(8.0, x_wall - (g.x_nh_inner + fm)),
             fm,
-            max(8.0, g.z_gkf_horiz - z_wood0 - 4),
             LABEL_ROST,
         )
     )
-    rail_w = max(8.0, p.room_width - 15.0 - (g.x_nh_inner + fm))
-    parts.append(xz_rect(g.x_nh_inner + fm, z_wood0, rail_w, fm, LABEL_ROST))
     parts.append(xz_face(g.soffit_sdk_lid_pts(), "sdk"))
+    for xc in g.horiz_cd_x_stations():
+        parts.append(xz_face(g.horiz_cd_quad(xc), LABEL_CD))
+        z0 = g.horiz_hanger_bot_z()
+        z1 = g.horiz_hanger_top_z(xc)
+        if z1 - z0 > 20.0:
+            parts.append(
+                xz_rect(xc - p.hanger_w * 0.5, z0, p.hanger_w, z1 - z0, LABEL_ZAVES)
+            )
+    parts.append(xz_face(g.horiz_break_ud_pts(), LABEL_CD))
+    parts.append(xz_face(g.horiz_wall_ud_pts(), LABEL_CD))
+    # Drop hanger through GKF (schematic) + wall angle under the lať.
+    if g.horiz_cd_x_stations():
+        xc = g.horiz_cd_x_stations()[0]
+        parts.append(
+            xz_rect(
+                xc - p.soffit_drop_w * 0.5,
+                z_rail + fm,
+                p.soffit_drop_w,
+                (g.z_gkf_horiz + p.sdk_t) - (z_rail + fm),
+                LABEL_ZAVES,
+            )
+        )
+    z_br = z_wood0 - p.wall_bracket_t
+    parts.append(
+        xz_rect(
+            x_wall - p.wall_bracket_leg,
+            z_br,
+            p.wall_bracket_leg - p.wall_bracket_t,
+            p.wall_bracket_t,
+            LABEL_ZAVES,
+        )
+    )
+    parts.append(
+        xz_rect(
+            x_wall - p.wall_bracket_t,
+            z_br + p.wall_bracket_t,
+            p.wall_bracket_t,
+            p.wall_bracket_leg - p.wall_bracket_t,
+            LABEL_ZAVES,
+        )
+    )
     parts.append(
         xz_polyline(
             [
