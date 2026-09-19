@@ -30,6 +30,21 @@ def test_layout_ceiling_and_gable():
     assert abs(g.z_gable_top(0.0) - p.eave_wall_z) < 1e-9
     assert abs(g.z_gable_top(p.room_width) - p.eave_wall_z) < 1e-9
     assert g.z_gable_top(g.x_ridge) > g.z_soffit
+    # Eave→ridge rise matches roof tan (same 40° as krytina / krokve).
+    assert abs((g.z_gable_top(g.x_ridge) - g.z_gable_top(0.0)) / g.x_ridge - g.tan) < 1e-9
+    # Crown polygon samples eaves so exterior corners do not flatten the rake.
+    crown = g.gable_wall_pts(g.xl_mas, g.xr_mas, -p.floor_t)[2:]
+    crown_xs = [x for x, _ in crown]
+    assert 0.0 in crown_xs
+    assert p.room_width in crown_xs
+    assert g.x_ridge in crown_xs
+    # Chord from clear-span eave to ridge stays at roof pitch (not the shallower
+    # exterior-corner→ridge shortcut that used to read ~37°).
+    i0 = crown_xs.index(0.0)
+    ir = crown_xs.index(g.x_ridge)
+    x0, z0 = crown[i0]
+    xr, zr = crown[ir]
+    assert abs((zr - z0) / (xr - x0) - g.tan) < 1e-9
     assert g.y_furn0 == p.predstena_kitchen
     assert g.y_furn1 == p.room_length - p.predstena_living
     # Acoustic face + Flex pack + GKF match the contractor soft stack below CD.
@@ -48,6 +63,27 @@ def test_layout_ceiling_and_gable():
     t0 = g.t_nh_face + g.t_flex_pack
     z_inner = g.z_slope_plane_offset(g.x_sdk_break, t0)
     assert z_inner > g.z_gkf_horiz + p.sdk_t + 20.0  # vertical return has real height
+
+
+def test_krov_is_discrete_rafters():
+    """Krov = krokve 100/160 @ 875 mm (sheet E_KROK), not a solid timber slab."""
+    p = ObyvakParams()
+    g = build_layout(p)
+    assert p.rafter_spacing == 875.0
+    assert p.rafter_w == 100.0
+    shape, _ = build(p)
+    krovs = _labeled(shape, "krov")
+    expected = g.rafter_y_stations(FACE_GAP, p.room_length - FACE_GAP)
+    assert len(krovs) == len(expected)
+    assert len(krovs) >= 10
+    for part in krovs:
+        bb = part.bounding_box()
+        assert abs(bb.size.Y - p.rafter_w) < 1e-3
+        assert bb.size.X > p.room_width  # full A-frame eave↔eave
+    # Neighbouring centres are ~875 mm apart.
+    centers = sorted(c.bounding_box().center().Y for c in krovs)
+    for a, b in zip(centers, centers[1:]):
+        assert abs((b - a) - p.rafter_spacing) < 1.0
 
 
 def test_sikminy_and_soffit_stack_in_3d():
@@ -517,7 +553,7 @@ def test_obyvak_3d_exports(tmp_path, monkeypatch):
     assert "soffit" not in sec_labels
     assert LABEL_FLEX in sec_labels
     assert LABEL_NATURHELD in sec_labels
-    assert LABEL_ROST in sec_labels
+    # Slice is snapped onto a krokev (875 grid); rost latě use 625 and may miss.
     assert "krov" in sec_labels
     assert "predstena" not in sec_labels
 

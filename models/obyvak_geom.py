@@ -637,10 +637,20 @@ class ObyvakLayout:
         return self.sikmina_nh_pts()
 
     def gable_wall_pts(self, x0: float, x1: float, z_bot: float) -> list[tuple[float, float]]:
+        """Gable masonry/plaster outline in XZ.
+
+        Top edge must sample the eave stations (x=0 and x=room_width), not only
+        the exterior corners and ridge. Skipping the eaves made the corner→ridge
+        chord shallower than 40° (~37°) even though ``z_gable_top`` uses the
+        roof tan — exterior wythes sit past the clear span at eave_wall_z.
+        """
         pts = [(x0, z_bot), (x1, z_bot)]
-        top_xs = [x1]
-        if min(x0, x1) < self.x_ridge < max(x0, x1):
-            top_xs.append(self.x_ridge)
+        lo, hi = min(x0, x1), max(x0, x1)
+        # Walk the crown from x1 back to x0: exterior → eave → ridge → eave → exterior.
+        top_xs: list[float] = [x1]
+        for x in (self.p.room_width, self.x_ridge, 0.0):
+            if lo + 1e-9 < x < hi - 1e-9:
+                top_xs.append(x)
         top_xs.append(x0)
         pts.extend((x, self.z_gable_top(x)) for x in top_xs)
         return pts
