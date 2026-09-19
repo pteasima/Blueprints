@@ -13,7 +13,8 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
   and terrace glazing on the X=0 eave (opposite cabinets).
 - Floor slab is the clear room only; perimeter walls own the strip below z=0.
 - Šikminy: NaturHeld 140 → latě // krokvím + Flex between → SDK → CD ⊥ krokvím
-  → závěsy → MW plenum → krov + pásky. `krov` = roof timber; `dreveny_rost` = NH latě.
+  → závěsy → MW plenum → krov (krokve 100/160 @ 875) + pásky. `krov` = roof
+  timber; `dreveny_rost` = NH latě.
 - Soffit box: NH L over cabinets (20 mm gap); Flex + latový rost; continuous GKF
   (slope past X_FURN → vertical return on shared horizontal CD/UD → lid);
   Nonius from krokve; rost hung from CD and braced to the eave wall.
@@ -388,7 +389,8 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     # Cutters: everything the roof must not occupy (walls, plates).
     roof_cutters = [s for s in structure if s.label != "podlaha"]
 
-    # --- Roof: krytina above krov above vata; thinned, then notched around walls. ---
+    # --- Roof: krytina above krokve above vata; thinned, then notched around walls. ---
+    # Krov = discrete rafters 100/160 @ 875 (sheet E_KROK), not a solid timber slab.
     krov_pts = _shrink_band(g.krov_pts(), top_n=3, gap=gap)
     krytina_pts = [(x, z + gap if i < 3 else z) for i, (x, z) in enumerate(g.krytina_pts())]
     vata_pts = [
@@ -396,11 +398,21 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         for i, (x, z) in enumerate(g.vata_pts())
     ]
 
-    krov = _cut_away(
-        _extrude_y(xz_face(krov_pts, "krov"), g.y_roof0, g.y_roof1, "krov"),
-        roof_cutters,
-        "krov",
-    )
+    y_raf0, y_raf1 = gap, p.room_length - gap
+    rafter_ys = g.rafter_y_stations(y_raf0, y_raf1)
+    half_raf = p.rafter_w * 0.5
+    krov_parts: list = []
+    for yc in rafter_ys:
+        ya, yb = yc - half_raf, yc + half_raf
+        if yb <= ya:
+            continue
+        krov_parts.append(
+            _cut_away(
+                _extrude_y(xz_face(krov_pts, "krov"), ya, yb, "krov"),
+                roof_cutters,
+                "krov",
+            )
+        )
     krytina = _cut_away(
         _extrude_y(xz_face(krytina_pts, "krytina"), g.y_roof0, g.y_roof1, "krytina"),
         roof_cutters,
@@ -411,7 +423,8 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
 
     parts: list = list(structure)
     parts.extend(_glass_panes(p, g, gap))
-    parts.extend([krov, krytina, vata])
+    parts.extend(krov_parts)
+    parts.extend([krytina, vata])
 
     # --- Šikminy: complete acoustic / steel stack (soffit block unchanged below). ---
     # Y-span matches the clear bay between předstěny (they own the gable ends).
@@ -448,16 +461,16 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         cd_parts.append(_extrude_y(xz_face(quad, LABEL_CD), y_ceil0, y_ceil1, LABEL_CD))
     parts.extend(cd_parts)
 
-    # 5) Závěsy CD→krokev at rafter × CD crossings
+    # 5) Závěsy CD→krokev at rafter × CD crossings (same Y stations as krokve).
     zaves_parts: list = []
-    rafter_ys = g.rafter_y_stations(y_ceil0, y_ceil1)
     half_hang = p.hanger_w * 0.5
+    ceil_rafter_ys = [yc for yc in rafter_ys if y_ceil0 <= yc <= y_ceil1]
     for st in g.sikmina_cd_stations():
         xs = [pt[0] for pt in g.sikmina_cd_quad(*st)]
         if min(xs) < 1.0 or max(xs) > g.x_furn - 1.0:
             continue
         hang_quad = g.hanger_quad(*st)
-        for yc in rafter_ys:
+        for yc in ceil_rafter_ys:
             zaves_parts.append(
                 _extrude_y(
                     xz_face(hang_quad, LABEL_ZAVES),
@@ -527,9 +540,9 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     s_right = (g.x_furn - g.x_false) / g.cos
     _add_slope_bracing(0.0, s_right, _right_raf, (-g.sin, 0.0, -g.cos))
 
-    # Guarantee FACE_GAP mates: shave float nicks against krov / hangers.
+    # Guarantee FACE_GAP mates: shave float nicks against krokve / hangers.
     if paska_parts:
-        tools = [krov] + zaves_parts
+        tools = list(krov_parts) + zaves_parts
         paska_parts = [_cut_away(bar, tools, LABEL_PASKA) for bar in paska_parts]
 
     parts.extend(paska_parts)
@@ -626,7 +639,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         hang_h = z_top - z_cd_top
         if hang_h < 20.0:
             continue
-        for yc in rafter_ys:
+        for yc in ceil_rafter_ys:
             horiz_zaves.append(
                 _box(
                     xc - half_hang,
@@ -638,8 +651,8 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
                     LABEL_ZAVES,
                 )
             )
-    if horiz_zaves:
-        horiz_zaves = [_cut_away(z, [krov], LABEL_ZAVES) for z in horiz_zaves]
+    if horiz_zaves and krov_parts:
+        horiz_zaves = [_cut_away(z, krov_parts, LABEL_ZAVES) for z in horiz_zaves]
     parts.extend(horiz_zaves)
 
     # Latový rost: top rails under GKF, vertical + underside latě, hung from CD, braced to wall.
@@ -831,12 +844,12 @@ def _labeled_slices(parts: list, plane: Plane):
 
 
 def build_section_slice(params: ObyvakParams | None = None):
-    """XZ slice through a rost lať near mid-length (panel A station from 3D solids)."""
+    """XZ slice through a krokev near mid-length (panel A station from 3D solids)."""
     p = params or ObyvakParams()
     g = ObyvakLayout(p)
-    # Discrete latě miss a pure mid-Y cut; snap to the nearest rost centreline.
+    # Discrete krokve miss a pure mid-Y cut; snap to the nearest rafter centreline.
     y_target = p.room_length / 2.0
-    stations = g.sikmina_rost_y_stations(g.y_furn0, g.y_furn1)
+    stations = g.rafter_y_stations(FACE_GAP, p.room_length - FACE_GAP)
     y_mid = min(stations, key=lambda y: abs(y - y_target)) if stations else y_target
     faces = _labeled_slices(_parts(p, g), Plane.XZ.offset(-y_mid))
     moved = []
