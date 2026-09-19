@@ -1,8 +1,11 @@
 """Viewer named scenes (camera / cuts / opacity recipes) for the WebGL shell.
 
-Coordinates are CAD millimetres converted to metres on the same axes as the
-build123d GLB (X eave↔eave, Y kitchen↔living, Z up). This differs from the
-USDZ Y-up remapping used for Quick Look.
+build123d/OCCT writes GLBs with a root rotation that maps CAD Z-up → glTF Y-up:
+
+  (x, y, z)_cad_mm  →  (x, z, −y)_gltf_m
+
+So in the viewer: X = eave↔eave, Y = up, Z = −(kitchen↔living).
+Scene JSON must use these glTF metres (same as mesh world space after load).
 """
 
 from __future__ import annotations
@@ -15,10 +18,14 @@ from typing import Any, Sequence
 _CAD_MM_TO_M = 0.001
 
 
-def cad_mm_to_m(point: Sequence[float]) -> list[float]:
-    """CAD mm (x, y, z) → GLB metres (same axes)."""
+def cad_mm_to_gltf_m(point: Sequence[float]) -> list[float]:
+    """CAD mm (x, y_length, z_up) → glTF metres (x, y_up, −y_length)."""
     x, y, z = point
-    return [x * _CAD_MM_TO_M, y * _CAD_MM_TO_M, z * _CAD_MM_TO_M]
+    return [x * _CAD_MM_TO_M, z * _CAD_MM_TO_M, -y * _CAD_MM_TO_M]
+
+
+# Back-compat alias used by early scene drafts.
+cad_mm_to_m = cad_mm_to_gltf_m
 
 
 def write_scenes_json(model_id: str, scenes: list[dict[str, Any]], dest: Path) -> Path:

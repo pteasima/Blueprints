@@ -8,7 +8,7 @@ from obyvak import FACE_GAP, build, build_elevation_slice, build_preview, build_
 from obyvak_geom import ObyvakParams, build_layout  # noqa: E402
 from obyvak_section import build as build_section  # noqa: E402
 from blueprints.export_utils import export_shape  # noqa: E402
-from blueprints.scenes import cad_mm_to_m, write_scenes_json  # noqa: E402
+from blueprints.scenes import cad_mm_to_gltf_m, write_scenes_json  # noqa: E402
 
 
 def _labeled(shape, name: str):
@@ -39,23 +39,28 @@ def test_soffit_scene_recipe():
     assert s["opacity"] == {"soffit": 1, "podhled": 1, "omitka": 1}
     assert len(s["cuts"]) == 1
     assert s["cuts"][0]["t"] == 0.5
-    assert s["cuts"][0]["normal"] == [1.0, 0.0, 0.0]
+    # glTF −Z ← CAD +Y (length); half the room length removed from kitchen side.
+    assert s["cuts"][0]["normal"] == [0.0, 0.0, -1.0]
     cam = s["camera"]
-    assert cam["up"] == [0.0, 0.0, 1.0]
+    assert cam["up"] == [0.0, 1.0, 0.0]  # glTF Y = CAD up
     assert len(cam["target"]) == 3
     assert len(cam["position"]) == 3
-    assert cam["position"][1] < cam["target"][1]  # look along +Y (soffit run)
+    # Look along −Z (kitchen → living); camera has larger Z than target.
+    assert cam["position"][2] > cam["target"][2]
     assert abs(cam["position"][0] - cam["target"][0]) < 1e-9
-    assert abs(cam["position"][2] - cam["target"][2]) < 1e-9
+    assert abs(cam["position"][1] - cam["target"][1]) < 1e-9
     assert len(cam["orthoFit"]) == 2
     assert cam["orthoFit"][0] > 0 and cam["orthoFit"][1] > 0
-    # Target sits in the cabinet soffit bay (metres).
+    # Target sits in the cabinet soffit bay (glTF metres).
     p = ObyvakParams()
     g = build_layout(p)
     tx, ty, tz = cam["target"]
     assert g.x_furn * 0.001 <= tx <= (g.x_furn + p.furniture_width) * 0.001
-    assert g.y_furn0 * 0.001 <= ty <= g.y_furn1 * 0.001
-    assert abs(cad_mm_to_m((0, 0, 1000))[2] - 1.0) < 1e-12
+    assert g.z_nabeh_bot * 0.001 <= ty <= g.z_gkf_horiz * 0.001
+    assert -g.y_furn1 * 0.001 <= tz <= -g.y_furn0 * 0.001
+    # CAD (0,0,1000) height → glTF Y = 1.
+    assert abs(cad_mm_to_gltf_m((0, 0, 1000))[1] - 1.0) < 1e-12
+    assert abs(cad_mm_to_gltf_m((0, 1000, 0))[2] - (-1.0)) < 1e-12
 
 
 def test_write_scenes_json(tmp_path):
