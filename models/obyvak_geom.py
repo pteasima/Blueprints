@@ -23,10 +23,11 @@ World:
 
 Right eave soffit box: NH L, Flex cavity + latový rost (latě @625, Flex between).
 GKF is continuous for acoustics and copies the wooden lattice edge: slope GKF
-runs to `x_nh_inner` (rost front), a vertical return drops onto the lid there,
-and the break CD/UD sits flush with that edge so the box hangs at its front —
-not mid-bay. Horizontal CD @625 + Nonius above the lid; rost drop-hung from
-that grid and braced to the eave wall. Furniture / pozednice are not structural.
+runs to `x_nh_inner` (rost front), a vertical return with a slope-cut top seats
+on the lid (lid extends past the front CD for a proper L), and that front CD
+hangs the box at the lattice edge. Horizontal CD @625 + Nonius above the lid;
+rost drop-hung from that grid and braced to the eave wall. Furniture /
+pozednice are not structural.
 """
 
 from __future__ import annotations
@@ -260,10 +261,19 @@ class ObyvakLayout:
         return inner + list(reversed(outer))
 
     def _slope_sdk_band_pts(self, t0: float, t1: float) -> list[tuple[float, float]]:
-        """GKF band on the slope plane, continued to x_sdk_break."""
+        """GKF band on the slope plane to x_sdk_break, with a mitered right-hand end.
+
+        The terminal edge is cut ⊥ to the board (along the attic normal) so it
+        seats on the vertical return's slope-cut top instead of ending as a
+        blunt vertical face.
+        """
         xs = self._sikmina_sdk_xs()
         inner = [(x, self.z_slope_plane_offset(x, t0)) for x in xs]
         outer = [(x, self.z_slope_plane_offset(x, t1)) for x in xs]
+        # Right-slope attic normal (up-left): end face = thickness along that normal.
+        dt = t1 - t0
+        x_i, z_i = inner[-1]
+        outer[-1] = (x_i - dt * self.sin, z_i + dt * self.cos)
         return inner + list(reversed(outer))
 
     def sikmina_nh_pts(self) -> list[tuple[float, float]]:
@@ -457,34 +467,39 @@ class ObyvakLayout:
         ]
 
     def soffit_flex_pts(self) -> list[tuple[float, float]]:
-        """Flex cavity in the soffit box + small pack under slope GKF to the rost front.
+        """Flex cavity in the soffit box + small pack under slope GKF to the return.
 
         Below Z_GKF: fills the NH L box. Between X_FURN and the vertical GKF
-        (just room-side of x_nh_inner) the top follows the slope-GKF underside.
+        the top follows the slope-GKF underside (angled seat on the return).
         """
         p = self.p
         t = self.t_nh_face
         t0 = self.t_nh_face + self.t_flex_pack
         xb = self.x_sdk_break
-        x_vert = xb - p.sdk_t  # room face of vertical GKF
+        x_vert = xb - p.sdk_t  # room face of vertical GKF (= lid overhang start)
         z_br = self.z_slope_plane_offset(xb, t0)
         z_fu = self.z_slope_plane_offset(self.x_furn, t0)
+        z_vert_top = self.z_slope_plane_offset(x_vert, t0)
         return [
             (self.x_nh_inner, self.z_nabeh_bot + t),
             (p.room_width, self.z_nabeh_bot + t),
             (p.room_width, self.z_gkf_horiz),
             (x_vert, self.z_gkf_horiz),
-            (x_vert, z_br),
+            (x_vert, z_vert_top),
             (self.x_furn, z_fu),
             (self.x_furn, self.z_gkf_horiz),
             (self.x_nh_inner, self.z_gkf_horiz),
         ]
 
     def soffit_sdk_lid_pts(self) -> list[tuple[float, float]]:
-        """Horizontal GKF lid from the rost-front break to the eave wall."""
+        """Horizontal GKF lid — extends past the front CD to seat the vertical return.
+
+        Runs from the room face of the vertical GKF to the eave wall so the
+        corner is a proper L (lid beyond the CD), not an edge-only touch.
+        """
         p = self.p
         t = p.sdk_t
-        x0 = self.x_sdk_break
+        x0 = self.x_sdk_break - p.sdk_t
         return [
             (x0, self.z_gkf_horiz),
             (p.room_width, self.z_gkf_horiz),
@@ -493,22 +508,25 @@ class ObyvakLayout:
         ]
 
     def soffit_sdk_vertical_pts(self) -> list[tuple[float, float]]:
-        """Vertical GKF return flush with the rost front (`x_nh_inner`).
+        """Vertical GKF return at the rost front, seated on the lid overhang.
 
-        Attic face at the lattice edge; thickness toward the room (into the NH
-        bay). Front soffit CD sits on the lid with its front face on that same
-        plane — gypsum copies the wooden edge, CD hangs the box there.
+        Attic face at `x_nh_inner` (CD front). Top is cut parallel to the slope
+        GKF underside so the two boards join on that angled face instead of
+        touching only at an edge. Bottom sits on the lid (which extends past CD).
         """
         p = self.p
         t0 = self.t_nh_face + self.t_flex_pack
         xb = self.x_sdk_break
+        x0 = xb - p.sdk_t
         z_bot = self.z_gkf_horiz + p.sdk_t
-        z_top = self.z_slope_plane_offset(xb, t0)
+        # Angled top // slope GKF inner plane (miter seat).
+        z_top_attic = self.z_slope_plane_offset(xb, t0)
+        z_top_room = self.z_slope_plane_offset(x0, t0)
         return [
-            (xb - p.sdk_t, z_bot),
+            (x0, z_bot),
             (xb, z_bot),
-            (xb, z_top),
-            (xb - p.sdk_t, z_top),
+            (xb, z_top_attic),
+            (x0, z_top_room),
         ]
 
     def krov_pts(self) -> list[tuple[float, float]]:

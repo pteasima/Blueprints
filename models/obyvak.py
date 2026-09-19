@@ -568,10 +568,11 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     z_br = g.z_slope_plane_offset(xb, t_sdk0)
     z_fu = g.z_slope_plane_offset(g.x_furn, t_sdk0)
     if x_vert - g.x_furn > 4 * gap and z_br > g.z_gkf_horiz + 4 * gap:
+        z_vert_top = g.z_slope_plane_offset(x_vert, t_sdk0)
         flex_wedge = [
             (g.x_furn + gap, g.z_gkf_horiz + gap),
             (x_vert - gap, g.z_gkf_horiz + gap),
-            (x_vert - gap, z_br - gap),
+            (x_vert - gap, z_vert_top - gap),
             (g.x_furn + gap, z_fu - gap),
         ]
         wedge_solid = _extrude_y(xz_face(flex_wedge, LABEL_FLEX), y_ceil0, y_ceil1, LABEL_FLEX)
@@ -580,25 +581,28 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         except Exception:
             parts.append(wedge_solid)
 
-    # Continuous GKF: slope → vertical return at rost front → horizontal lid.
+    # Continuous GKF: slope → vertical return (angled top) seated on lid past CD.
     lid_solid = None
     vert_solid = None
     if p.sdk_t > 2 * gap:
         z_bot = g.z_gkf_horiz + p.sdk_t
-        z_top = g.z_slope_plane_offset(xb, t_sdk0)
-        if z_top - z_bot > 2 * gap:
+        z_top_attic = g.z_slope_plane_offset(xb, t_sdk0)
+        z_top_room = g.z_slope_plane_offset(x_vert, t_sdk0)
+        if min(z_top_attic, z_top_room) - z_bot > 2 * gap:
             vert = [
                 (x_vert + gap, z_bot + gap),
                 (xb - gap, z_bot + gap),
-                (xb - gap, z_top - gap),
-                (x_vert + gap, z_top - gap),
+                (xb - gap, z_top_attic - gap),
+                (x_vert + gap, z_top_room - gap),
             ]
             vert_solid = _extrude_y(xz_face(vert, "sdk"), y_ceil0, y_ceil1, "sdk")
+        # Lid extends past the front CD to the room face of the vertical return.
+        x_lid0 = xb - p.sdk_t
         lid = [
-            (xb + gap, g.z_gkf_horiz + gap),
+            (x_lid0 + gap, g.z_gkf_horiz + gap),
             (p.room_width - gap, g.z_gkf_horiz + gap),
             (p.room_width - gap, g.z_gkf_horiz + p.sdk_t - gap),
-            (xb + gap, g.z_gkf_horiz + p.sdk_t - gap),
+            (x_lid0 + gap, g.z_gkf_horiz + p.sdk_t - gap),
         ]
         lid_solid = _extrude_y(xz_face(lid, "sdk"), y_ceil0, y_ceil1, "sdk")
 

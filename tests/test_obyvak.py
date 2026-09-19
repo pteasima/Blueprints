@@ -106,8 +106,14 @@ def test_sikminy_and_soffit_stack_in_3d():
         and c.bounding_box().min.Z >= g.z_gkf_horiz + p.sdk_t - 2.0
     ]
     assert len(verts) == 1
-    # Attic face of vertical GKF flush with rost front.
+    # Attic face of vertical GKF flush with rost front / CD front.
     assert abs(verts[0].bounding_box().max.X - (g.x_nh_inner - FACE_GAP)) < 2.0
+    # Lid extends past the CD (room-ward) to seat the vertical — proper L corner.
+    assert horiz_lids[0].bounding_box().min.X < g.x_nh_inner - p.sdk_t * 0.5
+    assert abs(horiz_lids[0].bounding_box().min.X - (g.x_nh_inner - p.sdk_t + FACE_GAP)) < 2.0
+    # Vertical top is cut to the slope (trapezoid taller on the room side).
+    vbb = verts[0].bounding_box()
+    assert vbb.size.Z > p.cd_t  # taller than a square butt at cd_t
     # Front soffit CD flush with rost edge (front face at x_nh_inner).
     front_cds = [
         c
