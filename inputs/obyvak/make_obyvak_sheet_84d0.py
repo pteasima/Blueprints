@@ -43,23 +43,23 @@ Z_POZ_TOP = Z_EAVE_WALL + POZ_H
 Z_TIE = Z_EAVE_WALL + POZ_H / 2.0
 
 T_FINISH, T_BASIC = 2.0, 2.0
-T_NH = 40.0
+T_NH = 60.0
 T_FLEX = 60.0
 T_FOIL = 1.0
 T_SDK = 12.5
 T_CD = 27.0
-T_PLENUM = 100.0
+T_PLENUM = 80.0
 T_KROKEV = 160.0
 T_VENT, T_DHV, T_KONTRA, T_LAT, T_TASKA = 40.0, 1.0, 40.0, 40.0, 22.0
 E_KROK, KROK_W = 875.0, 100.0
 BATTEN_W, BATTEN_D = 60.0, 40.0
 
-T_SOFT_BELOW_SDK = T_FINISH + T_BASIC + T_NH + T_FLEX + T_FOIL + T_SDK  # 117.5
+T_SOFT_BELOW_SDK = T_FINISH + T_BASIC + T_NH + T_FLEX + T_FOIL + T_SDK  # 137.5
 T_LEFT = T_PLENUM + T_CD + T_SOFT_BELOW_SDK     # 244.5
 T_EXTRA = W_FURN * SIN                          # ~289.3
 T_RIGHT = T_LEFT + T_EXTRA                      # ~533.8
-L_HANGER_LEFT = T_PLENUM                        # 100
-L_HANGER_RIGHT = T_PLENUM + T_EXTRA             # ~389.3
+L_HANGER_LEFT = T_PLENUM                        # 80
+L_HANGER_RIGHT = T_PLENUM + T_EXTRA             # ~369.3
 
 DIRECT_HANGER_STOCK = 125.0
 DIRECT_HANGER_CODE = "KB510154"
@@ -100,7 +100,7 @@ GAP_FURN = 20.0
 FRAME_MAIN = 40.0
 Z_NABEH_BOT = H_FURN + GAP_FURN
 NABEH_FACE_H = Z_GKF_HORIZ - Z_NABEH_BOT
-T_NH_FACE = T_FINISH + T_BASIC + T_NH  # 44
+T_NH_FACE = T_FINISH + T_BASIC + T_NH  # 64
 Z_SLOPE_NH = H_START
 X_NH_OUTER = X_FURN
 X_NH_INNER = X_FURN + T_NH_FACE
@@ -339,7 +339,7 @@ def dxf_panel_rez(ox=0.0, oy=0.0):
     legend = [
         "LEGENDA SKLADEB / ZÁVĚSŮ",
         "",
-        "LEVÁ (plénum ~100):",
+        "LEVÁ (plénum ~80):",
         f"  {DIRECT_HANGER_NAME}",
         f"  {DIRECT_HANGER_CODE} (sklad 125)",
         "  Domo Plus v plénu",
@@ -358,7 +358,7 @@ def dxf_panel_rez(ox=0.0, oy=0.0):
         "",
         "STACK interiér→exteriér:",
         "  1 StoSilent Finish+Basic",
-        "  2 NaturHeld 140 / 40 mm",
+        "  2 NaturHeld 140 / 60 mm",
         "  3 Flex 50 / 60 + latě 60×40@625",
         "  5 Intello / Vario Xtra",
         "  6 SDK RF/GKF 12,5",
@@ -718,7 +718,7 @@ ax.set_aspect("auto")
 lines_leg = [
     ("LEGENDA SKLADEB / ZÁVĚSŮ", 9.5, "bold", "#111"),
     ("", 4, "normal", "#111"),
-    ("LEVÁ — plénum ~100 mm", 8.5, "bold", "#1a5f8a"),
+    ("LEVÁ — plénum ~80 mm", 8.5, "bold", "#1a5f8a"),
     (f"· {DIRECT_HANGER_NAME}", 7.5, "normal", "#333"),
     (f"  kód {DIRECT_HANGER_CODE} (sklad 125)", 7.2, "normal", "#333"),
     ("· Domo Plus v plénu; závěs z boku krokve", 7.2, "normal", "#333"),
@@ -737,7 +737,7 @@ lines_leg = [
     ("", 3, "normal", "#111"),
     ("STACK interiér → exteriér", 8.5, "bold", "#111"),
     ("1  StoSilent Finish + Basic", 7.0, "normal", "#333"),
-    ("2  NaturHeld 140 / 40 mm", 7.0, "normal", "#333"),
+    ("2  NaturHeld 140 / 60 mm", 7.0, "normal", "#333"),
     ("3  Flex 50 / 60 + latě 60×40 @625", 7.0, "normal", "#333"),
     ("5  Intello / Vario Xtra", 7.0, "normal", "#333"),
     ("6  SDK RF/GKF 12,5", 7.0, "normal", "#333"),
