@@ -475,6 +475,61 @@ def build_elevation_slice(params: ObyvakParams | None = None):
     return _compound(mapped, label=f"{MODEL_NAME}_slice_elevation"), meta
 
 
+def scenes(params: ObyvakParams | None = None) -> list[dict]:
+    """Named WebGL viewer scenes (see blueprints.scenes).
+
+    Soffit: orthographic cross-section of the cabinet soffit. GLB is glTF Y-up
+    (CAD Z→Y, CAD Y→−Z). Cut along room length from the kitchen gable; camera
+    looks straight along that axis at the soffit with Y up.
+    """
+    from blueprints.scenes import cad_mm_to_gltf_m
+
+    p = params or ObyvakParams()
+    g = ObyvakLayout(p)
+    gap = FACE_GAP
+    # Match the soffit solid in `_parts` (cabinet bay, above furniture).
+    sx0, sx1 = g.x_furn, g.x_furn + p.furniture_width
+    sy0, sy1 = g.y_furn0 + gap, g.y_furn1 - gap
+    sz0 = g.z_nabeh_bot + gap
+    sz1 = g.z_gkf_horiz - p.soffit_hint_t - 2 * gap
+    cx = 0.5 * (sx0 + sx1)
+    cy = 0.5 * (sy0 + sy1)
+    cz = 0.5 * (sz0 + sz1)
+    # View plane is glTF XY (= CAD X width × CAD Z height).
+    pad = 1.25
+    frame_x0 = g.x_furn - 250.0
+    frame_x1 = p.room_width + p.wall_plaster + 50.0
+    frame_z0 = p.furniture_height - 150.0
+    frame_z1 = g.z_gkf_horiz + 200.0
+    half_w = 0.5 * (frame_x1 - frame_x0) * pad * 0.001
+    half_h = 0.5 * (frame_z1 - frame_z0) * pad * 0.001
+    dist_m = max(half_w, half_h, 0.35) * 5.0
+    target = cad_mm_to_gltf_m((cx, cy, cz))
+    # CAD +Y (kitchen→living) → glTF −Z. Camera on the kitchen side.
+    look = (0.0, 0.0, -1.0)
+    position = [
+        target[0] - look[0] * dist_m,
+        target[1] - look[1] * dist_m,
+        target[2] - look[2] * dist_m,
+    ]
+    return [
+        {
+            "id": "soffit",
+            "label": "Soffit",
+            "camera": {
+                "target": target,
+                "position": position,
+                "up": [0.0, 1.0, 0.0],
+                "orthoFit": [half_w, half_h],
+            },
+            "projection": "ortho",
+            "cuts": [{"normal": list(look), "t": 0.5}],
+            "opacity": {"soffit": 1, "podhled": 1, "omitka": 1},
+            "opacityDefault": 0.5,
+        }
+    ]
+
+
 def extra_exports(params: ObyvakParams | None = None):
     preview, _ = build_preview(params)
     section, _ = build_section_slice(params)

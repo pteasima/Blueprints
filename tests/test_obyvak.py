@@ -4,10 +4,11 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "models"))
 
-from obyvak import FACE_GAP, build, build_elevation_slice, build_preview, build_section_slice  # noqa: E402
+from obyvak import FACE_GAP, build, build_elevation_slice, build_preview, build_section_slice, scenes  # noqa: E402
 from obyvak_geom import ObyvakParams, build_layout  # noqa: E402
 from obyvak_section import build as build_section  # noqa: E402
 from blueprints.export_utils import export_shape  # noqa: E402
+from blueprints.scenes import cad_mm_to_gltf_m, write_scenes_json  # noqa: E402
 
 
 def _labeled(shape, name: str):
@@ -25,6 +26,48 @@ def test_layout_ceiling_and_gable():
     assert g.z_gable_top(g.x_ridge) > g.z_soffit
     assert g.y_furn0 == p.predstena_kitchen
     assert g.y_furn1 == p.room_length - p.predstena_living
+
+
+def test_soffit_scene_recipe():
+    specs = scenes()
+    assert len(specs) == 1
+    s = specs[0]
+    assert s["id"] == "soffit"
+    assert s["label"] == "Soffit"
+    assert s["projection"] == "ortho"
+    assert s["opacityDefault"] == 0.5
+    assert s["opacity"] == {"soffit": 1, "podhled": 1, "omitka": 1}
+    assert len(s["cuts"]) == 1
+    assert s["cuts"][0]["t"] == 0.5
+    # glTF −Z ← CAD +Y (length); half the room length removed from kitchen side.
+    assert s["cuts"][0]["normal"] == [0.0, 0.0, -1.0]
+    cam = s["camera"]
+    assert cam["up"] == [0.0, 1.0, 0.0]  # glTF Y = CAD up
+    assert len(cam["target"]) == 3
+    assert len(cam["position"]) == 3
+    # Look along −Z (kitchen → living); camera has larger Z than target.
+    assert cam["position"][2] > cam["target"][2]
+    assert abs(cam["position"][0] - cam["target"][0]) < 1e-9
+    assert abs(cam["position"][1] - cam["target"][1]) < 1e-9
+    assert len(cam["orthoFit"]) == 2
+    assert cam["orthoFit"][0] > 0 and cam["orthoFit"][1] > 0
+    # Target sits in the cabinet soffit bay (glTF metres).
+    p = ObyvakParams()
+    g = build_layout(p)
+    tx, ty, tz = cam["target"]
+    assert g.x_furn * 0.001 <= tx <= (g.x_furn + p.furniture_width) * 0.001
+    assert g.z_nabeh_bot * 0.001 <= ty <= g.z_gkf_horiz * 0.001
+    assert -g.y_furn1 * 0.001 <= tz <= -g.y_furn0 * 0.001
+    # CAD (0,0,1000) height → glTF Y = 1.
+    assert abs(cad_mm_to_gltf_m((0, 0, 1000))[1] - 1.0) < 1e-12
+    assert abs(cad_mm_to_gltf_m((0, 1000, 0))[2] - (-1.0)) < 1e-12
+
+
+def test_write_scenes_json(tmp_path):
+    path = write_scenes_json("obyvak", scenes(), tmp_path / "obyvak.scenes.json")
+    data = path.read_text(encoding="utf-8")
+    assert '"soffit"' in data
+    assert path.stat().st_size > 0
 
 
 def test_3d_matches_section_and_elevation_masses():

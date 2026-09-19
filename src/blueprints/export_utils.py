@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import json
 import os
 import shutil
 import struct
@@ -259,6 +260,7 @@ def export_shape(
     *,
     stem: str = "model",
     formats: tuple[str, ...] = ("step", "stl", "svg", "dxf", "png"),
+    scenes: list | None = None,
 ) -> dict[str, Path]:
     """Export a build123d shape to common formats under exports/<model_name>/."""
     out_dir = ensure_export_dir(model_name)
@@ -290,7 +292,7 @@ def export_shape(
             raise ValueError(f"Unsupported export format: {fmt}")
         written[fmt] = path
 
-    _maybe_write_usdz(written, model_name, shape=shape, stem=stem)
+    _maybe_write_usdz(written, model_name, shape=shape, stem=stem, scenes=scenes)
     publish_to_artifacts(model_name, written)
     return written
 
@@ -806,6 +808,7 @@ _VIEWER_HTML = """<!DOCTYPE html>
     <section class="sheet-section" id="section-view">
       <h2 class="sheet-title">View</h2>
       <div id="cams" class="seg"></div>
+      <div id="fov" class="fov"></div>
     </section>
     <section class="sheet-section" id="section-cuts">
       <h2 class="sheet-title">Sections</h2>
@@ -836,7 +839,14 @@ _VIEWER_HTML = """<!DOCTYPE html>
   }
   const canvas = document.getElementById('c');
   const glb = b64ToBuf("%%GLB_B64%%");
-  BlueprintsViewerBundle.mountViewer(canvas, glb);
+  let scenes = [];
+  try {
+    scenes = JSON.parse("%%SCENES_JSON%%");
+    if (!Array.isArray(scenes)) scenes = [];
+  } catch (e) {
+    scenes = [];
+  }
+  BlueprintsViewerBundle.mountViewer(canvas, glb, { scenes: scenes });
 })();
 </script>
 </body>
@@ -880,16 +890,23 @@ def write_gltf_html_viewer(
     html_path: Path,
     *,
     usdz_path: Path | None = None,
+    scenes: list | None = None,
 ) -> Path:
     """Self-contained offline HTML viewer (bundled Three.js + embedded GLB)."""
     glb_b64 = base64.b64encode(glb_path.read_bytes()).decode("ascii")
     usdz_b64 = ""
     if usdz_path is not None and usdz_path.is_file():
         usdz_b64 = base64.b64encode(usdz_path.read_bytes()).decode("ascii")
+    scenes_json = json.dumps(scenes if scenes is not None else [])
+    # Escape for embedding inside a double-quoted JS string literal.
+    scenes_js = (
+        scenes_json.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
+    )
     html = (
         _VIEWER_HTML.replace("%%VIEWER_JS%%", _viewer_iife())
         .replace("%%GLB_B64%%", glb_b64)
         .replace("%%USDZ_B64%%", usdz_b64)
+        .replace("%%SCENES_JSON%%", scenes_js)
     )
     html_path.parent.mkdir(parents=True, exist_ok=True)
     html_path.write_text(html, encoding="utf-8")
@@ -912,6 +929,7 @@ def _maybe_write_usdz(
     *,
     shape: Shape | Compound | None = None,
     stem: str = "model",
+    scenes: list | None = None,
 ) -> None:
     stl_path = written.get("stl")
     if stl_path is None or not stl_path.is_file():
@@ -933,7 +951,9 @@ def _maybe_write_usdz(
         write_glb(shape, glb_path)
         written["glb"] = glb_path
         html_path = stl_path.with_suffix(".html")
-        write_gltf_html_viewer(glb_path, html_path, usdz_path=usdz_path)
+        write_gltf_html_viewer(
+            glb_path, html_path, usdz_path=usdz_path, scenes=scenes
+        )
         written["html"] = html_path
 
     # Only the primary stem updates the Pages hub (extras must not overwrite it).
@@ -942,6 +962,7 @@ def _maybe_write_usdz(
             model_name,
             usdz_path,
             glb_path=written.get("glb"),
+            scenes=scenes,
         )
         if hub is not None:
             written["preview_hub"] = hub
