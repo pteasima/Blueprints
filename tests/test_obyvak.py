@@ -42,16 +42,22 @@ def test_layout_ceiling_and_gable():
 
 
 def test_sikminy_and_soffit_stack_in_3d():
-    """Šikminy NH / rost / Flex and self-supporting soffit box are distinct solids."""
+    """Šikminy NH / rost // krokvím / CD ⊥ / Flex and soffit box."""
     p = ObyvakParams()
     g = build_layout(p)
     shape, _ = build(p)
     nh = _labeled(shape, LABEL_NATURHELD)
     flex = _labeled(shape, LABEL_FLEX)
     rost = _labeled(shape, LABEL_ROST)
+    cds = _labeled(shape, "cd")
+    zaves = _labeled(shape, "zaves")
+    pasky = _labeled(shape, "paska")
     assert len(nh) >= 2  # slope NH + soffit L
     assert len(flex) >= 2  # slope Flex + box Flex
-    assert len(rost) >= 8  # slope latě + soffit frame
+    assert len(rost) >= 8  # slope latě (along Y) + soffit frame
+    assert len(cds) >= 5  # CD ⊥ krokvím along slope
+    assert len(zaves) >= 10
+    assert len(pasky) >= 10
     # Room-facing NH on slopes sits at H_START.
     slope_nh = min(nh, key=lambda s: s.bounding_box().min.X)
     assert abs(slope_nh.bounding_box().min.Z - (g.h_start + FACE_GAP)) < 2.0
@@ -74,10 +80,18 @@ def test_sikminy_and_soffit_stack_in_3d():
     for part in _labeled(shape, "krov"):
         bb = part.bounding_box()
         assert not (bb.min.X >= g.x_furn - 1.0 and bb.max.Z <= g.z_gkf_horiz + 1.0)
-    # Slope latě are discrete (not a solid wood slab).
-    slope_rost = [c for c in rost if c.bounding_box().max.X < g.x_furn]
+    # Slope latě are // krokvím: thin in Y, long along the slope (X).
+    slope_rost = [
+        c
+        for c in rost
+        if c.bounding_box().min.X < 100.0 and c.bounding_box().max.X <= g.x_furn + 1.0
+    ]
     assert len(slope_rost) >= 5
-    assert all(c.bounding_box().size.X < p.rost_spacing for c in slope_rost)
+    assert all(c.bounding_box().size.Y < p.rost_spacing for c in slope_rost)
+    assert all(c.bounding_box().size.X > 500.0 for c in slope_rost)
+    # CD are ⊥ krokvím: thin along slope (X), long in Y.
+    assert all(c.bounding_box().size.X < p.cd_spacing for c in cds)
+    assert all(c.bounding_box().size.Y > 1000.0 for c in cds)
 
 
 def test_soffit_scene_recipe():
@@ -152,6 +166,9 @@ def test_3d_matches_section_and_elevation_masses():
         LABEL_NATURHELD,
         "sklo",
         LABEL_ROST,
+        "cd",
+        "zaves",
+        "paska",
     ):
         assert name in labels
     assert "koruna" not in labels

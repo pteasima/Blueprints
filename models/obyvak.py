@@ -12,8 +12,8 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
   on gable shells, three gable pocket doors (chodba on Y=0; spíž + zádveří on Y=L),
   and terrace glazing on the X=0 eave (opposite cabinets).
 - Floor slab is the clear room only; perimeter walls own the strip below z=0.
-- Šikminy: NaturHeld 140 room face, dřevěný rošt (latě 60×40 @625), Flex 50 between
-  latě, then GKF; MW plenum to rafters. `krov` = rafter mass only (not the rost).
+- Šikminy: NaturHeld 140 → latě // krokvím + Flex between → SDK → CD ⊥ krokvím
+  → závěsy → MW plenum → krov + pásky. `krov` = roof timber; `dreveny_rost` = NH latě.
 - Soffit box: self-supporting NH L over cabinets (20 mm gap); Flex cavity + rost;
   GKF lid. Furniture is not structural; box does not hang from the pozednice.
 
@@ -29,9 +29,12 @@ from dataclasses import asdict
 from build123d import Align, Axis, Box, Color, Compound, Location, Plane, Solid
 
 from obyvak_geom import (
+    LABEL_CD,
     LABEL_FLEX,
     LABEL_NATURHELD,
+    LABEL_PASKA,
     LABEL_ROST,
+    LABEL_ZAVES,
     ObyvakLayout,
     ObyvakParams,
     xz_face,
@@ -366,7 +369,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     parts.extend(_glass_panes(p, g, gap))
     parts.extend([krov, krytina, vata])
 
-    # --- Šikminy + soffit: NaturHeld face, latový rost, Flex between latě. ---
+    # --- Šikminy: complete acoustic / steel stack (soffit block unchanged below). ---
     # Y-span matches the clear bay between předstěny (they own the gable ends).
     y_ceil0, y_ceil1 = g.y_furn0 + gap, g.y_furn1 - gap
 
@@ -374,20 +377,75 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         band = _shrink_closed_band(pts, gap)
         return _extrude_y(xz_face(band, label), y_ceil0, y_ceil1, label)
 
-    # Slopes: NaturHeld 140 → rost + Flex 50 → GKF (MW plenum already in `vata`).
+    # 1) NaturHeld 140 room face
     parts.append(_add_band(g.sikmina_nh_pts(), LABEL_NATURHELD))
 
+    # 2) Latě // krokvím (spaced along Y) + Flex 50 between them
     rost_parts: list = []
-    for quad in g.sikmina_batten_quads():
-        rost_parts.append(_extrude_y(xz_face(quad, LABEL_ROST), y_ceil0, y_ceil1, LABEL_ROST))
+    ribbon = g.sikmina_rost_ribbon_pts()
+    half_w = p.rost_w * 0.5
+    for yc in g.sikmina_rost_y_stations(y_ceil0, y_ceil1):
+        ya, yb = yc - half_w, yc + half_w
+        if yb <= ya:
+            continue
+        rost_parts.append(_extrude_y(xz_face(ribbon, LABEL_ROST), ya, yb, LABEL_ROST))
     flex_slope = _add_band(g.sikmina_flex_pts(), LABEL_FLEX)
     if rost_parts:
         flex_slope = _cut_away(flex_slope, rost_parts, LABEL_FLEX)
     parts.append(flex_slope)
     parts.extend(rost_parts)
+
+    # 3) SDK
     parts.append(_add_band(g.sikmina_sdk_pts(), "sdk"))
 
-    # Self-supporting soffit box over cabinets (nábytek nenosí; 20 mm gap).
+    # 4) CD ⊥ krokvím (spaced along slope, run along Y)
+    cd_parts: list = []
+    for quad in g.sikmina_cd_quads():
+        cd_parts.append(_extrude_y(xz_face(quad, LABEL_CD), y_ceil0, y_ceil1, LABEL_CD))
+    parts.extend(cd_parts)
+
+    # 5) Závěsy CD→krokev at rafter × CD crossings; pásky on rafter underside
+    zaves_parts: list = []
+    paska_parts: list = []
+    rafter_ys = g.rafter_y_stations(y_ceil0, y_ceil1)
+    half_raf = p.rafter_w * 0.5
+    half_hang = p.hanger_w * 0.5
+    for st in g.sikmina_cd_stations():
+        xs = [pt[0] for pt in g.sikmina_cd_quad(*st)]
+        if min(xs) < 1.0 or max(xs) > g.x_furn - 1.0:
+            continue
+        hang_quad = g.hanger_quad(*st)
+        strap_quad = g.paska_quad(*st)
+        for yc in rafter_ys:
+            zaves_parts.append(
+                _extrude_y(
+                    xz_face(hang_quad, LABEL_ZAVES),
+                    yc - half_hang,
+                    yc + half_hang,
+                    LABEL_ZAVES,
+                )
+            )
+            paska_parts.append(
+                _extrude_y(
+                    xz_face(strap_quad, LABEL_PASKA),
+                    yc - half_raf,
+                    yc + half_raf,
+                    LABEL_PASKA,
+                )
+            )
+    parts.extend(zaves_parts)
+    parts.extend(paska_parts)
+
+    # MW plenum must not swallow CD / hangers / pásky.
+    if cd_parts or zaves_parts or paska_parts:
+        vata = _cut_away(vata, cd_parts + zaves_parts + paska_parts, "vata")
+        # Replace the earlier vata entry in parts.
+        for i, part in enumerate(parts):
+            if part.label == "vata":
+                parts[i] = vata
+                break
+
+    # --- Soffit box (unchanged): NH L, Flex cavity, rost, GKF lid. ---
     t = g.t_nh_face
     soffit_nh = [
         (g.x_nh_outer + gap, g.z_nabeh_bot + gap),
@@ -533,24 +591,17 @@ def build_preview(params: ObyvakParams | None = None):
     kept = []
     for part in _parts(p, g):
         bb = part.bounding_box()
-        if part.label in {"krov", "krytina", "vata"}:
+        if part.label in {"krov", "krytina", "vata", LABEL_CD, LABEL_ZAVES, LABEL_PASKA}:
             continue
-        if part.label == LABEL_ROST and bb.min.X < g.x_furn - 1.0:
-            # Slope latě go with the attic pack; keep soffit-box rost.
-            continue
-        if part.label in {LABEL_NATURHELD, LABEL_FLEX}:
-            # Keep the cabinet soffit L / Flex; drop slope acoustic pack.
+        if part.label in {LABEL_ROST, LABEL_NATURHELD, LABEL_FLEX}:
+            # Keep cabinet soffit assembly; drop slope pack.
             if bb.min.X >= g.x_furn - 1.0:
                 kept.append(part)
             continue
-        if part.label == LABEL_ROST and bb.min.X >= g.x_furn - 1.0:
-            kept.append(part)
-            continue
         if part.label == "sdk" and bb.min.Z >= g.h_start - 50.0:
-            # Slope / lid GKF is roof pack — drop with the attic; keep gable pocket SDK.
+            # Slope / lid GKF is roof pack — drop; keep gable pocket SDK.
             continue
         if part.label in {"eps", "zdivo", "omitka", "pozednice", "nabytek"}:
-            # Open the cabinet eave only; keep gables so pocket doors read correctly.
             if bb.min.X >= p.room_width - 1.0:
                 continue
         kept.append(part)

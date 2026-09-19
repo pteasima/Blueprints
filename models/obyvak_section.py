@@ -1,12 +1,9 @@
 """Obývák 1.02 — příčný řez (panel A), parametrické 2D profily v Plane.XZ.
 
-Šikminy + soffit: NaturHeld 140, dřevěný rošt (latě), Flex 50 mezi latěmi, GKF.
-3D: `models/obyvak.py` (extrude podél Y).
+Šikminy: NaturHeld 140, latě // krokvím, Flex, SDK, CD ⊥ krokvím, závěsy, pásky.
+Soffit box beze změny. 3D: `models/obyvak.py`.
 
     python -m blueprints.export obyvak_section
-
-Zdroj: inputs/obyvak/make_obyvak_sheet_84d0.py / make_rez (panel A + E).
-450 mm u skříní je hloubka u okapové stěny — neplést se štítovou předstěnou 450.
 """
 
 from __future__ import annotations
@@ -15,10 +12,13 @@ from dataclasses import asdict
 
 from build123d import Compound
 
-from obyvak_geom import (  # noqa: F401 — ObyvakParams/build_layout re-exported for tests
+from obyvak_geom import (  # noqa: F401
+    LABEL_CD,
     LABEL_FLEX,
     LABEL_NATURHELD,
+    LABEL_PASKA,
     LABEL_ROST,
+    LABEL_ZAVES,
     ObyvakLayout,
     ObyvakParams,
     build_layout,
@@ -83,14 +83,23 @@ def build(params: ObyvakParams | None = None):
 
     parts.append(xz_face(g.vata_pts(), "vata"))
 
-    # Šikminy: NaturHeld → Flex zone with discrete latě → GKF.
+    # Šikminy stack
     parts.append(xz_face(g.sikmina_nh_pts(), LABEL_NATURHELD))
     parts.append(xz_face(g.sikmina_flex_pts(), LABEL_FLEX))
-    for quad in g.sikmina_batten_quads():
-        parts.append(xz_face(quad, LABEL_ROST))
+    # Lať // krokvím: continuous ribbon in this transverse cut (section through a lať).
+    parts.append(xz_face(g.sikmina_rost_ribbon_pts(), LABEL_ROST))
     parts.append(xz_face(g.sikmina_sdk_pts(), "sdk"))
+    for quad in g.sikmina_cd_quads():
+        parts.append(xz_face(quad, LABEL_CD))
+    # Schematic hangers + pásky at a few CD stations.
+    for st in g.sikmina_cd_stations()[::2]:
+        xs = [pt[0] for pt in g.sikmina_cd_quad(*st)]
+        if min(xs) < 1.0 or max(xs) > g.x_furn - 1.0:
+            continue
+        parts.append(xz_face(g.hanger_quad(*st), LABEL_ZAVES))
+        parts.append(xz_face(g.paska_quad(*st), LABEL_PASKA))
 
-    # Self-supporting soffit box: NH L, Flex cavity, rost hint, GKF lid.
+    # Soffit box (unchanged)
     parts.append(xz_face(g.soffit_nh_pts(), LABEL_NATURHELD))
     parts.append(xz_face(g.soffit_flex_pts(), LABEL_FLEX))
     fm = p.rost_d
@@ -119,7 +128,6 @@ def build(params: ObyvakParams | None = None):
         )
     )
 
-    # Room-facing outline (acoustic continuity).
     parts.append(
         xz_polyline(
             [
@@ -146,7 +154,7 @@ def build(params: ObyvakParams | None = None):
             "z_gkf_horiz": g.z_gkf_horiz,
             "t_nh_face": g.t_nh_face,
             "l_hanger_right": g.l_hanger_right,
-            "rost_count": len(g.sikmina_batten_stations()),
+            "cd_count": len(g.sikmina_cd_quads()),
         },
     }
     return shape, meta
