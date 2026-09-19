@@ -57,7 +57,14 @@ def test_sikminy_and_soffit_stack_in_3d():
     assert len(rost) >= 8  # slope latě (along Y) + soffit frame
     assert len(cds) >= 5  # CD ⊥ krokvím along slope
     assert len(zaves) >= 10
+    # ~6 straps/side (3 X pairs × 2 diagonals) along the 11 m length.
     assert len(pasky) >= 10
+    assert len(pasky) <= 14
+    # Pásky are long 45° diagonals (span both X and Y), not short along-rafter clips.
+    for strap in pasky:
+        bb = strap.bounding_box()
+        assert bb.size.Y > 800.0
+        assert bb.size.X > 400.0
     # Room-facing NH on slopes sits at H_START.
     slope_nh = min(nh, key=lambda s: s.bounding_box().min.X)
     assert abs(slope_nh.bounding_box().min.Z - (g.h_start + FACE_GAP)) < 2.0
@@ -89,6 +96,14 @@ def test_sikminy_and_soffit_stack_in_3d():
     assert len(slope_rost) >= 5
     assert all(c.bounding_box().size.Y < p.rost_spacing for c in slope_rost)
     assert all(c.bounding_box().size.X > 500.0 for c in slope_rost)
+    # Soffit rost is a lattice (latě @625), not full-depth solid boards.
+    soffit_rost = [
+        c
+        for c in rost
+        if c.bounding_box().min.X >= g.x_nh_inner - 1.0
+    ]
+    assert len(soffit_rost) >= 10
+    assert all(c.bounding_box().size.Y < p.rost_spacing for c in soffit_rost)
     # CD are ⊥ krokvím: thin along slope (X), long in Y.
     assert all(c.bounding_box().size.X < p.cd_spacing for c in cds)
     assert all(c.bounding_box().size.Y > 1000.0 for c in cds)

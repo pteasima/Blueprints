@@ -14,8 +14,8 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
 - Floor slab is the clear room only; perimeter walls own the strip below z=0.
 - Šikminy: NaturHeld 140 → latě // krokvím + Flex between → SDK → CD ⊥ krokvím
   → závěsy → MW plenum → krov + pásky. `krov` = roof timber; `dreveny_rost` = NH latě.
-- Soffit box: self-supporting NH L over cabinets (20 mm gap); Flex cavity + rost;
-  GKF lid. Furniture is not structural; box does not hang from the pozednice.
+- Soffit box: NH L over cabinets (20 mm gap); Flex cavity + latový rost (latě @625,
+  Flex between); GKF lid. Hanging TBD later — furniture is not structural.
 
     python -m blueprints.export obyvak
 
@@ -26,7 +26,7 @@ from __future__ import annotations
 
 from dataclasses import asdict
 
-from build123d import Align, Axis, Box, Color, Compound, Location, Plane, Solid
+from build123d import Align, Axis, Box, Color, Compound, Location, Plane, Rotation, Solid
 
 from obyvak_geom import (
     LABEL_CD,
@@ -62,6 +62,48 @@ def _paint(shape, label: str):
     shape.label = label
     shape.color = _layer_color(label)
     return shape
+
+
+def _oriented_bar(
+    p0: tuple[float, float, float],
+    p1: tuple[float, float, float],
+    width: float,
+    thick: float,
+    label: str,
+    thin_dir: tuple[float, float, float] | None = None,
+):
+    """Thin rectangular bar from p0→p1 (centreline), width×thick cross-section.
+
+    If ``thin_dir`` is set, the ``thick`` axis follows that direction (projected
+    ⊥ to the bar), so straps sit flat on a face instead of rolling into it.
+    """
+    import math
+
+    dx, dy, dz = p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]
+    length = math.sqrt(dx * dx + dy * dy + dz * dz)
+    if length < 10.0 or width <= 0 or thick <= 0:
+        return None
+    mid = (0.5 * (p0[0] + p1[0]), 0.5 * (p0[1] + p1[1]), 0.5 * (p0[2] + p1[2]))
+    fx, fy, fz = dx / length, dy / length, dz / length
+    solid = Box(length, width, thick, align=(Align.CENTER, Align.CENTER, Align.CENTER))
+    if thin_dir is not None:
+        nx, ny, nz = thin_dir
+        # Project thin_dir onto the plane ⊥ bar axis.
+        dot = nx * fx + ny * fy + nz * fz
+        nx, ny, nz = nx - dot * fx, ny - dot * fy, nz - dot * fz
+        nl = math.sqrt(nx * nx + ny * ny + nz * nz)
+        if nl < 1e-9:
+            # Parallel to bar — fall back to yaw/pitch.
+            thin_dir = None
+        else:
+            nx, ny, nz = nx / nl, ny / nl, nz / nl
+            solid = Plane(origin=mid, x_dir=(fx, fy, fz), z_dir=(nx, ny, nz)) * solid
+            return _paint(solid, label)
+    yaw = math.degrees(math.atan2(fy, fx))
+    hyp = math.hypot(fx, fy)
+    pitch = math.degrees(math.atan2(fz, hyp))
+    solid = Location(mid) * Rotation(Z=yaw) * Rotation(Y=-pitch) * solid
+    return _paint(solid, label)
 
 
 def _box(x: float, y: float, z: float, dx: float, dy: float, dz: float, label: str):
@@ -404,18 +446,15 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         cd_parts.append(_extrude_y(xz_face(quad, LABEL_CD), y_ceil0, y_ceil1, LABEL_CD))
     parts.extend(cd_parts)
 
-    # 5) Závěsy CD→krokev at rafter × CD crossings; pásky on rafter underside
+    # 5) Závěsy CD→krokev at rafter × CD crossings
     zaves_parts: list = []
-    paska_parts: list = []
     rafter_ys = g.rafter_y_stations(y_ceil0, y_ceil1)
-    half_raf = p.rafter_w * 0.5
     half_hang = p.hanger_w * 0.5
     for st in g.sikmina_cd_stations():
         xs = [pt[0] for pt in g.sikmina_cd_quad(*st)]
         if min(xs) < 1.0 or max(xs) > g.x_furn - 1.0:
             continue
         hang_quad = g.hanger_quad(*st)
-        strap_quad = g.paska_quad(*st)
         for yc in rafter_ys:
             zaves_parts.append(
                 _extrude_y(
@@ -425,27 +464,83 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
                     LABEL_ZAVES,
                 )
             )
-            paska_parts.append(
-                _extrude_y(
-                    xz_face(strap_quad, LABEL_PASKA),
-                    yc - half_raf,
-                    yc + half_raf,
-                    LABEL_PASKA,
-                )
-            )
     parts.extend(zaves_parts)
+
+    # 6) Zavětrovací pásky: long thin 40×2 straps at 45°, crossing into X on each slope.
+    # ~6 per side (3 X pairs) along the 11 m room length — racking restraint along Y.
+    paska_parts: list = []
+    n_x_pairs = 3
+    y_span = y_ceil1 - y_ceil0
+
+    def _add_slope_bracing(
+        s0: float,
+        s1: float,
+        point_at,
+        n_room: tuple[float, float, float],
+    ) -> None:
+        """place 3 X pairs on one slope; s = distance along slope from eave."""
+        slope_len = s1 - s0
+        if slope_len < 200 or y_span < 200:
+            return
+        off = p.strap_t * 0.5 + 2.0 * gap  # clear of shrunk krov underside
+        nx, ny, nz = n_room
+        for i in range(n_x_pairs):
+            y_c = y_ceil0 + (i + 0.5) * y_span / n_x_pairs
+            half = min(y_span / (2 * n_x_pairs) * 0.9, slope_len * 0.42)
+            s_c = 0.5 * (s0 + s1)
+            # Diagonal A: +s with +y ; Diagonal B: +s with -y (45° in the face).
+            # Stack the two legs of each X by strap thickness so they mate, not fuse.
+            for k, sign in enumerate((+1.0, -1.0)):
+                sa, sb = s_c - half, s_c + half
+                ya, yb = y_c - sign * half, y_c + sign * half
+                if ya < y_ceil0 + 50 or yb > y_ceil1 - 50:
+                    continue
+                if sa < s0 + 50 or sb > s1 - 50:
+                    continue
+                layer = off + k * (p.strap_t + gap)
+                p0 = point_at(sa, ya)
+                p1 = point_at(sb, yb)
+                p0 = (p0[0] + nx * layer, p0[1] + ny * layer, p0[2] + nz * layer)
+                p1 = (p1[0] + nx * layer, p1[1] + ny * layer, p1[2] + nz * layer)
+                bar = _oriented_bar(
+                    p0, p1, p.strap_w, p.strap_t, LABEL_PASKA, thin_dir=(nx, ny, nz)
+                )
+                if bar is not None:
+                    paska_parts.append(bar)
+
+    # Left slope: eave→false ridge; room-normal points down-right into the room.
+    def _left_raf(s: float, y: float):
+        x = s * g.cos
+        return (x, y, g.z_raf(x))
+
+    s_left = g.x_false / g.cos
+    _add_slope_bracing(0.0, s_left, _left_raf, (g.sin, 0.0, -g.cos))
+
+    # Right slope: false ridge→furniture line; descending as x grows.
+    def _right_raf(s: float, y: float):
+        # s from false ridge toward eave/furniture along the slope.
+        x = g.x_false + s * g.cos
+        return (x, y, g.z_raf(x))
+
+    s_right = (g.x_furn - g.x_false) / g.cos
+    _add_slope_bracing(0.0, s_right, _right_raf, (-g.sin, 0.0, -g.cos))
+
+    # Guarantee FACE_GAP mates: shave float nicks against krov / hangers.
+    if paska_parts:
+        tools = [krov] + zaves_parts
+        paska_parts = [_cut_away(bar, tools, LABEL_PASKA) for bar in paska_parts]
+
     parts.extend(paska_parts)
 
     # MW plenum must not swallow CD / hangers / pásky.
     if cd_parts or zaves_parts or paska_parts:
         vata = _cut_away(vata, cd_parts + zaves_parts + paska_parts, "vata")
-        # Replace the earlier vata entry in parts.
         for i, part in enumerate(parts):
             if part.label == "vata":
                 parts[i] = vata
                 break
 
-    # --- Soffit box (unchanged): NH L, Flex cavity, rost, GKF lid. ---
+    # --- Soffit box: NH L, Flex cavity, latový rost (not solid boards), GKF lid. ---
     t = g.t_nh_face
     soffit_nh = [
         (g.x_nh_outer + gap, g.z_nabeh_bot + gap),
@@ -474,54 +569,37 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     if p.sdk_t > 2 * gap:
         parts.append(_extrude_y(xz_face(lid, "sdk"), y_ceil0, y_ceil1, "sdk"))
 
-    # Dřevěný rošt inside the soffit Flex cavity: front stud, bottom rail, ribs @625.
+    # Latový rost in the soffit cavity (hanging TBD later): vertical face + underside.
     fm = p.rost_d
     fw = p.rost_w
+    half_w = fw * 0.5
     z_wood0 = g.z_nabeh_bot + t + gap
     z_wood1 = g.z_gkf_horiz - gap
+    face_h = z_wood1 - z_wood0
+    x_front = g.x_nh_inner + gap
+    x_wall = p.room_width - gap - 15.0
     frame_parts: list = []
-    if z_wood1 - z_wood0 > fm + gap and p.room_width - g.x_nh_inner > 2 * fm:
-        frame_parts.append(
-            _box(
-                g.x_nh_inner + gap,
-                y_ceil0,
-                z_wood0,
-                fm - gap,
-                y_ceil1 - y_ceil0,
-                max(z_wood1 - z_wood0 - gap, gap),
-                LABEL_ROST,
+    if face_h > fm + gap and x_wall - (x_front + fm) > gap:
+        for yc in g.sikmina_rost_y_stations(y_ceil0, y_ceil1):
+            ya, yb = yc - half_w, yc + half_w
+            if yb <= ya:
+                continue
+            # Vertical latě behind the NH face (spaced along Y).
+            frame_parts.append(
+                _box(x_front, ya, z_wood0, fm - gap, yb - ya, face_h - gap, LABEL_ROST)
             )
-        )
-        rail_w = p.room_width - gap - (g.x_nh_inner + fm) - 15.0
-        if rail_w > gap:
+            # Underside latě spanning toward the wall (same Y stations).
             frame_parts.append(
                 _box(
-                    g.x_nh_inner + fm,
-                    y_ceil0,
+                    x_front + fm,
+                    ya,
                     z_wood0,
-                    rail_w,
-                    y_ceil1 - y_ceil0,
+                    max(x_wall - (x_front + fm), gap),
+                    yb - ya,
                     fm - gap,
                     LABEL_ROST,
                 )
             )
-        rib_len = min(180.0, (p.room_width - g.x_nh_inner) * 0.4)
-        rib_z = z_wood0 + (z_wood1 - z_wood0) * 0.45
-        rib_h = max(fm * 0.7 - gap, gap)
-        y = y_ceil0 + p.rost_first_inset
-        while y + fw < y_ceil1:
-            frame_parts.append(
-                _box(
-                    g.x_nh_inner + fm,
-                    y,
-                    rib_z,
-                    rib_len,
-                    fw - gap,
-                    rib_h,
-                    LABEL_ROST,
-                )
-            )
-            y += p.rost_spacing
     if frame_parts:
         flex_solid = _cut_away(flex_solid, frame_parts, LABEL_FLEX)
         parts.append(flex_solid)
@@ -621,10 +699,13 @@ def _labeled_slices(parts: list, plane: Plane):
 
 
 def build_section_slice(params: ObyvakParams | None = None):
-    """XZ slice at mid-length — same station as panel A, taken from the 3D solids."""
+    """XZ slice through a rost lať near mid-length (panel A station from 3D solids)."""
     p = params or ObyvakParams()
     g = ObyvakLayout(p)
-    y_mid = p.room_length / 2.0
+    # Discrete latě miss a pure mid-Y cut; snap to the nearest rost centreline.
+    y_target = p.room_length / 2.0
+    stations = g.sikmina_rost_y_stations(g.y_furn0, g.y_furn1)
+    y_mid = min(stations, key=lambda y: abs(y - y_target)) if stations else y_target
     faces = _labeled_slices(_parts(p, g), Plane.XZ.offset(-y_mid))
     moved = []
     for face in faces:

@@ -1,7 +1,7 @@
 """Obývák 1.02 — příčný řez (panel A), parametrické 2D profily v Plane.XZ.
 
-Šikminy: NaturHeld 140, latě // krokvím, Flex, SDK, CD ⊥ krokvím, závěsy, pásky.
-Soffit box beze změny. 3D: `models/obyvak.py`.
+Šikminy: NaturHeld 140, latě // krokvím, Flex, SDK, CD ⊥ krokvím, závěsy,
+pásky (3D: 45° X; zde jen průřez). Soffit: latový rost. 3D: `models/obyvak.py`.
 
     python -m blueprints.export obyvak_section
 """
@@ -91,15 +91,19 @@ def build(params: ObyvakParams | None = None):
     parts.append(xz_face(g.sikmina_sdk_pts(), "sdk"))
     for quad in g.sikmina_cd_quads():
         parts.append(xz_face(quad, LABEL_CD))
-    # Schematic hangers + pásky at a few CD stations.
+    # Schematic hangers at a few CD stations; pásky = thin sections of 45° X straps.
     for st in g.sikmina_cd_stations()[::2]:
         xs = [pt[0] for pt in g.sikmina_cd_quad(*st)]
         if min(xs) < 1.0 or max(xs) > g.x_furn - 1.0:
             continue
         parts.append(xz_face(g.hanger_quad(*st), LABEL_ZAVES))
+    for st in g.sikmina_cd_stations()[1::3]:
+        xs = [pt[0] for pt in g.sikmina_cd_quad(*st)]
+        if min(xs) < 1.0 or max(xs) > g.x_furn - 1.0:
+            continue
         parts.append(xz_face(g.paska_quad(*st), LABEL_PASKA))
 
-    # Soffit box (unchanged)
+    # Soffit box: NH L, Flex, latový rost (section through a lať), GKF lid.
     parts.append(xz_face(g.soffit_nh_pts(), LABEL_NATURHELD))
     parts.append(xz_face(g.soffit_flex_pts(), LABEL_FLEX))
     fm = p.rost_d

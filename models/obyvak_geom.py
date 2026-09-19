@@ -18,11 +18,11 @@ World:
   Nonius / přímý závěs CD→krokve                            → `zaves`
   Domo Plus plenum                                          → `vata`
   krokve 100/160 @ ~875 + MW between                        → `krov` / `vata`
-  zavětrovací pásky 40×2 na líci krokví                     → `paska`
+  zavětrovací pásky 40×2 @ 45° X across krokve (racking)    → `paska`
   (střešní latě / kontralatě above rafters stay in krytina build-up)
 
-Right eave soffit box (unchanged for now): self-supporting NH L, Flex cavity +
-rost, GKF lid, 20 mm gap above cabinets.
+Right eave soffit box: NH L, Flex cavity + latový rost (latě @625, Flex between),
+GKF lid, 20 mm gap above cabinets. Hanging TBD later.
 """
 
 from __future__ import annotations
@@ -383,14 +383,13 @@ class ObyvakLayout:
         nx: float,
         nz: float,
     ) -> list[tuple[float, float]]:
-        """Zavětrovací páska 40×2 on the underside of the rafter at this station."""
+        """Schematic 40×2 strap cross-section on the rafter underside (2D only).
+
+        3D pásky are long 45° diagonals crossing into X along the room length;
+        a transverse cut only sees a thin section of those straps.
+        """
         p = self.p
-        # Sit just under the rafter inner face.
-        # Room-face point (x,z); rafter underside is at z_raf along vertical ≈ offset.
-        # Place strap centered under rafter along slope: at rafter inner, thickness strap_t into room.
         z_raf = self.z_raf(x)
-        # Approximate: point on rafter underside at this x, normal into room = -n
-        # Use slope offset from room face to rafter: t_raf_inner = (z_raf - z_ceil)*cos
         t_raf = (z_raf - self.z_ceil(x)) * self.cos
         cx = x + nx * (t_raf - p.strap_t)
         cz = z + nz * (t_raf - p.strap_t)
