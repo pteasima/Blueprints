@@ -253,24 +253,29 @@ def test_soffit_scene_recipe():
 
 
 def test_gable_scene_recipe():
-    """Gable: same ISO / look / cut as Soffit, framed on the full šikminy."""
+    """Gable: ISO length cut framed on the full šikminy (not soffit-zoomed)."""
     specs = {s["id"]: s for s in scenes()}
-    assert set(specs) == {"soffit", "gable"}
-    s, soffit = specs["gable"], specs["soffit"]
+    assert "gable" in specs
+    s = specs["gable"]
     assert s["label"] == "Gable"
-    assert s["projection"] == soffit["projection"] == "ortho"
-    assert s["opacity"] == soffit["opacity"]
-    assert s["opacityDefault"] == soffit["opacityDefault"]
-    assert s["cuts"] == soffit["cuts"]
-    cam, scam = s["camera"], soffit["camera"]
-    assert cam["up"] == scam["up"] == [0.0, 1.0, 0.0]
-    # Same look axis (kitchen → living); camera still on the kitchen side.
+    assert s["projection"] == "ortho"
+    assert s["opacityDefault"] == 0.5
+    assert s["opacity"] == {
+        LABEL_FLEX: 1,
+        LABEL_NATURHELD: 1,
+        LABEL_ROST: 1,
+        "omitka": 1,
+    }
+    assert len(s["cuts"]) == 1
+    assert s["cuts"][0]["t"] == 0.5
+    assert s["cuts"][0]["normal"] == [0.0, 0.0, -1.0]
+    cam = s["camera"]
+    assert cam["up"] == [0.0, 1.0, 0.0]
+    # Look along −Z (kitchen → living); camera on the kitchen side.
     assert cam["position"][2] > cam["target"][2]
     assert abs(cam["position"][0] - cam["target"][0]) < 1e-9
     assert abs(cam["position"][1] - cam["target"][1]) < 1e-9
-    # Wider than Soffit so both eaves and the ridge fit.
-    assert cam["orthoFit"][0] > scam["orthoFit"][0]
-    assert cam["orthoFit"][1] > scam["orthoFit"][1]
+    assert cam["orthoFit"][0] > 0 and cam["orthoFit"][1] > 0
     p = ObyvakParams()
     g = build_layout(p)
     tx, ty, tz = cam["target"]
@@ -281,6 +286,10 @@ def test_gable_scene_recipe():
     # Span covers both eaves (orthoFit half-widths in metres).
     assert cam["orthoFit"][0] * 2 > p.room_width * 0.001
     assert cam["orthoFit"][1] * 2 > (p.ridge_z - p.furniture_height) * 0.001
+    # Distinct from Soffit zoom (wider framing).
+    soffit_fit = specs["soffit"]["camera"]["orthoFit"]
+    assert cam["orthoFit"][0] > soffit_fit[0]
+    assert cam["orthoFit"][1] > soffit_fit[1]
 
 
 def test_write_scenes_json(tmp_path):
