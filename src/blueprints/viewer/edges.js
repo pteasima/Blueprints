@@ -25,11 +25,21 @@ export const EDGE_LINEWIDTH_PX = 3.5;
 export const EDGE_COLOR = 0x000000;
 
 /**
- * Pull edge fragments slightly toward the camera so coplanar faces lose the
- * depth test (critical with logarithmicDepthBuffer; polygonOffset is a no-op
- * once materials write gl_FragDepth).
+ * Clip-space Z pull before log-depth encoding (multiplied by w → constant NDC).
+ * Helps fat-line quads win coplanar tests before FragDepth runs.
+ */
+const EDGE_NDC_DEPTH_BIAS = 1e-4;
+
+/**
+ * Subtract from the *already encoded* gl_FragDepth after logdepthbuf_fragment.
+ * Must never reassign from gl_FragCoord.z under USE_LOGDEPTHBUF — Three r172+
+ * no longer defines USE_LOGDEPTHBUF_EXT, and that overwrite made edge depth
+ * incomparable to face log-depth (edges only survived against clear/background).
  */
 const EDGE_FRAG_DEPTH_BIAS = 5e-4;
+
+/** Cache-key bump when bias shader strategy changes. */
+const EDGE_BIAS_SHADER_REV = 2;
 
 /**
  * @returns {boolean}
@@ -113,19 +123,28 @@ function createEdgeMaterial(planes, res) {
     clippingPlanes: planes,
     clipIntersection: false,
   });
-  // polygonOffset is ineffective once logdepth writes gl_FragDepth — bias after.
+  // polygonOffset is ineffective once logdepth writes gl_FragDepth — bias in-shader.
   mat.onBeforeCompile = (shader) => {
+    // NDC Z bias before log-depth encodes from gl_Position.w.
+    shader.vertexShader = shader.vertexShader.replace(
+      "#include <logdepthbuf_vertex>",
+      `gl_Position.z -= ${EDGE_NDC_DEPTH_BIAS} * gl_Position.w;
+			#include <logdepthbuf_vertex>`,
+    );
+    // Subtract from encoded FragDepth; never overwrite with raw gl_FragCoord.z
+    // when logarithmic depth is on (that path is what broke opaque perspective).
     shader.fragmentShader = shader.fragmentShader.replace(
       "#include <logdepthbuf_fragment>",
       `#include <logdepthbuf_fragment>
-			#if defined( USE_LOGDEPTHBUF ) && defined( USE_LOGDEPTHBUF_EXT )
-				gl_FragDepth -= ${EDGE_FRAG_DEPTH_BIAS};
+			#if defined( USE_LOGDEPTHBUF )
+				gl_FragDepth -= max( ${EDGE_FRAG_DEPTH_BIAS}, fwidth( gl_FragDepth ) );
 			#else
 				gl_FragDepth = gl_FragCoord.z - ${EDGE_FRAG_DEPTH_BIAS};
 			#endif`,
     );
   };
-  mat.customProgramCacheKey = () => `bp-edge-depth-bias-${EDGE_FRAG_DEPTH_BIAS}`;
+  mat.customProgramCacheKey = () =>
+    `bp-edge-depth-bias-r${EDGE_BIAS_SHADER_REV}-${EDGE_FRAG_DEPTH_BIAS}-${EDGE_NDC_DEPTH_BIAS}`;
   if (res) mat.resolution.set(res.x, res.y);
   return mat;
 }
@@ -312,6 +331,47 @@ export function syncEdgeOverlays(partsMap, enabled, opts = {}) {
   }
 }
 
+/** Shared depth-only material for the edge overlay depth prepass. */
+let edgeDepthPrepassMat = null;
+
+/**
+ * @returns {THREE.MeshDepthMaterial}
+ */
+function getEdgeDepthPrepassMaterial() {
+  if (!edgeDepthPrepassMat) {
+    edgeDepthPrepassMat = new THREE.MeshDepthMaterial({
+      depthTest: true,
+      depthWrite: true,
+      colorWrite: false,
+      side: THREE.DoubleSide,
+    });
+  }
+  return edgeDepthPrepassMat;
+}
+
+/**
+ * Collect clipping planes from the first CAD mesh (section cuts).
+ * @param {THREE.Object3D} root
+ * @returns {THREE.Plane[]}
+ */
+function collectMeshClippingPlanes(root) {
+  /** @type {THREE.Plane[]} */
+  let planes = [];
+  root.traverse((obj) => {
+    if (planes.length || isEdgeOverlay(obj) || !obj.isMesh || !obj.material) {
+      return;
+    }
+    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+    for (const mat of mats) {
+      if (mat?.clippingPlanes?.length) {
+        planes = mat.clippingPlanes;
+        return;
+      }
+    }
+  });
+  return planes;
+}
+
 /**
  * After depth-peel composite: refill depth from CAD meshes, then draw edges.
  * Edges are omitted from peel colour RTs (mesh shaders / parent visibility),
@@ -352,19 +412,17 @@ export function renderEdgeOverlayPass(renderer, scene, camera, root) {
   const prevBg = scene.background;
   const prevOverride = scene.overrideMaterial;
   scene.background = null;
-  scene.overrideMaterial = null;
   renderer.autoClear = false;
 
-  // 1) Depth prepass of visible CAD meshes (opaque + faded).
+  // 1) Depth prepass via MeshDepthMaterial (reliable depth writes; respects cuts).
   setEdgeOverlaysVisible(root, false);
-  for (const s of snaps) {
-    s.mat.colorWrite = false;
-    s.mat.depthWrite = true;
-    s.mat.depthTest = true;
-    s.mat.transparent = false;
-  }
+  const depthMat = getEdgeDepthPrepassMaterial();
+  depthMat.clippingPlanes = collectMeshClippingPlanes(root);
+  depthMat.clipIntersection = false;
+  scene.overrideMaterial = depthMat;
   renderer.clearDepth();
   renderer.render(scene, camera);
+  scene.overrideMaterial = null;
 
   // 2) Edge colour only — meshes stay colour-silent so faded faces keep composite.
   setEdgeOverlaysVisible(root, true);
