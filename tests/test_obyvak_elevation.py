@@ -87,7 +87,8 @@ def test_elevation_geometry_is_horizontal_not_aframe():
     assert abs(sbb.min.Z - meta["derived"]["z_soffit"]) < 1e-6
     assert abs(sbb.size.X - p.room_length) < 1e-6
     # Horizontal strip, not an A-frame: constant Z thickness, full span.
-    assert abs(sbb.size.Z - p.soffit_hint_t) < 1e-6
+    g = build_layout(p)
+    assert abs(sbb.size.Z - g.t_nh_face) < 1e-6
 
 
 def test_obyvak_elevation_exports(tmp_path, monkeypatch):

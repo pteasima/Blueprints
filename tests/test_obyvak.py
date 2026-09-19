@@ -26,6 +26,42 @@ def test_layout_ceiling_and_gable():
     assert g.z_gable_top(g.x_ridge) > g.z_soffit
     assert g.y_furn0 == p.predstena_kitchen
     assert g.y_furn1 == p.room_length - p.predstena_living
+    # Acoustic face + Flex pack + GKF match the contractor soft stack below CD.
+    assert abs(g.t_nh_face - (p.finish_t + p.basic_t + p.naturheld_t)) < 1e-9
+    assert abs(g.t_soft_below_sdk - 117.5) < 1e-9
+    assert abs(g.t_left - 244.5) < 1e-9
+    assert g.l_hanger_right > g.l_hanger_left
+    assert abs(g.z_nabeh_bot - (p.furniture_height + p.furniture_gap)) < 1e-9
+    assert g.x_nh_inner == g.x_furn + g.t_nh_face
+
+
+def test_sikminy_and_soffit_stack_in_3d():
+    """Šikminy NH/Flex/GKF and self-supporting soffit box are distinct solids."""
+    p = ObyvakParams()
+    g = build_layout(p)
+    shape, _ = build(p)
+    podhled = _labeled(shape, "podhled")
+    soffit = _labeled(shape, "soffit")
+    assert len(podhled) >= 2  # slope NH + soffit L
+    assert len(soffit) >= 2  # slope Flex + box Flex
+    # Room-facing NH on slopes sits at H_START.
+    slope_nh = min(podhled, key=lambda s: s.bounding_box().min.X)
+    assert abs(slope_nh.bounding_box().min.Z - (g.h_start + FACE_GAP)) < 2.0
+    # Soffit box underside clears the cabinets by furniture_gap.
+    box_nh = max(podhled, key=lambda s: s.bounding_box().min.X)
+    assert abs(box_nh.bounding_box().min.Z - (g.z_nabeh_bot + FACE_GAP)) < 2.0
+    assert box_nh.bounding_box().min.Z >= p.furniture_height + p.furniture_gap - 1.0
+    furn = _labeled(shape, "nabytek")[0].bounding_box()
+    assert box_nh.bounding_box().min.Z >= furn.max.Z + p.furniture_gap - 2.0
+    # Ceiling GKF lid over the box.
+    lids = [
+        c
+        for c in _labeled(shape, "sdk")
+        if c.bounding_box().min.Z >= g.z_gkf_horiz - 1.0
+        and c.bounding_box().min.X >= g.x_furn - 1.0
+    ]
+    assert len(lids) == 1
+    assert abs(lids[0].bounding_box().size.Z - (p.sdk_t - 2 * FACE_GAP)) < 1e-3
 
 
 def test_soffit_scene_recipe():
@@ -130,7 +166,15 @@ def test_3d_matches_section_and_elevation_masses():
 
     pouzdra = sorted(_labeled(shape, "pouzdro"), key=lambda s: (s.bounding_box().min.Y, s.bounding_box().min.X))
     assert len(pouzdra) == len(p.pocket_doors)
-    sdk_faces = sorted(_labeled(shape, "sdk"), key=lambda s: s.bounding_box().min.Y)
+    # Gable pocket SDK faces only (slope/lid GKF sit much higher).
+    sdk_faces = sorted(
+        [
+            c
+            for c in _labeled(shape, "sdk")
+            if c.bounding_box().max.Z <= p.pocket_door_h + 1.0
+        ],
+        key=lambda s: s.bounding_box().min.Y,
+    )
     assert len(sdk_faces) == 2
     face_t = max(p.sdk_t, 12.5)
     for face in sdk_faces:

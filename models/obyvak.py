@@ -12,6 +12,9 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
   on gable shells, three gable pocket doors (chodba on Y=0; spíž + zádveří on Y=L),
   and terrace glazing on the X=0 eave (opposite cabinets).
 - Floor slab is the clear room only; perimeter walls own the strip below z=0.
+- Šikminy: NaturHeld+StoSilent room face, Flex pack, GKF, then MW plenum to rafters.
+- Soffit box: self-supporting L of NH over cabinets (20 mm gap); Flex cavity; GKF lid.
+  Furniture is not structural; box does not hang from the pozednice.
 
     python -m blueprints.export obyvak
 
@@ -81,6 +84,21 @@ def _shrink_band(pts: list[tuple[float, float]], top_n: int, gap: float) -> list
     out = []
     for i, (x, z) in enumerate(pts):
         out.append((x, z - gap if i < top_n else z + gap))
+    return out
+
+
+def _shrink_closed_band(pts: list[tuple[float, float]], gap: float) -> list[tuple[float, float]]:
+    """Inset a closed band whose first half is the inner/lower edge, second half the outer."""
+    n = len(pts)
+    if n < 4 or n % 2:
+        return pts
+    half = n // 2
+    out = []
+    for i, (x, z) in enumerate(pts):
+        if i < half:
+            out.append((x, z + gap))
+        else:
+            out.append((x, z - gap))
     return out
 
 
@@ -340,30 +358,90 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     parts.extend(_glass_panes(p, g, gap))
     parts.extend([krov, krytina, vata])
 
-    # Ceiling board under the ceiling line (below vata).
-    podhled_pts = [(x, z - gap) for x, z in g.podhled_pts()]
-    parts.append(
-        _extrude_y(xz_face(podhled_pts, "podhled"), g.y_furn0 + gap, g.y_furn1 - gap, "podhled")
-    )
+    # --- Šikminy + soffit: real acoustic / soft stack (not a 30 mm hint). ---
+    # Y-span matches the clear bay between předstěny (they own the gable ends).
+    y_ceil0, y_ceil1 = g.y_furn0 + gap, g.y_furn1 - gap
 
-    # --- Cabinets + bulkhead: clear of right plaster and of the ceiling board. ---
+    def _add_band(pts: list[tuple[float, float]], label: str) -> None:
+        band = _shrink_closed_band(pts, gap)
+        parts.append(_extrude_y(xz_face(band, label), y_ceil0, y_ceil1, label))
+
+    # Slopes: NH face → Flex (+foil) → GKF, then MW plenum is already in `vata`.
+    _add_band(g.sikmina_nh_pts(), "podhled")
+    _add_band(g.sikmina_flex_pts(), "soffit")
+    _add_band(g.sikmina_sdk_pts(), "sdk")
+
+    # Self-supporting soffit box over cabinets (nábytek nenosí; 20 mm gap).
+    t = g.t_nh_face
+    soffit_nh = [
+        (g.x_nh_outer + gap, g.z_nabeh_bot + gap),
+        (p.room_width - gap, g.z_nabeh_bot + gap),
+        (p.room_width - gap, g.z_nabeh_bot + t - gap),
+        (g.x_nh_inner - gap, g.z_nabeh_bot + t - gap),
+        (g.x_nh_inner - gap, g.z_gkf_horiz - gap),
+        (g.x_nh_outer + gap, g.z_gkf_horiz - gap),
+    ]
+    parts.append(_extrude_y(xz_face(soffit_nh, "podhled"), y_ceil0, y_ceil1, "podhled"))
+
+    flex_box = [
+        (g.x_nh_inner + gap, g.z_nabeh_bot + t + gap),
+        (p.room_width - gap, g.z_nabeh_bot + t + gap),
+        (p.room_width - gap, g.z_gkf_horiz - gap),
+        (g.x_nh_inner + gap, g.z_gkf_horiz - gap),
+    ]
+    flex_solid = _extrude_y(xz_face(flex_box, "soffit"), y_ceil0, y_ceil1, "soffit")
+
+    lid = [
+        (g.x_furn + gap, g.z_gkf_horiz + gap),
+        (p.room_width - gap, g.z_gkf_horiz + gap),
+        (p.room_width - gap, g.z_gkf_horiz + p.sdk_t - gap),
+        (g.x_furn + gap, g.z_gkf_horiz + p.sdk_t - gap),
+    ]
+    if p.sdk_t > 2 * gap:
+        parts.append(_extrude_y(xz_face(lid, "sdk"), y_ceil0, y_ceil1, "sdk"))
+
+    # Schematic hidden KVH inside the Flex cavity (front stud + bottom rail).
+    # Cut timber out of Flex so materials do not interpenetrate.
+    fm = p.soffit_frame_t
+    z_wood0 = g.z_nabeh_bot + t + gap
+    z_wood1 = g.z_gkf_horiz - gap
+    frame_parts: list = []
+    if z_wood1 - z_wood0 > fm + gap and p.room_width - g.x_nh_inner > 2 * fm:
+        stud = _box(
+            g.x_nh_inner + gap,
+            y_ceil0,
+            z_wood0,
+            fm - gap,
+            y_ceil1 - y_ceil0,
+            max(z_wood1 - z_wood0 - gap, gap),
+            "krov",
+        )
+        frame_parts.append(stud)
+        rail_w = p.room_width - gap - (g.x_nh_inner + fm) - 15.0
+        if rail_w > gap:
+            frame_parts.append(
+                _box(
+                    g.x_nh_inner + fm,
+                    y_ceil0,
+                    z_wood0,
+                    rail_w,
+                    y_ceil1 - y_ceil0,
+                    fm - gap,
+                    "krov",
+                )
+            )
+    if frame_parts:
+        flex_solid = _cut_away(flex_solid, frame_parts, "soffit")
+        parts.append(flex_solid)
+        parts.extend(frame_parts)
+    else:
+        parts.append(flex_solid)
+
+    # --- Cabinets: clear of right plaster; top leaves furniture_gap under the box. ---
     furn_w = p.furniture_width - gap
     furn_y0, furn_y1 = g.y_furn0 + gap, g.y_furn1 - gap
     parts.append(
         _box(g.x_furn, furn_y0, 0.0, furn_w, furn_y1 - furn_y0, p.furniture_height, "nabytek")
-    )
-    soffit_z0 = g.z_nabeh_bot + gap
-    soffit_z1 = g.z_gkf_horiz - p.soffit_hint_t - 2 * gap
-    parts.append(
-        _box(
-            g.x_furn,
-            furn_y0,
-            soffit_z0,
-            furn_w,
-            furn_y1 - furn_y0,
-            max(soffit_z1 - soffit_z0, gap),
-            "soffit",
-        )
     )
 
     # --- Předstěny + pouzdra: inset from plaster and from each other. ---
@@ -421,9 +499,24 @@ def build_preview(params: ObyvakParams | None = None):
     kept = []
     for part in _parts(p, g):
         bb = part.bounding_box()
-        if part.label in {"krov", "krytina", "vata", "podhled"}:
+        if part.label in {"krov", "krytina", "vata"}:
+            # Keep schematic KVH inside the soffit box; drop rafters / attic wool.
+            if (
+                part.label == "krov"
+                and bb.min.X >= g.x_furn - 1.0
+                and bb.max.Z <= g.z_gkf_horiz + 1.0
+            ):
+                kept.append(part)
             continue
-        if part.label in {"eps", "zdivo", "omitka", "pozednice", "nabytek", "soffit"}:
+        if part.label in {"podhled", "soffit"}:
+            # Keep the cabinet soffit L; drop slope acoustic pack.
+            if bb.min.X >= g.x_furn - 1.0:
+                kept.append(part)
+            continue
+        if part.label == "sdk" and bb.min.Z >= g.h_start - 50.0:
+            # Slope / lid GKF is roof pack — drop with the attic; keep gable pocket SDK.
+            continue
+        if part.label in {"eps", "zdivo", "omitka", "pozednice", "nabytek"}:
             # Open the cabinet eave only; keep gables so pocket doors read correctly.
             if bb.min.X >= p.room_width - 1.0:
                 continue
@@ -487,11 +580,11 @@ def scenes(params: ObyvakParams | None = None) -> list[dict]:
     p = params or ObyvakParams()
     g = ObyvakLayout(p)
     gap = FACE_GAP
-    # Match the soffit solid in `_parts` (cabinet bay, above furniture).
+    # Match the soffit box bay (cabinet run, NH L + Flex cavity).
     sx0, sx1 = g.x_furn, g.x_furn + p.furniture_width
     sy0, sy1 = g.y_furn0 + gap, g.y_furn1 - gap
     sz0 = g.z_nabeh_bot + gap
-    sz1 = g.z_gkf_horiz - p.soffit_hint_t - 2 * gap
+    sz1 = g.z_gkf_horiz - gap
     cx = 0.5 * (sx0 + sx1)
     cy = 0.5 * (sy0 + sy1)
     cz = 0.5 * (sz0 + sz1)

@@ -7,6 +7,21 @@ World:
   section X = transverse, elevation X = longitudinal (world Y).
 3D (`models/obyvak.py`) extrudes section profiles along Y and gable profiles along Y
 (thickness) / X (span).
+
+Šikminy + soffit stack (interior → attic, thicknesses perpendicular to the face
+except where noted) matches the contractor řez (NaturHeld acoustics):
+
+  StoSilent Top Finish + Top Basic + NaturHeld 140 (40)     → room face (`podhled`)
+  Isover Flex 50 (60) between 60×40 battens @ ~625         → `soffit` (flex fill)
+  vapour foil (~1) + GKF/RF 12.5                            → `sdk`
+  CD 60×27 + Nonius/direct hangers + Domo Plus plenum       → lumped into `vata`
+  rafters 100/160 @ ~875 + MW between                       → `krov` / `vata`
+
+Right eave: slope runs to the furniture line, then a self-supporting soffit box
+(450 deep, NH face continuous on vertical + underside, Flex cavity, 20 mm gap
+above cabinets — furniture is not structural). Horizontal GKF lid at Z≈H_START
+under the pozednice (~309 mm clear). Box hangs from the ceiling grid / rafters,
+not from the wall plate.
 """
 
 from __future__ import annotations
@@ -75,7 +90,8 @@ class ObyvakParams:
         (7950.0, 2500.0),  # HS portal · obývák / zádveří
     )
     glass_t: float = 20.0
-    soffit_hint_t: float = 30.0
+    # Hidden KVH 60×40 face size inside the soffit Flex cavity (schematic).
+    soffit_frame_t: float = 40.0
     ridge_runout: float = 200.0
 
 
@@ -89,10 +105,16 @@ class ObyvakLayout:
         self.cos = math.cos(th)
         self.tan = math.tan(th)
 
-        self.t_soft_below_sdk = (
-            p.finish_t + p.basic_t + p.naturheld_t + p.flex_t + p.foil_t + p.sdk_t
-        )
+        # Room-facing acoustic face (Finish + Basic + NaturHeld 140).
+        self.t_nh_face = p.finish_t + p.basic_t + p.naturheld_t
+        # Flex + foil + GKF behind the NH face (still below the CD grid).
+        self.t_flex_pack = p.flex_t + p.foil_t
+        self.t_soft_below_sdk = self.t_nh_face + self.t_flex_pack + p.sdk_t
         self.t_left = p.plenum_t + p.cd_t + self.t_soft_below_sdk
+        # Right-side hangers are longer: slope continues to X_FURN then drops.
+        self.t_extra = p.furniture_width * self.sin
+        self.l_hanger_left = p.plenum_t
+        self.l_hanger_right = p.plenum_t + self.t_extra
         self.t_above_raf = (
             p.vent_t + p.dhv_t + p.counter_batten_t + p.batten_t + p.tile_t
         )
@@ -107,6 +129,9 @@ class ObyvakLayout:
         self.z_nabeh_bot = p.furniture_height + p.furniture_gap
         self.z_soffit = self.h_start + self.x_ridge * self.tan
         self.z_raf_top = self.z_raf_inner_ridge + p.rafter_t / self.cos
+        # Vertical NH outer face flush with slope NH ∩ furniture plane; thickness into box.
+        self.x_nh_outer = self.x_furn
+        self.x_nh_inner = self.x_furn + self.t_nh_face
 
         self.xl_eps = -p.wall_plaster - p.wall_mason - p.wall_eps
         self.xl_mas = -p.wall_plaster - p.wall_mason
@@ -160,6 +185,10 @@ class ObyvakLayout:
         t = (x - self.x_false) / (self.x_furn - self.x_false)
         return self.z_false + t * (self.z_gkf_horiz - self.z_false)
 
+    def z_slope_offset(self, x: float, t_perp: float) -> float:
+        """Vertical Z of a surface parallel to the šikmina, t_perp above the room face."""
+        return self.z_ceil(x) + t_perp / self.cos
+
     def ceil_pts(self) -> list[tuple[float, float]]:
         p = self.p
         return [
@@ -167,6 +196,71 @@ class ObyvakLayout:
             (self.x_false, self.z_false),
             (self.x_furn, self.z_gkf_horiz),
             (p.room_width, self.z_gkf_horiz),
+        ]
+
+    def _sikmina_xs(self) -> list[float]:
+        return [0.0, self.x_false, self.x_furn]
+
+    def _slope_band_pts(self, t0: float, t1: float) -> list[tuple[float, float]]:
+        """Closed XZ band on the šikminy (0→X_FURN) between two parallel offsets."""
+        xs = self._sikmina_xs()
+        inner = [(x, self.z_slope_offset(x, t0)) for x in xs]
+        outer = [(x, self.z_slope_offset(x, t1)) for x in xs]
+        return inner + list(reversed(outer))
+
+    def sikmina_nh_pts(self) -> list[tuple[float, float]]:
+        """NaturHeld + StoSilent face on the slopes (perp thickness t_nh_face)."""
+        return self._slope_band_pts(0.0, self.t_nh_face)
+
+    def sikmina_flex_pts(self) -> list[tuple[float, float]]:
+        """Isover Flex 50 (+ foil) behind NH on the slopes."""
+        t0 = self.t_nh_face
+        return self._slope_band_pts(t0, t0 + self.t_flex_pack)
+
+    def sikmina_sdk_pts(self) -> list[tuple[float, float]]:
+        """GKF/RF board on the slopes, outside the Flex pack."""
+        t0 = self.t_nh_face + self.t_flex_pack
+        return self._slope_band_pts(t0, t0 + self.p.sdk_t)
+
+    def soffit_nh_pts(self) -> list[tuple[float, float]]:
+        """L-shaped NH+StoSilent on the soffit box: vertical face + underside.
+
+        Outer vertical face flush with the slope NH at X_FURN; thickness goes
+        into the box (toward the wall) so the junction has no step into the room.
+        """
+        p = self.p
+        t = self.t_nh_face
+        z0 = self.z_nabeh_bot
+        z1 = self.z_gkf_horiz
+        return [
+            (self.x_nh_outer, z0),
+            (p.room_width, z0),
+            (p.room_width, z0 + t),
+            (self.x_nh_inner, z0 + t),
+            (self.x_nh_inner, z1),
+            (self.x_nh_outer, z1),
+        ]
+
+    def soffit_flex_pts(self) -> list[tuple[float, float]]:
+        """Flex 50 cavity inside the soffit box (behind the NH L, under the GKF lid)."""
+        p = self.p
+        t = self.t_nh_face
+        return [
+            (self.x_nh_inner, self.z_nabeh_bot + t),
+            (p.room_width, self.z_nabeh_bot + t),
+            (p.room_width, self.z_gkf_horiz),
+            (self.x_nh_inner, self.z_gkf_horiz),
+        ]
+
+    def soffit_sdk_lid_pts(self) -> list[tuple[float, float]]:
+        """Horizontal GKF lid over the soffit box (fire / ceiling plane at Z≈H_START)."""
+        p = self.p
+        t = p.sdk_t
+        return [
+            (self.x_furn, self.z_gkf_horiz),
+            (p.room_width, self.z_gkf_horiz),
+            (p.room_width, self.z_gkf_horiz + t),
+            (self.x_furn, self.z_gkf_horiz + t),
         ]
 
     def krov_pts(self) -> list[tuple[float, float]]:
@@ -191,12 +285,18 @@ class ObyvakLayout:
         ]
 
     def vata_pts(self) -> list[tuple[float, float]]:
+        """MW plenum + between-rafter fill: above the soft pack / GKF lid, below rafters."""
         p = self.p
+        t_soft = self.t_soft_below_sdk
+        z_pack = self.z_slope_offset(self.x_furn, t_soft)
+        z_lid = self.z_gkf_horiz + p.sdk_t
         return [
-            (0.0, self.h_start),
-            (self.x_false, self.z_false),
-            (self.x_furn, self.z_gkf_horiz),
-            (p.room_width, self.z_gkf_horiz),
+            (0.0, self.z_slope_offset(0.0, t_soft)),
+            (self.x_false, self.z_slope_offset(self.x_false, t_soft)),
+            (self.x_furn, z_pack),
+            # Step down at the break: slope pack is thicker than the horizontal GKF lid.
+            (self.x_furn, z_lid),
+            (p.room_width, z_lid),
             (p.room_width, self.z_raf(p.room_width)),
             (self.x_ridge, self.z_raf(self.x_ridge)),
             (0.0, self.z_raf(0.0)),
@@ -214,9 +314,8 @@ class ObyvakLayout:
         ]
 
     def podhled_pts(self) -> list[tuple[float, float]]:
-        t = self.p.soffit_hint_t
-        ceil = self.ceil_pts()
-        return ceil + [(x, z - t) for x, z in reversed(ceil)]
+        """Full-room acoustic face outline (slopes + horizontal over cabinets) — for elevation."""
+        return self.sikmina_nh_pts()
 
     def gable_wall_pts(self, x0: float, x1: float, z_bot: float) -> list[tuple[float, float]]:
         pts = [(x0, z_bot), (x1, z_bot)]

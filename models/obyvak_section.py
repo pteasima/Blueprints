@@ -1,11 +1,11 @@
 """Obývák 1.02 — příčný řez (panel A), parametrické 2D profily v Plane.XZ.
 
-Hrubý řez místnosti: stěny, krov, podhled, soffit jako hmota (bez detailu skladeb).
-Bez textů a kót. 3D: `models/obyvak.py` (extrude podél Y).
+Šikminy + soffit: layered stack from the contractor řez (NH acoustics, Flex,
+GKF, self-supporting box). 3D: `models/obyvak.py` (extrude podél Y).
 
     python -m blueprints.export obyvak_section
 
-Zdroj: inputs/obyvak/make_obyvak_sheet_84d0.py (panel A).
+Zdroj: inputs/obyvak/make_obyvak_sheet_84d0.py / make_rez (panel A + E).
 450 mm u skříní je hloubka u okapové stěny — neplést se štítovou předstěnou 450.
 """
 
@@ -78,42 +78,42 @@ def build(params: ObyvakParams | None = None):
         )
     )
 
+    parts.append(xz_face(g.vata_pts(), "vata"))
+
+    # Šikminy stack (room → attic).
+    parts.append(xz_face(g.sikmina_nh_pts(), "podhled"))
+    parts.append(xz_face(g.sikmina_flex_pts(), "soffit"))
+    parts.append(xz_face(g.sikmina_sdk_pts(), "sdk"))
+
+    # Self-supporting soffit box: NH L, Flex cavity, GKF lid, gap above cabinets.
+    parts.append(xz_face(g.soffit_nh_pts(), "podhled"))
+    parts.append(xz_face(g.soffit_flex_pts(), "soffit"))
+    parts.append(xz_face(g.soffit_sdk_lid_pts(), "sdk"))
     parts.append(
-        xz_face(
+        xz_polyline(
             [
-                (0.0, g.h_start),
-                (g.x_false, g.z_false),
-                (g.x_furn, g.z_gkf_horiz),
-                (p.room_width, g.z_gkf_horiz),
-                (p.room_width, g.z_raf(p.room_width)),
-                (g.x_ridge, g.z_raf(g.x_ridge)),
-                (0.0, g.z_raf(0.0)),
+                (g.x_furn, p.furniture_height),
+                (p.room_width, p.furniture_height),
+                (p.room_width, g.z_nabeh_bot),
+                (g.x_furn, g.z_nabeh_bot),
             ],
-            "vata",
+            "podhled",
         )
     )
-    parts.append(
-        xz_rect(
-            g.x_furn,
-            g.z_nabeh_bot,
-            p.furniture_width,
-            g.z_gkf_horiz - g.z_nabeh_bot,
-            "soffit",
-        )
-    )
+
+    # Room-facing outline (acoustic continuity).
     parts.append(
         xz_polyline(
             [
                 (0.0, g.h_start),
                 (g.x_false, g.z_false),
                 (g.x_furn, g.z_gkf_horiz),
-                (p.room_width, g.z_gkf_horiz),
             ],
             "podhled",
         )
     )
-    parts.append(xz_line(g.x_furn, g.z_gkf_horiz, g.x_furn, g.z_nabeh_bot, "podhled"))
-    parts.append(xz_line(g.x_furn, g.z_nabeh_bot, p.room_width, g.z_nabeh_bot, "podhled"))
+    parts.append(xz_line(g.x_nh_outer, g.z_gkf_horiz, g.x_nh_outer, g.z_nabeh_bot, "podhled"))
+    parts.append(xz_line(g.x_nh_outer, g.z_nabeh_bot, p.room_width, g.z_nabeh_bot, "podhled"))
 
     shape = Compound(obj=parts, children=parts, label=MODEL_NAME)
     meta = {
@@ -126,6 +126,8 @@ def build(params: ObyvakParams | None = None):
             "z_false": g.z_false,
             "z_nabeh_bot": g.z_nabeh_bot,
             "z_gkf_horiz": g.z_gkf_horiz,
+            "t_nh_face": g.t_nh_face,
+            "l_hanger_right": g.l_hanger_right,
         },
     }
     return shape, meta

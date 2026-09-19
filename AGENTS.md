@@ -4,6 +4,16 @@ Parametric 2D/3D models in Python ([build123d](https://github.com/gumyr/build123
 
 Treat developer-experience friction (especially Cloud Agent onboarding) as part of the work. If setup, docs, or the export loop wastes time, fix it in-repo or propose the environment change — do not only work around it for one session.
 
+## Architectural modelling (physical building first)
+
+These are **building assemblies**, not decorative meshes. Before coding solids, reason as a house designer / structural engineer / contractor:
+
+- Every layer needs a real thickness, a load path or attachment, and a reason to exist (structure, weather, vapour, acoustics, finish, tolerance).
+- Do not invent geometry that cannot be built, hang, or drain. If a detail is load-bearing, say what carries it (rafters, hangers, masonry) and what must *not* carry it (e.g. furniture under a self-supporting soffit).
+- Acoustic faces (e.g. NaturHeld + StoSilent on šikminy) are continuous room-facing layers with stated thickness — not paint on a zero-thickness shell.
+- When transferring from a řez/detail sheet: if clearances, hangers, vapour order, or bearing are inconsistent, **push back** and say what must change in the structure before modelling. If the sheet is coherent, transfer the stack and tweak later.
+- Prefer labelled solids that match contractor language (`podhled`, `soffit`/Flex, `sdk`, `vata`, `krov`) over anonymous blobs.
+
 ## Environment
 
 Bootstrap (Cloud Agent `install` and local):

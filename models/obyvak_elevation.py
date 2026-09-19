@@ -77,7 +77,7 @@ def build(params: ObyvakParams | None = None):
     )
 
     parts.append(
-        xz_rect(0.0, g.z_soffit, span, p.soffit_hint_t, "podhled")
+        xz_rect(0.0, g.z_soffit, span, g.t_nh_face, "podhled")
     )
     parts.append(
         xz_rect(x0, g.z_raf_inner_ridge, x1 - x0, g.z_raf_top - g.z_raf_inner_ridge, "krov")

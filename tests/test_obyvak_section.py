@@ -44,7 +44,7 @@ def test_obyvak_section_builds_and_exports(tmp_path, monkeypatch):
     assert shape is not None
     assert meta["kind"] == "section"
     labels = {c.label for c in shape.children}
-    for name in ("zdivo", "eps", "krov", "vata", "soffit", "nabytek", "podhled", "krytina"):
+    for name in ("zdivo", "eps", "krov", "vata", "soffit", "nabytek", "podhled", "krytina", "sdk"):
         assert name in labels
     paths = export_section(shape, "obyvak_section")
     assert paths["svg"].exists()
