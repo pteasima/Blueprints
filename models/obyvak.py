@@ -868,44 +868,49 @@ def build_elevation_slice(params: ObyvakParams | None = None):
 def scenes(params: ObyvakParams | None = None) -> list[dict]:
     """Named WebGL viewer scenes (see blueprints.scenes).
 
-    Soffit: orthographic cross-section of the cabinet soffit. GLB is glTF Y-up
-    (CAD Z→Y, CAD Y→−Z). Cut along room length from the kitchen gable; camera
-    looks straight along that axis at the soffit with Y up.
+    Both scenes share ISO (ortho), look direction, and the mid-room length cut.
+    GLB is glTF Y-up (CAD Z→Y, CAD Y→−Z). Cut along room length from the kitchen
+    gable; camera looks straight along that axis with Y up.
+
+    Soffit: zoomed on the cabinet soffit bay.
+    Gable: same recipe framed on the full šikminy (eave↔eave slopes).
     """
     from blueprints.scenes import cad_mm_to_gltf_m
 
     p = params or ObyvakParams()
     g = ObyvakLayout(p)
     gap = FACE_GAP
-    # Match the soffit box bay (cabinet run, NH L + Flex cavity).
-    sx0, sx1 = g.x_furn, g.x_furn + p.furniture_width
     sy0, sy1 = g.y_furn0 + gap, g.y_furn1 - gap
-    sz0 = g.z_nabeh_bot + gap
-    sz1 = g.z_gkf_horiz - gap
-    cx = 0.5 * (sx0 + sx1)
     cy = 0.5 * (sy0 + sy1)
-    cz = 0.5 * (sz0 + sz1)
-    # View plane is glTF XY (= CAD X width × CAD Z height).
-    pad = 1.25
-    frame_x0 = g.x_furn - 250.0
-    frame_x1 = p.room_width + p.wall_plaster + 50.0
-    frame_z0 = p.furniture_height - 150.0
-    frame_z1 = g.z_gkf_horiz + 200.0
-    half_w = 0.5 * (frame_x1 - frame_x0) * pad * 0.001
-    half_h = 0.5 * (frame_z1 - frame_z0) * pad * 0.001
-    dist_m = max(half_w, half_h, 0.35) * 5.0
-    target = cad_mm_to_gltf_m((cx, cy, cz))
     # CAD +Y (kitchen→living) → glTF −Z. Camera on the kitchen side.
     look = (0.0, 0.0, -1.0)
-    position = [
-        target[0] - look[0] * dist_m,
-        target[1] - look[1] * dist_m,
-        target[2] - look[2] * dist_m,
-    ]
-    return [
-        {
-            "id": "soffit",
-            "label": "Soffit",
+    pad = 1.25
+    opacity = {LABEL_FLEX: 1, LABEL_NATURHELD: 1, LABEL_ROST: 1, "omitka": 1}
+
+    def _length_ortho_scene(
+        *,
+        scene_id: str,
+        label: str,
+        cx: float,
+        cz: float,
+        frame_x0: float,
+        frame_x1: float,
+        frame_z0: float,
+        frame_z1: float,
+    ) -> dict:
+        # View plane is glTF XY (= CAD X width × CAD Z height).
+        half_w = 0.5 * (frame_x1 - frame_x0) * pad * 0.001
+        half_h = 0.5 * (frame_z1 - frame_z0) * pad * 0.001
+        dist_m = max(half_w, half_h, 0.35) * 5.0
+        target = cad_mm_to_gltf_m((cx, cy, cz))
+        position = [
+            target[0] - look[0] * dist_m,
+            target[1] - look[1] * dist_m,
+            target[2] - look[2] * dist_m,
+        ]
+        return {
+            "id": scene_id,
+            "label": label,
             "camera": {
                 "target": target,
                 "position": position,
@@ -914,10 +919,39 @@ def scenes(params: ObyvakParams | None = None) -> list[dict]:
             },
             "projection": "ortho",
             "cuts": [{"normal": list(look), "t": 0.5}],
-            "opacity": {LABEL_FLEX: 1, LABEL_NATURHELD: 1, LABEL_ROST: 1, "omitka": 1},
+            "opacity": opacity,
             "opacityDefault": 0.5,
         }
-    ]
+
+    # Soffit: match the cabinet bay (NH L + Flex cavity).
+    sx0, sx1 = g.x_furn, g.x_furn + p.furniture_width
+    sz0 = g.z_nabeh_bot + gap
+    sz1 = g.z_gkf_horiz - gap
+    soffit = _length_ortho_scene(
+        scene_id="soffit",
+        label="Soffit",
+        cx=0.5 * (sx0 + sx1),
+        cz=0.5 * (sz0 + sz1),
+        frame_x0=g.x_furn - 250.0,
+        frame_x1=p.room_width + p.wall_plaster + 50.0,
+        frame_z0=p.furniture_height - 150.0,
+        frame_z1=g.z_gkf_horiz + 200.0,
+    )
+
+    # Gable: full pitched pack from window eave through ridge to cabinet eave.
+    gx0, gx1 = -p.wall_plaster - 50.0, p.room_width + p.wall_plaster + 50.0
+    gz0, gz1 = p.furniture_height - 150.0, p.ridge_z + 100.0
+    gable = _length_ortho_scene(
+        scene_id="gable",
+        label="Gable",
+        cx=0.5 * (gx0 + gx1),
+        cz=0.5 * (gz0 + gz1),
+        frame_x0=gx0,
+        frame_x1=gx1,
+        frame_z0=gz0,
+        frame_z1=gz1,
+    )
+    return [soffit, gable]
 
 
 def extra_exports(params: ObyvakParams | None = None):

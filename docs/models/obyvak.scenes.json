@@ -41,5 +41,48 @@
       "omitka": 1
     },
     "opacityDefault": 0.5
+  },
+  {
+    "id": "gable",
+    "label": "Gable",
+    "camera": {
+      "target": [
+        2.6750000000000003,
+        4.125,
+        -5.42
+      ],
+      "position": [
+        2.6750000000000003,
+        4.125,
+        11.705
+      ],
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "orthoFit": [
+        3.4250000000000003,
+        2.28125
+      ]
+    },
+    "projection": "ortho",
+    "cuts": [
+      {
+        "normal": [
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "t": 0.5
+      }
+    ],
+    "opacity": {
+      "NaturHeld Flex 50": 1,
+      "NaturHeld 140": 1,
+      "dreveny_rost": 1,
+      "omitka": 1
+    },
+    "opacityDefault": 0.5
   }
 ]

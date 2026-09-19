@@ -214,7 +214,7 @@ def test_soffit_hangs_from_cd_not_furniture_or_pozednice():
 
 def test_soffit_scene_recipe():
     specs = scenes()
-    assert len(specs) == 1
+    assert len(specs) == 2
     s = specs[0]
     assert s["id"] == "soffit"
     assert s["label"] == "Soffit"
@@ -252,10 +252,42 @@ def test_soffit_scene_recipe():
     assert abs(cad_mm_to_gltf_m((0, 1000, 0))[2] - (-1.0)) < 1e-12
 
 
+def test_gable_scene_recipe():
+    """Gable: same ISO / look / cut as Soffit, framed on the full šikminy."""
+    specs = {s["id"]: s for s in scenes()}
+    assert set(specs) == {"soffit", "gable"}
+    s, soffit = specs["gable"], specs["soffit"]
+    assert s["label"] == "Gable"
+    assert s["projection"] == soffit["projection"] == "ortho"
+    assert s["opacity"] == soffit["opacity"]
+    assert s["opacityDefault"] == soffit["opacityDefault"]
+    assert s["cuts"] == soffit["cuts"]
+    cam, scam = s["camera"], soffit["camera"]
+    assert cam["up"] == scam["up"] == [0.0, 1.0, 0.0]
+    # Same look axis (kitchen → living); camera still on the kitchen side.
+    assert cam["position"][2] > cam["target"][2]
+    assert abs(cam["position"][0] - cam["target"][0]) < 1e-9
+    assert abs(cam["position"][1] - cam["target"][1]) < 1e-9
+    # Wider than Soffit so both eaves and the ridge fit.
+    assert cam["orthoFit"][0] > scam["orthoFit"][0]
+    assert cam["orthoFit"][1] > scam["orthoFit"][1]
+    p = ObyvakParams()
+    g = build_layout(p)
+    tx, ty, tz = cam["target"]
+    # Target near room mid-width / mid-height of the pitched pack.
+    assert 0.0 <= tx <= p.room_width * 0.001
+    assert (p.furniture_height - 150.0) * 0.001 <= ty <= (p.ridge_z + 100.0) * 0.001
+    assert -g.y_furn1 * 0.001 <= tz <= -g.y_furn0 * 0.001
+    # Span covers both eaves (orthoFit half-widths in metres).
+    assert cam["orthoFit"][0] * 2 > p.room_width * 0.001
+    assert cam["orthoFit"][1] * 2 > (p.ridge_z - p.furniture_height) * 0.001
+
+
 def test_write_scenes_json(tmp_path):
     path = write_scenes_json("obyvak", scenes(), tmp_path / "obyvak.scenes.json")
     data = path.read_text(encoding="utf-8")
     assert '"soffit"' in data
+    assert '"gable"' in data
     assert path.stat().st_size > 0
 
 
