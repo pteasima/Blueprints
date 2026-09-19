@@ -627,12 +627,13 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       // Front/side: eye-level (same Y as target) so look is horizontal —
       // true elevation in ISO; no foreshortened floor. Top keeps a tiny
       // Z nudge so OrbitControls up does not align with the look axis.
+      // Side from −X (window wall), not +X.
       if (name === "front") {
         camera.position.set(c.x, c.y, c.z + dist);
       } else if (name === "top") {
         camera.position.set(c.x, c.y + dist, c.z + span * 0.01);
       } else if (name === "side") {
-        camera.position.set(c.x + dist, c.y, c.z);
+        camera.position.set(c.x - dist, c.y, c.z);
       }
       controls.target.copy(c);
       updateCameraClipPlanes();
