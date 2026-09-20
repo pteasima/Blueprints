@@ -17,7 +17,21 @@ from dataclasses import asdict
 
 from build123d import Compound
 
-from obyvak_geom import LABEL_NATURHELD, ObyvakLayout, ObyvakParams, xz_line, xz_rect
+from obyvak_geom import (
+    LABEL_BASS_WOOL,
+    LABEL_FLOOR,
+    LABEL_MASONRY,
+    LABEL_PLASTER,
+    LABEL_POCKET_FRAME,
+    LABEL_RAFTERS,
+    LABEL_ROOFING,
+    LABEL_SLOPE_NH,
+    LABEL_WALL_GKF,
+    ObyvakLayout,
+    ObyvakParams,
+    xz_line,
+    xz_rect,
+)
 
 
 MODEL_NAME = "obyvak_elevation"
@@ -40,21 +54,21 @@ def build(params: ObyvakParams | None = None):
 
     parts: list = []
 
-    parts.append(xz_rect(xl_eps, -p.floor_t, xr_eps - xl_eps, p.floor_t, "podlaha"))
+    parts.append(xz_rect(xl_eps, -p.floor_t, xr_eps - xl_eps, p.floor_t, LABEL_FLOOR))
     # No gable EPS / koruna — obyvák-only interior shells.
-    parts.append(xz_rect(xl_mas, -p.floor_t, p.wall_mason, h_gable + p.floor_t, "zdivo"))
-    parts.append(xz_rect(-p.wall_plaster, 0.0, p.wall_plaster, h_gable, "omitka"))
-    parts.append(xz_rect(span, 0.0, p.wall_plaster, h_gable, "omitka"))
+    parts.append(xz_rect(xl_mas, -p.floor_t, p.wall_mason, h_gable + p.floor_t, LABEL_MASONRY))
+    parts.append(xz_rect(-p.wall_plaster, 0.0, p.wall_plaster, h_gable, LABEL_PLASTER))
+    parts.append(xz_rect(span, 0.0, p.wall_plaster, h_gable, LABEL_PLASTER))
     parts.append(
-        xz_rect(span + p.wall_plaster, -p.floor_t, p.wall_mason, h_gable + p.floor_t, "zdivo")
+        xz_rect(span + p.wall_plaster, -p.floor_t, p.wall_mason, h_gable + p.floor_t, LABEL_MASONRY)
     )
 
     # Low SDK in front of pouzdro (covers pocket); předstěny above stay 190 / 450.
     face_t = max(p.sdk_t, 12.5)
-    parts.append(xz_rect(p.pouzdro_d, 0.0, face_t, p.pocket_door_h, "sdk"))
-    parts.append(xz_rect(span - p.pouzdro_d - face_t, 0.0, face_t, p.pocket_door_h, "sdk"))
-    parts.append(xz_rect(0.0, 0.0, p.pouzdro_d, p.pocket_door_h, "pouzdro"))
-    parts.append(xz_rect(span - p.pouzdro_d, 0.0, p.pouzdro_d, p.pocket_door_h, "pouzdro"))
+    parts.append(xz_rect(p.pouzdro_d, 0.0, face_t, p.pocket_door_h, LABEL_WALL_GKF))
+    parts.append(xz_rect(span - p.pouzdro_d - face_t, 0.0, face_t, p.pocket_door_h, LABEL_WALL_GKF))
+    parts.append(xz_rect(0.0, 0.0, p.pouzdro_d, p.pocket_door_h, LABEL_POCKET_FRAME))
+    parts.append(xz_rect(span - p.pouzdro_d, 0.0, p.pouzdro_d, p.pocket_door_h, LABEL_POCKET_FRAME))
 
     # Předstěny — never resize (190 kitchen / 450 living).
     parts.append(
@@ -63,7 +77,7 @@ def build(params: ObyvakParams | None = None):
             p.predstena_bottom_z,
             p.predstena_kitchen,
             h_gable - p.predstena_bottom_z,
-            "predstena",
+            LABEL_BASS_WOOL,
         )
     )
     parts.append(
@@ -72,17 +86,17 @@ def build(params: ObyvakParams | None = None):
             p.predstena_bottom_z,
             p.predstena_living,
             h_gable - p.predstena_bottom_z,
-            "predstena",
+            LABEL_BASS_WOOL,
         )
     )
 
     parts.append(
-        xz_rect(0.0, g.z_soffit, span, g.t_nh_face, LABEL_NATURHELD)
+        xz_rect(0.0, g.z_soffit, span, g.t_nh_face, LABEL_SLOPE_NH)
     )
     parts.append(
-        xz_rect(x0, g.z_raf_inner_ridge, x1 - x0, g.z_raf_top - g.z_raf_inner_ridge, "krov")
+        xz_rect(x0, g.z_raf_inner_ridge, x1 - x0, g.z_raf_top - g.z_raf_inner_ridge, LABEL_RAFTERS)
     )
-    parts.append(xz_line(x0, p.ridge_z, x1, p.ridge_z, "krytina"))
+    parts.append(xz_line(x0, p.ridge_z, x1, p.ridge_z, LABEL_ROOFING))
 
     shape = Compound(obj=parts, children=parts, label=MODEL_NAME)
     meta = {

@@ -45,7 +45,7 @@ SECTION_PNG_WIDTH = 1800
 # Optional roughness/metallic feed UsdPreviewSurface (viewer Realistic mode is separate).
 # Keep SOLID_COLORS in src/blueprints/viewer/materials.js in sync with fill/line RGB.
 SECTION_LAYERS: dict[str, dict[str, Any]] = {
-    "podlaha": {
+    "floor": {
         "fill": (230, 115, 20),
         "line": (120, 50, 0),
         "dxf": ColorIndex.YELLOW,
@@ -61,7 +61,7 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "roughness": 0.92,
         "metallic": 0.0,
     },
-    "zdivo": {
+    "masonry": {
         "fill": (225, 70, 40),
         "line": (130, 30, 15),
         "dxf": ColorIndex.RED,
@@ -69,7 +69,7 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "roughness": 0.88,
         "metallic": 0.0,
     },
-    "omitka": {
+    "plaster": {
         "fill": (255, 225, 120),
         "line": (170, 140, 50),
         "dxf": ColorIndex.YELLOW,
@@ -77,7 +77,7 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "roughness": 0.9,
         "metallic": 0.0,
     },
-    "nabytek": {
+    "furniture": {
         "fill": (255, 150, 0),
         "line": (160, 80, 0),
         "dxf": ColorIndex.YELLOW,
@@ -85,7 +85,7 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "roughness": 0.45,
         "metallic": 0.0,
     },
-    "pozednice": {
+    "wall_plate": {
         "fill": (200, 85, 10),
         "line": (110, 40, 0),
         "dxf": ColorIndex.YELLOW,
@@ -93,15 +93,7 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "roughness": 0.58,
         "metallic": 0.0,
     },
-    "predstena": {
-        "fill": (0, 195, 245),
-        "line": (0, 100, 150),
-        "dxf": ColorIndex.CYAN,
-        "weight": SECTION_LINE_WEIGHT,
-        "roughness": 0.82,
-        "metallic": 0.0,
-    },
-    "pouzdro": {
+    "pocket_frame": {
         "fill": (235, 185, 80),
         "line": (140, 100, 30),
         "dxf": ColorIndex.YELLOW,
@@ -110,7 +102,7 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "roughness": 0.7,
         "metallic": 0.0,
     },
-    "sdk": {
+    "wall_gkf": {
         "fill": (230, 230, 235),
         "line": (120, 120, 130),
         "dxf": ColorIndex.CYAN,
@@ -118,7 +110,7 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "roughness": 0.88,
         "metallic": 0.0,
     },
-    "krov": {
+    "rafters": {
         "fill": (200, 85, 10),
         "line": (110, 40, 0),
         "dxf": ColorIndex.YELLOW,
@@ -126,7 +118,7 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "roughness": 0.58,
         "metallic": 0.0,
     },
-    "vata": {
+    "plenum_wool": {
         "fill": (0, 210, 155),
         "line": (0, 110, 75),
         "dxf": ColorIndex.GREEN,
@@ -134,47 +126,7 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "roughness": 0.95,
         "metallic": 0.0,
     },
-    "NaturHeld Flex 50": {
-        "fill": (35, 175, 15),
-        "line": (15, 90, 5),
-        "dxf": ColorIndex.GREEN,
-        "weight": SECTION_LINE_WEIGHT,
-        "roughness": 0.92,
-        "metallic": 0.0,
-    },
-    "NaturHeld 140": {
-        "fill": (15, 85, 245),
-        "line": (10, 50, 160),
-        "dxf": ColorIndex.BLUE,
-        "weight": SECTION_HEAVY_WEIGHT,
-        "roughness": 0.8,
-        "metallic": 0.05,
-    },
-    "dreveny_rost": {
-        "fill": (160, 100, 30),
-        "line": (90, 50, 10),
-        "dxf": ColorIndex.YELLOW,
-        "weight": SECTION_LINE_WEIGHT,
-        "roughness": 0.58,
-        "metallic": 0.0,
-    },
-    "cd": {
-        "fill": (120, 120, 130),
-        "line": (60, 60, 70),
-        "dxf": ColorIndex.CYAN,
-        "weight": SECTION_LINE_WEIGHT,
-        "roughness": 0.35,
-        "metallic": 0.7,
-    },
-    "zaves": {
-        "fill": (90, 90, 100),
-        "line": (40, 40, 50),
-        "dxf": ColorIndex.CYAN,
-        "weight": SECTION_LINE_WEIGHT,
-        "roughness": 0.4,
-        "metallic": 0.75,
-    },
-    "paska": {
+    "racking_strap": {
         "fill": (70, 70, 80),
         "line": (30, 30, 40),
         "dxf": ColorIndex.CYAN,
@@ -182,7 +134,7 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "roughness": 0.45,
         "metallic": 0.8,
     },
-    "krytina": {
+    "roofing": {
         "fill": None,
         "line": (235, 15, 15),
         "dxf": ColorIndex.RED,
@@ -190,7 +142,7 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "roughness": 0.38,
         "metallic": 0.35,
     },
-    "sklo": {
+    "glazing": {
         "fill": (140, 210, 255),
         "line": (40, 120, 180),
         "dxf": ColorIndex.CYAN,
@@ -198,28 +150,166 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "roughness": 0.12,
         "metallic": 0.05,
     },
+    "slope_naturheld_140": {
+        "fill": (15, 85, 245),
+        "line": (10, 50, 160),
+        "dxf": ColorIndex.BLUE,
+        "weight": SECTION_HEAVY_WEIGHT,
+        "roughness": 0.8,
+        "metallic": 0.05,
+    },
+    "slope_naturheld_flex_50": {
+        "fill": (35, 175, 15),
+        "line": (15, 90, 5),
+        "dxf": ColorIndex.GREEN,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.92,
+        "metallic": 0.0,
+    },
+    "slope_battens": {
+        "fill": (160, 100, 30),
+        "line": (90, 50, 10),
+        "dxf": ColorIndex.YELLOW,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.58,
+        "metallic": 0.0,
+    },
+    "slope_gkf": {
+        "fill": (230, 230, 235),
+        "line": (120, 120, 130),
+        "dxf": ColorIndex.CYAN,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.88,
+        "metallic": 0.0,
+    },
+    "slope_cd": {
+        "fill": (120, 120, 130),
+        "line": (60, 60, 70),
+        "dxf": ColorIndex.CYAN,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.35,
+        "metallic": 0.7,
+    },
+    "slope_nonius": {
+        "fill": (90, 90, 100),
+        "line": (40, 40, 50),
+        "dxf": ColorIndex.CYAN,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.4,
+        "metallic": 0.75,
+    },
+    "soffit_naturheld_140": {
+        "fill": (15, 85, 245),
+        "line": (10, 50, 160),
+        "dxf": ColorIndex.BLUE,
+        "weight": SECTION_HEAVY_WEIGHT,
+        "roughness": 0.8,
+        "metallic": 0.05,
+    },
+    "soffit_naturheld_flex_50": {
+        "fill": (35, 175, 15),
+        "line": (15, 90, 5),
+        "dxf": ColorIndex.GREEN,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.92,
+        "metallic": 0.0,
+    },
+    "soffit_battens": {
+        "fill": (160, 100, 30),
+        "line": (90, 50, 10),
+        "dxf": ColorIndex.YELLOW,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.58,
+        "metallic": 0.0,
+    },
+    "soffit_gkf": {
+        "fill": (230, 230, 235),
+        "line": (120, 120, 130),
+        "dxf": ColorIndex.CYAN,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.88,
+        "metallic": 0.0,
+    },
+    "soffit_cd": {
+        "fill": (120, 120, 130),
+        "line": (60, 60, 70),
+        "dxf": ColorIndex.CYAN,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.35,
+        "metallic": 0.7,
+    },
+    "soffit_nonius": {
+        "fill": (90, 90, 100),
+        "line": (40, 40, 50),
+        "dxf": ColorIndex.CYAN,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.4,
+        "metallic": 0.75,
+    },
+    "bass_mineral_wool": {
+        "fill": (0, 210, 155),
+        "line": (0, 110, 75),
+        "dxf": ColorIndex.GREEN,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.95,
+        "metallic": 0.0,
+    },
+    "bass_gkb": {
+        "fill": (230, 230, 235),
+        "line": (120, 120, 130),
+        "dxf": ColorIndex.CYAN,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.88,
+        "metallic": 0.0,
+    },
+    "bass_cd": {
+        "fill": (120, 120, 130),
+        "line": (60, 60, 70),
+        "dxf": ColorIndex.CYAN,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.35,
+        "metallic": 0.7,
+    },
+    "bass_wall_hanger": {
+        "fill": (90, 90, 100),
+        "line": (40, 40, 50),
+        "dxf": ColorIndex.CYAN,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.4,
+        "metallic": 0.75,
+    },
 }
 
 SECTION_LAYER_ORDER = [
-    "podlaha",
+    "floor",
     "eps",
-    "zdivo",
-    "omitka",
-    "vata",
-    "nabytek",
-    "pouzdro",
-    "sdk",
-    "pozednice",
-    "krov",
-    "dreveny_rost",
-    "cd",
-    "zaves",
-    "paska",
-    "NaturHeld Flex 50",
-    "predstena",
-    "sklo",
-    "NaturHeld 140",
-    "krytina",
+    "masonry",
+    "plaster",
+    "furniture",
+    "wall_plate",
+    "pocket_frame",
+    "wall_gkf",
+    "rafters",
+    "plenum_wool",
+    "racking_strap",
+    "roofing",
+    "glazing",
+    "slope_naturheld_140",
+    "slope_naturheld_flex_50",
+    "slope_battens",
+    "slope_gkf",
+    "slope_cd",
+    "slope_nonius",
+    "soffit_naturheld_140",
+    "soffit_naturheld_flex_50",
+    "soffit_battens",
+    "soffit_gkf",
+    "soffit_cd",
+    "soffit_nonius",
+    "bass_mineral_wool",
+    "bass_gkb",
+    "bass_cd",
+    "bass_wall_hanger",
 ]
 
 
@@ -297,6 +387,7 @@ def export_shape(
     stem: str = "model",
     formats: tuple[str, ...] = ("step", "stl", "svg", "dxf", "png"),
     scenes: list | None = None,
+    part_groups: list | None = None,
 ) -> dict[str, Path]:
     """Export a build123d shape to common formats under exports/<model_name>/."""
     out_dir = ensure_export_dir(model_name)
@@ -328,7 +419,14 @@ def export_shape(
             raise ValueError(f"Unsupported export format: {fmt}")
         written[fmt] = path
 
-    _maybe_write_usdz(written, model_name, shape=shape, stem=stem, scenes=scenes)
+    _maybe_write_usdz(
+        written,
+        model_name,
+        shape=shape,
+        stem=stem,
+        scenes=scenes,
+        part_groups=part_groups,
+    )
     publish_to_artifacts(model_name, written)
     return written
 
@@ -842,25 +940,29 @@ _VIEWER_HTML = """<!DOCTYPE html>
   <button type="button" class="sheet-handle" id="sheet-handle" aria-label="Drag controls sheet"></button>
   <div class="sheet-scroll" id="sheet-scroll">
     <section class="sheet-section" id="section-view">
-      <h2 class="sheet-title">View</h2>
+      <h2 class="sheet-title" data-i18n="ui.view">View</h2>
       <div id="cams" class="seg"></div>
       <div id="fov" class="fov"></div>
     </section>
     <section class="sheet-section" id="section-cuts">
-      <h2 class="sheet-title">Sections</h2>
+      <h2 class="sheet-title" data-i18n="ui.sections">Cuts</h2>
       <div id="cuts" class="cuts"></div>
     </section>
     <section class="sheet-section" id="section-parts">
-      <h2 class="sheet-title">Parts</h2>
+      <h2 class="sheet-title" data-i18n="ui.parts">Parts</h2>
       <div id="parts" class="parts"></div>
     </section>
     <section class="sheet-section" id="section-materials">
-      <h2 class="sheet-title">Materials</h2>
-      <div id="mats" class="seg" role="group" aria-label="Materials"></div>
+      <h2 class="sheet-title" data-i18n="ui.materials">Materials</h2>
+      <div id="mats" class="seg" role="group" aria-label="Materials" data-i18n-aria="ui.materials"></div>
       <div class="edges-block">
-        <span class="edges-label">Edges</span>
-        <div id="edges" class="seg" role="group" aria-label="Edges"></div>
+        <span class="edges-label" data-i18n="ui.edges">Edges</span>
+        <div id="edges" class="seg" role="group" aria-label="Edges" data-i18n-aria="ui.edges"></div>
       </div>
+    </section>
+    <section class="sheet-section" id="section-locale">
+      <h2 class="sheet-title" data-i18n="ui.language">Language</h2>
+      <div id="locale" class="seg" role="group" aria-label="Language" data-i18n-aria="ui.language"></div>
     </section>
   </div>
 </aside>
@@ -886,7 +988,14 @@ _VIEWER_HTML = """<!DOCTYPE html>
   } catch (e) {
     scenes = [];
   }
-  BlueprintsViewerBundle.mountViewer(canvas, glb, { scenes: scenes });
+  let partGroups = [];
+  try {
+    partGroups = JSON.parse("%%PARTS_JSON%%");
+    if (!Array.isArray(partGroups)) partGroups = [];
+  } catch (e) {
+    partGroups = [];
+  }
+  BlueprintsViewerBundle.mountViewer(canvas, glb, { scenes: scenes, partGroups: partGroups });
 })();
 </script>
 </body>
@@ -931,6 +1040,7 @@ def write_gltf_html_viewer(
     *,
     usdz_path: Path | None = None,
     scenes: list | None = None,
+    part_groups: list | None = None,
 ) -> Path:
     """Self-contained offline HTML viewer (bundled Three.js + embedded GLB)."""
     glb_b64 = base64.b64encode(glb_path.read_bytes()).decode("ascii")
@@ -942,16 +1052,20 @@ def write_gltf_html_viewer(
     scenes_js = (
         scenes_json.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
     )
+    parts_json = json.dumps(part_groups if part_groups is not None else [])
+    parts_js = (
+        parts_json.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
+    )
     html = (
         _VIEWER_HTML.replace("%%VIEWER_JS%%", _viewer_iife())
         .replace("%%GLB_B64%%", glb_b64)
         .replace("%%USDZ_B64%%", usdz_b64)
         .replace("%%SCENES_JSON%%", scenes_js)
+        .replace("%%PARTS_JSON%%", parts_js)
     )
     html_path.parent.mkdir(parents=True, exist_ok=True)
     html_path.write_text(html, encoding="utf-8")
     return html_path
-
 
 
 def stl_to_usdz(stl_path: Path, usdz_path: Path) -> Path:
@@ -970,6 +1084,7 @@ def _maybe_write_usdz(
     shape: Shape | Compound | None = None,
     stem: str = "model",
     scenes: list | None = None,
+    part_groups: list | None = None,
 ) -> None:
     stl_path = written.get("stl")
     if stl_path is None or not stl_path.is_file():
@@ -992,7 +1107,11 @@ def _maybe_write_usdz(
         written["glb"] = glb_path
         html_path = stl_path.with_suffix(".html")
         write_gltf_html_viewer(
-            glb_path, html_path, usdz_path=usdz_path, scenes=scenes
+            glb_path,
+            html_path,
+            usdz_path=usdz_path,
+            scenes=scenes,
+            part_groups=part_groups,
         )
         written["html"] = html_path
 
@@ -1003,6 +1122,7 @@ def _maybe_write_usdz(
             usdz_path,
             glb_path=written.get("glb"),
             scenes=scenes,
+            part_groups=part_groups,
         )
         if hub is not None:
             written["preview_hub"] = hub

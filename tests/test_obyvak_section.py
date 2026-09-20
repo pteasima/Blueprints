@@ -6,7 +6,25 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "models"))
 
 from obyvak_section import ObyvakParams, build, build_layout  # noqa: E402
-from obyvak_geom import LABEL_CD, LABEL_FLEX, LABEL_NATURHELD, LABEL_ROST  # noqa: E402
+from obyvak_geom import (  # noqa: E402
+    LABEL_FLOOR,
+    LABEL_PLENUM_WOOL,
+    LABEL_RACKING_STRAP,
+    LABEL_RAFTERS,
+    LABEL_ROOFING,
+    LABEL_SLOPE_BATTENS,
+    LABEL_SLOPE_CD,
+    LABEL_SLOPE_FLEX,
+    LABEL_SLOPE_GKF,
+    LABEL_SLOPE_NH,
+    LABEL_SLOPE_NONIUS,
+    LABEL_SOFFIT_BATTENS,
+    LABEL_SOFFIT_CD,
+    LABEL_SOFFIT_FLEX,
+    LABEL_SOFFIT_GKF,
+    LABEL_SOFFIT_NH,
+    LABEL_SOFFIT_NONIUS,
+)
 from blueprints.export_utils import export_section  # noqa: E402
 
 
@@ -46,21 +64,27 @@ def test_obyvak_section_builds_and_exports(tmp_path, monkeypatch):
     assert meta["kind"] == "section"
     labels = {c.label for c in shape.children}
     for name in (
-        "zdivo",
+        "masonry",
         "eps",
-        "krov",
-        "vata",
-        LABEL_FLEX,
-        "nabytek",
-        LABEL_NATURHELD,
-        "krytina",
-        "sdk",
-        LABEL_ROST,
-        LABEL_CD,
+        LABEL_RAFTERS,
+        LABEL_PLENUM_WOOL,
+        LABEL_SLOPE_FLEX,
+        LABEL_SOFFIT_FLEX,
+        "furniture",
+        LABEL_SLOPE_NH,
+        LABEL_SOFFIT_NH,
+        LABEL_ROOFING,
+        LABEL_SLOPE_GKF,
+        LABEL_SOFFIT_GKF,
+        LABEL_SLOPE_BATTENS,
+        LABEL_SOFFIT_BATTENS,
+        LABEL_SLOPE_CD,
+        LABEL_SOFFIT_CD,
     ):
         assert name in labels
     assert "podhled" not in labels
-    assert "soffit" not in labels
+    assert "NaturHeld 140" not in labels
+    assert "sdk" not in labels
     assert meta["derived"]["cd_count"] >= 5
     paths = export_section(shape, "obyvak_section")
     assert paths["svg"].exists()

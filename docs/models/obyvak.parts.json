@@ -1,0 +1,56 @@
+[
+  {
+    "id": "shell",
+    "children": [
+      "floor",
+      "masonry",
+      "eps",
+      "plaster",
+      "wall_plate",
+      "rafters",
+      "roofing",
+      "plenum_wool",
+      "racking_strap",
+      "pocket_frame",
+      "wall_gkf",
+      "glazing"
+    ]
+  },
+  {
+    "id": "slopes",
+    "children": [
+      "slope_naturheld_140",
+      "slope_naturheld_flex_50",
+      "slope_battens",
+      "slope_gkf",
+      "slope_cd",
+      "slope_nonius"
+    ]
+  },
+  {
+    "id": "soffit",
+    "children": [
+      "soffit_naturheld_140",
+      "soffit_naturheld_flex_50",
+      "soffit_battens",
+      "soffit_gkf",
+      "soffit_cd",
+      "soffit_nonius"
+    ]
+  },
+  {
+    "id": "bass_traps",
+    "children": [
+      "bass_mineral_wool",
+      "bass_gkb",
+      "bass_cd",
+      "bass_wall_hanger"
+    ]
+  },
+  {
+    "id": "furniture",
+    "children": [
+      "furniture"
+    ]
+  }
+]

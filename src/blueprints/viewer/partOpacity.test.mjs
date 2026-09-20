@@ -1,5 +1,5 @@
 /**
- * Outline resolution + opacity material flags.
+ * Outline resolution + opacity material flags + group opacity expansion.
  * Run: node partOpacity.test.mjs
  */
 import assert from "node:assert/strict";
@@ -8,6 +8,7 @@ import {
   PART_GROUPS,
   applyOpacityToMeshes,
   collectLeafIds,
+  expandOpacityGroups,
   resolvePartOutline,
 } from "./materials.js";
 import {
@@ -18,39 +19,67 @@ import {
   VIEW_Z_EPSILON,
 } from "./depthPeel.js";
 
-// --- Outline ---
-const outline = resolvePartOutline([
-  "zdivo",
-  "eps",
-  "krov",
-  "podlaha",
-  "sklo",
-  "nabytek",
-]);
+const OBYVAK_GROUPS = [
+  {
+    id: "shell",
+    children: ["floor", "masonry", "eps", "plaster"],
+  },
+  {
+    id: "slopes",
+    children: ["slope_naturheld_140", "slope_gkf"],
+  },
+  {
+    id: "soffit",
+    children: ["soffit_naturheld_140", "soffit_gkf", "soffit_battens"],
+  },
+  {
+    id: "furniture",
+    children: ["furniture"],
+  },
+];
+
+const outline = resolvePartOutline(
+  [
+    "floor",
+    "masonry",
+    "slope_naturheld_140",
+    "soffit_naturheld_140",
+    "soffit_gkf",
+    "glazing",
+    "furniture",
+  ],
+  OBYVAK_GROUPS,
+  (id) => `L:${id}`,
+);
 const ids = outline.map((n) => n.id);
-assert.ok(ids.includes("walls"));
-assert.ok(ids.includes("roof"));
-assert.ok(ids.includes("interior"));
+assert.ok(ids.includes("shell"));
+assert.ok(ids.includes("slopes"));
+assert.ok(ids.includes("soffit"));
+assert.ok(ids.includes("furniture"));
 assert.ok(ids.includes("other"), "leftover labels go under Other");
 
-const walls = outline.find((n) => n.id === "walls");
-assert.equal(walls?.type, "group");
-const wallLeaves = collectLeafIds(walls);
-assert.deepEqual(wallLeaves.sort(), ["eps", "zdivo"].sort());
+const shell = outline.find((n) => n.id === "shell");
+assert.equal(shell?.type, "group");
+assert.equal(shell.label, "L:shell");
+assert.deepEqual(collectLeafIds(shell).sort(), ["floor", "masonry"].sort());
 
 const other = outline.find((n) => n.id === "other");
-assert.ok(collectLeafIds(other).includes("sklo"));
+assert.ok(collectLeafIds(other).includes("glazing"));
+assert.equal(other.children[0].label, "L:glazing");
 
 const empty = resolvePartOutline([]);
 assert.equal(empty.length, 0);
 
-const allLeafIds = new Set();
-for (const g of PART_GROUPS) {
-  for (const c of g.children) {
-    if (typeof c === "string") allLeafIds.add(c);
-  }
-}
-assert.ok(allLeafIds.has("krytina"));
+assert.deepEqual(PART_GROUPS, []);
+
+const expanded = expandOpacityGroups(
+  { soffit: 1, plaster: 1 },
+  outline,
+);
+assert.equal(expanded.soffit_naturheld_140, 1);
+assert.equal(expanded.soffit_gkf, 1);
+assert.equal(expanded.plaster, 1);
+assert.equal(expanded.slope_naturheld_140, undefined);
 
 // --- Opacity flags ---
 const geom = new THREE.BoxGeometry(1, 1, 1);

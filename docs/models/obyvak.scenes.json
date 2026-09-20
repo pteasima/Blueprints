@@ -1,7 +1,6 @@
 [
   {
     "id": "soffit",
-    "label": "Soffit",
     "camera": {
       "target": [
         5.125,
@@ -35,16 +34,13 @@
       }
     ],
     "opacity": {
-      "NaturHeld Flex 50": 1,
-      "NaturHeld 140": 1,
-      "dreveny_rost": 1,
-      "omitka": 1
+      "soffit": 1,
+      "plaster": 1
     },
     "opacityDefault": 0.5
   },
   {
     "id": "gable",
-    "label": "Gable",
     "camera": {
       "target": [
         2.6750000000000003,
@@ -78,10 +74,8 @@
       }
     ],
     "opacity": {
-      "NaturHeld Flex 50": 1,
-      "NaturHeld 140": 1,
-      "dreveny_rost": 1,
-      "omitka": 1
+      "slopes": 1,
+      "plaster": 1
     },
     "opacityDefault": 0.5
   }

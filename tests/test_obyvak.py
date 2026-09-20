@@ -4,11 +4,46 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "models"))
 
-from obyvak import FACE_GAP, build, build_elevation_slice, build_preview, build_section_slice, scenes  # noqa: E402
+from obyvak import (  # noqa: E402
+    FACE_GAP,
+    build,
+    build_elevation_slice,
+    build_preview,
+    build_section_slice,
+    part_groups,
+    scenes,
+)
 from obyvak_geom import (  # noqa: E402
-    LABEL_FLEX,
-    LABEL_NATURHELD,
-    LABEL_ROST,
+    LABEL_EPS,
+    LABEL_FLOOR,
+    LABEL_FURNITURE,
+    LABEL_MASONRY,
+    LABEL_PLASTER,
+    LABEL_PLENUM_WOOL,
+    LABEL_POCKET_FRAME,
+    LABEL_RACKING_STRAP,
+    LABEL_RAFTERS,
+    LABEL_ROOFING,
+    LABEL_SLOPE_BATTENS,
+    LABEL_SLOPE_CD,
+    LABEL_SLOPE_FLEX,
+    LABEL_SLOPE_GKF,
+    LABEL_SLOPE_NH,
+    LABEL_SLOPE_NONIUS,
+    LABEL_SOFFIT_BATTENS,
+    LABEL_SOFFIT_CD,
+    LABEL_SOFFIT_FLEX,
+    LABEL_SOFFIT_GKF,
+    LABEL_SOFFIT_NH,
+    LABEL_SOFFIT_NONIUS,
+    LABEL_WALL_GKF,
+    LABEL_WALL_PLATE,
+    LABEL_BASS_WOOL,
+    LABEL_BASS_GKB,
+    LABEL_BASS_CD,
+    LABEL_BASS_HANGER,
+    LABEL_GLAZING,
+    PART_GROUPS,
     ObyvakParams,
     build_layout,
 )
@@ -72,7 +107,7 @@ def test_krov_is_discrete_rafters():
     assert p.rafter_spacing == 875.0
     assert p.rafter_w == 100.0
     shape, _ = build(p)
-    krovs = _labeled(shape, "krov")
+    krovs = _labeled(shape, LABEL_RAFTERS)
     expected = g.rafter_y_stations(FACE_GAP, p.room_length - FACE_GAP)
     assert len(krovs) == len(expected)
     assert len(krovs) >= 10
@@ -91,12 +126,12 @@ def test_sikminy_and_soffit_stack_in_3d():
     p = ObyvakParams()
     g = build_layout(p)
     shape, _ = build(p)
-    nh = _labeled(shape, LABEL_NATURHELD)
-    flex = _labeled(shape, LABEL_FLEX)
-    rost = _labeled(shape, LABEL_ROST)
-    cds = _labeled(shape, "cd")
-    zaves = _labeled(shape, "zaves")
-    pasky = _labeled(shape, "paska")
+    nh = _labeled(shape, LABEL_SLOPE_NH) + _labeled(shape, LABEL_SOFFIT_NH)
+    flex = _labeled(shape, LABEL_SLOPE_FLEX) + _labeled(shape, LABEL_SOFFIT_FLEX)
+    rost = _labeled(shape, LABEL_SLOPE_BATTENS) + _labeled(shape, LABEL_SOFFIT_BATTENS)
+    cds = _labeled(shape, LABEL_SLOPE_CD) + _labeled(shape, LABEL_SOFFIT_CD)
+    zaves = _labeled(shape, LABEL_SLOPE_NONIUS) + _labeled(shape, LABEL_SOFFIT_NONIUS)
+    pasky = _labeled(shape, LABEL_RACKING_STRAP)
     assert len(nh) >= 2  # slope NH + soffit L
     assert len(flex) >= 2  # slope Flex + box Flex
     assert len(rost) >= 8  # slope latě (along Y) + soffit frame
@@ -117,12 +152,12 @@ def test_sikminy_and_soffit_stack_in_3d():
     box_nh = max(nh, key=lambda s: s.bounding_box().min.X)
     assert abs(box_nh.bounding_box().min.Z - (g.z_nabeh_bot + FACE_GAP)) < 2.0
     assert box_nh.bounding_box().min.Z >= p.furniture_height + p.furniture_gap - 1.0
-    furn = _labeled(shape, "nabytek")[0].bounding_box()
+    furn = _labeled(shape, LABEL_FURNITURE)[0].bounding_box()
     assert box_nh.bounding_box().min.Z >= furn.max.Z + p.furniture_gap - 2.0
     # Ceiling GKF: horizontal lid + vertical return at rost front (continuous shell).
     lids = [
         c
-        for c in _labeled(shape, "sdk")
+        for c in _labeled(shape, LABEL_SOFFIT_GKF) + _labeled(shape, LABEL_SLOPE_GKF)
         if c.bounding_box().min.Z >= g.z_gkf_horiz - 1.0
         and c.bounding_box().min.X >= g.x_furn - 1.0
     ]
@@ -167,8 +202,8 @@ def test_sikminy_and_soffit_stack_in_3d():
         and c.bounding_box().max.Z > g.z_gkf_horiz - p.rost_d
     ]
     assert len(front_drops) >= 1
-    # krov is roof timber only — soffit-frame latě use dreveny_rost.
-    for part in _labeled(shape, "krov"):
+    # Rafters are roof timber only — soffit-frame latě use *_battens.
+    for part in _labeled(shape, LABEL_RAFTERS):
         bb = part.bounding_box()
         assert not (bb.min.X >= g.x_furn - 1.0 and bb.max.Z <= g.z_gkf_horiz + 1.0)
     # Slope latě are // krokvím: thin in Y, long along the slope (X).
@@ -181,7 +216,7 @@ def test_sikminy_and_soffit_stack_in_3d():
     assert all(c.bounding_box().size.Y < p.rost_spacing for c in slope_rost)
     assert all(c.bounding_box().size.X > 500.0 for c in slope_rost)
     # Šikminy pack runs wall-to-wall (bass traps sit under it, do not replace it).
-    nh = _labeled(shape, LABEL_NATURHELD)
+    nh = _labeled(shape, LABEL_SLOPE_NH)
     assert any(c.bounding_box().size.Y > p.room_length - 10.0 for c in nh)
     # Soffit rost is a lattice (latě @625), not full-depth solid boards.
     soffit_rost = [
@@ -232,8 +267,8 @@ def test_soffit_hangs_from_cd_not_furniture_or_pozednice():
     g = build_layout(p)
     shape, _ = build(p)
     # No rost/CD/zaves share volume with furniture.
-    furn = _labeled(shape, "nabytek")[0]
-    for label in (LABEL_ROST, "cd", "zaves"):
+    furn = _labeled(shape, LABEL_FURNITURE)[0]
+    for label in (LABEL_SOFFIT_BATTENS, LABEL_SOFFIT_CD, LABEL_SOFFIT_NONIUS):
         for part in _labeled(shape, label):
             if part.bounding_box().min.X < g.x_furn - 1.0:
                 continue
@@ -247,7 +282,7 @@ def test_soffit_hangs_from_cd_not_furniture_or_pozednice():
             vol = sum(float(getattr(s, "volume", 0) or 0) for s in shapes)
             assert vol <= 1.0, f"{label} intersects furniture"
     # Pozednice stays above the hang plane — not a hang point.
-    for poz in _labeled(shape, "pozednice"):
+    for poz in _labeled(shape, LABEL_WALL_PLATE):
         assert poz.bounding_box().min.Z >= p.eave_wall_z - 1.0
         assert poz.bounding_box().min.Z > g.z_gkf_horiz + 50.0
 
@@ -257,14 +292,12 @@ def test_soffit_scene_recipe():
     assert len(specs) == 2
     s = specs[0]
     assert s["id"] == "soffit"
-    assert s["label"] == "Soffit"
+    assert "label" not in s or s.get("label") is None
     assert s["projection"] == "ortho"
     assert s["opacityDefault"] == 0.5
     assert s["opacity"] == {
-        LABEL_FLEX: 1,
-        LABEL_NATURHELD: 1,
-        LABEL_ROST: 1,
-        "omitka": 1,
+        "soffit": 1,
+        LABEL_PLASTER: 1,
     }
     assert len(s["cuts"]) == 1
     assert s["cuts"][0]["t"] == 0.5
@@ -297,14 +330,11 @@ def test_gable_scene_recipe():
     specs = {s["id"]: s for s in scenes()}
     assert "gable" in specs
     s = specs["gable"]
-    assert s["label"] == "Gable"
     assert s["projection"] == "ortho"
     assert s["opacityDefault"] == 0.5
     assert s["opacity"] == {
-        LABEL_FLEX: 1,
-        LABEL_NATURHELD: 1,
-        LABEL_ROST: 1,
-        "omitka": 1,
+        "slopes": 1,
+        LABEL_PLASTER: 1,
     }
     assert len(s["cuts"]) == 1
     assert s["cuts"][0]["t"] == 0.5
@@ -351,35 +381,43 @@ def test_3d_matches_section_and_elevation_masses():
 
     labels = {c.label for c in shape.children}
     for name in (
-        "podlaha",
-        "eps",
-        "zdivo",
-        "krov",
-        "krytina",
-        "vata",
-        "nabytek",
-        LABEL_FLEX,
-        "pouzdro",
-        "sdk",
-        LABEL_NATURHELD,
-        "sklo",
-        LABEL_ROST,
-        "cd",
-        "zaves",
-        "paska",
+        LABEL_FLOOR,
+        LABEL_EPS,
+        LABEL_MASONRY,
+        LABEL_RAFTERS,
+        LABEL_ROOFING,
+        LABEL_PLENUM_WOOL,
+        LABEL_FURNITURE,
+        LABEL_SLOPE_FLEX,
+        LABEL_SOFFIT_FLEX,
+        LABEL_POCKET_FRAME,
+        LABEL_SLOPE_GKF,
+        LABEL_SOFFIT_GKF,
+        LABEL_WALL_GKF,
+        LABEL_SLOPE_NH,
+        LABEL_SOFFIT_NH,
+        LABEL_GLAZING,
+        LABEL_SLOPE_BATTENS,
+        LABEL_SOFFIT_BATTENS,
+        LABEL_SLOPE_CD,
+        LABEL_SOFFIT_CD,
+        LABEL_SLOPE_NONIUS,
+        LABEL_SOFFIT_NONIUS,
+        LABEL_RACKING_STRAP,
+        LABEL_BASS_WOOL,
+        LABEL_BASS_GKB,
+        LABEL_BASS_CD,
+        LABEL_BASS_HANGER,
     ):
         assert name in labels
     assert "koruna" not in labels
     assert "podhled" not in labels
-    assert "soffit" not in labels
     assert "predstena" not in labels  # replaced by layered bass-trap solids
+    assert "sdk" not in labels
+    assert "NaturHeld 140" not in labels
 
     # Bass traps: kitchen MW+GKB (190) and living GKB+MW (450).
-    bass_wool = [
-        c
-        for c in _labeled(shape, "vata")
-        if c.bounding_box().size.Y < p.room_length * 0.2
-    ]
+    bass_wool = _labeled(shape, LABEL_BASS_WOOL)
     assert len(bass_wool) == 2
     kitchen_wool, living_wool = sorted(bass_wool, key=lambda s: s.bounding_box().min.Y)
     assert abs(kitchen_wool.bounding_box().min.Y - FACE_GAP) < 1e-6
@@ -389,7 +427,7 @@ def test_3d_matches_section_and_elevation_masses():
 
     bass_gkb = [
         c
-        for c in _labeled(shape, "sdk")
+        for c in _labeled(shape, LABEL_BASS_GKB)
         if c.bounding_box().min.Z >= p.predstena_bottom_z - 1.0
         and c.bounding_box().size.Y < 30.0  # vertical membrane face (~12.5)
     ]
@@ -398,22 +436,12 @@ def test_3d_matches_section_and_elevation_masses():
     assert abs(k_gkb.bounding_box().max.Y - (p.predstena_kitchen - FACE_GAP)) < 1.0
     assert abs(l_gkb.bounding_box().min.Y - (g.y_pred_r + FACE_GAP)) < 1.0
     # Short rear třmeny exist at both gables (no hangers into krov).
-    bass_trmeny = [
-        c
-        for c in _labeled(shape, "zaves")
-        if c.bounding_box().max.Y <= p.predstena_kitchen + 1.0
-        or c.bounding_box().min.Y >= g.y_pred_r - 1.0
-    ]
+    bass_trmeny = _labeled(shape, LABEL_BASS_HANGER)
     assert len(bass_trmeny) >= 4
-    bass_cd = [
-        c
-        for c in _labeled(shape, "cd")
-        if c.bounding_box().max.Y <= p.predstena_kitchen + 1.0
-        or c.bounding_box().min.Y >= g.y_pred_r - 1.0
-    ]
+    bass_cd = _labeled(shape, LABEL_BASS_CD)
     assert len(bass_cd) >= 8  # rear+front at several X stations × 2 gables
 
-    furn = _labeled(shape, "nabytek")[0].bounding_box()
+    furn = _labeled(shape, LABEL_FURNITURE)[0].bounding_box()
     assert abs(furn.size.X - (p.furniture_width - FACE_GAP)) < 1e-6
     assert abs(furn.min.Y - (g.y_furn0 + FACE_GAP)) < 1e-6
     assert abs(furn.max.Y - (g.y_furn1 - FACE_GAP)) < 1e-6
@@ -421,7 +449,7 @@ def test_3d_matches_section_and_elevation_masses():
     # Nominal layer thicknesses still present (minus interface clearance).
     eave_eps = [
         c
-        for c in _labeled(shape, "eps")
+        for c in _labeled(shape, LABEL_EPS)
         if abs(c.bounding_box().size.X - (p.wall_eps - FACE_GAP)) < 1e-3
     ]
     assert eave_eps, "expected eave EPS strips with full insulation thickness"
@@ -429,18 +457,18 @@ def test_3d_matches_section_and_elevation_masses():
 
     gable_eps = [
         c
-        for c in _labeled(shape, "eps")
+        for c in _labeled(shape, LABEL_EPS)
         if c.bounding_box().size.Y < p.wall_mason + p.wall_plaster + 1.0
     ]
     assert gable_eps == []
 
-    pouzdra = sorted(_labeled(shape, "pouzdro"), key=lambda s: (s.bounding_box().min.Y, s.bounding_box().min.X))
+    pouzdra = sorted(_labeled(shape, LABEL_POCKET_FRAME), key=lambda s: (s.bounding_box().min.Y, s.bounding_box().min.X))
     assert len(pouzdra) == len(p.pocket_doors)
     # Gable pocket SDK faces only (slope/lid GKF sit much higher).
     sdk_faces = sorted(
         [
             c
-            for c in _labeled(shape, "sdk")
+            for c in _labeled(shape, LABEL_WALL_GKF)
             if c.bounding_box().max.Z <= p.pocket_door_h + 1.0
         ],
         key=lambda s: s.bounding_box().min.Y,
@@ -494,7 +522,7 @@ def test_3d_matches_section_and_elevation_masses():
         if part.bounding_box().min.X > p.room_width * 0.4
     ]
     assert len(spiz) == 1
-    glass = _labeled(shape, "sklo")
+    glass = _labeled(shape, LABEL_GLAZING)
     assert len(glass) == len(p.eave_windows)
     for (y0, width), pane in zip(
         sorted(p.eave_windows, key=lambda w: w[0]),
@@ -508,7 +536,7 @@ def test_3d_matches_section_and_elevation_masses():
         assert abs(bb.max.Z - (p.window_h - FACE_GAP)) <= 1.0
     gable_walls = [
         c
-        for c in _labeled(shape, "zdivo")
+        for c in _labeled(shape, LABEL_MASONRY)
         if c.bounding_box().size.X > p.room_width * 0.5
     ]
     assert len(gable_walls) == 2
@@ -573,29 +601,29 @@ def test_obyvak_3d_exports(tmp_path, monkeypatch):
     furn_eave = [
         c
         for c in preview.children
-        if c.label in {"eps", "zdivo", "omitka", "pozednice", "nabytek"}
+        if c.label in {LABEL_EPS, LABEL_MASONRY, LABEL_PLASTER, LABEL_WALL_PLATE, LABEL_FURNITURE}
         and c.bounding_box().min.X >= p.room_width - 1.0
     ]
     assert furn_eave == []
-    assert any(c.label == "sklo" for c in preview.children)
+    assert any(c.label == LABEL_GLAZING for c in preview.children)
     cut = export_shape(preview, "obyvak", stem="cutaway", formats=("svg", "png"))
     assert cut["png"].stat().st_size > 0
 
     sec, _ = build_section_slice()
     sec_labels = {c.label for c in sec.children}
-    assert "nabytek" in sec_labels
+    assert LABEL_FURNITURE in sec_labels
     assert "soffit" not in sec_labels
-    assert LABEL_FLEX in sec_labels
-    assert LABEL_NATURHELD in sec_labels
+    assert LABEL_SLOPE_FLEX in sec_labels
+    assert LABEL_SLOPE_NH in sec_labels
     # Slice is snapped onto a krokev (875 grid); rost latě use 625 and may miss.
-    assert "krov" in sec_labels
+    assert LABEL_RAFTERS in sec_labels
     assert "predstena" not in sec_labels
 
     elev, _ = build_elevation_slice()
     elev_labels = {c.label for c in elev.children}
     assert "predstena" not in elev_labels
-    assert "vata" in elev_labels  # bass-trap wool at gables
-    assert "sdk" in elev_labels
+    assert LABEL_BASS_WOOL in elev_labels  # schematic trap massing at gables
+    assert LABEL_WALL_GKF in elev_labels
     assert "koruna" not in elev_labels
     from blueprints.export_utils import export_section as _export_section
 
@@ -603,3 +631,14 @@ def test_obyvak_3d_exports(tmp_path, monkeypatch):
     assert sliced["png"].stat().st_size > 0
     sliced_e = _export_section(elev, "obyvak", stem="slice_elevation")
     assert sliced_e["png"].stat().st_size > 0
+
+
+def test_part_groups_tree():
+    groups = part_groups()
+    assert groups == PART_GROUPS
+    ids = [g["id"] for g in groups]
+    assert ids == ["shell", "slopes", "soffit", "bass_traps", "furniture"]
+    leaf_ids = {c for g in groups for c in g["children"]}
+    shape, _ = build()
+    for label in {c.label for c in shape.children}:
+        assert label in leaf_ids, label

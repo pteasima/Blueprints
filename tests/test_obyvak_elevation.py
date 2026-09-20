@@ -6,7 +6,16 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "models"))
 
 from obyvak_elevation import build  # noqa: E402
-from obyvak_geom import LABEL_NATURHELD, ObyvakParams, build_layout  # noqa: E402
+from obyvak_geom import (  # noqa: E402
+    LABEL_BASS_WOOL,
+    LABEL_POCKET_FRAME,
+    LABEL_RAFTERS,
+    LABEL_ROOFING,
+    LABEL_SLOPE_NH,
+    LABEL_WALL_GKF,
+    ObyvakParams,
+    build_layout,
+)
 from obyvak_section import build as build_section  # noqa: E402
 from blueprints.export_utils import export_section  # noqa: E402
 
@@ -50,14 +59,14 @@ def test_elevation_geometry_is_horizontal_not_aframe():
     assert meta["derived"]["room_length"] == 11100.0
 
     labels = {c.label for c in shape.children}
-    for name in ("zdivo", "predstena", LABEL_NATURHELD, "krov", "krytina", "sdk"):
+    for name in ("masonry", LABEL_BASS_WOOL, LABEL_SLOPE_NH, LABEL_RAFTERS, LABEL_ROOFING, LABEL_WALL_GKF):
         assert name in labels
     assert "podhled" not in labels
     assert "eps" not in labels
     assert "koruna" not in labels
-    assert "pouzdro" in labels
+    assert LABEL_POCKET_FRAME in labels
 
-    pred = _faces(shape, "predstena")
+    pred = _faces(shape, LABEL_BASS_WOOL)
     assert len(pred) == 2
     boxes = sorted((c.bounding_box().min.X, c.bounding_box().max.X) for c in pred)
     assert abs(boxes[0][0] - 0.0) < 1e-6
@@ -69,20 +78,20 @@ def test_elevation_geometry_is_horizontal_not_aframe():
         assert abs(bb.min.Z - p.predstena_bottom_z) < 1e-6
         assert abs(bb.max.Z - meta["derived"]["z_soffit"]) < 1e-6
 
-    sdk = sorted(_faces(shape, "sdk"), key=lambda s: s.bounding_box().min.X)
+    sdk = sorted(_faces(shape, LABEL_WALL_GKF), key=lambda s: s.bounding_box().min.X)
     assert len(sdk) == 2
     face_t = max(p.sdk_t, 12.5)
     assert abs(sdk[0].bounding_box().size.X - face_t) < 1e-6
     assert abs(sdk[0].bounding_box().min.X - p.pouzdro_d) < 1e-6  # in front of pocket
     assert abs(sdk[1].bounding_box().max.X - (p.room_length - p.pouzdro_d)) < 1e-6
-    pouzdra = sorted(_faces(shape, "pouzdro"), key=lambda s: s.bounding_box().min.X)
+    pouzdra = sorted(_faces(shape, LABEL_POCKET_FRAME), key=lambda s: s.bounding_box().min.X)
     assert len(pouzdra) == 2
     assert abs(pouzdra[0].bounding_box().size.X - p.pouzdro_d) < 1e-6
     # Předstěny unchanged (never touch high plasterboard sizes).
     assert p.predstena_kitchen == 190.0
     assert p.predstena_living == 450.0
 
-    soffit = _faces(shape, LABEL_NATURHELD)
+    soffit = _faces(shape, LABEL_SLOPE_NH)
     assert len(soffit) == 1
     sbb = soffit[0].bounding_box()
     assert abs(sbb.min.Z - meta["derived"]["z_soffit"]) < 1e-6
@@ -105,8 +114,8 @@ def test_obyvak_elevation_exports(tmp_path, monkeypatch):
     assert paths["dxf"].stat().st_size > 0
     assert paths["png"].stat().st_size > 0
     svg = paths["svg"].read_text()
-    assert "predstena" in svg
-    assert "sdk" in svg
-    assert "pouzdro" in svg
+    assert LABEL_BASS_WOOL in svg
+    assert LABEL_WALL_GKF in svg
+    assert LABEL_POCKET_FRAME in svg
     assert "koruna" not in svg
     assert "stroke-dasharray" in svg

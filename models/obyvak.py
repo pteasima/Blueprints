@@ -12,9 +12,9 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
   on gable shells, three gable pocket doors (chodba on Y=0; spíž + zádveří on Y=L),
   and terrace glazing on the X=0 eave (opposite cabinets).
 - Floor slab is the clear room only; perimeter walls own the strip below z=0.
-- Šikminy: NaturHeld 140 → latě // krokvím + Flex between → SDK → CD ⊥ krokvím
-  → závěsy → MW plenum → krov (krokve 100/160 @ 875) + pásky. `krov` = roof
-  timber; `dreveny_rost` = NH latě.
+- Šikminy: NaturHeld 140 → latě // krokvím + Flex between → GKF → CD ⊥ krokvím
+  → Nonius → MW plenum → rafters (krokve 100/160 @ 875) + racking straps.
+  `rafters` = roof timber; `*_battens` = NH latě (zone-prefixed).
 - Soffit box: NH L over cabinets (20 mm gap); Flex + latový rost; continuous GKF
   (slope past X_FURN → vertical return on shared horizontal CD/UD → lid);
   Nonius from krokve; rost hung from CD and braced to the eave wall.
@@ -35,12 +35,36 @@ from dataclasses import asdict
 from build123d import Align, Axis, Box, Color, Compound, Location, Plane, Rotation, Solid
 
 from obyvak_geom import (
-    LABEL_CD,
-    LABEL_FLEX,
-    LABEL_NATURHELD,
-    LABEL_PASKA,
-    LABEL_ROST,
-    LABEL_ZAVES,
+    LABEL_BASS_CD,
+    LABEL_BASS_GKB,
+    LABEL_BASS_HANGER,
+    LABEL_BASS_WOOL,
+    LABEL_EPS,
+    LABEL_FLOOR,
+    LABEL_FURNITURE,
+    LABEL_GLAZING,
+    LABEL_MASONRY,
+    LABEL_PLASTER,
+    LABEL_PLENUM_WOOL,
+    LABEL_POCKET_FRAME,
+    LABEL_RACKING_STRAP,
+    LABEL_RAFTERS,
+    LABEL_ROOFING,
+    LABEL_SLOPE_BATTENS,
+    LABEL_SLOPE_CD,
+    LABEL_SLOPE_FLEX,
+    LABEL_SLOPE_GKF,
+    LABEL_SLOPE_NH,
+    LABEL_SLOPE_NONIUS,
+    LABEL_SOFFIT_BATTENS,
+    LABEL_SOFFIT_CD,
+    LABEL_SOFFIT_FLEX,
+    LABEL_SOFFIT_GKF,
+    LABEL_SOFFIT_NH,
+    LABEL_SOFFIT_NONIUS,
+    LABEL_WALL_GKF,
+    LABEL_WALL_PLATE,
+    PART_GROUPS,
     ObyvakLayout,
     ObyvakParams,
     xz_face,
@@ -242,7 +266,7 @@ def _cut_wall_openings(parts: list, cutters: list) -> list:
         return parts
     out = []
     for part in parts:
-        if part.label not in {"eps", "zdivo", "omitka", "sdk"}:
+        if part.label not in {LABEL_EPS, LABEL_MASONRY, LABEL_PLASTER, LABEL_WALL_GKF}:
             out.append(part)
             continue
         cut = part
@@ -275,7 +299,7 @@ def _gable_sdk_and_pouzdra(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list
             y_sdk = p.room_length - gap - face_t - p.pouzdro_d
             y_pocket = p.room_length - gap - pocket_d
         sdk_parts.append(
-            _box(gap, y_sdk, gap, p.room_width - 2 * gap, face_t, h, "sdk")
+            _box(gap, y_sdk, gap, p.room_width - 2 * gap, face_t, h, LABEL_WALL_GKF)
         )
         for gable, x0, width in p.pocket_doors:
             if gable != end:
@@ -285,7 +309,7 @@ def _gable_sdk_and_pouzdra(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list
             else:
                 px0 = x0 - width + gap
             px0 = min(max(px0, gap), p.room_width - width - gap)
-            pouzdra.append(_box(px0, y_pocket, gap, width - 2 * gap, pocket_d, h, "pouzdro"))
+            pouzdra.append(_box(px0, y_pocket, gap, width - 2 * gap, pocket_d, h, LABEL_POCKET_FRAME))
 
     # Walk-through openings only (not pouzdro bays).
     door_cutters = _pocket_door_cutters(p, g, gap)
@@ -369,8 +393,8 @@ def _bass_trap_frame(
         if z_top - z0 < 50.0:
             continue
         for ya, yb in ((y_rear0, y_rear1), (y_front0, y_front1)):
-            parts.append(_box(xa, ya, z0, xb - xa, yb - ya, d, LABEL_CD))
-            parts.append(_box(xa, ya, z_top - d, xb - xa, yb - ya, d, LABEL_CD))
+            parts.append(_box(xa, ya, z0, xb - xa, yb - ya, d, LABEL_BASS_CD))
+            parts.append(_box(xa, ya, z_top - d, xb - xa, yb - ya, d, LABEL_BASS_CD))
 
     for xc in stations:
         x0 = xc - hw
@@ -382,8 +406,8 @@ def _bass_trap_frame(
         z_vert0 = z0 + d + gap
         z_vert1 = z_top - d - gap
         if z_vert1 - z_vert0 > 50.0:
-            parts.append(_box(x0, y_rear0, z_vert0, p.cd_w, y_rear1 - y_rear0, z_vert1 - z_vert0, LABEL_CD))
-            parts.append(_box(x0, y_front0, z_vert0, p.cd_w, y_front1 - y_front0, z_vert1 - z_vert0, LABEL_CD))
+            parts.append(_box(x0, y_rear0, z_vert0, p.cd_w, y_rear1 - y_rear0, z_vert1 - z_vert0, LABEL_BASS_CD))
+            parts.append(_box(x0, y_front0, z_vert0, p.cd_w, y_front1 - y_front0, z_vert1 - z_vert0, LABEL_BASS_CD))
         # Depth struts in the air gap only (skříň diaphragm).
         z_levels = [z0, z_top - d]
         z = z0 + p.bass_hanger_z_inset
@@ -398,7 +422,7 @@ def _bass_trap_frame(
             seen.add(key)
             if z_s < z0 - 0.1 or z_s + d > z_top + 0.1:
                 continue
-            parts.append(_box(x0, y_strut0, z_s, p.cd_w, strut_dy, d, LABEL_CD))
+            parts.append(_box(x0, y_strut0, z_s, p.cd_w, strut_dy, d, LABEL_BASS_CD))
         # Short třmen arms: wall → rear CD only.
         z = z0 + p.bass_hanger_z_inset
         while z < z_top - 80.0:
@@ -408,7 +432,7 @@ def _bass_trap_frame(
                 ya, yb = y_rear1, y_wall
             if abs(yb - ya) > gap:
                 parts.append(
-                    _box(xc - arm_t * 0.5, ya, z - arm_h * 0.5, arm_t, yb - ya, arm_h, LABEL_ZAVES)
+                    _box(xc - arm_t * 0.5, ya, z - arm_h * 0.5, arm_t, yb - ya, arm_h, LABEL_BASS_HANGER)
                 )
             z += p.bass_hanger_z_step
     return parts
@@ -438,9 +462,9 @@ def _bass_trap_parts(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
     y_k_front0 = y_k_front1 - p.cd_t
     k_wool = None
     if y_k_wool1 > y_k0:
-        k_wool = _extrude_y(face, y_k0, y_k_wool1, "vata")
+        k_wool = _extrude_y(face, y_k0, y_k_wool1, LABEL_BASS_WOOL)
     if y_k_gkb1 > y_k_gkb0:
-        parts.append(_extrude_y(face, y_k_gkb0, y_k_gkb1, "sdk"))
+        parts.append(_extrude_y(face, y_k_gkb0, y_k_gkb1, LABEL_BASS_GKB))
     if bot_t > gap and y_k_gkb0 > y_k0 + gap:
         parts.append(
             _box(
@@ -450,7 +474,7 @@ def _bass_trap_parts(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
                 p.room_width - 2 * gap,
                 y_k_gkb0 - y_k0 - gap,
                 bot_t,
-                "sdk",
+                LABEL_BASS_GKB,
             )
         )
     k_frame = _bass_trap_frame(
@@ -479,7 +503,7 @@ def _bass_trap_parts(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
                     "_bass_bot",
                 )
             )
-        parts.append(_cut_away(k_wool, tools, "vata") if tools else k_wool)
+        parts.append(_cut_away(k_wool, tools, LABEL_BASS_WOOL) if tools else k_wool)
     parts.extend(k_frame)
 
     # --- Living Y=L: GKB 12.5 → vzduch 137.5 → MW 300 → zeď ---
@@ -493,10 +517,10 @@ def _bass_trap_parts(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
     y_l_front0 = y_l_gkb1 + gap
     y_l_front1 = y_l_front0 + p.cd_t
     if y_l_gkb1 > y_l_gkb0:
-        parts.append(_extrude_y(face, y_l_gkb0, y_l_gkb1, "sdk"))
+        parts.append(_extrude_y(face, y_l_gkb0, y_l_gkb1, LABEL_BASS_GKB))
     l_wool = None
     if y_l_wool1 > y_l_wool0:
-        l_wool = _extrude_y(face, y_l_wool0, y_l_wool1, "vata")
+        l_wool = _extrude_y(face, y_l_wool0, y_l_wool1, LABEL_BASS_WOOL)
     if bot_t > gap and y_l1 > y_l_gkb1 + gap:
         parts.append(
             _box(
@@ -506,7 +530,7 @@ def _bass_trap_parts(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
                 p.room_width - 2 * gap,
                 y_l1 - (y_l_gkb1 + gap),
                 bot_t,
-                "sdk",
+                LABEL_BASS_GKB,
             )
         )
     l_frame = _bass_trap_frame(
@@ -535,7 +559,7 @@ def _bass_trap_parts(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
                     "_bass_bot",
                 )
             )
-        parts.append(_cut_away(l_wool, tools, "vata") if tools else l_wool)
+        parts.append(_cut_away(l_wool, tools, LABEL_BASS_WOOL) if tools else l_wool)
     parts.extend(l_frame)
 
     return parts
@@ -554,7 +578,7 @@ def _glass_panes(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
                 p.glass_t,
                 width - 2 * gap,
                 p.window_h - gap,
-                "sklo",
+                LABEL_GLAZING,
             )
         )
     return panes
@@ -569,19 +593,19 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
 
     # --- Floor: clear slab only (walls own the perimeter strip below z=0). ---
     structure.append(
-        _box(gap, gap, -p.floor_t, p.room_width - 2 * gap, p.room_length - 2 * gap, p.floor_t, "podlaha")
+        _box(gap, gap, -p.floor_t, p.room_width - 2 * gap, p.room_length - 2 * gap, p.floor_t, LABEL_FLOOR)
     )
 
     # --- Eave walls (panel A): mid-span only. Layer stack outside → inside. ---
     structure.append(
-        _box(g.xl_eps, y0, -p.floor_t, p.wall_eps - gap, ey, p.eave_wall_z + p.floor_t, "eps")
+        _box(g.xl_eps, y0, -p.floor_t, p.wall_eps - gap, ey, p.eave_wall_z + p.floor_t, LABEL_EPS)
     )
     structure.append(
-        _box(g.xl_mas, y0, -p.floor_t, p.wall_mason - gap, ey, p.eave_wall_z + p.floor_t, "zdivo")
+        _box(g.xl_mas, y0, -p.floor_t, p.wall_mason - gap, ey, p.eave_wall_z + p.floor_t, LABEL_MASONRY)
     )
-    structure.append(_box(-p.wall_plaster, y0, 0.0, p.wall_plaster, ey, p.eave_wall_z, "omitka"))
+    structure.append(_box(-p.wall_plaster, y0, 0.0, p.wall_plaster, ey, p.eave_wall_z, LABEL_PLASTER))
 
-    structure.append(_box(p.room_width, y0, 0.0, p.wall_plaster, ey, p.eave_wall_z, "omitka"))
+    structure.append(_box(p.room_width, y0, 0.0, p.wall_plaster, ey, p.eave_wall_z, LABEL_PLASTER))
     structure.append(
         _box(
             p.room_width + p.wall_plaster + gap,
@@ -590,7 +614,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
             p.wall_mason - gap,
             ey,
             p.eave_wall_z + p.floor_t,
-            "zdivo",
+            LABEL_MASONRY,
         )
     )
     structure.append(
@@ -601,16 +625,16 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
             p.wall_eps - gap,
             ey,
             p.eave_wall_z + p.floor_t,
-            "eps",
+            LABEL_EPS,
         )
     )
 
     # Wall plates sit on masonry (not on plaster), clear of gables.
     structure.append(
-        _box(g.poz_l0, y0, p.eave_wall_z + gap, p.plate_w, ey, p.plate_h - gap, "pozednice")
+        _box(g.poz_l0, y0, p.eave_wall_z + gap, p.plate_w, ey, p.plate_h - gap, LABEL_WALL_PLATE)
     )
     structure.append(
-        _box(g.poz_r0, y0, p.eave_wall_z + gap, p.plate_w, ey, p.plate_h - gap, "pozednice")
+        _box(g.poz_r0, y0, p.eave_wall_z + gap, p.plate_w, ey, p.plate_h - gap, LABEL_WALL_PLATE)
     )
 
     # --- Gable walls (panel B): full X, own the corners; interior shells only (no EPS). ---
@@ -620,7 +644,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     ):
         structure.append(
             _extrude_y(
-                xz_face(g.gable_wall_pts(g.xl_mas, g.xr_mas, -p.floor_t), "zdivo"), ya, yb, "zdivo"
+                xz_face(g.gable_wall_pts(g.xl_mas, g.xr_mas, -p.floor_t), LABEL_MASONRY), ya, yb, LABEL_MASONRY
             )
         )
     for ya, yb in (
@@ -629,7 +653,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     ):
         structure.append(
             _extrude_y(
-                xz_face(g.gable_wall_pts(0.0, p.room_width, 0.0), "omitka"), ya, yb, "omitka"
+                xz_face(g.gable_wall_pts(0.0, p.room_width, 0.0), LABEL_PLASTER), ya, yb, LABEL_PLASTER
             )
         )
 
@@ -638,7 +662,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     structure = _cut_wall_openings(structure, door_cutters + window_cutters)
 
     # Cutters: everything the roof must not occupy (walls, plates).
-    roof_cutters = [s for s in structure if s.label != "podlaha"]
+    roof_cutters = [s for s in structure if s.label != LABEL_FLOOR]
 
     # --- Roof: krytina above krokve above vata; thinned, then notched around walls. ---
     # Krov = discrete rafters 100/160 @ 875 (sheet E_KROK), not a solid timber slab.
@@ -659,18 +683,18 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
             continue
         krov_parts.append(
             _cut_away(
-                _extrude_y(xz_face(krov_pts, "krov"), ya, yb, "krov"),
+                _extrude_y(xz_face(krov_pts, LABEL_RAFTERS), ya, yb, LABEL_RAFTERS),
                 roof_cutters,
-                "krov",
+                LABEL_RAFTERS,
             )
         )
     krytina = _cut_away(
-        _extrude_y(xz_face(krytina_pts, "krytina"), g.y_roof0, g.y_roof1, "krytina"),
+        _extrude_y(xz_face(krytina_pts, LABEL_ROOFING), g.y_roof0, g.y_roof1, LABEL_ROOFING),
         roof_cutters,
-        "krytina",
+        LABEL_ROOFING,
     )
     # Vata is the attic fill above the CD pack (full room length to gables).
-    vata = _extrude_y(xz_face(vata_pts, "vata"), gap, p.room_length - gap, "vata")
+    vata = _extrude_y(xz_face(vata_pts, LABEL_PLENUM_WOOL), gap, p.room_length - gap, LABEL_PLENUM_WOOL)
 
     parts: list = list(structure)
     parts.extend(_glass_panes(p, g, gap))
@@ -687,7 +711,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         return _extrude_y(xz_face(band, label), y_ceil0, y_ceil1, label)
 
     # 1) NaturHeld 140 room face
-    parts.append(_add_band(g.sikmina_nh_pts(), LABEL_NATURHELD))
+    parts.append(_add_band(g.sikmina_nh_pts(), LABEL_SLOPE_NH))
 
     # 2) Latě // krokvím (spaced along Y) + Flex 50 between them
     rost_parts: list = []
@@ -697,20 +721,20 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         ya, yb = yc - half_w, yc + half_w
         if yb <= ya:
             continue
-        rost_parts.append(_extrude_y(xz_face(ribbon, LABEL_ROST), ya, yb, LABEL_ROST))
-    flex_slope = _add_band(g.sikmina_flex_pts(), LABEL_FLEX)
+        rost_parts.append(_extrude_y(xz_face(ribbon, LABEL_SLOPE_BATTENS), ya, yb, LABEL_SLOPE_BATTENS))
+    flex_slope = _add_band(g.sikmina_flex_pts(), LABEL_SLOPE_FLEX)
     if rost_parts:
-        flex_slope = _cut_away(flex_slope, rost_parts, LABEL_FLEX)
+        flex_slope = _cut_away(flex_slope, rost_parts, LABEL_SLOPE_FLEX)
     parts.append(flex_slope)
     parts.extend(rost_parts)
 
     # 3) SDK
-    parts.append(_add_band(g.sikmina_sdk_pts(), "sdk"))
+    parts.append(_add_band(g.sikmina_sdk_pts(), LABEL_SLOPE_GKF))
 
     # 4) CD ⊥ krokvím (spaced along slope, run along Y)
     cd_parts: list = []
     for quad in g.sikmina_cd_quads():
-        cd_parts.append(_extrude_y(xz_face(quad, LABEL_CD), y_ceil0, y_ceil1, LABEL_CD))
+        cd_parts.append(_extrude_y(xz_face(quad, LABEL_SLOPE_CD), y_ceil0, y_ceil1, LABEL_SLOPE_CD))
     parts.extend(cd_parts)
 
     # 5) Závěsy CD→krokev at rafter × CD crossings (same Y stations as krokve).
@@ -725,10 +749,10 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         for yc in ceil_rafter_ys:
             zaves_parts.append(
                 _extrude_y(
-                    xz_face(hang_quad, LABEL_ZAVES),
+                    xz_face(hang_quad, LABEL_SLOPE_NONIUS),
                     yc - half_hang,
                     yc + half_hang,
-                    LABEL_ZAVES,
+                    LABEL_SLOPE_NONIUS,
                 )
             )
     parts.extend(zaves_parts)
@@ -770,7 +794,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
                 p0 = (p0[0] + nx * layer, p0[1] + ny * layer, p0[2] + nz * layer)
                 p1 = (p1[0] + nx * layer, p1[1] + ny * layer, p1[2] + nz * layer)
                 bar = _oriented_bar(
-                    p0, p1, p.strap_w, p.strap_t, LABEL_PASKA, thin_dir=(nx, ny, nz)
+                    p0, p1, p.strap_w, p.strap_t, LABEL_RACKING_STRAP, thin_dir=(nx, ny, nz)
                 )
                 if bar is not None:
                     paska_parts.append(bar)
@@ -795,15 +819,15 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     # Guarantee FACE_GAP mates: shave float nicks against krokve / hangers.
     if paska_parts:
         tools = list(krov_parts) + zaves_parts
-        paska_parts = [_cut_away(bar, tools, LABEL_PASKA) for bar in paska_parts]
+        paska_parts = [_cut_away(bar, tools, LABEL_RACKING_STRAP) for bar in paska_parts]
 
     parts.extend(paska_parts)
 
     # MW plenum must not swallow CD / hangers / pásky.
     if cd_parts or zaves_parts or paska_parts:
-        vata = _cut_away(vata, cd_parts + zaves_parts + paska_parts, "vata")
+        vata = _cut_away(vata, cd_parts + zaves_parts + paska_parts, LABEL_PLENUM_WOOL)
         for i, part in enumerate(parts):
-            if part.label == "vata":
+            if part.label == LABEL_PLENUM_WOOL:
                 parts[i] = vata
                 break
 
@@ -817,7 +841,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         (g.x_nh_inner - gap, g.z_gkf_horiz - gap),
         (g.x_nh_outer + gap, g.z_gkf_horiz - gap),
     ]
-    parts.append(_extrude_y(xz_face(soffit_nh, LABEL_NATURHELD), y_soff0, y_soff1, LABEL_NATURHELD))
+    parts.append(_extrude_y(xz_face(soffit_nh, LABEL_SOFFIT_NH), y_soff0, y_soff1, LABEL_SOFFIT_NH))
 
     # Soffit Flex: main box below Z_GKF + small pack under slope GKF to rost front.
     flex_box = [
@@ -826,7 +850,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         (p.room_width - gap, g.z_gkf_horiz - gap),
         (g.x_nh_inner + gap, g.z_gkf_horiz - gap),
     ]
-    flex_solid = _extrude_y(xz_face(flex_box, LABEL_FLEX), y_soff0, y_soff1, LABEL_FLEX)
+    flex_solid = _extrude_y(xz_face(flex_box, LABEL_SOFFIT_FLEX), y_soff0, y_soff1, LABEL_SOFFIT_FLEX)
     t_sdk0 = g.t_nh_face + g.t_flex_pack
     xb = g.x_sdk_break
     x_vert = xb - p.sdk_t
@@ -840,9 +864,9 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
             (x_vert - gap, z_vert_top - gap),
             (g.x_furn + gap, z_fu - gap),
         ]
-        wedge_solid = _extrude_y(xz_face(flex_wedge, LABEL_FLEX), y_soff0, y_soff1, LABEL_FLEX)
+        wedge_solid = _extrude_y(xz_face(flex_wedge, LABEL_SOFFIT_FLEX), y_soff0, y_soff1, LABEL_SOFFIT_FLEX)
         try:
-            flex_solid = _paint(flex_solid.fuse(wedge_solid), LABEL_FLEX)
+            flex_solid = _paint(flex_solid.fuse(wedge_solid), LABEL_SOFFIT_FLEX)
         except Exception:
             parts.append(wedge_solid)
 
@@ -860,7 +884,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
                 (xb - gap, z_top_attic - gap),
                 (x_vert + gap, z_top_room - gap),
             ]
-            vert_solid = _extrude_y(xz_face(vert, "sdk"), y_soff0, y_soff1, "sdk")
+            vert_solid = _extrude_y(xz_face(vert, LABEL_SOFFIT_GKF), y_soff0, y_soff1, LABEL_SOFFIT_GKF)
         # Lid extends past the front CD to the room face of the vertical return.
         x_lid0 = xb - p.sdk_t
         lid = [
@@ -869,16 +893,16 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
             (p.room_width - gap, g.z_gkf_horiz + p.sdk_t - gap),
             (x_lid0 + gap, g.z_gkf_horiz + p.sdk_t - gap),
         ]
-        lid_solid = _extrude_y(xz_face(lid, "sdk"), y_soff0, y_soff1, "sdk")
+        lid_solid = _extrude_y(xz_face(lid, LABEL_SOFFIT_GKF), y_soff0, y_soff1, LABEL_SOFFIT_GKF)
 
     # Horizontal CD on the lid (first flush with rost front) + wall UD.
     horiz_cd_parts: list = []
     for xc in g.horiz_cd_x_stations():
         horiz_cd_parts.append(
-            _extrude_y(xz_face(g.horiz_cd_quad(xc), LABEL_CD), y_soff0, y_soff1, LABEL_CD)
+            _extrude_y(xz_face(g.horiz_cd_quad(xc), LABEL_SOFFIT_CD), y_soff0, y_soff1, LABEL_SOFFIT_CD)
         )
     horiz_cd_parts.append(
-        _extrude_y(xz_face(g.horiz_wall_ud_pts(), LABEL_CD), y_soff0, y_soff1, LABEL_CD)
+        _extrude_y(xz_face(g.horiz_wall_ud_pts(), LABEL_SOFFIT_CD), y_soff0, y_soff1, LABEL_SOFFIT_CD)
     )
     parts.extend(horiz_cd_parts)
 
@@ -900,11 +924,11 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
                     p.hanger_w,
                     p.hanger_w,
                     hang_h,
-                    LABEL_ZAVES,
+                    LABEL_SOFFIT_NONIUS,
                 )
             )
     if horiz_zaves and krov_parts:
-        horiz_zaves = [_cut_away(z, krov_parts, LABEL_ZAVES) for z in horiz_zaves]
+        horiz_zaves = [_cut_away(z, krov_parts, LABEL_SOFFIT_NONIUS) for z in horiz_zaves]
     parts.extend(horiz_zaves)
 
     # Latový rost: top rails under GKF, vertical + underside latě, hung from CD, braced to wall.
@@ -929,11 +953,11 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
                 continue
             # Top rail under GKF — carries the box; screwed up to CD through the lid.
             frame_parts.append(
-                _box(x_front, ya, z_rail, max(x_wall - x_front, gap), yb - ya, fm - gap, LABEL_ROST)
+                _box(x_front, ya, z_rail, max(x_wall - x_front, gap), yb - ya, fm - gap, LABEL_SOFFIT_BATTENS)
             )
             # Vertical latě behind the NH face.
             frame_parts.append(
-                _box(x_front, ya, z_wood0, fm - gap, yb - ya, face_h, LABEL_ROST)
+                _box(x_front, ya, z_wood0, fm - gap, yb - ya, face_h, LABEL_SOFFIT_BATTENS)
             )
             # Underside latě spanning toward the wall.
             frame_parts.append(
@@ -944,7 +968,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
                     max(x_wall - (x_front + fm), gap),
                     yb - ya,
                     fm - gap,
-                    LABEL_ROST,
+                    LABEL_SOFFIT_BATTENS,
                 )
             )
             # Drop hangers: horizontal CD (incl. rost-front) → top rail through GKF.
@@ -961,24 +985,24 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
                             p.soffit_drop_w,
                             p.soffit_drop_t,
                             drop_h,
-                            LABEL_ZAVES,
+                            LABEL_SOFFIT_NONIUS,
                         )
                     )
             # Wall angle: horizontal under lať + vertical up the plaster (no shared volume).
             leg = p.wall_bracket_leg
             z_br = z_wood0 - bt
             bracket_parts.append(
-                _box(x_wall - leg, ya, z_br, leg - bt, yb - ya, bt, LABEL_ZAVES)
+                _box(x_wall - leg, ya, z_br, leg - bt, yb - ya, bt, LABEL_SOFFIT_NONIUS)
             )
             bracket_parts.append(
-                _box(x_wall - bt, ya, z_br + bt, bt, yb - ya, leg - bt, LABEL_ZAVES)
+                _box(x_wall - bt, ya, z_br + bt, bt, yb - ya, leg - bt, LABEL_SOFFIT_NONIUS)
             )
     if frame_parts:
         # Steel mates against timber with FACE_GAP — shave any float nicks.
         steel = drop_parts + bracket_parts
         if steel:
-            frame_parts = [_cut_away(f, steel, LABEL_ROST) for f in frame_parts]
-        flex_solid = _cut_away(flex_solid, frame_parts + steel, LABEL_FLEX)
+            frame_parts = [_cut_away(f, steel, LABEL_SOFFIT_BATTENS) for f in frame_parts]
+        flex_solid = _cut_away(flex_solid, frame_parts + steel, LABEL_SOFFIT_FLEX)
         parts.append(flex_solid)
         parts.extend(frame_parts)
         parts.extend(drop_parts)
@@ -991,22 +1015,22 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         parts.append(vert_solid)
     if lid_solid is not None:
         if drop_parts:
-            lid_solid = _cut_away(lid_solid, drop_parts, "sdk")
+            lid_solid = _cut_away(lid_solid, drop_parts, LABEL_SOFFIT_GKF)
         parts.append(lid_solid)
 
     # MW over the soffit bay must clear horizontal CD + Nonius.
     steel_over_soffit = horiz_cd_parts + horiz_zaves
     if steel_over_soffit:
         for i, part in enumerate(parts):
-            if part.label == "vata":
-                parts[i] = _cut_away(part, steel_over_soffit, "vata")
+            if part.label == LABEL_PLENUM_WOOL:
+                parts[i] = _cut_away(part, steel_over_soffit, LABEL_PLENUM_WOOL)
                 break
 
     # --- Cabinets: clear of right plaster; top leaves furniture_gap under the box. ---
     furn_w = p.furniture_width - gap
     furn_y0, furn_y1 = g.y_furn0 + gap, g.y_furn1 - gap
     parts.append(
-        _box(g.x_furn, furn_y0, 0.0, furn_w, furn_y1 - furn_y0, p.furniture_height, "nabytek")
+        _box(g.x_furn, furn_y0, 0.0, furn_w, furn_y1 - furn_y0, p.furniture_height, LABEL_FURNITURE)
     )
 
     # --- Bass traps (detail C/D): interior cabinets under continuous šikminy. ---
@@ -1054,31 +1078,31 @@ def build_preview(params: ObyvakParams | None = None):
     for part in _parts(p, g):
         bb = part.bounding_box()
         at_gable = bb.max.Y <= p.predstena_kitchen + 1.0 or bb.min.Y >= g.y_pred_r - 1.0
-        if part.label in {"krov", "krytina", LABEL_PASKA}:
+        if part.label in {LABEL_RAFTERS, LABEL_ROOFING, LABEL_RACKING_STRAP}:
             continue
-        if part.label == "vata":
-            # Keep bass-trap wool at gables; drop attic plenum.
+        if part.label == LABEL_PLENUM_WOOL:
+            continue  # attic plenum; bass wool kept via LABEL_BASS_WOOL below
+        if part.label in {LABEL_BASS_WOOL, LABEL_BASS_GKB, LABEL_BASS_CD, LABEL_BASS_HANGER}:
             if at_gable:
                 kept.append(part)
             continue
-        if part.label in {LABEL_CD, LABEL_ZAVES}:
-            # Keep bass-trap frame at gables; drop slope/soffit steel.
-            if at_gable:
-                kept.append(part)
-            continue
-        if part.label == LABEL_NATURHELD:
+        if part.label in {LABEL_SLOPE_CD, LABEL_SLOPE_NONIUS, LABEL_SOFFIT_CD, LABEL_SOFFIT_NONIUS}:
+            continue  # drop slope/soffit steel in cutaway
+        if part.label in {LABEL_SLOPE_NH, LABEL_SOFFIT_NH}:
             # Keep full acoustic face (slopes to gables + soffit) so continuity shows.
             kept.append(part)
             continue
-        if part.label in {LABEL_ROST, LABEL_FLEX}:
-            # Keep cabinet soffit assembly; drop slope rost/flex clutter.
+        if part.label in {LABEL_SLOPE_BATTENS, LABEL_SLOPE_FLEX}:
+            continue  # drop slope rost/flex clutter
+        if part.label in {LABEL_SOFFIT_BATTENS, LABEL_SOFFIT_FLEX}:
             if bb.min.X >= g.x_furn - 1.0:
                 kept.append(part)
             continue
-        if part.label == "sdk" and bb.min.Z >= g.h_start - 50.0 and not at_gable:
-            # Slope / lid GKF mid-span — drop; keep gable pocket + bass GKB.
+        if part.label == LABEL_SLOPE_GKF and bb.min.Z >= g.h_start - 50.0 and not at_gable:
+            continue  # drop mid-span slope GKF; keep wall/bass boards
+        if part.label == LABEL_SOFFIT_GKF and not at_gable:
             continue
-        if part.label in {"eps", "zdivo", "omitka", "pozednice", "nabytek"}:
+        if part.label in {LABEL_EPS, LABEL_MASONRY, LABEL_PLASTER, LABEL_WALL_PLATE, LABEL_FURNITURE}:
             if bb.min.X >= p.room_width - 1.0:
                 continue
         kept.append(part)
@@ -1173,7 +1197,6 @@ def scenes(params: ObyvakParams | None = None) -> list[dict]:
     ]
     soffit = {
         "id": "soffit",
-        "label": "Soffit",
         "camera": {
             "target": s_target,
             "position": s_position,
@@ -1182,7 +1205,7 @@ def scenes(params: ObyvakParams | None = None) -> list[dict]:
         },
         "projection": "ortho",
         "cuts": [{"normal": list(s_look), "t": 0.5}],
-        "opacity": {LABEL_FLEX: 1, LABEL_NATURHELD: 1, LABEL_ROST: 1, "omitka": 1},
+        "opacity": {"soffit": 1, LABEL_PLASTER: 1},
         "opacityDefault": 0.5,
     }
 
@@ -1208,7 +1231,6 @@ def scenes(params: ObyvakParams | None = None) -> list[dict]:
     ]
     gable = {
         "id": "gable",
-        "label": "Gable",
         "camera": {
             "target": g_target,
             "position": g_position,
@@ -1217,10 +1239,15 @@ def scenes(params: ObyvakParams | None = None) -> list[dict]:
         },
         "projection": "ortho",
         "cuts": [{"normal": list(g_look), "t": 0.5}],
-        "opacity": {LABEL_FLEX: 1, LABEL_NATURHELD: 1, LABEL_ROST: 1, "omitka": 1},
+        "opacity": {"slopes": 1, LABEL_PLASTER: 1},
         "opacityDefault": 0.5,
     }
     return [soffit, gable]
+
+
+def part_groups() -> list[dict]:
+    """Nested Parts outline (ids only). Viewer localizes group/leaf labels."""
+    return PART_GROUPS
 
 
 def extra_exports(params: ObyvakParams | None = None):

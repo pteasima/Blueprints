@@ -17,10 +17,19 @@ import {
   applyMaterialMode,
   applyOpacityToMeshes,
   collectLeafIds,
+  expandOpacityGroups,
   loadMaterialMode,
   resolvePartOutline,
   saveMaterialMode,
 } from "./materials.js";
+import {
+  applyStaticI18n,
+  getLocale,
+  initLocale,
+  onLocaleChange,
+  setLocale,
+  t as tr,
+} from "./i18n.js";
 import {
   applyEdgeClipping,
   clearEdgeOverlays,
@@ -72,15 +81,23 @@ function writeSceneQuery(sceneId) {
 /**
  * @param {HTMLCanvasElement} canvas
  * @param {ArrayBuffer} glbBuffer
- * @param {{ scenes?: object[], scene?: string }} [options]
+ * @param {{ scenes?: object[], scene?: string, partGroups?: object[] }} [options]
  */
 export function mountViewer(canvas, glbBuffer, options = {}) {
   /** Custom named scenes (model-specific); shown alongside Iso/Front/Side/Top. */
   const customScenes = Array.isArray(options.scenes) ? options.scenes : [];
+  /** Model-owned Parts tree (ids only); empty → leftovers under Other. */
+  const partGroups = Array.isArray(options.partGroups) ? options.partGroups : [];
   /** Prefer explicit option; otherwise `?scene=` from the current URL. */
   const initialSceneId = String(
     options.scene != null ? options.scene : readSceneQuery(),
   ).trim();
+
+  initLocale();
+  applyStaticI18n(document);
+
+  /** @type {import("./materials.js").OutlineNode[]} */
+  let partOutline = [];
 
   /** @type {THREE.Scene | null} */
   let scene = null;
@@ -236,6 +253,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       buildMaterialToggle();
       buildEdgesToggle();
       buildPartToggles();
+      buildLocaleToggle();
       // Resolve ?scene= / options.scene before building View buttons so the
       // matching custom scene starts highlighted.
       const initialSpec = findCustomScene(initialSceneId);
@@ -534,7 +552,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
 
     const label = document.createElement("span");
     label.className = "fov-label";
-    label.textContent = "FOV";
+    label.textContent = tr("ui.fov");
 
     fovValueEl = document.createElement("span");
     fovValueEl.className = "fov-value";
@@ -655,8 +673,9 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     if (hasOpacity) {
       const def =
         spec.opacityDefault != null ? Number(spec.opacityDefault) : 1;
-      const overrides =
+      const rawOverrides =
         spec.opacity && typeof spec.opacity === "object" ? spec.opacity : {};
+      const overrides = expandOpacityGroups(rawOverrides, partOutline);
       for (const name of parts.keys()) {
         const raw =
           Object.prototype.hasOwnProperty.call(overrides, name)
@@ -680,11 +699,11 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         );
         if (normal.lengthSq() < 1e-12) continue;
         normal.normalize();
-        const t = Math.min(1, Math.max(0, Number(c.t) || 0));
+        const cutT = Math.min(1, Math.max(0, Number(c.t) || 0));
         cuts.push({
           id: nextCutId++,
           normal,
-          t,
+          t: cutT,
           locked: true,
           label: formatAngleLabel(normal),
         });
@@ -895,14 +914,14 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     const host = document.getElementById("mats");
     if (!host) return;
     host.replaceChildren();
-    for (const [id, label] of [
-      [MODE_SOLID, "Solid"],
-      [MODE_REALISTIC, "Realistic"],
+    for (const [id, labelKey] of [
+      [MODE_SOLID, "ui.solid"],
+      [MODE_REALISTIC, "ui.realistic"],
     ]) {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.dataset.mode = id;
-      btn.textContent = label;
+      btn.textContent = tr(labelKey);
       if (id === materialMode) btn.classList.add("is-active");
       btn.addEventListener("click", () => {
         materialMode = id;
@@ -920,15 +939,15 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     const host = document.getElementById("edges");
     if (!host) return;
     host.replaceChildren();
-    for (const [id, label] of [
-      [EDGE_MODE_NONE, "None"],
-      [EDGE_MODE_TRANSPARENT, "Transparent"],
-      [EDGE_MODE_OPAQUE, "Opaque"],
+    for (const [id, labelKey] of [
+      [EDGE_MODE_NONE, "ui.edgesNone"],
+      [EDGE_MODE_TRANSPARENT, "ui.edgesTransparent"],
+      [EDGE_MODE_OPAQUE, "ui.edgesOpaque"],
     ]) {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.dataset.edgeMode = id;
-      btn.textContent = label;
+      btn.textContent = tr(labelKey);
       if (id === edgeMode) btn.classList.add("is-active");
       btn.addEventListener("click", () => {
         edgeMode = id;
@@ -1046,8 +1065,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         syncBtn = document.createElement("button");
         syncBtn.type = "button";
         syncBtn.className = "part-sync";
-        syncBtn.textContent = "Sync";
-        syncBtn.setAttribute("aria-label", `Sync ${node.label} to group`);
+        syncBtn.textContent = tr("ui.sync");
+        syncBtn.setAttribute("aria-label", `${tr("ui.sync")} ${node.label}`);
         const detached = detachedLeaves.has(node.id);
         syncBtn.hidden = !detached;
         syncBtn.setAttribute("aria-hidden", detached ? "false" : "true");
@@ -1174,7 +1193,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       if (!partLastNonZero.has(name)) partLastNonZero.set(name, 1);
     }
 
-    const outline = resolvePartOutline(parts.keys());
+    const outline = resolvePartOutline(parts.keys(), partGroups, tr);
+    partOutline = outline;
     for (const node of outline) {
       appendOutlineNode(node, host, 0, null);
     }
@@ -1240,18 +1260,18 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       host.append(btn);
     }
 
-    for (const [id, label] of [
-      ["iso", "Iso"],
-      ["front", "Front"],
-      ["side", "Side"],
-      ["top", "Top"],
+    for (const [id, labelKey] of [
+      ["iso", "ui.iso"],
+      ["front", "ui.front"],
+      ["side", "ui.side"],
+      ["top", "ui.top"],
     ]) {
-      addBtn(id, label, () => setCameraPreset(id));
+      addBtn(id, tr(labelKey), () => setCameraPreset(id));
     }
     for (const spec of customScenes) {
       const id = String(spec?.id || "").trim();
       if (!id) continue;
-      const label = String(spec.label || id);
+      const label = tr(`scene.${id}`);
       addBtn(`scene:${id}`, label, () => applyScene(spec));
     }
   }
@@ -1287,7 +1307,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       normal: new THREE.Vector3(0, 0, 1),
       t: 0,
       locked: false,
-      label: "Cut",
+      label: tr("ui.cut"),
     });
   }
 
@@ -1300,12 +1320,12 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       return;
     }
     const labelEl = row.querySelector(".cut-label");
-    if (labelEl) labelEl.textContent = cut.locked ? cut.label : "Cut";
+    if (labelEl) labelEl.textContent = cut.locked ? cut.label : tr("ui.cut");
     if (cut.locked && !row.querySelector(".cut-remove")) {
       const remove = document.createElement("button");
       remove.type = "button";
       remove.className = "cut-remove";
-      remove.setAttribute("aria-label", "Remove section");
+      remove.setAttribute("aria-label", tr("ui.removeSection"));
       remove.textContent = "×";
       remove.addEventListener("click", () => removeCut(cut.id));
       row.append(remove);
@@ -1342,11 +1362,11 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     buildCutUI();
   }
 
-  function setCutT(id, t) {
+  function setCutT(id, cutT) {
     const cut = cuts.find((c) => c.id === id);
     if (!cut) return;
     if (!cut.locked) lockCut(cut);
-    cut.t = Math.min(1, Math.max(0, Number(t)));
+    cut.t = Math.min(1, Math.max(0, Number(cutT)));
     applyClipping();
   }
 
@@ -1425,7 +1445,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
 
       const label = document.createElement("span");
       label.className = "cut-label";
-      label.textContent = cut.locked ? cut.label : "Cut";
+      label.textContent = cut.locked ? cut.label : tr("ui.cut");
 
       const endSlider = () => {
         if (!cutSliderActive) return;
@@ -1456,7 +1476,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         const remove = document.createElement("button");
         remove.type = "button";
         remove.className = "cut-remove";
-        remove.setAttribute("aria-label", "Remove section");
+        remove.setAttribute("aria-label", tr("ui.removeSection"));
         remove.textContent = "×";
         remove.addEventListener("click", () => removeCut(cut.id));
         row.append(remove);
@@ -1624,14 +1644,66 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   /** @type {HTMLButtonElement | null} */
   const measureBtn = document.getElementById("measure");
   let arBusy = false;
-  const MEASURE_LABEL = "Measure";
+  const MEASURE_LABEL = () => tr("ui.measure");
+
+  function buildLocaleToggle() {
+    const host = document.getElementById("locale");
+    if (!host) return;
+    host.replaceChildren();
+    for (const [id, label] of [
+      ["cs", "CS"],
+      ["en", "EN"],
+    ]) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.dataset.locale = id;
+      btn.textContent = label;
+      if (id === getLocale()) btn.classList.add("is-active");
+      btn.addEventListener("click", () => {
+        setLocale(/** @type {"en"|"cs"} */ (id));
+      });
+      host.append(btn);
+    }
+  }
+
+  function relocalizeUi() {
+    applyStaticI18n(document);
+    if (arBtn && !arBusy) arBtn.textContent = tr("ui.ar");
+    if (measureBtn) measureBtn.textContent = MEASURE_LABEL();
+    try {
+      buildMaterialToggle();
+      buildEdgesToggle();
+      buildCameraButtons();
+      buildFovControl();
+      buildPartToggles();
+      buildCutUI();
+      buildLocaleToggle();
+    } catch (err) {
+      console.error("relocalizeUi", err);
+      // Still refresh the locale control if an earlier rebuild failed.
+      try {
+        buildLocaleToggle();
+      } catch {
+        /* ignore */
+      }
+    }
+    chromeApi?.refreshPartialHeight();
+  }
+
+  onLocaleChange(() => relocalizeUi());
 
   function showArButton() {
-    if (arBtn) arBtn.hidden = false;
+    if (arBtn) {
+      arBtn.hidden = false;
+      if (!arBusy) arBtn.textContent = tr("ui.ar");
+    }
   }
 
   function showMeasureButton() {
-    if (measureBtn) measureBtn.hidden = false;
+    if (measureBtn) {
+      measureBtn.hidden = false;
+      measureBtn.textContent = MEASURE_LABEL();
+    }
   }
 
   /** @type {ReturnType<typeof createMeasureTool> | null} */
@@ -1650,7 +1722,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
           measureBtn.textContent = label;
           measureBtn.classList.add("is-live");
         } else {
-          measureBtn.textContent = MEASURE_LABEL;
+          measureBtn.textContent = MEASURE_LABEL();
           measureBtn.classList.remove("is-live");
         }
       },
@@ -1659,7 +1731,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         measureBtn.classList.toggle("is-active", on);
         measureBtn.setAttribute("aria-pressed", on ? "true" : "false");
         if (!on) {
-          measureBtn.textContent = MEASURE_LABEL;
+          measureBtn.textContent = MEASURE_LABEL();
           measureBtn.classList.remove("is-live");
         }
       },

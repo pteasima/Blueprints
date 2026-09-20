@@ -45,10 +45,14 @@ def main(argv: list[str] | None = None) -> int:
     kind = meta.get("kind") or getattr(mod, "EXPORT_KIND", "solid")
     scenes_fn = getattr(mod, "scenes", None)
     scenes = scenes_fn() if callable(scenes_fn) else None
+    parts_fn = getattr(mod, "part_groups", None)
+    part_groups = parts_fn() if callable(parts_fn) else None
     if kind == "section":
         paths = export_section(shape, model_name)
     else:
-        paths = export_shape(shape, model_name, scenes=scenes)
+        paths = export_shape(
+            shape, model_name, scenes=scenes, part_groups=part_groups
+        )
 
     extra_fn = getattr(mod, "extra_exports", None)
     if extra_fn is not None:

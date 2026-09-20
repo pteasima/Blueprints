@@ -27,31 +27,35 @@
   <button type="button" class="sheet-handle" id="sheet-handle" aria-label="Drag controls sheet"></button>
   <div class="sheet-scroll" id="sheet-scroll">
     <section class="sheet-section" id="section-view">
-      <h2 class="sheet-title">View</h2>
+      <h2 class="sheet-title" data-i18n="ui.view">View</h2>
       <div id="cams" class="seg"></div>
       <div id="fov" class="fov"></div>
     </section>
     <section class="sheet-section" id="section-cuts">
-      <h2 class="sheet-title">Sections</h2>
+      <h2 class="sheet-title" data-i18n="ui.sections">Cuts</h2>
       <div id="cuts" class="cuts"></div>
     </section>
     <section class="sheet-section" id="section-parts">
-      <h2 class="sheet-title">Parts</h2>
+      <h2 class="sheet-title" data-i18n="ui.parts">Parts</h2>
       <div id="parts" class="parts"></div>
     </section>
     <section class="sheet-section" id="section-materials">
-      <h2 class="sheet-title">Materials</h2>
-      <div id="mats" class="seg" role="group" aria-label="Materials"></div>
+      <h2 class="sheet-title" data-i18n="ui.materials">Materials</h2>
+      <div id="mats" class="seg" role="group" aria-label="Materials" data-i18n-aria="ui.materials"></div>
       <div class="edges-block">
-        <span class="edges-label">Edges</span>
-        <div id="edges" class="seg" role="group" aria-label="Edges"></div>
+        <span class="edges-label" data-i18n="ui.edges">Edges</span>
+        <div id="edges" class="seg" role="group" aria-label="Edges" data-i18n-aria="ui.edges"></div>
       </div>
+    </section>
+    <section class="sheet-section" id="section-locale">
+      <h2 class="sheet-title" data-i18n="ui.language">Language</h2>
+      <div id="locale" class="seg" role="group" aria-label="Language" data-i18n-aria="ui.language"></div>
     </section>
   </div>
 </aside>
 <pre id="err"></pre>
 <canvas id="c"></canvas>
-<script src="viewer.iife.js?v=02ebf32dfc"></script>
+<script src="viewer.iife.js?v=3e839ac935"></script>
 <script>
 (function () {
   const errEl = document.getElementById("err");
@@ -68,6 +72,7 @@
   document.title = id + " · Blueprints";
   const canvas = document.getElementById("c");
   const scenesUrl = "../models/" + encodeURIComponent(id) + ".scenes.json";
+  const partsUrl = "../models/" + encodeURIComponent(id) + ".parts.json";
   Promise.all([
     fetch("../models/" + encodeURIComponent(id) + ".glb").then(function (r) {
       if (!r.ok) throw new Error("GLB HTTP " + r.status);
@@ -82,9 +87,21 @@
     }).catch(function () {
       return [];
     }),
+    fetch(partsUrl).then(function (r) {
+      if (r.status === 404) return [];
+      if (!r.ok) throw new Error("parts HTTP " + r.status);
+      return r.json().then(function (data) {
+        return Array.isArray(data) ? data : [];
+      });
+    }).catch(function () {
+      return [];
+    }),
   ])
-    .then(function (pair) {
-      BlueprintsViewerBundle.mountViewer(canvas, pair[0], { scenes: pair[1] });
+    .then(function (triple) {
+      BlueprintsViewerBundle.mountViewer(canvas, triple[0], {
+        scenes: triple[1],
+        partGroups: triple[2],
+      });
     })
     .catch(function (e) {
       fail(String(e && e.message ? e.message : e));
