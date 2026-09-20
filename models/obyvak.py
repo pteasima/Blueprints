@@ -1066,13 +1066,17 @@ def build_preview(params: ObyvakParams | None = None):
             if at_gable:
                 kept.append(part)
             continue
-        if part.label in {LABEL_ROST, LABEL_NATURHELD, LABEL_FLEX}:
-            # Keep cabinet soffit assembly; drop slope pack.
+        if part.label == LABEL_NATURHELD:
+            # Keep full acoustic face (slopes to gables + soffit) so continuity shows.
+            kept.append(part)
+            continue
+        if part.label in {LABEL_ROST, LABEL_FLEX}:
+            # Keep cabinet soffit assembly; drop slope rost/flex clutter.
             if bb.min.X >= g.x_furn - 1.0:
                 kept.append(part)
             continue
-        if part.label == "sdk" and bb.min.Z >= g.h_start - 50.0:
-            # Slope / lid GKF is roof pack — drop; keep gable pocket + bass GKB.
+        if part.label == "sdk" and bb.min.Z >= g.h_start - 50.0 and not at_gable:
+            # Slope / lid GKF mid-span — drop; keep gable pocket + bass GKB.
             continue
         if part.label in {"eps", "zdivo", "omitka", "pozednice", "nabytek"}:
             if bb.min.X >= p.room_width - 1.0:
