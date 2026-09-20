@@ -83,7 +83,7 @@ const PART_CS = {
 
 const UI_EN = {
   "ui.view": "View",
-  "ui.sections": "Sections",
+  "ui.sections": "Cuts",
   "ui.parts": "Parts",
   "ui.materials": "Materials",
   "ui.edges": "Edges",

@@ -945,7 +945,7 @@ _VIEWER_HTML = """<!DOCTYPE html>
       <div id="fov" class="fov"></div>
     </section>
     <section class="sheet-section" id="section-cuts">
-      <h2 class="sheet-title" data-i18n="ui.sections">Sections</h2>
+      <h2 class="sheet-title" data-i18n="ui.sections">Cuts</h2>
       <div id="cuts" class="cuts"></div>
     </section>
     <section class="sheet-section" id="section-parts">
