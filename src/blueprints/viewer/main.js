@@ -1247,7 +1247,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.dataset.preset = id;
-      btn.textContent = t(labelKey);
+      btn.textContent = label;
       if (id === activeCameraPreset) btn.classList.add("is-active");
       btn.addEventListener("click", () => {
         activeCameraPreset = id;
@@ -1670,13 +1670,23 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     applyStaticI18n(document);
     if (arBtn && !arBusy) arBtn.textContent = t("ui.ar");
     if (measureBtn) measureBtn.textContent = MEASURE_LABEL();
-    buildMaterialToggle();
-    buildEdgesToggle();
-    buildCameraButtons();
-    buildFovControl();
-    buildPartToggles();
-    buildCutUI();
-    buildLocaleToggle();
+    try {
+      buildMaterialToggle();
+      buildEdgesToggle();
+      buildCameraButtons();
+      buildFovControl();
+      buildPartToggles();
+      buildCutUI();
+      buildLocaleToggle();
+    } catch (err) {
+      console.error("relocalizeUi", err);
+      // Still refresh the locale control if an earlier rebuild failed.
+      try {
+        buildLocaleToggle();
+      } catch {
+        /* ignore */
+      }
+    }
     chromeApi?.refreshPartialHeight();
   }
 
