@@ -82,6 +82,23 @@ class ObyvakParams:
     predstena_kitchen: float = 190.0
     predstena_living: float = 450.0
     predstena_bottom_z: float = 2450.0
+    # Bass-trap stacks (detail sheets C/D) — wall → room; air gap is empty.
+    # Kitchen 190: MW 80 + vzduch 97.5 + GKB 12.5.
+    bass_k_wool: float = 80.0
+    bass_k_air: float = 97.5
+    bass_k_gkb: float = 12.5
+    bass_k_rear_reach: float = 80.0  # wall → rear CD (≤ catalog ~120)
+    # Living 450: GKB 12.5 + vzduch 137.5 + MW 300 (mirrored).
+    bass_l_gkb: float = 12.5
+    bass_l_air: float = 137.5
+    bass_l_wool: float = 300.0
+    bass_l_rear_reach: float = 100.0
+    # Short rear wall fix + vertical CD studs (no hangers through šikminy).
+    bass_hanger_z_inset: float = 200.0
+    bass_hanger_z_step: float = 700.0
+    bass_trmen_arm_t: float = 3.0
+    bass_trmen_arm_h: float = 16.0
+    bass_bottom_sdk_t: float = 12.5
     pouzdro_d: float = 120.0
     pocket_door_h: float = 2450.0
     # Clearance from the kitchen-cabinet eave (X=room_width) to the spíž opening.
@@ -127,6 +144,10 @@ class ObyvakParams:
     wall_bracket_leg: float = 80.0
     wall_bracket_t: float = 3.0
     ridge_runout: float = 200.0
+
+    def __post_init__(self) -> None:
+        assert abs(self.bass_k_wool + self.bass_k_air + self.bass_k_gkb - self.predstena_kitchen) < 1e-9
+        assert abs(self.bass_l_gkb + self.bass_l_air + self.bass_l_wool - self.predstena_living) < 1e-9
 
 
 class ObyvakLayout:

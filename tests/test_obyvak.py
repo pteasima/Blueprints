@@ -188,11 +188,12 @@ def test_sikminy_and_soffit_stack_in_3d():
     ]
     assert len(soffit_rost) >= 10
     assert all(c.bounding_box().size.Y < p.rost_spacing for c in soffit_rost)
-    # CD are ⊥ krokvím: thin along slope (X), long in Y.
-    assert all(c.bounding_box().size.X < p.cd_spacing for c in cds)
-    assert all(c.bounding_box().size.Y > 1000.0 for c in cds)
+    # CD are ⊥ krokvím: thin along slope (X), long in Y (šikminy / soffit only).
+    slope_cds = [c for c in cds if c.bounding_box().size.Y > 1000.0]
+    assert slope_cds
+    assert all(c.bounding_box().size.X < p.cd_spacing for c in slope_cds)
     # Horizontal CD + Nonius over the soffit bay (GKF lid → CD → rafters).
-    horiz_cds = [c for c in cds if c.bounding_box().min.X >= g.x_furn - 1.0]
+    horiz_cds = [c for c in slope_cds if c.bounding_box().min.X >= g.x_furn - 1.0]
     assert len(horiz_cds) >= 2
     assert all(c.bounding_box().size.Y > 1000.0 for c in horiz_cds)
     soffit_hangers = [
@@ -355,7 +356,6 @@ def test_3d_matches_section_and_elevation_masses():
         "vata",
         "nabytek",
         LABEL_FLEX,
-        "predstena",
         "pouzdro",
         "sdk",
         LABEL_NATURHELD,
@@ -369,15 +369,46 @@ def test_3d_matches_section_and_elevation_masses():
     assert "koruna" not in labels
     assert "podhled" not in labels
     assert "soffit" not in labels
+    assert "predstena" not in labels  # replaced by layered bass-trap solids
 
-    kitchen, living = sorted(_labeled(shape, "predstena"), key=lambda s: s.bounding_box().min.Y)
-    kbb, lbb = kitchen.bounding_box(), living.bounding_box()
-    assert abs(kbb.min.Y - FACE_GAP) < 1e-6
-    assert abs(kbb.size.Y - (p.predstena_kitchen - 2 * FACE_GAP)) < 1e-6
-    assert abs(lbb.max.Y - (p.room_length - FACE_GAP)) < 1e-6
-    assert abs(lbb.size.Y - (p.predstena_living - 2 * FACE_GAP)) < 1e-6
-    assert abs(kbb.min.Z - (p.predstena_bottom_z + FACE_GAP)) < 1.0
-    assert abs(kbb.max.Z - (g.z_false - FACE_GAP)) < 1.0
+    # Bass traps: kitchen MW+GKB (190) and living GKB+MW (450).
+    bass_wool = [
+        c
+        for c in _labeled(shape, "vata")
+        if c.bounding_box().size.Y < p.room_length * 0.2
+    ]
+    assert len(bass_wool) == 2
+    kitchen_wool, living_wool = sorted(bass_wool, key=lambda s: s.bounding_box().min.Y)
+    assert abs(kitchen_wool.bounding_box().min.Y - FACE_GAP) < 1e-6
+    assert abs(kitchen_wool.bounding_box().size.Y - (p.bass_k_wool - 2 * FACE_GAP)) < 1.0
+    assert abs(living_wool.bounding_box().max.Y - (p.room_length - FACE_GAP)) < 1e-6
+    assert abs(living_wool.bounding_box().size.Y - (p.bass_l_wool - 2 * FACE_GAP)) < 1.0
+
+    bass_gkb = [
+        c
+        for c in _labeled(shape, "sdk")
+        if c.bounding_box().min.Z >= p.predstena_bottom_z - 1.0
+        and c.bounding_box().size.Y < 30.0  # vertical membrane face (~12.5)
+    ]
+    assert len(bass_gkb) >= 2
+    k_gkb, l_gkb = sorted(bass_gkb, key=lambda s: s.bounding_box().min.Y)[:2]
+    assert abs(k_gkb.bounding_box().max.Y - (p.predstena_kitchen - FACE_GAP)) < 1.0
+    assert abs(l_gkb.bounding_box().min.Y - (g.y_pred_r + FACE_GAP)) < 1.0
+    # Short rear třmeny exist at both gables (no hangers into krov).
+    bass_trmeny = [
+        c
+        for c in _labeled(shape, "zaves")
+        if c.bounding_box().max.Y <= p.predstena_kitchen + 1.0
+        or c.bounding_box().min.Y >= g.y_pred_r - 1.0
+    ]
+    assert len(bass_trmeny) >= 4
+    bass_cd = [
+        c
+        for c in _labeled(shape, "cd")
+        if c.bounding_box().max.Y <= p.predstena_kitchen + 1.0
+        or c.bounding_box().min.Y >= g.y_pred_r - 1.0
+    ]
+    assert len(bass_cd) >= 8  # rear+front at several X stations × 2 gables
 
     furn = _labeled(shape, "nabytek")[0].bounding_box()
     assert abs(furn.size.X - (p.furniture_width - FACE_GAP)) < 1e-6
@@ -559,7 +590,8 @@ def test_obyvak_3d_exports(tmp_path, monkeypatch):
 
     elev, _ = build_elevation_slice()
     elev_labels = {c.label for c in elev.children}
-    assert "predstena" in elev_labels
+    assert "predstena" not in elev_labels
+    assert "vata" in elev_labels  # bass-trap wool at gables
     assert "sdk" in elev_labels
     assert "koruna" not in elev_labels
     from blueprints.export_utils import export_section as _export_section
