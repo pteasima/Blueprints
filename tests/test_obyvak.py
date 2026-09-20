@@ -397,7 +397,7 @@ def test_3d_matches_section_and_elevation_masses():
     k_gkb, l_gkb = sorted(bass_gkb, key=lambda s: s.bounding_box().min.Y)[:2]
     assert abs(k_gkb.bounding_box().max.Y - (p.predstena_kitchen - FACE_GAP)) < 1.0
     assert abs(l_gkb.bounding_box().min.Y - (g.y_pred_r + FACE_GAP)) < 1.0
-    # Short rear třmeny exist at both gables (no hangers into krov).
+    # Short rear třmeny / Nonius exist at both gables (no hangers into krov).
     bass_trmeny = [
         c
         for c in _labeled(shape, "zaves")
@@ -405,6 +405,19 @@ def test_3d_matches_section_and_elevation_masses():
         or c.bounding_box().min.Y >= g.y_pred_r - 1.0
     ]
     assert len(bass_trmeny) >= 4
+    # Kitchen uses acoustic Nonius straps (tall plates); living keeps short třmeny.
+    kitchen_hang = [
+        c
+        for c in bass_trmeny
+        if c.bounding_box().max.Y <= p.predstena_kitchen + 1.0 and c.bounding_box().size.Z >= 50.0
+    ]
+    living_hang = [
+        c
+        for c in bass_trmeny
+        if c.bounding_box().min.Y >= g.y_pred_r - 1.0 and c.bounding_box().size.Z < 40.0
+    ]
+    assert len(kitchen_hang) >= 4
+    assert len(living_hang) >= 4
     bass_cd = [
         c
         for c in _labeled(shape, "cd")

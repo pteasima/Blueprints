@@ -20,8 +20,8 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
   Nonius from krokve; rost hung from CD and braced to the eave wall.
   Furniture and pozednice are not structural.
 - Bass traps (štít): kitchen 190 / living 450 as interior CD/UW cabinets under
-  continuous šikminy (pack runs wall-to-wall). Short rear třmeny to the gable;
-  top soft-joints to the NH face — no hangers through the slope pack.
+  continuous šikminy. Kitchen: acoustic Nonius + Sylomer on the gable → rear CD.
+  Living: short třmeny (for now). Top soft-joints to the NH face.
 
     python -m blueprints.export obyvak
 
@@ -317,6 +317,62 @@ def _bass_cd_x_stations(p: ObyvakParams, gap: float) -> list[float]:
     return xs
 
 
+def _bass_wall_hanger(
+    p: ObyvakParams,
+    gap: float,
+    *,
+    xc: float,
+    z: float,
+    y_wall: float,
+    y_rear0: float,
+    y_rear1: float,
+    toward_room: float,
+    kind: str,
+) -> list:
+    """Wall fix to rear CD only — never through the air cavity.
+
+    ``kind``: ``\"trmen\"`` short acoustic bracket, or ``\"nonius\"`` acoustic
+    Nonius + Sylomer pad on the gable (kitchen 190).
+    """
+    parts: list = []
+    if toward_room > 0:
+        y_a, y_b = y_wall, y_rear0
+    else:
+        y_a, y_b = y_rear1, y_wall
+    reach = abs(y_b - y_a)
+    if reach <= gap:
+        return parts
+
+    if kind == "nonius":
+        # Sylomer pad on the plaster face.
+        sy_xy, sy_t, sy_z = 30.0, 12.0, 30.0
+        if toward_room > 0:
+            parts.append(
+                _box(xc - sy_xy * 0.5, y_wall, z - sy_z * 0.5, sy_xy, sy_t, sy_z, LABEL_ZAVES)
+            )
+            y_strap0 = y_wall + sy_t + gap
+            y_strap1 = y_rear0 - gap
+        else:
+            parts.append(
+                _box(xc - sy_xy * 0.5, y_wall - sy_t, z - sy_z * 0.5, sy_xy, sy_t, sy_z, LABEL_ZAVES)
+            )
+            y_strap0 = y_rear1 + gap
+            y_strap1 = y_wall - sy_t - gap
+        if y_strap1 - y_strap0 > gap:
+            # Nonius strap: tall perforated plate wall→rear CD face (≤ catalog reach).
+            nw, nh = 20.0, 80.0
+            parts.append(
+                _box(xc - nw * 0.5, y_strap0, z - nh * 0.5, nw, y_strap1 - y_strap0, nh, LABEL_ZAVES)
+            )
+        return parts
+
+    # Default: short třmen arm.
+    arm_t = p.bass_trmen_arm_t
+    arm_h = p.bass_trmen_arm_h
+    parts.append(_box(xc - arm_t * 0.5, y_a, z - arm_h * 0.5, arm_t, y_b - y_a, arm_h, LABEL_ZAVES))
+    return parts
+
+
 def _bass_trap_frame(
     p: ObyvakParams,
     g: ObyvakLayout,
@@ -329,18 +385,17 @@ def _bass_trap_frame(
     y_wall: float,
     toward_room: float,
     z_bot: float | None = None,
+    wall_hanger: str = "trmen",
 ) -> list:
     """Closed CD/UW cabinet: rear + front verticals, depth struts, bay rails.
 
-    Gable-only hang via short wall třmeny to the rear studs — no Nonius through
-    the šikmina pack. Tops stay below the continuous ceiling (min z_ceil over
-    each part footprint) so the box sits under šikminy, not through them.
+    Wall hang to rear studs only (``trmen`` or acoustic ``nonius`` + Sylomer) —
+    never through the air cavity / šikmina pack. Tops stay below the continuous
+    ceiling (min z_ceil over each footprint).
     """
     parts: list = []
     z0 = z_bot if z_bot is not None else p.predstena_bottom_z + gap
     hw = p.cd_w * 0.5
-    arm_t = p.bass_trmen_arm_t
-    arm_h = p.bass_trmen_arm_h
     d = p.cd_t
     if toward_room > 0:
         y_strut0, y_strut1 = y_rear1 + gap, y_front0 - gap
@@ -399,17 +454,22 @@ def _bass_trap_frame(
             if z_s < z0 - 0.1 or z_s + d > z_top + 0.1:
                 continue
             parts.append(_box(x0, y_strut0, z_s, p.cd_w, strut_dy, d, LABEL_CD))
-        # Short třmen arms: wall → rear CD only.
+        # Wall hangers → rear CD only.
         z = z0 + p.bass_hanger_z_inset
         while z < z_top - 80.0:
-            if toward_room > 0:
-                ya, yb = y_wall, y_rear0
-            else:
-                ya, yb = y_rear1, y_wall
-            if abs(yb - ya) > gap:
-                parts.append(
-                    _box(xc - arm_t * 0.5, ya, z - arm_h * 0.5, arm_t, yb - ya, arm_h, LABEL_ZAVES)
+            parts.extend(
+                _bass_wall_hanger(
+                    p,
+                    gap,
+                    xc=xc,
+                    z=z,
+                    y_wall=y_wall,
+                    y_rear0=y_rear0,
+                    y_rear1=y_rear1,
+                    toward_room=toward_room,
+                    kind=wall_hanger,
                 )
+            )
             z += p.bass_hanger_z_step
     return parts
 
@@ -420,6 +480,8 @@ def _bass_trap_parts(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
     Šikminy run full length to the gable; these assemblies sit in the room
     against the štít from Z=2450 up to a soft joint under the NH face.
     Frame is a closed CD/UW cabinet (rear + front + depth struts + rails).
+    Kitchen 190: acoustic Nonius + Sylomer on the gable → rear CD only.
+    Living 450: short třmeny (unchanged for now).
     """
     outline = _predstena_outline(p, g, gap)
     face = xz_face(outline, "predstena")
@@ -464,6 +526,7 @@ def _bass_trap_parts(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
         y_wall=y_k0,
         toward_room=1.0,
         z_bot=z_frame,
+        wall_hanger="nonius",  # acoustic Nonius + Sylomer on kitchen gable
     )
     if k_wool is not None:
         tools = [s for s in k_frame if s.bounding_box().min.Y < y_k_wool1]
