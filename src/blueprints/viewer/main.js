@@ -28,7 +28,7 @@ import {
   initLocale,
   onLocaleChange,
   setLocale,
-  t,
+  t as tr,
 } from "./i18n.js";
 import {
   applyEdgeClipping,
@@ -552,7 +552,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
 
     const label = document.createElement("span");
     label.className = "fov-label";
-    label.textContent = t("ui.fov");
+    label.textContent = tr("ui.fov");
 
     fovValueEl = document.createElement("span");
     fovValueEl.className = "fov-value";
@@ -699,11 +699,11 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         );
         if (normal.lengthSq() < 1e-12) continue;
         normal.normalize();
-        const t = Math.min(1, Math.max(0, Number(c.t) || 0));
+        const cutT = Math.min(1, Math.max(0, Number(c.t) || 0));
         cuts.push({
           id: nextCutId++,
           normal,
-          t,
+          t: cutT,
           locked: true,
           label: formatAngleLabel(normal),
         });
@@ -921,7 +921,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.dataset.mode = id;
-      btn.textContent = t(labelKey);
+      btn.textContent = tr(labelKey);
       if (id === materialMode) btn.classList.add("is-active");
       btn.addEventListener("click", () => {
         materialMode = id;
@@ -947,7 +947,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.dataset.edgeMode = id;
-      btn.textContent = t(labelKey);
+      btn.textContent = tr(labelKey);
       if (id === edgeMode) btn.classList.add("is-active");
       btn.addEventListener("click", () => {
         edgeMode = id;
@@ -1065,8 +1065,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         syncBtn = document.createElement("button");
         syncBtn.type = "button";
         syncBtn.className = "part-sync";
-        syncBtn.textContent = t("ui.sync");
-        syncBtn.setAttribute("aria-label", `${t("ui.sync")} ${node.label}`);
+        syncBtn.textContent = tr("ui.sync");
+        syncBtn.setAttribute("aria-label", `${tr("ui.sync")} ${node.label}`);
         const detached = detachedLeaves.has(node.id);
         syncBtn.hidden = !detached;
         syncBtn.setAttribute("aria-hidden", detached ? "false" : "true");
@@ -1266,12 +1266,12 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       ["side", "ui.side"],
       ["top", "ui.top"],
     ]) {
-      addBtn(id, t(labelKey), () => setCameraPreset(id));
+      addBtn(id, tr(labelKey), () => setCameraPreset(id));
     }
     for (const spec of customScenes) {
       const id = String(spec?.id || "").trim();
       if (!id) continue;
-      const label = t(`scene.${id}`);
+      const label = tr(`scene.${id}`);
       addBtn(`scene:${id}`, label, () => applyScene(spec));
     }
   }
@@ -1307,7 +1307,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       normal: new THREE.Vector3(0, 0, 1),
       t: 0,
       locked: false,
-      label: t("ui.cut"),
+      label: tr("ui.cut"),
     });
   }
 
@@ -1320,12 +1320,12 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       return;
     }
     const labelEl = row.querySelector(".cut-label");
-    if (labelEl) labelEl.textContent = cut.locked ? cut.label : t("ui.cut");
+    if (labelEl) labelEl.textContent = cut.locked ? cut.label : tr("ui.cut");
     if (cut.locked && !row.querySelector(".cut-remove")) {
       const remove = document.createElement("button");
       remove.type = "button";
       remove.className = "cut-remove";
-      remove.setAttribute("aria-label", t("ui.removeSection"));
+      remove.setAttribute("aria-label", tr("ui.removeSection"));
       remove.textContent = "×";
       remove.addEventListener("click", () => removeCut(cut.id));
       row.append(remove);
@@ -1362,11 +1362,11 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     buildCutUI();
   }
 
-  function setCutT(id, t) {
+  function setCutT(id, cutT) {
     const cut = cuts.find((c) => c.id === id);
     if (!cut) return;
     if (!cut.locked) lockCut(cut);
-    cut.t = Math.min(1, Math.max(0, Number(t)));
+    cut.t = Math.min(1, Math.max(0, Number(cutT)));
     applyClipping();
   }
 
@@ -1445,7 +1445,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
 
       const label = document.createElement("span");
       label.className = "cut-label";
-      label.textContent = cut.locked ? cut.label : t("ui.cut");
+      label.textContent = cut.locked ? cut.label : tr("ui.cut");
 
       const endSlider = () => {
         if (!cutSliderActive) return;
@@ -1476,7 +1476,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         const remove = document.createElement("button");
         remove.type = "button";
         remove.className = "cut-remove";
-        remove.setAttribute("aria-label", t("ui.removeSection"));
+        remove.setAttribute("aria-label", tr("ui.removeSection"));
         remove.textContent = "×";
         remove.addEventListener("click", () => removeCut(cut.id));
         row.append(remove);
@@ -1644,7 +1644,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   /** @type {HTMLButtonElement | null} */
   const measureBtn = document.getElementById("measure");
   let arBusy = false;
-  const MEASURE_LABEL = () => t("ui.measure");
+  const MEASURE_LABEL = () => tr("ui.measure");
 
   function buildLocaleToggle() {
     const host = document.getElementById("locale");
@@ -1668,7 +1668,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
 
   function relocalizeUi() {
     applyStaticI18n(document);
-    if (arBtn && !arBusy) arBtn.textContent = t("ui.ar");
+    if (arBtn && !arBusy) arBtn.textContent = tr("ui.ar");
     if (measureBtn) measureBtn.textContent = MEASURE_LABEL();
     try {
       buildMaterialToggle();
@@ -1695,7 +1695,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   function showArButton() {
     if (arBtn) {
       arBtn.hidden = false;
-      if (!arBusy) arBtn.textContent = t("ui.ar");
+      if (!arBusy) arBtn.textContent = tr("ui.ar");
     }
   }
 
