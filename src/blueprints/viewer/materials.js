@@ -11,26 +11,35 @@ export const MODE_REALISTIC = "realistic";
 
 /** @type {Record<string, [number, number, number]>} 0–255 RGB — near-max chroma */
 export const SOLID_COLORS = {
-  podlaha: [230, 115, 20],
+  floor: [230, 115, 20],
   eps: [70, 230, 25],
-  zdivo: [225, 70, 40],
-  omitka: [255, 225, 120],
-  nabytek: [255, 150, 0],
-  pozednice: [200, 85, 10],
-  koruna: [200, 85, 10],
-  predstena: [0, 195, 245],
-  pouzdro: [235, 185, 80],
-  sdk: [230, 230, 235],
-  krov: [200, 85, 10],
-  dreveny_rost: [160, 100, 30],
-  cd: [120, 120, 130],
-  zaves: [90, 90, 100],
-  paska: [70, 70, 80],
-  vata: [0, 210, 155],
-  "NaturHeld Flex 50": [35, 175, 15],
-  "NaturHeld 140": [15, 85, 245],
-  krytina: [235, 15, 15],
-  sklo: [140, 210, 255],
+  masonry: [225, 70, 40],
+  plaster: [255, 225, 120],
+  furniture: [255, 150, 0],
+  wall_plate: [200, 85, 10],
+  pocket_frame: [235, 185, 80],
+  wall_gkf: [230, 230, 235],
+  rafters: [200, 85, 10],
+  plenum_wool: [0, 210, 155],
+  racking_strap: [70, 70, 80],
+  roofing: [235, 15, 15],
+  glazing: [140, 210, 255],
+  slope_naturheld_140: [15, 85, 245],
+  slope_naturheld_flex_50: [35, 175, 15],
+  slope_battens: [160, 100, 30],
+  slope_gkf: [230, 230, 235],
+  slope_cd: [120, 120, 130],
+  slope_nonius: [90, 90, 100],
+  soffit_naturheld_140: [15, 85, 245],
+  soffit_naturheld_flex_50: [35, 175, 15],
+  soffit_battens: [160, 100, 30],
+  soffit_gkf: [230, 230, 235],
+  soffit_cd: [120, 120, 130],
+  soffit_nonius: [90, 90, 100],
+  bass_mineral_wool: [0, 210, 155],
+  bass_gkb: [230, 230, 235],
+  bass_cd: [120, 120, 130],
+  bass_wall_hanger: [90, 90, 100],
 };
 
 /**
@@ -39,33 +48,44 @@ export const SOLID_COLORS = {
  * @type {Record<string, number>}
  */
 export const LAYER_DEPTH_BIAS = {
-  podlaha: 0,
+  floor: 0,
   eps: 1,
-  zdivo: 2,
-  omitka: 3,
-  pouzdro: 4,
-  sdk: 4,
-  predstena: 5,
-  nabytek: 6,
-  "NaturHeld Flex 50": 7,
-  dreveny_rost: 8,
-  cd: 8,
-  zaves: 9,
-  paska: 9,
-  pozednice: 9,
-  koruna: 9,
-  vata: 10,
-  krov: 11,
-  krytina: 12,
-  "NaturHeld 140": 13,
-  sklo: 14,
+  masonry: 2,
+  plaster: 3,
+  pocket_frame: 4,
+  wall_gkf: 4,
+  bass_gkb: 4,
+  slope_gkf: 4,
+  soffit_gkf: 4,
+  furniture: 6,
+  slope_naturheld_flex_50: 7,
+  soffit_naturheld_flex_50: 7,
+  slope_battens: 8,
+  soffit_battens: 8,
+  slope_cd: 8,
+  soffit_cd: 8,
+  bass_cd: 8,
+  slope_nonius: 9,
+  soffit_nonius: 9,
+  bass_wall_hanger: 9,
+  racking_strap: 9,
+  wall_plate: 9,
+  plenum_wool: 10,
+  bass_mineral_wool: 10,
+  rafters: 11,
+  roofing: 12,
+  slope_naturheld_140: 13,
+  soffit_naturheld_140: 13,
+  glazing: 14,
 };
 
 /**
  * Nested Parts outline. A child is a leaf CAD label (string) or a group
- * `{ id, label, children }`. Keep leaf ids in sync with SOLID_COLORS / SECTION_LAYERS.
+ * `{ id, children }` (optional `label` is ignored — viewer i18n supplies display).
+ * Keep leaf ids in sync with SOLID_COLORS / SECTION_LAYERS.
+ * Model-specific trees come from `*.parts.json`; this is the hello_world fallback.
  *
- * @typedef {{ id: string, label: string, children: PartTreeNode[] }} PartTreeGroup
+ * @typedef {{ id: string, label?: string, children: PartTreeNode[] }} PartTreeGroup
  * @typedef {string | PartTreeGroup} PartTreeNode
  * @typedef {{ type: "leaf", id: string, label: string }} OutlineLeaf
  * @typedef {{ type: "group", id: string, label: string, children: OutlineNode[] }} OutlineGroup
@@ -73,43 +93,19 @@ export const LAYER_DEPTH_BIAS = {
  */
 
 /** @type {PartTreeGroup[]} */
-export const PART_GROUPS = [
-  {
-    id: "walls",
-    label: "Walls",
-    children: ["zdivo", "eps", "omitka", "predstena", "pouzdro"],
-  },
-  {
-    id: "roof",
-    label: "Roof",
-    children: [
-      "pozednice",
-      "koruna",
-      "krov",
-      "paska",
-      "zaves",
-      "cd",
-      "dreveny_rost",
-      "vata",
-      "NaturHeld Flex 50",
-      "NaturHeld 140",
-      "krytina",
-    ],
-  },
-  {
-    id: "interior",
-    label: "Interior",
-    children: ["podlaha", "nabytek"],
-  },
-];
+export const PART_GROUPS = [];
 
 /**
- * Filter PART_GROUPS to labels present in the loaded GLB; stash leftovers in Other.
+ * Filter groups to labels present in the loaded GLB; stash leftovers in Other.
  * @param {Iterable<string>} availableLabels
+ * @param {PartTreeGroup[]} [groups]
+ * @param {(id: string) => string} [labelFn] display-name resolver (defaults to id)
  * @returns {OutlineNode[]}
  */
-export function resolvePartOutline(availableLabels) {
+export function resolvePartOutline(availableLabels, groups, labelFn) {
   const remaining = new Set(availableLabels);
+  const treeSpec = Array.isArray(groups) && groups.length ? groups : PART_GROUPS;
+  const t = typeof labelFn === "function" ? labelFn : (id) => id;
 
   /**
    * @param {PartTreeNode[]} nodes
@@ -122,7 +118,7 @@ export function resolvePartOutline(availableLabels) {
       if (typeof node === "string") {
         if (!remaining.has(node)) continue;
         remaining.delete(node);
-        out.push({ type: "leaf", id: node, label: node });
+        out.push({ type: "leaf", id: node, label: t(node) });
         continue;
       }
       const kids = walk(node.children || []);
@@ -130,26 +126,54 @@ export function resolvePartOutline(availableLabels) {
       out.push({
         type: "group",
         id: node.id,
-        label: node.label,
+        label: t(node.id),
         children: kids,
       });
     }
     return out;
   }
 
-  const tree = walk(PART_GROUPS);
+  const tree = walk(treeSpec);
   if (remaining.size) {
     const otherLeaves = [...remaining]
       .sort((a, b) => a.localeCompare(b))
-      .map((id) => /** @type {OutlineLeaf} */ ({ type: "leaf", id, label: id }));
+      .map((id) => /** @type {OutlineLeaf} */ ({ type: "leaf", id, label: t(id) }));
     tree.push({
       type: "group",
       id: "other",
-      label: "Other",
+      label: t("other"),
       children: otherLeaves,
     });
   }
   return tree;
+}
+
+/**
+ * Expand opacity recipe keys that name outline groups into leaf ids.
+ * @param {Record<string, number>} opacity
+ * @param {OutlineNode[]} outline
+ * @returns {Record<string, number>}
+ */
+export function expandOpacityGroups(opacity, outline) {
+  if (!opacity || typeof opacity !== "object") return {};
+  /** @type {Map<string, string[]>} */
+  const groupLeaves = new Map();
+  for (const node of outline) {
+    if (node.type === "group") {
+      groupLeaves.set(node.id, collectLeafIds(node));
+    }
+  }
+  /** @type {Record<string, number>} */
+  const out = {};
+  for (const [key, value] of Object.entries(opacity)) {
+    const leaves = groupLeaves.get(key);
+    if (leaves && leaves.length) {
+      for (const id of leaves) out[id] = value;
+    } else {
+      out[key] = value;
+    }
+  }
+  return out;
 }
 
 /**
@@ -270,7 +294,7 @@ export function applyOpacityToMeshes(meshes, opacity, opts = {}) {
 
 /** @type {Record<string, RealisticPreset>} */
 export const REALISTIC_PRESETS = {
-  podlaha: {
+  floor: {
     color: [230, 115, 20],
     roughness: 0.68,
     metalness: 0.0,
@@ -282,19 +306,19 @@ export const REALISTIC_PRESETS = {
     metalness: 0.0,
     map: "foam",
   },
-  zdivo: {
+  masonry: {
     color: [225, 70, 40],
     roughness: 0.9,
     metalness: 0.0,
     map: "masonry",
   },
-  omitka: {
+  plaster: {
     color: [255, 225, 120],
     roughness: 0.92,
     metalness: 0.0,
     map: "plaster",
   },
-  nabytek: {
+  furniture: {
     color: [255, 150, 0],
     roughness: 0.38,
     metalness: 0.0,
@@ -302,95 +326,149 @@ export const REALISTIC_PRESETS = {
     clearcoatRoughness: 0.28,
     map: "wood",
   },
-  pozednice: {
+  wall_plate: {
     color: [200, 85, 10],
     roughness: 0.55,
     metalness: 0.0,
     map: "wood",
   },
-  koruna: {
-    color: [200, 85, 10],
-    roughness: 0.55,
-    metalness: 0.0,
-    map: "wood",
-  },
-  predstena: {
-    color: [0, 195, 245],
-    roughness: 0.84,
-    metalness: 0.0,
-    map: "plaster",
-  },
-  pouzdro: {
+  pocket_frame: {
     color: [235, 185, 80],
     roughness: 0.7,
     metalness: 0.0,
     map: "plaster",
   },
-  sdk: {
+  wall_gkf: {
     color: [230, 230, 235],
     roughness: 0.88,
     metalness: 0.0,
     map: "plaster",
   },
-  krov: {
+  rafters: {
     color: [200, 85, 10],
     roughness: 0.55,
     metalness: 0.0,
     map: "wood",
   },
-  vata: {
+  plenum_wool: {
     color: [0, 210, 155],
     roughness: 0.97,
     metalness: 0.0,
     map: "wool",
   },
-  "NaturHeld Flex 50": {
-    color: [35, 175, 15],
-    roughness: 0.92,
-    metalness: 0.0,
-    map: "wool",
-  },
-  "NaturHeld 140": {
-    color: [15, 85, 245],
-    roughness: 0.78,
-    metalness: 0.08,
-    map: "plaster",
-  },
-  dreveny_rost: {
-    color: [160, 100, 30],
-    roughness: 0.55,
-    metalness: 0.0,
-    map: "wood",
-  },
-  cd: {
-    color: [120, 120, 130],
-    roughness: 0.35,
-    metalness: 0.7,
-    map: "metal",
-  },
-  zaves: {
-    color: [90, 90, 100],
-    roughness: 0.4,
-    metalness: 0.75,
-    map: "metal",
-  },
-  paska: {
+  racking_strap: {
     color: [70, 70, 80],
     roughness: 0.45,
     metalness: 0.8,
     map: "metal",
   },
-  krytina: {
+  roofing: {
     color: [235, 15, 15],
     roughness: 0.32,
     metalness: 0.45,
     map: "metal",
   },
-  sklo: {
+  glazing: {
     color: [140, 210, 255],
     roughness: 0.08,
     metalness: 0.05,
     map: "none",
+  },
+  slope_naturheld_flex_50: {
+    color: [35, 175, 15],
+    roughness: 0.92,
+    metalness: 0.0,
+    map: "wool",
+  },
+  slope_naturheld_140: {
+    color: [15, 85, 245],
+    roughness: 0.78,
+    metalness: 0.08,
+    map: "plaster",
+  },
+  slope_battens: {
+    color: [160, 100, 30],
+    roughness: 0.55,
+    metalness: 0.0,
+    map: "wood",
+  },
+  slope_gkf: {
+    color: [230, 230, 235],
+    roughness: 0.88,
+    metalness: 0.0,
+    map: "plaster",
+  },
+  slope_cd: {
+    color: [120, 120, 130],
+    roughness: 0.35,
+    metalness: 0.7,
+    map: "metal",
+  },
+  slope_nonius: {
+    color: [90, 90, 100],
+    roughness: 0.4,
+    metalness: 0.75,
+    map: "metal",
+  },
+  soffit_naturheld_flex_50: {
+    color: [35, 175, 15],
+    roughness: 0.92,
+    metalness: 0.0,
+    map: "wool",
+  },
+  soffit_naturheld_140: {
+    color: [15, 85, 245],
+    roughness: 0.78,
+    metalness: 0.08,
+    map: "plaster",
+  },
+  soffit_battens: {
+    color: [160, 100, 30],
+    roughness: 0.55,
+    metalness: 0.0,
+    map: "wood",
+  },
+  soffit_gkf: {
+    color: [230, 230, 235],
+    roughness: 0.88,
+    metalness: 0.0,
+    map: "plaster",
+  },
+  soffit_cd: {
+    color: [120, 120, 130],
+    roughness: 0.35,
+    metalness: 0.7,
+    map: "metal",
+  },
+  soffit_nonius: {
+    color: [90, 90, 100],
+    roughness: 0.4,
+    metalness: 0.75,
+    map: "metal",
+  },
+  bass_mineral_wool: {
+    color: [0, 210, 155],
+    roughness: 0.97,
+    metalness: 0.0,
+    map: "wool",
+  },
+  bass_gkb: {
+    color: [230, 230, 235],
+    roughness: 0.88,
+    metalness: 0.0,
+    map: "plaster",
+  },
+  bass_cd: {
+    color: [120, 120, 130],
+    roughness: 0.35,
+    metalness: 0.7,
+    map: "metal",
+  },
+  bass_wall_hanger: {
+    color: [90, 90, 100],
+    roughness: 0.4,
+    metalness: 0.75,
+    map: "metal",
   },
 };
 

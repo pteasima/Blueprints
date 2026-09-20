@@ -10,16 +10,16 @@ World:
 
 Šikminy stack (interior → attic; thicknesses ⊥ to the face unless noted):
 
-  StoSilent Top Finish + Top Basic + NaturHeld 140 (60)     → `NaturHeld 140`
-  dřevěný rošt: latě KVH 60×40 @ ~625 // krokvím (⊥ CD)   → `dreveny_rost`
-  NaturHeld Flex 50 between those latě (60)                 → `NaturHeld Flex 50`
-  vapour foil (~1) + GKF/RF 12.5                            → `sdk`
-  CD Rigips 60×27 @ ~625 ⊥ krokvím                          → `cd`
-  Nonius / přímý závěs CD→krokve                            → `zaves`
-  Domo Plus plenum (80)                                     → `vata`
-  krokve 100/160 @ ~875 + MW between                        → `krov` / `vata`
-  zavětrovací pásky 40×2 @ 45° X across krokve (racking)    → `paska`
-  (střešní latě / kontralatě above rafters stay in krytina build-up)
+  StoSilent Top Finish + Top Basic + NaturHeld 140 (60)     → `slope_naturheld_140`
+  dřevěný rošt: latě KVH 60×40 @ ~625 // krokvím (⊥ CD)   → `slope_battens`
+  NaturHeld Flex 50 between those latě (60)                 → `slope_naturheld_flex_50`
+  vapour foil (~1) + GKF/RF 12.5                            → `slope_gkf`
+  CD Rigips 60×27 @ ~625 ⊥ krokvím                          → `slope_cd`
+  Nonius závěs CD→krokve                                    → `slope_nonius`
+  Domo Plus plenum (80)                                     → `plenum_wool`
+  krokve 100/160 @ ~875 + MW between                        → `rafters` / `plenum_wool`
+  zavětrovací pásky 40×2 @ 45° X across krokve (racking)    → `racking_strap`
+  (střešní latě / kontralatě above rafters stay in roofing)
 
 Right eave soffit box: NH L, Flex cavity + latový rost (latě @625, Flex between).
 GKF is continuous for acoustics and copies the wooden lattice edge: slope GKF
@@ -27,7 +27,8 @@ runs to `x_nh_inner` (rost front), a vertical return with a slope-cut top seats
 on the lid (lid extends past the front CD for a proper L), and that front CD
 hangs the box at the lattice edge. Horizontal CD @625 + Nonius above the lid;
 rost drop-hung from that grid and braced to the eave wall. Furniture /
-pozednice are not structural.
+wall plate are not structural. CAD ids are zone-prefixed so the viewer can
+toggle / fade slopes, soffit, and bass traps independently.
 """
 
 from __future__ import annotations
@@ -37,13 +38,97 @@ from dataclasses import dataclass
 
 from build123d import Edge, Face, Vector, Wire
 
-# CAD / viewer part labels (human-readable where the contractor sheet names products).
-LABEL_NATURHELD = "NaturHeld 140"
-LABEL_FLEX = "NaturHeld Flex 50"
-LABEL_ROST = "dreveny_rost"
-LABEL_CD = "cd"
-LABEL_ZAVES = "zaves"
-LABEL_PASKA = "paska"
+# CAD / viewer part labels (stable machine ids; display names live in viewer i18n).
+# --- Shell (roof + walls + floor) ---
+LABEL_FLOOR = "floor"
+LABEL_MASONRY = "masonry"
+LABEL_EPS = "eps"
+LABEL_PLASTER = "plaster"
+LABEL_WALL_PLATE = "wall_plate"
+LABEL_RAFTERS = "rafters"
+LABEL_ROOFING = "roofing"
+LABEL_PLENUM_WOOL = "plenum_wool"
+LABEL_RACKING_STRAP = "racking_strap"
+LABEL_POCKET_FRAME = "pocket_frame"
+LABEL_WALL_GKF = "wall_gkf"
+LABEL_GLAZING = "glazing"
+# --- Slopes (šikminy) ---
+LABEL_SLOPE_NH = "slope_naturheld_140"
+LABEL_SLOPE_FLEX = "slope_naturheld_flex_50"
+LABEL_SLOPE_BATTENS = "slope_battens"
+LABEL_SLOPE_GKF = "slope_gkf"
+LABEL_SLOPE_CD = "slope_cd"
+LABEL_SLOPE_NONIUS = "slope_nonius"
+# --- Soffit (podhled) ---
+LABEL_SOFFIT_NH = "soffit_naturheld_140"
+LABEL_SOFFIT_FLEX = "soffit_naturheld_flex_50"
+LABEL_SOFFIT_BATTENS = "soffit_battens"
+LABEL_SOFFIT_GKF = "soffit_gkf"
+LABEL_SOFFIT_CD = "soffit_cd"
+LABEL_SOFFIT_NONIUS = "soffit_nonius"
+# --- Bass traps ---
+LABEL_BASS_WOOL = "bass_mineral_wool"
+LABEL_BASS_GKB = "bass_gkb"
+LABEL_BASS_CD = "bass_cd"
+LABEL_BASS_HANGER = "bass_wall_hanger"
+# --- Furniture ---
+LABEL_FURNITURE = "furniture"
+
+# Nested Parts outline (ids only; viewer localizes group/leaf labels).
+PART_GROUPS = [
+    {
+        "id": "shell",
+        "children": [
+            LABEL_FLOOR,
+            LABEL_MASONRY,
+            LABEL_EPS,
+            LABEL_PLASTER,
+            LABEL_WALL_PLATE,
+            LABEL_RAFTERS,
+            LABEL_ROOFING,
+            LABEL_PLENUM_WOOL,
+            LABEL_RACKING_STRAP,
+            LABEL_POCKET_FRAME,
+            LABEL_WALL_GKF,
+            LABEL_GLAZING,
+        ],
+    },
+    {
+        "id": "slopes",
+        "children": [
+            LABEL_SLOPE_NH,
+            LABEL_SLOPE_FLEX,
+            LABEL_SLOPE_BATTENS,
+            LABEL_SLOPE_GKF,
+            LABEL_SLOPE_CD,
+            LABEL_SLOPE_NONIUS,
+        ],
+    },
+    {
+        "id": "soffit",
+        "children": [
+            LABEL_SOFFIT_NH,
+            LABEL_SOFFIT_FLEX,
+            LABEL_SOFFIT_BATTENS,
+            LABEL_SOFFIT_GKF,
+            LABEL_SOFFIT_CD,
+            LABEL_SOFFIT_NONIUS,
+        ],
+    },
+    {
+        "id": "bass_traps",
+        "children": [
+            LABEL_BASS_WOOL,
+            LABEL_BASS_GKB,
+            LABEL_BASS_CD,
+            LABEL_BASS_HANGER,
+        ],
+    },
+    {
+        "id": "furniture",
+        "children": [LABEL_FURNITURE],
+    },
+]
 
 
 @dataclass(frozen=True)

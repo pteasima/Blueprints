@@ -37,3 +37,14 @@ def write_scenes_json(model_id: str, scenes: list[dict[str, Any]], dest: Path) -
         encoding="utf-8",
     )
     return dest
+
+
+def write_parts_json(model_id: str, groups: list[dict[str, Any]], dest: Path) -> Path:
+    """Write `docs/models/<id>.parts.json` (nested group tree; ids only)."""
+    dest = dest.resolve()
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(
+        json.dumps(groups, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    return dest
