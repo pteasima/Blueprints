@@ -1193,7 +1193,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       if (!partLastNonZero.has(name)) partLastNonZero.set(name, 1);
     }
 
-    const outline = resolvePartOutline(parts.keys(), partGroups, t);
+    const outline = resolvePartOutline(parts.keys(), partGroups, tr);
     partOutline = outline;
     for (const node of outline) {
       appendOutlineNode(node, host, 0, null);
