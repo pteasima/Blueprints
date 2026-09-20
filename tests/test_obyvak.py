@@ -180,6 +180,9 @@ def test_sikminy_and_soffit_stack_in_3d():
     assert len(slope_rost) >= 5
     assert all(c.bounding_box().size.Y < p.rost_spacing for c in slope_rost)
     assert all(c.bounding_box().size.X > 500.0 for c in slope_rost)
+    # Šikminy pack runs wall-to-wall (bass traps sit under it, do not replace it).
+    nh = _labeled(shape, LABEL_NATURHELD)
+    assert any(c.bounding_box().size.Y > p.room_length - 10.0 for c in nh)
     # Soffit rost is a lattice (latě @625), not full-depth solid boards.
     soffit_rost = [
         c

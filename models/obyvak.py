@@ -19,10 +19,9 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
   (slope past X_FURN → vertical return on shared horizontal CD/UD → lid);
   Nonius from krokve; rost hung from CD and braced to the eave wall.
   Furniture and pozednice are not structural.
-- Bass traps (štít předstěny): kitchen 190 = MW 80 + vzduch 97.5 + GKB 12.5;
-  living 450 = GKB 12.5 + vzduch 137.5 + MW 300. Hybrid box frame (CD vzadu +
-  CD vpředu) with short rear třmeny to the gable only — top soft-joints to the
-  šikmina; no hangers through the slope pack into krokve.
+- Bass traps (štít): kitchen 190 / living 450 as interior CD/UW cabinets under
+  continuous šikminy (pack runs wall-to-wall). Short rear třmeny to the gable;
+  top soft-joints to the NH face — no hangers through the slope pack.
 
     python -m blueprints.export obyvak
 
@@ -331,26 +330,76 @@ def _bass_trap_frame(
     toward_room: float,
     z_bot: float | None = None,
 ) -> list:
-    """Rear + front vertical CD and short wall třmeny (gable-only hang — no krov).
+    """Closed CD/UW cabinet: rear + front verticals, depth struts, bay rails.
 
-    ``toward_room`` is +1 (kitchen, Y increases into room) or -1 (living).
+    Gable-only hang via short wall třmeny to the rear studs — no Nonius through
+    the šikmina pack. Tops stay below the continuous ceiling (min z_ceil over
+    each part footprint) so the box sits under šikminy, not through them.
     """
     parts: list = []
     z0 = z_bot if z_bot is not None else p.predstena_bottom_z + gap
     hw = p.cd_w * 0.5
     arm_t = p.bass_trmen_arm_t
     arm_h = p.bass_trmen_arm_h
-    for xc in _bass_cd_x_stations(p, gap):
-        z_top = g.z_ceil(xc) - gap
+    d = p.cd_t
+    if toward_room > 0:
+        y_strut0, y_strut1 = y_rear1 + gap, y_front0 - gap
+    else:
+        y_strut0, y_strut1 = y_front1 + gap, y_rear0 - gap
+    strut_dy = y_strut1 - y_strut0
+    if strut_dy <= gap:
+        return parts
+
+    stations = _bass_cd_x_stations(p, gap)
+    stations = [xc for xc in stations if gap <= xc - hw and xc + hw <= p.room_width - gap]
+    if not stations:
+        return parts
+
+    def _z_under_ceil(*xs: float) -> float:
+        """Flat top clear of the sloping acoustic face over the given X samples."""
+        return min(g.z_ceil(x) for x in xs) - gap
+
+    # Bay rails along X (between verticals) on rear and front planes.
+    for i in range(len(stations) - 1):
+        xa = stations[i] + hw + gap
+        xb = stations[i + 1] - hw - gap
+        if xb - xa <= gap:
+            continue
+        z_top = _z_under_ceil(xa, 0.5 * (xa + xb), xb)
         if z_top - z0 < 50.0:
             continue
+        for ya, yb in ((y_rear0, y_rear1), (y_front0, y_front1)):
+            parts.append(_box(xa, ya, z0, xb - xa, yb - ya, d, LABEL_CD))
+            parts.append(_box(xa, ya, z_top - d, xb - xa, yb - ya, d, LABEL_CD))
+
+    for xc in stations:
         x0 = xc - hw
-        # Keep studs inside the clear span.
-        if x0 < gap or x0 + p.cd_w > p.room_width - gap:
+        x1 = xc + hw
+        z_top = _z_under_ceil(x0, xc, x1)
+        if z_top - z0 < 50.0:
             continue
-        parts.append(_box(x0, y_rear0, z0, p.cd_w, y_rear1 - y_rear0, z_top - z0, LABEL_CD))
-        parts.append(_box(x0, y_front0, z0, p.cd_w, y_front1 - y_front0, z_top - z0, LABEL_CD))
-        # Short třmen arms: wall → rear CD only (never through the air cavity).
+        # Vertical studs — clear of top/bottom depth struts.
+        z_vert0 = z0 + d + gap
+        z_vert1 = z_top - d - gap
+        if z_vert1 - z_vert0 > 50.0:
+            parts.append(_box(x0, y_rear0, z_vert0, p.cd_w, y_rear1 - y_rear0, z_vert1 - z_vert0, LABEL_CD))
+            parts.append(_box(x0, y_front0, z_vert0, p.cd_w, y_front1 - y_front0, z_vert1 - z_vert0, LABEL_CD))
+        # Depth struts in the air gap only (skříň diaphragm).
+        z_levels = [z0, z_top - d]
+        z = z0 + p.bass_hanger_z_inset
+        while z < z_top - d - 80.0:
+            z_levels.append(max(z0, z - d * 0.5))
+            z += p.bass_hanger_z_step
+        seen: set[float] = set()
+        for z_s in z_levels:
+            key = round(z_s, 1)
+            if key in seen:
+                continue
+            seen.add(key)
+            if z_s < z0 - 0.1 or z_s + d > z_top + 0.1:
+                continue
+            parts.append(_box(x0, y_strut0, z_s, p.cd_w, strut_dy, d, LABEL_CD))
+        # Short třmen arms: wall → rear CD only.
         z = z0 + p.bass_hanger_z_inset
         while z < z_top - 80.0:
             if toward_room > 0:
@@ -365,18 +414,16 @@ def _bass_trap_frame(
     return parts
 
 
-def _bass_trap_parts(p: ObyvakParams, g: ObyvakLayout, gap: float) -> tuple[list, list]:
-    """Detailed hybrid bass traps at both gables (sheets C/D).
+def _bass_trap_parts(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
+    """Bass traps at both gables — interior boxes under continuous šikminy.
 
-    Anchoring modelled as gable-only: short rear třmeny + CD box frame.
-    Top abuts the šikmina/false-ridge underside with FACE_GAP — no Nonius
-    through the acoustic slope pack into krokve.
-    Returns (visible parts, full-depth envelope cutters for attic wool).
+    Šikminy run full length to the gable; these assemblies sit in the room
+    against the štít from Z=2450 up to a soft joint under the NH face.
+    Frame is a closed CD/UW cabinet (rear + front + depth struts + rails).
     """
     outline = _predstena_outline(p, g, gap)
     face = xz_face(outline, "predstena")
     parts: list = []
-    envelopes: list = []
     bot_t = min(p.bass_bottom_sdk_t, p.bass_k_gkb) - gap * 0.5
     z_frame = p.predstena_bottom_z + gap + (bot_t + gap if bot_t > gap else 0.0)
 
@@ -394,7 +441,6 @@ def _bass_trap_parts(p: ObyvakParams, g: ObyvakLayout, gap: float) -> tuple[list
         k_wool = _extrude_y(face, y_k0, y_k_wool1, "vata")
     if y_k_gkb1 > y_k_gkb0:
         parts.append(_extrude_y(face, y_k_gkb0, y_k_gkb1, "sdk"))
-    # Bottom closed SDK ledge under the cavity only (not under the vertical GKB).
     if bot_t > gap and y_k_gkb0 > y_k0 + gap:
         parts.append(
             _box(
@@ -420,8 +466,7 @@ def _bass_trap_parts(p: ObyvakParams, g: ObyvakLayout, gap: float) -> tuple[list
         z_bot=z_frame,
     )
     if k_wool is not None:
-        steel_in_wool = [s for s in k_frame if s.bounding_box().min.Y < y_k_wool1]
-        tools = list(steel_in_wool)
+        tools = [s for s in k_frame if s.bounding_box().min.Y < y_k_wool1]
         if bot_t > gap:
             tools.append(
                 _box(
@@ -436,7 +481,6 @@ def _bass_trap_parts(p: ObyvakParams, g: ObyvakLayout, gap: float) -> tuple[list
             )
         parts.append(_cut_away(k_wool, tools, "vata") if tools else k_wool)
     parts.extend(k_frame)
-    envelopes.append(_extrude_y(face, y_k0, y_k_gkb1, "_bass_env"))
 
     # --- Living Y=L: GKB 12.5 → vzduch 137.5 → MW 300 → zeď ---
     y_l1 = p.room_length - gap
@@ -478,8 +522,7 @@ def _bass_trap_parts(p: ObyvakParams, g: ObyvakLayout, gap: float) -> tuple[list
         z_bot=z_frame,
     )
     if l_wool is not None:
-        steel_in_wool = [s for s in l_frame if s.bounding_box().max.Y > y_l_wool0]
-        tools = list(steel_in_wool)
+        tools = [s for s in l_frame if s.bounding_box().max.Y > y_l_wool0]
         if bot_t > gap:
             tools.append(
                 _box(
@@ -494,9 +537,8 @@ def _bass_trap_parts(p: ObyvakParams, g: ObyvakLayout, gap: float) -> tuple[list
             )
         parts.append(_cut_away(l_wool, tools, "vata") if tools else l_wool)
     parts.extend(l_frame)
-    envelopes.append(_extrude_y(face, y_l_gkb0, y_l1, "_bass_env"))
 
-    return parts, envelopes
+    return parts
 
 
 def _glass_panes(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
@@ -627,7 +669,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         roof_cutters,
         "krytina",
     )
-    # Vata is the attic fill: keep it inside the room and clear of předstěny later.
+    # Vata is the attic fill above the CD pack (full room length to gables).
     vata = _extrude_y(xz_face(vata_pts, "vata"), gap, p.room_length - gap, "vata")
 
     parts: list = list(structure)
@@ -635,9 +677,10 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     parts.extend(krov_parts)
     parts.extend([krytina, vata])
 
-    # --- Šikminy: complete acoustic / steel stack (soffit block unchanged below). ---
-    # Y-span matches the clear bay between předstěny (they own the gable ends).
-    y_ceil0, y_ceil1 = g.y_furn0 + gap, g.y_furn1 - gap
+    # --- Šikminy: complete acoustic / steel stack. ---
+    # Slope pack runs wall-to-wall to the gables; soffit bay stays between bass traps.
+    y_ceil0, y_ceil1 = gap, p.room_length - gap
+    y_soff0, y_soff1 = g.y_furn0 + gap, g.y_furn1 - gap
 
     def _add_band(pts: list[tuple[float, float]], label: str):
         band = _shrink_closed_band(pts, gap)
@@ -774,7 +817,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         (g.x_nh_inner - gap, g.z_gkf_horiz - gap),
         (g.x_nh_outer + gap, g.z_gkf_horiz - gap),
     ]
-    parts.append(_extrude_y(xz_face(soffit_nh, LABEL_NATURHELD), y_ceil0, y_ceil1, LABEL_NATURHELD))
+    parts.append(_extrude_y(xz_face(soffit_nh, LABEL_NATURHELD), y_soff0, y_soff1, LABEL_NATURHELD))
 
     # Soffit Flex: main box below Z_GKF + small pack under slope GKF to rost front.
     flex_box = [
@@ -783,7 +826,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         (p.room_width - gap, g.z_gkf_horiz - gap),
         (g.x_nh_inner + gap, g.z_gkf_horiz - gap),
     ]
-    flex_solid = _extrude_y(xz_face(flex_box, LABEL_FLEX), y_ceil0, y_ceil1, LABEL_FLEX)
+    flex_solid = _extrude_y(xz_face(flex_box, LABEL_FLEX), y_soff0, y_soff1, LABEL_FLEX)
     t_sdk0 = g.t_nh_face + g.t_flex_pack
     xb = g.x_sdk_break
     x_vert = xb - p.sdk_t
@@ -797,7 +840,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
             (x_vert - gap, z_vert_top - gap),
             (g.x_furn + gap, z_fu - gap),
         ]
-        wedge_solid = _extrude_y(xz_face(flex_wedge, LABEL_FLEX), y_ceil0, y_ceil1, LABEL_FLEX)
+        wedge_solid = _extrude_y(xz_face(flex_wedge, LABEL_FLEX), y_soff0, y_soff1, LABEL_FLEX)
         try:
             flex_solid = _paint(flex_solid.fuse(wedge_solid), LABEL_FLEX)
         except Exception:
@@ -817,7 +860,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
                 (xb - gap, z_top_attic - gap),
                 (x_vert + gap, z_top_room - gap),
             ]
-            vert_solid = _extrude_y(xz_face(vert, "sdk"), y_ceil0, y_ceil1, "sdk")
+            vert_solid = _extrude_y(xz_face(vert, "sdk"), y_soff0, y_soff1, "sdk")
         # Lid extends past the front CD to the room face of the vertical return.
         x_lid0 = xb - p.sdk_t
         lid = [
@@ -826,16 +869,16 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
             (p.room_width - gap, g.z_gkf_horiz + p.sdk_t - gap),
             (x_lid0 + gap, g.z_gkf_horiz + p.sdk_t - gap),
         ]
-        lid_solid = _extrude_y(xz_face(lid, "sdk"), y_ceil0, y_ceil1, "sdk")
+        lid_solid = _extrude_y(xz_face(lid, "sdk"), y_soff0, y_soff1, "sdk")
 
     # Horizontal CD on the lid (first flush with rost front) + wall UD.
     horiz_cd_parts: list = []
     for xc in g.horiz_cd_x_stations():
         horiz_cd_parts.append(
-            _extrude_y(xz_face(g.horiz_cd_quad(xc), LABEL_CD), y_ceil0, y_ceil1, LABEL_CD)
+            _extrude_y(xz_face(g.horiz_cd_quad(xc), LABEL_CD), y_soff0, y_soff1, LABEL_CD)
         )
     horiz_cd_parts.append(
-        _extrude_y(xz_face(g.horiz_wall_ud_pts(), LABEL_CD), y_ceil0, y_ceil1, LABEL_CD)
+        _extrude_y(xz_face(g.horiz_wall_ud_pts(), LABEL_CD), y_soff0, y_soff1, LABEL_CD)
     )
     parts.extend(horiz_cd_parts)
 
@@ -880,7 +923,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     bracket_parts: list = []
     if face_h > fm + gap and x_wall - (x_front + fm) > gap:
         cd_xs = g.horiz_cd_x_stations()
-        for yc in g.sikmina_rost_y_stations(y_ceil0, y_ceil1):
+        for yc in g.sikmina_rost_y_stations(y_soff0, y_soff1):
             ya, yb = yc - half_w, yc + half_w
             if yb <= ya:
                 continue
@@ -966,19 +1009,9 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         _box(g.x_furn, furn_y0, 0.0, furn_w, furn_y1 - furn_y0, p.furniture_height, "nabytek")
     )
 
-    # --- Bass traps (detail C/D): layered MW + air + GKB + CD + short třmeny. ---
-    # Gable-only hang: rear wall fixings carry the box; top soft-joints to šikmina.
-    bass_parts, bass_envs = _bass_trap_parts(p, g, gap)
-    parts.extend(bass_parts)
-
-    # Attic wool stops at the předstěny (they own that bay).
-    for i, part in enumerate(parts):
-        if part.label != "vata":
-            continue
-        bb = part.bounding_box()
-        if bb.size.Y > p.room_length * 0.5:
-            parts[i] = _cut_away(part, bass_envs, "vata")
-            break
+    # --- Bass traps (detail C/D): interior cabinets under continuous šikminy. ---
+    # Gable-only hang; top soft-joints to NH face — pack itself is not interrupted.
+    parts.extend(_bass_trap_parts(p, g, gap))
 
     parts.extend(_gable_sdk_and_pouzdra(p, g, gap))
     return parts
