@@ -580,11 +580,45 @@ export function createDepthPeelRenderer(renderer) {
    * @param {THREE.Camera} camera
    * @param {THREE.Object3D | null} root
    */
+  /**
+   * Callouts live on the scene, not the GLB root. Hide them for the colour and
+   * edge passes, then draw them once so leaders sit on top of CAD edges and
+   * are not composited twice.
+   * @param {THREE.Scene} scene
+   */
+  function annotationNodes(scene) {
+    return scene.children.filter((child) => child.userData?.blueprintAnnotations);
+  }
+
+  /**
+   * @param {THREE.Object3D[]} nodes
+   */
+  function setNodesVisible(nodes, visible) {
+    for (const node of nodes) node.visible = visible;
+  }
+
+  /**
+   * @param {THREE.Scene} scene
+   * @param {THREE.Camera} camera
+   * @param {THREE.Object3D | null} root
+   */
+  function renderAnnotations(scene, camera, root) {
+    if (!annotationNodes(scene).some((node) => node.visible)) return;
+    renderOverlays(scene, camera, root);
+  }
+
   function renderFacesThenEdges(scene, camera, root) {
     setEdgeOverlaysVisible(root, false);
+    const notes = annotationNodes(scene);
+    const prevNotes = notes.map((node) => node.visible);
+    setNodesVisible(notes, false);
     renderer.setRenderTarget(null);
     renderer.render(scene, camera);
     renderEdgeOverlayPass(renderer, scene, camera, root);
+    notes.forEach((node, i) => {
+      node.visible = prevNotes[i];
+    });
+    renderAnnotations(scene, camera, root);
   }
 
   /**
@@ -970,9 +1004,15 @@ export function createDepthPeelRenderer(renderer) {
     renderer.autoClear = true;
     renderer.render(compositeScene, compositeCamera);
 
-    // CAD edges (incl. faded parts) + gizmos on top of the composite.
+    // CAD edges, then callouts on top (not baked into the peel composite).
+    const notes = annotationNodes(scene);
+    const prevNotes = notes.map((node) => node.visible);
+    setNodesVisible(notes, false);
     renderEdgeOverlayPass(renderer, scene, camera, root);
-    renderOverlays(scene, camera, root);
+    notes.forEach((node, i) => {
+      node.visible = prevNotes[i];
+    });
+    renderAnnotations(scene, camera, root);
     renderer.autoClear = prevAutoClear;
     return true;
   }

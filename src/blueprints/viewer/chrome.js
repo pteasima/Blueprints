@@ -79,7 +79,7 @@ canvas {
   right: calc(var(--safe-r) + var(--chrome-pad));
   display: flex;
   gap: 8px;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   pointer-events: none;
 }
@@ -91,6 +91,14 @@ canvas {
   align-items: center;
   pointer-events: none;
 }
+
+.top-chrome-start {
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.top-chrome-end { flex: 0 0 auto; }
 
 .top-chrome-start > *,
 .top-chrome-end > * { pointer-events: auto; }
@@ -137,7 +145,17 @@ canvas {
   letter-spacing: -0.02em;
 }
 #ar:not([hidden]),
-#measure:not([hidden]) { min-width: auto; }
+#measure:not([hidden]),
+#labels:not([hidden]),
+#drawing:not([hidden]) { min-width: auto; }
+
+@media (max-width: 720px) {
+  .chrome-btn {
+    height: 2.25rem;
+    padding: 0 0.65rem;
+    font-size: 0.82rem;
+  }
+}
 
 .measure-crosshair {
   position: fixed;
@@ -394,6 +412,37 @@ canvas {
 
 .seg button.is-active,
 .seg button:active {
+  background: var(--glass-strong);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.scene-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 0.55rem;
+}
+
+.scene-list button {
+  appearance: none;
+  flex: 0 1 auto;
+  max-width: 100%;
+  margin: 0;
+  padding: 0.5rem 0.7rem;
+  border: 0;
+  border-radius: 10px;
+  background: var(--fill);
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+  cursor: pointer;
+}
+
+.scene-list button.is-active,
+.scene-list button:active {
   background: var(--glass-strong);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
 }

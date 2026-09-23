@@ -44,6 +44,8 @@ import {
 } from "./edges.js";
 import { createDepthPeelRenderer } from "./depthPeel.js";
 import { createMeasureTool } from "./measure.js";
+import { cadMmToGltf, createAnnotations } from "./annotations.js";
+import { DRAW_H, DRAW_W, downloadBlob, plateFromCanvas } from "./drawing.js";
 
 /** Query param for a named custom scene (`?m=<id>&scene=<sceneId>`). */
 const SCENE_QUERY = "scene";
@@ -144,6 +146,9 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     canvas,
     antialias: true,
     alpha: false,
+    // Drawing capture reads the canvas after the frame; without this the
+    // buffer is cleared before toBlob and the plate is blank.
+    preserveDrawingBuffer: true,
     // Room-scale models in metres need better depth precision than a fixed
     // 24-bit buffer — coplanar CAD faces otherwise flicker while orbiting.
     logarithmicDepthBuffer: true,
@@ -182,6 +187,19 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   const controls = new OrbitControls(camera, canvas);
   controls.enableDamping = false;
   controls.screenSpacePanning = true;
+
+  const annotations = createAnnotations({
+    scene,
+    getCamera: () => camera,
+    getCanvas: () => canvas,
+    getLocale,
+    getVisibleWidthM: () => {
+      if (!camera.isOrthographicCamera) return null;
+      const zoom = Math.max(camera.zoom, 1e-6);
+      return (camera.right - camera.left) / zoom;
+    },
+    getTarget: () => controls.target,
+  });
 
   /** @type {ReturnType<typeof createCooperativeRange> | null} */
   let fovRange = null;
@@ -270,6 +288,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       chromeApi?.refreshPartialHeight();
       showArButton();
       showMeasureButton();
+      syncDrawingButton();
+      syncLabelButton();
     },
     (err) => {
       fail(String(err?.message || err));
@@ -629,6 +649,10 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
 
   function setCameraPreset(name) {
     if (!root) return;
+    activeSceneSpec = null;
+    annotations.clear();
+    syncDrawingButton();
+    syncLabelButton();
     // Builtin presets assume default world-up (Three Y).
     perspCamera.up.set(0, 1, 0);
     orthoCamera.up.set(0, 1, 0);
@@ -666,6 +690,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
    */
   function applyScene(spec) {
     if (!root || !spec) return;
+    activeSceneSpec = spec;
 
     const hasOpacity =
       spec.opacityDefault != null ||
@@ -699,11 +724,20 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         );
         if (normal.lengthSq() < 1e-12) continue;
         normal.normalize();
-        const cutT = Math.min(1, Math.max(0, Number(c.t) || 0));
+        /** @type {THREE.Vector3 | null} */
+        let anchor = null;
+        let cutT = Math.min(1, Math.max(0, Number(c.t) || 0));
+        if (Array.isArray(c.anchor) && c.anchor.length >= 3) {
+          anchor = cadMmToGltf(c.anchor);
+          const { near, far } = projectBoxOntoNormal(normal);
+          const s = anchor.dot(normal);
+          cutT = Math.min(1, Math.max(0, (s - near) / Math.max(far - near, 1e-6)));
+        }
         cuts.push({
           id: nextCutId++,
           normal,
           t: cutT,
+          anchor,
           locked: true,
           label: formatAngleLabel(normal),
         });
@@ -769,6 +803,9 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     }
 
     maybeSpawnDraftFromCamera();
+    annotations.setSpec(spec);
+    syncDrawingButton();
+    syncLabelButton();
   }
 
   /**
@@ -1203,6 +1240,11 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
 
   /** @type {string | null} */
   let activeCameraPreset = "iso";
+  /** Last custom scene, kept across orbit so Drawing can restore its camera. */
+  /** @type {object | null} */
+  let activeSceneSpec = null;
+  /** While true, the animation loop does not render (drawing capture). */
+  let pauseTick = false;
 
   /**
    * @param {string} sceneId
@@ -1227,23 +1269,40 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     }
   }
 
+  function viewButtons() {
+    return document.querySelectorAll("#cams button, #scenes button");
+  }
+
   function clearCameraPresetHighlight() {
     if (activeCameraPreset == null) return;
     activeCameraPreset = null;
-    const host = document.getElementById("cams");
-    host?.querySelectorAll("button").forEach((el) => {
+    viewButtons().forEach((el) => {
       el.classList.remove("is-active");
     });
     syncSceneUrl();
+  }
+
+  function sceneButtonHost() {
+    let host = document.getElementById("scenes");
+    if (!host) {
+      const cams = document.getElementById("cams");
+      host = document.createElement("div");
+      host.id = "scenes";
+      host.className = "scene-list";
+      cams?.insertAdjacentElement("afterend", host);
+    }
+    return host;
   }
 
   function buildCameraButtons() {
     const host = document.getElementById("cams");
     if (!host) return;
     host.replaceChildren();
+    const scenesHost = sceneButtonHost();
+    scenesHost.replaceChildren();
 
-    /** @param {string} id @param {string} label @param {() => void} onClick */
-    function addBtn(id, label, onClick) {
+    /** @param {HTMLElement} parent @param {string} id @param {string} label @param {() => void} onClick */
+    function addBtn(parent, id, label, onClick) {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.dataset.preset = id;
@@ -1251,13 +1310,13 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       if (id === activeCameraPreset) btn.classList.add("is-active");
       btn.addEventListener("click", () => {
         activeCameraPreset = id;
-        host.querySelectorAll("button").forEach((el) => {
+        viewButtons().forEach((el) => {
           el.classList.toggle("is-active", el.dataset.preset === id);
         });
         onClick();
         syncSceneUrl();
       });
-      host.append(btn);
+      parent.append(btn);
     }
 
     for (const [id, labelKey] of [
@@ -1266,14 +1325,15 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       ["side", "ui.side"],
       ["top", "ui.top"],
     ]) {
-      addBtn(id, tr(labelKey), () => setCameraPreset(id));
+      addBtn(host, id, tr(labelKey), () => setCameraPreset(id));
     }
     for (const spec of customScenes) {
       const id = String(spec?.id || "").trim();
       if (!id) continue;
       const label = tr(`scene.${id}`);
-      addBtn(`scene:${id}`, label, () => applyScene(spec));
+      addBtn(scenesHost, `scene:${id}`, label, () => applyScene(spec));
     }
+    scenesHost.hidden = scenesHost.childElementCount === 0;
   }
 
   function lookDirection(out = _look) {
@@ -1367,6 +1427,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     if (!cut) return;
     if (!cut.locked) lockCut(cut);
     cut.t = Math.min(1, Math.max(0, Number(cutT)));
+    cut.anchor = null;
     applyClipping();
   }
 
@@ -1410,6 +1471,9 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   }
 
   function planeForCut(cut) {
+    if (cut.anchor) {
+      return new THREE.Plane().setFromNormalAndCoplanarPoint(cut.normal, cut.anchor);
+    }
     const { near, far } = projectBoxOntoNormal(cut.normal);
     const s = near + (far - near) * cut.t;
     _point.copy(cut.normal).multiplyScalar(s);
@@ -1670,6 +1734,9 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     applyStaticI18n(document);
     if (arBtn && !arBusy) arBtn.textContent = tr("ui.ar");
     if (measureBtn) measureBtn.textContent = MEASURE_LABEL();
+    syncDrawingButton();
+    syncLabelButton();
+    annotations.relocalize();
     try {
       buildMaterialToggle();
       buildEdgesToggle();
@@ -1704,6 +1771,135 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       measureBtn.hidden = false;
       measureBtn.textContent = MEASURE_LABEL();
     }
+  }
+
+  const drawBtn = document.getElementById("drawing");
+  const labelBtn = document.getElementById("labels");
+  let labelsOn = true;
+
+  function syncDrawingButton() {
+    if (!drawBtn) return;
+    drawBtn.hidden = false;
+    drawBtn.disabled = !activeSceneSpec || drawBusy;
+    drawBtn.textContent = tr("ui.drawing");
+  }
+
+  function syncLabelButton() {
+    if (!labelBtn) return;
+    const has = Boolean(activeSceneSpec);
+    labelBtn.hidden = !has;
+    labelBtn.disabled = !has;
+    labelBtn.setAttribute("aria-pressed", labelsOn ? "true" : "false");
+    labelBtn.classList.toggle("is-active", has && labelsOn);
+    labelBtn.textContent = tr("ui.labels");
+  }
+
+  function modelFileId() {
+    try {
+      const id = new URLSearchParams(window.location.search).get("m");
+      if (id && id.trim()) return id.trim();
+    } catch {
+      /* ignore */
+    }
+    return "model";
+  }
+
+  /**
+   * Zero the sheet's view offset so the plate is the full orthographic frame.
+   */
+  function lockPlateFrame() {
+    frameAnim = 0;
+    frameZoom = 1;
+    frameOffX = 0;
+    frameOffY = 0;
+    frameZoomT = 1;
+    frameOffXT = 0;
+    frameOffYT = 0;
+    camera.clearViewOffset();
+    camera.zoom = viewZoom;
+    camera.updateProjectionMatrix();
+  }
+
+  let drawBusy = false;
+
+  async function captureDrawing() {
+    if (drawBusy || !root || !activeSceneSpec) return null;
+    drawBusy = true;
+    syncDrawingButton();
+    pauseTick = true;
+    const spec = activeSceneSpec;
+    const prevEdge = edgeMode;
+    const prevBg = scene.background;
+    const prevRatio = renderer.getPixelRatio();
+    const prevStyleW = canvas.style.width;
+    const prevStyleH = canvas.style.height;
+    const prevDetent = chromeApi?.getDetent?.() ?? null;
+    const measureWas = measureTool?.isActive() ?? false;
+    const labelsWere = annotations.isVisible();
+    try {
+      if (measureWas) measureTool?.setActive(false);
+      annotations.setVisible(true);
+      chromeApi?.setDetent("closed");
+      canvas.style.width = `${DRAW_W}px`;
+      canvas.style.height = `${DRAW_H}px`;
+      renderer.setPixelRatio(1);
+      resize();
+      lockPlateFrame();
+      edgeMode = EDGE_MODE_OPAQUE;
+      refreshEdges();
+      scene.background = new THREE.Color(0xffffff);
+      annotations.setInk("plate");
+      applyScene(spec);
+      lockPlateFrame();
+      annotations.update();
+      depthPeel.render(scene, camera, root, anyPartFaded, { quality: "high" });
+      const { png, pdf } = await plateFromCanvas(canvas);
+      const stem = `${modelFileId()}_${String(spec.id || "scene")}`;
+      return { png, pdf, stem };
+    } finally {
+      canvas.style.width = prevStyleW;
+      canvas.style.height = prevStyleH;
+      renderer.setPixelRatio(prevRatio);
+      edgeMode = prevEdge;
+      scene.background = prevBg;
+      annotations.setInk("viewer");
+      annotations.setVisible(labelsWere);
+      if (prevDetent) chromeApi?.setDetent(prevDetent);
+      resize();
+      refreshEdges();
+      if (spec) applyScene(spec);
+      if (measureWas) measureTool?.setActive(true);
+      pauseTick = false;
+      drawBusy = false;
+      syncDrawingButton();
+      syncLabelButton();
+      requestAnimationFrame(tick);
+    }
+  }
+
+  window.blueprintCaptureDrawing = async () => {
+    const plate = await captureDrawing();
+    if (!plate) return null;
+    return { png: plate.png, pdf: plate.pdf, stem: plate.stem };
+  };
+
+  if (labelBtn) {
+    labelBtn.addEventListener("click", () => {
+      labelsOn = !labelsOn;
+      annotations.setVisible(labelsOn);
+      syncLabelButton();
+    });
+  }
+
+  if (drawBtn) {
+    drawBtn.addEventListener("click", () => {
+      void (async () => {
+        const plate = await captureDrawing();
+        if (!plate) return;
+        downloadBlob(plate.png, `${plate.stem}.png`);
+        downloadBlob(plate.pdf, `${plate.stem}.pdf`);
+      })();
+    });
   }
 
   /** @type {ReturnType<typeof createMeasureTool> | null} */
@@ -1873,12 +2069,14 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   let prevUsedPeel = false;
 
   function tick() {
+    if (pauseTick) return;
     const now = performance.now();
     stepFrameAnim(now);
     controls.update();
     // Keep near/far tight as orbit distance changes.
     if (root) updateCameraClipPlanes();
     measureTool?.update();
+    annotations.update();
 
     // Fast while pointer-down or camera moving; high ~10ms after last move.
     // Settled path matches main-branch peels (full-res, 12 layers, no early-out).

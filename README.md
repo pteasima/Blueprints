@@ -2,7 +2,7 @@
 
 Parametric 2D/3D house and furniture models in Python, using [build123d](https://github.com/gumyr/build123d) (Open CASCADE).
 
-This repo is meant for Cursor agent workflows: edit parameters, regenerate geometry, export STEP/STL/SVG/DXF/PNG previews, and review diffs + screenshots from the Cursor iOS app or desktop. Agent operating notes (always attach PNG previews, Cloud Agent bootstrap) live in [`AGENTS.md`](AGENTS.md).
+This repo is meant for Cursor agent workflows: edit parameters, regenerate geometry, export STEP/STL and viewer drawings, and review diffs + screenshots from the Cursor iOS app or desktop. Agent operating notes (always attach PNG previews, Cloud Agent bootstrap) live in [`AGENTS.md`](AGENTS.md).
 
 ## Why build123d (vs plain ezdxf)
 
@@ -23,7 +23,7 @@ source .venv/bin/activate
 python -m blueprints.export hello_world
 ```
 
-Generated artifacts: `STEP`/`STL` (desktop CAD), `USDZ`/`GLB` (Git LFS under `docs/models/`), `SVG`/`DXF`, and a white-background `PNG` preview. GitHub Actions builds `docs/index.html` (web-viewer hub) and deploys production at https://pteasima.github.io/Blueprints/ plus per-PR previews under `/pr-preview/pr-<N>/` (see `AGENTS.md` / `docs/README.md`).
+Generated artifacts: `STEP`/`STL` (desktop CAD), `USDZ`/`GLB` (Git LFS under `docs/models/`). 2D sections still write `SVG`/`DXF`/`PNG`. Labelled 3D plates are PNG/PDF from the viewer Drawing button. GitHub Actions builds `docs/index.html` (web-viewer hub) and deploys production at https://pteasima.github.io/Blueprints/ plus per-PR previews under `/pr-preview/pr-<N>/` (see `AGENTS.md` / `docs/README.md`).
 
 ## Layout
 

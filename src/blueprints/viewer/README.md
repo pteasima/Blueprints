@@ -17,8 +17,12 @@ Custom offline viewer shell (not a third-party app). Three.js is bundled only as
 - Partial sheet (phone) / open side sheet (wide) shifts the camera view offset so the model stays centered in the visible safe area above/beside the sheet; peek, closed, and full clear the offset.
 - **AR**: generates a USDZ in-browser from the current visible geometry (hidden parts omitted, section cuts baked into mesh) and opens Quick Look. No server round-trip. GLB is already metres (glTF); models larger than 2 m are scaled to a ~0.45 m tabletop and lifted slightly above the plane for indoor AR. Quick Look transparency sorting may be weaker than the web depth-peel path.
 - **Measure (experimental):** top-bar tool next to AR. AutoCAD-style place/confirm (trackpad: crosshair on enable; touch: drag with finger-offset cursor, tap-anywhere confirms without re-picking). Mesh snaps (vertex / edge / face) plus perpendicular width snap between parallel edges on a face. **Not a finished contract** — UX and snap behavior will keep changing; do not treat current behavior as gospel when extending the viewer.
+- **Scene drawings:** a custom scene may carry `title`, `project`, and `annotations` (callouts and dimensions). Anchors are CAD millimetres. Callout `offset` is a fraction of the view; dimension `offset` is a fraction of the view height, to one side of the measured line. Text is `{en, cs}` and follows the language toggle. Labels are small haloed notes (no chip), sized from the view, and not part of the GLB. **Labels** on the top bar hides and shows them. Builtin Iso/Front/Side/Top clears them; orbiting keeps them on their anchors. A cut may pass through an `anchor` (CAD mm) instead of a bbox-relative `t`.
+- **Drawing** (top bar): active custom scene only. Re-applies that scene’s camera, renders an A3 landscape plate (white background, opaque edges, labels on even if the view has them hidden), and downloads PNG and PDF. `window.blueprintCaptureDrawing()` returns `{png, pdf, stem}` for a headless capture.
 
-## Rebuild the IIFE (after editing `main.js` / `chrome.js` / `coopRange.js` / `materials.js` / `depthPeel.js` / `edges.js`)
+View buttons: Iso / Front / Side / Top stay one segmented control. Custom scenes are separate wrapping buttons underneath.
+
+## Rebuild the IIFE (after editing `main.js` / `chrome.js` / `coopRange.js` / `materials.js` / `depthPeel.js` / `edges.js` / `annotations.js` / `drawing.js`)
 
 ```bash
 cd src/blueprints/viewer

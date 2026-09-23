@@ -32,7 +32,7 @@ def test_export_publishes_usdz_to_artifacts(tmp_path, monkeypatch):
     monkeypatch.setenv("BLUEPRINTS_SKIP_PREVIEW_SITE", "1")
 
     shape, _ = build(HelloWorldParams(width=50, depth=40, height=20, fillet_radius=2))
-    paths = export_shape(shape, "hello_world", formats=("step", "stl", "svg", "dxf"))
+    paths = export_shape(shape, "hello_world", formats=("step", "stl"))
 
     assert paths["usdz"].exists()
     assert paths["glb"].exists()
@@ -225,12 +225,11 @@ def test_obyvak_usdz_has_layer_materials(tmp_path, monkeypatch):
 
     expected = {
         "eps": (70 / 255, 230 / 255, 25 / 255),
-        "zdivo": (225 / 255, 70 / 255, 40 / 255),
-        "krov": (200 / 255, 85 / 255, 10 / 255),
-        "predstena": (0 / 255, 195 / 255, 245 / 255),
-        "krytina": (235 / 255, 15 / 255, 15 / 255),  # stroke used when fill is None
-        "vata": (0 / 255, 210 / 255, 155 / 255),
-        "nabytek": (255 / 255, 150 / 255, 0 / 255),
+        "masonry": (225 / 255, 70 / 255, 40 / 255),
+        "rafters": (200 / 255, 85 / 255, 10 / 255),
+        "roofing": (235 / 255, 15 / 255, 15 / 255),  # stroke used when fill is None
+        "plenum_wool": (0 / 255, 210 / 255, 155 / 255),
+        "furniture": (255 / 255, 150 / 255, 0 / 255),
     }
     for name, rgb in expected.items():
         mesh_prim = stage.GetPrimAtPath(f"/Model/Geom/{name}")

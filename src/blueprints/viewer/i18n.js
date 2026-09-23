@@ -110,8 +110,12 @@ const UI_EN = {
   "ui.hideControls": "Hide controls",
   "ui.showControls": "Show controls",
   "ui.dragSheet": "Drag controls sheet",
+  "ui.drawing": "Drawing",
+  "ui.labels": "Labels",
   "scene.soffit": "Soffit",
   "scene.gable": "Gable",
+  "scene.sikmina-lattice": "Šikmina lattice",
+  "scene.sikmina-section": "Šikmina section",
 };
 
 const UI_CS = {
@@ -139,8 +143,12 @@ const UI_CS = {
   "ui.hideControls": "Skrýt ovládání",
   "ui.showControls": "Zobrazit ovládání",
   "ui.dragSheet": "Přetáhnout panel",
+  "ui.drawing": "Výkres",
+  "ui.labels": "Popisky",
   "scene.soffit": "Podhled",
   "scene.gable": "Štít",
+  "scene.sikmina-lattice": "Šikmina — rošt",
+  "scene.sikmina-section": "Šikmina — řez",
 };
 
 /** @type {Record<Locale, Record<string, string>>} */

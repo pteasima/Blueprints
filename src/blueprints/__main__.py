@@ -54,28 +54,6 @@ def main(argv: list[str] | None = None) -> int:
             shape, model_name, scenes=scenes, part_groups=part_groups
         )
 
-    extra_fn = getattr(mod, "extra_exports", None)
-    if extra_fn is not None:
-        for stem, extra_shape, extra_kind in extra_fn():
-            if extra_kind == "section":
-                extra = export_section(extra_shape, model_name, stem=stem)
-            else:
-                extra = export_shape(
-                    extra_shape,
-                    model_name,
-                    stem=stem,
-                    formats=("step", "stl", "svg", "dxf", "png"),
-                )
-            paths.update({f"{stem}_{k}": v for k, v in extra.items()})
-    elif hasattr(mod, "build_preview"):
-        preview, _ = mod.build_preview()
-        extra = export_shape(
-            preview,
-            model_name,
-            stem="cutaway",
-            formats=("step", "stl", "svg", "dxf", "png"),
-        )
-        paths.update({f"cutaway_{k}": v for k, v in extra.items()})
     params = meta.get("derived") or getattr(mod, "PARAMS", meta.get("params", {}))
     print(f"Built {model_name}: {summarize_params(params) if params else '(no params)'}")
     for fmt, path in paths.items():

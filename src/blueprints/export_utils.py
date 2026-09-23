@@ -20,7 +20,6 @@ from build123d import (
     LineType,
     Shape,
     Unit,
-    Vector,
     export_gltf,
     export_step,
     export_stl,
@@ -33,7 +32,6 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 EXPORTS_DIR = REPO_ROOT / "exports"
 VIEWER_DIR = Path(__file__).resolve().parent / "viewer"
 VIEWER_IIFE_PATH = VIEWER_DIR / "viewer.iife.js"
-PREVIEW_LINE_WEIGHT = 1.0
 
 # Drawing-unit stroke widths so a ~6 m section still reads at ~1800 px PNG.
 SECTION_LINE_WEIGHT = 12.0
@@ -342,47 +340,10 @@ def _shape_span(shape: Shape | Compound) -> float:
     return max(size.X, size.Y, size.Z)
 
 
-def _preview_line_weight(shape: Shape | Compound) -> float:
-    """1 mm strokes vanish on an 11 m isometric; use section weights for large models."""
-    if _shape_span(shape) > 2000:
-        return SECTION_LINE_WEIGHT
-    return PREVIEW_LINE_WEIGHT
-
-
-def _preview_png_width(shape: Shape | Compound) -> int:
-    if _shape_span(shape) > 2000:
-        return SECTION_PNG_WIDTH
-    return 1400
-
-
 def _stl_tolerance(shape: Shape | Compound) -> float:
     if _shape_span(shape) > 2000:
         return 2.0
     return 1e-3
-
-
-def _viewport_edges(shape: Shape | Compound):
-    """Isometric-ish visible edges; camera sits outside the bbox (orthographic)."""
-    bb = shape.bounding_box()
-    center = bb.center()
-    direction = Vector(-1.2, -1.5, 1.0).normalized()
-    origin = center + direction * (bb.diagonal * 1.5)
-    visible, _hidden = shape.project_to_viewport(origin, look_at=center)
-    return visible
-
-
-def _write_svg(edges, path: Path, *, line_weight: float = PREVIEW_LINE_WEIGHT) -> None:
-    exporter = ExportSVG(scale=1.0, line_weight=line_weight)
-    exporter.add_layer("visible", line_weight=line_weight)
-    exporter.add_shape(edges, layer="visible")
-    exporter.write(path)
-
-
-def _write_dxf(edges, path: Path) -> None:
-    exporter = ExportDXF()
-    exporter.add_layer("visible")
-    exporter.add_shape(edges, layer="visible")
-    exporter.write(path)
 
 
 def _write_png(svg_path: Path, png_path: Path, *, width: int = 1400) -> None:
@@ -403,16 +364,17 @@ def export_shape(
     model_name: str,
     *,
     stem: str = "model",
-    formats: tuple[str, ...] = ("step", "stl", "svg", "dxf", "png"),
+    formats: tuple[str, ...] = ("step", "stl"),
     scenes: list | None = None,
     part_groups: list | None = None,
 ) -> dict[str, Path]:
-    """Export a build123d shape to common formats under exports/<model_name>/."""
+    """Export a solid under exports/<model_name>/.
+
+    STEP and STL only. SVG/DXF/PNG plates come from the viewer drawing
+    export (named scenes) or from ``export_section`` for 2D sheets.
+    """
     out_dir = ensure_export_dir(model_name)
     written: dict[str, Path] = {}
-    edges = None
-    line_weight = _preview_line_weight(shape)
-    png_width = _preview_png_width(shape)
 
     for fmt in formats:
         path = out_dir / f"{stem}.{fmt}"
@@ -421,18 +383,10 @@ def export_shape(
         elif fmt == "stl":
             export_stl(shape, path, tolerance=_stl_tolerance(shape))
         elif fmt in {"svg", "dxf", "png"}:
-            if edges is None:
-                edges = _viewport_edges(shape)
-            if fmt == "svg":
-                _write_svg(edges, path, line_weight=line_weight)
-            elif fmt == "dxf":
-                _write_dxf(edges, path)
-            else:
-                svg_path = written.get("svg") or (out_dir / f"{stem}.svg")
-                if "svg" not in written:
-                    _write_svg(edges, svg_path, line_weight=line_weight)
-                    written["svg"] = svg_path
-                _write_png(svg_path, path, width=png_width)
+            raise ValueError(
+                "Solid models do not export SVG, DXF, or PNG. "
+                "Use the viewer Drawing button, or export_section for a 2D sheet."
+            )
         else:
             raise ValueError(f"Unsupported export format: {fmt}")
         written[fmt] = path
@@ -949,6 +903,8 @@ _VIEWER_HTML = """<!DOCTYPE html>
 <nav id="top-chrome" class="top-chrome" aria-label="Viewer">
   <div class="top-chrome-start">
     <button type="button" id="ar" class="chrome-btn" hidden>AR</button>
+    <button type="button" id="labels" class="chrome-btn" hidden aria-pressed="true">Labels</button>
+    <button type="button" id="drawing" class="chrome-btn" hidden disabled>Drawing</button>
   </div>
   <div class="top-chrome-end">
     <button type="button" id="sheet-toggle" class="chrome-btn sheet-toggle" aria-expanded="true" aria-label="Hide controls" title="Hide controls">›</button>
@@ -960,6 +916,7 @@ _VIEWER_HTML = """<!DOCTYPE html>
     <section class="sheet-section" id="section-view">
       <h2 class="sheet-title" data-i18n="ui.view">View</h2>
       <div id="cams" class="seg"></div>
+      <div id="scenes" class="scene-list" hidden></div>
       <div id="fov" class="fov"></div>
     </section>
     <section class="sheet-section" id="section-cuts">
