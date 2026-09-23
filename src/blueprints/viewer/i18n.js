@@ -116,8 +116,8 @@ const UI_EN = {
   "ui.labels": "Labels",
   "scene.soffit": "Soffit",
   "scene.gable": "Gable",
-  "scene.sikmina-lattice": "Šikmina lattice",
-  "scene.sikmina-section": "Šikmina section",
+  "scene.sikmina-lattice": "Slopes lattice",
+  "scene.sikmina-section": "Slopes section",
 };
 
 const UI_CS = {

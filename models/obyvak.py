@@ -1352,7 +1352,7 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     lat_target = on_face(0.28 * g.x_false, y_mid, t_rost)
     lattice = {
         "id": "sikmina-lattice",
-        "title": _tx("Šikmina — lattice", "Šikmina — rošt"),
+        "title": _tx("Slopes — lattice", "Šikmina — rošt"),
         "project": "Obývák 1.02",
         "camera": _ortho_pose(
             lat_target,
@@ -1369,13 +1369,17 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
         ],
         "opacity": {
             LABEL_SLOPE_BATTENS: 1,
-            LABEL_SLOPE_FLEX: 1,
             LABEL_SLOPE_CD: 1,
             LABEL_SLOPE_DIRECT: 1,
             LABEL_SLOPE_NONIUS: 1,
             LABEL_RAFTERS: 1,
             LABEL_RACKING_STRAP: 1,
             LABEL_WALL_PLATE: 1,
+            # Head-on, the NaturHeld face covers the whole grid, so it stays
+            # off. Flex and the foil+GKF board are the same ghosts as the
+            # section, light enough that the battens and CD stay the picture.
+            LABEL_SLOPE_FLEX: 0.18,
+            LABEL_SLOPE_GKF: 0.35,
         },
         "opacityDefault": 0,
         "annotations": [
@@ -1425,10 +1429,11 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     # The soffit is in the picture with no callouts (its own plate comes later).
     y_note = y_near + 30.0
     x_right = g.x_false + 0.62 * (g.x_furn - g.x_false)
-    # Wool the contractor is adding. Each cut face is its own layer, so
-    # a sliced solid stacks two (sometimes four) of these. 0.18 keeps the
-    # tint light enough that latě, CD, and hangers stay readable on the plate.
+    # Each cut face is its own layer, so a sliced solid stacks two of these.
+    # Wool stays the lighter tint. Foil is the 1 mm in the GKF solid, so the
+    # board is ghosted a step darker and the wood, CD, and hangers stay solid.
     wool = 0.18
+    board = 0.35
     frame_x0 = g.left_eave - 80.0
     frame_x1 = g.right_eave + 80.0
     frame_z0 = g.z_nabeh_bot - 180.0
@@ -1438,7 +1443,7 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     section = {
         "id": "sikmina-section",
         "title": _tx(
-            "Šikmina — section\nperpendicular to the rafters",
+            "Slopes — section\nperpendicular to the rafters",
             "Šikmina — řez\nkolmo na krokve",
         ),
         "project": "Obývák 1.02",
@@ -1459,21 +1464,27 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
             _cut((0.0, 0.0, 1.0), (0.5 * g.x_false, y_far, g.h_start)),
         ],
         "opacity": {
-            "slopes": 1,
-            "soffit": 1,
             LABEL_RAFTERS: 1,
+            LABEL_WALL_PLATE: 1,
+            LABEL_SLOPE_BATTENS: 1,
+            LABEL_SOFFIT_BATTENS: 1,
+            LABEL_SLOPE_CD: 1,
+            LABEL_SOFFIT_CD: 1,
+            LABEL_SLOPE_DIRECT: 1,
+            LABEL_SLOPE_NONIUS: 1,
+            LABEL_SOFFIT_NONIUS: 1,
             LABEL_RACKING_STRAP: 1,
             LABEL_ROOFING: 1,
-            LABEL_WALL_PLATE: 1,
             LABEL_MASONRY: 1,
             LABEL_EPS: 1,
             LABEL_PLASTER: 1,
-            # After the group keys so these leaves stay ghosted.
             LABEL_PLENUM_WOOL: wool,
             LABEL_SLOPE_NH: wool,
             LABEL_SLOPE_FLEX: wool,
             LABEL_SOFFIT_NH: wool,
             LABEL_SOFFIT_FLEX: wool,
+            LABEL_SLOPE_GKF: board,
+            LABEL_SOFFIT_GKF: board,
         },
         "opacityDefault": 0,
         "annotations": [

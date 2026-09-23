@@ -405,11 +405,12 @@ def test_sikmina_drawing_scenes():
     assert lattice["opacity"][LABEL_RAFTERS] == 1
     assert LABEL_MASONRY not in lattice["opacity"]
     assert LABEL_SLOPE_NH not in lattice["opacity"]
-    assert LABEL_SLOPE_GKF not in lattice["opacity"]
+    assert lattice["opacity"][LABEL_SLOPE_FLEX] == 0.18
+    assert lattice["opacity"][LABEL_SLOPE_GKF] == 0.35
     assert LABEL_ROOFING not in lattice["opacity"]
     assert len(lattice["cuts"]) == 3
     assert lattice["title"]["cs"].startswith("Šikmina")
-    assert lattice["title"]["en"]
+    assert lattice["title"]["en"].startswith("Slopes")
     assert lattice["project"] == "Obývák 1.02"
     up = lattice["camera"]["up"]
     assert abs(up[2]) < 1e-9
@@ -432,22 +433,29 @@ def test_sikmina_drawing_scenes():
 
     section = specs["sikmina-section"]
     assert section["opacityDefault"] == 0
-    assert section["opacity"]["slopes"] == 1
+    assert "slopes" not in section["opacity"]
     assert section["opacity"][LABEL_MASONRY] == 1
     assert section["opacity"][LABEL_WALL_PLATE] == 1
     assert section["opacity"][LABEL_RAFTERS] == 1
+    assert section["opacity"][LABEL_SLOPE_BATTENS] == 1
+    assert section["opacity"][LABEL_SLOPE_CD] == 1
+    assert section["opacity"][LABEL_SLOPE_DIRECT] == 1
+    assert section["opacity"][LABEL_SOFFIT_BATTENS] == 1
+    assert section["opacity"][LABEL_SOFFIT_CD] == 1
+    assert section["opacity"][LABEL_SOFFIT_NONIUS] == 1
     wool = 0.18
+    board = 0.35
     assert section["opacity"][LABEL_PLENUM_WOOL] == wool
     assert section["opacity"][LABEL_SLOPE_NH] == wool
     assert section["opacity"][LABEL_SLOPE_FLEX] == wool
     assert section["opacity"][LABEL_SOFFIT_NH] == wool
     assert section["opacity"][LABEL_SOFFIT_FLEX] == wool
-    keys = list(section["opacity"])
-    assert keys.index("slopes") < keys.index(LABEL_SLOPE_NH)
-    assert keys.index("soffit") < keys.index(LABEL_SOFFIT_FLEX)
+    assert section["opacity"][LABEL_SLOPE_GKF] == board
+    assert section["opacity"][LABEL_SOFFIT_GKF] == board
     assert LABEL_FURNITURE not in section["opacity"]
     assert len(section["cuts"]) == 2
-    assert section["opacity"]["soffit"] == 1
+    assert section["title"]["en"].startswith("Slopes")
+    assert section["title"]["cs"].startswith("Šikmina")
     assert section["camera"]["position"][2] > section["camera"]["target"][2]
     # Both slopes: the frame reaches the cabinet eave, and nothing cuts at the ridge.
     assert section["camera"]["orthoFit"][0] > (g.x_ridge * 0.001)
