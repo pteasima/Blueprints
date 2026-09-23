@@ -1,9 +1,10 @@
 /**
  * Scene callouts, dimensions, and a title block.
  *
- * Anchors are CAD millimetres. Leaders and labels stay a constant pixel size
- * and are redrawn in screen space each frame, so they survive orbit and the
- * A3 drawing capture. The group lives on the Three scene, not the GLB root,
+ * Anchors are CAD millimetres. Notes are small haloed text (no chip), sized
+ * from the view so a phone does not cover the model. They are camera-facing
+ * planes, not sprites: a tilted camera up (the šikmina lattice) must not
+ * mirror the glyphs. The group lives on the Three scene, not the GLB root,
  * so AR and Measure never pick it up.
  */
 import * as THREE from "three";
@@ -11,9 +12,11 @@ import { Line2 } from "three/addons/lines/Line2.js";
 import { LineGeometry } from "three/addons/lines/LineGeometry.js";
 import { LineMaterial } from "three/addons/lines/LineMaterial.js";
 
-const FONT =
-  '600 42px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+const FONT_STACK =
+  '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
 const A3_WIDTH_MM = 420;
+/** Plate notes, in CSS pixels of the A3 buffer. Small enough to read, not to hide the cut. */
+const PLATE_FONT_PX = 36;
 
 const _ndc = new THREE.Vector3();
 const _a = new THREE.Vector3();
@@ -68,19 +71,37 @@ export function formatScale(visibleWidthM) {
 }
 
 /**
- * @param {string[]} lines
+ * Live view: a few percent of the short side, capped so a phone stays readable
+ * without covering the assembly. The plate uses a fixed size on the A3 buffer.
+ * @param {HTMLCanvasElement} canvas
  * @param {"viewer" | "plate"} ink
  */
-function makeTextSprite(lines, ink) {
+export function labelFontPx(canvas, ink) {
+  if (ink === "plate") return PLATE_FONT_PX;
+  const short = Math.min(
+    Math.max(1, canvas.clientWidth),
+    Math.max(1, canvas.clientHeight),
+  );
+  return Math.round(Math.min(14, Math.max(12, short * 0.034)));
+}
+
+/**
+ * Haloed text on a camera-facing plane. No filled chip.
+ * @param {string[]} lines
+ * @param {"viewer" | "plate"} ink
+ * @param {number} fontPx
+ * @param {"center" | "topleft" | "bottomleft"} [anchor]
+ */
+function makeTextLabel(lines, ink, fontPx, anchor = "center") {
   const clean = lines.map((l) => String(l)).filter((l) => l.length);
   const canvas = document.createElement("canvas");
   const measure = canvas.getContext("2d");
-  const fontPx = 48;
-  const padX = 22;
-  const padY = 16;
-  const lineH = 58;
-  if (measure) measure.font = FONT.replace("42px", `${fontPx}px`);
-  let maxW = 40;
+  const font = `600 ${fontPx}px ${FONT_STACK}`;
+  const padX = Math.ceil(fontPx * 0.35);
+  const padY = Math.ceil(fontPx * 0.2);
+  const lineH = Math.ceil(fontPx * 1.25);
+  if (measure) measure.font = font;
+  let maxW = fontPx;
   if (measure) {
     for (const line of clean) maxW = Math.max(maxW, measure.measureText(line).width);
   }
@@ -94,56 +115,40 @@ function makeTextSprite(lines, ink) {
     ctx.scale(scale, scale);
     ctx.clearRect(0, 0, cssW, cssH);
     const plate = ink === "plate";
-    ctx.fillStyle = plate ? "rgba(255,255,255,0.94)" : "rgba(22,22,24,0.82)";
-    roundRect(ctx, 1, 1, cssW - 2, cssH - 2, 12);
-    ctx.fill();
-    ctx.strokeStyle = plate ? "rgba(20,20,20,0.85)" : "rgba(255,255,255,0.28)";
-    ctx.lineWidth = plate ? 2 : 1.5;
-    roundRect(ctx, 1, 1, cssW - 2, cssH - 2, 12);
-    ctx.stroke();
-    ctx.font = FONT.replace("42px", `${fontPx}px`);
-    ctx.fillStyle = plate ? "#141414" : "#f5f5f7";
+    ctx.font = font;
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
+    ctx.lineJoin = "round";
+    ctx.miterLimit = 2;
+    ctx.lineWidth = Math.max(2, fontPx * 0.28);
+    ctx.strokeStyle = plate ? "#ffffff" : "rgba(0,0,0,0.92)";
+    ctx.fillStyle = plate ? "#141414" : "#f7f7f8";
     clean.forEach((line, i) => {
-      ctx.fillText(line, padX, padY + lineH * i + lineH * 0.5);
+      const x = padX;
+      const y = padY + lineH * i + lineH * 0.5;
+      ctx.strokeText(line, x, y);
+      ctx.fillText(line, x, y);
     });
   }
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
+  tex.flipY = true;
   tex.needsUpdate = true;
-  const mat = new THREE.SpriteMaterial({
+  const mat = new THREE.MeshBasicMaterial({
     map: tex,
     depthTest: false,
     depthWrite: false,
     transparent: true,
     toneMapped: false,
+    side: THREE.DoubleSide,
   });
-  const sprite = new THREE.Sprite(mat);
-  sprite.renderOrder = 30;
-  sprite.frustumCulled = false;
-  sprite.userData.cssWidth = cssW;
-  sprite.userData.cssHeight = cssH;
-  return sprite;
-}
-
-/**
- * @param {CanvasRenderingContext2D} ctx
- * @param {number} x
- * @param {number} y
- * @param {number} w
- * @param {number} h
- * @param {number} r
- */
-function roundRect(ctx, x, y, w, h, r) {
-  const rr = Math.min(r, w / 2, h / 2);
-  ctx.beginPath();
-  ctx.moveTo(x + rr, y);
-  ctx.arcTo(x + w, y, x + w, y + h, rr);
-  ctx.arcTo(x + w, y + h, x, y + h, rr);
-  ctx.arcTo(x, y + h, x, y, rr);
-  ctx.arcTo(x, y, x + w, y, rr);
-  ctx.closePath();
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat);
+  mesh.renderOrder = 30;
+  mesh.frustumCulled = false;
+  mesh.userData.cssWidth = cssW;
+  mesh.userData.cssHeight = cssH;
+  mesh.userData.anchor = anchor;
+  return mesh;
 }
 
 /**
@@ -199,12 +204,16 @@ export function createAnnotations(opts) {
   let spec = null;
   /** @type {"viewer" | "plate"} */
   let ink = "viewer";
+  /** User toggle. Capture forces notes on, then restores this. */
+  let shown = true;
+  /** Font size baked into the current textures. */
+  let bakedFont = 0;
 
-  /** @type {Array<{ kind: string, sprite: THREE.Sprite, lines: Line2[], data: object }>} */
+  /** @type {Array<{ kind: string, sprite: THREE.Mesh, lines: Line2[], data: object }>} */
   let items = [];
-  /** @type {THREE.Sprite | null} */
+  /** @type {THREE.Mesh | null} */
   let titleSprite = null;
-  /** @type {THREE.Sprite | null} */
+  /** @type {THREE.Mesh | null} */
   let scaleSprite = null;
   /** @type {Line2 | null} */
   let scaleBar = null;
@@ -234,22 +243,31 @@ export function createAnnotations(opts) {
     scaleBar = null;
   }
 
+  function fontPx() {
+    return labelFontPx(getCanvas(), ink);
+  }
+
+  function applyVisibility() {
+    group.visible = Boolean(spec) && shown;
+  }
+
   function rebuild() {
     clearGroup();
+    bakedFont = fontPx();
     if (!spec) {
-      group.visible = false;
+      applyVisibility();
       return;
     }
-    group.visible = true;
     const locale = getLocale();
     const color = inkColor();
+    const px = bakedFont;
     const list = Array.isArray(spec.annotations) ? spec.annotations : [];
     for (const ann of list) {
       if (!ann || typeof ann !== "object") continue;
       if (ann.kind === "callout" && Array.isArray(ann.anchor)) {
         const text = resolveText(ann.text, locale);
         if (!text) continue;
-        const sprite = makeTextSprite(text.split("\n"), ink);
+        const sprite = makeTextLabel(text.split("\n"), ink, px);
         const leader = makeFatLine(color);
         group.add(leader, sprite);
         items.push({
@@ -259,7 +277,7 @@ export function createAnnotations(opts) {
           data: ann,
         });
       } else if (ann.kind === "dim" && Array.isArray(ann.a) && Array.isArray(ann.b)) {
-        const sprite = makeTextSprite(["0"], ink);
+        const sprite = makeTextLabel(["0"], ink, px);
         const extA = makeFatLine(color);
         const extB = makeFatLine(color);
         const dim = makeFatLine(color);
@@ -279,14 +297,13 @@ export function createAnnotations(opts) {
     const project = spec.project ? String(spec.project) : "";
     const titleLines = [...title.split("\n"), project].filter(Boolean);
     if (titleLines.length) {
-      titleSprite = makeTextSprite(titleLines, ink);
-      titleSprite.center.set(0, 1);
+      titleSprite = makeTextLabel(titleLines, ink, px, "topleft");
       group.add(titleSprite);
     }
-    scaleSprite = makeTextSprite(["1:1"], ink);
-    scaleSprite.center.set(0, 0);
+    scaleSprite = makeTextLabel(["1:1"], ink, px, "bottomleft");
     scaleBar = makeFatLine(color);
     group.add(scaleBar, scaleSprite);
+    applyVisibility();
   }
 
   /**
@@ -323,18 +340,32 @@ export function createAnnotations(opts) {
     return (2 * Math.tan(vFov / 2) * dist) / h;
   }
 
+  const _right = new THREE.Vector3();
+  const _up = new THREE.Vector3();
+
   /**
-   * @param {THREE.Sprite} sprite
+   * Face the camera with its own up, so a tilted lattice view cannot mirror text.
+   * @param {THREE.Mesh} mesh
    * @param {THREE.Vector3} world
    */
-  function placeSprite(sprite, world) {
+  function placeSprite(mesh, world) {
+    const cam = getCamera();
     const wpp = worldPerPixel(world);
-    sprite.position.copy(world);
-    sprite.scale.set(
-      wpp * sprite.userData.cssWidth,
-      wpp * sprite.userData.cssHeight,
-      1,
-    );
+    const wpx = wpp * mesh.userData.cssWidth;
+    const hpx = wpp * mesh.userData.cssHeight;
+    _right.set(1, 0, 0).applyQuaternion(cam.quaternion);
+    _up.set(0, 1, 0).applyQuaternion(cam.quaternion);
+    const anchor = mesh.userData.anchor || "center";
+    mesh.position.copy(world);
+    if (anchor === "topleft") {
+      mesh.position.addScaledVector(_right, wpx * 0.5);
+      mesh.position.addScaledVector(_up, -hpx * 0.5);
+    } else if (anchor === "bottomleft") {
+      mesh.position.addScaledVector(_right, wpx * 0.5);
+      mesh.position.addScaledVector(_up, hpx * 0.5);
+    }
+    mesh.quaternion.copy(cam.quaternion);
+    mesh.scale.set(wpx, hpx, 1);
   }
 
   function syncResolution() {
@@ -348,20 +379,24 @@ export function createAnnotations(opts) {
   }
 
   /**
-   * @param {THREE.Sprite} sprite
+   * @param {THREE.Mesh} sprite
    * @param {string[]} lines
    */
   function replaceSpriteText(sprite, lines) {
-    const next = makeTextSprite(lines, ink);
+    const next = makeTextLabel(lines, ink, bakedFont || fontPx(), sprite.userData.anchor);
     sprite.material.map?.dispose();
     sprite.material.dispose();
     sprite.material = next.material;
     sprite.userData.cssWidth = next.userData.cssWidth;
     sprite.userData.cssHeight = next.userData.cssHeight;
+    next.geometry.dispose();
   }
 
   function update() {
-    if (!spec || !group.visible) return;
+    if (!spec || !shown) return;
+    const px = fontPx();
+    if (px !== bakedFont) rebuild();
+    if (!group.visible) return;
     syncResolution();
     const locale = getLocale();
     const cam = getCamera();
@@ -432,7 +467,7 @@ export function createAnnotations(opts) {
         setFatLine(item.lines[3], da.clone().sub(tickDir), da.clone().add(tickDir));
         setFatLine(item.lines[4], db.clone().sub(tickDir), db.clone().add(tickDir));
         _mid.copy(da).lerp(db, 0.5);
-        const lift = unproject(na.x + px - dy * 0.02, na.y + py + dx * 0.02, z, new THREE.Vector3()).sub(
+        const lift = unproject(na.x + px - dy * 0.03, na.y + py + dx * 0.03, z, new THREE.Vector3()).sub(
           unproject(na.x + px, na.y + py, z, new THREE.Vector3()),
         );
         if (lift.lengthSq() > 1e-12) {
@@ -499,6 +534,17 @@ export function createAnnotations(opts) {
       ink = next === "plate" ? "plate" : "viewer";
       rebuild();
       update();
+    },
+    /**
+     * @param {boolean} next
+     */
+    setVisible(next) {
+      shown = Boolean(next);
+      applyVisibility();
+      if (group.visible) update();
+    },
+    isVisible() {
+      return shown;
     },
     relocalize() {
       rebuild();

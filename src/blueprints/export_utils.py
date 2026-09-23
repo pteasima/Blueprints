@@ -903,6 +903,7 @@ _VIEWER_HTML = """<!DOCTYPE html>
 <nav id="top-chrome" class="top-chrome" aria-label="Viewer">
   <div class="top-chrome-start">
     <button type="button" id="ar" class="chrome-btn" hidden>AR</button>
+    <button type="button" id="labels" class="chrome-btn" hidden aria-pressed="true">Labels</button>
     <button type="button" id="drawing" class="chrome-btn" hidden disabled>Drawing</button>
   </div>
   <div class="top-chrome-end">

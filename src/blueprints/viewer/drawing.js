@@ -35,8 +35,16 @@ export function downloadBlob(blob, filename) {
  * @param {HTMLCanvasElement} canvas
  */
 export function canvasToPngBlob(canvas) {
+  // Copy through a 2D canvas. toBlob on the WebGL canvas itself is flipped
+  // on some phones; drawImage matches the pixels on screen.
+  const copy = document.createElement("canvas");
+  copy.width = canvas.width;
+  copy.height = canvas.height;
+  const ctx = copy.getContext("2d");
+  if (!ctx) return Promise.reject(new Error("2D canvas unavailable"));
+  ctx.drawImage(canvas, 0, 0);
   return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => {
+    copy.toBlob((blob) => {
       if (blob) resolve(blob);
       else reject(new Error("PNG capture failed"));
     }, "image/png");
@@ -84,19 +92,15 @@ export async function pdfFromImageData(image) {
   const w = image.width;
   const h = image.height;
   const src = image.data;
-  // Canvas rows are top-down; PDF image samples start at the bottom.
+  // Keep canvas order (first row is the top). With this page matrix, PDF
+  // viewers paint that first row at the top of the sheet. Flipping here
+  // turned the plate upside down.
   const rgb = new Uint8Array(w * h * 3);
-  for (let y = 0; y < h; y++) {
-    const srcRow = (h - 1 - y) * w * 4;
-    const dstRow = y * w * 3;
-    for (let x = 0; x < w; x++) {
-      const i = srcRow + x * 4;
-      const j = dstRow + x * 3;
-      const a = src[i + 3] / 255;
-      rgb[j] = Math.round(src[i] * a + 255 * (1 - a));
-      rgb[j + 1] = Math.round(src[i + 1] * a + 255 * (1 - a));
-      rgb[j + 2] = Math.round(src[i + 2] * a + 255 * (1 - a));
-    }
+  for (let i = 0, j = 0; i < src.length; i += 4, j += 3) {
+    const a = src[i + 3] / 255;
+    rgb[j] = Math.round(src[i] * a + 255 * (1 - a));
+    rgb[j + 1] = Math.round(src[i + 1] * a + 255 * (1 - a));
+    rgb[j + 2] = Math.round(src[i + 2] * a + 255 * (1 - a));
   }
   const { bytes, filter } = await deflateBytes(rgb);
   const pageW = mmToPt(A3_WIDTH_MM);

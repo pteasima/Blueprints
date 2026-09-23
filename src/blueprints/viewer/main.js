@@ -289,6 +289,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       showArButton();
       showMeasureButton();
       syncDrawingButton();
+      syncLabelButton();
     },
     (err) => {
       fail(String(err?.message || err));
@@ -651,6 +652,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     activeSceneSpec = null;
     annotations.clear();
     syncDrawingButton();
+    syncLabelButton();
     // Builtin presets assume default world-up (Three Y).
     perspCamera.up.set(0, 1, 0);
     orthoCamera.up.set(0, 1, 0);
@@ -803,6 +805,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     maybeSpawnDraftFromCamera();
     annotations.setSpec(spec);
     syncDrawingButton();
+    syncLabelButton();
   }
 
   /**
@@ -1732,6 +1735,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     if (arBtn && !arBusy) arBtn.textContent = tr("ui.ar");
     if (measureBtn) measureBtn.textContent = MEASURE_LABEL();
     syncDrawingButton();
+    syncLabelButton();
     annotations.relocalize();
     try {
       buildMaterialToggle();
@@ -1770,12 +1774,24 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   }
 
   const drawBtn = document.getElementById("drawing");
+  const labelBtn = document.getElementById("labels");
+  let labelsOn = true;
 
   function syncDrawingButton() {
     if (!drawBtn) return;
     drawBtn.hidden = false;
     drawBtn.disabled = !activeSceneSpec || drawBusy;
     drawBtn.textContent = tr("ui.drawing");
+  }
+
+  function syncLabelButton() {
+    if (!labelBtn) return;
+    const has = Boolean(activeSceneSpec);
+    labelBtn.hidden = !has;
+    labelBtn.disabled = !has;
+    labelBtn.setAttribute("aria-pressed", labelsOn ? "true" : "false");
+    labelBtn.classList.toggle("is-active", has && labelsOn);
+    labelBtn.textContent = tr("ui.labels");
   }
 
   function modelFileId() {
@@ -1819,8 +1835,10 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     const prevStyleH = canvas.style.height;
     const prevDetent = chromeApi?.getDetent?.() ?? null;
     const measureWas = measureTool?.isActive() ?? false;
+    const labelsWere = annotations.isVisible();
     try {
       if (measureWas) measureTool?.setActive(false);
+      annotations.setVisible(true);
       chromeApi?.setDetent("closed");
       canvas.style.width = `${DRAW_W}px`;
       canvas.style.height = `${DRAW_H}px`;
@@ -1845,6 +1863,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       edgeMode = prevEdge;
       scene.background = prevBg;
       annotations.setInk("viewer");
+      annotations.setVisible(labelsWere);
       if (prevDetent) chromeApi?.setDetent(prevDetent);
       resize();
       refreshEdges();
@@ -1853,6 +1872,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       pauseTick = false;
       drawBusy = false;
       syncDrawingButton();
+      syncLabelButton();
       requestAnimationFrame(tick);
     }
   }
@@ -1862,6 +1882,14 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     if (!plate) return null;
     return { png: plate.png, pdf: plate.pdf, stem: plate.stem };
   };
+
+  if (labelBtn) {
+    labelBtn.addEventListener("click", () => {
+      labelsOn = !labelsOn;
+      annotations.setVisible(labelsOn);
+      syncLabelButton();
+    });
+  }
 
   if (drawBtn) {
     drawBtn.addEventListener("click", () => {
