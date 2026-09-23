@@ -1403,12 +1403,6 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
                 "Páska 40×2\n45° přes krokve",
                 (0.16, -0.1),
             ),
-            _callout(
-                (g.poz_l0 + p.plate_w * 0.5, y_mid, p.eave_wall_z + p.plate_h),
-                "Rafters seat on the wall plate\n(centred on the ring beam)",
-                "Krokve sedí na pozednici\n(osa na věnci)",
-                (0.16, -0.08),
-            ),
             _dim(
                 on_face(0.48 * g.x_false, rost_pair[0], t_rost),
                 on_face(0.48 * g.x_false, rost_pair[1], t_rost),
@@ -1430,8 +1424,11 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     # Section: kitchen → living, both slopes and the soffit, one rafter bay.
     # The soffit is in the picture with no callouts (its own plate comes later).
     y_note = y_near + 30.0
-    plate_x = g.poz_l0 + p.plate_w * 0.5
     x_right = g.x_false + 0.62 * (g.x_furn - g.x_false)
+    # Wool the contractor is adding. Each cut face is its own layer, so
+    # a sliced solid stacks two (sometimes four) of these. 0.18 keeps the
+    # tint light enough that latě, CD, and hangers stay readable on the plate.
+    wool = 0.18
     frame_x0 = g.left_eave - 80.0
     frame_x1 = g.right_eave + 80.0
     frame_z0 = g.z_nabeh_bot - 180.0
@@ -1465,13 +1462,18 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
             "slopes": 1,
             "soffit": 1,
             LABEL_RAFTERS: 1,
-            LABEL_PLENUM_WOOL: 1,
             LABEL_RACKING_STRAP: 1,
             LABEL_ROOFING: 1,
             LABEL_WALL_PLATE: 1,
             LABEL_MASONRY: 1,
             LABEL_EPS: 1,
             LABEL_PLASTER: 1,
+            # After the group keys so these leaves stay ghosted.
+            LABEL_PLENUM_WOOL: wool,
+            LABEL_SLOPE_NH: wool,
+            LABEL_SLOPE_FLEX: wool,
+            LABEL_SOFFIT_NH: wool,
+            LABEL_SOFFIT_FLEX: wool,
         },
         "opacityDefault": 0,
         "annotations": [
@@ -1512,33 +1514,9 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
                 (0.05, 0.07),
             ),
             _callout(
-                (0.48 * g.x_false, y_note, g.z_raf(0.48 * g.x_false) + 24.0),
-                "Rafter 100/160 @ 875\nunderside on the wall plate",
-                "Krokev 100/160 @ 875\nspodní hrana na pozednici",
-                (0.08, 0.05),
-            ),
-            _callout(
-                (0.34 * g.x_false, y_note, g.z_raf(0.34 * g.x_false)),
-                "Strap 40×2 at 45°",
-                "Páska 40×2 pod 45°",
-                (0.04, 0.06),
-            ),
-            _callout(
-                (plate_x, y_note, p.eave_wall_z + p.plate_h * 0.5),
-                "Wall plate 140×100\non ring beam 250",
-                "Pozednice 140×100\nna věnci 250",
-                (-0.1, -0.04),
-            ),
-            _callout(
-                (g.left_eave + 40.0, y_note, g.z_tile(0.0)),
-                "40°  ·  overhang 80 mm\n(gutter only)",
-                "40°  ·  přesah 80 mm\n(jen okap)",
-                (-0.02, 0.1),
-            ),
-            _callout(
                 on_face(x_right, y_note, t_cd_outer + 80.0),
-                "Nonius 340/440\nCD → rafter, not the wall plate",
-                "Nonius 340/440\nCD → krokev, ne pozednice",
+                "Nonius 340/440\nCD → rafter",
+                "Nonius 340/440\nCD → krokev",
                 (0.1, 0.06),
             ),
         ],

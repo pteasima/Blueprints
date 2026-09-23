@@ -223,22 +223,6 @@
         ]
       },
       {
-        "kind": "callout",
-        "anchor": [
-          -140.0,
-          5101.0,
-          3300.0
-        ],
-        "text": {
-          "en": "Rafters seat on the wall plate\n(centred on the ring beam)",
-          "cs": "Krokve sedí na pozednici\n(osa na věnci)"
-        },
-        "offset": [
-          0.16,
-          -0.08
-        ]
-      },
-      {
         "kind": "dim",
         "a": [
           1176.0,
@@ -341,13 +325,17 @@
       "slopes": 1,
       "soffit": 1,
       "rafters": 1,
-      "plenum_wool": 1,
       "racking_strap": 1,
       "roofing": 1,
       "wall_plate": 1,
       "masonry": 1,
       "eps": 1,
-      "plaster": 1
+      "plaster": 1,
+      "plenum_wool": 0.18,
+      "slope_naturheld_140": 0.18,
+      "slope_naturheld_flex_50": 0.18,
+      "soffit_naturheld_140": 0.18,
+      "soffit_naturheld_flex_50": 0.18
     },
     "opacityDefault": 0,
     "annotations": [
@@ -450,77 +438,13 @@
       {
         "kind": "callout",
         "anchor": [
-          1176.0,
-          4696.0,
-          4428.3
-        ],
-        "text": {
-          "en": "Rafter 100/160 @ 875\nunderside on the wall plate",
-          "cs": "Krokev 100/160 @ 875\nspodní hrana na pozednici"
-        },
-        "offset": [
-          0.08,
-          0.05
-        ]
-      },
-      {
-        "kind": "callout",
-        "anchor": [
-          833.0,
-          4696.0,
-          4116.4
-        ],
-        "text": {
-          "en": "Strap 40×2 at 45°",
-          "cs": "Páska 40×2 pod 45°"
-        },
-        "offset": [
-          0.04,
-          0.06
-        ]
-      },
-      {
-        "kind": "callout",
-        "anchor": [
-          -140.0,
-          4696.0,
-          3250.0
-        ],
-        "text": {
-          "en": "Wall plate 140×100\non ring beam 250",
-          "cs": "Pozednice 140×100\nna věnci 250"
-        },
-        "offset": [
-          -0.1,
-          -0.04
-        ]
-      },
-      {
-        "kind": "callout",
-        "anchor": [
-          -505.0,
-          4696.0,
-          3813.0
-        ],
-        "text": {
-          "en": "40°  ·  overhang 80 mm\n(gutter only)",
-          "cs": "40°  ·  přesah 80 mm\n(jen okap)"
-        },
-        "offset": [
-          -0.02,
-          0.1
-        ]
-      },
-      {
-        "kind": "callout",
-        "anchor": [
           3969.0,
           4696.0,
           4198.7
         ],
         "text": {
-          "en": "Nonius 340/440\nCD → rafter, not the wall plate",
-          "cs": "Nonius 340/440\nCD → krokev, ne pozednice"
+          "en": "Nonius 340/440\nCD → rafter",
+          "cs": "Nonius 340/440\nCD → krokev"
         },
         "offset": [
           0.1,

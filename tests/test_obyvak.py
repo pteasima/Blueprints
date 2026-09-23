@@ -427,7 +427,8 @@ def test_sikmina_drawing_scenes():
         assert "en" in ann["text"] and "cs" in ann["text"]
         texts.append(ann["text"]["cs"])
     assert any("625" in t for t in texts)
-    assert any("krokev" in t.lower() or "Krokev" in t or "pozednici" in t for t in texts)
+    assert any("krokv" in t.lower() for t in texts)
+    assert not any("pozednic" in t.lower() or "věnc" in t.lower() for t in texts)
 
     section = specs["sikmina-section"]
     assert section["opacityDefault"] == 0
@@ -435,6 +436,15 @@ def test_sikmina_drawing_scenes():
     assert section["opacity"][LABEL_MASONRY] == 1
     assert section["opacity"][LABEL_WALL_PLATE] == 1
     assert section["opacity"][LABEL_RAFTERS] == 1
+    wool = 0.18
+    assert section["opacity"][LABEL_PLENUM_WOOL] == wool
+    assert section["opacity"][LABEL_SLOPE_NH] == wool
+    assert section["opacity"][LABEL_SLOPE_FLEX] == wool
+    assert section["opacity"][LABEL_SOFFIT_NH] == wool
+    assert section["opacity"][LABEL_SOFFIT_FLEX] == wool
+    keys = list(section["opacity"])
+    assert keys.index("slopes") < keys.index(LABEL_SLOPE_NH)
+    assert keys.index("soffit") < keys.index(LABEL_SOFFIT_FLEX)
     assert LABEL_FURNITURE not in section["opacity"]
     assert len(section["cuts"]) == 2
     assert section["opacity"]["soffit"] == 1
@@ -453,12 +463,14 @@ def test_sikmina_drawing_scenes():
     assert "NaturHeld 140, 60 mm" in joined
     assert "Flex 50" in joined
     assert "Domo Plus" in joined
-    assert "věnci 250" in joined or "věnec 250" in joined
-    assert "pozednici" in joined or "Pozednice" in joined
-    assert "40°" in joined
     assert "Nonius" in joined
     assert "125" in joined
-    assert "soffit" not in joined.lower() and "podhled" not in joined.lower()
+    low = joined.lower()
+    assert "přesah" not in low and "overhang" not in low
+    assert "pozednic" not in low and "wall plate" not in low
+    assert "věnc" not in low and "páska" not in low and "strap" not in low
+    assert "40°" not in joined
+    assert "soffit" not in low and "podhled" not in low
 
 
 def test_write_scenes_json(tmp_path):
