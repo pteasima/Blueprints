@@ -337,22 +337,6 @@ SECTION_LAYER_ORDER = [
     "bass_wall_hanger",
 ]
 
-# Section-cut wafers use the same colour as the layer they fill.
-_CAP_LAYER = {
-    "cap_slope_naturheld_140": "slope_naturheld_140",
-    "cap_slope_naturheld_flex_50": "slope_naturheld_flex_50",
-    "cap_slope_gkf": "slope_gkf",
-    "cap_plenum_wool": "plenum_wool",
-    "cap_roofing": "roofing",
-    "cap_masonry": "masonry",
-    "cap_soffit_naturheld_140": "soffit_naturheld_140",
-    "cap_soffit_naturheld_flex_50": "soffit_naturheld_flex_50",
-    "cap_soffit_gkf": "soffit_gkf",
-}
-for _cap, _src in _CAP_LAYER.items():
-    SECTION_LAYERS[_cap] = dict(SECTION_LAYERS[_src])
-    SECTION_LAYER_ORDER.append(_cap)
-
 
 def ensure_export_dir(model_name: str) -> Path:
     out = EXPORTS_DIR / model_name

@@ -58,15 +58,6 @@ from obyvak_geom import (
     LABEL_RAFTERS,
     LABEL_ROOFING,
     LABEL_SLOPE_BATTENS,
-    LABEL_CAP_MASONRY,
-    LABEL_CAP_PLENUM,
-    LABEL_CAP_ROOFING,
-    LABEL_CAP_SLOPE_FLEX,
-    LABEL_CAP_SLOPE_GKF,
-    LABEL_CAP_SLOPE_NH,
-    LABEL_CAP_SOFFIT_FLEX,
-    LABEL_CAP_SOFFIT_GKF,
-    LABEL_CAP_SOFFIT_NH,
     LABEL_SLOPE_CD,
     LABEL_SLOPE_DIRECT,
     LABEL_SLOPE_FLEX,
@@ -1137,76 +1128,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     parts.extend(_bass_trap_parts(p, g, gap))
 
     parts.extend(_gable_sdk_and_pouzdra(p, g, gap))
-    parts.extend(_section_caps(parts, p, g))
     return parts
-
-
-def _as_solids(hit) -> list:
-    if hit is None:
-        return []
-    if isinstance(hit, Solid):
-        return [hit]
-    if isinstance(hit, Compound):
-        try:
-            return list(hit.solids())
-        except Exception:
-            return []
-    try:
-        out: list = []
-        for item in hit:
-            out.extend(_as_solids(item))
-        return out
-    except TypeError:
-        return []
-
-
-def _section_caps(parts: list, p: ObyvakParams, g: ObyvakLayout) -> list:
-    """Thin filled faces on the šikmina-section near cut.
-
-    A clipping plane does not draw the cut of a long extrusion, so NaturHeld
-    and Domo Plus read as empty frames. These slices sit just inside that cut
-    and stay hidden until the section scene turns `section_fill` on.
-    """
-    y_near, _, _, _ = _rafter_window(p, g)
-    y0 = y_near + 2.0
-    thick = 4.0
-    tool = _box(
-        g.left_eave - 400.0,
-        y0,
-        -400.0,
-        (g.right_eave - g.left_eave) + 800.0,
-        thick,
-        p.ridge_z + 800.0,
-        "cap_tool",
-    )
-    want = {
-        LABEL_SLOPE_NH: LABEL_CAP_SLOPE_NH,
-        LABEL_SLOPE_FLEX: LABEL_CAP_SLOPE_FLEX,
-        LABEL_SLOPE_GKF: LABEL_CAP_SLOPE_GKF,
-        LABEL_PLENUM_WOOL: LABEL_CAP_PLENUM,
-        LABEL_ROOFING: LABEL_CAP_ROOFING,
-        LABEL_MASONRY: LABEL_CAP_MASONRY,
-        LABEL_SOFFIT_NH: LABEL_CAP_SOFFIT_NH,
-        LABEL_SOFFIT_FLEX: LABEL_CAP_SOFFIT_FLEX,
-        LABEL_SOFFIT_GKF: LABEL_CAP_SOFFIT_GKF,
-    }
-    caps: list = []
-    for part in parts:
-        dest = want.get(part.label)
-        if not dest:
-            continue
-        try:
-            hit = part.intersect(tool)
-        except Exception:
-            continue
-        for solid in _as_solids(hit):
-            try:
-                if float(solid.volume) < 1.0:
-                    continue
-            except Exception:
-                continue
-            caps.append(_paint(solid, dest))
-    return caps
 
 
 def _compound(parts: list, label: str = MODEL_NAME) -> Compound:
@@ -1542,7 +1464,6 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
         "opacity": {
             "slopes": 1,
             "soffit": 1,
-            "section_fill": 1,
             LABEL_RAFTERS: 1,
             LABEL_PLENUM_WOOL: 1,
             LABEL_RACKING_STRAP: 1,
@@ -1674,7 +1595,7 @@ def scenes(params: ObyvakParams | None = None) -> list[dict]:
         },
         "projection": "ortho",
         "cuts": [{"normal": list(s_look), "t": 0.5}],
-        "opacity": {"soffit": 1, LABEL_PLASTER: 1, "section_fill": 0},
+        "opacity": {"soffit": 1, LABEL_PLASTER: 1},
         "opacityDefault": 0.5,
     }
 
@@ -1708,7 +1629,7 @@ def scenes(params: ObyvakParams | None = None) -> list[dict]:
         },
         "projection": "ortho",
         "cuts": [{"normal": list(g_look), "t": 0.5}],
-        "opacity": {"slopes": 1, LABEL_PLASTER: 1, "section_fill": 0},
+        "opacity": {"slopes": 1, LABEL_PLASTER: 1},
         "opacityDefault": 0.5,
     }
     return [soffit, gable, *_sikmina_plates(p, g)]

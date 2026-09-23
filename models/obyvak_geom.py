@@ -61,16 +61,6 @@ LABEL_SLOPE_GKF = "slope_gkf"
 LABEL_SLOPE_CD = "slope_cd"
 LABEL_SLOPE_DIRECT = "slope_direct_hanger"
 LABEL_SLOPE_NONIUS = "slope_nonius"
-# Filled faces for the šikmina section cut. Hidden unless that scene turns them on.
-LABEL_CAP_SLOPE_NH = "cap_slope_naturheld_140"
-LABEL_CAP_SLOPE_FLEX = "cap_slope_naturheld_flex_50"
-LABEL_CAP_SLOPE_GKF = "cap_slope_gkf"
-LABEL_CAP_PLENUM = "cap_plenum_wool"
-LABEL_CAP_ROOFING = "cap_roofing"
-LABEL_CAP_MASONRY = "cap_masonry"
-LABEL_CAP_SOFFIT_NH = "cap_soffit_naturheld_140"
-LABEL_CAP_SOFFIT_FLEX = "cap_soffit_naturheld_flex_50"
-LABEL_CAP_SOFFIT_GKF = "cap_soffit_gkf"
 # --- Soffit (podhled) ---
 LABEL_SOFFIT_NH = "soffit_naturheld_140"
 LABEL_SOFFIT_FLEX = "soffit_naturheld_flex_50"
@@ -140,20 +130,6 @@ PART_GROUPS = [
     {
         "id": "furniture",
         "children": [LABEL_FURNITURE],
-    },
-    {
-        "id": "section_fill",
-        "children": [
-            LABEL_CAP_SLOPE_NH,
-            LABEL_CAP_SLOPE_FLEX,
-            LABEL_CAP_SLOPE_GKF,
-            LABEL_CAP_PLENUM,
-            LABEL_CAP_ROOFING,
-            LABEL_CAP_MASONRY,
-            LABEL_CAP_SOFFIT_NH,
-            LABEL_CAP_SOFFIT_FLEX,
-            LABEL_CAP_SOFFIT_GKF,
-        ],
     },
 ]
 

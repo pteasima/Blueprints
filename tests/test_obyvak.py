@@ -325,7 +325,6 @@ def test_soffit_scene_recipe():
     assert s["opacity"] == {
         "soffit": 1,
         LABEL_PLASTER: 1,
-        "section_fill": 0,
     }
     assert len(s["cuts"]) == 1
     assert s["cuts"][0]["t"] == 0.5
@@ -363,7 +362,6 @@ def test_gable_scene_recipe():
     assert s["opacity"] == {
         "slopes": 1,
         LABEL_PLASTER: 1,
-        "section_fill": 0,
     }
     assert len(s["cuts"]) == 1
     assert s["cuts"][0]["t"] == 0.5
@@ -440,7 +438,6 @@ def test_sikmina_drawing_scenes():
     assert LABEL_FURNITURE not in section["opacity"]
     assert len(section["cuts"]) == 2
     assert section["opacity"]["soffit"] == 1
-    assert section["opacity"]["section_fill"] == 1
     assert section["camera"]["position"][2] > section["camera"]["target"][2]
     # Both slopes: the frame reaches the cabinet eave, and nothing cuts at the ridge.
     assert section["camera"]["orthoFit"][0] > (g.x_ridge * 0.001)
@@ -719,10 +716,6 @@ def test_3d_parts_do_not_interpenetrate():
                 except Exception:
                     pass
             if vol > 1.0:  # mm³
-                # Section wafers are a coincident copy of the cut face, not a second layer.
-                labels = {a.label, b.label}
-                if any(name.startswith("cap_") for name in labels):
-                    continue
                 violations.append((a.label, b.label, round(vol, 1)))
     assert violations == []
 
@@ -761,7 +754,7 @@ def test_part_groups_tree():
     groups = part_groups()
     assert groups == PART_GROUPS
     ids = [g["id"] for g in groups]
-    assert ids == ["shell", "slopes", "soffit", "bass_traps", "furniture", "section_fill"]
+    assert ids == ["shell", "slopes", "soffit", "bass_traps", "furniture"]
     leaf_ids = {c for g in groups for c in g["children"]}
     shape, _ = build()
     for label in {c.label for c in shape.children}:

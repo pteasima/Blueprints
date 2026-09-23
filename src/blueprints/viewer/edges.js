@@ -454,7 +454,13 @@ function collectMeshClippingPlanes(root) {
   /** @type {THREE.Plane[]} */
   let planes = [];
   root.traverse((obj) => {
-    if (planes.length || isEdgeOverlay(obj) || !obj.isMesh || !obj.material) {
+    if (
+      planes.length ||
+      isEdgeOverlay(obj) ||
+      obj.userData?.isSectionCap ||
+      !obj.isMesh ||
+      !obj.material
+    ) {
       return;
     }
     const mats = Array.isArray(obj.material) ? obj.material : [obj.material];

@@ -281,6 +281,22 @@ export function applyOpacityToMeshes(meshes, opacity, opts = {}) {
     }
     mesh.renderOrder = o < 1 ? 0 : mesh.userData.opaqueRenderOrder;
     applyOpacityToEdgeOverlays(mesh, o, edgeMode);
+    for (const child of mesh.children || []) {
+      if (!child?.userData?.isSectionCap || !child.material) continue;
+      child.visible = true;
+      child.renderOrder = mesh.renderOrder;
+      const caps = Array.isArray(child.material) ? child.material : [child.material];
+      for (const mat of caps) {
+        if (!mat) continue;
+        mat.opacity = o;
+        mat.transparent = o < 1;
+        mat.depthWrite = o >= 1;
+        mat.depthTest = true;
+        mat.forceSinglePass = o < 1;
+        mat.side = THREE.DoubleSide;
+        mat.needsUpdate = true;
+      }
+    }
   }
 }
 

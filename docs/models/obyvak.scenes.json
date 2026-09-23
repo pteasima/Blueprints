@@ -35,8 +35,7 @@
     ],
     "opacity": {
       "soffit": 1,
-      "plaster": 1,
-      "section_fill": 0
+      "plaster": 1
     },
     "opacityDefault": 0.5
   },
@@ -76,8 +75,7 @@
     ],
     "opacity": {
       "slopes": 1,
-      "plaster": 1,
-      "section_fill": 0
+      "plaster": 1
     },
     "opacityDefault": 0.5
   },
@@ -342,7 +340,6 @@
     "opacity": {
       "slopes": 1,
       "soffit": 1,
-      "section_fill": 1,
       "rafters": 1,
       "plenum_wool": 1,
       "racking_strap": 1,

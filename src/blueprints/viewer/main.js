@@ -8,6 +8,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { USDZExporter } from "three/addons/exporters/USDZExporter.js";
 import { meshToClippedExportMesh } from "./clipGeometry.js";
+import { isSectionCap, syncSectionCaps } from "./sectionCaps.js";
 import { applyArPlacement, computeArPlacement } from "./arPlacement.js";
 import { BG_DARK, BG_LIGHT, initSheetChrome } from "./chrome.js";
 import { createCooperativeRange } from "./coopRange.js";
@@ -647,24 +648,12 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     maybeSpawnDraftFromCamera();
   }
 
-  function sectionFillIds() {
-    const ids = new Set();
-    for (const group of partGroups) {
-      if (group && group.id === "section_fill" && Array.isArray(group.children)) {
-        for (const id of group.children) ids.add(String(id));
-      }
-    }
-    return ids;
-  }
-
-  /** Iso and the other builtin views show the building, not the section wafers. */
+  /** Iso and the other builtin views show every part. */
   function resetDefaultOpacities() {
-    const hidden = sectionFillIds();
     for (const name of parts.keys()) {
-      const o = hidden.has(name) ? 0 : 1;
-      partOpacity.set(name, o);
-      if (o > 0) partLastNonZero.set(name, o);
-      applyOpacityToMeshes(parts.get(name) || [], o, { edgeMode });
+      partOpacity.set(name, 1);
+      partLastNonZero.set(name, 1);
+      applyOpacityToMeshes(parts.get(name) || [], 1, { edgeMode });
     }
     updateBox();
     applyClipping();
@@ -970,6 +959,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       renderer.toneMappingExposure = 1;
     }
     refreshEdges();
+    syncSectionCaps(parts, lockedClipPlanes());
   }
 
   function buildMaterialToggle() {
@@ -1250,12 +1240,10 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     groupOpacityRanges.clear();
     leafSyncButtons.clear();
 
-    const hiddenFill = sectionFillIds();
     for (const name of parts.keys()) {
       if (!partOpacity.has(name)) {
-        const o = hiddenFill.has(name) ? 0 : 1;
-        partOpacity.set(name, o);
-        applyOpacityToMeshes(parts.get(name) || [], o, { edgeMode });
+        partOpacity.set(name, 1);
+        applyOpacityToMeshes(parts.get(name) || [], 1, { edgeMode });
       }
       if (!partLastNonZero.has(name)) partLastNonZero.set(name, 1);
     }
@@ -1515,7 +1503,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     if (!root) return;
     root.traverse((obj) => {
       if (!obj.isMesh || !obj.material) return;
-      if (isEdgeOverlay(obj)) return;
+      if (isEdgeOverlay(obj) || isSectionCap(obj)) return;
       const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
       for (const m of mats) {
         m.clippingPlanes = planes;
@@ -1523,6 +1511,9 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         m.needsUpdate = true;
       }
     });
+    // Fill the cut. Clipping only discards fragments; without these faces a
+    // solid opened on both ends reads as an empty tube.
+    syncSectionCaps(parts, planes);
     // Rebuild hard+cut edge geometry so section faces get silhouette strokes.
     if (edgeMode !== EDGE_MODE_NONE) refreshEdges();
     else applyEdgeClipping(root, planes);
