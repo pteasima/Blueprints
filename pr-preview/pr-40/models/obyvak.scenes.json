@@ -82,7 +82,7 @@
   {
     "id": "sikmina-lattice",
     "title": {
-      "en": "Šikmina — lattice",
+      "en": "Slopes — lattice",
       "cs": "Šikmina — rošt"
     },
     "project": "Obývák 1.02",
@@ -148,13 +148,14 @@
     ],
     "opacity": {
       "slope_battens": 1,
-      "slope_naturheld_flex_50": 1,
       "slope_cd": 1,
       "slope_direct_hanger": 1,
       "slope_nonius": 1,
       "rafters": 1,
       "racking_strap": 1,
-      "wall_plate": 1
+      "wall_plate": 1,
+      "slope_naturheld_flex_50": 0.18,
+      "slope_gkf": 0.35
     },
     "opacityDefault": 0,
     "annotations": [
@@ -269,7 +270,7 @@
   {
     "id": "sikmina-section",
     "title": {
-      "en": "Šikmina — section\nperpendicular to the rafters",
+      "en": "Slopes — section\nperpendicular to the rafters",
       "cs": "Šikmina — řez\nkolmo na krokve"
     },
     "project": "Obývák 1.02",
@@ -322,12 +323,17 @@
       }
     ],
     "opacity": {
-      "slopes": 1,
-      "soffit": 1,
       "rafters": 1,
+      "wall_plate": 1,
+      "slope_battens": 1,
+      "soffit_battens": 1,
+      "slope_cd": 1,
+      "soffit_cd": 1,
+      "slope_direct_hanger": 1,
+      "slope_nonius": 1,
+      "soffit_nonius": 1,
       "racking_strap": 1,
       "roofing": 1,
-      "wall_plate": 1,
       "masonry": 1,
       "eps": 1,
       "plaster": 1,
@@ -335,7 +341,9 @@
       "slope_naturheld_140": 0.18,
       "slope_naturheld_flex_50": 0.18,
       "soffit_naturheld_140": 0.18,
-      "soffit_naturheld_flex_50": 0.18
+      "soffit_naturheld_flex_50": 0.18,
+      "slope_gkf": 0.35,
+      "soffit_gkf": 0.35
     },
     "opacityDefault": 0,
     "annotations": [
