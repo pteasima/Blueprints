@@ -17,9 +17,9 @@ def test_hello_world_builds_and_exports(tmp_path, monkeypatch):
     shape, meta = build(HelloWorldParams(width=50, depth=40, height=20, fillet_radius=2))
     assert shape is not None
     assert meta["params"]["width"] == 50
-    paths = export_shape(shape, "hello_world", formats=("step", "stl", "svg", "dxf"))
+    paths = export_shape(shape, "hello_world", formats=("step", "stl"))
     assert paths["step"].exists()
     assert paths["stl"].exists()
-    assert paths["svg"].exists()
-    assert paths["dxf"].exists()
+    assert "svg" not in paths
+    assert "dxf" not in paths
     assert paths["step"].stat().st_size > 0

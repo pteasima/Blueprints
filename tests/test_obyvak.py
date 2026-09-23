@@ -8,7 +8,6 @@ from obyvak import (  # noqa: E402
     FACE_GAP,
     build,
     build_elevation_slice,
-    build_preview,
     build_section_slice,
     part_groups,
     scenes,
@@ -300,7 +299,13 @@ def test_soffit_hangs_from_cd_not_furniture_or_pozednice():
 
 def test_soffit_scene_recipe():
     specs = scenes()
-    assert len(specs) == 2
+    assert len(specs) == 4
+    assert [s["id"] for s in specs] == [
+        "soffit",
+        "gable",
+        "sikmina-lattice",
+        "sikmina-section",
+    ]
     s = specs[0]
     assert s["id"] == "soffit"
     assert "label" not in s or s.get("label") is None
@@ -373,11 +378,87 @@ def test_gable_scene_recipe():
     assert cam["orthoFit"][1] > soffit_fit[1]
 
 
+def test_sikmina_drawing_scenes():
+    """Lattice is head-on to the 40° face; section keeps the věnec and misses columns."""
+    import math
+
+    specs = {s["id"]: s for s in scenes()}
+    p = ObyvakParams()
+    g = build_layout(p)
+    columns = g.eave_column_y_centres()
+
+    lattice = specs["sikmina-lattice"]
+    assert lattice["projection"] == "ortho"
+    assert lattice["opacityDefault"] == 0
+    assert lattice["opacity"][LABEL_SLOPE_BATTENS] == 1
+    assert lattice["opacity"][LABEL_SLOPE_CD] == 1
+    assert lattice["opacity"][LABEL_RAFTERS] == 1
+    assert LABEL_MASONRY not in lattice["opacity"]
+    assert LABEL_SLOPE_NH not in lattice["opacity"]
+    assert LABEL_SLOPE_GKF not in lattice["opacity"]
+    assert LABEL_ROOFING not in lattice["opacity"]
+    assert len(lattice["cuts"]) == 3
+    assert lattice["title"]["cs"].startswith("Šikmina")
+    assert lattice["title"]["en"]
+    assert lattice["project"] == "Obývák 1.02"
+    up = lattice["camera"]["up"]
+    assert abs(up[2]) < 1e-9
+    assert up[0] > 0.5 and up[1] > 0.5
+    cam = lattice["camera"]
+    assert cam["position"][0] > cam["target"][0]
+    assert cam["position"][1] < cam["target"][1]
+    for cut in lattice["cuts"]:
+        y = cut["anchor"][1]
+        assert all(abs(y - c) > 400.0 for c in columns)
+    texts = []
+    for ann in lattice["annotations"]:
+        if ann["kind"] == "dim" and "text" not in ann:
+            continue
+        assert "en" in ann["text"] and "cs" in ann["text"]
+        texts.append(ann["text"]["cs"])
+    assert any("625" in t for t in texts)
+    assert any("krokev" in t.lower() or "Krokev" in t or "pozednici" in t for t in texts)
+
+    section = specs["sikmina-section"]
+    assert section["opacityDefault"] == 0
+    assert section["opacity"]["slopes"] == 1
+    assert section["opacity"][LABEL_MASONRY] == 1
+    assert section["opacity"][LABEL_WALL_PLATE] == 1
+    assert section["opacity"][LABEL_RAFTERS] == 1
+    assert LABEL_FURNITURE not in section["opacity"]
+    assert len(section["cuts"]) == 3
+    assert section["camera"]["position"][2] > section["camera"]["target"][2]
+    ys = []
+    for cut in section["cuts"]:
+        ys.append(cut["anchor"][1])
+        assert all(abs(cut["anchor"][1] - c) > 400.0 for c in columns)
+    assert any(abs(cut["anchor"][0] - g.x_ridge) < 1.0 for cut in section["cuts"])
+    dims = [ann for ann in section["annotations"] if ann["kind"] == "dim"]
+    assert len(dims) >= 2
+    rafter_dims = []
+    for dim in dims:
+        dist = math.dist(dim["a"], dim["b"])
+        rafter_dims.append(dist)
+        y = dim["a"][1]
+        assert all(abs(y - c) > 400.0 for c in columns)
+    assert any(abs(d - p.rafter_t) < 1.0 for d in rafter_dims)
+    assert any(abs(d - p.venec_h) < 1.0 for d in rafter_dims)
+    joined = " ".join(
+        ann["text"]["cs"] for ann in section["annotations"] if "text" in ann
+    )
+    assert "NaturHeld" in joined
+    assert "pozednici" in joined or "Pozednice" in joined
+    assert "40°" in joined
+    assert "Nonius" in joined
+
+
 def test_write_scenes_json(tmp_path):
     path = write_scenes_json("obyvak", scenes(), tmp_path / "obyvak.scenes.json")
     data = path.read_text(encoding="utf-8")
     assert '"soffit"' in data
     assert '"gable"' in data
+    assert '"sikmina-lattice"' in data
+    assert '"sikmina-section"' in data
     assert path.stat().st_size > 0
 
 
@@ -636,30 +717,11 @@ def test_obyvak_3d_exports(tmp_path, monkeypatch):
     monkeypatch.setattr(eu, "EXPORTS_DIR", tmp_path)
     p = ObyvakParams()
     shape, _meta = build(p)
-    paths = export_shape(shape, "obyvak", formats=("step", "stl", "svg", "png"))
+    paths = export_shape(shape, "obyvak", formats=("step", "stl"))
     assert paths["step"].stat().st_size > 0
     assert paths["stl"].stat().st_size > 0
-    assert paths["png"].stat().st_size > 0
-    preview, _ = build_preview(p)
-    full_n = len(shape.children)
-    assert len(preview.children) < full_n
-    furn_eave = [
-        c
-        for c in preview.children
-        if c.label
-        in {
-            LABEL_EPS,
-            LABEL_MASONRY,
-            LABEL_PLASTER,
-            LABEL_WALL_PLATE,
-            LABEL_FURNITURE,
-        }
-        and c.bounding_box().min.X >= p.room_width - 1.0
-    ]
-    assert furn_eave == []
-    assert any(c.label == LABEL_GLAZING for c in preview.children)
-    cut = export_shape(preview, "obyvak", stem="cutaway", formats=("svg", "png"))
-    assert cut["png"].stat().st_size > 0
+    assert "png" not in paths
+    assert "svg" not in paths
 
     sec, _ = build_section_slice()
     sec_labels = {c.label for c in sec.children}
@@ -677,12 +739,6 @@ def test_obyvak_3d_exports(tmp_path, monkeypatch):
     assert LABEL_BASS_WOOL in elev_labels  # schematic trap massing at gables
     assert LABEL_WALL_GKF in elev_labels
     assert "koruna" not in elev_labels
-    from blueprints.export_utils import export_section as _export_section
-
-    sliced = _export_section(sec, "obyvak", stem="slice_section")
-    assert sliced["png"].stat().st_size > 0
-    sliced_e = _export_section(elev, "obyvak", stem="slice_elevation")
-    assert sliced_e["png"].stat().st_size > 0
 
 
 def test_part_groups_tree():

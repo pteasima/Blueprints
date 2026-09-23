@@ -51,14 +51,14 @@ python -m blueprints.export <model>
 
 Example: `python -m blueprints.export hello_world`
 
-Exports land in `exports/<model>/` (`model.png`, plus STEP/STL/USDZ/GLB/HTML/SVG/DXF). **PNG is required** in the reply. The HTML viewer is a self-contained offline WebGL page (embedded GLB + custom Three.js shell) with part toggles and camera presets; USDZ remains for Quick Look/AR.
+Solids land in `exports/<model>/` as STEP/STL plus USDZ/GLB/HTML for the viewer. 2D modules (`obyvak_section`, `obyvak_elevation`) still write layered SVG/DXF/PNG. Contractor plates — labels, dimensions, a named orthographic scene — come from the viewer **Drawing** button (PNG and PDF of that view). **A PNG of any changed 3D view is required** in the reply: capture the viewer drawing, not a hidden-line dump of the solid. The HTML viewer is a self-contained offline WebGL page (embedded GLB + custom Three.js shell) with part toggles, camera presets, and scene drawings; USDZ remains for Quick Look/AR.
 
 The viewer **Measure** tool (top bar, next to AR) is **experimental** and will be developed further — do not treat its current UX/snap behavior as a stable contract when changing the viewer. See `src/blueprints/viewer/README.md`.
 
 Chat on iOS **and** web only *renders* `<img>` and `<video>`. Copy PNG (and optional orbit video) to `/opt/cursor/artifacts/` and embed with:
 
 ```html
-<img src="/opt/cursor/artifacts/obyvak_cutaway.png" alt="obyvak cutaway" />
+<img src="/opt/cursor/artifacts/obyvak_sikmina-section.png" alt="šikmina section drawing" />
 ```
 
 Only those `src` values are rewritten to a public artifact URL. **Do not** put `/opt/cursor/artifacts/…` in `<a href>` — the chat leaves the path as-is, the browser resolves it to `https://cursor.com/opt/cursor/artifacts/…`, and Cursor shows **404**. USDZ never appears as a tile.

@@ -398,6 +398,37 @@ canvas {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
 }
 
+.scene-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 0.55rem;
+}
+
+.scene-list button {
+  appearance: none;
+  flex: 0 1 auto;
+  max-width: 100%;
+  margin: 0;
+  padding: 0.5rem 0.7rem;
+  border: 0;
+  border-radius: 10px;
+  background: var(--fill);
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+  cursor: pointer;
+}
+
+.scene-list button.is-active,
+.scene-list button:active {
+  background: var(--glass-strong);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
 .parts {
   display: flex;
   flex-direction: column;

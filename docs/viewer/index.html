@@ -18,6 +18,7 @@
     <a id="home" class="chrome-btn" href="../" aria-label="Back to hub">←</a>
     <button type="button" id="ar" class="chrome-btn" hidden>AR</button>
     <button type="button" id="measure" class="chrome-btn" hidden aria-pressed="false">Measure</button>
+    <button type="button" id="drawing" class="chrome-btn" hidden disabled>Drawing</button>
   </div>
   <div class="top-chrome-end">
     <button type="button" id="sheet-toggle" class="chrome-btn sheet-toggle" aria-expanded="true" aria-label="Hide controls" title="Hide controls">›</button>
@@ -29,6 +30,7 @@
     <section class="sheet-section" id="section-view">
       <h2 class="sheet-title" data-i18n="ui.view">View</h2>
       <div id="cams" class="seg"></div>
+      <div id="scenes" class="scene-list" hidden></div>
       <div id="fov" class="fov"></div>
     </section>
     <section class="sheet-section" id="section-cuts">
@@ -55,7 +57,7 @@
 </aside>
 <pre id="err"></pre>
 <canvas id="c"></canvas>
-<script src="viewer.iife.js?v=735c523083"></script>
+<script src="viewer.iife.js?v=31cc8ade11"></script>
 <script>
 (function () {
   const errEl = document.getElementById("err");
