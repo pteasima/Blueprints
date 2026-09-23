@@ -43,7 +43,6 @@ from build123d import Edge, Face, Vector, Wire
 LABEL_FLOOR = "floor"
 LABEL_MASONRY = "masonry"
 LABEL_COLUMN = "column"
-LABEL_VENEC = "venec"
 LABEL_EPS = "eps"
 LABEL_PLASTER = "plaster"
 LABEL_WALL_PLATE = "wall_plate"
@@ -84,7 +83,6 @@ PART_GROUPS = [
             LABEL_FLOOR,
             LABEL_MASONRY,
             LABEL_COLUMN,
-            LABEL_VENEC,
             LABEL_EPS,
             LABEL_PLASTER,
             LABEL_WALL_PLATE,
@@ -142,9 +140,9 @@ class ObyvakParams:
     room_width: float = 5350.0
     room_length: float = 11100.0
     # Raised so rafter underside sits on pozednice top at plate mid-X (40° pack unchanged).
-    ridge_z: float = 6011.5
+    ridge_z: float = 6057.6
     eave_wall_z: float = 3200.0
-    # Ring beam under pozednice; columns stop at eave_wall_z − venec_h.
+    # Ring-beam course under pozednice (drawn as masonry); columns stop below it.
     venec_h: float = 250.0
     roof_angle_deg: float = 40.0
     furniture_width: float = 450.0
@@ -155,6 +153,10 @@ class ObyvakParams:
     wall_plaster: float = 15.0
     plate_w: float = 140.0
     plate_h: float = 100.0
+    # Terrace-glass jakl (modelled as masonry) — in front of glass, pier centres.
+    window_column_size: float = 100.0
+    # Concrete columns in the cabinet eave that the wall bears against (same Y grid).
+    furn_column_size: float = 250.0
     rafter_t: float = 160.0
     plenum_t: float = 80.0
     cd_t: float = 27.0
@@ -291,8 +293,9 @@ class ObyvakLayout:
         self.xr_eps = p.room_width + p.wall_plaster + p.wall_mason + p.wall_eps
         self.left_eave = self.xl_eps - p.roof_overhang
         self.right_eave = self.xr_eps + p.roof_overhang
-        self.poz_l0 = self.xl_mas + p.wall_mason - p.plate_w
-        self.poz_r0 = self.xr_int + p.wall_plaster
+        # Pozednice centred on the věnec / masonry thickness (not flush to the room face).
+        self.poz_l0 = self.xl_mas + p.wall_mason * 0.5 - p.plate_w * 0.5
+        self.poz_r0 = self.xr_int + p.wall_plaster + p.wall_mason * 0.5 - p.plate_w * 0.5
 
         self.x_pred_l = p.predstena_kitchen
         self.x_pred_r = p.room_length - p.predstena_living
@@ -312,11 +315,15 @@ class ObyvakLayout:
 
         self.zle_tile = self.z_tile(0.0) - (0.0 - self.left_eave) * self.tan
         self.zre_tile = self.z_tile(p.room_width) - (self.right_eave - p.room_width) * self.tan
-        # Underside of věnec / top of columns (pozednice sits on eave_wall_z).
+        # Underside of ring-beam course / top of columns (pozednice sits on eave_wall_z).
         self.column_top_z = p.eave_wall_z - p.venec_h
 
+    def eave_column_y_centres(self) -> list[float]:
+        """Y centres of the two structural columns (gaps between glazed bays)."""
+        return [(y0 + y1) * 0.5 for y0, y1 in self.eave_pier_spans()]
+
     def eave_pier_spans(self) -> list[tuple[float, float]]:
-        """Y spans of the two terrace-wall columns (gaps between eave_windows)."""
+        """Y spans between eave_windows (pier / column stations)."""
         wins = sorted(self.p.eave_windows, key=lambda w: w[0])
         spans: list[tuple[float, float]] = []
         for i in range(len(wins) - 1):
@@ -338,6 +345,21 @@ class ObyvakLayout:
         last1 = wins[-1][0] + wins[-1][1]
         if y1 > last1:
             spans.append((last1, y1))
+        return spans
+
+    def eave_masonry_furn_spans(self, y0: float, y1: float) -> list[tuple[float, float]]:
+        """Cabinet-eave masonry Y spans with gaps for the concrete columns."""
+        half = self.p.furn_column_size * 0.5
+        cuts = sorted(self.eave_column_y_centres())
+        spans: list[tuple[float, float]] = []
+        cursor = y0
+        for yc in cuts:
+            ya, yb = yc - half, yc + half
+            if ya > cursor:
+                spans.append((cursor, ya))
+            cursor = max(cursor, yb)
+        if y1 > cursor:
+            spans.append((cursor, y1))
         return spans
 
     def z_raf(self, x: float) -> float:

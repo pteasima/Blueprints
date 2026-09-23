@@ -48,7 +48,7 @@ def test_derived_matches_source_sheet():
     assert g.x_false == (p.room_width - p.furniture_width) / 2.0
     assert g.z_nabeh_bot == p.furniture_height + p.furniture_gap
     assert abs(g.h_start - _source_h_start(p)) < 1e-9
-    assert abs(g.h_start - 3052.0) < 2.0
+    assert abs(g.h_start - 3098.0) < 2.0
     assert g.z_gkf_horiz == g.h_start
     assert g.z_false == g.h_start + g.x_false * g.tan
     soffit_h = g.z_gkf_horiz - g.z_nabeh_bot
@@ -65,7 +65,6 @@ def test_obyvak_section_builds_and_exports(tmp_path, monkeypatch):
     labels = {c.label for c in shape.children}
     for name in (
         "masonry",
-        "venec",
         "eps",
         LABEL_RAFTERS,
         LABEL_PLENUM_WOOL,
@@ -83,6 +82,7 @@ def test_obyvak_section_builds_and_exports(tmp_path, monkeypatch):
         LABEL_SOFFIT_CD,
     ):
         assert name in labels
+    assert "venec" not in labels
     assert "podhled" not in labels
     assert "NaturHeld 140" not in labels
     assert "sdk" not in labels
