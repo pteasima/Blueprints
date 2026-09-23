@@ -12,10 +12,11 @@ World:
 
   StoSilent Top Finish + Top Basic + NaturHeld 140 (60)     → `slope_naturheld_140`
   dřevěný rošt: latě KVH 60×40 @ ~625 // krokvím (⊥ CD)   → `slope_battens`
-  NaturHeld Flex 50 between those latě (60)                 → `slope_naturheld_flex_50`
+  NaturHeld Flex 50 between those latě, flush (40)          → `slope_naturheld_flex_50`
   vapour foil (~1) + GKF/RF 12.5                            → `slope_gkf`
   CD Rigips 60×27 @ ~625 ⊥ krokvím                          → `slope_cd`
-  Nonius závěs CD→krokve                                    → `slope_nonius`
+  přímý závěs 125 on the window slope (plenum ~80)          → `slope_direct_hanger`
+  Nonius on the cabinet slope (gap opens to ~370)           → `slope_nonius`
   Domo Plus plenum (80)                                     → `plenum_wool`
   krokve 100/160 @ ~875 + MW between                        → `rafters` / `plenum_wool`
   zavětrovací pásky 40×2 @ 45° X across krokve (racking)    → `racking_strap`
@@ -58,6 +59,7 @@ LABEL_SLOPE_FLEX = "slope_naturheld_flex_50"
 LABEL_SLOPE_BATTENS = "slope_battens"
 LABEL_SLOPE_GKF = "slope_gkf"
 LABEL_SLOPE_CD = "slope_cd"
+LABEL_SLOPE_DIRECT = "slope_direct_hanger"
 LABEL_SLOPE_NONIUS = "slope_nonius"
 # --- Soffit (podhled) ---
 LABEL_SOFFIT_NH = "soffit_naturheld_140"
@@ -101,6 +103,7 @@ PART_GROUPS = [
             LABEL_SLOPE_BATTENS,
             LABEL_SLOPE_GKF,
             LABEL_SLOPE_CD,
+            LABEL_SLOPE_DIRECT,
             LABEL_SLOPE_NONIUS,
         ],
     },
@@ -255,8 +258,8 @@ class ObyvakLayout:
 
         # Room-facing acoustic face (Finish + Basic + NaturHeld 140).
         self.t_nh_face = p.finish_t + p.basic_t + p.naturheld_t
-        # Flex + foil + GKF behind the NH face (still below the CD grid).
-        self.t_flex_pack = p.flex_t + p.foil_t
+        # Flex fills the 40 mm lať. Foil is the 1 mm seat under GKF — not a second Flex skin.
+        self.t_flex_pack = p.rost_d + p.foil_t
         self.t_soft_below_sdk = self.t_nh_face + self.t_flex_pack + p.sdk_t
         self.t_left = p.plenum_t + p.cd_t + self.t_soft_below_sdk
         # Right-side hangers are longer: slope continues to X_FURN then drops.
@@ -427,9 +430,9 @@ class ObyvakLayout:
         return self._slope_band_pts(0.0, self.t_nh_face)
 
     def sikmina_flex_pts(self) -> list[tuple[float, float]]:
-        """Flex 50 (+ foil) zone behind NH on the slopes — latě sit inside this band."""
+        """Flex 50 between the latě, flush with the 40 mm lať. No quilt over them."""
         t0 = self.t_nh_face
-        return self._slope_band_pts(t0, t0 + self.t_flex_pack)
+        return self._slope_band_pts(t0, t0 + self.p.rost_d)
 
     def sikmina_sdk_pts(self) -> list[tuple[float, float]]:
         """GKF/RF on the slopes, continued past X_FURN to the vertical acoustic return."""

@@ -8,6 +8,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { USDZExporter } from "three/addons/exporters/USDZExporter.js";
 import { meshToClippedExportMesh } from "./clipGeometry.js";
+import { isSectionCap, syncSectionCaps } from "./sectionCaps.js";
 import { applyArPlacement, computeArPlacement } from "./arPlacement.js";
 import { BG_DARK, BG_LIGHT, initSheetChrome } from "./chrome.js";
 import { createCooperativeRange } from "./coopRange.js";
@@ -647,10 +648,23 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     maybeSpawnDraftFromCamera();
   }
 
+  /** Iso and the other builtin views show every part. */
+  function resetDefaultOpacities() {
+    for (const name of parts.keys()) {
+      partOpacity.set(name, 1);
+      partLastNonZero.set(name, 1);
+      applyOpacityToMeshes(parts.get(name) || [], 1, { edgeMode });
+    }
+    updateBox();
+    applyClipping();
+    syncPartOpacityUi();
+  }
+
   function setCameraPreset(name) {
     if (!root) return;
     activeSceneSpec = null;
     annotations.clear();
+    resetDefaultOpacities();
     syncDrawingButton();
     syncLabelButton();
     // Builtin presets assume default world-up (Three Y).
@@ -945,6 +959,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       renderer.toneMappingExposure = 1;
     }
     refreshEdges();
+    syncSectionCaps(parts, lockedClipPlanes());
   }
 
   function buildMaterialToggle() {
@@ -1226,7 +1241,10 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     leafSyncButtons.clear();
 
     for (const name of parts.keys()) {
-      if (!partOpacity.has(name)) partOpacity.set(name, 1);
+      if (!partOpacity.has(name)) {
+        partOpacity.set(name, 1);
+        applyOpacityToMeshes(parts.get(name) || [], 1, { edgeMode });
+      }
       if (!partLastNonZero.has(name)) partLastNonZero.set(name, 1);
     }
 
@@ -1485,7 +1503,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     if (!root) return;
     root.traverse((obj) => {
       if (!obj.isMesh || !obj.material) return;
-      if (isEdgeOverlay(obj)) return;
+      if (isEdgeOverlay(obj) || isSectionCap(obj)) return;
       const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
       for (const m of mats) {
         m.clippingPlanes = planes;
@@ -1493,6 +1511,9 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         m.needsUpdate = true;
       }
     });
+    // Fill the cut. Clipping only discards fragments; without these faces a
+    // solid opened on both ends reads as an empty tube.
+    syncSectionCaps(parts, planes);
     // Rebuild hard+cut edge geometry so section faces get silhouette strokes.
     if (edgeMode !== EDGE_MODE_NONE) refreshEdges();
     else applyEdgeClipping(root, planes);
