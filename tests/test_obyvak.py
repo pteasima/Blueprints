@@ -136,6 +136,37 @@ def test_krov_is_discrete_rafters():
         assert abs((b - a) - p.rafter_spacing) < 1.0
 
 
+def test_mineral_wool_fills_rafter_bays():
+    """Mineral wool packs the 160 mm between krokve and stops under the vent."""
+    from build123d import Box, Location
+
+    p = ObyvakParams()
+    g = build_layout(p)
+    shape, _ = build(p)
+    wool_parts = _labeled(shape, LABEL_PLENUM_WOOL)
+    assert len(wool_parts) == 1
+    wool = wool_parts[0]
+    bb = wool.bounding_box()
+    # Into the rafter depth at the ridge, still below the ventilation / tiles.
+    assert bb.max.Z > g.z_raf(g.x_ridge) + p.rafter_t * 0.5
+    assert bb.max.Z < g.z_raf_outer(g.x_ridge) + 0.5
+
+    stations = g.rafter_y_stations(FACE_GAP, p.room_length - FACE_GAP)
+    x = 0.45 * g.x_false
+    z_mid = 0.5 * (g.z_raf(x) + g.z_raf_outer(x))
+    def _hit_volume(shape, xyz) -> float:
+        hit = shape.intersect(Location(xyz) * Box(8, 8, 8))
+        if hit is None:
+            return 0.0
+        solids = list(hit.solids()) if hasattr(hit, "solids") else [hit]
+        return sum(float(s.volume) for s in solids if s is not None)
+
+    y_bay = 0.5 * (stations[4] + stations[5])
+    assert _hit_volume(wool, (x, y_bay, z_mid)) > 100.0
+    # The krokev itself stays timber.
+    assert _hit_volume(wool, (x, stations[4], z_mid)) < 1.0
+
+
 def test_sikminy_and_soffit_stack_in_3d():
     """Šikminy NH / rost // krokvím / CD ⊥ / Flex and soffit box."""
     p = ObyvakParams()
@@ -471,10 +502,12 @@ def test_sikmina_drawing_scenes():
     assert "NaturHeld 140, 60 mm" in joined
     assert "Flex 50" in joined
     assert "Minerální vlna" in joined
+    assert "plénum" not in joined.lower()
     joined_en = " ".join(
         ann["text"]["en"] for ann in section["annotations"] if "text" in ann
     )
-    assert "Mineral wool, 80 mm plenum" in joined_en
+    assert "Mineral wool" in joined_en
+    assert "plenum" not in joined_en.lower()
     assert "Nonius" in joined
     assert "125" in joined
     low = joined.lower()
