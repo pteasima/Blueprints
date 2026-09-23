@@ -1,0 +1,456 @@
+[
+  {
+    "id": "soffit",
+    "camera": {
+      "target": [
+        5.125,
+        2.7972030707389997,
+        -5.42
+      ],
+      "position": [
+        5.125,
+        2.7972030707389997,
+        -2.218730807881252
+      ],
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "orthoFit": [
+        0.478125,
+        0.6402538384237496
+      ]
+    },
+    "projection": "ortho",
+    "cuts": [
+      {
+        "normal": [
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "t": 0.5
+      }
+    ],
+    "opacity": {
+      "soffit": 1,
+      "plaster": 1
+    },
+    "opacityDefault": 0.5
+  },
+  {
+    "id": "gable",
+    "camera": {
+      "target": [
+        2.6750000000000003,
+        4.228800000000001,
+        -5.42
+      ],
+      "position": [
+        2.6750000000000003,
+        4.228800000000001,
+        11.705
+      ],
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "orthoFit": [
+        3.4250000000000003,
+        2.411
+      ]
+    },
+    "projection": "ortho",
+    "cuts": [
+      {
+        "normal": [
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "t": 0.5
+      }
+    ],
+    "opacity": {
+      "slopes": 1,
+      "plaster": 1
+    },
+    "opacityDefault": 0.5
+  },
+  {
+    "id": "sikmina-lattice",
+    "title": {
+      "en": "Šikmina — lattice",
+      "cs": "Šikmina — rošt"
+    },
+    "project": "Obývák 1.02",
+    "camera": {
+      "target": [
+        0.6860000000000002,
+        3.8096827007695246,
+        -5.101
+      ],
+      "position": [
+        9.011966090356559,
+        -6.112817299230475,
+        -5.101
+      ],
+      "up": [
+        0.766044443118978,
+        0.6427876096865393,
+        0.0
+      ],
+      "orthoFit": [
+        1.3466250000000002,
+        2.5905807656799067
+      ]
+    },
+    "projection": "ortho",
+    "cuts": [
+      {
+        "normal": [
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "anchor": [
+          2675.0,
+          4269.8,
+          3124.4
+        ]
+      },
+      {
+        "normal": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "anchor": [
+          2675.0,
+          5932.2,
+          3124.4
+        ]
+      },
+      {
+        "normal": [
+          -1.0,
+          0.0,
+          0.0
+        ],
+        "anchor": [
+          2675.0,
+          5101.0,
+          3124.4
+        ]
+      }
+    ],
+    "opacity": {
+      "slope_battens": 1,
+      "slope_naturheld_flex_50": 1,
+      "slope_cd": 1,
+      "slope_direct_hanger": 1,
+      "slope_nonius": 1,
+      "rafters": 1,
+      "racking_strap": 1,
+      "wall_plate": 1
+    },
+    "opacityDefault": 0,
+    "annotations": [
+      {
+        "kind": "callout",
+        "anchor": [
+          1519.0,
+          4466.0,
+          4508.7
+        ],
+        "text": {
+          "en": "KVH battens 60×40\n// rafters @ 625",
+          "cs": "Latě KVH 60×40\n// krokvím @ 625"
+        },
+        "offset": [
+          0.14,
+          0.08
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          547.7,
+          5101.0,
+          3755.0
+        ],
+        "text": {
+          "en": "CD 60×27 @ 625\nperpendicular to rafters",
+          "cs": "CD 60×27 @ 625\n⊥ krokvím"
+        },
+        "offset": [
+          -0.22,
+          0.02
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          1026.5,
+          5451.0,
+          4226.6
+        ],
+        "text": {
+          "en": "Direct hanger 125\nCD → side of rafter",
+          "cs": "Přímý závěs 125\nCD → bok krokve"
+        },
+        "offset": [
+          0.2,
+          0.06
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          1225.0,
+          5550.0,
+          4445.4
+        ],
+        "text": {
+          "en": "Bracing strap 40×2\n45° across rafters",
+          "cs": "Páska 40×2\n45° přes krokve"
+        },
+        "offset": [
+          0.16,
+          -0.1
+        ]
+      },
+      {
+        "kind": "dim",
+        "a": [
+          1176.0,
+          4466.0,
+          4220.8
+        ],
+        "b": [
+          1176.0,
+          5091.0,
+          4220.8
+        ],
+        "offset": 0.055
+      },
+      {
+        "kind": "dim",
+        "a": [
+          547.7,
+          4821.0,
+          3755.0
+        ],
+        "b": [
+          1026.5,
+          4821.0,
+          4156.7
+        ],
+        "offset": -0.045
+      },
+      {
+        "kind": "dim",
+        "a": [
+          784.0,
+          4576.0,
+          4075.3
+        ],
+        "b": [
+          784.0,
+          5451.0,
+          4075.3
+        ],
+        "offset": -0.06
+      }
+    ]
+  },
+  {
+    "id": "sikmina-section",
+    "title": {
+      "en": "Šikmina — section\nperpendicular to the rafters",
+      "cs": "Šikmina — řez\nkolmo na krokve"
+    },
+    "project": "Obývák 1.02",
+    "camera": {
+      "target": [
+        2.6750000000000003,
+        4.263800000000001,
+        -4.666
+      ],
+      "position": [
+        2.6750000000000003,
+        4.263800000000001,
+        14.803999999999998
+      ],
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "orthoFit": [
+        3.894,
+        2.1317040000000005
+      ]
+    },
+    "projection": "ortho",
+    "cuts": [
+      {
+        "normal": [
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "anchor": [
+          1225.0,
+          4666.0,
+          3124.4
+        ]
+      },
+      {
+        "normal": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "anchor": [
+          1225.0,
+          5581.0,
+          3124.4
+        ]
+      }
+    ],
+    "opacity": {
+      "slopes": 1,
+      "soffit": 1,
+      "rafters": 1,
+      "racking_strap": 1,
+      "roofing": 1,
+      "wall_plate": 1,
+      "masonry": 1,
+      "eps": 1,
+      "plaster": 1,
+      "plenum_wool": 0.18,
+      "slope_naturheld_140": 0.18,
+      "slope_naturheld_flex_50": 0.18,
+      "soffit_naturheld_140": 0.18,
+      "soffit_naturheld_flex_50": 0.18
+    },
+    "opacityDefault": 0,
+    "annotations": [
+      {
+        "kind": "callout",
+        "anchor": [
+          686.0,
+          4696.0,
+          3741.8
+        ],
+        "text": {
+          "en": "NaturHeld 140, 60 mm\nStoSilent Finish + Basic 2+2 mm",
+          "cs": "NaturHeld 140, 60 mm\nStoSilent Finish + Basic 2+2 mm"
+        },
+        "offset": [
+          -0.12,
+          -0.05
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          1029.0,
+          4696.0,
+          4097.5
+        ],
+        "text": {
+          "en": "KVH battens 60×40 @ 625\nNaturHeld Flex 50 between them",
+          "cs": "Latě KVH 60×40 @ 625\nNaturHeld Flex 50 mezi nimi"
+        },
+        "offset": [
+          -0.12,
+          -0.08
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          1347.5,
+          4696.0,
+          4400.3
+        ],
+        "text": {
+          "en": "Foil + GKF 12.5",
+          "cs": "Fólie + GKF 12,5"
+        },
+        "offset": [
+          -0.1,
+          -0.06
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          1666.0,
+          4696.0,
+          4693.4
+        ],
+        "text": {
+          "en": "CD 60×27 @ 625\nperpendicular to rafters",
+          "cs": "CD 60×27 @ 625\n⊥ krokvím"
+        },
+        "offset": [
+          0.06,
+          0.05
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          1911.0,
+          4696.0,
+          4963.6
+        ],
+        "text": {
+          "en": "Direct hanger 125\nCD → side of rafter",
+          "cs": "Přímý závěs 125\nCD → bok krokve"
+        },
+        "offset": [
+          0.08,
+          0.06
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          1225.0,
+          4696.0,
+          4398.4
+        ],
+        "text": {
+          "en": "Domo Plus, 80 mm plenum",
+          "cs": "Domo Plus, 80 mm plénum"
+        },
+        "offset": [
+          0.05,
+          0.07
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          3969.0,
+          4696.0,
+          4198.7
+        ],
+        "text": {
+          "en": "Nonius 340/440\nCD → rafter",
+          "cs": "Nonius 340/440\nCD → krokev"
+        },
+        "offset": [
+          0.1,
+          0.06
+        ]
+      }
+    ]
+  }
+]
