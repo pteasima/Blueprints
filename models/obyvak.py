@@ -14,7 +14,7 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
 - Floor slab is the clear room only; perimeter walls own the strip below z=0.
 - Šikminy: NaturHeld 140 → latě // krokvím + Flex between (flush) → foil + GKF
   → CD ⊥ krokvím → přímý závěs 125 on the window slope, Nonius on the cabinet
-  slope → Domo Plus plenum → rafters (krokve 100/160 @ 875) + racking straps.
+  slope → mineral wool (below and between rafters) → krokve 100/160 @ 875 + straps.
   `rafters` = roof timber; `*_battens` = NH latě (zone-prefixed).
 - Soffit box: NH L over cabinets (20 mm gap); Flex + latový rost; continuous GKF
   (slope past X_FURN → vertical return on shared horizontal CD/UD → lid);
@@ -766,8 +766,27 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         roofing_cutters,
         LABEL_ROOFING,
     )
-    # Vata is the attic fill above the CD pack (full room length to gables).
+    # Mineral wool: the void above the CD pack, plus the bays between krokve.
+    # Same part. The vent channel above the rafter top stays empty.
     vata = _extrude_y(xz_face(vata_pts, LABEL_PLENUM_WOOL), gap, p.room_length - gap, LABEL_PLENUM_WOOL)
+    bay_raw = g.vata_rafter_bay_pts()
+    bay_pts = [
+        (min(max(x, gap), p.room_width - gap), z - gap) for x, z in bay_raw
+    ]
+    bay_face = xz_face(bay_pts, LABEL_PLENUM_WOOL)
+    # Cheeks stop FACE_GAP short of each krokev so the timber and the wool do not share a face.
+    cursor = gap
+    y_wool1 = p.room_length - gap
+    for yc in rafter_ys:
+        ya = yc - half_raf - gap
+        yb = yc + half_raf + gap
+        if ya - cursor > gap:
+            piece = _extrude_y(bay_face, cursor, ya, LABEL_PLENUM_WOOL)
+            vata = _paint(vata.fuse(piece), LABEL_PLENUM_WOOL)
+        cursor = max(cursor, yb)
+    if y_wool1 - cursor > gap:
+        piece = _extrude_y(bay_face, cursor, y_wool1, LABEL_PLENUM_WOOL)
+        vata = _paint(vata.fuse(piece), LABEL_PLENUM_WOOL)
 
     parts: list = list(structure)
     parts.extend(_glass_panes(p, g, gap))
@@ -899,7 +918,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
 
     parts.extend(paska_parts)
 
-    # MW plenum must not swallow CD / hangers / pásky.
+    # Mineral wool must not swallow CD / hangers / pásky.
     if cd_parts or zaves_parts or paska_parts:
         vata = _cut_away(vata, cd_parts + zaves_parts + paska_parts, LABEL_PLENUM_WOOL)
         for i, part in enumerate(parts):
@@ -1352,7 +1371,7 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     lat_target = on_face(0.28 * g.x_false, y_mid, t_rost)
     lattice = {
         "id": "sikmina-lattice",
-        "title": _tx("Šikmina — lattice", "Šikmina — rošt"),
+        "title": _tx("Slopes — lattice", "Šikmina — rošt"),
         "project": "Obývák 1.02",
         "camera": _ortho_pose(
             lat_target,
@@ -1369,13 +1388,17 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
         ],
         "opacity": {
             LABEL_SLOPE_BATTENS: 1,
-            LABEL_SLOPE_FLEX: 1,
             LABEL_SLOPE_CD: 1,
             LABEL_SLOPE_DIRECT: 1,
             LABEL_SLOPE_NONIUS: 1,
             LABEL_RAFTERS: 1,
             LABEL_RACKING_STRAP: 1,
             LABEL_WALL_PLATE: 1,
+            # Head-on, the NaturHeld face covers the whole grid, so it stays
+            # off. Flex and the foil+GKF board are the same ghosts as the
+            # section, light enough that the battens and CD stay the picture.
+            LABEL_SLOPE_FLEX: 0.18,
+            LABEL_SLOPE_GKF: 0.35,
         },
         "opacityDefault": 0,
         "annotations": [
@@ -1403,12 +1426,6 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
                 "Páska 40×2\n45° přes krokve",
                 (0.16, -0.1),
             ),
-            _callout(
-                (g.poz_l0 + p.plate_w * 0.5, y_mid, p.eave_wall_z + p.plate_h),
-                "Rafters seat on the wall plate\n(centred on the ring beam)",
-                "Krokve sedí na pozednici\n(osa na věnci)",
-                (0.16, -0.08),
-            ),
             _dim(
                 on_face(0.48 * g.x_false, rost_pair[0], t_rost),
                 on_face(0.48 * g.x_false, rost_pair[1], t_rost),
@@ -1430,8 +1447,12 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     # Section: kitchen → living, both slopes and the soffit, one rafter bay.
     # The soffit is in the picture with no callouts (its own plate comes later).
     y_note = y_near + 30.0
-    plate_x = g.poz_l0 + p.plate_w * 0.5
     x_right = g.x_false + 0.62 * (g.x_furn - g.x_false)
+    # Each cut face is its own layer, so a sliced solid stacks two of these.
+    # Wool stays the lighter tint. Foil is the 1 mm in the GKF solid, so the
+    # board is ghosted a step darker and the wood, CD, and hangers stay solid.
+    wool = 0.18
+    board = 0.35
     frame_x0 = g.left_eave - 80.0
     frame_x1 = g.right_eave + 80.0
     frame_z0 = g.z_nabeh_bot - 180.0
@@ -1441,7 +1462,7 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     section = {
         "id": "sikmina-section",
         "title": _tx(
-            "Šikmina — section\nperpendicular to the rafters",
+            "Slopes — section\nperpendicular to the rafters",
             "Šikmina — řez\nkolmo na krokve",
         ),
         "project": "Obývák 1.02",
@@ -1462,16 +1483,27 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
             _cut((0.0, 0.0, 1.0), (0.5 * g.x_false, y_far, g.h_start)),
         ],
         "opacity": {
-            "slopes": 1,
-            "soffit": 1,
             LABEL_RAFTERS: 1,
-            LABEL_PLENUM_WOOL: 1,
+            LABEL_WALL_PLATE: 1,
+            LABEL_SLOPE_BATTENS: 1,
+            LABEL_SOFFIT_BATTENS: 1,
+            LABEL_SLOPE_CD: 1,
+            LABEL_SOFFIT_CD: 1,
+            LABEL_SLOPE_DIRECT: 1,
+            LABEL_SLOPE_NONIUS: 1,
+            LABEL_SOFFIT_NONIUS: 1,
             LABEL_RACKING_STRAP: 1,
             LABEL_ROOFING: 1,
-            LABEL_WALL_PLATE: 1,
             LABEL_MASONRY: 1,
             LABEL_EPS: 1,
             LABEL_PLASTER: 1,
+            LABEL_PLENUM_WOOL: wool,
+            LABEL_SLOPE_NH: wool,
+            LABEL_SLOPE_FLEX: wool,
+            LABEL_SOFFIT_NH: wool,
+            LABEL_SOFFIT_FLEX: wool,
+            LABEL_SLOPE_GKF: board,
+            LABEL_SOFFIT_GKF: board,
         },
         "opacityDefault": 0,
         "annotations": [
@@ -1506,39 +1538,17 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
                 (0.08, 0.06),
             ),
             _callout(
-                on_face(0.5 * g.x_false, y_note, t_cd_outer + p.plenum_t * 0.55),
-                "Domo Plus, 80 mm plenum",
-                "Domo Plus, 80 mm plénum",
-                (0.05, 0.07),
-            ),
-            _callout(
-                (0.48 * g.x_false, y_note, g.z_raf(0.48 * g.x_false) + 24.0),
-                "Rafter 100/160 @ 875\nunderside on the wall plate",
-                "Krokev 100/160 @ 875\nspodní hrana na pozednici",
+                # Mid-depth of the rafter bay: the void below and the fill between
+                # krokve are one mineral-wool solid.
+                on_face(0.5 * g.x_false, y_note, g.t_left + p.rafter_t * 0.5),
+                "Mineral wool",
+                "Minerální vlna",
                 (0.08, 0.05),
             ),
             _callout(
-                (0.34 * g.x_false, y_note, g.z_raf(0.34 * g.x_false)),
-                "Strap 40×2 at 45°",
-                "Páska 40×2 pod 45°",
-                (0.04, 0.06),
-            ),
-            _callout(
-                (plate_x, y_note, p.eave_wall_z + p.plate_h * 0.5),
-                "Wall plate 140×100\non ring beam 250",
-                "Pozednice 140×100\nna věnci 250",
-                (-0.1, -0.04),
-            ),
-            _callout(
-                (g.left_eave + 40.0, y_note, g.z_tile(0.0)),
-                "40°  ·  overhang 80 mm\n(gutter only)",
-                "40°  ·  přesah 80 mm\n(jen okap)",
-                (-0.02, 0.1),
-            ),
-            _callout(
                 on_face(x_right, y_note, t_cd_outer + 80.0),
-                "Nonius 340/440\nCD → rafter, not the wall plate",
-                "Nonius 340/440\nCD → krokev, ne pozednice",
+                "Nonius 340/440\nCD → rafter",
+                "Nonius 340/440\nCD → krokev",
                 (0.1, 0.06),
             ),
         ],

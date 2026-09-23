@@ -136,6 +136,37 @@ def test_krov_is_discrete_rafters():
         assert abs((b - a) - p.rafter_spacing) < 1.0
 
 
+def test_mineral_wool_fills_rafter_bays():
+    """Mineral wool packs the 160 mm between krokve and stops under the vent."""
+    from build123d import Box, Location
+
+    p = ObyvakParams()
+    g = build_layout(p)
+    shape, _ = build(p)
+    wool_parts = _labeled(shape, LABEL_PLENUM_WOOL)
+    assert len(wool_parts) == 1
+    wool = wool_parts[0]
+    bb = wool.bounding_box()
+    # Into the rafter depth at the ridge, still below the ventilation / tiles.
+    assert bb.max.Z > g.z_raf(g.x_ridge) + p.rafter_t * 0.5
+    assert bb.max.Z < g.z_raf_outer(g.x_ridge) + 0.5
+
+    stations = g.rafter_y_stations(FACE_GAP, p.room_length - FACE_GAP)
+    x = 0.45 * g.x_false
+    z_mid = 0.5 * (g.z_raf(x) + g.z_raf_outer(x))
+    def _hit_volume(shape, xyz) -> float:
+        hit = shape.intersect(Location(xyz) * Box(8, 8, 8))
+        if hit is None:
+            return 0.0
+        solids = list(hit.solids()) if hasattr(hit, "solids") else [hit]
+        return sum(float(s.volume) for s in solids if s is not None)
+
+    y_bay = 0.5 * (stations[4] + stations[5])
+    assert _hit_volume(wool, (x, y_bay, z_mid)) > 100.0
+    # The krokev itself stays timber.
+    assert _hit_volume(wool, (x, stations[4], z_mid)) < 1.0
+
+
 def test_sikminy_and_soffit_stack_in_3d():
     """Šikminy NH / rost // krokvím / CD ⊥ / Flex and soffit box."""
     p = ObyvakParams()
@@ -405,11 +436,12 @@ def test_sikmina_drawing_scenes():
     assert lattice["opacity"][LABEL_RAFTERS] == 1
     assert LABEL_MASONRY not in lattice["opacity"]
     assert LABEL_SLOPE_NH not in lattice["opacity"]
-    assert LABEL_SLOPE_GKF not in lattice["opacity"]
+    assert lattice["opacity"][LABEL_SLOPE_FLEX] == 0.18
+    assert lattice["opacity"][LABEL_SLOPE_GKF] == 0.35
     assert LABEL_ROOFING not in lattice["opacity"]
     assert len(lattice["cuts"]) == 3
     assert lattice["title"]["cs"].startswith("Šikmina")
-    assert lattice["title"]["en"]
+    assert lattice["title"]["en"].startswith("Slopes")
     assert lattice["project"] == "Obývák 1.02"
     up = lattice["camera"]["up"]
     assert abs(up[2]) < 1e-9
@@ -427,17 +459,34 @@ def test_sikmina_drawing_scenes():
         assert "en" in ann["text"] and "cs" in ann["text"]
         texts.append(ann["text"]["cs"])
     assert any("625" in t for t in texts)
-    assert any("krokev" in t.lower() or "Krokev" in t or "pozednici" in t for t in texts)
+    assert any("krokv" in t.lower() for t in texts)
+    assert not any("pozednic" in t.lower() or "věnc" in t.lower() for t in texts)
 
     section = specs["sikmina-section"]
     assert section["opacityDefault"] == 0
-    assert section["opacity"]["slopes"] == 1
+    assert "slopes" not in section["opacity"]
     assert section["opacity"][LABEL_MASONRY] == 1
     assert section["opacity"][LABEL_WALL_PLATE] == 1
     assert section["opacity"][LABEL_RAFTERS] == 1
+    assert section["opacity"][LABEL_SLOPE_BATTENS] == 1
+    assert section["opacity"][LABEL_SLOPE_CD] == 1
+    assert section["opacity"][LABEL_SLOPE_DIRECT] == 1
+    assert section["opacity"][LABEL_SOFFIT_BATTENS] == 1
+    assert section["opacity"][LABEL_SOFFIT_CD] == 1
+    assert section["opacity"][LABEL_SOFFIT_NONIUS] == 1
+    wool = 0.18
+    board = 0.35
+    assert section["opacity"][LABEL_PLENUM_WOOL] == wool
+    assert section["opacity"][LABEL_SLOPE_NH] == wool
+    assert section["opacity"][LABEL_SLOPE_FLEX] == wool
+    assert section["opacity"][LABEL_SOFFIT_NH] == wool
+    assert section["opacity"][LABEL_SOFFIT_FLEX] == wool
+    assert section["opacity"][LABEL_SLOPE_GKF] == board
+    assert section["opacity"][LABEL_SOFFIT_GKF] == board
     assert LABEL_FURNITURE not in section["opacity"]
     assert len(section["cuts"]) == 2
-    assert section["opacity"]["soffit"] == 1
+    assert section["title"]["en"].startswith("Slopes")
+    assert section["title"]["cs"].startswith("Šikmina")
     assert section["camera"]["position"][2] > section["camera"]["target"][2]
     # Both slopes: the frame reaches the cabinet eave, and nothing cuts at the ridge.
     assert section["camera"]["orthoFit"][0] > (g.x_ridge * 0.001)
@@ -452,13 +501,21 @@ def test_sikmina_drawing_scenes():
     )
     assert "NaturHeld 140, 60 mm" in joined
     assert "Flex 50" in joined
-    assert "Domo Plus" in joined
-    assert "věnci 250" in joined or "věnec 250" in joined
-    assert "pozednici" in joined or "Pozednice" in joined
-    assert "40°" in joined
+    assert "Minerální vlna" in joined
+    assert "plénum" not in joined.lower()
+    joined_en = " ".join(
+        ann["text"]["en"] for ann in section["annotations"] if "text" in ann
+    )
+    assert "Mineral wool" in joined_en
+    assert "plenum" not in joined_en.lower()
     assert "Nonius" in joined
     assert "125" in joined
-    assert "soffit" not in joined.lower() and "podhled" not in joined.lower()
+    low = joined.lower()
+    assert "přesah" not in low and "overhang" not in low
+    assert "pozednic" not in low and "wall plate" not in low
+    assert "věnc" not in low and "páska" not in low and "strap" not in low
+    assert "40°" not in joined
+    assert "soffit" not in low and "podhled" not in low
 
 
 def test_write_scenes_json(tmp_path):

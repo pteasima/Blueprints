@@ -15,10 +15,10 @@ World:
   NaturHeld Flex 50 between those latě, flush (40)          → `slope_naturheld_flex_50`
   vapour foil (~1) + GKF/RF 12.5                            → `slope_gkf`
   CD Rigips 60×27 @ ~625 ⊥ krokvím                          → `slope_cd`
-  přímý závěs 125 on the window slope (plenum ~80)          → `slope_direct_hanger`
+  přímý závěs 125 on the window slope (void ~80)            → `slope_direct_hanger`
   Nonius on the cabinet slope (gap opens to ~370)           → `slope_nonius`
-  Domo Plus plenum (80)                                     → `plenum_wool`
-  krokve 100/160 @ ~875 + MW between                        → `rafters` / `plenum_wool`
+  minerální vlna: void below krokve + bays between them    → `plenum_wool`
+  krokve 100/160 @ ~875                                     → `rafters`
   zavětrovací pásky 40×2 @ 45° X across krokve (racking)    → `racking_strap`
   (střešní latě / kontralatě above rafters stay in roofing)
 
@@ -700,7 +700,12 @@ class ObyvakLayout:
         ]
 
     def vata_pts(self) -> list[tuple[float, float]]:
-        """MW plenum + between-rafter fill: above CD / GKF lid, below rafters."""
+        """Mineral wool below the rafters: above the CD / GKF lid, up to the underside.
+
+        The bays *between* rafters are ``vata_rafter_bay_pts`` (same material).
+        This polygon is also the 2D cut through a krokev, where the timber is solid
+        and the bay fill is not in the plane.
+        """
         p = self.p
         t_below = self.t_soft_below_sdk + p.cd_t
         # Follow the slope-GKF plane to the rost-front break, then step to the lid CD.
@@ -717,6 +722,23 @@ class ObyvakLayout:
             (p.room_width, self.z_raf(p.room_width)),
             (self.x_ridge, self.z_raf(self.x_ridge)),
             (0.0, self.z_raf(0.0)),
+        ]
+
+    def vata_rafter_bay_pts(self) -> list[tuple[float, float]]:
+        """Mineral wool in the rafter depth, over the warm room only.
+
+        Bottom is the rafter underside; top is the rafter top. The ventilation
+        gap, DHV, and tiles stay above this. The 3D build keeps a FACE_GAP off
+        each krokev cheek so the timber is not the insulation.
+        """
+        p = self.p
+        return [
+            (0.0, self.z_raf(0.0)),
+            (self.x_ridge, self.z_raf(self.x_ridge)),
+            (p.room_width, self.z_raf(p.room_width)),
+            (p.room_width, self.z_raf_outer(p.room_width)),
+            (self.x_ridge, self.z_raf_outer(self.x_ridge)),
+            (0.0, self.z_raf_outer(0.0)),
         ]
 
     def horiz_cd_x_stations(self) -> list[float]:

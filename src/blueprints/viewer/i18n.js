@@ -23,7 +23,7 @@ const PART_EN = {
   wall_plate: "Wall plate",
   rafters: "Rafters",
   roofing: "Roofing build-up",
-  plenum_wool: "Domo Plus plenum",
+  plenum_wool: "Mineral wool",
   racking_strap: "Racking strap",
   pocket_frame: "Pocket-door frame",
   wall_gkf: "GKF plasterboard",
@@ -63,7 +63,7 @@ const PART_CS = {
   wall_plate: "Pozednice",
   rafters: "Krokve",
   roofing: "Střešní skladba",
-  plenum_wool: "Domo Plus",
+  plenum_wool: "Minerální vlna",
   racking_strap: "Zavětrovací páska",
   pocket_frame: "Pouzdro",
   wall_gkf: "GKF sádrokarton",
@@ -116,8 +116,8 @@ const UI_EN = {
   "ui.labels": "Labels",
   "scene.soffit": "Soffit",
   "scene.gable": "Gable",
-  "scene.sikmina-lattice": "Šikmina lattice",
-  "scene.sikmina-section": "Šikmina section",
+  "scene.sikmina-lattice": "Slopes lattice",
+  "scene.sikmina-section": "Slopes section",
 };
 
 const UI_CS = {
