@@ -5134,7 +5134,10 @@ varying float vPeelViewZ;`),n.fragmentShader=n.fragmentShader.replace("#include 
       varying vec2 vUv;
       void main() {
         vec4 c = texture2D(tSrc, vUv);
-        gl_FragColor = vec4(c.rgb * c.a, c.a);
+        // Colour pass uses NormalBlending into a cleared target, so rgb is
+        // already premultiplied. Multiplying by alpha again crushes the tint
+        // (a 0.35 wash of Domo Plus landed as muddy grey on the plate).
+        gl_FragColor = vec4(c.rgb, c.a);
       }
     `,depthTest:!1,depthWrite:!1,toneMapped:!1,blending:Ul,blendSrc:oa,blendDst:ji,blendSrcAlpha:oa,blendDstAlpha:ji,blendEquation:Fn}),g=new Je(new Yn(2,2),d),_=new qn;_.add(g);let m=new Wt({uniforms:{uValue:{value:0}},vertexShader:`
       void main() {
