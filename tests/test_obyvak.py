@@ -33,6 +33,7 @@ from obyvak_geom import (  # noqa: E402
     LABEL_SOFFIT_BATTENS,
     LABEL_SOFFIT_CD,
     LABEL_SOFFIT_FLEX,
+    LABEL_SOFFIT_DUCT,
     LABEL_SOFFIT_GKF,
     LABEL_SOFFIT_NH,
     LABEL_SOFFIT_NONIUS,
@@ -206,7 +207,7 @@ def test_sikminy_and_soffit_stack_in_3d():
     assert box_nh.bounding_box().min.Z >= p.furniture_height + p.furniture_gap - 1.0
     furn = _labeled(shape, LABEL_FURNITURE)[0].bounding_box()
     assert box_nh.bounding_box().min.Z >= furn.max.Z + p.furniture_gap - 2.0
-    # Ceiling GKF: horizontal lid + vertical return at rost front (continuous shell).
+    # Ceiling GKF: raised horizontal lid + vertical return at rost front.
     lids = [
         c
         for c in _labeled(shape, LABEL_SOFFIT_GKF) + _labeled(shape, LABEL_SLOPE_GKF)
@@ -229,20 +230,19 @@ def test_sikminy_and_soffit_stack_in_3d():
         and c.bounding_box().min.Z >= g.z_gkf_horiz + p.sdk_t - 2.0
     ]
     assert len(verts) == 1
-    # Attic face of vertical GKF flush with rost front / CD front.
-    assert abs(verts[0].bounding_box().max.X - (g.x_nh_inner - FACE_GAP)) < 2.0
-    # Lid extends past the CD (room-ward) to seat the vertical — proper L corner.
-    assert horiz_lids[0].bounding_box().min.X < g.x_nh_inner - p.sdk_t * 0.5
-    assert abs(horiz_lids[0].bounding_box().min.X - (g.x_nh_inner - p.sdk_t + FACE_GAP)) < 2.0
-    # Vertical top is cut to the slope (trapezoid taller on the room side).
+    # Room face of the vertical return is the rost front; it stands attic of that plane.
+    assert abs(verts[0].bounding_box().min.X - (g.x_nh_inner + FACE_GAP)) < 2.0
+    assert abs(verts[0].bounding_box().max.X - (g.x_nh_inner + p.sdk_t - FACE_GAP)) < 2.0
+    # Lid starts on that return and runs to the plate.
+    assert abs(horiz_lids[0].bounding_box().min.X - (g.x_nh_inner + FACE_GAP)) < 2.0
     vbb = verts[0].bounding_box()
-    assert vbb.size.Z > p.cd_t  # taller than a square butt at cd_t
-    # Front soffit CD flush with rost edge (front face at x_nh_inner).
+    assert vbb.size.Z > p.cd_t
+    # Front soffit CD flush with rost edge, sitting on the raised lid.
     front_cds = [
         c
         for c in cds
         if abs(c.bounding_box().min.X - g.x_nh_inner) < 2.0
-        and c.bounding_box().min.Z >= g.z_gkf_horiz + p.sdk_t - 2.0
+        and c.bounding_box().min.Z >= g.z_soffit_lid + p.sdk_t - 2.0
     ]
     assert len(front_cds) >= 1
     # Drop hangers exist at the front CD (box hangs at lattice edge, not mid-bay only).
@@ -250,8 +250,8 @@ def test_sikminy_and_soffit_stack_in_3d():
         c
         for c in zaves
         if abs(c.bounding_box().center().X - (g.x_nh_inner + p.cd_w * 0.5)) < p.cd_w
-        and c.bounding_box().min.Z < g.z_gkf_horiz + p.sdk_t
-        and c.bounding_box().max.Z > g.z_gkf_horiz - p.rost_d
+        and c.bounding_box().min.Z < g.z_soffit_lid + p.sdk_t
+        and c.bounding_box().max.Z > g.z_soffit_lid
     ]
     assert len(front_drops) >= 1
     # Rafters are roof timber only — soffit-frame latě use *_battens.
@@ -290,7 +290,7 @@ def test_sikminy_and_soffit_stack_in_3d():
         c
         for c in zaves
         if c.bounding_box().min.X >= g.x_furn - 1.0
-        and c.bounding_box().min.Z >= g.z_gkf_horiz + p.sdk_t - 1.0
+        and c.bounding_box().min.Z >= g.z_soffit_lid + p.sdk_t - 1.0
     ]
     assert len(soffit_hangers) >= 4
     # Soffit rost includes top rails under GKF + wall-braced underside latě.
@@ -299,7 +299,7 @@ def test_sikminy_and_soffit_stack_in_3d():
     top_rails = [
         c
         for c in soffit_rost
-        if c.bounding_box().min.Z >= g.z_gkf_horiz - p.rost_d - 2.0
+        if abs(c.bounding_box().max.Z - g.z_soffit_rail()) < 3.0
         and c.bounding_box().size.X > 200.0
     ]
     assert len(top_rails) >= 5
@@ -339,6 +339,46 @@ def test_soffit_hangs_from_cd_not_furniture_or_pozednice():
         assert poz.bounding_box().min.Z > g.z_gkf_horiz + 50.0
 
 
+def test_soffit_ducts_sit_under_lid_on_wall_plate():
+    """Three Ø160 pipes under the GKF; the board ends on the pozednice, not the plaster."""
+    p = ObyvakParams()
+    g = build_layout(p)
+    shape, _ = build(p)
+    ducts = _labeled(shape, LABEL_SOFFIT_DUCT)
+    assert len(ducts) == 3
+    r = p.duct_od * 0.5
+    for duct in ducts:
+        bb = duct.bounding_box()
+        assert abs(bb.size.X - p.duct_od) < 1.0
+        assert abs(bb.size.Z - p.duct_od) < 1.0
+        # Warm side of the lid, clear of the column heads.
+        assert bb.max.Z < g.z_soffit_lid - 5.0
+        assert bb.min.Z > g.column_top_z + 10.0
+        assert bb.max.X < p.room_width - 4.0
+        assert bb.min.X > g.x_nh_inner + p.rost_d + 5.0
+    # 2-over-1: two crowns at the same height, one nested below.
+    crowns = sorted(d.bounding_box().max.Z for d in ducts)
+    assert abs(crowns[1] - crowns[2]) < 1.0
+    assert crowns[0] < crowns[1] - r
+    lids = [
+        c
+        for c in _labeled(shape, LABEL_SOFFIT_GKF)
+        if c.bounding_box().size.Z < p.sdk_t + 1.0 and c.bounding_box().size.X > 100.0
+    ]
+    assert len(lids) == 1
+    lid = lids[0].bounding_box()
+    # Top flush with the plate; cut end on the plate cheek, above the wall head.
+    assert abs(lid.max.Z - (g.z_plate_top - FACE_GAP)) < 1.0
+    assert lid.min.Z > p.eave_wall_z + 50.0
+    assert abs(lid.max.X - (g.poz_r0 - FACE_GAP)) < 1.0
+    assert lid.max.X > p.room_width
+    # Plate is the edge fix, still not a rost hang point.
+    for poz in _labeled(shape, LABEL_WALL_PLATE):
+        if poz.bounding_box().min.X < p.room_width:
+            continue
+        assert poz.bounding_box().min.Z > g.z_soffit_rail()
+
+
 def test_soffit_scene_recipe():
     specs = scenes()
     assert len(specs) == 4
@@ -376,7 +416,7 @@ def test_soffit_scene_recipe():
     g = build_layout(p)
     tx, ty, tz = cam["target"]
     assert g.x_furn * 0.001 <= tx <= (g.x_furn + p.furniture_width) * 0.001
-    assert g.z_nabeh_bot * 0.001 <= ty <= g.z_gkf_horiz * 0.001
+    assert g.z_nabeh_bot * 0.001 <= ty <= g.z_soffit_lid * 0.001
     assert -g.y_furn1 * 0.001 <= tz <= -g.y_furn0 * 0.001
     # CAD (0,0,1000) height → glTF Y = 1.
     assert abs(cad_mm_to_gltf_m((0, 0, 1000))[1] - 1.0) < 1e-12

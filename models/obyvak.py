@@ -16,10 +16,13 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
   → CD ⊥ krokvím → přímý závěs 125 on the window slope, Nonius on the cabinet
   slope → mineral wool (below and between rafters) → krokve 100/160 @ 875 + straps.
   `rafters` = roof timber; `*_battens` = NH latě (zone-prefixed).
-- Soffit box: NH L over cabinets (20 mm gap); Flex + latový rost; continuous GKF
-  (slope past X_FURN → vertical return on shared horizontal CD/UD → lid);
-  Nonius from krokve; rost hung from CD and braced to the eave wall.
-  Furniture and pozednice are not structural.
+- Soffit box: NH L over cabinets (20 mm gap); Flex + latový rost below a
+  service void; three Ø160 spiral ducts (HRV + AC) in that void; GKF lid
+  raised onto the pozednice (above the wall head, not the plaster). Slope GKF
+  → vertical return → lid. Nonius from krokve carries the lid; rost hangs from
+  the front CD and braces to the eave wall. Ducts hang on their own trapeze.
+  Furniture and pozednice do not carry the box — the plate only cleats the
+  board edge.
 - Terrace eave (X=0): 100×100 columns in front of the glass at the pier centres
   stop one brick course below the ring beam; cabinet eave keeps a continuous wall
   with 300×300 columns standing in front of it on the room side (same Y grid).
@@ -39,7 +42,18 @@ from __future__ import annotations
 
 from dataclasses import asdict
 
-from build123d import Align, Axis, Box, Color, Compound, Location, Plane, Rotation, Solid
+from build123d import (
+    Align,
+    Axis,
+    Box,
+    Color,
+    Compound,
+    Cylinder,
+    Location,
+    Plane,
+    Rotation,
+    Solid,
+)
 
 from obyvak_geom import (
     LABEL_BASS_CD,
@@ -67,6 +81,7 @@ from obyvak_geom import (
     LABEL_SOFFIT_BATTENS,
     LABEL_SOFFIT_CD,
     LABEL_SOFFIT_FLEX,
+    LABEL_SOFFIT_DUCT,
     LABEL_SOFFIT_GKF,
     LABEL_SOFFIT_NH,
     LABEL_SOFFIT_NONIUS,
@@ -141,6 +156,16 @@ def _oriented_bar(
     hyp = math.hypot(fx, fy)
     pitch = math.degrees(math.atan2(fz, hyp))
     solid = Location(mid) * Rotation(Z=yaw) * Rotation(Y=-pitch) * solid
+    return _paint(solid, label)
+
+
+def _cyl_y(cx: float, y0: float, y1: float, cz: float, radius: float, label: str):
+    """Cylinder along Y, centred on (cx, mid-Y, cz). Radius is the true OD/2."""
+    length = y1 - y0
+    if length <= 0 or radius <= 0:
+        raise ValueError(f"non-positive duct for {label}")
+    solid = Cylinder(radius, length, align=(Align.CENTER, Align.CENTER, Align.CENTER))
+    solid = Location((cx, 0.5 * (y0 + y1), cz)) * Rotation(X=90) * solid
     return _paint(solid, label)
 
 
@@ -926,79 +951,79 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
                 parts[i] = vata
                 break
 
-    # --- Soffit bay: GKF lid → horizontal CD → Nonius → krokev; box hangs from CD. ---
+    # --- Soffit bay: ducts under a lid that lands on the pozednice. ---
+    # Box: krokve → Nonius → front CD → drop through the lid → vertical latě
+    # → mid-rail / bottom latě, wall angle as brace only.
+    # Lid edge: continuous steel cleat on the plate cheek. Not a hang point.
+    # Ducts: trapeze from the CD, clear of the rost and the column heads.
     t = g.t_nh_face
+    x_duct0, x_duct1 = g.soffit_duct_x_extent()
+    lat_end = g.x_nh_inner + p.rost_d
+    if x_duct0 < lat_end + 8.0:
+        raise ValueError(
+            f"soffit ducts collide with the front latě ({x_duct0:.1f} < {lat_end + 8:.1f})"
+        )
+    if x_duct1 > p.room_width - 4.0:
+        raise ValueError(f"soffit ducts run through the plaster ({x_duct1:.1f})")
+    if g.z_soffit_duct_bot() < g.column_top_z + 10.0:
+        raise ValueError(
+            f"soffit ducts hit the column heads ({g.z_soffit_duct_bot():.1f} < {g.column_top_z + 10:.1f})"
+        )
+    if g.z_soffit_duct_crown() > g.z_soffit_lid - 5.0:
+        raise ValueError("soffit ducts do not fit under the lid on the pozednice")
+
+    t_sdk0 = g.t_nh_face + g.t_flex_pack
+    z_nh_hi = g.z_slope_plane_offset(g.x_nh_outer, t_sdk0) - gap
+    z_nh_lo = g.z_slope_plane_offset(g.x_nh_inner, t_sdk0) - gap
     soffit_nh = [
         (g.x_nh_outer + gap, g.z_nabeh_bot + gap),
         (p.room_width - gap, g.z_nabeh_bot + gap),
         (p.room_width - gap, g.z_nabeh_bot + t - gap),
         (g.x_nh_inner - gap, g.z_nabeh_bot + t - gap),
-        (g.x_nh_inner - gap, g.z_gkf_horiz - gap),
-        (g.x_nh_outer + gap, g.z_gkf_horiz - gap),
+        (g.x_nh_inner - gap, z_nh_lo),
+        (g.x_nh_outer + gap, z_nh_hi),
     ]
     parts.append(_extrude_y(xz_face(soffit_nh, LABEL_SOFFIT_NH), y_soff0, y_soff1, LABEL_SOFFIT_NH))
 
-    # Soffit Flex: main box below Z_GKF + small pack under slope GKF to rost front.
+    # Flex stays in the acoustic cavity under the mid-rail. The duct void is empty.
+    z_rail_top = g.z_soffit_rail()
     flex_box = [
         (g.x_nh_inner + gap, g.z_nabeh_bot + t + gap),
         (p.room_width - gap, g.z_nabeh_bot + t + gap),
-        (p.room_width - gap, g.z_gkf_horiz - gap),
-        (g.x_nh_inner + gap, g.z_gkf_horiz - gap),
+        (p.room_width - gap, z_rail_top - gap),
+        (g.x_nh_inner + gap, z_rail_top - gap),
     ]
     flex_solid = _extrude_y(xz_face(flex_box, LABEL_SOFFIT_FLEX), y_soff0, y_soff1, LABEL_SOFFIT_FLEX)
-    t_sdk0 = g.t_nh_face + g.t_flex_pack
-    xb = g.x_sdk_break
-    x_vert = xb - p.sdk_t
-    z_br = g.z_slope_plane_offset(xb, t_sdk0)
-    z_fu = g.z_slope_plane_offset(g.x_furn, t_sdk0)
-    if x_vert - g.x_furn > 4 * gap and z_br > g.z_gkf_horiz + 4 * gap:
-        z_vert_top = g.z_slope_plane_offset(x_vert, t_sdk0)
-        flex_wedge = [
-            (g.x_furn + gap, g.z_gkf_horiz + gap),
-            (x_vert - gap, g.z_gkf_horiz + gap),
-            (x_vert - gap, z_vert_top - gap),
-            (g.x_furn + gap, z_fu - gap),
-        ]
-        wedge_solid = _extrude_y(xz_face(flex_wedge, LABEL_SOFFIT_FLEX), y_soff0, y_soff1, LABEL_SOFFIT_FLEX)
-        try:
-            flex_solid = _paint(flex_solid.fuse(wedge_solid), LABEL_SOFFIT_FLEX)
-        except Exception:
-            parts.append(wedge_solid)
 
-    # Continuous GKF: slope → vertical return (angled top) seated on lid past CD.
+    # GKF return on the attic side of the rost front, lid from there onto the plate.
     lid_solid = None
     vert_solid = None
+    xb = g.x_sdk_break
     if p.sdk_t > 2 * gap:
-        z_bot = g.z_gkf_horiz + p.sdk_t
-        z_top_attic = g.z_slope_plane_offset(xb, t_sdk0)
-        z_top_room = g.z_slope_plane_offset(x_vert, t_sdk0)
-        if min(z_top_attic, z_top_room) - z_bot > 2 * gap:
+        z_bot = g.z_slope_plane_offset(xb, t_sdk0)
+        z_top = g.z_soffit_lid
+        if z_top - z_bot > 2 * gap:
             vert = [
-                (x_vert + gap, z_bot + gap),
-                (xb - gap, z_bot + gap),
-                (xb - gap, z_top_attic - gap),
-                (x_vert + gap, z_top_room - gap),
+                (xb + gap, z_bot + gap),
+                (xb + p.sdk_t - gap, z_bot + gap),
+                (xb + p.sdk_t - gap, z_top - gap),
+                (xb + gap, z_top - gap),
             ]
             vert_solid = _extrude_y(xz_face(vert, LABEL_SOFFIT_GKF), y_soff0, y_soff1, LABEL_SOFFIT_GKF)
-        # Lid extends past the front CD to the room face of the vertical return.
-        x_lid0 = xb - p.sdk_t
         lid = [
-            (x_lid0 + gap, g.z_gkf_horiz + gap),
-            (p.room_width - gap, g.z_gkf_horiz + gap),
-            (p.room_width - gap, g.z_gkf_horiz + p.sdk_t - gap),
-            (x_lid0 + gap, g.z_gkf_horiz + p.sdk_t - gap),
+            (xb + gap, g.z_soffit_lid + gap),
+            (g.poz_r0 - gap, g.z_soffit_lid + gap),
+            (g.poz_r0 - gap, g.z_soffit_lid + p.sdk_t - gap),
+            (xb + gap, g.z_soffit_lid + p.sdk_t - gap),
         ]
         lid_solid = _extrude_y(xz_face(lid, LABEL_SOFFIT_GKF), y_soff0, y_soff1, LABEL_SOFFIT_GKF)
 
-    # Horizontal CD on the lid (first flush with rost front) + wall UD.
+    # Horizontal CD on the lid. No UD on the plaster — the board ends on the plate.
     horiz_cd_parts: list = []
     for xc in g.horiz_cd_x_stations():
         horiz_cd_parts.append(
             _extrude_y(xz_face(g.horiz_cd_quad(xc), LABEL_SOFFIT_CD), y_soff0, y_soff1, LABEL_SOFFIT_CD)
         )
-    horiz_cd_parts.append(
-        _extrude_y(xz_face(g.horiz_wall_ud_pts(), LABEL_SOFFIT_CD), y_soff0, y_soff1, LABEL_SOFFIT_CD)
-    )
     parts.extend(horiz_cd_parts)
 
     # Nonius: horizontal CD → krokev (tall plenum over the cabinet bay).
@@ -1026,31 +1051,42 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         horiz_zaves = [_cut_away(z, krov_parts, LABEL_SOFFIT_NONIUS) for z in horiz_zaves]
     parts.extend(horiz_zaves)
 
-    # Latový rost: top rails under GKF, vertical + underside latě, hung from CD, braced to wall.
+    # Latový rost: verticals stop under the GKF return (beside the ducts), mid-rail
+    # under the pipes, underside latě braced to the wall. The front CD is the only hang.
     fm = p.rost_d
     fw = p.rost_w
     half_w = fw * 0.5
     bt = p.wall_bracket_t
-    # Leave a shelf under the underside latě for the wall angle (above NH).
     z_wood0 = g.z_nabeh_bot + t + gap + bt
-    z_rail = g.z_gkf_horiz - fm
-    face_h = z_rail - z_wood0
+    # Stop under the GKF return. The return owns the attic side of the rost front;
+    # the drop from the front CD bridges that gap in clear air beside the pipes.
+    z_lat_top = g.z_slope_plane_offset(g.x_sdk_break, t_sdk0) - gap
+    face_h = z_lat_top - z_wood0
     x_front = g.x_nh_inner + gap
     x_wall = p.room_width - p.wall_plaster - gap
+    z_mid = z_rail_top - fm
     frame_parts: list = []
     drop_parts: list = []
     bracket_parts: list = []
-    if face_h > fm + gap and x_wall - (x_front + fm) > gap:
+    if face_h > fm + gap and x_wall - (x_front + fm) > gap and z_rail_top - z_wood0 > fm:
         cd_xs = g.horiz_cd_x_stations()
         for yc in g.sikmina_rost_y_stations(y_soff0, y_soff1):
             ya, yb = yc - half_w, yc + half_w
             if yb <= ya:
                 continue
-            # Top rail under GKF — carries the box; screwed up to CD through the lid.
+            # Mid-rail under the ducts — caps the acoustic cavity, ties to the wall.
             frame_parts.append(
-                _box(x_front, ya, z_rail, max(x_wall - x_front, gap), yb - ya, fm - gap, LABEL_SOFFIT_BATTENS)
+                _box(
+                    x_front + fm,
+                    ya,
+                    z_mid,
+                    max(x_wall - (x_front + fm), gap),
+                    yb - ya,
+                    fm - gap,
+                    LABEL_SOFFIT_BATTENS,
+                )
             )
-            # Vertical latě behind the NH face.
+            # Vertical latě behind the NH face, beside the duct pack (not through it).
             frame_parts.append(
                 _box(x_front, ya, z_wood0, fm - gap, yb - ya, face_h, LABEL_SOFFIT_BATTENS)
             )
@@ -1066,51 +1102,128 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
                     LABEL_SOFFIT_BATTENS,
                 )
             )
-            # Drop hangers: horizontal CD (incl. rost-front) → top rail through GKF.
-            z_drop0 = z_rail + fm
-            z_drop1 = g.z_gkf_horiz + p.sdk_t  # underside of CD
-            drop_h = z_drop1 - z_drop0
-            if drop_h > gap:
-                for xc in cd_xs:
-                    drop_parts.append(
+            # Drop only at the rost-front CD. The other rails are over the pipes.
+            z_drop1 = g.z_soffit_lid + p.sdk_t
+            drop_h = z_drop1 - z_lat_top
+            if drop_h > gap and cd_xs:
+                xc = cd_xs[0]
+                drop_parts.append(
+                    _box(
+                        xc - p.soffit_drop_w * 0.5,
+                        yc - p.soffit_drop_t * 0.5,
+                        z_lat_top,
+                        p.soffit_drop_w,
+                        p.soffit_drop_t,
+                        drop_h,
+                        LABEL_SOFFIT_NONIUS,
+                    )
+                )
+            # Wall angle: horizontal under lať + vertical up the plaster.
+            leg = p.wall_bracket_leg
+            z_ang = z_wood0 - bt
+            bracket_parts.append(
+                _box(x_wall - leg, ya, z_ang, leg - bt, yb - ya, bt, LABEL_SOFFIT_NONIUS)
+            )
+            bracket_parts.append(
+                _box(x_wall - bt, ya, z_ang + bt, bt, yb - ya, leg - bt, LABEL_SOFFIT_NONIUS)
+            )
+
+    # Ø160 spiral ducts along the soffit, 2-over-1. Bare metal, warm side of the lid.
+    duct_parts: list = []
+    r_duct = p.duct_od * 0.5
+    for cx, cz in g.soffit_duct_centers():
+        duct_parts.append(_cyl_y(cx, y_soff0, y_soff1, cz, r_duct, LABEL_SOFFIT_DUCT))
+
+    # Trapeze: flat bar under the lower duct, rods up to the CD in the side gaps.
+    # Room-side rod lands on the front CD; wall-side rod lands on the wall CD.
+    trapeze_parts: list = []
+    bar_t = p.soffit_drop_t
+    # Centre the 2 mm straps in the gaps beside the pack (not on the metal).
+    x_rod_room = 0.5 * (lat_end + x_duct0 - bar_t)
+    x_rod_wall = 0.5 * (x_duct1 + p.room_width - bar_t)
+    z_bar_top = g.z_soffit_duct_bot() - gap
+    if z_bar_top - bar_t > z_rail_top + gap and x_rod_wall - x_rod_room > r_duct:
+        z_rod_top = g.z_soffit_lid + p.sdk_t
+        rod_h = z_rod_top - (z_bar_top - bar_t)
+        for yc in g.sikmina_rost_y_stations(y_soff0, y_soff1):
+            ya = yc - p.soffit_drop_w * 0.5
+            yb = yc + p.soffit_drop_w * 0.5
+            trapeze_parts.append(
+                _box(
+                    x_rod_room,
+                    ya,
+                    z_bar_top - bar_t,
+                    (x_rod_wall + bar_t) - x_rod_room,
+                    yb - ya,
+                    bar_t,
+                    LABEL_SOFFIT_NONIUS,
+                )
+            )
+            if rod_h > gap:
+                for xr in (x_rod_room, x_rod_wall):
+                    trapeze_parts.append(
                         _box(
-                            xc - p.soffit_drop_w * 0.5,
-                            yc - p.soffit_drop_t * 0.5,
-                            z_drop0,
-                            p.soffit_drop_w,
-                            p.soffit_drop_t,
-                            drop_h,
+                            xr,
+                            ya,
+                            z_bar_top,
+                            bar_t,
+                            yb - ya,
+                            z_rod_top - z_bar_top,
                             LABEL_SOFFIT_NONIUS,
                         )
                     )
-            # Wall angle: horizontal under lať + vertical up the plaster (no shared volume).
-            leg = p.wall_bracket_leg
-            z_br = z_wood0 - bt
-            bracket_parts.append(
-                _box(x_wall - leg, ya, z_br, leg - bt, yb - ya, bt, LABEL_SOFFIT_NONIUS)
-            )
-            bracket_parts.append(
-                _box(x_wall - bt, ya, z_br + bt, bt, yb - ya, leg - bt, LABEL_SOFFIT_NONIUS)
-            )
+
+    # Continuous angle on the plate cheek, holding the board edge. Not the hang.
+    cleat_parts: list = []
+    setback = g.poz_r0 - p.room_width
+    cleat_leg = min(p.wall_bracket_leg, max(setback - 15.0, bt + 10.0))
+    cleat_parts.append(
+        _box(
+            g.poz_r0 - cleat_leg,
+            y_soff0,
+            g.z_soffit_lid - bt - gap,
+            cleat_leg - gap,
+            y_soff1 - y_soff0,
+            bt,
+            LABEL_SOFFIT_NONIUS,
+        )
+    )
+    cleat_parts.append(
+        _box(
+            g.poz_r0 - bt - gap,
+            y_soff0,
+            g.z_soffit_lid - cleat_leg,
+            bt,
+            y_soff1 - y_soff0,
+            cleat_leg - bt - gap,
+            LABEL_SOFFIT_NONIUS,
+        )
+    )
+
+    service_steel = drop_parts + trapeze_parts + bracket_parts + cleat_parts
     if frame_parts:
-        # Steel mates against timber with FACE_GAP — shave any float nicks.
-        steel = drop_parts + bracket_parts
-        if steel:
-            frame_parts = [_cut_away(f, steel, LABEL_SOFFIT_BATTENS) for f in frame_parts]
-        flex_solid = _cut_away(flex_solid, frame_parts + steel, LABEL_SOFFIT_FLEX)
+        if service_steel:
+            frame_parts = [_cut_away(f, service_steel, LABEL_SOFFIT_BATTENS) for f in frame_parts]
+        flex_solid = _cut_away(flex_solid, frame_parts + service_steel, LABEL_SOFFIT_FLEX)
         parts.append(flex_solid)
         parts.extend(frame_parts)
-        parts.extend(drop_parts)
-        parts.extend(bracket_parts)
     else:
         parts.append(flex_solid)
+    parts.extend(drop_parts)
+    parts.extend(bracket_parts)
+    parts.extend(trapeze_parts)
+    parts.extend(cleat_parts)
+    parts.extend(duct_parts)
 
-    # GKF lid + vertical return last so drop hangers can pierce the lid (FACE_GAP mates).
+    # GKF last so hangers and trapeze rods can pierce the lid.
+    pierce = drop_parts + trapeze_parts
     if vert_solid is not None:
+        if pierce:
+            vert_solid = _cut_away(vert_solid, pierce, LABEL_SOFFIT_GKF)
         parts.append(vert_solid)
     if lid_solid is not None:
-        if drop_parts:
-            lid_solid = _cut_away(lid_solid, drop_parts, LABEL_SOFFIT_GKF)
+        if pierce:
+            lid_solid = _cut_away(lid_solid, pierce, LABEL_SOFFIT_GKF)
         parts.append(lid_solid)
 
     # MW over the soffit bay must clear horizontal CD + Nonius.
@@ -1135,6 +1248,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
             LABEL_SOFFIT_GKF,
             LABEL_SOFFIT_CD,
             LABEL_SOFFIT_NONIUS,
+            LABEL_SOFFIT_DUCT,
         }
         parts = [
             _cut_away(part, furn_col_parts, part.label) if part.label in soffit_cut_labels else part
@@ -1575,15 +1689,15 @@ def scenes(params: ObyvakParams | None = None) -> list[dict]:
     sx0, sx1 = g.x_furn, g.x_furn + p.furniture_width
     sy0, sy1 = g.y_furn0 + gap, g.y_furn1 - gap
     sz0 = g.z_nabeh_bot + gap
-    sz1 = g.z_gkf_horiz - gap
+    sz1 = g.z_soffit_lid + p.sdk_t
     scx = 0.5 * (sx0 + sx1)
     scy = 0.5 * (sy0 + sy1)
     scz = 0.5 * (sz0 + sz1)
     spad = 1.25
     s_frame_x0 = g.x_furn - 250.0
-    s_frame_x1 = p.room_width + p.wall_plaster + 50.0
+    s_frame_x1 = g.poz_r0 + p.plate_w + 40.0
     s_frame_z0 = p.furniture_height - 150.0
-    s_frame_z1 = g.z_gkf_horiz + 200.0
+    s_frame_z1 = g.z_plate_top + 180.0
     s_half_w = 0.5 * (s_frame_x1 - s_frame_x0) * spad * 0.001
     s_half_h = 0.5 * (s_frame_z1 - s_frame_z0) * spad * 0.001
     s_dist_m = max(s_half_w, s_half_h, 0.35) * 5.0
