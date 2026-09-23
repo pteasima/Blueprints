@@ -14,7 +14,7 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
 - Floor slab is the clear room only; perimeter walls own the strip below z=0.
 - Šikminy: NaturHeld 140 → latě // krokvím + Flex between (flush) → foil + GKF
   → CD ⊥ krokvím → přímý závěs 125 on the window slope, Nonius on the cabinet
-  slope → Domo Plus plenum → rafters (krokve 100/160 @ 875) + racking straps.
+  slope → mineral-wool plenum → rafters (krokve 100/160 @ 875) + racking straps.
   `rafters` = roof timber; `*_battens` = NH latě (zone-prefixed).
 - Soffit box: NH L over cabinets (20 mm gap); Flex + latový rost; continuous GKF
   (slope past X_FURN → vertical return on shared horizontal CD/UD → lid);
@@ -1520,8 +1520,8 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
             ),
             _callout(
                 on_face(0.5 * g.x_false, y_note, t_cd_outer + p.plenum_t * 0.55),
-                "Domo Plus, 80 mm plenum",
-                "Domo Plus, 80 mm plénum",
+                "Mineral wool, 80 mm plenum",
+                "Minerální vlna, 80 mm plénum",
                 (0.05, 0.07),
             ),
             _callout(

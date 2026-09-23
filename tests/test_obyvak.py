@@ -470,7 +470,11 @@ def test_sikmina_drawing_scenes():
     )
     assert "NaturHeld 140, 60 mm" in joined
     assert "Flex 50" in joined
-    assert "Domo Plus" in joined
+    assert "Minerální vlna" in joined
+    joined_en = " ".join(
+        ann["text"]["en"] for ann in section["annotations"] if "text" in ann
+    )
+    assert "Mineral wool, 80 mm plenum" in joined_en
     assert "Nonius" in joined
     assert "125" in joined
     low = joined.lower()

@@ -224,7 +224,7 @@ export function createDepthPeelRenderer(renderer) {
         vec4 c = texture2D(tSrc, vUv);
         // Colour pass uses NormalBlending into a cleared target, so rgb is
         // already premultiplied. Multiplying by alpha again crushes the tint
-        // (a 0.35 wash of Domo Plus landed as muddy grey on the plate).
+        // (a 0.35 wash of the mineral wool landed as muddy grey on the plate).
         gl_FragColor = vec4(c.rgb, c.a);
       }
     `,

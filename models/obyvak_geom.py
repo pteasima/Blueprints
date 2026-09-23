@@ -17,7 +17,7 @@ World:
   CD Rigips 60×27 @ ~625 ⊥ krokvím                          → `slope_cd`
   přímý závěs 125 on the window slope (plenum ~80)          → `slope_direct_hanger`
   Nonius on the cabinet slope (gap opens to ~370)           → `slope_nonius`
-  Domo Plus plenum (80)                                     → `plenum_wool`
+  minerální vlna / mineral wool plenum (80)                → `plenum_wool`
   krokve 100/160 @ ~875 + MW between                        → `rafters` / `plenum_wool`
   zavětrovací pásky 40×2 @ 45° X across krokve (racking)    → `racking_strap`
   (střešní latě / kontralatě above rafters stay in roofing)
