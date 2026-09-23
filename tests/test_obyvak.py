@@ -14,7 +14,6 @@ from obyvak import (  # noqa: E402
     scenes,
 )
 from obyvak_geom import (  # noqa: E402
-    LABEL_COLUMN,
     LABEL_EPS,
     LABEL_FLOOR,
     LABEL_FURNITURE,
@@ -396,7 +395,6 @@ def test_3d_matches_section_and_elevation_masses():
         LABEL_FLOOR,
         LABEL_EPS,
         LABEL_MASONRY,
-        LABEL_COLUMN,
         LABEL_RAFTERS,
         LABEL_ROOFING,
         LABEL_PLENUM_WOOL,
@@ -425,30 +423,36 @@ def test_3d_matches_section_and_elevation_masses():
         assert name in labels
     assert "koruna" not in labels
     assert "venec" not in labels
+    assert "column" not in labels
     assert "podhled" not in labels
     assert "predstena" not in labels  # replaced by layered bass-trap solids
     assert "sdk" not in labels
     assert "NaturHeld 140" not in labels
 
-    # Four columns: 2×100 at glass, 2×250 in cabinet wall; all stop under ring beam.
-    cols = sorted(_labeled(shape, LABEL_COLUMN), key=lambda s: (s.bounding_box().min.X, s.bounding_box().min.Y))
-    assert len(cols) == 4
-    win_cols = cols[:2]
-    furn_cols = cols[2:]
+    # Columns are masonry: 100×100 in front of glass, 300×300 protruding at cabinets.
     x_glass = g.xl_mas + (p.wall_mason - p.glass_t) / 2.0
-    for yc, col in zip(g.eave_column_y_centres(), win_cols, strict=True):
+    x_win_col = x_glass + p.glass_t
+    x_furn_col0 = g.xr_mas - p.furn_column_size
+    assert x_furn_col0 < p.room_width  # protrudes into the room
+    win_cols = []
+    furn_cols = []
+    for c in _labeled(shape, LABEL_MASONRY):
+        bb = c.bounding_box()
+        if abs(bb.max.Z - g.column_top_z) > 2.0:
+            continue
+        if abs(bb.size.Y - p.window_column_size) < 2.0 and bb.min.X >= x_win_col - 2.0 and bb.max.X < 0.0:
+            win_cols.append(c)
+        if abs(bb.size.Y - p.furn_column_size) < 2.0 and bb.min.X < p.room_width and bb.max.X > p.room_width:
+            furn_cols.append(c)
+    assert len(win_cols) == 2
+    assert len(furn_cols) == 2
+    for yc, col in zip(g.eave_column_y_centres(), sorted(win_cols, key=lambda s: s.bounding_box().min.Y), strict=True):
         bb = col.bounding_box()
-        assert abs(bb.size.X - (p.window_column_size - FACE_GAP)) < 1.0
-        assert abs(bb.size.Y - p.window_column_size) < 1.0
         assert abs(bb.min.Y + bb.size.Y * 0.5 - yc) < 1.0
-        assert bb.min.X >= x_glass + p.glass_t - 1.0  # in front of glass (room side)
-        assert abs(bb.max.Z - g.column_top_z) < 1.0
-    for yc, col in zip(g.eave_column_y_centres(), furn_cols, strict=True):
+    for yc, col in zip(g.eave_column_y_centres(), sorted(furn_cols, key=lambda s: s.bounding_box().min.Y), strict=True):
         bb = col.bounding_box()
-        assert abs(bb.size.Y - p.furn_column_size) < 1.0
         assert abs(bb.min.Y + bb.size.Y * 0.5 - yc) < 1.0
-        assert bb.min.X >= p.room_width - 1.0
-        assert abs(bb.max.Z - g.column_top_z) < 1.0
+        assert abs(bb.min.X - x_furn_col0) < 2.0
 
     # Bass traps: kitchen MW+GKB (190) and living GKB+MW (450).
     bass_wool = _labeled(shape, LABEL_BASS_WOOL)
@@ -639,7 +643,6 @@ def test_obyvak_3d_exports(tmp_path, monkeypatch):
         in {
             LABEL_EPS,
             LABEL_MASONRY,
-            LABEL_COLUMN,
             LABEL_PLASTER,
             LABEL_WALL_PLATE,
             LABEL_FURNITURE,

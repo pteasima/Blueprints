@@ -42,7 +42,6 @@ from build123d import Edge, Face, Vector, Wire
 # --- Shell (roof + walls + floor) ---
 LABEL_FLOOR = "floor"
 LABEL_MASONRY = "masonry"
-LABEL_COLUMN = "column"
 LABEL_EPS = "eps"
 LABEL_PLASTER = "plaster"
 LABEL_WALL_PLATE = "wall_plate"
@@ -82,7 +81,6 @@ PART_GROUPS = [
         "children": [
             LABEL_FLOOR,
             LABEL_MASONRY,
-            LABEL_COLUMN,
             LABEL_EPS,
             LABEL_PLASTER,
             LABEL_WALL_PLATE,
@@ -153,10 +151,10 @@ class ObyvakParams:
     wall_plaster: float = 15.0
     plate_w: float = 140.0
     plate_h: float = 100.0
-    # Terrace-glass jakl (modelled as masonry) — in front of glass, pier centres.
+    # Terrace-glass jakl (drawn as masonry) — in front of glass, pier centres.
     window_column_size: float = 100.0
-    # Concrete columns in the cabinet eave that the wall bears against (same Y grid).
-    furn_column_size: float = 250.0
+    # Concrete columns in the cabinet eave (300×300, protrude into the room).
+    furn_column_size: float = 300.0
     rafter_t: float = 160.0
     plenum_t: float = 80.0
     cd_t: float = 27.0
