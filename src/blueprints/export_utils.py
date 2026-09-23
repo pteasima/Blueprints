@@ -204,6 +204,14 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "roughness": 0.35,
         "metallic": 0.7,
     },
+    "slope_direct_hanger": {
+        "fill": (150, 150, 160),
+        "line": (70, 70, 80),
+        "dxf": ColorIndex.CYAN,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.4,
+        "metallic": 0.75,
+    },
     "slope_nonius": {
         "fill": (90, 90, 100),
         "line": (40, 40, 50),
@@ -315,6 +323,7 @@ SECTION_LAYER_ORDER = [
     "slope_battens",
     "slope_gkf",
     "slope_cd",
+    "slope_direct_hanger",
     "slope_nonius",
     "soffit_naturheld_140",
     "soffit_naturheld_flex_50",
@@ -327,6 +336,22 @@ SECTION_LAYER_ORDER = [
     "bass_cd",
     "bass_wall_hanger",
 ]
+
+# Section-cut wafers use the same colour as the layer they fill.
+_CAP_LAYER = {
+    "cap_slope_naturheld_140": "slope_naturheld_140",
+    "cap_slope_naturheld_flex_50": "slope_naturheld_flex_50",
+    "cap_slope_gkf": "slope_gkf",
+    "cap_plenum_wool": "plenum_wool",
+    "cap_roofing": "roofing",
+    "cap_masonry": "masonry",
+    "cap_soffit_naturheld_140": "soffit_naturheld_140",
+    "cap_soffit_naturheld_flex_50": "soffit_naturheld_flex_50",
+    "cap_soffit_gkf": "soffit_gkf",
+}
+for _cap, _src in _CAP_LAYER.items():
+    SECTION_LAYERS[_cap] = dict(SECTION_LAYERS[_src])
+    SECTION_LAYER_ORDER.append(_cap)
 
 
 def ensure_export_dir(model_name: str) -> Path:

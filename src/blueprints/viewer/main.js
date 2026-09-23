@@ -647,10 +647,35 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     maybeSpawnDraftFromCamera();
   }
 
+  function sectionFillIds() {
+    const ids = new Set();
+    for (const group of partGroups) {
+      if (group && group.id === "section_fill" && Array.isArray(group.children)) {
+        for (const id of group.children) ids.add(String(id));
+      }
+    }
+    return ids;
+  }
+
+  /** Iso and the other builtin views show the building, not the section wafers. */
+  function resetDefaultOpacities() {
+    const hidden = sectionFillIds();
+    for (const name of parts.keys()) {
+      const o = hidden.has(name) ? 0 : 1;
+      partOpacity.set(name, o);
+      if (o > 0) partLastNonZero.set(name, o);
+      applyOpacityToMeshes(parts.get(name) || [], o, { edgeMode });
+    }
+    updateBox();
+    applyClipping();
+    syncPartOpacityUi();
+  }
+
   function setCameraPreset(name) {
     if (!root) return;
     activeSceneSpec = null;
     annotations.clear();
+    resetDefaultOpacities();
     syncDrawingButton();
     syncLabelButton();
     // Builtin presets assume default world-up (Three Y).
@@ -1225,8 +1250,13 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     groupOpacityRanges.clear();
     leafSyncButtons.clear();
 
+    const hiddenFill = sectionFillIds();
     for (const name of parts.keys()) {
-      if (!partOpacity.has(name)) partOpacity.set(name, 1);
+      if (!partOpacity.has(name)) {
+        const o = hiddenFill.has(name) ? 0 : 1;
+        partOpacity.set(name, o);
+        applyOpacityToMeshes(parts.get(name) || [], o, { edgeMode });
+      }
       if (!partLastNonZero.has(name)) partLastNonZero.set(name, 1);
     }
 

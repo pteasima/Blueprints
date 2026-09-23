@@ -25,6 +25,7 @@ from obyvak_geom import (  # noqa: E402
     LABEL_ROOFING,
     LABEL_SLOPE_BATTENS,
     LABEL_SLOPE_CD,
+    LABEL_SLOPE_DIRECT,
     LABEL_SLOPE_FLEX,
     LABEL_SLOPE_GKF,
     LABEL_SLOPE_NH,
@@ -94,8 +95,12 @@ def test_layout_ceiling_and_gable():
     assert abs(g.z_raf(x_bear) - (p.eave_wall_z + p.plate_h)) < 1.0
     # Acoustic face + Flex pack + GKF match the contractor soft stack below CD.
     assert abs(g.t_nh_face - (p.finish_t + p.basic_t + p.naturheld_t)) < 1e-9
-    assert abs(g.t_soft_below_sdk - 137.5) < 1e-9
-    assert abs(g.t_left - 244.5) < 1e-9
+    assert abs(g.t_flex_pack - (p.rost_d + p.foil_t)) < 1e-9
+    assert abs(g.t_soft_below_sdk - 117.5) < 1e-9
+    assert abs(g.t_left - 224.5) < 1e-9
+    flex_pts = g.sikmina_flex_pts()
+    # Band is inner polyline then reversed outer. At the eave, thickness is the lať depth.
+    assert abs((flex_pts[-1][1] - flex_pts[0][1]) * g.cos - p.rost_d) < 1e-6
     assert g.l_hanger_right > g.l_hanger_left
     assert abs(g.z_nabeh_bot - (p.furniture_height + p.furniture_gap)) < 1e-9
     assert g.x_nh_inner == g.x_furn + g.t_nh_face
@@ -141,6 +146,12 @@ def test_sikminy_and_soffit_stack_in_3d():
     rost = _labeled(shape, LABEL_SLOPE_BATTENS) + _labeled(shape, LABEL_SOFFIT_BATTENS)
     cds = _labeled(shape, LABEL_SLOPE_CD) + _labeled(shape, LABEL_SOFFIT_CD)
     zaves = _labeled(shape, LABEL_SLOPE_NONIUS) + _labeled(shape, LABEL_SOFFIT_NONIUS)
+    direct = _labeled(shape, LABEL_SLOPE_DIRECT)
+    assert direct
+    assert all(c.bounding_box().center().X < g.x_false for c in direct)
+    slope_nonius = _labeled(shape, LABEL_SLOPE_NONIUS)
+    assert slope_nonius
+    assert all(c.bounding_box().center().X >= g.x_false - 1.0 for c in slope_nonius)
     pasky = _labeled(shape, LABEL_RACKING_STRAP)
     assert len(nh) >= 2  # slope NH + soffit L
     assert len(flex) >= 2  # slope Flex + box Flex
@@ -314,6 +325,7 @@ def test_soffit_scene_recipe():
     assert s["opacity"] == {
         "soffit": 1,
         LABEL_PLASTER: 1,
+        "section_fill": 0,
     }
     assert len(s["cuts"]) == 1
     assert s["cuts"][0]["t"] == 0.5
@@ -351,6 +363,7 @@ def test_gable_scene_recipe():
     assert s["opacity"] == {
         "slopes": 1,
         LABEL_PLASTER: 1,
+        "section_fill": 0,
     }
     assert len(s["cuts"]) == 1
     assert s["cuts"][0]["t"] == 0.5
@@ -379,9 +392,7 @@ def test_gable_scene_recipe():
 
 
 def test_sikmina_drawing_scenes():
-    """Lattice is head-on to the 40° face; section keeps the věnec and misses columns."""
-    import math
-
+    """Lattice is head-on to the window slope; section shows both slopes and the soffit."""
     specs = {s["id"]: s for s in scenes()}
     p = ObyvakParams()
     g = build_layout(p)
@@ -392,6 +403,7 @@ def test_sikmina_drawing_scenes():
     assert lattice["opacityDefault"] == 0
     assert lattice["opacity"][LABEL_SLOPE_BATTENS] == 1
     assert lattice["opacity"][LABEL_SLOPE_CD] == 1
+    assert lattice["opacity"][LABEL_SLOPE_DIRECT] == 1
     assert lattice["opacity"][LABEL_RAFTERS] == 1
     assert LABEL_MASONRY not in lattice["opacity"]
     assert LABEL_SLOPE_NH not in lattice["opacity"]
@@ -426,30 +438,30 @@ def test_sikmina_drawing_scenes():
     assert section["opacity"][LABEL_WALL_PLATE] == 1
     assert section["opacity"][LABEL_RAFTERS] == 1
     assert LABEL_FURNITURE not in section["opacity"]
-    assert len(section["cuts"]) == 3
+    assert len(section["cuts"]) == 2
+    assert section["opacity"]["soffit"] == 1
+    assert section["opacity"]["section_fill"] == 1
     assert section["camera"]["position"][2] > section["camera"]["target"][2]
-    ys = []
+    # Both slopes: the frame reaches the cabinet eave, and nothing cuts at the ridge.
+    assert section["camera"]["orthoFit"][0] > (g.x_ridge * 0.001)
     for cut in section["cuts"]:
-        ys.append(cut["anchor"][1])
         assert all(abs(cut["anchor"][1] - c) > 400.0 for c in columns)
-    assert any(abs(cut["anchor"][0] - g.x_ridge) < 1.0 for cut in section["cuts"])
+        assert abs(cut["normal"][0]) < 1e-9
+    assert not any(abs(cut["anchor"][0] - g.x_ridge) < 1.0 for cut in section["cuts"])
     dims = [ann for ann in section["annotations"] if ann["kind"] == "dim"]
-    assert len(dims) >= 2
-    rafter_dims = []
-    for dim in dims:
-        dist = math.dist(dim["a"], dim["b"])
-        rafter_dims.append(dist)
-        y = dim["a"][1]
-        assert all(abs(y - c) > 400.0 for c in columns)
-    assert any(abs(d - p.rafter_t) < 1.0 for d in rafter_dims)
-    assert any(abs(d - p.venec_h) < 1.0 for d in rafter_dims)
+    assert dims == []
     joined = " ".join(
         ann["text"]["cs"] for ann in section["annotations"] if "text" in ann
     )
-    assert "NaturHeld" in joined
+    assert "NaturHeld 140, 60 mm" in joined
+    assert "Flex 50" in joined
+    assert "Domo Plus" in joined
+    assert "věnci 250" in joined or "věnec 250" in joined
     assert "pozednici" in joined or "Pozednice" in joined
     assert "40°" in joined
     assert "Nonius" in joined
+    assert "125" in joined
+    assert "soffit" not in joined.lower() and "podhled" not in joined.lower()
 
 
 def test_write_scenes_json(tmp_path):
@@ -707,6 +719,10 @@ def test_3d_parts_do_not_interpenetrate():
                 except Exception:
                     pass
             if vol > 1.0:  # mm³
+                # Section wafers are a coincident copy of the cut face, not a second layer.
+                labels = {a.label, b.label}
+                if any(name.startswith("cap_") for name in labels):
+                    continue
                 violations.append((a.label, b.label, round(vol, 1)))
     assert violations == []
 
@@ -745,7 +761,7 @@ def test_part_groups_tree():
     groups = part_groups()
     assert groups == PART_GROUPS
     ids = [g["id"] for g in groups]
-    assert ids == ["shell", "slopes", "soffit", "bass_traps", "furniture"]
+    assert ids == ["shell", "slopes", "soffit", "bass_traps", "furniture", "section_fill"]
     leaf_ids = {c for g in groups for c in g["children"]}
     shape, _ = build()
     for label in {c.label for c in shape.children}:

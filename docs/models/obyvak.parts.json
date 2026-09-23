@@ -24,6 +24,7 @@
       "slope_battens",
       "slope_gkf",
       "slope_cd",
+      "slope_direct_hanger",
       "slope_nonius"
     ]
   },
@@ -51,6 +52,20 @@
     "id": "furniture",
     "children": [
       "furniture"
+    ]
+  },
+  {
+    "id": "section_fill",
+    "children": [
+      "cap_slope_naturheld_140",
+      "cap_slope_naturheld_flex_50",
+      "cap_slope_gkf",
+      "cap_plenum_wool",
+      "cap_roofing",
+      "cap_masonry",
+      "cap_soffit_naturheld_140",
+      "cap_soffit_naturheld_flex_50",
+      "cap_soffit_gkf"
     ]
   }
 ]
