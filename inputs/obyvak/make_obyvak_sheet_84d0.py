@@ -266,7 +266,7 @@ def dxf_panel_rez(ox=0.0, oy=0.0):
     label(X(poz_l0 + POZ_W / 2), Z(Z_POZ_TOP + 30), "pozednice", 22, align=A.BOTTOM_CENTER)
     label(X(poz_r0 + POZ_W / 2), Z(Z_POZ_TOP + 30), "pozednice", 22, align=A.BOTTOM_CENTER)
 
-    left_e, right_e = xl_eps - 280, xr_eps + 280
+    left_e, right_e = xl_eps - 80, xr_eps + 80
     zle = z_tile(0) - (0 - left_e) * TAN
     zre = z_tile(L_ROOM) - (right_e - L_ROOM) * TAN
     poly([
@@ -602,7 +602,7 @@ ap(ax, [(X_FURN, 0), (L_ROOM, 0), (L_ROOM, H_FURN), (X_FURN, H_FURN)],
 ht(ax, X_FURN + W_FURN / 2, H_FURN * 0.5, "skříně\n450×2450",
    ha="center", va="center", fontsize=8, color="#5a4010")
 
-left_e, right_e = xl_eps - 280, xr_eps + 280
+left_e, right_e = xl_eps - 80, xr_eps + 80
 zle = z_tile(0) - (0 - left_e) * TAN
 zre = z_tile(L_ROOM) - (right_e - L_ROOM) * TAN
 ap(ax, [

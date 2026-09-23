@@ -82,6 +82,17 @@ def test_layout_ceiling_and_gable():
     assert abs((zr - z0) / (xr - x0) - g.tan) < 1e-9
     assert g.y_furn0 == p.predstena_kitchen
     assert g.y_furn1 == p.room_length - p.predstena_living
+    assert p.roof_overhang == 80.0
+    assert abs(g.left_eave - (g.xl_eps - p.roof_overhang)) < 1e-9
+    assert abs(g.column_top_z - (p.eave_wall_z - p.venec_h)) < 1e-9
+    assert g.eave_pier_spans() == [(3050.0, 3250.0), (7750.0, 7950.0)]
+    assert g.eave_column_y_centres() == [3150.0, 7850.0]
+    # Pozednice centred on masonry / věnec thickness.
+    assert abs(g.poz_l0 + p.plate_w * 0.5 - (g.xl_mas + p.wall_mason * 0.5)) < 1e-9
+    assert abs(g.poz_r0 + p.plate_w * 0.5 - (g.xr_int + p.wall_plaster + p.wall_mason * 0.5)) < 1e-9
+    # Rafter underside seats on pozednice top at plate mid-X.
+    x_bear = g.poz_l0 + p.plate_w * 0.5
+    assert abs(g.z_raf(x_bear) - (p.eave_wall_z + p.plate_h)) < 1.0
     # Acoustic face + Flex pack + GKF match the contractor soft stack below CD.
     assert abs(g.t_nh_face - (p.finish_t + p.basic_t + p.naturheld_t)) < 1e-9
     assert abs(g.t_soft_below_sdk - 137.5) < 1e-9
@@ -411,10 +422,44 @@ def test_3d_matches_section_and_elevation_masses():
     ):
         assert name in labels
     assert "koruna" not in labels
+    assert "venec" not in labels
+    assert "column" not in labels
     assert "podhled" not in labels
     assert "predstena" not in labels  # replaced by layered bass-trap solids
     assert "sdk" not in labels
     assert "NaturHeld 140" not in labels
+
+    # Columns are masonry: 100×100 in front of glass; 300×300 in front of cabinet wall.
+    x_glass = g.xl_mas + (p.wall_mason - p.glass_t) / 2.0
+    x_win_col = x_glass + p.glass_t
+    x_furn_col0 = p.room_width - p.furn_column_size
+    assert x_furn_col0 + p.furn_column_size == p.room_width  # hard against interior face
+    win_cols = []
+    furn_cols = []
+    for c in _labeled(shape, LABEL_MASONRY):
+        bb = c.bounding_box()
+        if abs(bb.max.Z - g.column_top_z) > 2.0 and abs(bb.max.Z - (g.column_top_z - FACE_GAP)) > 2.0:
+            continue
+        if abs(bb.size.Y - p.window_column_size) < 2.0 and bb.min.X >= x_win_col - 2.0 and bb.max.X < 0.0:
+            win_cols.append(c)
+        # Entirely in the room, against the cabinet-wall plaster.
+        if (
+            abs(bb.size.Y - p.furn_column_size) < 2.0
+            and abs(bb.size.X - (p.furn_column_size - FACE_GAP)) < 2.0
+            and bb.max.X <= p.room_width + 1.0
+            and bb.min.X >= x_furn_col0 - 2.0
+        ):
+            furn_cols.append(c)
+    assert len(win_cols) == 2
+    assert len(furn_cols) == 2
+    for yc, col in zip(g.eave_column_y_centres(), sorted(win_cols, key=lambda s: s.bounding_box().min.Y), strict=True):
+        bb = col.bounding_box()
+        assert abs(bb.min.Y + bb.size.Y * 0.5 - yc) < 1.0
+    for yc, col in zip(g.eave_column_y_centres(), sorted(furn_cols, key=lambda s: s.bounding_box().min.Y), strict=True):
+        bb = col.bounding_box()
+        assert abs(bb.min.Y + bb.size.Y * 0.5 - yc) < 1.0
+        assert abs(bb.min.X - x_furn_col0) < 2.0
+        assert bb.max.X <= p.room_width + 1.0  # not inside the wall
 
     # Bass traps: kitchen MW+GKB (190) and living GKB+MW (450).
     bass_wool = _labeled(shape, LABEL_BASS_WOOL)
@@ -601,7 +646,14 @@ def test_obyvak_3d_exports(tmp_path, monkeypatch):
     furn_eave = [
         c
         for c in preview.children
-        if c.label in {LABEL_EPS, LABEL_MASONRY, LABEL_PLASTER, LABEL_WALL_PLATE, LABEL_FURNITURE}
+        if c.label
+        in {
+            LABEL_EPS,
+            LABEL_MASONRY,
+            LABEL_PLASTER,
+            LABEL_WALL_PLATE,
+            LABEL_FURNITURE,
+        }
         and c.bounding_box().min.X >= p.room_width - 1.0
     ]
     assert furn_eave == []

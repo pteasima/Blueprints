@@ -59,6 +59,7 @@ def build(params: ObyvakParams | None = None):
 
     parts.append(xz_rect(g.xl_eps, -p.floor_t, g.xr_eps - g.xl_eps, p.floor_t, LABEL_FLOOR))
     parts.append(xz_rect(g.xl_eps, -p.floor_t, p.wall_eps, p.eave_wall_z + p.floor_t, LABEL_EPS))
+    # Eave masonry includes the ring-beam course under pozednice (same material).
     parts.append(xz_rect(g.xl_mas, -p.floor_t, p.wall_mason, p.eave_wall_z + p.floor_t, LABEL_MASONRY))
     parts.append(xz_rect(-p.wall_plaster, 0.0, p.wall_plaster, p.eave_wall_z, LABEL_PLASTER))
     parts.append(xz_rect(p.room_width, 0.0, p.wall_plaster, p.eave_wall_z, LABEL_PLASTER))
