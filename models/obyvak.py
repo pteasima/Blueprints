@@ -20,8 +20,9 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
   Nonius from krokve; rost hung from CD and braced to the eave wall.
   Furniture and pozednice are not structural.
 - Terrace eave (X=0): 100×100 columns in front of the glass at the pier centres
-  stop one brick course below the ring beam; cabinet eave has 300×300 columns
-  protruding into the room on the same Y grid. Columns are drawn as masonry.
+  stop one brick course below the ring beam; cabinet eave keeps a continuous wall
+  with 300×300 columns standing in front of it on the room side (same Y grid).
+  Columns are drawn as masonry.
 - Rafters seat on the wall plate (centred on the věnec); EPS is cut around rafters,
   not the other way around. Overhang past EPS is gutter-sized only.
 - Bass traps (štít): kitchen 190 / living 450 as interior CD/UW cabinets under
@@ -641,27 +642,24 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
             )
         )
 
-    # Right (cabinets): masonry segmented around 300×300 columns that protrude
-    # into the room (outer face flush with outer masonry / xr_mas).
+    # Right (cabinets): continuous masonry wall; 300×300 columns stand in front of
+    # the interior plaster face (entirely in the room), same Y grid as the glass posts.
     structure.append(_box(p.room_width, y0, 0.0, p.wall_plaster, ey, p.eave_wall_z, LABEL_PLASTER))
     x_furn_mas = p.room_width + p.wall_plaster + gap
-    for ya, yb in g.eave_masonry_furn_spans(y0, y1):
-        if yb <= ya + gap:
-            continue
-        structure.append(
-            _box(
-                x_furn_mas,
-                ya,
-                -p.floor_t,
-                p.wall_mason - gap,
-                yb - ya,
-                z_col + p.floor_t,
-                LABEL_MASONRY,
-            )
+    structure.append(
+        _box(
+            x_furn_mas,
+            y0,
+            -p.floor_t,
+            p.wall_mason - gap,
+            ey,
+            p.eave_wall_z + p.floor_t,
+            LABEL_MASONRY,
         )
+    )
     half_furn = p.furn_column_size * 0.5
-    # 300×300: outer face on xr_mas, protrudes past plaster into the room; sits on the slab.
-    x_furn_col0 = g.xr_mas - p.furn_column_size
+    # Against the room-side plaster face; sits on the slab.
+    x_furn_col0 = p.room_width - p.furn_column_size
     furn_col_parts: list = []
     for yc in g.eave_column_y_centres():
         furn_col_parts.append(
@@ -676,23 +674,6 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
             )
         )
     structure.extend(furn_col_parts)
-    # Plaster yields to the protruding columns.
-    if furn_col_parts:
-        structure = [
-            _cut_away(s, furn_col_parts, s.label) if s.label == LABEL_PLASTER and s.bounding_box().min.X >= p.room_width - 1.0 else s
-            for s in structure
-        ]
-    structure.append(
-        _box(
-            x_furn_mas,
-            y0,
-            z_col + gap,
-            p.wall_mason - gap,
-            ey,
-            p.venec_h - gap,
-            LABEL_MASONRY,
-        )
-    )
     structure.append(
         _box(
             g.xr_mas + gap,

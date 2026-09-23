@@ -429,20 +429,26 @@ def test_3d_matches_section_and_elevation_masses():
     assert "sdk" not in labels
     assert "NaturHeld 140" not in labels
 
-    # Columns are masonry: 100×100 in front of glass, 300×300 protruding at cabinets.
+    # Columns are masonry: 100×100 in front of glass; 300×300 in front of cabinet wall.
     x_glass = g.xl_mas + (p.wall_mason - p.glass_t) / 2.0
     x_win_col = x_glass + p.glass_t
-    x_furn_col0 = g.xr_mas - p.furn_column_size
-    assert x_furn_col0 < p.room_width  # protrudes into the room
+    x_furn_col0 = p.room_width - p.furn_column_size
+    assert x_furn_col0 + p.furn_column_size == p.room_width  # hard against interior face
     win_cols = []
     furn_cols = []
     for c in _labeled(shape, LABEL_MASONRY):
         bb = c.bounding_box()
-        if abs(bb.max.Z - g.column_top_z) > 2.0:
+        if abs(bb.max.Z - g.column_top_z) > 2.0 and abs(bb.max.Z - (g.column_top_z - FACE_GAP)) > 2.0:
             continue
         if abs(bb.size.Y - p.window_column_size) < 2.0 and bb.min.X >= x_win_col - 2.0 and bb.max.X < 0.0:
             win_cols.append(c)
-        if abs(bb.size.Y - p.furn_column_size) < 2.0 and bb.min.X < p.room_width and bb.max.X > p.room_width:
+        # Entirely in the room, against the cabinet-wall plaster.
+        if (
+            abs(bb.size.Y - p.furn_column_size) < 2.0
+            and abs(bb.size.X - (p.furn_column_size - FACE_GAP)) < 2.0
+            and bb.max.X <= p.room_width + 1.0
+            and bb.min.X >= x_furn_col0 - 2.0
+        ):
             furn_cols.append(c)
     assert len(win_cols) == 2
     assert len(furn_cols) == 2
@@ -453,6 +459,7 @@ def test_3d_matches_section_and_elevation_masses():
         bb = col.bounding_box()
         assert abs(bb.min.Y + bb.size.Y * 0.5 - yc) < 1.0
         assert abs(bb.min.X - x_furn_col0) < 2.0
+        assert bb.max.X <= p.room_width + 1.0  # not inside the wall
 
     # Bass traps: kitchen MW+GKB (190) and living GKB+MW (450).
     bass_wool = _labeled(shape, LABEL_BASS_WOOL)

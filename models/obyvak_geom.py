@@ -153,7 +153,7 @@ class ObyvakParams:
     plate_h: float = 100.0
     # Terrace-glass jakl (drawn as masonry) — in front of glass, pier centres.
     window_column_size: float = 100.0
-    # Concrete columns in the cabinet eave (300×300, protrude into the room).
+    # Concrete columns stand in front of the cabinet eave (room side), 300×300.
     furn_column_size: float = 300.0
     rafter_t: float = 160.0
     plenum_t: float = 80.0
@@ -343,21 +343,6 @@ class ObyvakLayout:
         last1 = wins[-1][0] + wins[-1][1]
         if y1 > last1:
             spans.append((last1, y1))
-        return spans
-
-    def eave_masonry_furn_spans(self, y0: float, y1: float) -> list[tuple[float, float]]:
-        """Cabinet-eave masonry Y spans with gaps for the concrete columns."""
-        half = self.p.furn_column_size * 0.5
-        cuts = sorted(self.eave_column_y_centres())
-        spans: list[tuple[float, float]] = []
-        cursor = y0
-        for yc in cuts:
-            ya, yb = yc - half, yc + half
-            if ya > cursor:
-                spans.append((cursor, ya))
-            cursor = max(cursor, yb)
-        if y1 > cursor:
-            spans.append((cursor, y1))
         return spans
 
     def z_raf(self, x: float) -> float:
