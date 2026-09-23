@@ -1,0 +1,542 @@
+[
+  {
+    "id": "soffit",
+    "camera": {
+      "target": [
+        5.125,
+        2.7841489978456773,
+        -5.42
+      ],
+      "position": [
+        5.125,
+        2.7841489978456773,
+        -2.3003187634645186
+      ],
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "orthoFit": [
+        0.478125,
+        0.6239362473070963
+      ]
+    },
+    "projection": "ortho",
+    "cuts": [
+      {
+        "normal": [
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "t": 0.5
+      }
+    ],
+    "opacity": {
+      "soffit": 1,
+      "plaster": 1
+    },
+    "opacityDefault": 0.5
+  },
+  {
+    "id": "gable",
+    "camera": {
+      "target": [
+        2.6750000000000003,
+        4.228800000000001,
+        -5.42
+      ],
+      "position": [
+        2.6750000000000003,
+        4.228800000000001,
+        11.705
+      ],
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "orthoFit": [
+        3.4250000000000003,
+        2.411
+      ]
+    },
+    "projection": "ortho",
+    "cuts": [
+      {
+        "normal": [
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "t": 0.5
+      }
+    ],
+    "opacity": {
+      "slopes": 1,
+      "plaster": 1
+    },
+    "opacityDefault": 0.5
+  },
+  {
+    "id": "sikmina-lattice",
+    "title": {
+      "en": "Šikmina — lattice",
+      "cs": "Šikmina — rošt"
+    },
+    "project": "Obývák 1.02",
+    "camera": {
+      "target": [
+        0.6860000000000002,
+        3.7835745549828794,
+        -5.101
+      ],
+      "position": [
+        9.011966090356559,
+        -6.1389254450171205,
+        -5.101
+      ],
+      "up": [
+        0.766044443118978,
+        0.6427876096865393,
+        0.0
+      ],
+      "orthoFit": [
+        1.3466250000000002,
+        2.5905807656799067
+      ]
+    },
+    "projection": "ortho",
+    "cuts": [
+      {
+        "normal": [
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "anchor": [
+          2675.0,
+          4269.8,
+          3098.3
+        ]
+      },
+      {
+        "normal": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "anchor": [
+          2675.0,
+          5932.2,
+          3098.3
+        ]
+      },
+      {
+        "normal": [
+          -1.0,
+          0.0,
+          0.0
+        ],
+        "anchor": [
+          2675.0,
+          5101.0,
+          3098.3
+        ]
+      }
+    ],
+    "opacity": {
+      "slope_battens": 1,
+      "slope_naturheld_flex_50": 1,
+      "slope_cd": 1,
+      "slope_nonius": 1,
+      "rafters": 1,
+      "racking_strap": 1,
+      "wall_plate": 1
+    },
+    "opacityDefault": 0,
+    "annotations": [
+      {
+        "kind": "callout",
+        "anchor": [
+          1519.0,
+          4466.0,
+          4482.5
+        ],
+        "text": {
+          "en": "KVH battens 60×40\n// rafters @ 625",
+          "cs": "Latě KVH 60×40\n// krokvím @ 625"
+        },
+        "offset": [
+          0.14,
+          0.08
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          547.7,
+          5101.0,
+          3755.0
+        ],
+        "text": {
+          "en": "CD 60×27 @ 625\nperpendicular to rafters",
+          "cs": "CD 60×27 @ 625\n⊥ krokvím"
+        },
+        "offset": [
+          -0.22,
+          0.02
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          1026.5,
+          5451.0,
+          4226.6
+        ],
+        "text": {
+          "en": "Nonius hanger\nCD → rafter",
+          "cs": "Nonius závěs\nCD → krokev"
+        },
+        "offset": [
+          0.2,
+          0.06
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          1225.0,
+          5550.0,
+          4445.4
+        ],
+        "text": {
+          "en": "Bracing strap 40×2\n45° across rafters",
+          "cs": "Páska 40×2\n45° přes krokve"
+        },
+        "offset": [
+          0.16,
+          -0.1
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          -140.0,
+          5101.0,
+          3300.0
+        ],
+        "text": {
+          "en": "Rafters seat on the wall plate\n(centred on the ring beam)",
+          "cs": "Krokve sedí na pozednici\n(osa na věnci)"
+        },
+        "offset": [
+          0.16,
+          -0.08
+        ]
+      },
+      {
+        "kind": "dim",
+        "a": [
+          1176.0,
+          4466.0,
+          4194.7
+        ],
+        "b": [
+          1176.0,
+          5091.0,
+          4194.7
+        ],
+        "offset": 0.055
+      },
+      {
+        "kind": "dim",
+        "a": [
+          547.7,
+          4821.0,
+          3755.0
+        ],
+        "b": [
+          1026.5,
+          4821.0,
+          4156.7
+        ],
+        "offset": -0.045
+      },
+      {
+        "kind": "dim",
+        "a": [
+          784.0,
+          4576.0,
+          4075.3
+        ],
+        "b": [
+          784.0,
+          5451.0,
+          4075.3
+        ],
+        "offset": -0.06
+      }
+    ]
+  },
+  {
+    "id": "sikmina-section",
+    "title": {
+      "en": "Šikmina — section\nperpendicular to the rafters",
+      "cs": "Šikmina — řez\nkolmo na krokve"
+    },
+    "project": "Obývák 1.02",
+    "camera": {
+      "target": [
+        1.135,
+        4.513800000000001,
+        -4.666
+      ],
+      "position": [
+        1.135,
+        4.513800000000001,
+        8.974
+      ],
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "orthoFit": [
+        2.728,
+        1.9306560000000004
+      ]
+    },
+    "projection": "ortho",
+    "cuts": [
+      {
+        "normal": [
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "anchor": [
+          1102.5,
+          4666.0,
+          3098.3
+        ]
+      },
+      {
+        "normal": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "anchor": [
+          1102.5,
+          5581.0,
+          3098.3
+        ]
+      },
+      {
+        "normal": [
+          -1.0,
+          0.0,
+          0.0
+        ],
+        "anchor": [
+          2675.0,
+          4666.0,
+          3098.3
+        ]
+      }
+    ],
+    "opacity": {
+      "slopes": 1,
+      "rafters": 1,
+      "plenum_wool": 1,
+      "racking_strap": 1,
+      "roofing": 1,
+      "wall_plate": 1,
+      "masonry": 1,
+      "eps": 1,
+      "plaster": 1
+    },
+    "opacityDefault": 0,
+    "annotations": [
+      {
+        "kind": "callout",
+        "anchor": [
+          735.0,
+          4696.0,
+          3756.8
+        ],
+        "text": {
+          "en": "StoSilent + NaturHeld 140\n64 mm room face",
+          "cs": "StoSilent + NaturHeld 140\n64 mm do místnosti"
+        },
+        "offset": [
+          -0.16,
+          -0.07
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          1127.0,
+          4696.0,
+          4153.6
+        ],
+        "text": {
+          "en": "Battens 60×40 // rafters\nFlex 50 between them",
+          "cs": "Latě 60×40 // krokvím\nFlex 50 mezi nimi"
+        },
+        "offset": [
+          -0.16,
+          -0.1
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          1519.0,
+          4696.0,
+          4544.2
+        ],
+        "text": {
+          "en": "Foil + GKF 12.5",
+          "cs": "Fólie + GKF 12,5"
+        },
+        "offset": [
+          -0.18,
+          -0.12
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          1715.0,
+          4696.0,
+          4734.5
+        ],
+        "text": {
+          "en": "CD 60×27 @ 625\nperpendicular to rafters",
+          "cs": "CD 60×27 @ 625\n⊥ krokvím"
+        },
+        "offset": [
+          0.1,
+          0.08
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          2009.0,
+          4696.0,
+          5045.8
+        ],
+        "text": {
+          "en": "Nonius hanger to the rafter\nnot to the wall plate",
+          "cs": "Nonius do krokve\nne do pozednice"
+        },
+        "offset": [
+          0.08,
+          0.1
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          1274.0,
+          4696.0,
+          4506.5
+        ],
+        "text": {
+          "en": "Rafter 100/160 @ 875\nunderside on the wall plate",
+          "cs": "Krokev 100/160 @ 875\nspodní hrana na pozednici"
+        },
+        "offset": [
+          0.12,
+          0.06
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          931.0,
+          4696.0,
+          4198.7
+        ],
+        "text": {
+          "en": "Strap 40×2 at 45°",
+          "cs": "Páska 40×2 pod 45°"
+        },
+        "offset": [
+          0.06,
+          0.1
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          -140.0,
+          4696.0,
+          3250.0
+        ],
+        "text": {
+          "en": "Wall plate 140×100\ncentred on the ring beam",
+          "cs": "Pozednice 140×100\nosa na věnci"
+        },
+        "offset": [
+          0.22,
+          -0.02
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          -505.0,
+          4696.0,
+          3813.0
+        ],
+        "text": {
+          "en": "40°  ·  overhang 80 mm\n(gutter only)",
+          "cs": "40°  ·  přesah 80 mm\n(jen okap)"
+        },
+        "offset": [
+          0.06,
+          0.24
+        ]
+      },
+      {
+        "kind": "dim",
+        "a": [
+          -140.0,
+          4696.0,
+          2950.0
+        ],
+        "b": [
+          -140.0,
+          4696.0,
+          3200.0
+        ],
+        "offset": -0.06,
+        "text": {
+          "en": "Ring beam 250",
+          "cs": "Věnec 250"
+        }
+      },
+      {
+        "kind": "dim",
+        "a": [
+          1102.5,
+          4896.0,
+          4342.6
+        ],
+        "b": [
+          999.7,
+          4896.0,
+          4465.1
+        ],
+        "offset": 0.055
+      }
+    ]
+  }
+]
