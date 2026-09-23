@@ -42,6 +42,8 @@ from build123d import Edge, Face, Vector, Wire
 # --- Shell (roof + walls + floor) ---
 LABEL_FLOOR = "floor"
 LABEL_MASONRY = "masonry"
+LABEL_COLUMN = "column"
+LABEL_VENEC = "venec"
 LABEL_EPS = "eps"
 LABEL_PLASTER = "plaster"
 LABEL_WALL_PLATE = "wall_plate"
@@ -81,6 +83,8 @@ PART_GROUPS = [
         "children": [
             LABEL_FLOOR,
             LABEL_MASONRY,
+            LABEL_COLUMN,
+            LABEL_VENEC,
             LABEL_EPS,
             LABEL_PLASTER,
             LABEL_WALL_PLATE,
@@ -137,8 +141,11 @@ class ObyvakParams:
 
     room_width: float = 5350.0
     room_length: float = 11100.0
-    ridge_z: float = 5850.0
+    # Raised so rafter underside sits on pozednice top at plate mid-X (40° pack unchanged).
+    ridge_z: float = 6011.5
     eave_wall_z: float = 3200.0
+    # Ring beam under pozednice; columns stop at eave_wall_z − venec_h.
+    venec_h: float = 250.0
     roof_angle_deg: float = 40.0
     furniture_width: float = 450.0
     furniture_height: float = 2450.0
@@ -163,7 +170,8 @@ class ObyvakParams:
     batten_t: float = 40.0
     tile_t: float = 22.0
     floor_t: float = 150.0
-    roof_overhang: float = 280.0
+    # Past outer EPS face — just enough for a gutter.
+    roof_overhang: float = 80.0
     predstena_kitchen: float = 190.0
     predstena_living: float = 450.0
     predstena_bottom_z: float = 2450.0
@@ -304,6 +312,33 @@ class ObyvakLayout:
 
         self.zle_tile = self.z_tile(0.0) - (0.0 - self.left_eave) * self.tan
         self.zre_tile = self.z_tile(p.room_width) - (self.right_eave - p.room_width) * self.tan
+        # Underside of věnec / top of columns (pozednice sits on eave_wall_z).
+        self.column_top_z = p.eave_wall_z - p.venec_h
+
+    def eave_pier_spans(self) -> list[tuple[float, float]]:
+        """Y spans of the two terrace-wall columns (gaps between eave_windows)."""
+        wins = sorted(self.p.eave_windows, key=lambda w: w[0])
+        spans: list[tuple[float, float]] = []
+        for i in range(len(wins) - 1):
+            y0 = wins[i][0] + wins[i][1]
+            y1 = wins[i + 1][0]
+            if y1 > y0:
+                spans.append((y0, y1))
+        return spans
+
+    def eave_masonry_end_spans(self, y0: float, y1: float) -> list[tuple[float, float]]:
+        """Y spans of solid eave masonry outside the glazed bays (not the columns)."""
+        wins = sorted(self.p.eave_windows, key=lambda w: w[0])
+        if not wins:
+            return [(y0, y1)]
+        spans: list[tuple[float, float]] = []
+        first0 = wins[0][0]
+        if first0 > y0:
+            spans.append((y0, first0))
+        last1 = wins[-1][0] + wins[-1][1]
+        if y1 > last1:
+            spans.append((last1, y1))
+        return spans
 
     def z_raf(self, x: float) -> float:
         return self.z_raf_inner_ridge - abs(x - self.x_ridge) * self.tan

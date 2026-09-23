@@ -14,6 +14,7 @@ from obyvak import (  # noqa: E402
     scenes,
 )
 from obyvak_geom import (  # noqa: E402
+    LABEL_COLUMN,
     LABEL_EPS,
     LABEL_FLOOR,
     LABEL_FURNITURE,
@@ -36,6 +37,7 @@ from obyvak_geom import (  # noqa: E402
     LABEL_SOFFIT_GKF,
     LABEL_SOFFIT_NH,
     LABEL_SOFFIT_NONIUS,
+    LABEL_VENEC,
     LABEL_WALL_GKF,
     LABEL_WALL_PLATE,
     LABEL_BASS_WOOL,
@@ -82,6 +84,13 @@ def test_layout_ceiling_and_gable():
     assert abs((zr - z0) / (xr - x0) - g.tan) < 1e-9
     assert g.y_furn0 == p.predstena_kitchen
     assert g.y_furn1 == p.room_length - p.predstena_living
+    assert p.roof_overhang == 80.0
+    assert abs(g.left_eave - (g.xl_eps - p.roof_overhang)) < 1e-9
+    assert abs(g.column_top_z - (p.eave_wall_z - p.venec_h)) < 1e-9
+    assert g.eave_pier_spans() == [(3050.0, 3250.0), (7750.0, 7950.0)]
+    # Rafter underside seats on pozednice top at plate mid-X.
+    x_bear = g.poz_l0 + p.plate_w * 0.5
+    assert abs(g.z_raf(x_bear) - (p.eave_wall_z + p.plate_h)) < 1.0
     # Acoustic face + Flex pack + GKF match the contractor soft stack below CD.
     assert abs(g.t_nh_face - (p.finish_t + p.basic_t + p.naturheld_t)) < 1e-9
     assert abs(g.t_soft_below_sdk - 137.5) < 1e-9
@@ -384,6 +393,8 @@ def test_3d_matches_section_and_elevation_masses():
         LABEL_FLOOR,
         LABEL_EPS,
         LABEL_MASONRY,
+        LABEL_COLUMN,
+        LABEL_VENEC,
         LABEL_RAFTERS,
         LABEL_ROOFING,
         LABEL_PLENUM_WOOL,
@@ -415,6 +426,19 @@ def test_3d_matches_section_and_elevation_masses():
     assert "predstena" not in labels  # replaced by layered bass-trap solids
     assert "sdk" not in labels
     assert "NaturHeld 140" not in labels
+
+    # Two terrace-wall columns end one brick course below top of věnec / pozednice.
+    cols = sorted(_labeled(shape, LABEL_COLUMN), key=lambda s: s.bounding_box().min.Y)
+    assert len(cols) == 2
+    for (y0, y1), col in zip(g.eave_pier_spans(), cols, strict=True):
+        bb = col.bounding_box()
+        assert abs(bb.min.Y - y0) < 1.0
+        assert abs(bb.max.Y - y1) < 1.0
+        assert abs(bb.max.Z - g.column_top_z) < 1.0
+    for ven in _labeled(shape, LABEL_VENEC):
+        bb = ven.bounding_box()
+        assert abs(bb.min.Z - (g.column_top_z + FACE_GAP)) < 1.0
+        assert abs(bb.max.Z - p.eave_wall_z) < 1.0
 
     # Bass traps: kitchen MW+GKB (190) and living GKB+MW (450).
     bass_wool = _labeled(shape, LABEL_BASS_WOOL)
@@ -601,7 +625,16 @@ def test_obyvak_3d_exports(tmp_path, monkeypatch):
     furn_eave = [
         c
         for c in preview.children
-        if c.label in {LABEL_EPS, LABEL_MASONRY, LABEL_PLASTER, LABEL_WALL_PLATE, LABEL_FURNITURE}
+        if c.label
+        in {
+            LABEL_EPS,
+            LABEL_MASONRY,
+            LABEL_COLUMN,
+            LABEL_VENEC,
+            LABEL_PLASTER,
+            LABEL_WALL_PLATE,
+            LABEL_FURNITURE,
+        }
         and c.bounding_box().min.X >= p.room_width - 1.0
     ]
     assert furn_eave == []

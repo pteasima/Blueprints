@@ -19,6 +19,10 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
   (slope past X_FURN → vertical return on shared horizontal CD/UD → lid);
   Nonius from krokve; rost hung from CD and braced to the eave wall.
   Furniture and pozednice are not structural.
+- Terrace eave (X=0): two masonry columns in the glass-wall piers stop one brick
+  course (venec_h) below the ring beam; věnec runs continuous under pozednice.
+- Rafters seat on the wall plate (small birdsmouth); EPS is cut around rafters,
+  not the other way around. Overhang past EPS is gutter-sized only.
 - Bass traps (štít): kitchen 190 / living 450 as interior CD/UW cabinets under
   continuous šikminy (pack runs wall-to-wall). Short rear třmeny to the gable;
   top soft-joints to the NH face — no hangers through the slope pack.
@@ -39,6 +43,7 @@ from obyvak_geom import (
     LABEL_BASS_GKB,
     LABEL_BASS_HANGER,
     LABEL_BASS_WOOL,
+    LABEL_COLUMN,
     LABEL_EPS,
     LABEL_FLOOR,
     LABEL_FURNITURE,
@@ -62,6 +67,7 @@ from obyvak_geom import (
     LABEL_SOFFIT_GKF,
     LABEL_SOFFIT_NH,
     LABEL_SOFFIT_NONIUS,
+    LABEL_VENEC,
     LABEL_WALL_GKF,
     LABEL_WALL_PLATE,
     PART_GROUPS,
@@ -241,8 +247,9 @@ def _pocket_door_cutters(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
 
 
 def _eave_window_cutters(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
-    """Through-openings in the X=0 eave (terrace: 2× HS + fixed glass)."""
+    """Through-openings in the X=0 eave up to the underside of the věnec."""
     cutters = []
+    z_open = g.column_top_z
     for y0, width in p.eave_windows:
         ya, yb = y0 + gap, y0 + width - gap
         if yb <= ya:
@@ -254,7 +261,7 @@ def _eave_window_cutters(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
                 -1.0,
                 -g.xl_eps + p.wall_plaster + 2.0,
                 yb - ya,
-                p.window_h + 2 * gap + 2.0,
+                z_open + 2 * gap + 2.0,
                 "_window_cut",
             )
         )
@@ -266,7 +273,14 @@ def _cut_wall_openings(parts: list, cutters: list) -> list:
         return parts
     out = []
     for part in parts:
-        if part.label not in {LABEL_EPS, LABEL_MASONRY, LABEL_PLASTER, LABEL_WALL_GKF}:
+        if part.label not in {
+            LABEL_EPS,
+            LABEL_MASONRY,
+            LABEL_PLASTER,
+            LABEL_WALL_GKF,
+            LABEL_COLUMN,
+            LABEL_VENEC,
+        }:
             out.append(part)
             continue
         cut = part
@@ -589,6 +603,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     # Room-clear eave run: gable plaster owns y∈[-plaster,0] and [L, L+plaster].
     y0, y1 = gap, p.room_length - gap
     ey = y1 - y0
+    z_col = g.column_top_z
     structure: list = []
 
     # --- Floor: clear slab only (walls own the perimeter strip below z=0). ---
@@ -597,14 +612,30 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     )
 
     # --- Eave walls (panel A): mid-span only. Layer stack outside → inside. ---
+    # Left (terrace / glazing): EPS full height; masonry ends + columns to věnec
+    # underside; continuous věnec under pozednice; plaster room face.
     structure.append(
         _box(g.xl_eps, y0, -p.floor_t, p.wall_eps - gap, ey, p.eave_wall_z + p.floor_t, LABEL_EPS)
     )
+    for ya, yb in g.eave_masonry_end_spans(y0, y1):
+        if yb <= ya + gap:
+            continue
+        structure.append(
+            _box(g.xl_mas, ya, -p.floor_t, p.wall_mason - gap, yb - ya, z_col + p.floor_t, LABEL_MASONRY)
+        )
+    for ya, yb in g.eave_pier_spans():
+        ya_c, yb_c = max(ya, y0), min(yb, y1)
+        if yb_c <= ya_c + gap:
+            continue
+        structure.append(
+            _box(g.xl_mas, ya_c, -p.floor_t, p.wall_mason - gap, yb_c - ya_c, z_col + p.floor_t, LABEL_COLUMN)
+        )
     structure.append(
-        _box(g.xl_mas, y0, -p.floor_t, p.wall_mason - gap, ey, p.eave_wall_z + p.floor_t, LABEL_MASONRY)
+        _box(g.xl_mas, y0, z_col + gap, p.wall_mason - gap, ey, p.venec_h - gap, LABEL_VENEC)
     )
     structure.append(_box(-p.wall_plaster, y0, 0.0, p.wall_plaster, ey, p.eave_wall_z, LABEL_PLASTER))
 
+    # Right (cabinets): no columns; masonry to věnec underside + continuous věnec.
     structure.append(_box(p.room_width, y0, 0.0, p.wall_plaster, ey, p.eave_wall_z, LABEL_PLASTER))
     structure.append(
         _box(
@@ -613,8 +644,19 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
             -p.floor_t,
             p.wall_mason - gap,
             ey,
-            p.eave_wall_z + p.floor_t,
+            z_col + p.floor_t,
             LABEL_MASONRY,
+        )
+    )
+    structure.append(
+        _box(
+            p.room_width + p.wall_plaster + gap,
+            y0,
+            z_col + gap,
+            p.wall_mason - gap,
+            ey,
+            p.venec_h - gap,
+            LABEL_VENEC,
         )
     )
     structure.append(
@@ -629,7 +671,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         )
     )
 
-    # Wall plates sit on masonry (not on plaster), clear of gables.
+    # Wall plates sit on věnec (not on plaster), clear of gables.
     structure.append(
         _box(g.poz_l0, y0, p.eave_wall_z + gap, p.plate_w, ey, p.plate_h - gap, LABEL_WALL_PLATE)
     )
@@ -661,10 +703,17 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     window_cutters = _eave_window_cutters(p, g, gap)
     structure = _cut_wall_openings(structure, door_cutters + window_cutters)
 
-    # Cutters: everything the roof must not occupy (walls, plates).
-    roof_cutters = [s for s in structure if s.label != LABEL_FLOOR]
+    # Rafter seat: only pozednice (+ minor věnec/masonry/column contact). EPS is
+    # cut around the finished rafters — real build order.
+    rafter_seat_cutters = [
+        s
+        for s in structure
+        if s.label in {LABEL_WALL_PLATE, LABEL_VENEC, LABEL_MASONRY, LABEL_COLUMN, LABEL_PLASTER}
+    ]
+    # Krytina may still clear gable massing / plates at the ridge runout.
+    roofing_cutters = [s for s in structure if s.label != LABEL_FLOOR]
 
-    # --- Roof: krytina above krokve above vata; thinned, then notched around walls. ---
+    # --- Roof: krytina above krokve above vata; thinned, then notched at seat. ---
     # Krov = discrete rafters 100/160 @ 875 (sheet E_KROK), not a solid timber slab.
     krov_pts = _shrink_band(g.krov_pts(), top_n=3, gap=gap)
     krytina_pts = [(x, z + gap if i < 3 else z) for i, (x, z) in enumerate(g.krytina_pts())]
@@ -684,13 +733,20 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         krov_parts.append(
             _cut_away(
                 _extrude_y(xz_face(krov_pts, LABEL_RAFTERS), ya, yb, LABEL_RAFTERS),
-                roof_cutters,
+                rafter_seat_cutters,
                 LABEL_RAFTERS,
             )
         )
+    # EPS (and room plaster on the terrace eave) wrap around rafters.
+    eps_raf_cutters = list(krov_parts)
+    structure = [
+        _cut_away(s, eps_raf_cutters, s.label) if s.label in {LABEL_EPS, LABEL_PLASTER} else s
+        for s in structure
+    ]
+
     krytina = _cut_away(
         _extrude_y(xz_face(krytina_pts, LABEL_ROOFING), g.y_roof0, g.y_roof1, LABEL_ROOFING),
-        roof_cutters,
+        roofing_cutters,
         LABEL_ROOFING,
     )
     # Vata is the attic fill above the CD pack (full room length to gables).
@@ -1102,7 +1158,15 @@ def build_preview(params: ObyvakParams | None = None):
             continue  # drop mid-span slope GKF; keep wall/bass boards
         if part.label == LABEL_SOFFIT_GKF and not at_gable:
             continue
-        if part.label in {LABEL_EPS, LABEL_MASONRY, LABEL_PLASTER, LABEL_WALL_PLATE, LABEL_FURNITURE}:
+        if part.label in {
+            LABEL_EPS,
+            LABEL_MASONRY,
+            LABEL_COLUMN,
+            LABEL_VENEC,
+            LABEL_PLASTER,
+            LABEL_WALL_PLATE,
+            LABEL_FURNITURE,
+        }:
             if bb.min.X >= p.room_width - 1.0:
                 continue
         kept.append(part)
