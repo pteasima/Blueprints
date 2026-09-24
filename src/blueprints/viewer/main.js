@@ -665,7 +665,6 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       applyOpacityToMeshes(parts.get(name) || [], 1, { edgeMode });
     }
     updateBox();
-    applyClipping();
     syncPartOpacityUi();
   }
 
@@ -734,7 +733,6 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         setPartOpacity(name, raw, { skipUi: true, skipClip: true });
       }
       updateBox();
-      applyClipping();
       syncPartOpacityUi();
     }
 
@@ -848,7 +846,6 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     applyOpacityToMeshes(parts.get(name) || [], o, { edgeMode });
     if (opts.skipClip) return;
     updateBox();
-    applyClipping();
     if (!opts.skipUi) syncPartOpacityUi();
   }
 
@@ -867,7 +864,6 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       applyOpacityToMeshes(parts.get(id) || [], o, { edgeMode });
     }
     updateBox();
-    applyClipping();
     syncPartOpacityUi();
   }
 
@@ -885,7 +881,6 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     if (o > 0) partLastNonZero.set(leafId, o);
     applyOpacityToMeshes(parts.get(leafId) || [], o, { edgeMode });
     updateBox();
-    applyClipping();
     syncPartOpacityUi();
   }
 
@@ -1460,6 +1455,13 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     if (!cut.locked) lockCut(cut);
     cut.t = Math.min(1, Math.max(0, Number(cutT)));
     cut.anchor = null;
+    // While the thumb is down, only move the clip planes. Rebuilding every
+    // fat line on each tick is what made the slider feel stuck. Silhouettes
+    // and caps catch up once, on release.
+    if (cutSliderActive) {
+      applyClipPlanes();
+      return;
+    }
     applyClipping();
   }
 
@@ -1512,19 +1514,33 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     return new THREE.Plane().setFromNormalAndCoplanarPoint(cut.normal, _point);
   }
 
-  function applyClipping() {
+  /**
+   * Point materials and edge strokes at the current cut planes.
+   * Does not rebuild line geometry or caps.
+   * @returns {THREE.Plane[]}
+   */
+  function applyClipPlanes() {
     const planes = lockedClipPlanes();
-    if (!root) return;
+    if (!root) return planes;
     root.traverse((obj) => {
       if (!obj.isMesh || !obj.material) return;
       if (isEdgeOverlay(obj) || isSectionCap(obj)) return;
       const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
       for (const m of mats) {
+        if (!m) continue;
+        const prevCount = m.clippingPlanes ? m.clippingPlanes.length : 0;
         m.clippingPlanes = planes;
         m.clipIntersection = false;
-        m.needsUpdate = true;
+        if (prevCount !== planes.length) m.needsUpdate = true;
       }
     });
+    applyEdgeClipping(root, planes);
+    return planes;
+  }
+
+  function applyClipping() {
+    const planes = applyClipPlanes();
+    if (!root) return;
     // Fill the cut. Clipping only discards fragments; without these faces a
     // solid opened on both ends reads as an empty tube.
     syncSectionCaps(parts, planes);
@@ -1549,6 +1565,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       const endSlider = () => {
         if (!cutSliderActive) return;
         cutSliderActive = false;
+        applyClipping();
         flushDeferredDraft();
       };
       const range = createCooperativeRange({
@@ -2107,6 +2124,12 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   let lastPeelQuality = "fast";
   /** @type {"fast" | "high" | null} */
   let renderedPeelQuality = null;
+  /**
+   * After a scene or setting change, show one fast frame before merging
+   * batches, then peel on the following still frame. Camera let-go does not
+   * set this, so a warm peel still happens on the next still frame.
+   */
+  let holdFastForPrime = false;
 
   canvas.addEventListener("pointermove", () => {
     if (measureTool?.isActive()) viewDirty = true;
@@ -2213,21 +2236,24 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     const camChanged = cameraSigChanged();
     // Still frame, after the first picture: correct transparency. Anything
     // in motion stays on one sorted-alpha draw.
+    if (contentChanged) holdFastForPrime = true;
     const wantHigh =
       !peelPointerDown &&
       !camMoved &&
       !contentChanged &&
       !cutSliderActive &&
-      !frameAnim;
+      !frameAnim &&
+      !holdFastForPrime;
     lastPeelQuality = wantHigh ? "high" : "fast";
     const qualityUpgrade = lastPeelQuality !== renderedPeelQuality;
-    if (!viewDirty && !contentChanged && !camChanged && !qualityUpgrade) {
+    if (!viewDirty && !contentChanged && !camChanged && !qualityUpgrade && !holdFastForPrime) {
       requestAnimationFrame(tick);
       return;
     }
     viewDirty = false;
     contentSig = contentNow;
     renderedPeelQuality = lastPeelQuality;
+    if (!contentChanged) holdFastForPrime = false;
 
     measureTool?.update();
     annotations.update();
@@ -2235,6 +2261,9 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     const usedPeel = depthPeel.render(scene, camera, root, anyPartFaded, {
       quality: lastPeelQuality,
       batchKey: contentNow,
+      // The frame that shows a new scene or slider value should paint before
+      // the geometry merge. The following still frame peels.
+      deferPrime: contentChanged,
     });
     // Re-apply slider opacities when leaving peel mode so materials cannot
     // stay stuck translucent / depthWrite-off after a 100% scrub. The abort

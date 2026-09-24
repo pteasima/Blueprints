@@ -321,9 +321,11 @@ export function applyEdgeClipping(root, planes) {
     const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
     for (const m of mats) {
       if (!m) continue;
+      const prevCount = m.clippingPlanes ? m.clippingPlanes.length : 0;
       m.clippingPlanes = list;
       m.clipIntersection = false;
-      m.needsUpdate = true;
+      // Plane values are uniforms. Recompile only when the plane count changes.
+      if (prevCount !== list.length) m.needsUpdate = true;
     }
   });
 }
@@ -531,7 +533,19 @@ export function renderEdgeOverlayPass(renderer, scene, camera, root, opts = {}) 
 
   // 1) Depth prepass via MeshDepthMaterial (reliable depth writes; respects cuts).
   //    Camera stays on layer 0, so EDGE_LAYER strokes are not in this pass.
+  //    Faded faces stay out of this buffer — they do not depth-write in the
+  //    fast path either — so lines remain visible through transparent parts.
   setEdgeOverlaysVisible(root, false);
+  /** @type {THREE.Object3D[]} */
+  const hiddenFades = [];
+  root.traverse((obj) => {
+    if (!obj.isMesh || isEdgeOverlay(obj) || obj.visible === false) return;
+    const mat = Array.isArray(obj.material) ? obj.material[0] : obj.material;
+    if (mat && mat.transparent && mat.opacity < 1 - 1e-4) {
+      hiddenFades.push(obj);
+      obj.visible = false;
+    }
+  });
   const depthMat = getEdgeDepthPrepassMaterial();
   depthMat.clippingPlanes = collectMeshClippingPlanes(root);
   depthMat.clipIntersection = false;
@@ -539,6 +553,7 @@ export function renderEdgeOverlayPass(renderer, scene, camera, root, opts = {}) 
   renderer.clearDepth();
   renderer.render(scene, camera);
   scene.overrideMaterial = null;
+  for (const obj of hiddenFades) obj.visible = true;
 
   // 2) Edge colour only. Faces stay on layer 0; the depth prepass already
   //    filled the buffer, so redrawing them (and flipping their transparent

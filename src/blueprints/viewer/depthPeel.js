@@ -722,41 +722,6 @@ export function createDepthPeelRenderer(renderer) {
     return true;
   }
 
-  /**
-   * Write CAD depth from the merged faces. The edge pass then draws only
-   * the fat lines against that buffer, instead of rasterizing every face
-   * again.
-   * @param {THREE.Camera} camera
-   * @param {THREE.Object3D} root
-   * @param {THREE.Mesh[]} opaque
-   * @param {THREE.Mesh[]} transparent
-   * @param {THREE.Plane[] | null} planes
-   */
-  function renderMergedDepth(camera, root, opaque, transparent, planes) {
-    ensureSlot(transBatches, root, transparent);
-    ensureSlot(opaqueBatches, root, opaque);
-    if (
-      transBatches.sources.length !== transparent.length ||
-      opaqueBatches.sources.length !== opaque.length
-    ) {
-      return false;
-    }
-    depthPrepassMat.clippingPlanes = planes || [];
-    depthPrepassMat.clipIntersection = false;
-    depthBatchScene.overrideMaterial = depthPrepassMat;
-    for (const mesh of transBatches.meshes) depthBatchScene.add(mesh);
-    for (const mesh of opaqueBatches.meshes) depthBatchScene.add(mesh);
-    const prev = renderer.autoClear;
-    renderer.autoClear = false;
-    renderer.clearDepth();
-    renderer.render(depthBatchScene, camera);
-    renderer.autoClear = prev;
-    depthBatchScene.overrideMaterial = null;
-    for (const mesh of transBatches.meshes) depthBatchScene.remove(mesh);
-    for (const mesh of opaqueBatches.meshes) depthBatchScene.remove(mesh);
-    return true;
-  }
-
   function uniqueMaterials(meshes) {
     /** @type {Set<THREE.Material>} */
     const set = new Set();
@@ -853,7 +818,7 @@ export function createDepthPeelRenderer(renderer) {
    * @param {THREE.Camera} camera
    * @param {THREE.Object3D | null} root
    * @param {boolean | (() => boolean)} shouldPeel
-   * @param {{ quality?: "fast" | "high", batchKey?: string }} [opts]
+   * @param {{ quality?: "fast" | "high", batchKey?: string, deferPrime?: boolean }} [opts]
    * @returns {boolean} true if peel compositing was used this frame
    */
   function render(scene, camera, root, shouldPeel, opts = {}) {
@@ -876,7 +841,7 @@ export function createDepthPeelRenderer(renderer) {
       peelStageUniform.value = 0;
       renderFacesThenEdges(scene, camera, root, { reuseDepth: true });
       const batchKey = opts.batchKey || "";
-      if (root && batchKey !== primedKey) {
+      if (root && !opts.deferPrime && batchKey !== primedKey) {
         const lists = collectMeshes(root);
         primeBatches(root, lists.opaque, lists.transparent, batchKey);
       }
@@ -1208,21 +1173,28 @@ export function createDepthPeelRenderer(renderer) {
     renderer.autoClear = true;
     renderer.render(compositeScene, compositeCamera);
 
-    // Settled frames refill depth and draw CAD edges. Fast frames skip that
-    // full-scene pass; the lines appear when the view settles.
+    // Settled frames refill depth from opaque faces only, then draw CAD edges.
+    // Faded shells do not write this depth, so lines stay visible through them
+    // the way they do on the fast path (those materials keep depthWrite off).
     const notes = annotationNodes(scene);
     const prevNotes = notes.map((node) => node.visible);
     setNodesVisible(notes, false);
     if (highQuality && root) {
-      const depthReady = renderMergedDepth(
-        camera,
-        root,
-        opaque,
-        transparent,
-        clipPlanes,
-      );
+      depthPrepassMat.clippingPlanes = clipPlanes || [];
+      depthPrepassMat.clipIntersection = false;
+      setMeshesVisible(transparent, false);
+      setEdgeOverlaysVisible(root, false);
+      const prevOverride = scene.overrideMaterial;
+      scene.overrideMaterial = depthPrepassMat;
+      const prevAuto = renderer.autoClear;
+      renderer.autoClear = false;
+      renderer.clearDepth();
+      renderer.render(scene, camera);
+      renderer.autoClear = prevAuto;
+      scene.overrideMaterial = prevOverride;
+      setMeshesVisible(transparent, true);
       renderEdgeOverlayPass(renderer, scene, camera, root, {
-        reuseDepth: depthReady,
+        reuseDepth: true,
       });
     }
     notes.forEach((node, i) => {
