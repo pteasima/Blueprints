@@ -3,13 +3,13 @@
  *
  * Fade path when {@link USE_DEPTH_PEEL} is true: opaque colour + float32
  * linear eye-space Z, then N peels ordered by hardware depth (LESS) while
- * recording linear view-Z into float colour targets. Callers pass
- * `quality: "fast"` is one ordinary sorted-alpha draw (no peel targets, no
- * pixel readback) while the camera moves or a scene/opacity change is in
- * flight. `quality: "high"` is the full-res multi-layer peel plus the edge
- * refill, once the view has settled. On any fail-safe
- * abort, restore visibility and fall back to one full `renderer.render`
- * with standard alpha so faded parts never vanish for a frame.
+ * recording linear view-Z into float colour targets. The live view always
+ * passes `quality: "fast"`: one sorted-alpha draw, no peel targets. A
+ * full-res 12-layer peel is ~20× the draw calls (gable is ~6k meshes and
+ * ~128k draws) and blocks input for seconds, so it is only for an explicit
+ * plate capture (`quality: "high"`). On any fail-safe abort, restore
+ * visibility and fall back to one full `renderer.render` with standard
+ * alpha so faded parts never vanish for a frame.
  *
  * Do **not** sample the logarithmic DepthTexture against gl_FragCoord.z —
  * that comparison is invalid with logarithmicDepthBuffer and discards every
@@ -627,10 +627,9 @@ export function createDepthPeelRenderer(renderer) {
       return false;
     }
 
-    // Interaction path. A "cheap" multi-peel was still ~10 draws of every
-    // faded mesh, so orbiting and scene changes felt like the settled frame.
-    // Sorted alpha is approximate; the peel replaces it after the view rests.
-    // Return true so the caller does not reset materials between the two.
+    // Live view. Sorted alpha is approximate; a 12-layer peel of every
+    // faded mesh blocks the page on complex scenes, so the orbit does not
+    // upgrade. Return true so the caller does not reset materials.
     if (opts.quality !== "high") {
       peelStageUniform.value = 0;
       renderFacesThenEdges(scene, camera, root, { reuseDepth: true });

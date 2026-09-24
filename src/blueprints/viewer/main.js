@@ -833,8 +833,6 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     annotations.setSpec(spec);
     syncDrawingButton();
     syncLabelButton();
-    // After the CPU work, so the next frames stay on the single sorted-alpha draw.
-    holdFastPeel();
   }
 
   /**
@@ -851,7 +849,6 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     if (opts.skipClip) return;
     updateBox();
     applyClipping();
-    holdFastPeel();
     if (!opts.skipUi) syncPartOpacityUi();
   }
 
@@ -871,7 +868,6 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     }
     updateBox();
     applyClipping();
-    holdFastPeel();
     syncPartOpacityUi();
   }
 
@@ -890,7 +886,6 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     applyOpacityToMeshes(parts.get(leafId) || [], o, { edgeMode });
     updateBox();
     applyClipping();
-    holdFastPeel();
     syncPartOpacityUi();
   }
 
@@ -1595,54 +1590,13 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   // damping `change`, which would rebuild the cut UI mid-slider-drag.
   // `start` is user-gesture only (programmatic framing does not fire it).
   //
-  // Peel quality: OrbitControls `end` is unreliable on some touch/Safari
-  // paths (pointercancel without end → stuck in fast forever). Drive settle
-  // from canvas pointer lifecycle + window up/cancel instead.
-  let peelPointerDown = false;
-  /** @type {"fast" | "high"} */
-  let lastPeelQuality = "high";
-  /**
-   * Stay on the single sorted-alpha draw until interaction has been quiet this long.
-   * 10ms made the 12-layer frame part of the same gesture, so dragging and
-   * scene changes felt like the settled path the whole time.
-   */
-  const PEEL_SETTLE_MS = 220;
-  /** performance.now() deadline; fast peel until then (scene / opacity). */
-  let peelFastUntil = 0;
-
-  function holdFastPeel() {
-    peelFastUntil = Math.max(peelFastUntil, performance.now() + PEEL_SETTLE_MS);
-  }
-  /** Squared metres — ignore float noise only (no orbit damping). */
-  const PEEL_MOVE_EPS2 = 1e-5;
-  const peelCamPos = new THREE.Vector3();
-  const peelCamTarget = new THREE.Vector3();
-  let peelCamInited = false;
-  let peelLastMoveMs = 0;
-
-  function notePeelPointerDown() {
-    peelPointerDown = true;
-  }
-  function notePeelPointerUp() {
-    peelPointerDown = false;
-    peelLastMoveMs = performance.now();
-  }
-
-  canvas.addEventListener("pointerdown", notePeelPointerDown, { capture: true });
-  window.addEventListener("pointerup", notePeelPointerUp, { capture: true });
-  window.addEventListener("pointercancel", notePeelPointerUp, { capture: true });
-  window.addEventListener("touchend", notePeelPointerUp, { capture: true });
-  window.addEventListener("touchcancel", notePeelPointerUp, { capture: true });
-
   controls.addEventListener("start", () => {
     clearCameraPresetHighlight();
-    notePeelPointerDown();
   });
   controls.addEventListener("change", () => {
     syncViewZoomFromCamera();
   });
   controls.addEventListener("end", () => {
-    notePeelPointerUp();
     if (suppressCameraChange) return;
     maybeSpawnDraftFromCamera();
   });
@@ -2099,8 +2053,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     frameIso,
     openArQuickLook,
     buildArExportScene,
-    /** @returns {"fast" | "high"} */
-    getPeelQuality: () => lastPeelQuality,
+    /** Live view stays on sorted alpha. `"high"` is the plate capture only. */
+    getPeelQuality: () => "fast",
   };
   window.BlueprintsViewer = api;
 
@@ -2125,8 +2079,6 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   let camSig = null;
   /** @type {string | null} */
   let contentSig = null;
-  /** @type {"fast" | "high" | null} */
-  let renderedPeelQuality = null;
 
   canvas.addEventListener("pointermove", () => {
     if (measureTool?.isActive()) viewDirty = true;
@@ -2217,52 +2169,24 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     // Keep near/far tight as orbit distance changes.
     if (root) updateCameraClipPlanes();
 
-    // Fast while pointer-down or camera moving; high ~10ms after last move.
-    // Settled path matches main-branch peels (full-res, 12 layers, no early-out).
-    if (!peelCamInited) {
-      peelCamPos.copy(camera.position);
-      peelCamTarget.copy(controls.target);
-      peelCamInited = true;
-      peelLastMoveMs = now;
-    }
-    const camMoved =
-      camera.position.distanceToSquared(peelCamPos) > PEEL_MOVE_EPS2 ||
-      controls.target.distanceToSquared(peelCamTarget) > PEEL_MOVE_EPS2;
-    peelCamPos.copy(camera.position);
-    peelCamTarget.copy(controls.target);
-    if (peelPointerDown || camMoved) peelLastMoveMs = now;
-
-    const peelBusy =
-      peelPointerDown ||
-      now < peelFastUntil ||
-      now - peelLastMoveMs < PEEL_SETTLE_MS ||
-      frameAnim !== 0 ||
-      cutSliderActive;
-    lastPeelQuality = peelBusy ? "fast" : "high";
-
     const contentNow = readContentSig();
     const contentChanged = contentNow !== contentSig;
     const camChanged = cameraSigChanged();
-    const qualityUpgrade = lastPeelQuality !== renderedPeelQuality;
-    if (!viewDirty && !contentChanged && !camChanged && !peelBusy && !qualityUpgrade) {
+    if (!viewDirty && !contentChanged && !camChanged) {
       requestAnimationFrame(tick);
       return;
     }
     viewDirty = false;
     contentSig = contentNow;
-    renderedPeelQuality = lastPeelQuality;
 
     measureTool?.update();
     annotations.update();
 
+    // Sorted alpha only. The 12-layer peel is ~20× this draw count and
+    // freezes a complex scene for seconds, so the live view does not upgrade.
     const usedPeel = depthPeel.render(scene, camera, root, anyPartFaded, {
-      quality: lastPeelQuality,
+      quality: "fast",
     });
-    // A slow fast frame can outlive the settle window and be followed at once
-    // by the 12-layer peel. Push the heavy frame out so the picture appears first.
-    if (lastPeelQuality === "fast" && performance.now() > peelFastUntil) {
-      peelFastUntil = performance.now() + PEEL_SETTLE_MS;
-    }
     // Re-apply slider opacities when leaving peel mode so materials cannot
     // stay stuck translucent / depthWrite-off after a 100% scrub. The abort
     // path already presented sorted alpha, so a forced redraw just runs the
