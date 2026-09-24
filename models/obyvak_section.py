@@ -133,8 +133,8 @@ def build(params: ObyvakParams | None = None):
     z_rail_top = g.z_soffit_rail()
     z_rail = z_rail_top - fm
     x_wall = p.room_width - p.wall_plaster
-    # Vertical lať beside the ducts + mid-rail under them + underside.
-    z_lat_top = g.z_slope_plane_offset(g.x_sdk_break, g.t_nh_face + g.t_flex_pack)
+    # Vertical lať beside the ducts, up to the lid + mid-rail + underside.
+    z_lat_top = g.z_soffit_lid
     parts.append(
         xz_rect(
             g.x_nh_inner,
@@ -163,7 +163,6 @@ def build(params: ObyvakParams | None = None):
         )
     )
     parts.append(xz_face(g.soffit_sdk_lid_pts(), LABEL_SOFFIT_GKF))
-    parts.append(xz_face(g.soffit_sdk_vertical_pts(), LABEL_SOFFIT_GKF))
     r_duct = p.duct_od * 0.5
     for cx, cz in g.soffit_duct_centers():
         parts.append(xz_ngon(cx, cz, r_duct, LABEL_SOFFIT_DUCT))
@@ -177,9 +176,11 @@ def build(params: ObyvakParams | None = None):
             )
     for quad in g.soffit_plate_cleat_quads():
         parts.append(xz_face(quad, LABEL_SOFFIT_NONIUS))
-    # Drop from the latě top, through the lid, into the front CD (schematic) + wall angle.
-    if g.horiz_cd_x_stations():
-        xc = g.horiz_cd_x_stations()[0]
+    # Screw through the lid into the rost CD (schematic) + wall angle.
+    # The joint CD is the other rail, room-ward of this line.
+    rost_x = g.x_sdk_break + p.cd_w * 0.5
+    if any(abs(x - rost_x) < 1.0 for x in g.horiz_cd_x_stations()):
+        xc = rost_x
         z_drop0 = z_lat_top
         z_drop1 = g.z_soffit_lid + p.sdk_t
         parts.append(

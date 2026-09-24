@@ -19,10 +19,10 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
 - Soffit box: NH L over cabinets (20 mm gap); Flex + latový rost below a
   service void; three Ø160 spiral ducts (HRV + AC) in that void; GKF lid
   raised onto the pozednice (above the wall head, not the plaster). Slope GKF
-  → vertical return → lid. Nonius from krokve carries the lid; rost hangs from
-  the front CD and braces to the eave wall. Ducts hang on their own trapeze.
-  Furniture and pozednice do not carry the box — the plate only cleats the
-  board edge.
+  butts the lid where the two planes meet; each edge has its own CD. Nonius
+  from krokve carries both. The rost hangs from its CD (attic of that joint)
+  and braces to the eave wall. Ducts hang on their own trapeze. Furniture and
+  pozednice do not carry the box — the plate only cleats the board edge.
 - Terrace eave (X=0): 100×100 columns in front of the glass at the pier centres
   stop one brick course below the ring beam; cabinet eave keeps a continuous wall
   with 300×300 columns standing in front of it on the room side (same Y grid).
@@ -995,21 +995,11 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     ]
     flex_solid = _extrude_y(xz_face(flex_box, LABEL_SOFFIT_FLEX), y_soff0, y_soff1, LABEL_SOFFIT_FLEX)
 
-    # GKF return on the attic side of the rost front, lid from there onto the plate.
+    # Lid from the plane intersection onto the plate. No vertical riser:
+    # the slope board butts this edge, each side screwed to its own CD.
     lid_solid = None
-    vert_solid = None
-    xb = g.x_sdk_break
+    xb = g.x_gkf_kink
     if p.sdk_t > 2 * gap:
-        z_bot = g.z_slope_plane_offset(xb, t_sdk0)
-        z_top = g.z_soffit_lid
-        if z_top - z_bot > 2 * gap:
-            vert = [
-                (xb + gap, z_bot + gap),
-                (xb + p.sdk_t - gap, z_bot + gap),
-                (xb + p.sdk_t - gap, z_top - gap),
-                (xb + gap, z_top - gap),
-            ]
-            vert_solid = _extrude_y(xz_face(vert, LABEL_SOFFIT_GKF), y_soff0, y_soff1, LABEL_SOFFIT_GKF)
         lid = [
             (xb + gap, g.z_soffit_lid + gap),
             (g.poz_r0 - gap, g.z_soffit_lid + gap),
@@ -1051,16 +1041,16 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         horiz_zaves = [_cut_away(z, krov_parts, LABEL_SOFFIT_NONIUS) for z in horiz_zaves]
     parts.extend(horiz_zaves)
 
-    # Latový rost: verticals stop under the GKF return (beside the ducts), mid-rail
-    # under the pipes, underside latě braced to the wall. The front CD is the only hang.
+    # Latový rost: verticals up to the lid (beside the ducts), mid-rail under the
+    # pipes, underside latě braced to the wall. The rost CD is the only hang.
     fm = p.rost_d
     fw = p.rost_w
     half_w = fw * 0.5
     bt = p.wall_bracket_t
     z_wood0 = g.z_nabeh_bot + t + gap + bt
-    # Stop under the GKF return. The return owns the attic side of the rost front;
-    # the drop from the front CD bridges that gap in clear air beside the pipes.
-    z_lat_top = g.z_slope_plane_offset(g.x_sdk_break, t_sdk0) - gap
+    # Land on the lid. The rost CD is on the attic side of that board; a short
+    # drop through the GKF is the screw, not a riser.
+    z_lat_top = g.z_soffit_lid - gap
     face_h = z_lat_top - z_wood0
     x_front = g.x_nh_inner + gap
     x_wall = p.room_width - p.wall_plaster - gap
@@ -1102,11 +1092,13 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
                     LABEL_SOFFIT_BATTENS,
                 )
             )
-            # Drop only at the rost-front CD. The other rails are over the pipes.
+            # Drop only at the rost CD. The joint CD is room-ward of this line;
+            # the rails over the pipes are not a hang point for the lattice.
             z_drop1 = g.z_soffit_lid + p.sdk_t
             drop_h = z_drop1 - z_lat_top
-            if drop_h > gap and cd_xs:
-                xc = cd_xs[0]
+            rost_x = g.x_sdk_break + p.cd_w * 0.5
+            if drop_h > gap and any(abs(x - rost_x) < 1.0 for x in cd_xs):
+                xc = rost_x
                 drop_parts.append(
                     _box(
                         xc - p.soffit_drop_w * 0.5,
@@ -1217,10 +1209,6 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
 
     # GKF last so hangers and trapeze rods can pierce the lid.
     pierce = drop_parts + trapeze_parts
-    if vert_solid is not None:
-        if pierce:
-            vert_solid = _cut_away(vert_solid, pierce, LABEL_SOFFIT_GKF)
-        parts.append(vert_solid)
     if lid_solid is not None:
         if pierce:
             lid_solid = _cut_away(lid_solid, pierce, LABEL_SOFFIT_GKF)

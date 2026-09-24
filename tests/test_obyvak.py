@@ -105,15 +105,19 @@ def test_layout_ceiling_and_gable():
     assert g.l_hanger_right > g.l_hanger_left
     assert abs(g.z_nabeh_bot - (p.furniture_height + p.furniture_gap)) < 1e-9
     assert g.x_nh_inner == g.x_furn + g.t_nh_face
-    # GKF zlom flush with wooden rost front; front CD hangs the lattice there.
+    # Lattice still hangs at the rost. The gypsum joint is room-ward of that,
+    # where the slope underside meets the lid — one CD cannot cover both lines.
     assert g.x_sdk_break == g.x_nh_inner
     assert g.x_sdk_break > g.x_furn
-    cds = g.horiz_cd_x_stations()
-    assert cds
-    assert abs(cds[0] - (g.x_nh_inner + p.cd_w * 0.5)) < 1e-9
+    assert g.x_gkf_kink < g.x_furn
+    assert g.x_furn - g.x_gkf_kink < 80.0
+    assert g.x_sdk_break - g.x_gkf_kink > p.cd_w
     t0 = g.t_nh_face + g.t_flex_pack
-    z_inner = g.z_slope_plane_offset(g.x_sdk_break, t0)
-    assert z_inner > g.z_gkf_horiz + p.sdk_t + 20.0  # vertical return has real height
+    assert abs(g.z_slope_plane_offset(g.x_gkf_kink, t0) - g.z_soffit_lid) < 1e-6
+    assert g.z_soffit_lid - g.z_slope_plane_offset(g.x_sdk_break, t0) > 50.0
+    cds = g.horiz_cd_x_stations()
+    assert abs(cds[0] - (g.x_gkf_kink + 1.0 + p.cd_w * 0.5)) < 1e-6
+    assert any(abs(x - (g.x_nh_inner + p.cd_w * 0.5)) < 1e-6 for x in cds)
 
 
 def test_krov_is_discrete_rafters():
@@ -207,36 +211,41 @@ def test_sikminy_and_soffit_stack_in_3d():
     assert box_nh.bounding_box().min.Z >= p.furniture_height + p.furniture_gap - 1.0
     furn = _labeled(shape, LABEL_FURNITURE)[0].bounding_box()
     assert box_nh.bounding_box().min.Z >= furn.max.Z + p.furniture_gap - 2.0
-    # Ceiling GKF: raised horizontal lid + vertical return at rost front.
-    lids = [
-        c
-        for c in _labeled(shape, LABEL_SOFFIT_GKF) + _labeled(shape, LABEL_SLOPE_GKF)
-        if c.bounding_box().min.Z >= g.z_gkf_horiz - 1.0
-        and c.bounding_box().min.X >= g.x_furn - 1.0
-    ]
-    assert len(lids) >= 2  # lid + vertical return (slope SDK also reaches rost front)
+    # Ceiling GKF: slope board butts the lid at the plane intersection. No riser.
+    slope_boards = _labeled(shape, LABEL_SLOPE_GKF)
+    assert slope_boards
+    slope_board = max(slope_boards, key=lambda s: s.bounding_box().max.X)
+    assert abs(slope_board.bounding_box().max.X - g.x_gkf_kink) < 2.0
     horiz_lids = [
         c
-        for c in lids
-        if c.bounding_box().size.Z < p.sdk_t + 1.0
-        and c.bounding_box().size.X > 100.0
+        for c in _labeled(shape, LABEL_SOFFIT_GKF)
+        if c.bounding_box().size.Z < p.sdk_t + 1.0 and c.bounding_box().size.X > 100.0
     ]
     assert len(horiz_lids) == 1
     assert abs(horiz_lids[0].bounding_box().size.Z - (p.sdk_t - 2 * FACE_GAP)) < 1e-3
-    verts = [
+    assert abs(horiz_lids[0].bounding_box().min.X - (g.x_gkf_kink + FACE_GAP)) < 2.0
+    risers = [
         c
-        for c in lids
-        if c.bounding_box().size.X < p.sdk_t + 1.0
-        and c.bounding_box().min.Z >= g.z_gkf_horiz + p.sdk_t - 2.0
+        for c in _labeled(shape, LABEL_SOFFIT_GKF)
+        if c.bounding_box().size.X < p.sdk_t + 2.0
     ]
-    assert len(verts) == 1
-    # Room face of the vertical return is the rost front; it stands attic of that plane.
-    assert abs(verts[0].bounding_box().min.X - (g.x_nh_inner + FACE_GAP)) < 2.0
-    assert abs(verts[0].bounding_box().max.X - (g.x_nh_inner + p.sdk_t - FACE_GAP)) < 2.0
-    # Lid starts on that return and runs to the plate.
-    assert abs(horiz_lids[0].bounding_box().min.X - (g.x_nh_inner + FACE_GAP)) < 2.0
-    vbb = verts[0].bounding_box()
-    assert vbb.size.Z > p.cd_t
+    assert risers == []
+    # Last slope CD is still inside one module of the joint. The lid CD closes it.
+    slope_carriers = [
+        c
+        for c in cds
+        if c.bounding_box().max.X < g.x_gkf_kink and c.bounding_box().max.Z > g.z_soffit_lid
+    ]
+    assert slope_carriers
+    last_cd = max(slope_carriers, key=lambda c: c.bounding_box().max.X)
+    assert (g.x_gkf_kink - last_cd.bounding_box().max.X) / g.cos < p.cd_spacing
+    kink_cds = [
+        c
+        for c in cds
+        if abs(c.bounding_box().min.X - (g.x_gkf_kink + 1.0)) < 2.0
+        and c.bounding_box().min.Z >= g.z_soffit_lid + p.sdk_t - 2.0
+    ]
+    assert len(kink_cds) >= 1
     # Front soffit CD flush with rost edge, sitting on the raised lid.
     front_cds = [
         c
