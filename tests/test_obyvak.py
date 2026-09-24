@@ -116,13 +116,29 @@ def test_layout_ceiling_and_gable():
     assert abs(g.z_slope_plane_offset(g.x_gkf_kink, t0) - g.z_soffit_lid) < 1e-6
     assert g.z_soffit_lid - g.z_slope_plane_offset(g.x_sdk_break, t0) > 50.0
     cds = g.horiz_cd_x_stations()
-    # Butt CD is wafer-screwed to the room web of the hung rost CD. One millimetre between them.
-    assert abs(cds[0] - g.horiz_butt_cd_x()) < 1e-6
-    assert abs(cds[1] - (g.x_nh_inner + p.cd_w * 0.5)) < 1e-6
-    assert abs((cds[1] - cds[0]) - (p.cd_w + 1.0)) < 1e-6
-    overhang = (g.horiz_butt_cd_x() - p.cd_w * 0.5) - g.x_gkf_kink
-    assert 20.0 < overhang < 50.0
-    assert g.horiz_butt_cd_x() not in g.horiz_hung_cd_x_stations()
+    # One hung rost CD. The gypsum butt is an angle on that rail, not a second channel.
+    assert abs(cds[0] - (g.x_nh_inner + p.cd_w * 0.5)) < 1e-6
+    assert all(x - p.cd_w * 0.5 >= g.x_nh_inner - 1e-6 for x in cds)
+    slope_q, horiz_q, lip_q = g.soffit_joint_angle_quads()
+    assert abs(max(pt[0] for pt in horiz_q) - (g.x_sdk_break - 1.0)) < 1e-6
+    assert min(pt[0] for pt in horiz_q) > g.x_gkf_kink
+    z_seat = g.z_soffit_lid + p.sdk_t + 3.0
+    low = [pt for pt in slope_q if abs(pt[1] - z_seat) < 1e-4]
+    assert len(low) == 2
+    assert min(pt[0] for pt in low) > g.x_gkf_kink
+    assert max(pt[0] for pt in low) < g.x_sdk_break
+    high = [pt for pt in slope_q if pt[1] > z_seat + 10.0]
+    inner_high = min(high, key=lambda pt: pt[0])
+    z_attic = g.z_soffit_lid + p.sdk_t / g.cos
+    seat0 = (g.x_gkf_kink - g.cos * 40.0 + g.sin, z_attic + g.sin * 40.0 + g.cos)
+    assert abs(inner_high[0] - seat0[0]) < 1e-4
+    assert abs(inner_high[1] - seat0[1]) < 1e-4
+    sdk = g.sikmina_sdk_pts()
+    end = [pt for pt in sdk if abs(pt[0] - g.x_gkf_kink) < 1e-6]
+    assert len(end) == 2
+    assert abs(abs(end[0][1] - end[1][1]) * g.cos - p.sdk_t) < 1e-6
+    assert abs(max(pt[0] for pt in lip_q) - (g.x_sdk_break - 1.0)) < 1e-6
+    assert max(pt[1] for pt in lip_q) - (g.z_soffit_lid + p.sdk_t) > 15.0
 
 
 def test_krov_is_discrete_rafters():
@@ -235,7 +251,7 @@ def test_sikminy_and_soffit_stack_in_3d():
         if c.bounding_box().size.X < p.sdk_t + 2.0
     ]
     assert risers == []
-    # Last slope CD is still inside one module of the joint. The lid CD closes it.
+    # Last slope CD is still inside one module of the joint. The angle closes it.
     slope_carriers = [
         c
         for c in cds
@@ -244,24 +260,32 @@ def test_sikminy_and_soffit_stack_in_3d():
     assert slope_carriers
     last_cd = max(slope_carriers, key=lambda c: c.bounding_box().max.X)
     assert (g.x_gkf_kink - last_cd.bounding_box().max.X) / g.cos < p.cd_spacing
-    butt_x = g.horiz_butt_cd_x()
-    butt_cds = [
-        c
-        for c in cds
-        if abs(c.bounding_box().center().X - butt_x) < 2.0
-        and c.bounding_box().min.Z >= g.z_soffit_lid + p.sdk_t - 2.0
-    ]
-    assert len(butt_cds) >= 1
-    assert abs(butt_cds[0].bounding_box().max.X - (g.x_nh_inner - 1.0)) < 2.0
-    # The butt rail is screwed on. Its Nonius row does not exist.
-    butt_hangers = [
+    soffit_cd_parts = _labeled(shape, LABEL_SOFFIT_CD)
+    assert soffit_cd_parts
+    assert min(c.bounding_box().min.X for c in soffit_cd_parts) >= g.x_nh_inner - 1.0
+    joint = [
         c
         for c in zaves
-        if abs(c.bounding_box().center().X - butt_x) < p.cd_w * 0.4
-        and c.bounding_box().min.Z >= g.z_soffit_lid + p.sdk_t - 2.0
-        and c.bounding_box().size.Z > 20.0
+        if c.bounding_box().size.Y > 1000.0
+        and c.bounding_box().min.X < g.x_sdk_break
+        and c.bounding_box().max.X > g.x_gkf_kink
+        and c.bounding_box().max.Z < g.horiz_hanger_bot_z() + 30.0
     ]
-    assert butt_hangers == []
+    assert len(joint) == 3
+    assert min(c.bounding_box().min.X for c in joint) < g.x_gkf_kink
+    assert any(abs(c.bounding_box().max.X - (g.x_sdk_break - 1.0)) < 2.0 for c in joint)
+    from build123d import Box, Location
+
+    z_end = g.z_slope_plane_offset(
+        g.x_gkf_kink - 2.0, g.t_nh_face + g.t_flex_pack + p.sdk_t * 0.5
+    )
+    probe = Location((g.x_gkf_kink - 2.0, p.room_length * 0.5, z_end)) * Box(0.4, 30.0, 30.0)
+    hit = slope_board.intersect(probe)
+    pieces = list(hit.solids()) if hit is not None and hasattr(hit, "solids") else []
+    assert pieces, "slope board has no thickness at the square end"
+    # Mates pull 1 mm off each face, so the solid reads a little under 12.5.
+    thick = max(s.bounding_box().size.Z for s in pieces) * g.cos
+    assert thick > p.sdk_t - 2.0, thick
     # Front soffit CD flush with rost edge, sitting on the raised lid.
     front_cds = [
         c

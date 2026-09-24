@@ -3,7 +3,8 @@
 Šikminy: NaturHeld 140, latě // krokvím, Flex, SDK, CD ⊥ krokvím, závěsy,
 pásky (3D: 45° X; zde jen průřez). Soffit: GKF lid on the pozednice above
 three Ø160 ducts; latový rost under the pipes, hung from the front CD and
-braced to the wall. 3D: `models/obyvak.py`.
+braced to the wall. The hidden gypsum butt is a light-gauge angle on that
+same CD. 3D: `models/obyvak.py`.
 
     python -m blueprints.export obyvak_section
 """
@@ -168,28 +169,17 @@ def build(params: ObyvakParams | None = None):
         parts.append(xz_ngon(cx, cz, r_duct, LABEL_SOFFIT_DUCT))
     for xc in g.horiz_cd_x_stations():
         parts.append(xz_face(g.horiz_cd_quad(xc), LABEL_SOFFIT_CD))
-        if abs(xc - g.horiz_butt_cd_x()) < 1.0:
-            continue
         z0 = g.horiz_hanger_bot_z()
         z1 = g.horiz_hanger_top_z(xc)
         if z1 - z0 > 20.0:
             parts.append(
                 xz_rect(xc - p.hanger_w * 0.5, z0, p.hanger_w, z1 - z0, LABEL_SOFFIT_NONIUS)
             )
-    # Stitch on top of the butt CD and the room edge of the rost CD.
-    parts.append(
-        xz_rect(
-            g.horiz_butt_cd_x(),
-            g.horiz_hanger_bot_z(),
-            g.x_sdk_break + 15.0 - g.horiz_butt_cd_x(),
-            2.0,
-            LABEL_SOFFIT_NONIUS,
-        )
-    )
+    for quad in g.soffit_joint_angle_quads():
+        parts.append(xz_face(quad, LABEL_SOFFIT_NONIUS))
     for quad in g.soffit_plate_cleat_quads():
         parts.append(xz_face(quad, LABEL_SOFFIT_NONIUS))
     # Screw through the lid into the rost CD (schematic) + wall angle.
-    # The joint CD is the other rail, room-ward of this line.
     rost_x = g.x_sdk_break + p.cd_w * 0.5
     if any(abs(x - rost_x) < 1.0 for x in g.horiz_cd_x_stations()):
         xc = rost_x

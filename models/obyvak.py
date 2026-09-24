@@ -19,11 +19,11 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
 - Soffit box: NH L over cabinets (20 mm gap); Flex + latový rost below a
   service void; three Ø160 spiral ducts (HRV + AC) in that void; GKF lid
   raised onto the pozednice (above the wall head, not the plaster). Slope GKF
-  butts the lid where the two planes meet. Nonius hangs the rost CD only; the
-  butt CD is wafer-screwed to that CD's room side and carries no hanger. The
-  rost hangs from its CD and braces to the eave wall. Ducts hang on their own
-  trapeze. Furniture and pozednice do not carry the box — the plate only cleats
-  the board edge.
+  butts the lid where the two planes meet, at full 12.5 mm. A light-gauge angle
+  backs that hidden joint and screws to the rost CD; that CD keeps the only
+  Nonius for the corner. The rost hangs from it and braces to the eave wall.
+  Ducts hang on their own trapeze. Furniture and pozednice do not carry the
+  box — the plate only cleats the board edge.
 - Terrace eave (X=0): 100×100 columns in front of the glass at the pier centres
   stop one brick course below the ring beam; cabinet eave keeps a continuous wall
   with 300×300 columns standing in front of it on the room side (same Y grid).
@@ -997,7 +997,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     flex_solid = _extrude_y(xz_face(flex_box, LABEL_SOFFIT_FLEX), y_soff0, y_soff1, LABEL_SOFFIT_FLEX)
 
     # Lid from the plane intersection onto the plate. No vertical riser.
-    # The butt CD is beside the rost CD; the board edge overhangs it ~35 mm.
+    # The joint angle on the rost CD holds the board edge.
     lid_solid = None
     xb = g.x_gkf_kink
     if p.sdk_t > 2 * gap:
@@ -1017,11 +1017,11 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         )
     parts.extend(horiz_cd_parts)
 
-    # Nonius: hung CD → krokev. The butt CD is screwed to the rost CD and has none.
+    # Nonius: each lid CD → krokev. The joint angle screws to the rost CD.
     horiz_zaves: list = []
     half_hang = p.hanger_w * 0.5
     z_cd_top = g.horiz_hanger_bot_z()
-    for xc in g.horiz_hung_cd_x_stations():
+    for xc in g.horiz_cd_x_stations():
         z_top = g.horiz_hanger_top_z(xc) - 2.0 * gap
         hang_h = z_top - z_cd_top
         if hang_h < 20.0:
@@ -1042,24 +1042,19 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         horiz_zaves = [_cut_away(z, krov_parts, LABEL_SOFFIT_NONIUS) for z in horiz_zaves]
     parts.extend(horiz_zaves)
 
-    # Stitch plates on top of the two CDs: the butt channel is wafer-screwed
-    # to the rost channel. One plate at each lať, clear of the Nonius.
-    stitch_parts: list = []
-    x_stitch0 = g.horiz_butt_cd_x()
-    x_stitch1 = g.x_sdk_break + 15.0
-    for yc in g.sikmina_rost_y_stations(y_soff0, y_soff1):
-        stitch_parts.append(
-            _box(
-                x_stitch0,
-                yc - 15.0,
-                z_cd_top,
-                x_stitch1 - x_stitch0,
-                30.0,
-                2.0,
+    # Light-gauge angle along the hidden butt: seat on the slope board, leg
+    # across the lid, lip up the rost CD. One strip, no second hanger row.
+    angle_parts: list = []
+    for quad in g.soffit_joint_angle_quads():
+        angle_parts.append(
+            _extrude_y(
+                xz_face(quad, LABEL_SOFFIT_NONIUS),
+                y_soff0,
+                y_soff1,
                 LABEL_SOFFIT_NONIUS,
             )
         )
-    parts.extend(stitch_parts)
+    parts.extend(angle_parts)
 
     # Latový rost: verticals up to the lid (beside the ducts), mid-rail under the
     # pipes, underside latě braced to the wall. The rost CD is the only hang.
@@ -1112,8 +1107,8 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
                     LABEL_SOFFIT_BATTENS,
                 )
             )
-            # Drop only at the rost CD. The joint CD is room-ward of this line;
-            # the rails over the pipes are not a hang point for the lattice.
+            # Drop only at the rost CD. The rails over the pipes are not a hang
+            # point for the lattice; the joint angle lands on this same CD.
             z_drop1 = g.z_soffit_lid + p.sdk_t
             drop_h = z_drop1 - z_lat_top
             rost_x = g.x_sdk_break + p.cd_w * 0.5
@@ -1235,7 +1230,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         parts.append(lid_solid)
 
     # MW over the soffit bay must clear horizontal CD + Nonius.
-    steel_over_soffit = horiz_cd_parts + horiz_zaves + stitch_parts
+    steel_over_soffit = horiz_cd_parts + horiz_zaves + angle_parts
     if steel_over_soffit:
         for i, part in enumerate(parts):
             if part.label == LABEL_PLENUM_WOOL:
