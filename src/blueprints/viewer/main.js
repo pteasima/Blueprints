@@ -729,8 +729,12 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
           Object.prototype.hasOwnProperty.call(overrides, name)
             ? overrides[name]
             : def;
-        setPartOpacity(name, raw, { skipUi: true });
+        // One clip + edge rebuild after the loop. Per-part applyClipping
+        // rebuilt every fat line once per leaf and made scene changes stall.
+        setPartOpacity(name, raw, { skipUi: true, skipClip: true });
       }
+      updateBox();
+      applyClipping();
       syncPartOpacityUi();
     }
 
@@ -829,12 +833,14 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     annotations.setSpec(spec);
     syncDrawingButton();
     syncLabelButton();
+    // After the CPU work, so the next frames stay on the single sorted-alpha draw.
+    holdFastPeel();
   }
 
   /**
    * @param {string} name
    * @param {number} opacity
-   * @param {{ skipUi?: boolean, detach?: boolean }} [opts]
+   * @param {{ skipUi?: boolean, detach?: boolean, skipClip?: boolean }} [opts]
    */
   function setPartOpacity(name, opacity, opts = {}) {
     const o = Math.max(0, Math.min(1, Number(opacity) || 0));
@@ -842,8 +848,10 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     if (o > 0) partLastNonZero.set(name, o);
     if (opts.detach) detachedLeaves.add(name);
     applyOpacityToMeshes(parts.get(name) || [], o, { edgeMode });
+    if (opts.skipClip) return;
     updateBox();
     applyClipping();
+    holdFastPeel();
     if (!opts.skipUi) syncPartOpacityUi();
   }
 
@@ -863,6 +871,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     }
     updateBox();
     applyClipping();
+    holdFastPeel();
     syncPartOpacityUi();
   }
 
@@ -881,6 +890,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     applyOpacityToMeshes(parts.get(leafId) || [], o, { edgeMode });
     updateBox();
     applyClipping();
+    holdFastPeel();
     syncPartOpacityUi();
   }
 
@@ -1591,7 +1601,18 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   let peelPointerDown = false;
   /** @type {"fast" | "high"} */
   let lastPeelQuality = "high";
-  const PEEL_SETTLE_MS = 10;
+  /**
+   * Stay on the single sorted-alpha draw until interaction has been quiet this long.
+   * 10ms made the 12-layer frame part of the same gesture, so dragging and
+   * scene changes felt like the settled path the whole time.
+   */
+  const PEEL_SETTLE_MS = 220;
+  /** performance.now() deadline; fast peel until then (scene / opacity). */
+  let peelFastUntil = 0;
+
+  function holdFastPeel() {
+    peelFastUntil = Math.max(peelFastUntil, performance.now() + PEEL_SETTLE_MS);
+  }
   /** Squared metres — ignore float noise only (no orbit damping). */
   const PEEL_MOVE_EPS2 = 1e-5;
   const peelCamPos = new THREE.Vector3();
@@ -2213,6 +2234,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
 
     const peelBusy =
       peelPointerDown ||
+      now < peelFastUntil ||
       now - peelLastMoveMs < PEEL_SETTLE_MS ||
       frameAnim !== 0 ||
       cutSliderActive;
@@ -2236,12 +2258,17 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     const usedPeel = depthPeel.render(scene, camera, root, anyPartFaded, {
       quality: lastPeelQuality,
     });
+    // A slow fast frame can outlive the settle window and be followed at once
+    // by the 12-layer peel. Push the heavy frame out so the picture appears first.
+    if (lastPeelQuality === "fast" && performance.now() > peelFastUntil) {
+      peelFastUntil = performance.now() + PEEL_SETTLE_MS;
+    }
     // Re-apply slider opacities when leaving peel mode so materials cannot
-    // stay stuck translucent / depthWrite-off after a 100% scrub.
+    // stay stuck translucent / depthWrite-off after a 100% scrub. The abort
+    // path already presented sorted alpha, so a forced redraw just runs the
+    // failing peel a second time.
     if (prevUsedPeel && !usedPeel) {
       healOpacitiesFromState();
-      // Opacity flags changed after this frame's stamp was stored.
-      viewDirty = true;
     }
     prevUsedPeel = usedPeel;
     requestAnimationFrame(tick);
