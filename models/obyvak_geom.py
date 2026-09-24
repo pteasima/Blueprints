@@ -28,10 +28,9 @@ against the cabinet eave, below the lid and above the column heads. The GKF lid
 is raised so its top is flush with the pozednice and its cut end meets the plate
 cheek — above the wall head, not on the plaster. Slope GKF and its latě stop
 where that board's underside meets the lid (a little room-ward of the furniture
-line). One horizontal CD on that line takes both board edges; the previous
-slope CD is still inside the 625 mm module, so no extra tilted profile. The
-rost keeps its own CD — the lattice is ~95 mm attic of the joint, and a 60 mm
-channel cannot cover both lines. No vertical gypsum riser.
+line). The rost CD is the hung rail (Nonius to the krokve). A second CD is
+wafer-screwed to its room web and only holds the gypsum butt — the board
+overhangs that CD by about 35 mm. No second hanger row. No vertical riser.
 Ducts hang from the CD on their own trapeze. Furniture and the wall plate do
 not carry the box (the plate only fixes the board edge). CAD ids are
 zone-prefixed so the viewer can toggle / fade slopes, soffit, and bass traps
@@ -510,8 +509,8 @@ class ObyvakLayout:
         """CD centers along the šikmina (⊥ krokvím — spaced along the slope).
 
         The cabinet-slope run stops one module short of the gypsum joint. The
-        horizontal CD on the lid closes that bay (see ``horiz_cd_x_stations``);
-        a tilted profile there would send its Nonius through the lid hanger.
+        butt CD screwed to the rost rail closes that bay (see
+        ``horiz_butt_cd_x``).
         """
         p = self.p
         return self._path_stations(p.cd_spacing, p.cd_first_inset)
@@ -796,17 +795,30 @@ class ObyvakLayout:
             (0.0, self.z_raf_outer(0.0)),
         ]
 
+    def horiz_butt_cd_x(self) -> float:
+        """Centre of the CD wafer-screwed to the room web of the rost CD.
+
+        No Nonius — the rost rail is the suspension. The gypsum butt is about
+        35 mm room-ward of this channel, a normal edge distance for 12.5 mm board.
+        """
+        rost = self.x_sdk_break + self.p.cd_w * 0.5
+        return rost - self.p.cd_w - 1.0
+
+    def horiz_hung_cd_x_stations(self) -> list[float]:
+        """CD centres that take a Nonius. The butt CD is not one of them."""
+        butt = self.horiz_butt_cd_x()
+        return [x for x in self.horiz_cd_x_stations() if abs(x - butt) > 1.0]
+
     def horiz_cd_x_stations(self) -> list[float]:
         """CD centres on the raised GKF lid.
 
         The bay is only ~450 mm, so a 625 mm grid never lands a second profile.
-        Four rails: at the gypsum joint (slope board and lid both screw here),
-        rost-front (hangs the box — ~95 mm attic of the joint, so not the same
-        profile), over the duct bundle, and inboard of the plaster.
+        Four rails: butt CD screwed to the room side of the rost CD (gypsum
+        edge only), rost CD (the hung rail — lattice and lid), over the duct
+        bundle, and inboard of the plaster.
         """
         p = self.p
-        # 1 mm room-side clearance so the channel does not occupy the slope board.
-        kink = self.x_gkf_kink + 1.0 + p.cd_w * 0.5
+        butt = self.horiz_butt_cd_x()
         front = self.x_sdk_break + p.cd_w * 0.5
         over = self.soffit_duct_centers()[2][0]
         # Wall-side rod sits in the plaster gap; this CD's attic edge lands on it.
@@ -815,8 +827,9 @@ class ObyvakLayout:
         wall = rod_wall + 2.0 - p.cd_w * 0.5
         wall = min(wall, p.room_width - 2.0 - p.cd_w * 0.5)
         out: list[float] = []
-        for x in (kink, front, over, wall):
-            if out and x - out[-1] < p.cd_w + 5.0:
+        for x in (butt, front, over, wall):
+            # Side-by-side webs (centre spacing = CD + 1 mm) stay. A real overlap does not.
+            if out and x - out[-1] < p.cd_w + 0.5:
                 continue
             # Stay inside the room. The board itself continues onto the plate.
             if x + p.cd_w * 0.5 > p.room_width - 1.0:

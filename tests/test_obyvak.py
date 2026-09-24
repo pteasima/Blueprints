@@ -116,8 +116,13 @@ def test_layout_ceiling_and_gable():
     assert abs(g.z_slope_plane_offset(g.x_gkf_kink, t0) - g.z_soffit_lid) < 1e-6
     assert g.z_soffit_lid - g.z_slope_plane_offset(g.x_sdk_break, t0) > 50.0
     cds = g.horiz_cd_x_stations()
-    assert abs(cds[0] - (g.x_gkf_kink + 1.0 + p.cd_w * 0.5)) < 1e-6
-    assert any(abs(x - (g.x_nh_inner + p.cd_w * 0.5)) < 1e-6 for x in cds)
+    # Butt CD is wafer-screwed to the room web of the hung rost CD. One millimetre between them.
+    assert abs(cds[0] - g.horiz_butt_cd_x()) < 1e-6
+    assert abs(cds[1] - (g.x_nh_inner + p.cd_w * 0.5)) < 1e-6
+    assert abs((cds[1] - cds[0]) - (p.cd_w + 1.0)) < 1e-6
+    overhang = (g.horiz_butt_cd_x() - p.cd_w * 0.5) - g.x_gkf_kink
+    assert 20.0 < overhang < 50.0
+    assert g.horiz_butt_cd_x() not in g.horiz_hung_cd_x_stations()
 
 
 def test_krov_is_discrete_rafters():
@@ -239,13 +244,24 @@ def test_sikminy_and_soffit_stack_in_3d():
     assert slope_carriers
     last_cd = max(slope_carriers, key=lambda c: c.bounding_box().max.X)
     assert (g.x_gkf_kink - last_cd.bounding_box().max.X) / g.cos < p.cd_spacing
-    kink_cds = [
+    butt_x = g.horiz_butt_cd_x()
+    butt_cds = [
         c
         for c in cds
-        if abs(c.bounding_box().min.X - (g.x_gkf_kink + 1.0)) < 2.0
+        if abs(c.bounding_box().center().X - butt_x) < 2.0
         and c.bounding_box().min.Z >= g.z_soffit_lid + p.sdk_t - 2.0
     ]
-    assert len(kink_cds) >= 1
+    assert len(butt_cds) >= 1
+    assert abs(butt_cds[0].bounding_box().max.X - (g.x_nh_inner - 1.0)) < 2.0
+    # The butt rail is screwed on. Its Nonius row does not exist.
+    butt_hangers = [
+        c
+        for c in zaves
+        if abs(c.bounding_box().center().X - butt_x) < p.cd_w * 0.4
+        and c.bounding_box().min.Z >= g.z_soffit_lid + p.sdk_t - 2.0
+        and c.bounding_box().size.Z > 20.0
+    ]
+    assert butt_hangers == []
     # Front soffit CD flush with rost edge, sitting on the raised lid.
     front_cds = [
         c
