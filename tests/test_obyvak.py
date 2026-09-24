@@ -105,10 +105,15 @@ def test_layout_ceiling_and_gable():
     assert g.l_hanger_right > g.l_hanger_left
     assert abs(g.z_nabeh_bot - (p.furniture_height + p.furniture_gap)) < 1e-9
     assert g.x_nh_inner == g.x_furn + g.t_nh_face
-    # Bulkhead NH butts the slope board square. It does not knife up to the GKF.
-    nh_top = g.z_slope_offset(g.x_furn, g.t_nh_face)
+    # Slope latě and Flex run to the vertical soffit lať. The bulkhead top is their seat.
+    assert max(x for x, _z in g.sikmina_flex_pts()) == g.x_nh_inner
+    assert max(x for x, _z in g.sikmina_rost_ribbon_pts()) == g.x_nh_inner
     nh_pts = g.soffit_nh_pts()
-    assert sum(1 for _x, z in nh_pts if abs(z - nh_top) < 1e-6) == 2
+    z_seat_in = g.z_slope_plane_offset(g.x_nh_inner, g.t_nh_face)
+    z_seat_out = g.z_slope_offset(g.x_furn, g.t_nh_face)
+    assert any(abs(x - g.x_nh_inner) < 1e-6 and abs(z - z_seat_in) < 1e-6 for x, z in nh_pts)
+    assert any(abs(x - g.x_furn) < 1e-6 and abs(z - z_seat_out) < 1e-6 for x, z in nh_pts)
+    assert z_seat_in < z_seat_out
     assert max(z for _x, z in nh_pts) < g.z_soffit_lid - 40.0
     # Lattice still hangs at the rost. The gypsum joint is room-ward of that,
     # where the slope underside meets the lid — one CD cannot cover both lines.
@@ -312,15 +317,17 @@ def test_sikminy_and_soffit_stack_in_3d():
     for part in _labeled(shape, LABEL_RAFTERS):
         bb = part.bounding_box()
         assert not (bb.min.X >= g.x_furn - 1.0 and bb.max.Z <= g.z_gkf_horiz + 1.0)
-    # Slope latě are // krokvím: thin in Y, long along the slope (X).
+    # Slope latě are // krokvím: thin in Y, long along the slope (X),
+    # butted to the vertical soffit lať.
     slope_rost = [
         c
         for c in rost
-        if c.bounding_box().min.X < 100.0 and c.bounding_box().max.X <= g.x_furn + 1.0
+        if c.bounding_box().min.X < 100.0 and c.bounding_box().max.X <= g.x_nh_inner + 1.0
     ]
     assert len(slope_rost) >= 5
     assert all(c.bounding_box().size.Y < p.rost_spacing for c in slope_rost)
     assert all(c.bounding_box().size.X > 500.0 for c in slope_rost)
+    assert all(abs(c.bounding_box().max.X - g.x_nh_inner) < 2.0 for c in slope_rost)
     # Šikminy pack runs wall-to-wall (bass traps sit under it, do not replace it).
     nh = _labeled(shape, LABEL_SLOPE_NH)
     assert any(c.bounding_box().size.Y > p.room_length - 10.0 for c in nh)

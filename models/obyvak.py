@@ -19,7 +19,8 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
 - Soffit box: NH L over cabinets (20 mm gap); Flex + latový rost below a
   service void; three Ø160 spiral ducts (HRV + AC) in that void; GKF lid
   raised onto the pozednice (above the wall head, not the plaster). Slope GKF
-  butts the lid where the two planes meet, at full 12.5 mm. A light-gauge angle
+  butts the lid where the two planes meet, at full 12.5 mm. Slope latě and Flex
+  continue on that plane to the vertical soffit lať. A light-gauge angle
   backs that hidden joint and screws to the rost CD; that CD keeps the only
   Nonius for the corner. The rost hangs from it and braces to the eave wall.
   Ducts hang on their own trapeze. Furniture and pozednice do not carry the
@@ -973,15 +974,16 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     if g.z_soffit_duct_crown() > g.z_soffit_lid - 5.0:
         raise ValueError("soffit ducts do not fit under the lid on the pozednice")
 
-    # Square top, flush with the slope board's attic face. 1 mm off each mate.
-    z_nh_top = g.z_slope_offset(g.x_nh_outer, t) - gap
+    # Top follows the Flex seat down to the vertical lať. 1 mm off each mate.
+    z_nh_out = g.z_slope_offset(g.x_nh_outer, t) - gap
+    z_nh_in = g.z_slope_plane_offset(g.x_nh_inner, t) - gap
     soffit_nh = [
         (g.x_nh_outer + gap, g.z_nabeh_bot + gap),
         (p.room_width - gap, g.z_nabeh_bot + gap),
         (p.room_width - gap, g.z_nabeh_bot + t - gap),
         (g.x_nh_inner - gap, g.z_nabeh_bot + t - gap),
-        (g.x_nh_inner - gap, z_nh_top),
-        (g.x_nh_outer + gap, z_nh_top),
+        (g.x_nh_inner - gap, z_nh_in),
+        (g.x_nh_outer + gap, z_nh_out),
     ]
     parts.append(_extrude_y(xz_face(soffit_nh, LABEL_SOFFIT_NH), y_soff0, y_soff1, LABEL_SOFFIT_NH))
 

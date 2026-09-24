@@ -26,10 +26,11 @@ Right eave soffit box: NH L, Flex cavity + latový rost (latě @625, Flex betwee
 Three Ø160 spiral ducts (HRV supply, HRV extract, AC) sit in a 2-over-1 pack
 against the cabinet eave, below the lid and above the column heads. The GKF lid
 is raised so its top is flush with the pozednice and its cut end meets the plate
-cheek — above the wall head, not on the plaster. Slope GKF and its latě stop
-where that board's underside meets the lid (a little room-ward of the furniture
-line). The board stays 12.5 mm to a square end. A light-gauge angle backs that
-hidden butt: a short leg on the slope board, a horizontal leg screwed to the
+cheek — above the wall head, not on the plaster. Slope GKF stops where that
+board's underside meets the lid. The latě and Flex continue on the same plane
+to the vertical soffit lať. The board stays 12.5 mm to a square end. A
+light-gauge angle backs that hidden butt: a short leg on the slope board, a
+horizontal leg screwed to the
 rost CD. No second CD and no second Nonius. No vertical riser.
 Ducts hang from the CD on their own trapeze. Furniture and the wall plate do
 not carry the box (the plate only fixes the board edge). CAD ids are
@@ -452,13 +453,25 @@ class ObyvakLayout:
         """NaturHeld + StoSilent face on the slopes (perp thickness t_nh_face)."""
         return self._slope_band_pts(0.0, self.t_nh_face)
 
+    def _flex_band_pts(self, t0: float, t1: float) -> list[tuple[float, float]]:
+        """Flex / lať band on the slope plane, continued to the vertical soffit lať.
+
+        Past X_FURN the ceiling face is horizontal, but this pack stays on the
+        roof slope until it butts the plumb lať. `z_slope_offset` would flatten
+        there and leave the cavity above the bulkhead.
+        """
+        xs = [0.0, self.x_false, self.x_nh_inner]
+        inner = [(x, self.z_slope_plane_offset(x, t0)) for x in xs]
+        outer = [(x, self.z_slope_plane_offset(x, t1)) for x in xs]
+        return inner + list(reversed(outer))
+
     def sikmina_flex_pts(self) -> list[tuple[float, float]]:
         """Flex 50 between the latě, flush with the 40 mm lať. No quilt over them.
 
-        Stops with the latě at the gypsum joint — not on the furniture line.
+        Runs to the vertical soffit lať so the bay above the bulkhead is filled.
         """
         t0 = self.t_nh_face
-        return self._slope_band_pts(t0, t0 + self.p.rost_d, self.x_gkf_kink)
+        return self._flex_band_pts(t0, t0 + self.p.rost_d)
 
     def sikmina_sdk_pts(self) -> list[tuple[float, float]]:
         """GKF/RF on the slopes, ending where the underside meets the soffit lid."""
@@ -551,9 +564,7 @@ class ObyvakLayout:
         Latě run eave→ridge (parallel to rafters); spacing is along Y, so a
         transverse section that cuts a lať shows this continuous ribbon.
         """
-        return self._slope_band_pts(
-            self.t_nh_face, self.t_nh_face + self.p.rost_d, self.x_gkf_kink
-        )
+        return self._flex_band_pts(self.t_nh_face, self.t_nh_face + self.p.rost_d)
 
     def y_stations(
         self, y0: float, y1: float, spacing: float, first_inset: float
@@ -674,22 +685,24 @@ class ObyvakLayout:
     def soffit_nh_pts(self) -> list[tuple[float, float]]:
         """L-shaped NH+StoSilent on the soffit box: vertical face + underside.
 
-        The vertical leg butts the full end of the slope board (square top,
-        flush with that board's attic face). It does not climb to the GKF —
-        that cut left a knife edge and an air gap between the two faces.
-        Room arris is the slope face meeting this vertical face at X_FURN.
+        The vertical leg butts the slope board. Its top follows the attic face
+        of that board — the seat of the Flex — down to the vertical lať, so the
+        pack can run through instead of stopping on a level cut. It does not
+        climb to the GKF. Room arris is the slope face meeting this vertical
+        face at X_FURN.
         """
         p = self.p
         t = self.t_nh_face
         z0 = self.z_nabeh_bot
-        z_top = self.z_slope_offset(self.x_nh_outer, t)
+        z_out = self.z_slope_offset(self.x_nh_outer, t)
+        z_in = self.z_slope_plane_offset(self.x_nh_inner, t)
         return [
             (self.x_nh_outer, z0),
             (p.room_width, z0),
             (p.room_width, z0 + t),
             (self.x_nh_inner, z0 + t),
-            (self.x_nh_inner, z_top),
-            (self.x_nh_outer, z_top),
+            (self.x_nh_inner, z_in),
+            (self.x_nh_outer, z_out),
         ]
 
     def soffit_flex_pts(self) -> list[tuple[float, float]]:
