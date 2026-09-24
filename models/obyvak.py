@@ -971,7 +971,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
 
     # --- Soffit bay: ducts under a lid that lands on the pozednice. ---
     # Box: krokve → Nonius → front CD → drop through the lid → vertical latě
-    # → mid-rail / bottom latě, wall angle as brace only.
+    # → bottom latě, wall angle as brace only.
     # Lid edge: continuous steel cleat on the plate cheek. Not a hang point.
     # Ducts: trapeze from the CD, clear of the rost and the column heads.
     t = g.t_nh_face
@@ -1003,7 +1003,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     ]
     parts.append(_extrude_y(xz_face(soffit_nh, LABEL_SOFFIT_NH), y_soff0, y_soff1, LABEL_SOFFIT_NH))
 
-    # Flex stays in the acoustic cavity under the mid-rail. The duct void is empty.
+    # Flex stays in the acoustic cavity, stopped short of the pipes. No timber cap.
     z_rail_top = g.z_soffit_rail()
     flex_box = [
         (g.x_nh_inner + gap, g.z_nabeh_bot + t + gap),
@@ -1073,8 +1073,9 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         )
     parts.extend(angle_parts)
 
-    # Latový rost: verticals up to the lid (beside the ducts), mid-rail under the
-    # pipes, underside latě braced to the wall. The rost CD is the only hang.
+    # Latový rost: verticals up to the lid (beside the ducts), underside latě
+    # braced to the wall. The rost CD is the only hang for the lattice. The
+    # wall CD carries the duct trapeze, not this frame.
     fm = p.rost_d
     fw = p.rost_w
     half_w = fw * 0.5
@@ -1086,7 +1087,6 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     face_h = z_lat_top - z_wood0
     x_front = g.x_nh_inner + gap
     x_wall = p.room_width - p.wall_plaster - gap
-    z_mid = z_rail_top - fm
     frame_parts: list = []
     drop_parts: list = []
     bracket_parts: list = []
@@ -1099,18 +1099,6 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
             ya, yb = yc - half_w, yc + half_w
             if yb <= ya:
                 continue
-            # Mid-rail under the ducts — caps the acoustic cavity, ties to the wall.
-            frame_parts.append(
-                _box(
-                    x_front + fm,
-                    ya,
-                    z_mid,
-                    max(x_wall - (x_front + fm), gap),
-                    yb - ya,
-                    fm - gap,
-                    LABEL_SOFFIT_BATTENS,
-                )
-            )
             # Vertical latě behind the NH face, beside the duct pack (not through it).
             frame_parts.append(
                 _box(x_front, ya, z_wood0, fm - gap, yb - ya, face_h, LABEL_SOFFIT_BATTENS)

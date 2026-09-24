@@ -139,7 +139,12 @@ def test_layout_ceiling_and_gable():
     cds = g.horiz_cd_x_stations()
     # One hung rost CD. The gypsum butt is an angle on that rail, not a second channel.
     assert abs(cds[0] - (g.x_nh_inner + p.cd_w * 0.5)) < 1e-6
+    assert len(cds) == 2
     assert all(x - p.cd_w * 0.5 >= g.x_nh_inner - 1e-6 for x in cds)
+    # No CD over the duct bundle. The wall CD stays: the trapeze rod lands on it.
+    over = g.soffit_duct_centers()[2][0]
+    assert all(abs(x - over) > p.cd_w for x in cds)
+    assert cds[1] > g.soffit_duct_x_extent()[1] - p.cd_w
     slope_q, horiz_q, lip_q = g.soffit_joint_angle_quads()
     assert abs(max(pt[0] for pt in horiz_q) - (g.x_sdk_break - 1.0)) < 1e-6
     assert min(pt[0] for pt in horiz_q) > g.x_gkf_kink
@@ -381,7 +386,7 @@ def test_sikminy_and_soffit_stack_in_3d():
         and c.bounding_box().min.Z >= g.z_soffit_lid + p.sdk_t - 1.0
     ]
     assert len(soffit_hangers) >= 4
-    # Soffit rost includes top rails under GKF + wall-braced underside latě.
+    # Underside latě brace to the wall. No second horizontal row under the ducts.
     soffit_rost = [c for c in rost if c.bounding_box().min.X >= g.x_nh_inner - 1.0]
     assert len(soffit_rost) >= 15
     top_rails = [
@@ -390,7 +395,7 @@ def test_sikminy_and_soffit_stack_in_3d():
         if abs(c.bounding_box().max.Z - g.z_soffit_rail()) < 3.0
         and c.bounding_box().size.X > 200.0
     ]
-    assert len(top_rails) >= 5
+    assert top_rails == []
     wall_braces = [
         c
         for c in zaves

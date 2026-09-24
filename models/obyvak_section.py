@@ -132,10 +132,8 @@ def build(params: ObyvakParams | None = None):
     parts.append(xz_face(g.soffit_flex_pts(), LABEL_SOFFIT_FLEX))
     fm = p.rost_d
     z_wood0 = g.z_nabeh_bot + g.t_nh_face + p.wall_bracket_t
-    z_rail_top = g.z_soffit_rail()
-    z_rail = z_rail_top - fm
     x_wall = p.room_width - p.wall_plaster
-    # Vertical lať beside the ducts, up to the lid + mid-rail + underside.
+    # Vertical lať beside the ducts, up to the lid, plus the underside lať.
     z_lat_top = g.z_soffit_lid
     parts.append(
         xz_rect(
@@ -143,15 +141,6 @@ def build(params: ObyvakParams | None = None):
             z_wood0,
             fm,
             max(8.0, z_lat_top - z_wood0),
-            LABEL_SOFFIT_BATTENS,
-        )
-    )
-    parts.append(
-        xz_rect(
-            g.x_nh_inner + fm,
-            z_rail,
-            max(8.0, x_wall - (g.x_nh_inner + fm)),
-            fm,
             LABEL_SOFFIT_BATTENS,
         )
     )

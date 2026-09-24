@@ -696,10 +696,11 @@ class ObyvakLayout:
         return min(z for _, z in self.soffit_duct_centers()) - r
 
     def z_soffit_rail(self) -> float:
-        """Top of the acoustic mid-rail.
+        """Top of the soffit Flex, clear of the lower duct.
 
-        Sits far enough under the lower duct for a 2 mm trapeze strap and a
-        real gap, so the quilt and the pipes are not the same layer.
+        There is no timber cap here. The quilt stops far enough under the
+        pipes for a 2 mm trapeze strap and a real gap, so it can be lifted
+        out without cutting.
         """
         return self.z_soffit_duct_bot() - self.p.duct_gap - 8.0
 
@@ -733,10 +734,10 @@ class ObyvakLayout:
         ]
 
     def soffit_flex_pts(self) -> list[tuple[float, float]]:
-        """Flex in the acoustic cavity only — under the mid-rail, not around the ducts.
+        """Flex in the acoustic cavity only, stopped short of the ducts.
 
-        The service void between the rail and the lid stays empty so the pipes
-        can be hung and taken out without cutting the quilt.
+        The service void above this line stays empty so the pipes can be hung
+        and taken out without cutting the quilt. No timber lid on the Flex.
         """
         p = self.p
         t = self.t_nh_face
@@ -831,21 +832,20 @@ class ObyvakLayout:
     def horiz_cd_x_stations(self) -> list[float]:
         """CD centres on the raised GKF lid.
 
-        The bay is only ~450 mm, so a 625 mm grid never lands a second profile.
-        Three rails: rost-front (hangs the box; the joint angle screws to this),
-        over the duct bundle, and inboard of the plaster. The gypsum butt does
-        not get a channel of its own.
+        Two rails. The rost CD hangs the box and takes the joint angle. The
+        wall CD is the second leg of the duct trapeze: the plate cleat only
+        fixes the board edge and must not carry the pipes. The lid between
+        those two is about 260 mm, so there is no rail over the duct bundle.
         """
         p = self.p
         front = self.x_sdk_break + p.cd_w * 0.5
-        over = self.soffit_duct_centers()[2][0]
         # Wall-side rod sits in the plaster gap; this CD's attic edge lands on it.
         x_hi = self.soffit_duct_x_extent()[1]
         rod_wall = 0.5 * (x_hi + p.room_width)
         wall = rod_wall + 2.0 - p.cd_w * 0.5
         wall = min(wall, p.room_width - 2.0 - p.cd_w * 0.5)
         out: list[float] = []
-        for x in (front, over, wall):
+        for x in (front, wall):
             if out and x - out[-1] < p.cd_w + 5.0:
                 continue
             # Stay inside the room. The board itself continues onto the plate.
