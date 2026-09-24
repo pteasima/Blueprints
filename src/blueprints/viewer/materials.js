@@ -4,6 +4,7 @@
  * Screen edge overlays use black fat lines (see edges.js), not section line colours.
  */
 import * as THREE from "three";
+import { patchMaterialForDepthPeel } from "./depthPeel.js";
 
 export const MATERIAL_MODE_KEY = "blueprints.materialMode";
 export const MODE_SOLID = "solid";
@@ -710,6 +711,9 @@ function finishMaterial(mat, planes, depthBias = 0) {
     mat.clippingPlanes = [];
   }
   applyLayerDepthBias(mat, depthBias);
+  // Install the peel shader (compiled out until a still frame turns it on)
+  // so the moving frame does not have to compile a second program later.
+  patchMaterialForDepthPeel(mat);
   mat.needsUpdate = true;
 }
 

@@ -1590,13 +1590,37 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   // damping `change`, which would rebuild the cut UI mid-slider-drag.
   // `start` is user-gesture only (programmatic framing does not fire it).
   //
+  // Peel the frame after the camera, pointer, and opacity/cut edits have
+  // stopped. A timer here just delays a hitch; the settled frame itself has
+  // to be cheap. Pointer-down forces the single sorted-alpha draw so a touch
+  // is never stuck behind the peel.
+  let peelPointerDown = false;
+  const peelCamPos = new THREE.Vector3();
+  const peelCamTarget = new THREE.Vector3();
+  let peelCamInited = false;
+
+  canvas.addEventListener(
+    "pointerdown",
+    () => {
+      peelPointerDown = true;
+    },
+    { capture: true },
+  );
+  const notePeelPointerUp = () => {
+    peelPointerDown = false;
+  };
+  window.addEventListener("pointerup", notePeelPointerUp, { capture: true });
+  window.addEventListener("pointercancel", notePeelPointerUp, { capture: true });
+
   controls.addEventListener("start", () => {
     clearCameraPresetHighlight();
+    peelPointerDown = true;
   });
   controls.addEventListener("change", () => {
     syncViewZoomFromCamera();
   });
   controls.addEventListener("end", () => {
+    peelPointerDown = false;
     if (suppressCameraChange) return;
     maybeSpawnDraftFromCamera();
   });
@@ -2053,8 +2077,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     frameIso,
     openArQuickLook,
     buildArExportScene,
-    /** Live view stays on sorted alpha. `"high"` is the plate capture only. */
-    getPeelQuality: () => "fast",
+    /** @returns {"fast" | "high"} */
+    getPeelQuality: () => lastPeelQuality,
   };
   window.BlueprintsViewer = api;
 
@@ -2079,6 +2103,10 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   let camSig = null;
   /** @type {string | null} */
   let contentSig = null;
+  /** @type {"fast" | "high"} */
+  let lastPeelQuality = "fast";
+  /** @type {"fast" | "high" | null} */
+  let renderedPeelQuality = null;
 
   canvas.addEventListener("pointermove", () => {
     if (measureTool?.isActive()) viewDirty = true;
@@ -2169,23 +2197,44 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     // Keep near/far tight as orbit distance changes.
     if (root) updateCameraClipPlanes();
 
+    if (!peelCamInited) {
+      peelCamPos.copy(camera.position);
+      peelCamTarget.copy(controls.target);
+      peelCamInited = true;
+    }
+    const camMoved =
+      camera.position.distanceToSquared(peelCamPos) > 1e-8 ||
+      controls.target.distanceToSquared(peelCamTarget) > 1e-8;
+    peelCamPos.copy(camera.position);
+    peelCamTarget.copy(controls.target);
+
     const contentNow = readContentSig();
     const contentChanged = contentNow !== contentSig;
     const camChanged = cameraSigChanged();
-    if (!viewDirty && !contentChanged && !camChanged) {
+    // Still frame, after the first picture: correct transparency. Anything
+    // in motion stays on one sorted-alpha draw.
+    const wantHigh =
+      !peelPointerDown &&
+      !camMoved &&
+      !contentChanged &&
+      !cutSliderActive &&
+      !frameAnim;
+    lastPeelQuality = wantHigh ? "high" : "fast";
+    const qualityUpgrade = lastPeelQuality !== renderedPeelQuality;
+    if (!viewDirty && !contentChanged && !camChanged && !qualityUpgrade) {
       requestAnimationFrame(tick);
       return;
     }
     viewDirty = false;
     contentSig = contentNow;
+    renderedPeelQuality = lastPeelQuality;
 
     measureTool?.update();
     annotations.update();
 
-    // Sorted alpha only. The 12-layer peel is ~20× this draw count and
-    // freezes a complex scene for seconds, so the live view does not upgrade.
     const usedPeel = depthPeel.render(scene, camera, root, anyPartFaded, {
-      quality: "fast",
+      quality: lastPeelQuality,
+      batchKey: contentNow,
     });
     // Re-apply slider opacities when leaving peel mode so materials cannot
     // stay stuck translucent / depthWrite-off after a 100% scrub. The abort

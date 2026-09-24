@@ -503,27 +503,9 @@ export function renderEdgeOverlayPass(renderer, scene, camera, root, opts = {}) 
   if (!root) return;
 
   const reuseDepth = Boolean(opts.reuseDepth);
-  /** @type {{ mat: THREE.Material, colorWrite: boolean, depthWrite: boolean, depthTest: boolean, transparent: boolean }[]} */
-  const snaps = [];
   let anyEdge = false;
   root.traverse((obj) => {
-    if (isEdgeOverlay(obj)) {
-      anyEdge = true;
-      return;
-    }
-    if (reuseDepth) return;
-    if (!obj.isMesh || !obj.material) return;
-    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-    for (const mat of mats) {
-      if (!mat) continue;
-      snaps.push({
-        mat,
-        colorWrite: mat.colorWrite !== false,
-        depthWrite: mat.depthWrite !== false,
-        depthTest: mat.depthTest !== false,
-        transparent: Boolean(mat.transparent),
-      });
-    }
+    if (isEdgeOverlay(obj)) anyEdge = true;
   });
   if (!anyEdge) return;
 
@@ -558,24 +540,14 @@ export function renderEdgeOverlayPass(renderer, scene, camera, root, opts = {}) 
   renderer.render(scene, camera);
   scene.overrideMaterial = null;
 
-  // 2) Edge colour only — meshes stay colour-silent so faded faces keep composite.
+  // 2) Edge colour only. Faces stay on layer 0; the depth prepass already
+  //    filled the buffer, so redrawing them (and flipping their transparent
+  //    flag) only burns a second full traversal.
   setEdgeOverlaysVisible(root, true);
-  for (const s of snaps) {
-    s.mat.colorWrite = false;
-    s.mat.depthWrite = false;
-    s.mat.depthTest = true;
-    s.mat.transparent = false;
-  }
-  camera.layers.enable(EDGE_LAYER);
+  camera.layers.set(EDGE_LAYER);
   renderer.render(scene, camera);
   camera.layers.mask = prevLayers;
 
-  for (const s of snaps) {
-    s.mat.colorWrite = s.colorWrite;
-    s.mat.depthWrite = s.depthWrite;
-    s.mat.depthTest = s.depthTest;
-    s.mat.transparent = s.transparent;
-  }
   scene.background = prevBg;
   scene.overrideMaterial = prevOverride;
   renderer.autoClear = prevAutoClear;
