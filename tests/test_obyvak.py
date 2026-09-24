@@ -108,6 +108,17 @@ def test_layout_ceiling_and_gable():
     # Slope latě and Flex run to the vertical soffit lať. The bulkhead top is their seat.
     assert max(x for x, _z in g.sikmina_flex_pts()) == g.x_nh_inner
     assert max(x for x, _z in g.sikmina_rost_ribbon_pts()) == g.x_nh_inner
+    # One 625 mm grid. The soffit bay does not start a second inset.
+    slope_ys = g.sikmina_rost_y_stations(1.0, p.room_length - 1.0)
+    soffit_ys = g.soffit_rost_y_stations(g.y_furn0 + 1.0, g.y_furn1 - 1.0, slope_ys)
+    assert soffit_ys
+    assert all(y in slope_ys for y in soffit_ys)
+    restarted = g.sikmina_rost_y_stations(g.y_furn0 + 1.0, g.y_furn1 - 1.0)
+    assert abs(soffit_ys[0] - restarted[0]) > 50.0
+    wedge = g.soffit_flex_wedge_pts()
+    assert max(x for x, _z in wedge) == g.x_nh_inner
+    assert max(z for _x, z in wedge) == g.z_soffit_lid
+    assert min(z for _x, z in wedge) < g.z_soffit_lid - 40.0
     nh_pts = g.soffit_nh_pts()
     z_seat_in = g.z_slope_plane_offset(g.x_nh_inner, g.t_nh_face)
     z_seat_out = g.z_slope_offset(g.x_furn, g.t_nh_face)
@@ -339,6 +350,22 @@ def test_sikminy_and_soffit_stack_in_3d():
     ]
     assert len(soffit_rost) >= 10
     assert all(c.bounding_box().size.Y < p.rost_spacing for c in soffit_rost)
+    slope_y = {round(c.bounding_box().center().Y, 1) for c in slope_rost}
+    verticals = [
+        c
+        for c in soffit_rost
+        if c.bounding_box().size.Z > 400.0 and c.bounding_box().size.X < p.rost_d + 5.0
+    ]
+    assert verticals
+    assert all(round(c.bounding_box().center().Y, 1) in slope_y for c in verticals)
+    wedges = [
+        c
+        for c in _labeled(shape, LABEL_SLOPE_FLEX)
+        if c.bounding_box().size.X < 200.0 and c.bounding_box().max.Z > g.z_soffit_lid - 5.0
+    ]
+    assert len(wedges) == 1
+    assert wedges[0].bounding_box().min.X > g.x_gkf_kink - 2.0
+    assert wedges[0].bounding_box().max.X < g.x_nh_inner + 2.0
     # CD are ⊥ krokvím: thin along slope (X), long in Y (šikminy / soffit only).
     slope_cds = [c for c in cds if c.bounding_box().size.Y > 1000.0]
     assert slope_cds

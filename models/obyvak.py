@@ -847,6 +847,22 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     parts.append(flex_slope)
     parts.extend(rost_parts)
 
+    # Triangle under the lid, above the 40 mm pack, out to the vertical lať.
+    # Only the soffit bay has that lid.
+    wedge_pts = g.soffit_flex_wedge_pts()
+    x_w0 = wedge_pts[0][0] + gap
+    z_w_top = g.z_soffit_lid - gap
+    wedge = [
+        (x_w0, wedge_pts[0][1]),
+        (wedge_pts[1][0], wedge_pts[1][1]),
+        (wedge_pts[1][0], z_w_top),
+        (x_w0, z_w_top),
+    ]
+    wedge_solid = _extrude_y(xz_face(wedge, LABEL_SLOPE_FLEX), y_soff0, y_soff1, LABEL_SLOPE_FLEX)
+    if rost_parts:
+        wedge_solid = _cut_away(wedge_solid, rost_parts, LABEL_SLOPE_FLEX)
+    parts.append(wedge_solid)
+
     # 3) SDK
     parts.append(_add_band(g.sikmina_sdk_pts(), LABEL_SLOPE_GKF))
 
@@ -1074,9 +1090,12 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     frame_parts: list = []
     drop_parts: list = []
     bracket_parts: list = []
+    soffit_ys = g.soffit_rost_y_stations(
+        y_soff0, y_soff1, g.sikmina_rost_y_stations(y_ceil0, y_ceil1)
+    )
     if face_h > fm + gap and x_wall - (x_front + fm) > gap and z_rail_top - z_wood0 > fm:
         cd_xs = g.horiz_cd_x_stations()
-        for yc in g.sikmina_rost_y_stations(y_soff0, y_soff1):
+        for yc in soffit_ys:
             ya, yb = yc - half_w, yc + half_w
             if yb <= ya:
                 continue
@@ -1153,7 +1172,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     if z_bar_top - bar_t > z_rail_top + gap and x_rod_wall - x_rod_room > r_duct:
         z_rod_top = g.z_soffit_lid + p.sdk_t
         rod_h = z_rod_top - (z_bar_top - bar_t)
-        for yc in g.sikmina_rost_y_stations(y_soff0, y_soff1):
+        for yc in soffit_ys:
             ya = yc - p.soffit_drop_w * 0.5
             yb = yc + p.soffit_drop_w * 0.5
             trapeze_parts.append(

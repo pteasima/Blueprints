@@ -108,6 +108,7 @@ def build(params: ObyvakParams | None = None):
     # Šikminy stack
     parts.append(xz_face(g.sikmina_nh_pts(), LABEL_SLOPE_NH))
     parts.append(xz_face(g.sikmina_flex_pts(), LABEL_SLOPE_FLEX))
+    parts.append(xz_face(g.soffit_flex_wedge_pts(), LABEL_SLOPE_FLEX))
     # Lať // krokvím: continuous ribbon in this transverse cut (section through a lať).
     parts.append(xz_face(g.sikmina_rost_ribbon_pts(), LABEL_SLOPE_BATTENS))
     parts.append(xz_face(g.sikmina_sdk_pts(), LABEL_SLOPE_GKF))

@@ -581,6 +581,33 @@ class ObyvakLayout:
         p = self.p
         return self.y_stations(y0, y1, p.rost_spacing, p.rost_first_inset)
 
+    def soffit_rost_y_stations(
+        self, bay0: float, bay1: float, slope_ys: list[float]
+    ) -> list[float]:
+        """Soffit latě on the slope-lať centres, limited to the soffit bay.
+
+        Restarting the 625 mm module at the předstěna, with its own inset,
+        shifted every vertical lať off the slope lať it is supposed to meet.
+        """
+        half = self.p.rost_w * 0.5
+        return [y for y in slope_ys if bay0 + half <= y <= bay1 - half]
+
+    def soffit_flex_wedge_pts(self) -> list[tuple[float, float]]:
+        """Flex above the 40 mm pack, under the lid, out to the vertical lať.
+
+        The pack top meets the lid at the gypsum joint and falls away toward
+        the eave. That triangle is still on the warm side of the lid.
+        """
+        t1 = self.t_nh_face + self.p.rost_d
+        x0 = self.x_gkf_kink
+        x1 = self.x_nh_inner
+        return [
+            (x0, self.z_slope_plane_offset(x0, t1)),
+            (x1, self.z_slope_plane_offset(x1, t1)),
+            (x1, self.z_soffit_lid),
+            (x0, self.z_soffit_lid),
+        ]
+
     def rafter_y_stations(self, y0: float, y1: float) -> list[float]:
         p = self.p
         return self.y_stations(y0, y1, p.rafter_spacing, p.rafter_first_inset)
