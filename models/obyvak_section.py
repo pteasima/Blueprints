@@ -235,8 +235,7 @@ def build(params: ObyvakParams | None = None):
             LABEL_SLOPE_NH,
         )
     )
-    z_nh_face = g.z_slope_plane_offset(g.x_nh_outer, g.t_nh_face + g.t_flex_pack)
-    parts.append(xz_line(g.x_nh_outer, z_nh_face, g.x_nh_outer, g.z_nabeh_bot, LABEL_SOFFIT_NH))
+    parts.append(xz_line(g.x_nh_outer, g.z_gkf_horiz, g.x_nh_outer, g.z_nabeh_bot, LABEL_SOFFIT_NH))
     parts.append(xz_line(g.x_nh_outer, g.z_nabeh_bot, p.room_width, g.z_nabeh_bot, LABEL_SOFFIT_NH))
 
     shape = Compound(obj=parts, children=parts, label=MODEL_NAME)

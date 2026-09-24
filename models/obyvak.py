@@ -973,16 +973,15 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     if g.z_soffit_duct_crown() > g.z_soffit_lid - 5.0:
         raise ValueError("soffit ducts do not fit under the lid on the pozednice")
 
-    t_sdk0 = g.t_nh_face + g.t_flex_pack
-    z_nh_hi = g.z_slope_plane_offset(g.x_nh_outer, t_sdk0) - gap
-    z_nh_lo = g.z_slope_plane_offset(g.x_nh_inner, t_sdk0) - gap
+    # Square top, flush with the slope board's attic face. 1 mm off each mate.
+    z_nh_top = g.z_slope_offset(g.x_nh_outer, t) - gap
     soffit_nh = [
         (g.x_nh_outer + gap, g.z_nabeh_bot + gap),
         (p.room_width - gap, g.z_nabeh_bot + gap),
         (p.room_width - gap, g.z_nabeh_bot + t - gap),
         (g.x_nh_inner - gap, g.z_nabeh_bot + t - gap),
-        (g.x_nh_inner - gap, z_nh_lo),
-        (g.x_nh_outer + gap, z_nh_hi),
+        (g.x_nh_inner - gap, z_nh_top),
+        (g.x_nh_outer + gap, z_nh_top),
     ]
     parts.append(_extrude_y(xz_face(soffit_nh, LABEL_SOFFIT_NH), y_soff0, y_soff1, LABEL_SOFFIT_NH))
 

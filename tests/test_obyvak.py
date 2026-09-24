@@ -105,6 +105,11 @@ def test_layout_ceiling_and_gable():
     assert g.l_hanger_right > g.l_hanger_left
     assert abs(g.z_nabeh_bot - (p.furniture_height + p.furniture_gap)) < 1e-9
     assert g.x_nh_inner == g.x_furn + g.t_nh_face
+    # Bulkhead NH butts the slope board square. It does not knife up to the GKF.
+    nh_top = g.z_slope_offset(g.x_furn, g.t_nh_face)
+    nh_pts = g.soffit_nh_pts()
+    assert sum(1 for _x, z in nh_pts if abs(z - nh_top) < 1e-6) == 2
+    assert max(z for _x, z in nh_pts) < g.z_soffit_lid - 40.0
     # Lattice still hangs at the rost. The gypsum joint is room-ward of that,
     # where the slope underside meets the lid — one CD cannot cover both lines.
     assert g.x_sdk_break == g.x_nh_inner

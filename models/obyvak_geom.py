@@ -674,24 +674,22 @@ class ObyvakLayout:
     def soffit_nh_pts(self) -> list[tuple[float, float]]:
         """L-shaped NH+StoSilent on the soffit box: vertical face + underside.
 
-        Outer vertical face flush with the slope NH at X_FURN. The top edge
-        follows the slope-GKF underside so the acoustic board stops on the
-        šikmina instead of running through it. The lid is attic of this face;
-        the gypsum joint itself is a few centimetres room-ward of X_FURN.
+        The vertical leg butts the full end of the slope board (square top,
+        flush with that board's attic face). It does not climb to the GKF —
+        that cut left a knife edge and an air gap between the two faces.
+        Room arris is the slope face meeting this vertical face at X_FURN.
         """
         p = self.p
         t = self.t_nh_face
-        t0 = self.t_nh_face + self.t_flex_pack
         z0 = self.z_nabeh_bot
-        z_hi = self.z_slope_plane_offset(self.x_nh_outer, t0)
-        z_lo = self.z_slope_plane_offset(self.x_nh_inner, t0)
+        z_top = self.z_slope_offset(self.x_nh_outer, t)
         return [
             (self.x_nh_outer, z0),
             (p.room_width, z0),
             (p.room_width, z0 + t),
             (self.x_nh_inner, z0 + t),
-            (self.x_nh_inner, z_lo),
-            (self.x_nh_outer, z_hi),
+            (self.x_nh_inner, z_top),
+            (self.x_nh_outer, z_top),
         ]
 
     def soffit_flex_pts(self) -> list[tuple[float, float]]:
