@@ -1,9 +1,10 @@
 """Obývák 1.02 — příčný řez (panel A), parametrické 2D profily v Plane.XZ.
 
 Šikminy: NaturHeld 140, latě // krokvím, Flex, SDK, CD ⊥ krokvím, závěsy,
-pásky (3D: 45° X; zde jen průřez). Soffit: continuous GKF (slope past X_FURN →
-vertical return on shared CD/UD → lid); latový rost hung from horizontal CD
-+ wall brace. 3D: `models/obyvak.py`.
+pásky (3D: 45° X; zde jen průřez). Soffit: GKF lid on the pozednice above
+three Ø160 ducts; latový rost under the pipes, hung from the front CD and
+braced to the wall. The hidden gypsum butt is a light-gauge angle on that
+same CD. 3D: `models/obyvak.py`.
 
     python -m blueprints.export obyvak_section
 """
@@ -32,6 +33,7 @@ from obyvak_geom import (  # noqa: F401
     LABEL_SLOPE_NONIUS,
     LABEL_SOFFIT_BATTENS,
     LABEL_SOFFIT_CD,
+    LABEL_SOFFIT_DUCT,
     LABEL_SOFFIT_FLEX,
     LABEL_SOFFIT_GKF,
     LABEL_SOFFIT_NH,
@@ -42,6 +44,7 @@ from obyvak_geom import (  # noqa: F401
     build_layout,
     xz_face,
     xz_line,
+    xz_ngon,
     xz_polyline,
     xz_rect,
 )
@@ -105,6 +108,7 @@ def build(params: ObyvakParams | None = None):
     # Šikminy stack
     parts.append(xz_face(g.sikmina_nh_pts(), LABEL_SLOPE_NH))
     parts.append(xz_face(g.sikmina_flex_pts(), LABEL_SLOPE_FLEX))
+    parts.append(xz_face(g.soffit_flex_wedge_pts(), LABEL_SLOPE_FLEX))
     # Lať // krokvím: continuous ribbon in this transverse cut (section through a lať).
     parts.append(xz_face(g.sikmina_rost_ribbon_pts(), LABEL_SLOPE_BATTENS))
     parts.append(xz_face(g.sikmina_sdk_pts(), LABEL_SLOPE_GKF))
@@ -122,20 +126,23 @@ def build(params: ObyvakParams | None = None):
             continue
         parts.append(xz_face(g.paska_quad(*st), LABEL_RACKING_STRAP))
 
-    # Soffit bay: NH L, Flex, latový rost (hung from CD + wall brace), GKF lid,
-    # horizontal CD + Nonius, UD at break and eave.
+    # Soffit bay: NH L, Flex under the rail, ducts, GKF lid on the plate,
+    # horizontal CD + Nonius, plate cleat, rost hung from the front CD.
     parts.append(xz_face(g.soffit_nh_pts(), LABEL_SOFFIT_NH))
     parts.append(xz_face(g.soffit_flex_pts(), LABEL_SOFFIT_FLEX))
     fm = p.rost_d
     z_wood0 = g.z_nabeh_bot + g.t_nh_face + p.wall_bracket_t
-    z_rail = g.z_gkf_horiz - fm
     x_wall = p.room_width - p.wall_plaster
-    # Vertical lať + top rail + underside (section through a rost station).
+    # Vertical lať beside the ducts, up to the lid, plus the underside lať.
+    z_lat_top = g.z_soffit_lid
     parts.append(
-        xz_rect(g.x_nh_inner, z_wood0, fm, max(8.0, z_rail - z_wood0), LABEL_SOFFIT_BATTENS)
-    )
-    parts.append(
-        xz_rect(g.x_nh_inner, z_rail, max(8.0, x_wall - g.x_nh_inner), fm, LABEL_SOFFIT_BATTENS)
+        xz_rect(
+            g.x_nh_inner,
+            z_wood0,
+            fm,
+            max(8.0, z_lat_top - z_wood0),
+            LABEL_SOFFIT_BATTENS,
+        )
     )
     parts.append(
         xz_rect(
@@ -147,7 +154,9 @@ def build(params: ObyvakParams | None = None):
         )
     )
     parts.append(xz_face(g.soffit_sdk_lid_pts(), LABEL_SOFFIT_GKF))
-    parts.append(xz_face(g.soffit_sdk_vertical_pts(), LABEL_SOFFIT_GKF))
+    r_duct = p.duct_od * 0.5
+    for cx, cz in g.soffit_duct_centers():
+        parts.append(xz_ngon(cx, cz, r_duct, LABEL_SOFFIT_DUCT))
     for xc in g.horiz_cd_x_stations():
         parts.append(xz_face(g.horiz_cd_quad(xc), LABEL_SOFFIT_CD))
         z0 = g.horiz_hanger_bot_z()
@@ -156,16 +165,22 @@ def build(params: ObyvakParams | None = None):
             parts.append(
                 xz_rect(xc - p.hanger_w * 0.5, z0, p.hanger_w, z1 - z0, LABEL_SOFFIT_NONIUS)
             )
-    parts.append(xz_face(g.horiz_wall_ud_pts(), LABEL_SOFFIT_CD))
-    # Drop hanger through GKF at the rost-front CD (schematic) + wall angle.
-    if g.horiz_cd_x_stations():
-        xc = g.horiz_cd_x_stations()[0]
+    for quad in g.soffit_joint_angle_quads():
+        parts.append(xz_face(quad, LABEL_SOFFIT_NONIUS))
+    for quad in g.soffit_plate_cleat_quads():
+        parts.append(xz_face(quad, LABEL_SOFFIT_NONIUS))
+    # Screw through the lid into the rost CD (schematic) + wall angle.
+    rost_x = g.x_sdk_break + p.cd_w * 0.5
+    if any(abs(x - rost_x) < 1.0 for x in g.horiz_cd_x_stations()):
+        xc = rost_x
+        z_drop0 = z_lat_top
+        z_drop1 = g.z_soffit_lid + p.sdk_t
         parts.append(
             xz_rect(
                 xc - p.soffit_drop_w * 0.5,
-                z_rail + fm,
+                z_drop0,
                 p.soffit_drop_w,
-                (g.z_gkf_horiz + p.sdk_t) - (z_rail + fm),
+                z_drop1 - z_drop0,
                 LABEL_SOFFIT_NONIUS,
             )
         )

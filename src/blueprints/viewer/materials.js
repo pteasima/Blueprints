@@ -38,6 +38,7 @@ export const SOLID_COLORS = {
   soffit_gkf: [230, 230, 235],
   soffit_cd: [120, 120, 130],
   soffit_nonius: [90, 90, 100],
+  soffit_duct: [168, 176, 188],
   bass_mineral_wool: [0, 210, 155],
   bass_gkb: [230, 230, 235],
   bass_cd: [120, 120, 130],
@@ -71,6 +72,7 @@ export const LAYER_DEPTH_BIAS = {
   bass_cd: 8,
   slope_nonius: 9,
   soffit_nonius: 9,
+  soffit_duct: 9,
   bass_wall_hanger: 9,
   racking_strap: 9,
   wall_plate: 9,
@@ -476,6 +478,12 @@ export const REALISTIC_PRESETS = {
     color: [90, 90, 100],
     roughness: 0.4,
     metalness: 0.75,
+    map: "metal",
+  },
+  soffit_duct: {
+    color: [168, 176, 188],
+    roughness: 0.35,
+    metalness: 0.85,
     map: "metal",
   },
   bass_mineral_wool: {

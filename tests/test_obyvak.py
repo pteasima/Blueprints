@@ -33,6 +33,7 @@ from obyvak_geom import (  # noqa: E402
     LABEL_SOFFIT_BATTENS,
     LABEL_SOFFIT_CD,
     LABEL_SOFFIT_FLEX,
+    LABEL_SOFFIT_DUCT,
     LABEL_SOFFIT_GKF,
     LABEL_SOFFIT_NH,
     LABEL_SOFFIT_NONIUS,
@@ -104,15 +105,61 @@ def test_layout_ceiling_and_gable():
     assert g.l_hanger_right > g.l_hanger_left
     assert abs(g.z_nabeh_bot - (p.furniture_height + p.furniture_gap)) < 1e-9
     assert g.x_nh_inner == g.x_furn + g.t_nh_face
-    # GKF zlom flush with wooden rost front; front CD hangs the lattice there.
+    # Slope latě and Flex run to the vertical soffit lať. The bulkhead top is their seat.
+    assert max(x for x, _z in g.sikmina_flex_pts()) == g.x_nh_inner
+    assert max(x for x, _z in g.sikmina_rost_ribbon_pts()) == g.x_nh_inner
+    # One 625 mm grid. The soffit bay does not start a second inset.
+    slope_ys = g.sikmina_rost_y_stations(1.0, p.room_length - 1.0)
+    soffit_ys = g.soffit_rost_y_stations(g.y_furn0 + 1.0, g.y_furn1 - 1.0, slope_ys)
+    assert soffit_ys
+    assert all(y in slope_ys for y in soffit_ys)
+    restarted = g.sikmina_rost_y_stations(g.y_furn0 + 1.0, g.y_furn1 - 1.0)
+    assert abs(soffit_ys[0] - restarted[0]) > 50.0
+    wedge = g.soffit_flex_wedge_pts()
+    assert max(x for x, _z in wedge) == g.x_nh_inner
+    assert max(z for _x, z in wedge) == g.z_soffit_lid
+    assert min(z for _x, z in wedge) < g.z_soffit_lid - 40.0
+    nh_pts = g.soffit_nh_pts()
+    z_seat_in = g.z_slope_plane_offset(g.x_nh_inner, g.t_nh_face)
+    z_seat_out = g.z_slope_offset(g.x_furn, g.t_nh_face)
+    assert any(abs(x - g.x_nh_inner) < 1e-6 and abs(z - z_seat_in) < 1e-6 for x, z in nh_pts)
+    assert any(abs(x - g.x_furn) < 1e-6 and abs(z - z_seat_out) < 1e-6 for x, z in nh_pts)
+    assert z_seat_in < z_seat_out
+    assert max(z for _x, z in nh_pts) < g.z_soffit_lid - 40.0
+    # Lattice still hangs at the rost. The gypsum joint is room-ward of that,
+    # where the slope underside meets the lid — one CD cannot cover both lines.
     assert g.x_sdk_break == g.x_nh_inner
     assert g.x_sdk_break > g.x_furn
-    cds = g.horiz_cd_x_stations()
-    assert cds
-    assert abs(cds[0] - (g.x_nh_inner + p.cd_w * 0.5)) < 1e-9
+    assert g.x_gkf_kink < g.x_furn
+    assert g.x_furn - g.x_gkf_kink < 80.0
+    assert g.x_sdk_break - g.x_gkf_kink > p.cd_w
     t0 = g.t_nh_face + g.t_flex_pack
-    z_inner = g.z_slope_plane_offset(g.x_sdk_break, t0)
-    assert z_inner > g.z_gkf_horiz + p.sdk_t + 20.0  # vertical return has real height
+    assert abs(g.z_slope_plane_offset(g.x_gkf_kink, t0) - g.z_soffit_lid) < 1e-6
+    assert g.z_soffit_lid - g.z_slope_plane_offset(g.x_sdk_break, t0) > 50.0
+    cds = g.horiz_cd_x_stations()
+    # One hung rost CD. The gypsum butt is an angle on that rail. The ducts are
+    # anchored to the wall, so there is no second rail and no trapeze.
+    assert cds == [g.x_nh_inner + p.cd_w * 0.5]
+    slope_q, horiz_q, lip_q = g.soffit_joint_angle_quads()
+    assert abs(max(pt[0] for pt in horiz_q) - (g.x_sdk_break - 1.0)) < 1e-6
+    assert min(pt[0] for pt in horiz_q) > g.x_gkf_kink
+    z_seat = g.z_soffit_lid + p.sdk_t + 3.0
+    low = [pt for pt in slope_q if abs(pt[1] - z_seat) < 1e-4]
+    assert len(low) == 2
+    assert min(pt[0] for pt in low) > g.x_gkf_kink
+    assert max(pt[0] for pt in low) < g.x_sdk_break
+    high = [pt for pt in slope_q if pt[1] > z_seat + 10.0]
+    inner_high = min(high, key=lambda pt: pt[0])
+    z_attic = g.z_soffit_lid + p.sdk_t / g.cos
+    seat0 = (g.x_gkf_kink - g.cos * 40.0 + g.sin, z_attic + g.sin * 40.0 + g.cos)
+    assert abs(inner_high[0] - seat0[0]) < 1e-4
+    assert abs(inner_high[1] - seat0[1]) < 1e-4
+    sdk = g.sikmina_sdk_pts()
+    end = [pt for pt in sdk if abs(pt[0] - g.x_gkf_kink) < 1e-6]
+    assert len(end) == 2
+    assert abs(abs(end[0][1] - end[1][1]) * g.cos - p.sdk_t) < 1e-6
+    assert abs(max(pt[0] for pt in lip_q) - (g.x_sdk_break - 1.0)) < 1e-6
+    assert max(pt[1] for pt in lip_q) - (g.z_soffit_lid + p.sdk_t) > 15.0
 
 
 def test_krov_is_discrete_rafters():
@@ -206,43 +253,66 @@ def test_sikminy_and_soffit_stack_in_3d():
     assert box_nh.bounding_box().min.Z >= p.furniture_height + p.furniture_gap - 1.0
     furn = _labeled(shape, LABEL_FURNITURE)[0].bounding_box()
     assert box_nh.bounding_box().min.Z >= furn.max.Z + p.furniture_gap - 2.0
-    # Ceiling GKF: horizontal lid + vertical return at rost front (continuous shell).
-    lids = [
-        c
-        for c in _labeled(shape, LABEL_SOFFIT_GKF) + _labeled(shape, LABEL_SLOPE_GKF)
-        if c.bounding_box().min.Z >= g.z_gkf_horiz - 1.0
-        and c.bounding_box().min.X >= g.x_furn - 1.0
-    ]
-    assert len(lids) >= 2  # lid + vertical return (slope SDK also reaches rost front)
+    # Ceiling GKF: slope board butts the lid at the plane intersection. No riser.
+    slope_boards = _labeled(shape, LABEL_SLOPE_GKF)
+    assert slope_boards
+    slope_board = max(slope_boards, key=lambda s: s.bounding_box().max.X)
+    assert abs(slope_board.bounding_box().max.X - g.x_gkf_kink) < 2.0
     horiz_lids = [
         c
-        for c in lids
-        if c.bounding_box().size.Z < p.sdk_t + 1.0
-        and c.bounding_box().size.X > 100.0
+        for c in _labeled(shape, LABEL_SOFFIT_GKF)
+        if c.bounding_box().size.Z < p.sdk_t + 1.0 and c.bounding_box().size.X > 100.0
     ]
     assert len(horiz_lids) == 1
     assert abs(horiz_lids[0].bounding_box().size.Z - (p.sdk_t - 2 * FACE_GAP)) < 1e-3
-    verts = [
+    assert abs(horiz_lids[0].bounding_box().min.X - (g.x_gkf_kink + FACE_GAP)) < 2.0
+    risers = [
         c
-        for c in lids
-        if c.bounding_box().size.X < p.sdk_t + 1.0
-        and c.bounding_box().min.Z >= g.z_gkf_horiz + p.sdk_t - 2.0
+        for c in _labeled(shape, LABEL_SOFFIT_GKF)
+        if c.bounding_box().size.X < p.sdk_t + 2.0
     ]
-    assert len(verts) == 1
-    # Attic face of vertical GKF flush with rost front / CD front.
-    assert abs(verts[0].bounding_box().max.X - (g.x_nh_inner - FACE_GAP)) < 2.0
-    # Lid extends past the CD (room-ward) to seat the vertical — proper L corner.
-    assert horiz_lids[0].bounding_box().min.X < g.x_nh_inner - p.sdk_t * 0.5
-    assert abs(horiz_lids[0].bounding_box().min.X - (g.x_nh_inner - p.sdk_t + FACE_GAP)) < 2.0
-    # Vertical top is cut to the slope (trapezoid taller on the room side).
-    vbb = verts[0].bounding_box()
-    assert vbb.size.Z > p.cd_t  # taller than a square butt at cd_t
-    # Front soffit CD flush with rost edge (front face at x_nh_inner).
+    assert risers == []
+    # Last slope CD is still inside one module of the joint. The angle closes it.
+    slope_carriers = [
+        c
+        for c in cds
+        if c.bounding_box().max.X < g.x_gkf_kink and c.bounding_box().max.Z > g.z_soffit_lid
+    ]
+    assert slope_carriers
+    last_cd = max(slope_carriers, key=lambda c: c.bounding_box().max.X)
+    assert (g.x_gkf_kink - last_cd.bounding_box().max.X) / g.cos < p.cd_spacing
+    soffit_cd_parts = _labeled(shape, LABEL_SOFFIT_CD)
+    assert soffit_cd_parts
+    assert min(c.bounding_box().min.X for c in soffit_cd_parts) >= g.x_nh_inner - 1.0
+    joint = [
+        c
+        for c in zaves
+        if c.bounding_box().size.Y > 1000.0
+        and c.bounding_box().min.X < g.x_sdk_break
+        and c.bounding_box().max.X > g.x_gkf_kink
+        and c.bounding_box().max.Z < g.horiz_hanger_bot_z() + 30.0
+    ]
+    assert len(joint) == 3
+    assert min(c.bounding_box().min.X for c in joint) < g.x_gkf_kink
+    assert any(abs(c.bounding_box().max.X - (g.x_sdk_break - 1.0)) < 2.0 for c in joint)
+    from build123d import Box, Location
+
+    z_end = g.z_slope_plane_offset(
+        g.x_gkf_kink - 2.0, g.t_nh_face + g.t_flex_pack + p.sdk_t * 0.5
+    )
+    probe = Location((g.x_gkf_kink - 2.0, p.room_length * 0.5, z_end)) * Box(0.4, 30.0, 30.0)
+    hit = slope_board.intersect(probe)
+    pieces = list(hit.solids()) if hit is not None and hasattr(hit, "solids") else []
+    assert pieces, "slope board has no thickness at the square end"
+    # Mates pull 1 mm off each face, so the solid reads a little under 12.5.
+    thick = max(s.bounding_box().size.Z for s in pieces) * g.cos
+    assert thick > p.sdk_t - 2.0, thick
+    # Front soffit CD flush with rost edge, sitting on the raised lid.
     front_cds = [
         c
         for c in cds
         if abs(c.bounding_box().min.X - g.x_nh_inner) < 2.0
-        and c.bounding_box().min.Z >= g.z_gkf_horiz + p.sdk_t - 2.0
+        and c.bounding_box().min.Z >= g.z_soffit_lid + p.sdk_t - 2.0
     ]
     assert len(front_cds) >= 1
     # Drop hangers exist at the front CD (box hangs at lattice edge, not mid-bay only).
@@ -250,23 +320,25 @@ def test_sikminy_and_soffit_stack_in_3d():
         c
         for c in zaves
         if abs(c.bounding_box().center().X - (g.x_nh_inner + p.cd_w * 0.5)) < p.cd_w
-        and c.bounding_box().min.Z < g.z_gkf_horiz + p.sdk_t
-        and c.bounding_box().max.Z > g.z_gkf_horiz - p.rost_d
+        and c.bounding_box().min.Z < g.z_soffit_lid + p.sdk_t
+        and c.bounding_box().max.Z > g.z_soffit_lid
     ]
     assert len(front_drops) >= 1
     # Rafters are roof timber only — soffit-frame latě use *_battens.
     for part in _labeled(shape, LABEL_RAFTERS):
         bb = part.bounding_box()
         assert not (bb.min.X >= g.x_furn - 1.0 and bb.max.Z <= g.z_gkf_horiz + 1.0)
-    # Slope latě are // krokvím: thin in Y, long along the slope (X).
+    # Slope latě are // krokvím: thin in Y, long along the slope (X),
+    # butted to the vertical soffit lať.
     slope_rost = [
         c
         for c in rost
-        if c.bounding_box().min.X < 100.0 and c.bounding_box().max.X <= g.x_furn + 1.0
+        if c.bounding_box().min.X < 100.0 and c.bounding_box().max.X <= g.x_nh_inner + 1.0
     ]
     assert len(slope_rost) >= 5
     assert all(c.bounding_box().size.Y < p.rost_spacing for c in slope_rost)
     assert all(c.bounding_box().size.X > 500.0 for c in slope_rost)
+    assert all(abs(c.bounding_box().max.X - g.x_nh_inner) < 2.0 for c in slope_rost)
     # Šikminy pack runs wall-to-wall (bass traps sit under it, do not replace it).
     nh = _labeled(shape, LABEL_SLOPE_NH)
     assert any(c.bounding_box().size.Y > p.room_length - 10.0 for c in nh)
@@ -278,31 +350,50 @@ def test_sikminy_and_soffit_stack_in_3d():
     ]
     assert len(soffit_rost) >= 10
     assert all(c.bounding_box().size.Y < p.rost_spacing for c in soffit_rost)
+    slope_y = {round(c.bounding_box().center().Y, 1) for c in slope_rost}
+    verticals = [
+        c
+        for c in soffit_rost
+        if c.bounding_box().size.Z > 400.0 and c.bounding_box().size.X < p.rost_d + 5.0
+    ]
+    assert verticals
+    assert all(round(c.bounding_box().center().Y, 1) in slope_y for c in verticals)
+    wedges = [
+        c
+        for c in _labeled(shape, LABEL_SLOPE_FLEX)
+        if c.bounding_box().size.X < 200.0 and c.bounding_box().max.Z > g.z_soffit_lid - 5.0
+    ]
+    assert len(wedges) == 1
+    assert wedges[0].bounding_box().min.X > g.x_gkf_kink - 2.0
+    assert wedges[0].bounding_box().max.X < g.x_nh_inner + 2.0
     # CD are ⊥ krokvím: thin along slope (X), long in Y (šikminy / soffit only).
     slope_cds = [c for c in cds if c.bounding_box().size.Y > 1000.0]
     assert slope_cds
     assert all(c.bounding_box().size.X < p.cd_spacing for c in slope_cds)
-    # Horizontal CD + Nonius over the soffit bay (GKF lid → CD → rafters).
+    # One horizontal CD + Nonius over the soffit bay (GKF lid → rost CD → rafters).
+    rost_x = g.x_sdk_break + p.cd_w * 0.5
     horiz_cds = [c for c in slope_cds if c.bounding_box().min.X >= g.x_furn - 1.0]
-    assert len(horiz_cds) >= 2
-    assert all(c.bounding_box().size.Y > 1000.0 for c in horiz_cds)
+    assert len(horiz_cds) == 1
+    assert abs(horiz_cds[0].bounding_box().center().X - rost_x) < 2.0
+    assert horiz_cds[0].bounding_box().size.Y > 1000.0
     soffit_hangers = [
         c
         for c in zaves
         if c.bounding_box().min.X >= g.x_furn - 1.0
-        and c.bounding_box().min.Z >= g.z_gkf_horiz + p.sdk_t - 1.0
+        and c.bounding_box().min.Z >= g.z_soffit_lid + p.sdk_t - 1.0
     ]
     assert len(soffit_hangers) >= 4
-    # Soffit rost includes top rails under GKF + wall-braced underside latě.
+    assert all(abs(c.bounding_box().center().X - rost_x) < p.cd_w for c in soffit_hangers)
+    # Underside latě brace to the wall. No second horizontal row under the ducts.
     soffit_rost = [c for c in rost if c.bounding_box().min.X >= g.x_nh_inner - 1.0]
     assert len(soffit_rost) >= 15
     top_rails = [
         c
         for c in soffit_rost
-        if c.bounding_box().min.Z >= g.z_gkf_horiz - p.rost_d - 2.0
+        if abs(c.bounding_box().max.Z - g.z_soffit_rail()) < 3.0
         and c.bounding_box().size.X > 200.0
     ]
-    assert len(top_rails) >= 5
+    assert top_rails == []
     wall_braces = [
         c
         for c in zaves
@@ -337,6 +428,46 @@ def test_soffit_hangs_from_cd_not_furniture_or_pozednice():
     for poz in _labeled(shape, LABEL_WALL_PLATE):
         assert poz.bounding_box().min.Z >= p.eave_wall_z - 1.0
         assert poz.bounding_box().min.Z > g.z_gkf_horiz + 50.0
+
+
+def test_soffit_ducts_sit_under_lid_on_wall_plate():
+    """Three Ø160 pipes under the GKF; the board ends on the pozednice, not the plaster."""
+    p = ObyvakParams()
+    g = build_layout(p)
+    shape, _ = build(p)
+    ducts = _labeled(shape, LABEL_SOFFIT_DUCT)
+    assert len(ducts) == 3
+    r = p.duct_od * 0.5
+    for duct in ducts:
+        bb = duct.bounding_box()
+        assert abs(bb.size.X - p.duct_od) < 1.0
+        assert abs(bb.size.Z - p.duct_od) < 1.0
+        # Warm side of the lid, clear of the column heads.
+        assert bb.max.Z < g.z_soffit_lid - 5.0
+        assert bb.min.Z > g.column_top_z + 10.0
+        assert bb.max.X < p.room_width - 4.0
+        assert bb.min.X > g.x_nh_inner + p.rost_d + 5.0
+    # 2-over-1: two crowns at the same height, one nested below.
+    crowns = sorted(d.bounding_box().max.Z for d in ducts)
+    assert abs(crowns[1] - crowns[2]) < 1.0
+    assert crowns[0] < crowns[1] - r
+    lids = [
+        c
+        for c in _labeled(shape, LABEL_SOFFIT_GKF)
+        if c.bounding_box().size.Z < p.sdk_t + 1.0 and c.bounding_box().size.X > 100.0
+    ]
+    assert len(lids) == 1
+    lid = lids[0].bounding_box()
+    # Top flush with the plate; cut end on the plate cheek, above the wall head.
+    assert abs(lid.max.Z - (g.z_plate_top - FACE_GAP)) < 1.0
+    assert lid.min.Z > p.eave_wall_z + 50.0
+    assert abs(lid.max.X - (g.poz_r0 - FACE_GAP)) < 1.0
+    assert lid.max.X > p.room_width
+    # Plate is the edge fix, still not a rost hang point.
+    for poz in _labeled(shape, LABEL_WALL_PLATE):
+        if poz.bounding_box().min.X < p.room_width:
+            continue
+        assert poz.bounding_box().min.Z > g.z_soffit_rail()
 
 
 def test_soffit_scene_recipe():
@@ -376,7 +507,7 @@ def test_soffit_scene_recipe():
     g = build_layout(p)
     tx, ty, tz = cam["target"]
     assert g.x_furn * 0.001 <= tx <= (g.x_furn + p.furniture_width) * 0.001
-    assert g.z_nabeh_bot * 0.001 <= ty <= g.z_gkf_horiz * 0.001
+    assert g.z_nabeh_bot * 0.001 <= ty <= g.z_soffit_lid * 0.001
     assert -g.y_furn1 * 0.001 <= tz <= -g.y_furn0 * 0.001
     # CAD (0,0,1000) height → glTF Y = 1.
     assert abs(cad_mm_to_gltf_m((0, 0, 1000))[1] - 1.0) < 1e-12
