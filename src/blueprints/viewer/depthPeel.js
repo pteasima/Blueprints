@@ -18,6 +18,7 @@
  */
 import * as THREE from "three";
 import { isEdgeOverlay, renderEdgeOverlayPass, setEdgeOverlaysVisible } from "./edges.js";
+import { createFxaaPresenter } from "./fxaa.js";
 
 /**
  * Everitt peels for CAD shell stacking. Sorted alpha remains the emergency
@@ -156,6 +157,7 @@ varying float vPeelViewZ;`,
 export function createDepthPeelRenderer(renderer) {
   const size = new THREE.Vector2();
   const bgColor = new THREE.Color();
+  const fxaa = createFxaaPresenter(renderer);
 
   /** @type {THREE.WebGLRenderTarget | null} */
   let opaqueRT = null;
@@ -610,17 +612,31 @@ export function createDepthPeelRenderer(renderer) {
     renderOverlays(scene, camera, root);
   }
 
-  function renderFacesThenEdges(scene, camera, root) {
+  /**
+   * @param {THREE.Scene} scene
+   * @param {THREE.Camera} camera
+   * @param {THREE.Object3D | null} root
+   * @param {{ reuseDepth?: boolean }} [opts]
+   *   Opaque frames reuse face depth for edges. Abort-to-alpha and any path
+   *   that did not write CAD depth keeps the depth refill.
+   */
+  function renderFacesThenEdges(scene, camera, root, opts = {}) {
+    const rt = fxaa.colorTarget();
     setEdgeOverlaysVisible(root, false);
     const notes = annotationNodes(scene);
     const prevNotes = notes.map((node) => node.visible);
     setNodesVisible(notes, false);
-    renderer.setRenderTarget(null);
+    renderer.setRenderTarget(rt);
+    renderer.autoClear = true;
     renderer.render(scene, camera);
-    renderEdgeOverlayPass(renderer, scene, camera, root);
+    renderEdgeOverlayPass(renderer, scene, camera, root, {
+      reuseDepth: Boolean(opts.reuseDepth),
+    });
     notes.forEach((node, i) => {
       node.visible = prevNotes[i];
     });
+    // FXAA the geometry, then callouts on the canvas so plate text stays crisp.
+    fxaa.blitToCanvas();
     renderAnnotations(scene, camera, root);
   }
 
@@ -641,14 +657,14 @@ export function createDepthPeelRenderer(renderer) {
     // off from applyOpacityToMeshes — one standard sorted-alpha render.
     if (!wantPeel) {
       peelStageUniform.value = 0;
-      renderFacesThenEdges(scene, camera, root);
+      renderFacesThenEdges(scene, camera, root, { reuseDepth: true });
       return false;
     }
 
     const { opaque, transparent } = collectMeshes(root);
     if (!transparent.length) {
       peelStageUniform.value = 0;
-      renderFacesThenEdges(scene, camera, root);
+      renderFacesThenEdges(scene, camera, root, { reuseDepth: true });
       return false;
     }
 
@@ -896,7 +912,9 @@ export function createDepthPeelRenderer(renderer) {
       peelUniforms.tPeelViewZ.value = peelViewZRT.texture;
 
       if (highQuality) {
-        // Settled path: same as main — colour every peel, no early-out.
+        // Settled path: colour every peel, no early-out. The float readback
+        // is only the peel-0 fail-safe — later layers used to stall the GPU
+        // on a 12×12 readPixels and then draw anyway.
         peelStageUniform.value = 2;
         for (const { mat } of matBackup) {
           mat.depthWrite = false;
@@ -919,9 +937,11 @@ export function createDepthPeelRenderer(renderer) {
         renderer.clear();
         renderer.render(scene, camera);
 
-        const peelWrote = viewZWroteGeometry(peelViewZRT, 12);
-        if (peel === 0 && !peelWrote) return abortToStandard();
-        if (peelWrote) anyLayerWritten = true;
+        if (peel === 0) {
+          const peelWrote = viewZWroteGeometry(peelViewZRT, 12);
+          if (!peelWrote) return abortToStandard();
+          anyLayerWritten = true;
+        }
 
         blitMat.uniforms.tSrc.value = layerRT.texture;
         renderer.setRenderTarget(accumRT);
@@ -1003,18 +1023,21 @@ export function createDepthPeelRenderer(renderer) {
     scene.background = prevBg;
     renderer.toneMapping = prevTone;
 
-    renderer.setRenderTarget(null);
+    const colorRT = fxaa.colorTarget();
+    renderer.setRenderTarget(colorRT);
     renderer.autoClear = true;
     renderer.render(compositeScene, compositeCamera);
 
-    // CAD edges, then callouts on top (not baked into the peel composite).
+    // CAD edges into the colour target (composite depth is the quad, so refill),
+    // FXAA to the canvas, then callouts on top so labels are not blurred.
     const notes = annotationNodes(scene);
     const prevNotes = notes.map((node) => node.visible);
     setNodesVisible(notes, false);
-    renderEdgeOverlayPass(renderer, scene, camera, root);
+    renderEdgeOverlayPass(renderer, scene, camera, root, { reuseDepth: false });
     notes.forEach((node, i) => {
       node.visible = prevNotes[i];
     });
+    fxaa.blitToCanvas();
     renderAnnotations(scene, camera, root);
     renderer.autoClear = prevAutoClear;
     return true;
@@ -1022,6 +1045,7 @@ export function createDepthPeelRenderer(renderer) {
 
   function dispose() {
     disposeTargets();
+    fxaa.dispose();
     compositeMat.dispose();
     compositeQuad.geometry.dispose();
     blitMat.dispose();

@@ -46,7 +46,9 @@ export const SOLID_COLORS = {
 
 /**
  * Stable depth bias for stacked layers (outside → inside / below → above).
- * Higher wins when faces are nearly coplanar (polygonOffset + renderOrder).
+ * Higher wins when faces are nearly coplanar. `polygonOffset` is kept for
+ * pipelines that do not write `gl_FragDepth`; under logarithmic depth the
+ * shader patch in {@link applyLayerDepthBias} is what actually separates faces.
  * @type {Record<string, number>}
  */
 export const LAYER_DEPTH_BIAS = {
@@ -82,6 +84,53 @@ export const LAYER_DEPTH_BIAS = {
   soffit_naturheld_140: 13,
   glazing: 14,
 };
+
+/**
+ * Encoded window-Z pulled toward the camera per {@link LAYER_DEPTH_BIAS} step.
+ * Two times the top bias (glazing = 14) stays under the edge-stroke FragDepth
+ * pull in `edges.js` (`EDGE_FRAG_DEPTH_BIAS`), so outlines remain in front.
+ */
+export const LAYER_FRAG_DEPTH_STEP = 1.5e-5;
+
+/** Cache-key bump when the face-bias shader changes. */
+export const LAYER_DEPTH_SHADER_REV = 1;
+
+/**
+ * Pull a face forward in the log-depth buffer. Polygon offset never survives
+ * the logarithmic `gl_FragDepth` write (perspective log, or raw `gl_FragCoord.z`
+ * in ISO), so coplanar shells flicker unless the bias is applied here.
+ * No-op at bias 0. Safe to call once per material.
+ * @param {THREE.Material} mat
+ * @param {number} [depthBias]
+ */
+export function applyLayerDepthBias(mat, depthBias = 0) {
+  if (mat.userData.layerDepthPatched) return;
+  const bias = Math.max(0, Math.round(Number(depthBias) || 0));
+  mat.userData.layerDepthBias = bias;
+  if (!(bias > 0)) return;
+  mat.userData.layerDepthPatched = true;
+
+  const prevCompile = mat.onBeforeCompile?.bind(mat);
+  const prevKey = mat.customProgramCacheKey?.bind(mat);
+  const step = LAYER_FRAG_DEPTH_STEP.toExponential(8);
+  mat.onBeforeCompile = (shader, renderer) => {
+    prevCompile?.(shader, renderer);
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <logdepthbuf_fragment>",
+      `#include <logdepthbuf_fragment>
+#if defined( USE_LOGDEPTHBUF )
+	{
+		float bpFaceBias = ${bias}.0 * ${step};
+		float bpGraze = min(bpFaceBias, 0.35 * fwidth(gl_FragDepth));
+		gl_FragDepth -= bpFaceBias + bpGraze;
+	}
+#endif`,
+    );
+  };
+  mat.customProgramCacheKey = () =>
+    `${prevKey ? prevKey() : mat.type}|bpLayerDepth-r${LAYER_DEPTH_SHADER_REV}-${bias}`;
+  mat.needsUpdate = true;
+}
 
 /**
  * Nested Parts outline. A child is a leaf CAD label (string) or a group
@@ -660,6 +709,7 @@ function finishMaterial(mat, planes, depthBias = 0) {
   } else {
     mat.clippingPlanes = [];
   }
+  applyLayerDepthBias(mat, depthBias);
   mat.needsUpdate = true;
 }
 
