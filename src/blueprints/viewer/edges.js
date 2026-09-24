@@ -47,7 +47,14 @@ const EDGE_NDC_DEPTH_BIAS = 1e-4;
  * no longer defines USE_LOGDEPTHBUF_EXT, and that overwrite made edge depth
  * incomparable to face log-depth (edges only survived against clear/background).
  */
-const EDGE_FRAG_DEPTH_BIAS = 5e-4;
+export const EDGE_FRAG_DEPTH_BIAS = 5e-4;
+
+/**
+ * Fat-line overlays live on this layer so an opaque frame can draw them
+ * without rasterizing every CAD face a second time. The camera stays on
+ * layer 0 for faces; the edge pass switches to this layer.
+ */
+export const EDGE_LAYER = 1;
 
 /** Cache-key bump when bias shader strategy changes. */
 const EDGE_BIAS_SHADER_REV = 2;
@@ -395,6 +402,7 @@ export function syncEdgeOverlays(partsMap, enabled, opts = {}) {
         overlay.userData.edgeLabel = label;
         overlay.raycast = () => {};
         overlay.renderOrder = 1000;
+        overlay.layers.set(EDGE_LAYER);
         mesh.add(overlay);
       } else {
         const mat = overlay.material;
@@ -409,6 +417,7 @@ export function syncEdgeOverlays(partsMap, enabled, opts = {}) {
           overlay.userData.edgeLabel = label;
           overlay.raycast = () => {};
           overlay.renderOrder = 1000;
+          overlay.layers.set(EDGE_LAYER);
           mesh.add(overlay);
         } else {
           if (mat.color) mat.color.setHex(EDGE_COLOR);
@@ -422,6 +431,7 @@ export function syncEdgeOverlays(partsMap, enabled, opts = {}) {
           mat.needsUpdate = true;
         }
       }
+      overlay.layers.set(EDGE_LAYER);
       rebuildOverlayGeometry(mesh, /** @type {any} */ (overlay), planes);
     }
   }
@@ -475,48 +485,52 @@ function collectMeshClippingPlanes(root) {
 }
 
 /**
- * After depth-peel composite: refill depth from CAD meshes, then draw edges.
- * Edges are omitted from peel colour RTs (mesh shaders / parent visibility),
- * so this is the only place transparent-part edges appear while peeling.
+ * Faces first, then fat lines. Opaque frames reuse the colour-pass depth
+ * (`reuseDepth`). Peeled frames refill depth, because the composite quad is
+ * not the CAD depth and faded materials did not write one.
  *
  * @param {THREE.WebGLRenderer} renderer
  * @param {THREE.Scene} scene
  * @param {THREE.Camera} camera
  * @param {THREE.Object3D} root
+ * @param {{ reuseDepth?: boolean }} [opts]
+ *   `reuseDepth` draws only the fat lines against the depth the colour pass
+ *   just wrote. Used for fully opaque frames. Faded / peeled frames refill
+ *   depth first — transparent materials did not write a usable buffer, and a
+ *   peel composite quad is not the CAD depth.
  */
-export function renderEdgeOverlayPass(renderer, scene, camera, root) {
+export function renderEdgeOverlayPass(renderer, scene, camera, root, opts = {}) {
   if (!root) return;
 
-  /** @type {{ mat: THREE.Material, colorWrite: boolean, depthWrite: boolean, depthTest: boolean, transparent: boolean }[]} */
-  const snaps = [];
+  const reuseDepth = Boolean(opts.reuseDepth);
   let anyEdge = false;
   root.traverse((obj) => {
-    if (isEdgeOverlay(obj)) {
-      anyEdge = true;
-      return;
-    }
-    if (!obj.isMesh || !obj.material) return;
-    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-    for (const mat of mats) {
-      if (!mat) continue;
-      snaps.push({
-        mat,
-        colorWrite: mat.colorWrite !== false,
-        depthWrite: mat.depthWrite !== false,
-        depthTest: mat.depthTest !== false,
-        transparent: Boolean(mat.transparent),
-      });
-    }
+    if (isEdgeOverlay(obj)) anyEdge = true;
   });
   if (!anyEdge) return;
 
   const prevAutoClear = renderer.autoClear;
   const prevBg = scene.background;
   const prevOverride = scene.overrideMaterial;
+  const prevLayers = camera.layers.mask;
   scene.background = null;
   renderer.autoClear = false;
 
+  if (reuseDepth) {
+    // Lines sit on EDGE_LAYER, so the parent faces are not rasterized again.
+    // Their depth from the colour pass is still in this target.
+    setEdgeOverlaysVisible(root, true);
+    camera.layers.set(EDGE_LAYER);
+    renderer.render(scene, camera);
+    camera.layers.mask = prevLayers;
+    scene.background = prevBg;
+    scene.overrideMaterial = prevOverride;
+    renderer.autoClear = prevAutoClear;
+    return;
+  }
+
   // 1) Depth prepass via MeshDepthMaterial (reliable depth writes; respects cuts).
+  //    Camera stays on layer 0, so EDGE_LAYER strokes are not in this pass.
   setEdgeOverlaysVisible(root, false);
   const depthMat = getEdgeDepthPrepassMaterial();
   depthMat.clippingPlanes = collectMeshClippingPlanes(root);
@@ -526,22 +540,14 @@ export function renderEdgeOverlayPass(renderer, scene, camera, root) {
   renderer.render(scene, camera);
   scene.overrideMaterial = null;
 
-  // 2) Edge colour only — meshes stay colour-silent so faded faces keep composite.
+  // 2) Edge colour only. Faces stay on layer 0; the depth prepass already
+  //    filled the buffer, so redrawing them (and flipping their transparent
+  //    flag) only burns a second full traversal.
   setEdgeOverlaysVisible(root, true);
-  for (const s of snaps) {
-    s.mat.colorWrite = false;
-    s.mat.depthWrite = false;
-    s.mat.depthTest = true;
-    s.mat.transparent = false;
-  }
+  camera.layers.set(EDGE_LAYER);
   renderer.render(scene, camera);
+  camera.layers.mask = prevLayers;
 
-  for (const s of snaps) {
-    s.mat.colorWrite = s.colorWrite;
-    s.mat.depthWrite = s.depthWrite;
-    s.mat.depthTest = s.depthTest;
-    s.mat.transparent = s.transparent;
-  }
   scene.background = prevBg;
   scene.overrideMaterial = prevOverride;
   renderer.autoClear = prevAutoClear;

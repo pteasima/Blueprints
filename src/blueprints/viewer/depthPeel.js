@@ -3,11 +3,14 @@
  *
  * Fade path when {@link USE_DEPTH_PEEL} is true: opaque colour + float32
  * linear eye-space Z, then N peels ordered by hardware depth (LESS) while
- * recording linear view-Z into float colour targets. Callers pass
- * `quality: "fast"` (half-res, fewer peels) while the camera moves and
- * `quality: "high"` (full-res, more peels) once settled. On any fail-safe
- * abort, restore visibility and fall back to one full `renderer.render`
- * with standard alpha so faded parts never vanish for a frame.
+ * recording linear view-Z into float colour targets. While the camera is
+ * moving, callers pass `quality: "fast"`: one sorted-alpha draw. Once the
+ * view is still, `quality: "high"` peels at full resolution. Faded meshes
+ * that share a material are drawn as one batch, so the still frame is a
+ * handful of draws per layer instead of one draw per CAD face. On any
+ * fail-safe abort, restore
+ * visibility and fall back to one full `renderer.render` with standard alpha
+ * so faded parts never vanish.
  *
  * Do **not** sample the logarithmic DepthTexture against gl_FragCoord.z —
  * that comparison is invalid with logarithmicDepthBuffer and discards every
@@ -17,6 +20,7 @@
  * Literal material opacity — no crush, no SOLID_ALPHA&lt;1 stand-in.
  */
 import * as THREE from "three";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { isEdgeOverlay, renderEdgeOverlayPass, setEdgeOverlaysVisible } from "./edges.js";
 
 /**
@@ -85,7 +89,7 @@ export function patchMaterialForDepthPeel(mat) {
 
   const prevCacheKey = mat.customProgramCacheKey?.bind(mat);
   mat.customProgramCacheKey = () =>
-    `${prevCacheKey ? prevCacheKey() : mat.type}|depthPeel10`;
+    `${prevCacheKey ? prevCacheKey() : mat.type}|depthPeel11|${mat.defines?.USE_BP_PEEL ? 1 : 0}`;
 
   const prevCompile = mat.onBeforeCompile?.bind(mat);
   mat.onBeforeCompile = (shader, renderer) => {
@@ -102,52 +106,88 @@ export function patchMaterialForDepthPeel(mat) {
     shader.vertexShader = shader.vertexShader.replace(
       "#include <common>",
       `#include <common>
-varying float vPeelViewZ;`,
+#ifdef USE_BP_PEEL
+varying float vPeelViewZ;
+#endif`,
     );
     shader.vertexShader = shader.vertexShader.replace(
       "#include <project_vertex>",
       `#include <project_vertex>
-	vPeelViewZ = -mvPosition.z;`,
+#ifdef USE_BP_PEEL
+	vPeelViewZ = -mvPosition.z;
+#endif`,
     );
 
     shader.fragmentShader = shader.fragmentShader.replace(
       "#include <common>",
       `#include <common>
+#ifdef USE_BP_PEEL
 uniform float uPeelStage;
 uniform sampler2D tPrevViewZ;
 uniform sampler2D tPeelViewZ;
 uniform sampler2D tOpaqueViewZ;
 uniform float uViewZEps;
 uniform vec2 uResolution;
-varying float vPeelViewZ;`,
+varying float vPeelViewZ;
+#endif`,
     );
-    shader.fragmentShader = shader.fragmentShader.replace(
-      "#include <dithering_fragment>",
-      `#include <dithering_fragment>
+    // After log-depth, face bias, and alpha test — before lighting. Fragments
+    // that are not this layer discard here, so a peel does not shade the whole
+    // stack. GLSL1 fragment shaders cannot return, so the depth stage overwrites
+    // gl_FragColor after dithering (view-Z must not be tone-mapped).
+    const peelTest = `
+#ifdef USE_BP_PEEL
 	if (uPeelStage > 0.5) {
 		vec2 peelUv = gl_FragCoord.xy / uResolution;
 		float opaqueZ = texture2D(tOpaqueViewZ, peelUv).r;
 		float prevZ = texture2D(tPrevViewZ, peelUv).r;
 		float eps = max(uViewZEps, 1e-3 * max(vPeelViewZ, 1.0));
-		// Behind an opaque solid (linear eye-space Z). Skip when opaqueZ is
-		// ~0 (dead clear / failed float RT) so we do not discard every frag.
 		if (opaqueZ > 1e-4 && vPeelViewZ >= opaqueZ - eps) discard;
-		// Already peeled (at or in front of previous layer).
 		if (vPeelViewZ <= prevZ + eps) discard;
-		if (uPeelStage < 1.5) {
-			// Depth peel: write linear view-Z; nearest wins via depthTest LESS.
-			gl_FragColor = vec4(vPeelViewZ, 0.0, 0.0, 1.0);
-		} else {
+		if (uPeelStage >= 1.5) {
 			float peelZ = texture2D(tPeelViewZ, peelUv).r;
 			if (peelZ > ${(VIEW_Z_FAR * 0.5).toFixed(1)}) discard;
-			// Tolerant band: anything from prev..peel that belongs to this layer.
 			float peelEps = max(uViewZEps, 1e-3 * max(peelZ, 1.0));
 			if (vPeelViewZ > peelZ + peelEps) discard;
 		}
-	}`,
+	}
+#endif`;
+    const anchor = "#include <alphahash_fragment>";
+    if (shader.fragmentShader.includes(anchor)) {
+      shader.fragmentShader = shader.fragmentShader.replace(
+        anchor,
+        `${anchor}\n${peelTest}`,
+      );
+    }
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <dithering_fragment>",
+      `#include <dithering_fragment>
+#ifdef USE_BP_PEEL
+	if (uPeelStage > 0.5 && uPeelStage < 1.5) {
+		gl_FragColor = vec4(vPeelViewZ, 0.0, 0.0, 1.0);
+	}
+#endif`,
     );
   };
   mat.needsUpdate = true;
+}
+
+/**
+ * Peel tests live in a second program. The moving frame keeps the original
+ * shader, so a drag after the view has settled does not sample peel targets.
+ * @param {THREE.Material[]} mats
+ * @param {boolean} active
+ */
+function setPeelShaderActive(mats, active) {
+  for (const mat of mats) {
+    if (!mat) continue;
+    const has = Boolean(mat.defines && Object.prototype.hasOwnProperty.call(mat.defines, "USE_BP_PEEL"));
+    if (active === has) continue;
+    if (!mat.defines) mat.defines = {};
+    if (active) mat.defines.USE_BP_PEEL = "1";
+    else delete mat.defines.USE_BP_PEEL;
+    mat.needsUpdate = true;
+  }
 }
 
 /**
@@ -473,6 +513,250 @@ export function createDepthPeelRenderer(renderer) {
    * @param {THREE.Mesh[]} meshes
    * @returns {THREE.Material[]}
    */
+  /**
+   * Faded CAD faces are thousands of tiny meshes on a handful of materials.
+   * A peel layer that draws each one is tens of thousands of calls; merging
+   * world-space copies by material makes the layer a few dozen draws.
+   * Matrices on this model do not animate, so the batch is reused until the
+   * faded set or a mesh origin changes.
+   * @type {THREE.Mesh[]}
+   */
+  /**
+   * @typedef {{ meshes: THREE.Mesh[], sources: THREE.Mesh[], key: string }} BatchSlot
+   */
+  const transBatches = { meshes: [], sources: [], key: "" };
+  const opaqueBatches = { meshes: [], sources: [], key: "" };
+  /** Content stamp of the batches already built, so drag frames do not remerge. */
+  let primedKey = "";
+  const peelBatchScene = new THREE.Scene();
+  const depthBatchScene = new THREE.Scene();
+  const depthPrepassMat = new THREE.MeshDepthMaterial({
+    depthTest: true,
+    depthWrite: true,
+    colorWrite: false,
+    side: THREE.DoubleSide,
+  });
+
+  /**
+   * @param {BatchSlot} slot
+   */
+  function disposeSlot(slot) {
+    for (const mesh of slot.meshes) mesh.geometry.dispose();
+    slot.meshes = [];
+    slot.sources = [];
+    slot.key = "";
+  }
+
+  function disposePeelBatches() {
+    disposeSlot(transBatches);
+    disposeSlot(opaqueBatches);
+    primedKey = "";
+  }
+
+  /**
+   * Build merged draws once per opacity/scene stamp. Called from the moving
+   * frame so the still-frame peel does not pay the merge.
+   * @param {THREE.Object3D} root
+   * @param {THREE.Mesh[]} opaque
+   * @param {THREE.Mesh[]} transparent
+   * @param {string} batchKey
+   */
+  function primeBatches(root, opaque, transparent, batchKey) {
+    if (!transparent.length) return;
+    if (batchKey && batchKey === primedKey && transBatches.meshes.length) return;
+    ensureSlot(transBatches, root, transparent);
+    ensureSlot(opaqueBatches, root, opaque);
+    if (
+      transBatches.sources.length === transparent.length &&
+      opaqueBatches.sources.length === opaque.length
+    ) {
+      primedKey = batchKey || "";
+    }
+  }
+
+  /**
+   * @param {THREE.BufferGeometry} geometry
+   */
+  function attributeKey(geometry) {
+    return Object.keys(geometry.attributes).sort().join(",");
+  }
+
+  /**
+   * @param {THREE.Mesh} mesh
+   */
+  function bakeWorldGeometry(mesh) {
+    const src = mesh.geometry;
+    // toNonIndexed unpacks interleaved glTF buffers. mergeGeometries rejects those.
+    const geo = src.index ? src.toNonIndexed() : src.clone();
+    geo.applyMatrix4(mesh.matrixWorld);
+    return geo;
+  }
+
+  /**
+   * @param {THREE.Object3D} root
+   * @param {THREE.Mesh[]} meshes
+   */
+  /**
+   * @param {BatchSlot} slot
+   * @param {THREE.Object3D} root
+   * @param {THREE.Mesh[]} meshes
+   */
+  function ensureSlot(slot, root, meshes) {
+    let key = String(meshes.length);
+    for (const mesh of meshes) {
+      const matId = Array.isArray(mesh.material) ? "m" : mesh.material?.id || 0;
+      key += `.${mesh.id}:${matId}`;
+    }
+    if (key === slot.key) return;
+    root.updateWorldMatrix(true, true);
+    disposeSlot(slot);
+    slot.key = key;
+
+    /** @type {Map<string, { mat: THREE.Material, meshes: THREE.Mesh[] }>} */
+    const groups = new Map();
+    for (const mesh of meshes) {
+      if (!mesh.geometry || Array.isArray(mesh.material) || !mesh.material) continue;
+      const gkey = `${mesh.material.uuid}:${attributeKey(mesh.geometry)}`;
+      let bucket = groups.get(gkey);
+      if (!bucket) {
+        bucket = { mat: mesh.material, meshes: [] };
+        groups.set(gkey, bucket);
+      }
+      bucket.meshes.push(mesh);
+    }
+
+    for (const bucket of groups.values()) {
+      /** @type {THREE.BufferGeometry[]} */
+      const geos = [];
+      try {
+        for (const mesh of bucket.meshes) geos.push(bakeWorldGeometry(mesh));
+        const merged = mergeGeometries(geos, false);
+        if (!merged) continue;
+        const batch = new THREE.Mesh(merged, bucket.mat);
+        batch.frustumCulled = false;
+        batch.matrixAutoUpdate = false;
+        batch.renderOrder = 0;
+        batch.userData.isPeelBatch = true;
+        slot.meshes.push(batch);
+        slot.sources.push(...bucket.meshes);
+      } catch {
+        // Leave this material on the original meshes.
+      } finally {
+        for (const geo of geos) geo.dispose();
+      }
+    }
+  }
+
+  /**
+   * @param {THREE.Scene} scene
+   * @param {THREE.Camera} camera
+   * @param {THREE.Object3D} root
+   * @param {THREE.Mesh[]} transparent
+   */
+  /**
+   * Draw merged faces from their own scene. Rendering the CAD root would
+   * still walk every hidden source mesh, and that walk dominated the peel.
+   * @param {BatchSlot} slot
+   * @param {THREE.Mesh[]} expected
+   * @param {THREE.Scene} scene
+   * @param {THREE.Camera} camera
+   */
+  function renderSlot(slot, expected, scene, camera) {
+    if (!slot.meshes.length || slot.sources.length !== expected.length) {
+      renderer.render(scene, camera);
+      return false;
+    }
+    peelBatchScene.environment = scene.environment;
+    peelBatchScene.environmentIntensity = scene.environmentIntensity;
+    peelBatchScene.fog = scene.fog;
+    /** @type {THREE.Object3D[]} */
+    const lights = [];
+    for (const child of scene.children) {
+      if (child.isLight) lights.push(child);
+    }
+    for (const light of lights) peelBatchScene.add(light);
+    for (const batch of slot.meshes) peelBatchScene.add(batch);
+    renderer.render(peelBatchScene, camera);
+    for (const batch of slot.meshes) peelBatchScene.remove(batch);
+    for (const light of lights) scene.add(light);
+    return true;
+  }
+
+  /**
+   * @param {THREE.Scene} scene
+   * @param {THREE.Camera} camera
+   * @param {THREE.Mesh[]} transparent
+   */
+  function renderTransparent(scene, camera, transparent) {
+    renderSlot(transBatches, transparent, scene, camera);
+  }
+
+  /**
+   * @param {THREE.Scene} scene
+   * @param {THREE.Camera} camera
+   * @param {THREE.Mesh[]} opaque
+   */
+  function renderOpaqueColour(scene, camera, opaque) {
+    if (!opaque.length) return;
+    renderSlot(opaqueBatches, opaque, scene, camera);
+  }
+
+  /**
+   * Depth-only draw of the merged opaque faces (section view-Z).
+   * @param {THREE.Camera} camera
+   * @param {THREE.Mesh[]} opaque
+   * @param {THREE.Material} overrideMat
+   */
+  function renderOpaqueDepth(camera, opaque, overrideMat) {
+    if (
+      !opaqueBatches.meshes.length ||
+      opaqueBatches.sources.length !== opaque.length
+    ) {
+      return false;
+    }
+    depthBatchScene.overrideMaterial = overrideMat;
+    for (const mesh of opaqueBatches.meshes) depthBatchScene.add(mesh);
+    renderer.render(depthBatchScene, camera);
+    depthBatchScene.overrideMaterial = null;
+    for (const mesh of opaqueBatches.meshes) depthBatchScene.remove(mesh);
+    return true;
+  }
+
+  /**
+   * Write CAD depth from the merged faces. The edge pass then draws only
+   * the fat lines against that buffer, instead of rasterizing every face
+   * again.
+   * @param {THREE.Camera} camera
+   * @param {THREE.Object3D} root
+   * @param {THREE.Mesh[]} opaque
+   * @param {THREE.Mesh[]} transparent
+   * @param {THREE.Plane[] | null} planes
+   */
+  function renderMergedDepth(camera, root, opaque, transparent, planes) {
+    ensureSlot(transBatches, root, transparent);
+    ensureSlot(opaqueBatches, root, opaque);
+    if (
+      transBatches.sources.length !== transparent.length ||
+      opaqueBatches.sources.length !== opaque.length
+    ) {
+      return false;
+    }
+    depthPrepassMat.clippingPlanes = planes || [];
+    depthPrepassMat.clipIntersection = false;
+    depthBatchScene.overrideMaterial = depthPrepassMat;
+    for (const mesh of transBatches.meshes) depthBatchScene.add(mesh);
+    for (const mesh of opaqueBatches.meshes) depthBatchScene.add(mesh);
+    const prev = renderer.autoClear;
+    renderer.autoClear = false;
+    renderer.clearDepth();
+    renderer.render(depthBatchScene, camera);
+    renderer.autoClear = prev;
+    depthBatchScene.overrideMaterial = null;
+    for (const mesh of transBatches.meshes) depthBatchScene.remove(mesh);
+    for (const mesh of opaqueBatches.meshes) depthBatchScene.remove(mesh);
+    return true;
+  }
+
   function uniqueMaterials(meshes) {
     /** @type {Set<THREE.Material>} */
     const set = new Set();
@@ -507,82 +791,6 @@ export function createDepthPeelRenderer(renderer) {
     renderer.autoClear = prevAutoClear;
   }
 
-  const copyProbeBuf = new Float32Array(4);
-
-  const copyMat = new THREE.ShaderMaterial({
-    uniforms: { tSrc: { value: null } },
-    vertexShader: /* glsl */ `
-      varying vec2 vUv;
-      void main() {
-        vUv = uv;
-        gl_Position = vec4(position.xy, 0.0, 1.0);
-      }
-    `,
-    fragmentShader: /* glsl */ `
-      uniform sampler2D tSrc;
-      varying vec2 vUv;
-      void main() {
-        gl_FragColor = texture2D(tSrc, vUv);
-      }
-    `,
-    depthTest: false,
-    depthWrite: false,
-    toneMapped: false,
-    blending: THREE.NoBlending,
-  });
-  const copyQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), copyMat);
-  const copyScene = new THREE.Scene();
-  copyScene.add(copyQuad);
-
-  /**
-   * @param {THREE.WebGLRenderTarget} src
-   * @param {THREE.WebGLRenderTarget} dst
-   */
-  function copyColorRT(src, dst) {
-    copyMat.uniforms.tSrc.value = src.texture;
-    const prevAuto = renderer.autoClear;
-    renderer.setRenderTarget(dst);
-    renderer.setClearColor(0x000000, 1);
-    renderer.clear();
-    renderer.autoClear = false;
-    renderer.render(copyScene, compositeCamera);
-    renderer.autoClear = prevAuto;
-  }
-
-  /**
-   * Sparse float view-Z probe (avoid dense readPixels sync every peel).
-   * @param {THREE.WebGLRenderTarget} rt
-   * @param {number} [grid]
-   */
-  function viewZWroteGeometry(rt, grid = 4) {
-    const w = rt.width;
-    const h = rt.height;
-    const farCut = VIEW_Z_FAR * 0.5;
-    for (let iy = 0; iy < grid; iy++) {
-      for (let ix = 0; ix < grid; ix++) {
-        const x = Math.min(w - 1, Math.floor(((ix + 0.5) / grid) * w));
-        const y = Math.min(h - 1, Math.floor(((iy + 0.5) / grid) * h));
-        try {
-          renderer.readRenderTargetPixels(rt, x, y, 1, 1, copyProbeBuf);
-        } catch {
-          continue;
-        }
-        if (Number.isFinite(copyProbeBuf[0]) && copyProbeBuf[0] < farCut) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  /**
-   * Faces first (edges hidden), then the depth-aware edge overlay pass.
-   * Drawing fat lines in the same pass as coplanar CAD faces fails the depth
-   * test on most opaque views; the soffit/peel path already used this split.
-   * @param {THREE.Scene} scene
-   * @param {THREE.Camera} camera
-   * @param {THREE.Object3D | null} root
-   */
   /**
    * Callouts live on the scene, not the GLB root. Hide them for the colour and
    * edge passes, then draw them once so leaders sit on top of CAD edges and
@@ -610,14 +818,30 @@ export function createDepthPeelRenderer(renderer) {
     renderOverlays(scene, camera, root);
   }
 
-  function renderFacesThenEdges(scene, camera, root) {
+  /**
+   * Faces first (edges hidden), then the depth-aware edge overlay pass.
+   * Drawing fat lines in the same pass as coplanar CAD faces fails the depth
+   * test on most opaque views; the soffit/peel path already used this split.
+   * @param {THREE.Scene} scene
+   * @param {THREE.Camera} camera
+   * @param {THREE.Object3D | null} root
+   * @param {{ reuseDepth?: boolean, skipEdges?: boolean }} [opts]
+   *   Opaque frames reuse face depth for edges. Abort-to-alpha and any path
+   *   that did not write CAD depth keeps the depth refill.
+   */
+  function renderFacesThenEdges(scene, camera, root, opts = {}) {
     setEdgeOverlaysVisible(root, false);
     const notes = annotationNodes(scene);
     const prevNotes = notes.map((node) => node.visible);
     setNodesVisible(notes, false);
     renderer.setRenderTarget(null);
+    renderer.autoClear = true;
     renderer.render(scene, camera);
-    renderEdgeOverlayPass(renderer, scene, camera, root);
+    if (!opts.skipEdges) {
+      renderEdgeOverlayPass(renderer, scene, camera, root, {
+        reuseDepth: Boolean(opts.reuseDepth),
+      });
+    }
     notes.forEach((node, i) => {
       node.visible = prevNotes[i];
     });
@@ -629,7 +853,7 @@ export function createDepthPeelRenderer(renderer) {
    * @param {THREE.Camera} camera
    * @param {THREE.Object3D | null} root
    * @param {boolean | (() => boolean)} shouldPeel
-   * @param {{ quality?: "fast" | "high" }} [opts]
+   * @param {{ quality?: "fast" | "high", batchKey?: string }} [opts]
    * @returns {boolean} true if peel compositing was used this frame
    */
   function render(scene, camera, root, shouldPeel, opts = {}) {
@@ -641,16 +865,31 @@ export function createDepthPeelRenderer(renderer) {
     // off from applyOpacityToMeshes — one standard sorted-alpha render.
     if (!wantPeel) {
       peelStageUniform.value = 0;
-      renderFacesThenEdges(scene, camera, root);
+      renderFacesThenEdges(scene, camera, root, { reuseDepth: true });
       return false;
+    }
+
+    // Dragging / scrubbing. Sorted alpha is one draw of the scene. The
+    // peel replaces it on the next still frame. Return true so the caller
+    // does not reset materials between the two.
+    if (opts.quality !== "high") {
+      peelStageUniform.value = 0;
+      renderFacesThenEdges(scene, camera, root, { reuseDepth: true });
+      const batchKey = opts.batchKey || "";
+      if (root && batchKey !== primedKey) {
+        const lists = collectMeshes(root);
+        primeBatches(root, lists.opaque, lists.transparent, batchKey);
+      }
+      return true;
     }
 
     const { opaque, transparent } = collectMeshes(root);
     if (!transparent.length) {
       peelStageUniform.value = 0;
-      renderFacesThenEdges(scene, camera, root);
+      renderFacesThenEdges(scene, camera, root, { reuseDepth: true });
       return false;
     }
+    if (root) primeBatches(root, opaque, transparent, opts.batchKey || "");
 
     const highQuality = opts.quality === "high";
     const peelScale = highQuality ? PEEL_SCALE_HIGH : PEEL_SCALE_FAST;
@@ -697,6 +936,7 @@ export function createDepthPeelRenderer(renderer) {
         },
       });
     }
+    setPeelShaderActive(transMats, true);
 
     /** @type {Map<THREE.Mesh, Function | null | undefined>} */
     const onBeforeRenderBackup = new Map();
@@ -796,6 +1036,7 @@ export function createDepthPeelRenderer(renderer) {
         obj.visible = visible;
       }
       restoreOnBeforeRender();
+      setPeelShaderActive(transMats, false);
       peelStageUniform.value = 0;
       scene.background = prevBg;
       scene.overrideMaterial = null;
@@ -816,16 +1057,17 @@ export function createDepthPeelRenderer(renderer) {
     renderer.setRenderTarget(opaqueRT);
     renderer.setClearColor(0x000000, 0);
     renderer.clear();
-    renderer.render(scene, camera);
+    renderOpaqueColour(scene, camera, opaque);
 
     // --- Opaque linear view-Z at peel resolution ---
     renderer.setRenderTarget(opaqueViewZRT);
     renderer.setClearColor(0x000000, 1);
     clearViewZTarget(opaqueViewZRT, VIEW_Z_FAR, { clearDepth: true });
 
-    // Fail-safe: after clear-to-FAR (before opaque draw), a corner pixel must
-    // still read ~FAR. ~0 means float clear/RT failed → peels would discard.
-    {
+    // Fail-safe on the settled path only. readPixels stalls the GPU, so the
+    // fast path (drag, scene change) must not sync. A bad float target shows
+    // up on the next high frame and aborts to standard alpha.
+    if (highQuality) {
       const corner = new Float32Array(4);
       try {
         renderer.readRenderTargetPixels(opaqueViewZRT, 2, 2, 1, 1, corner);
@@ -838,12 +1080,14 @@ export function createDepthPeelRenderer(renderer) {
     }
 
     const prevOverride = scene.overrideMaterial;
-    scene.overrideMaterial = opaqueViewZMat;
     renderer.setRenderTarget(opaqueViewZRT);
     renderer.autoClear = false;
-    renderer.render(scene, camera);
+    if (!renderOpaqueDepth(camera, opaque, opaqueViewZMat)) {
+      scene.overrideMaterial = opaqueViewZMat;
+      renderer.render(scene, camera);
+      scene.overrideMaterial = prevOverride;
+    }
     renderer.autoClear = true;
-    scene.overrideMaterial = prevOverride;
     peelUniforms.tOpaqueViewZ.value = opaqueViewZRT.texture;
 
     // --- Accum empty ---
@@ -890,57 +1134,12 @@ export function createDepthPeelRenderer(renderer) {
       clearViewZTarget(peelViewZRT, VIEW_Z_FAR);
       renderer.setRenderTarget(peelViewZRT);
       renderer.autoClear = false;
-      renderer.render(scene, camera);
+      renderTransparent(scene, camera, transparent);
       renderer.autoClear = true;
 
       peelUniforms.tPeelViewZ.value = peelViewZRT.texture;
 
-      if (highQuality) {
-        // Settled path: same as main — colour every peel, no early-out.
-        peelStageUniform.value = 2;
-        for (const { mat } of matBackup) {
-          mat.depthWrite = false;
-          mat.depthTest = false;
-          mat.colorWrite = true;
-          mat.transparent = true;
-          mat.forceSinglePass = true;
-          applyBlend(mat, {
-            blending: THREE.NormalBlending,
-            blendSrc: THREE.SrcAlphaFactor,
-            blendDst: THREE.OneMinusSrcAlphaFactor,
-            blendSrcAlpha: THREE.OneFactor,
-            blendDstAlpha: THREE.OneMinusSrcAlphaFactor,
-            blendEquation: THREE.AddEquation,
-          });
-          syncPeelUniforms(mat);
-        }
-        renderer.setRenderTarget(layerRT);
-        renderer.setClearColor(0x000000, 0);
-        renderer.clear();
-        renderer.render(scene, camera);
-
-        const peelWrote = viewZWroteGeometry(peelViewZRT, 12);
-        if (peel === 0 && !peelWrote) return abortToStandard();
-        if (peelWrote) anyLayerWritten = true;
-
-        blitMat.uniforms.tSrc.value = layerRT.texture;
-        renderer.setRenderTarget(accumRT);
-        renderer.autoClear = false;
-        renderer.render(blitScene, compositeCamera);
-        renderer.autoClear = true;
-
-        copyColorRT(peelViewZRT, prevViewZRT);
-        continue;
-      }
-
-      // Fast path: sparse probe + early-out + ping-pong (approx while moving).
-      const peelWrote = viewZWroteGeometry(peelViewZRT, peel === 0 ? 12 : 4);
-      if (!peelWrote) {
-        if (peel === 0) return abortToStandard();
-        break;
-      }
-      anyLayerWritten = true;
-
+      // Colour this layer only. No per-layer readPixels grid.
       peelStageUniform.value = 2;
       for (const { mat } of matBackup) {
         mat.depthWrite = false;
@@ -961,7 +1160,9 @@ export function createDepthPeelRenderer(renderer) {
       renderer.setRenderTarget(layerRT);
       renderer.setClearColor(0x000000, 0);
       renderer.clear();
-      renderer.render(scene, camera);
+      renderTransparent(scene, camera, transparent);
+
+      anyLayerWritten = true;
 
       blitMat.uniforms.tSrc.value = layerRT.texture;
       renderer.setRenderTarget(accumRT);
@@ -969,9 +1170,9 @@ export function createDepthPeelRenderer(renderer) {
       renderer.render(blitScene, compositeCamera);
       renderer.autoClear = true;
 
-      const swap = prevViewZRT;
+      const swapRT = prevViewZRT;
       prevViewZRT = peelViewZRT;
-      peelViewZRT = swap;
+      peelViewZRT = swapRT;
     }
 
     if (!anyLayerWritten) {
@@ -988,7 +1189,6 @@ export function createDepthPeelRenderer(renderer) {
       mat.colorWrite = snap.colorWrite !== false;
       mat.side = snap.side;
       mat.forceSinglePass = snap.forceSinglePass;
-      mat.needsUpdate = true;
     }
     for (const { mesh, visible } of visBackup) {
       mesh.visible = visible;
@@ -998,6 +1198,7 @@ export function createDepthPeelRenderer(renderer) {
     }
     restoreOnBeforeRender();
     setEdgeOverlaysVisible(root, true);
+    setPeelShaderActive(transMats, false);
 
     peelStageUniform.value = 0;
     scene.background = prevBg;
@@ -1007,11 +1208,23 @@ export function createDepthPeelRenderer(renderer) {
     renderer.autoClear = true;
     renderer.render(compositeScene, compositeCamera);
 
-    // CAD edges, then callouts on top (not baked into the peel composite).
+    // Settled frames refill depth and draw CAD edges. Fast frames skip that
+    // full-scene pass; the lines appear when the view settles.
     const notes = annotationNodes(scene);
     const prevNotes = notes.map((node) => node.visible);
     setNodesVisible(notes, false);
-    renderEdgeOverlayPass(renderer, scene, camera, root);
+    if (highQuality && root) {
+      const depthReady = renderMergedDepth(
+        camera,
+        root,
+        opaque,
+        transparent,
+        clipPlanes,
+      );
+      renderEdgeOverlayPass(renderer, scene, camera, root, {
+        reuseDepth: depthReady,
+      });
+    }
     notes.forEach((node, i) => {
       node.visible = prevNotes[i];
     });
@@ -1021,6 +1234,7 @@ export function createDepthPeelRenderer(renderer) {
   }
 
   function dispose() {
+    disposePeelBatches();
     disposeTargets();
     compositeMat.dispose();
     compositeQuad.geometry.dispose();
@@ -1029,8 +1243,7 @@ export function createDepthPeelRenderer(renderer) {
     clearViewZMat.dispose();
     clearViewZQuad.geometry.dispose();
     opaqueViewZMat.dispose();
-    copyMat.dispose();
-    copyQuad.geometry.dispose();
+    depthPrepassMat.dispose();
   }
 
   return {
