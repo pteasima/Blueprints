@@ -23,8 +23,9 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
   continue on that plane to the vertical soffit lať. A light-gauge angle
   backs that hidden joint and screws to the rost CD; that CD keeps the only
   Nonius for the corner. The rost hangs from it and braces to the eave wall.
-  Ducts hang on their own trapeze. Furniture and pozednice do not carry the
-  box — the plate only cleats the board edge.
+  The three ducts are already anchored to the wall and are not hung from this
+  box. Furniture and pozednice do not carry the box — the plate only cleats
+  the board edge.
 - Terrace eave (X=0): 100×100 columns in front of the glass at the pier centres
   stop one brick course below the ring beam; cabinet eave keeps a continuous wall
   with 300×300 columns standing in front of it on the room side (same Y grid).
@@ -973,7 +974,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     # Box: krokve → Nonius → front CD → drop through the lid → vertical latě
     # → bottom latě, wall angle as brace only.
     # Lid edge: continuous steel cleat on the plate cheek. Not a hang point.
-    # Ducts: trapeze from the CD, clear of the rost and the column heads.
+    # Ducts are already anchored to the wall. This box only keeps them clear.
     t = g.t_nh_face
     x_duct0, x_duct1 = g.soffit_duct_x_extent()
     lat_end = g.x_nh_inner + p.rost_d
@@ -1074,8 +1075,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     parts.extend(angle_parts)
 
     # Latový rost: verticals up to the lid (beside the ducts), underside latě
-    # braced to the wall. The rost CD is the only hang for the lattice. The
-    # wall CD carries the duct trapeze, not this frame.
+    # braced to the wall. The rost CD is the only hang. The ducts are not.
     fm = p.rost_d
     fw = p.rost_w
     half_w = fw * 0.5
@@ -1115,8 +1115,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
                     LABEL_SOFFIT_BATTENS,
                 )
             )
-            # Drop only at the rost CD. The rails over the pipes are not a hang
-            # point for the lattice; the joint angle lands on this same CD.
+            # Drop only at the rost CD. The joint angle lands on this same CD.
             z_drop1 = g.z_soffit_lid + p.sdk_t
             drop_h = z_drop1 - z_lat_top
             rost_x = g.x_sdk_break + p.cd_w * 0.5
@@ -1143,50 +1142,11 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
                 _box(x_wall - bt, ya, z_ang + bt, bt, yb - ya, leg - bt, LABEL_SOFFIT_NONIUS)
             )
 
-    # Ø160 spiral ducts along the soffit, 2-over-1. Bare metal, warm side of the lid.
+    # Ø160 spiral ducts along the soffit, 2-over-1. Already anchored to the wall.
     duct_parts: list = []
     r_duct = p.duct_od * 0.5
     for cx, cz in g.soffit_duct_centers():
         duct_parts.append(_cyl_y(cx, y_soff0, y_soff1, cz, r_duct, LABEL_SOFFIT_DUCT))
-
-    # Trapeze: flat bar under the lower duct, rods up to the CD in the side gaps.
-    # Room-side rod lands on the front CD; wall-side rod lands on the wall CD.
-    trapeze_parts: list = []
-    bar_t = p.soffit_drop_t
-    # Centre the 2 mm straps in the gaps beside the pack (not on the metal).
-    x_rod_room = 0.5 * (lat_end + x_duct0 - bar_t)
-    x_rod_wall = 0.5 * (x_duct1 + p.room_width - bar_t)
-    z_bar_top = g.z_soffit_duct_bot() - gap
-    if z_bar_top - bar_t > z_rail_top + gap and x_rod_wall - x_rod_room > r_duct:
-        z_rod_top = g.z_soffit_lid + p.sdk_t
-        rod_h = z_rod_top - (z_bar_top - bar_t)
-        for yc in soffit_ys:
-            ya = yc - p.soffit_drop_w * 0.5
-            yb = yc + p.soffit_drop_w * 0.5
-            trapeze_parts.append(
-                _box(
-                    x_rod_room,
-                    ya,
-                    z_bar_top - bar_t,
-                    (x_rod_wall + bar_t) - x_rod_room,
-                    yb - ya,
-                    bar_t,
-                    LABEL_SOFFIT_NONIUS,
-                )
-            )
-            if rod_h > gap:
-                for xr in (x_rod_room, x_rod_wall):
-                    trapeze_parts.append(
-                        _box(
-                            xr,
-                            ya,
-                            z_bar_top,
-                            bar_t,
-                            yb - ya,
-                            z_rod_top - z_bar_top,
-                            LABEL_SOFFIT_NONIUS,
-                        )
-                    )
 
     # Continuous angle on the plate cheek, holding the board edge. Not the hang.
     cleat_parts: list = []
@@ -1215,7 +1175,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         )
     )
 
-    service_steel = drop_parts + trapeze_parts + bracket_parts + cleat_parts
+    service_steel = drop_parts + bracket_parts + cleat_parts
     if frame_parts:
         if service_steel:
             frame_parts = [_cut_away(f, service_steel, LABEL_SOFFIT_BATTENS) for f in frame_parts]
@@ -1226,12 +1186,11 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         parts.append(flex_solid)
     parts.extend(drop_parts)
     parts.extend(bracket_parts)
-    parts.extend(trapeze_parts)
     parts.extend(cleat_parts)
     parts.extend(duct_parts)
 
-    # GKF last so hangers and trapeze rods can pierce the lid.
-    pierce = drop_parts + trapeze_parts
+    # GKF last so the rost drop can pierce the lid.
+    pierce = drop_parts
     if lid_solid is not None:
         if pierce:
             lid_solid = _cut_away(lid_solid, pierce, LABEL_SOFFIT_GKF)

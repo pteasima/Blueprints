@@ -137,14 +137,9 @@ def test_layout_ceiling_and_gable():
     assert abs(g.z_slope_plane_offset(g.x_gkf_kink, t0) - g.z_soffit_lid) < 1e-6
     assert g.z_soffit_lid - g.z_slope_plane_offset(g.x_sdk_break, t0) > 50.0
     cds = g.horiz_cd_x_stations()
-    # One hung rost CD. The gypsum butt is an angle on that rail, not a second channel.
-    assert abs(cds[0] - (g.x_nh_inner + p.cd_w * 0.5)) < 1e-6
-    assert len(cds) == 2
-    assert all(x - p.cd_w * 0.5 >= g.x_nh_inner - 1e-6 for x in cds)
-    # No CD over the duct bundle. The wall CD stays: the trapeze rod lands on it.
-    over = g.soffit_duct_centers()[2][0]
-    assert all(abs(x - over) > p.cd_w for x in cds)
-    assert cds[1] > g.soffit_duct_x_extent()[1] - p.cd_w
+    # One hung rost CD. The gypsum butt is an angle on that rail. The ducts are
+    # anchored to the wall, so there is no second rail and no trapeze.
+    assert cds == [g.x_nh_inner + p.cd_w * 0.5]
     slope_q, horiz_q, lip_q = g.soffit_joint_angle_quads()
     assert abs(max(pt[0] for pt in horiz_q) - (g.x_sdk_break - 1.0)) < 1e-6
     assert min(pt[0] for pt in horiz_q) > g.x_gkf_kink
@@ -375,10 +370,12 @@ def test_sikminy_and_soffit_stack_in_3d():
     slope_cds = [c for c in cds if c.bounding_box().size.Y > 1000.0]
     assert slope_cds
     assert all(c.bounding_box().size.X < p.cd_spacing for c in slope_cds)
-    # Horizontal CD + Nonius over the soffit bay (GKF lid → CD → rafters).
+    # One horizontal CD + Nonius over the soffit bay (GKF lid → rost CD → rafters).
+    rost_x = g.x_sdk_break + p.cd_w * 0.5
     horiz_cds = [c for c in slope_cds if c.bounding_box().min.X >= g.x_furn - 1.0]
-    assert len(horiz_cds) >= 2
-    assert all(c.bounding_box().size.Y > 1000.0 for c in horiz_cds)
+    assert len(horiz_cds) == 1
+    assert abs(horiz_cds[0].bounding_box().center().X - rost_x) < 2.0
+    assert horiz_cds[0].bounding_box().size.Y > 1000.0
     soffit_hangers = [
         c
         for c in zaves
@@ -386,6 +383,7 @@ def test_sikminy_and_soffit_stack_in_3d():
         and c.bounding_box().min.Z >= g.z_soffit_lid + p.sdk_t - 1.0
     ]
     assert len(soffit_hangers) >= 4
+    assert all(abs(c.bounding_box().center().X - rost_x) < p.cd_w for c in soffit_hangers)
     # Underside latě brace to the wall. No second horizontal row under the ducts.
     soffit_rost = [c for c in rost if c.bounding_box().min.X >= g.x_nh_inner - 1.0]
     assert len(soffit_rost) >= 15

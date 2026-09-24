@@ -24,15 +24,15 @@ World:
 
 Right eave soffit box: NH L, Flex cavity + latový rost (latě @625, Flex between).
 Three Ø160 spiral ducts (HRV supply, HRV extract, AC) sit in a 2-over-1 pack
-against the cabinet eave, below the lid and above the column heads. The GKF lid
+against the cabinet eave, below the lid and above the column heads. They are
+already anchored to the wall; this box does not hang them. The GKF lid
 is raised so its top is flush with the pozednice and its cut end meets the plate
 cheek — above the wall head, not on the plaster. Slope GKF stops where that
 board's underside meets the lid. The latě and Flex continue on the same plane
 to the vertical soffit lať. The board stays 12.5 mm to a square end. A
 light-gauge angle backs that hidden butt: a short leg on the slope board, a
-horizontal leg screwed to the
-rost CD. No second CD and no second Nonius. No vertical riser.
-Ducts hang from the CD on their own trapeze. Furniture and the wall plate do
+horizontal leg screwed to the rost CD. That CD is the only horizontal rail
+and the only Nonius row. No vertical riser. Furniture and the wall plate do
 not carry the box (the plate only fixes the board edge). CAD ids are
 zone-prefixed so the viewer can toggle / fade slopes, soffit, and bass traps
 independently.
@@ -698,9 +698,8 @@ class ObyvakLayout:
     def z_soffit_rail(self) -> float:
         """Top of the soffit Flex, clear of the lower duct.
 
-        There is no timber cap here. The quilt stops far enough under the
-        pipes for a 2 mm trapeze strap and a real gap, so it can be lifted
-        out without cutting.
+        There is no timber cap and no hanger under the pipes. The quilt stops
+        short of the metal so the wall-anchored ducts stay in an empty void.
         """
         return self.z_soffit_duct_bot() - self.p.duct_gap - 8.0
 
@@ -736,8 +735,9 @@ class ObyvakLayout:
     def soffit_flex_pts(self) -> list[tuple[float, float]]:
         """Flex in the acoustic cavity only, stopped short of the ducts.
 
-        The service void above this line stays empty so the pipes can be hung
-        and taken out without cutting the quilt. No timber lid on the Flex.
+        The service void above this line stays empty. The pipes are already
+        anchored to the wall and are not hung from this box. No timber lid
+        on the Flex.
         """
         p = self.p
         t = self.t_nh_face
@@ -830,29 +830,17 @@ class ObyvakLayout:
         ]
 
     def horiz_cd_x_stations(self) -> list[float]:
-        """CD centres on the raised GKF lid.
+        """CD centre on the raised GKF lid.
 
-        Two rails. The rost CD hangs the box and takes the joint angle. The
-        wall CD is the second leg of the duct trapeze: the plate cleat only
-        fixes the board edge and must not carry the pipes. The lid between
-        those two is about 260 mm, so there is no rail over the duct bundle.
+        One rail. The rost CD hangs the box and takes the joint angle. The
+        plate cleat fixes the board edge. The ducts are anchored to the wall,
+        so there is no second rail and no trapeze.
         """
         p = self.p
         front = self.x_sdk_break + p.cd_w * 0.5
-        # Wall-side rod sits in the plaster gap; this CD's attic edge lands on it.
-        x_hi = self.soffit_duct_x_extent()[1]
-        rod_wall = 0.5 * (x_hi + p.room_width)
-        wall = rod_wall + 2.0 - p.cd_w * 0.5
-        wall = min(wall, p.room_width - 2.0 - p.cd_w * 0.5)
-        out: list[float] = []
-        for x in (front, wall):
-            if out and x - out[-1] < p.cd_w + 5.0:
-                continue
-            # Stay inside the room. The board itself continues onto the plate.
-            if x + p.cd_w * 0.5 > p.room_width - 1.0:
-                continue
-            out.append(x)
-        return out
+        if front + p.cd_w * 0.5 > p.room_width - 1.0:
+            return []
+        return [front]
 
     def soffit_joint_angle_quads(self) -> list[list[tuple[float, float]]]:
         """Light-gauge angle on the hidden GKF butt, fixed to the rost CD.
