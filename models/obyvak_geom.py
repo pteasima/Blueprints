@@ -172,7 +172,12 @@ class ObyvakParams:
     finish_t: float = 2.0
     basic_t: float = 2.0
     naturheld_t: float = 60.0
-    flex_t: float = 60.0
+    # Flex cavity thickness (mm). Also the KVH batten depth: __post_init__
+    # copies this onto rost_d so the battens and the Flex move together.
+    # Default is 40, the depth actually drawn. The old default of 60 was never
+    # read, so a study that only edited flex_t did not move the room. Foil
+    # stays its own 1 mm seat and is not part of this thickness.
+    flex_t: float = 40.0
     foil_t: float = 1.0
     sdk_t: float = 12.5
     vent_t: float = 40.0
@@ -227,6 +232,7 @@ class ObyvakParams:
     glass_t: float = 20.0
     # Interior acoustic rost (latě holding NaturHeld) — // krokvím, ⊥ CD.
     rost_w: float = 60.0
+    # Overwritten from flex_t. Do not set this to change the cavity.
     rost_d: float = 40.0
     rost_spacing: float = 625.0
     rost_first_inset: float = 90.0
@@ -257,6 +263,8 @@ class ObyvakParams:
     ridge_runout: float = 200.0
 
     def __post_init__(self) -> None:
+        # One source of truth. flex_t is the Flex cavity and the batten depth.
+        object.__setattr__(self, "rost_d", self.flex_t)
         assert abs(self.bass_k_wool + self.bass_k_air + self.bass_k_gkb - self.predstena_kitchen) < 1e-9
         assert abs(self.bass_l_gkb + self.bass_l_air + self.bass_l_wool - self.predstena_living) < 1e-9
 
@@ -273,8 +281,9 @@ class ObyvakLayout:
 
         # Room-facing acoustic face (Finish + Basic + NaturHeld 140).
         self.t_nh_face = p.finish_t + p.basic_t + p.naturheld_t
-        # Flex fills the 40 mm lať. Foil is the 1 mm seat under GKF — not a second Flex skin.
-        self.t_flex_pack = p.rost_d + p.foil_t
+        # Flex cavity is flex_t, which __post_init__ has copied onto rost_d.
+        # Foil is the 1 mm seat under GKF — not a second Flex skin.
+        self.t_flex_pack = p.flex_t + p.foil_t
         self.t_soft_below_sdk = self.t_nh_face + self.t_flex_pack + p.sdk_t
         self.t_left = p.plenum_t + p.cd_t + self.t_soft_below_sdk
         # Right-side hangers are longer: slope continues to X_FURN then drops.
@@ -466,7 +475,7 @@ class ObyvakLayout:
         return inner + list(reversed(outer))
 
     def sikmina_flex_pts(self) -> list[tuple[float, float]]:
-        """Flex 50 between the latě, flush with the 40 mm lať. No quilt over them.
+        """Flex 50 between the latě, flush with the lať (depth flex_t). No quilt over them.
 
         Runs to the vertical soffit lať so the bay above the bulkhead is filled.
         """
