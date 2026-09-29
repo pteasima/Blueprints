@@ -25,7 +25,7 @@ still area-weights the whole underside with the slope's open fraction, which
 overstates the batten blockage. Soffit α therefore moves with naturheld_t
 and not with flex_t. Slope α moves with both.
 
-Bass traps keep their own wool / air / gypsum thicknesses and are not swept.
+Bass traps keep their own wool / air / gypsum thicknesses and are not swept. Wool resistivity is the Flex table value for that thickness (the drawing names no product).
 Walls, floor, and glazing are inventoried from the layout and not given an
 absorption model (α = 0 in the cheap Sabine / Eyring check, so that check
 overestimates reverberation time).
@@ -45,12 +45,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from blueprints.acoustics.materials import (
-    BASS_WOOL_SIGMA_NOTE,
-    BASS_WOOL_SIGMA_PA_S_M2,
     DECLARED_MINIMUM_CAVEAT,
     NATURHELD_140,
     TRANSPARENT_FACING_CAVEAT,
     WALL_140_ANALOGUE_CAVEAT,
+    bass_wool_sigma,
     flex_table_sigma_pa_s_m2,
     foil_areal_mass_kg_m2,
     gypsum_areal_mass_kg_m2,
@@ -199,7 +198,12 @@ def soffit_open_layers(params, layout, sigma_mode: str) -> list[Layer]:
 
 
 def bass_layers(wool_mm: float, air_mm: float, gkb_mm: float, name: str) -> list[Layer]:
-    """Room → GKB → air → wool → rigid wall. Thicknesses stay on ObyvakParams."""
+    """Room → GKB → air → wool → rigid wall. Thicknesses stay on ObyvakParams.
+
+    The wool is not a named product. Resistivity is the Flex table value for
+    this thickness (see ``bass_wool_sigma``), an assumption, not swept.
+    """
+    sigma, note = bass_wool_sigma(wool_mm)
     return [
         Layer(
             f"{name} GKB",
@@ -213,8 +217,8 @@ def bass_layers(wool_mm: float, air_mm: float, gkb_mm: float, name: str) -> list
             f"{name} mineral wool",
             "porous",
             wool_mm / 1000.0,
-            BASS_WOOL_SIGMA_PA_S_M2,
-            note=BASS_WOOL_SIGMA_NOTE,
+            sigma,
+            note=note,
         ),
     ]
 
@@ -308,14 +312,14 @@ def surface_inventory(layout) -> list[Surface]:
             f"MW {params.bass_k_wool:.0f} + air {params.bass_k_air:.0f} + GKB {params.bass_k_gkb:.0f}",
             bass_one,
             False,
-            "fixed build-up; wool resistivity is a TYPICAL placeholder",
+            "fixed build-up; wool resistivity is the Flex table value, an assumption",
         ),
         Surface(
             "bass_living",
             f"GKB {params.bass_l_gkb:.0f} + air {params.bass_l_air:.0f} + MW {params.bass_l_wool:.0f}",
             bass_one,
             False,
-            "fixed build-up, mirrored; same placeholder wool resistivity",
+            "fixed build-up, mirrored; same Flex-table wool assumption",
         ),
         Surface("floor", f"floor slab {params.floor_t:.0f} mm", floor, False, "absorption not modeled"),
         Surface("glazing", f"glass {params.glass_t:.0f} mm", glazing, False, "absorption not modeled"),

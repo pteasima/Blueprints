@@ -34,12 +34,18 @@ PE_FOIL_DENSITY_KG_M3 = 950.0
 # TYPICAL gypsum board, about 9 kg/m² at 12.5 mm (700–800 kg/m³).
 GYPSUM_AREAL_MASS_AT_12_5_KG_M2 = 9.0
 
-# Gable mineral wool has no product sheet in this model. Placeholder so the
-# same transfer matrix can inventory the traps. Not swept, not Naturheld.
-BASS_WOOL_SIGMA_PA_S_M2 = 10_000.0
-BASS_WOOL_SIGMA_NOTE = (
-    "TYPICAL placeholder 10 kPa·s/m² for unspecified gable mineral wool; "
-    "not a product sheet, not part of the thickness or resistivity study"
+# Drawing label is bass_mineral_wool / minerální vlna, not a product card.
+# The 10 kPa·s/m² placeholder is not used. See bass_wool_sigma().
+
+# Painted plaster, hard floor, glazing, cabinet fronts, trap bottoms.
+# One typical mid-band value, identical in every ceiling case. Not a
+# measurement of this room. Without it, specular rays that never meet the
+# ceiling do not decay and a T20 is just the bounce cutoff.
+TYPICAL_UNTREATED_ALPHA = 0.03
+TYPICAL_UNTREATED_NOTE = (
+    "ASSUMPTION: 0.03, a typical mid-band figure for painted plaster, "
+    "single glazing, a hard floor and smooth cabinet fronts. "
+    "Frequency-independent. Not measured in this room. Same in every case."
 )
 
 # Assumed solid density behind the unused porosity estimate. Not a sheet value.
@@ -265,6 +271,24 @@ def flex_table_sigma_pa_s_m2(thickness_mm: float) -> tuple[float, str]:
         "Flex table has no value between 60 and 80 mm; using the bis-60 mm "
         "figure 5 kPa·s/m² and saying so (not AFr10)",
     )
+
+
+
+def bass_wool_sigma(thickness_mm: float) -> tuple[float, str]:
+    """Flow resistivity for gable wool that the drawing does not name.
+
+    The solid is labelled bass_mineral_wool, not Naturheld and not a listed
+    product. The Flex table value for that thickness is used, and the note
+    says it is an assumption. Callers must keep this fixed across ceiling cases.
+    """
+    sigma, table_note = flex_table_sigma_pa_s_m2(thickness_mm)
+    note = (
+        "ASSUMPTION: drawing label bass_mineral_wool (minerální vlna), no product "
+        f"card. Flex table value for {thickness_mm:.0f} mm is used "
+        f"({sigma / KPA_S_M2_TO_PA_S_M2:.0f} kPa·s/m²), same in every ceiling case. "
+        + table_note
+    )
+    return sigma, note
 
 
 @dataclass(frozen=True)

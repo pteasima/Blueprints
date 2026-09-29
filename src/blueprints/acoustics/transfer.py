@@ -91,9 +91,11 @@ def _layer_matrix(k: complex, zc: complex, thickness_m: float) -> Matrix:
 def layer_matrix(layer: Layer, freq_hz: float) -> Matrix | None:
     """Transfer matrix from the back face of the layer to the room face.
 
-    ``None`` for a named transparent layer (identity, coat omitted).
+    ``None`` is the identity: a named transparent coat, or a layer whose
+    thickness is zero (removed board or removed Flex). Zero thickness is a
+    real path, not an error.
     """
-    if layer.kind == "transparent":
+    if layer.kind == "transparent" or layer.thickness_m <= 0.0:
         return None
     if layer.kind == "porous":
         if layer.sigma_pa_s_m2 is None:
@@ -163,3 +165,104 @@ def area_weighted_absorption(alpha_open: float, open_fraction: float) -> float:
     if not 0.0 <= open_fraction <= 1.0:
         raise ValueError(f"open fraction out of range: {open_fraction}")
     return open_fraction * alpha_open
+
+
+def _kz(k: complex, kx: float) -> complex:
+    """Normal wavenumber. e^{+jωt}: Im(kz) <= 0 so e^{-j kz z} decays for z > 0."""
+    kz = cmath.sqrt(k * k - (kx * kx))
+    if kz.imag > 0.0:
+        kz = -kz
+    elif abs(kz.imag) <= 1e-15 and kz.real < 0.0:
+        kz = -kz
+    return kz
+
+
+def oblique_impedance(layers: list[Layer], freq_hz: float, theta_rad: float) -> complex:
+    """Extended-reaction input impedance at incidence angle theta from the normal.
+
+    Trace wavenumber kx = k0 sin(theta) is the same in every layer. Each layer
+    is propagated with its own normal wavenumber kz = sqrt(k^2 - kx^2) and the
+    normal specific impedance Zn = Zc k / kz. Not a local-reaction model.
+    """
+    if not 0.0 <= theta_rad < math.pi / 2.0:
+        raise ValueError("theta must be in [0, pi/2)")
+    k0 = 2.0 * math.pi * freq_hz / AIR_SPEED_M_S
+    kx = k0 * math.sin(theta_rad)
+    total: Matrix = ((1.0 + 0j, 0j), (0j, 1.0 + 0j))
+    any_layer = False
+    for layer in layers:
+        matrix = _layer_matrix_oblique(layer, freq_hz, kx)
+        if matrix is None:
+            continue
+        total = _matmul(total, matrix)
+        any_layer = True
+    if not any_layer:
+        raise ValueError("stack has no acoustic thickness")
+    velocity = total[1][0]
+    if velocity == 0:
+        return complex(math.inf)
+    return total[0][0] / velocity
+
+
+def _layer_matrix_oblique(layer: Layer, freq_hz: float, kx: float) -> Matrix | None:
+    if layer.kind == "transparent" or layer.thickness_m <= 0.0:
+        return None
+    if layer.kind == "limp":
+        # A thin sheet's mass law does not depend on angle. Angle enters through
+        # the air and the porous layers on either side.
+        if layer.areal_mass_kg_m2 is None:
+            raise ValueError(f"{layer.name} has no areal mass")
+        omega = 2.0 * math.pi * freq_hz
+        return ((1.0 + 0j, 1j * omega * layer.areal_mass_kg_m2), (0j, 1.0 + 0j))
+    if layer.kind == "air":
+        k = 2.0 * math.pi * freq_hz / AIR_SPEED_M_S
+        zc = AIR_DENSITY_KG_M3 * AIR_SPEED_M_S
+    elif layer.kind == "porous":
+        if layer.sigma_pa_s_m2 is None:
+            raise ValueError(f"{layer.name} has no flow resistivity")
+        zc, k = miki_zc_k(freq_hz, layer.sigma_pa_s_m2)
+    else:
+        raise ValueError(f"unknown layer kind {layer.kind}")
+    kz = _kz(k, kx)
+    if abs(kz) < 1e-12:
+        return None
+    zn = zc * k / kz
+    return _layer_matrix(kz, zn, layer.thickness_m)
+
+
+def oblique_absorption(layers: list[Layer], freq_hz: float, theta_rad: float, open_fraction: float) -> float:
+    """α(θ) = 1 − |R|², then area-weighted. Timber battens contribute α = 0.
+
+    The incident normal impedance is ρc / cos(θ). Theta is from the normal.
+    """
+    impedance = oblique_impedance(layers, freq_hz, theta_rad)
+    k0 = 2.0 * math.pi * freq_hz / AIR_SPEED_M_S
+    kz0 = _kz(k0, k0 * math.sin(theta_rad))
+    z0n = (AIR_DENSITY_KG_M3 * AIR_SPEED_M_S) * k0 / kz0
+    reflection = (impedance - z0n) / (impedance + z0n)
+    alpha = 1.0 - abs(reflection) ** 2
+    if -1e-9 <= alpha < 0.0:
+        alpha = 0.0
+    elif 1.0 < alpha <= 1.0 + 1e-9:
+        alpha = 1.0
+    return area_weighted_absorption(alpha, open_fraction)
+
+
+def paris_absorption(
+    layers: list[Layer],
+    freq_hz: float,
+    open_fraction: float,
+    n: int = 90,
+) -> float:
+    """Statistical (Paris) coefficient, 2 ∫ α(θ) cosθ sinθ dθ from 0 to π/2.
+
+    Stored for comparison. The ray tracer does not use this average: a hit
+    looks up α at the arrival angle. Quadrature in u = sin²θ, so the weight
+    is flat and grazing is the last sample, not a singularity we integrate through.
+    """
+    total = 0.0
+    for i in range(n):
+        u = (i + 0.5) / n
+        theta = math.asin(math.sqrt(u))
+        total += oblique_absorption(layers, freq_hz, theta, open_fraction)
+    return total / n

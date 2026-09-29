@@ -188,3 +188,122 @@ def test_absorption_locks_and_thickness_moves_them():
     assert flex.flex_sigma_pa_s_m2 == 5_000.0
     # 80 mm of Flex is not a grid point; the table value at that thickness is 6.
     assert flex_table_sigma_pa_s_m2(80.0)[0] == 6_000.0
+
+
+def test_oblique_matches_normal_at_zero_and_locks_two_angles():
+    """Regression locks. Not laboratory data."""
+    import math
+
+    from blueprints.acoustics.transfer import oblique_absorption
+
+    params = ObyvakParams()
+    layers = slope_open_layers(params, "declared_minimum")
+    fraction = open_fraction_from_params(params)
+    alpha_0 = oblique_absorption(layers, 1000.0, 0.0, fraction)
+    assert abs(alpha_0 - AS_BUILT_SLOPE[1000]) < 1e-8
+    alpha_45 = oblique_absorption(layers, 1000.0, math.radians(45.0), fraction)
+    alpha_60 = oblique_absorption(layers, 1000.0, math.radians(60.0), fraction)
+    assert abs(alpha_45 - 0.75159467) < 1e-8
+    assert abs(alpha_60 - 0.80886884) < 1e-8
+
+
+def test_zero_thickness_layer_is_identity_not_a_crash():
+    import math
+
+    from blueprints.acoustics.transfer import Layer, oblique_absorption
+
+    params = ObyvakParams()
+    full = slope_open_layers(params, "declared_minimum")
+    removed = []
+    for layer in full:
+        if layer.name == "naturheld FLEX":
+            removed.append(Layer(layer.name, "porous", 0.0, layer.sigma_pa_s_m2, note="removed"))
+        else:
+            removed.append(layer)
+    alpha = oblique_absorption(removed, 1000.0, math.radians(45.0), 1.0)
+    assert 0.0 < alpha < 1.0
+    # No acoustic thickness at all is still an error, not a silent α.
+    import pytest
+
+    with pytest.raises(ValueError):
+        oblique_absorption([Layer("gone", "porous", 0.0, 5000.0)], 1000.0, 0.0, 1.0)
+
+
+def test_bass_wool_uses_flex_table_not_a_placeholder():
+    from blueprints.acoustics.materials import bass_wool_sigma
+    from blueprints.acoustics.study import bass_layers
+
+    sigma_80, note_80 = bass_wool_sigma(80.0)
+    sigma_300, note_300 = bass_wool_sigma(300.0)
+    assert sigma_80 == 6_000.0
+    assert sigma_300 == 6_000.0
+    assert "ASSUMPTION" in note_80 and "ASSUMPTION" in note_300
+    kitchen = bass_layers(80.0, 97.5, 12.5, "kitchen bass")
+    living = bass_layers(300.0, 137.5, 12.5, "living bass")
+    assert kitchen[-1].sigma_pa_s_m2 == 6_000.0
+    assert living[-1].sigma_pa_s_m2 == 6_000.0
+    assert kitchen[-1].sigma_pa_s_m2 != 10_000.0
+
+
+def test_tiny_ray_decay_is_deterministic():
+    """Few rays, fixed seed. Checksum is this implementation, not a measurement."""
+    import numpy as np
+
+    from blueprints.acoustics.rays import prepare_grids, scattering_for, trace_decay
+    from blueprints.acoustics.shell import build_shell
+    from blueprints.acoustics.study import bass_layers, soffit_open_layers
+
+    params = ObyvakParams()
+    layout = build_layout(params)
+    shell = build_shell(layout)
+    names = {name: i for i, name in enumerate(shell.surface_names)}
+    fraction = open_fraction_from_params(params)
+    layers = slope_open_layers(params, "declared_minimum")
+    grids = prepare_grids(
+        {
+            names["slope"]: (layers, fraction),
+            names["soffit"]: (soffit_open_layers(params, layout, "declared_minimum"), fraction),
+            names["bass_kitchen"]: (bass_layers(params.bass_k_wool, params.bass_k_air, params.bass_k_gkb, "k"), 1.0),
+            names["bass_living"]: (bass_layers(params.bass_l_wool, params.bass_l_air, params.bass_l_gkb, "l"), 1.0),
+        },
+        1000.0,
+    )
+    scatter = scattering_for(shell.surface_names, 1000.0, params.rost_spacing / 1000.0, True, True)
+    result = trace_decay(
+        shell,
+        np.array([2.2, 5.5, 1.2]),
+        np.array([3.0, 6.6, 1.2]),
+        alpha_grids=grids,
+        scatter=scatter,
+        freq_hz=1000,
+        miki_extrapolated=False,
+        n_rays=24,
+        max_bounces=12,
+        seed=11,
+        residual_alpha=0.03,
+    )
+    again = trace_decay(
+        shell,
+        np.array([2.2, 5.5, 1.2]),
+        np.array([3.0, 6.6, 1.2]),
+        alpha_grids=grids,
+        scatter=scatter,
+        freq_hz=1000,
+        miki_extrapolated=False,
+        n_rays=24,
+        max_bounces=12,
+        seed=11,
+        residual_alpha=0.03,
+    )
+    assert result.energy_checksum == again.energy_checksum
+    assert result.received_hits == again.received_hits
+    assert abs(result.energy_checksum - TINY_RAY_CHECKSUM) < 1e-6
+    assert result.received_hits == TINY_RAY_HITS
+    assert result.t20_s is not None
+    assert abs(result.t20_s - TINY_RAY_T20) < 1e-6
+
+
+# Filled from the 24-ray seed-11 trace. Not a measured reverberation time.
+TINY_RAY_CHECKSUM = 4.2843820287058465
+TINY_RAY_HITS = 6
+TINY_RAY_T20 = 0.3012243608952153
