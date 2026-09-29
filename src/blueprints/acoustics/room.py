@@ -262,7 +262,51 @@ def _sabine_eyring(volume: float, areas: dict[str, float], paris: dict[str, floa
     return sabine, eyring
 
 
-def run(n_rays: int = N_RAYS) -> list[dict]:
+def board_options() -> list[Option]:
+    """140 at 60 mm or thicker. Clearance is not a constraint.
+
+    Below 60 mm of 140 is structurally out and is not here. Flex, when it
+    is present, stays at the drawn 40 mm batten. A 40 mm versus 60 mm Flex
+    check on the 60 mm board (previous run) did not move EDT.
+    """
+    out: list[Option] = []
+    for nh in (60.0, 80.0, 100.0, 120.0):
+        out.append(
+            Option(
+                f"nh{int(nh)}_only",
+                f"naturheld 140 {int(nh)} mm, no Flex, no battens",
+                nh,
+                0.0,
+                False,
+                True,
+                "declared_minimum",
+                True,
+                "board, foil and gypsum; gypsum stays on the CD grid. "
+                "Ceiling may move inward; duct clearance is not a constraint.",
+            )
+        )
+        out.append(
+            Option(
+                f"nh{int(nh)}_flex40",
+                f"naturheld 140 {int(nh)} mm plus Flex 40 mm and battens",
+                nh,
+                40.0,
+                True,
+                True,
+                "declared_minimum",
+                True,
+                "drawn Flex thickness. Ceiling may move inward; "
+                "duct clearance is not a constraint.",
+            )
+        )
+    return out
+
+
+def run(
+    n_rays: int = N_RAYS,
+    chosen: list[Option] | None = None,
+    bands: tuple[int, ...] = BANDS_HZ,
+) -> list[dict]:
     _ensure_models()
     from obyvak_geom import ObyvakParams, build_layout
 
@@ -283,7 +327,7 @@ def run(n_rays: int = N_RAYS) -> list[dict]:
     assert l_sigma == living[-1].sigma_pa_s_m2
     spacing_m = drawn.rost_spacing / 1000.0
     rows: list[dict] = []
-    for option in options():
+    for option in (options() if chosen is None else chosen):
         probe = build_layout(
             ObyvakParams(naturheld_t=option.naturheld_mm, flex_t=max(option.flex_mm, 0.0))
         )
@@ -291,7 +335,7 @@ def run(n_rays: int = N_RAYS) -> list[dict]:
         buildable = clearance >= 0.0 if option.buildable is None else option.buildable
         layers = slope_layers(option, drawn)
         open_fraction = phi if option.battens else 1.0
-        for freq in BANDS_HZ:
+        for freq in bands:
             slope_flag = _out_of_range(layers, freq)
             soffit_flag = _out_of_range(soffit, freq)
             bass_flag = _out_of_range(kitchen, freq) + _out_of_range(living, freq)
@@ -380,10 +424,17 @@ def write_csv(rows: list[dict], path: Path) -> None:
         writer.writerows(rows)
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
+    import sys as _sys
+
+    argv = list(_sys.argv[1:] if argv is None else argv)
     root = Path(__file__).resolve().parents[3]
-    out = root / "exports" / "acoustics" / "obyvak_room.csv"
-    rows = run()
+    if argv[:1] == ["board"]:
+        out = root / "exports" / "acoustics" / "obyvak_room_board.csv"
+        rows = run(chosen=board_options(), bands=(500, 1000))
+    else:
+        out = root / "exports" / "acoustics" / "obyvak_room.csv"
+        rows = run()
     write_csv(rows, out)
     print(f"wrote {out} ({len(rows)} rows)")
     print(TYPICAL_UNTREATED_NOTE)
