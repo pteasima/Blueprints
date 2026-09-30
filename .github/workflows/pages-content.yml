@@ -1,15 +1,16 @@
 # Update the pages-site content branch and deploy GitHub Pages:
 # - push to main → site root (keeps pr-preview/)
-# - PR open/sync → pr-preview/pr-<N>/
-# - PR closed (merge or close) → delete pr-preview/pr-<N>/
+# - push to any other branch → pr-preview/pr-<N>/ for the open PR
+# - PR open/sync/close → same preview publish, or delete on close
 #
-# Deploy runs in this workflow (GITHUB_TOKEN cannot workflow_dispatch
-# pages.yml from pull_request events).
+# Feature-branch pushes are the backup publish. Cursor app commits sometimes
+# never emit pull_request, and the app token cannot workflow_dispatch (403).
+# Deploy runs in this workflow.
 name: pages-content
 
 on:
   push:
-    branches: [main]
+    branches-ignore: [pages-site]
     paths:
       - "docs/**"
       - "src/blueprints/viewer/**"
@@ -47,6 +48,8 @@ concurrency:
 
 jobs:
   update:
+    outputs:
+      mode: ${{ steps.merge.outputs.mode }}
     runs-on: ubuntu-latest
     # Same-repo PRs only (fork tokens cannot push pages-site).
     if: >
@@ -82,9 +85,48 @@ jobs:
           EVENT_ACTION: ${{ github.event.action || '' }}
           PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number || '' }}
           DISPATCH_ACTION: ${{ inputs.action || 'preview' }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           chmod +x scripts/*.sh
+
+          # A feature-branch push publishes that branch's open PR. Skip when
+          # pull_request will publish the same commit, and never fall through
+          # to the production root.
+          if [[ "$EVENT_NAME" == "push" && "$GITHUB_REF" != "refs/heads/main" ]]; then
+            PR_NUMBER="$(
+              gh pr list \
+                --repo "$GITHUB_REPOSITORY" \
+                --head "$GITHUB_REF_NAME" \
+                --state open \
+                --json number \
+                --jq '.[0].number // empty'
+            )"
+            if [[ -z "${PR_NUMBER}" ]]; then
+              echo "No open PR for ${GITHUB_REF_NAME}; not publishing"
+              echo "mode=skip" >> "$GITHUB_OUTPUT"
+              echo "pr=" >> "$GITHUB_OUTPUT"
+              echo "message=Skip pages-site (no open PR)" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep 10
+            pr_runs="$(
+              gh run list \
+                --repo "$GITHUB_REPOSITORY" \
+                --commit "$GITHUB_SHA" \
+                --workflow pages-content.yml \
+                --event pull_request \
+                --json databaseId \
+                --jq 'length'
+            )"
+            if [[ "${pr_runs}" != "0" ]]; then
+              echo "pull_request run already publishing ${GITHUB_SHA}"
+              echo "mode=skip" >> "$GITHUB_OUTPUT"
+              echo "pr=${PR_NUMBER}" >> "$GITHUB_OUTPUT"
+              echo "message=Skip pages-site (pull_request run exists)" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
 
           seed_root_from_main_if_needed() {
             if [[ -f pages-site/index.html ]]; then
@@ -122,6 +164,12 @@ jobs:
             fi
             echo "pr=$PR_NUMBER" >> "$GITHUB_OUTPUT"
             echo "message=Manual pages-site update pr-${PR_NUMBER}" >> "$GITHUB_OUTPUT"
+          elif [[ "$EVENT_NAME" == "push" && "$GITHUB_REF" != "refs/heads/main" ]]; then
+            seed_root_from_main_if_needed
+            python scripts/merge_pages_site.py preview docs pages-site "$PR_NUMBER"
+            echo "mode=preview" >> "$GITHUB_OUTPUT"
+            echo "pr=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+            echo "message=Publish PR preview pr-${PR_NUMBER}" >> "$GITHUB_OUTPUT"
           else
             python scripts/merge_pages_site.py root docs pages-site
             echo "mode=root" >> "$GITHUB_OUTPUT"
@@ -130,9 +178,11 @@ jobs:
           fi
 
       - name: Push pages-site
+        if: steps.merge.outputs.mode != 'skip'
         run: bash scripts/push_pages_site.sh pages-site "${{ steps.merge.outputs.message }}"
 
       - name: Stage deploy tree
+        if: steps.merge.outputs.mode != 'skip'
         run: |
           set -euo pipefail
           rm -rf _deploy
@@ -141,15 +191,17 @@ jobs:
           tar -C pages-site --exclude .git -cf - . | tar -C _deploy -xf -
 
       - uses: actions/configure-pages@v5
+        if: steps.merge.outputs.mode != 'skip'
         with:
           enablement: true
 
       - uses: actions/upload-pages-artifact@v3
+        if: steps.merge.outputs.mode != 'skip'
         with:
           path: _deploy
 
       - name: Comment on PR
-        if: steps.merge.outputs.pr != ''
+        if: steps.merge.outputs.pr != '' && steps.merge.outputs.mode != 'skip'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
@@ -161,6 +213,7 @@ jobs:
 
   deploy:
     needs: update
+    if: needs.update.outputs.mode != 'skip'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
