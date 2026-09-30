@@ -20,8 +20,6 @@
     "id": "slopes",
     "children": [
       "slope_naturheld_140",
-      "slope_naturheld_flex_50",
-      "slope_battens",
       "slope_gkf",
       "slope_cd",
       "slope_direct_hanger",
@@ -32,7 +30,7 @@
     "id": "soffit",
     "children": [
       "soffit_naturheld_140",
-      "soffit_naturheld_flex_50",
+      "soffit_mineral_wool",
       "soffit_battens",
       "soffit_gkf",
       "soffit_cd",

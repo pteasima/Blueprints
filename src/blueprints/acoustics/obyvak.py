@@ -1,15 +1,17 @@
 """Absorption of the obývák stacks, and the room decay those coefficients imply.
 
 The soffit outline, roof pitch, and both predstěna depths stay fixed. What
-this varies is the wool/air split behind each gable GKB and how much of the
-40 mm slope lať is filled with NaturHeld Flex.
+this varies is the wool/air split behind each gable GKB. The slopes are the
+as-built 80 mm NaturHeld 140 board on the GKF, with no Flex and no slope
+latě. The soffit cavity is mineral wool behind a 40 mm NaturHeld 140 face.
 
 Both gables follow the solids in ``models/obyvak.py``: wall, mineral wool,
-empty gap, 12.5 mm GKB toward the room. The slope build-up is StoSilent on
-NaturHeld 140, then Flex and/or air in the lať, stopped on the GKF as a
-heavy (rigid) backing. Hanger compliance of that GKF is not in this model.
-The GKB itself is a limp mass; stud stiffness is omitted, so real trap
-resonances sit somewhat higher than the frequencies reported here.
+empty gap, 12.5 mm GKB toward the room. On the kitchen gable the geometric
+gap includes the front CD: 27 mm of profile plus 20 mm clear of that CD, so
+the leaf can move. The slope build-up is StoSilent on NaturHeld 140, stopped
+on the GKF as a heavy (rigid) backing. Hanger compliance of that GKF is not
+in this model. The GKB itself is a limp mass; stud stiffness is omitted, so
+real trap resonances sit somewhat higher than the frequencies reported here.
 
 Flow resistivities are catalogue-order assumptions, not measured samples.
 A half/double resistivity case is part of the ranking so a wrong number
@@ -38,13 +40,12 @@ THIRDS: tuple[float, ...] = (
 )
 BASS_BANDS: tuple[float, ...] = (31.5, 40, 50, 63, 80, 100, 125)
 WOOL_FRACTIONS: tuple[float, ...] = (0.0, 0.25, 0.5, 0.75, 1.0)
-FLEX_FRACTIONS: tuple[float, ...] = (0.0, 0.25, 0.5, 0.75, 1.0)
 
 # Nominal gypsum density. 12.5 mm → 10 kg/m².
 GKB_DENSITY = 800.0
 
-# Fixed finishes. Absolute T20 moves if these are wrong; the wool and Flex
-# rankings below are differences against the same finishes.
+# Fixed finishes. Absolute T20 moves if these are wrong; the wool rankings
+# below are differences against the same finishes.
 FLOOR_ALPHA = 0.05
 PLASTER_ALPHA = 0.04
 GLASS_ALPHA = 0.03
@@ -97,7 +98,9 @@ class Geometry:
     kitchen_wool_fraction: float
     living_wool_fraction: float
     gkb_mass: float
-    rost_depth: float
+    soffit_wool_depth: float
+    soffit_air_depth: float
+    soffit_board: float
     length: float
     width: float
 
@@ -165,13 +168,15 @@ def room_geometry(params=None) -> Geometry:
         furniture=furniture,
         kitchen_trap=trap,
         living_trap=trap,
-        timber_fraction=p.rost_w / p.rost_spacing,
+        timber_fraction=0.0,
         kitchen_cavity=kitchen_cavity,
         living_cavity=living_cavity,
         kitchen_wool_fraction=p.bass_k_wool * mm / kitchen_cavity,
         living_wool_fraction=p.bass_l_wool * mm / living_cavity,
         gkb_mass=GKB_DENSITY * p.bass_k_gkb * mm,
-        rost_depth=p.rost_d * mm,
+        soffit_wool_depth=max(0.0, (g.z_soffit_rail() - (g.z_nabeh_bot + g.t_soffit_face)) * mm),
+        soffit_air_depth=max(0.0, (g.z_soffit_lid - g.z_soffit_rail()) * mm),
+        soffit_board=p.soffit_naturheld_t * mm,
         length=p.room_length * mm,
         width=p.room_width * mm,
     )
@@ -218,41 +223,36 @@ def _split(cavity_m: float, wool_fraction: float) -> tuple[float, float]:
     return wool, cavity_m - wool
 
 
-def slope_stacks(
-    flex_m: float,
-    rost_m: float,
-    res: Resistivity,
+def slope_stack(board_m: float, plaster_m: float, res: Resistivity) -> tuple[Layer, ...]:
+    """StoSilent + NaturHeld 140 on the rigid GKF. No Flex, no timber fraction."""
+    return (
+        ("porous", plaster_m, res.stosilent),
+        ("porous", board_m, res.wood_fibre_board),
+    )
+
+
+def soffit_stack(
     board_m: float,
     plaster_m: float,
-) -> tuple[tuple[Layer, ...], tuple[Layer, ...]]:
-    """Bay (Flex/air) and lať (timber, rigid behind the board). Room → backing."""
-    face: list[Layer] = [
+    wool_m: float,
+    air_m: float,
+    res: Resistivity,
+) -> tuple[Layer, ...]:
+    """Soffit face, then mineral wool up to the duct void, then that air, then the lid."""
+    layers: list[Layer] = [
         ("porous", plaster_m, res.stosilent),
         ("porous", board_m, res.wood_fibre_board),
     ]
-    air_m = max(0.0, rost_m - flex_m)
-    bay = list(face)
-    if flex_m > 1e-6:
-        bay.append(("porous", flex_m, res.wood_fibre_flex))
+    if wool_m > 1e-6:
+        layers.append(("porous", wool_m, res.mineral_wool))
     if air_m > 1e-6:
-        bay.append(("air", air_m, 0.0))
-    return tuple(bay), tuple(face)
+        layers.append(("air", air_m, 0.0))
+    return tuple(layers)
 
 
 def _face_thicknesses(params) -> tuple[float, float]:
     mm = 1.0 / 1000.0
     return (params.finish_t + params.basic_t) * mm, params.naturheld_t * mm
-
-
-def mixed_field_alpha(
-    bay: tuple[Layer, ...],
-    lat: tuple[Layer, ...],
-    timber_fraction: float,
-    freq: float,
-) -> float:
-    bay_a = field_absorption(bay, freq)
-    lat_a = field_absorption(lat, freq)
-    return (1.0 - timber_fraction) * bay_a + timber_fraction * lat_a
 
 
 def eyring_t(
@@ -279,11 +279,11 @@ def _band_alphas(
     board_m: float,
     kitchen_fraction: float,
     living_fraction: float,
-    flex_fraction: float,
 ) -> dict[float, dict[str, float]]:
-    flex_m = flex_fraction * geom.rost_depth
-    soffit_bay, soffit_lat = slope_stacks(geom.rost_depth, geom.rost_depth, res, board_m, plaster_m)
-    bay, lat = slope_stacks(flex_m, geom.rost_depth, res, board_m, plaster_m)
+    slopes = slope_stack(board_m, plaster_m, res)
+    soffit = soffit_stack(
+        geom.soffit_board, plaster_m, geom.soffit_wool_depth, geom.soffit_air_depth, res
+    )
     k_wool, k_air = _split(geom.kitchen_cavity, kitchen_fraction)
     l_wool, l_air = _split(geom.living_cavity, living_fraction)
     kitchen = trap_stack(k_wool, k_air, geom.gkb_mass, res.mineral_wool)
@@ -293,8 +293,8 @@ def _band_alphas(
         out[freq] = {
             "kitchen": field_absorption(kitchen, freq),
             "living": field_absorption(living, freq),
-            "slope": mixed_field_alpha(bay, lat, geom.timber_fraction, freq),
-            "soffit": mixed_field_alpha(soffit_bay, soffit_lat, geom.timber_fraction, freq),
+            "slope": field_absorption(slopes, freq),
+            "soffit": field_absorption(soffit, freq),
         }
     return out
 
@@ -455,6 +455,7 @@ def _recommend_trap(
     delta_empty: dict[float, float],
     delta_full: dict[float, float],
     as_built_t: dict[float, float],
+    keep_clearance: str | None = None,
 ) -> str:
     means = {fraction: _bass_mean(curve) for fraction, curve in family.items()}
     as_mean = _bass_mean(as_built_alpha)
@@ -477,7 +478,12 @@ def _recommend_trap(
         ),
     ]
     fill_wins = direction == "more-wool" and stable and full_better
-    if fill_wins:
+    if keep_clearance:
+        lines.append(
+            f"Packing the remaining cavity onto the board changes the room by {full_txt}. "
+            + keep_clearance
+        )
+    elif fill_wins:
         extra = area * (best_wool - as_wool)
         lines.append(
             f"Filling the cavity shortens the room decay past 5% ({full_txt}). "
@@ -529,36 +535,15 @@ def _recommend_trap(
     return "\n".join(lines)
 
 
-def _flex_paragraph(geom: Geometry, delta_t: dict[str, dict[float, float]], as_built_t: dict[float, float]) -> str:
-    empty = delta_t["flex-0"]
-    half = delta_t["flex-0.5"]
-    bits = []
-    audible_any = False
-    for freq in (63.0, 125.0, 250.0, 500.0):
-        d_empty = empty[freq]
-        d_half = half[freq]
-        ref = as_built_t[freq]
-        heard = _audible(d_empty, ref) or _audible(d_half, ref)
-        audible_any = audible_any or heard
-        bits.append(
-            f"{freq:.0f} Hz: empty lať {d_empty:+.3f} s, half fill {d_half:+.3f} s "
-            f"(as-built T {ref:.2f} s)"
-        )
-    if audible_any:
-        decision = (
-            "Leaving the lať partly empty moves the midrange decay by more than "
-            "the 5 % just-noticeable difference. Keep the flush 40 mm Flex fill: "
-            "it is also the simple install. A deeper lať is a framing change and "
-            "is outside this comparison."
-        )
-    else:
-        decision = (
-            "Emptying or halving the Flex fill stays inside a 5 % decay-time change "
-            "at 63, 125, 250, and 500 Hz. Acoustically the lať fill is optional in this "
-            "model; the flush 40 mm fill remains the simple install, and a partial "
-            "fill is the awkward one. Do not deepen the lať for absorption."
-        )
-    return "Slope Flex, relative to the as-built full fill. " + "; ".join(bits) + ". " + decision
+def _slope_paragraph(params, as_built_t: dict[float, float]) -> str:
+    return (
+        f"Slopes: NaturHeld 140, {params.naturheld_t:.0f} mm, with StoSilent "
+        f"{params.finish_t:.0f}+{params.basic_t:.0f} mm, screwed through the GKF into the CD. "
+        "No slope latě and no NaturHeld Flex. "
+        f"Soffit side and bottom are NaturHeld 140, {params.soffit_naturheld_t:.0f} mm; "
+        "the cavity behind that face is mineral wool, stopped short of the ducts. "
+        f"As-built decay: 125 Hz {as_built_t[125.0]:.2f} s, 500 Hz {as_built_t[500.0]:.2f} s."
+    )
 
 
 def _sensitivity(
@@ -568,7 +553,7 @@ def _sensitivity(
     board_m: float,
 ) -> tuple[str, dict[str, list[tuple[float, str, float]]]]:
     """Half and double fibrous resistivity. StoSilent stays put (it is a facing)."""
-    grouped: dict[str, list[tuple[float, str, float]]] = {"kitchen": [], "living": [], "flex": []}
+    grouped: dict[str, list[tuple[float, str, float]]] = {"kitchen": [], "living": []}
     for factor in (0.5, 2.0):
         scaled = Resistivity(
             mineral_wool=res.mineral_wool * factor,
@@ -594,36 +579,22 @@ def _sensitivity(
             best = max(means, key=means.get)
             gain = means[best] - as_mean
             grouped[label].append((factor, _direction(best, as_fraction, gain), gain))
-        bands_full = _band_alphas(
-            geom, scaled, plaster_m, board_m,
-            geom.kitchen_wool_fraction, geom.living_wool_fraction, 1.0,
-        )
-        bands_empty = _band_alphas(
-            geom, scaled, plaster_m, board_m,
-            geom.kitchen_wool_fraction, geom.living_wool_fraction, 0.0,
-        )
-        t_full = room_times(geom, bands_full)[125.0]
-        t_empty = room_times(geom, bands_empty)[125.0]
-        grouped["flex"].append(
-            (factor, "audible" if _audible(t_empty - t_full, t_full) else "inaudible", t_empty - t_full)
-        )
     parts = []
     for label in ("kitchen", "living"):
         for factor, direction, gain in grouped[label]:
             parts.append(f"σ×{factor:g} {label} wool call: {direction} (bass-mean gain {gain:.2f})")
-    for factor, direction, gain in grouped["flex"]:
-        parts.append(f"σ×{factor:g} empty-lať ΔT(125 Hz) {gain:+.3f} s ({direction})")
-    text = "Resistivity check (mineral wool and wood fibre together). " + "; ".join(parts) + "."
+    text = "Resistivity check (mineral wool and the wood-fibre board). " + "; ".join(parts) + "."
     return text, grouped
 
 
-def _volumes(geom: Geometry, wool_k: float, wool_l: float, flex_fraction: float) -> str:
+def _volumes(geom: Geometry, wool_k: float, wool_l: float) -> str:
     wool = geom.kitchen_trap * wool_k + geom.living_trap * wool_l
-    flex = geom.slope * (1.0 - geom.timber_fraction) * flex_fraction * geom.rost_depth
+    soffit_wool = geom.soffit * geom.soffit_wool_depth
     return (
-        f"Variable material at this split: gable wool {wool:.2f} m³, "
-        f"slope Flex {flex:.2f} m³ (lať timber excluded). "
-        "The soffit stays on a full Flex fill and is not in that Flex volume."
+        f"Material at this split: gable wool {wool:.2f} m³, "
+        f"soffit mineral wool about {soffit_wool:.2f} m³ "
+        "(the horizontal cavity depth applied across the soffit face). "
+        "The slopes are a wood-fibre board, not a Flex quilt."
     )
 
 
@@ -632,9 +603,9 @@ def build_report(study_bits: dict) -> str:
     axials: dict[str, float] = study_bits["axials"]
     res: Resistivity = study_bits["resistivity"]
     lines = [
-        "Obývák layer impedance. Soffit size, roof pitch, trap depths, and the "
-        "choice of materials stay fixed. Varied: wool versus air behind each "
-        "12.5 mm GKB, and the Flex fraction of the 40 mm slope lať.",
+        "Obývák layer impedance. Soffit size, roof pitch, trap depths, the 80 mm "
+        "slope board, and the choice of materials stay fixed. Varied: wool versus "
+        "air behind each 12.5 mm GKB.",
         (
             f"Room volume {geom.volume:.0f} m³. Areas: slopes {geom.slope:.1f} m², "
             f"soffit {geom.soffit:.1f} m², each gable trap {geom.kitchen_trap:.1f} m², "
@@ -657,7 +628,7 @@ def build_report(study_bits: dict) -> str:
         ),
         study_bits["kitchen_text"],
         study_bits["living_text"],
-        study_bits["flex_text"],
+        study_bits["slope_text"],
         study_bits["sensitivity_text"],
         study_bits["volume_text"],
         (
@@ -835,16 +806,12 @@ def render_svg(study: dict) -> str:
     extremes = [max(abs(v) for v in curve.values()) for curve in deltas.values()]
     span = max(0.08, max(extremes) * 1.15)
     delta_colors = {
-        "flex-0": ("#b36b00", None),
-        "flex-0.5": ("#e0a100", "5 3"),
         "kitchen-0": ("#1f4e79", None),
         "kitchen-1": ("#1f4e79", "2 3"),
         "living-0": ("#2e7d4f", None),
         "living-1": ("#2e7d4f", "2 3"),
     }
     delta_names = {
-        "flex-0": "Flex empty",
-        "flex-0.5": "Flex half",
         "kitchen-0": "kitchen air only",
         "kitchen-1": "kitchen wool full",
         "living-0": "living air only",
@@ -886,23 +853,20 @@ def run_study(params=None, resistivity: Resistivity | None = None) -> Study:
         board_m,
         geom.kitchen_wool_fraction,
         geom.living_wool_fraction,
-        1.0,
     )
     as_t = room_times(geom, as_built)
     kitchen_family = _trap_family(geom, res, geom.kitchen_cavity, WOOL_FRACTIONS)
     living_family = _trap_family(geom, res, geom.living_cavity, WOOL_FRACTIONS)
 
     scenarios = {
-        "flex-0": (geom.kitchen_wool_fraction, geom.living_wool_fraction, 0.0),
-        "flex-0.5": (geom.kitchen_wool_fraction, geom.living_wool_fraction, 0.5),
-        "kitchen-0": (0.0, geom.living_wool_fraction, 1.0),
-        "kitchen-1": (1.0, geom.living_wool_fraction, 1.0),
-        "living-0": (geom.kitchen_wool_fraction, 0.0, 1.0),
-        "living-1": (geom.kitchen_wool_fraction, 1.0, 1.0),
+        "kitchen-0": (0.0, geom.living_wool_fraction),
+        "kitchen-1": (1.0, geom.living_wool_fraction),
+        "living-0": (geom.kitchen_wool_fraction, 0.0),
+        "living-1": (geom.kitchen_wool_fraction, 1.0),
     }
     delta_t: dict[str, dict[float, float]] = {}
-    for name, (k_frac, l_frac, flex_frac) in scenarios.items():
-        bands = _band_alphas(geom, res, plaster_m, board_m, k_frac, l_frac, flex_frac)
+    for name, (k_frac, l_frac) in scenarios.items():
+        bands = _band_alphas(geom, res, plaster_m, board_m, k_frac, l_frac)
         times = room_times(geom, bands)
         delta_t[name] = {freq: times[freq] - as_t[freq] for freq in THIRDS}
 
@@ -921,6 +885,11 @@ def run_study(params=None, resistivity: Resistivity | None = None) -> Study:
         delta_t["kitchen-0"],
         delta_t["kitchen-1"],
         as_t,
+        keep_clearance=(
+            "That remainder is the 27 mm front CD plus 20 mm clear of it, so the "
+            "GKB leaf can move on the Sylomer washer. Keep the as-built split; "
+            "do not bed the wool on the board."
+        ),
     )
     living_text = _recommend_trap(
         "Living gable",
@@ -937,17 +906,17 @@ def run_study(params=None, resistivity: Resistivity | None = None) -> Study:
         delta_t["living-1"],
         as_t,
     )
-    flex_text = _flex_paragraph(geom, delta_t, as_t)
+    slope_text = _slope_paragraph(p, as_t)
     as_wool_k, _ = _split(geom.kitchen_cavity, geom.kitchen_wool_fraction)
     as_wool_l, _ = _split(geom.living_cavity, geom.living_wool_fraction)
-    volume_text = _volumes(geom, as_wool_k, as_wool_l, 1.0)
+    volume_text = _volumes(geom, as_wool_k, as_wool_l)
     bits = {
         "geometry": geom,
         "resistivity": res,
         "axials": axials,
         "kitchen_text": kitchen_text,
         "living_text": living_text,
-        "flex_text": flex_text,
+        "slope_text": slope_text,
         "sensitivity_text": sensitivity_text,
         "volume_text": volume_text,
         "as_built_alpha": as_built,

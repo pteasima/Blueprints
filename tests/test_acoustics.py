@@ -141,7 +141,9 @@ def test_room_areas_are_in_the_building_range():
     assert 6.0 < geom.kitchen_trap < 20.0
     assert geom.living_trap == geom.kitchen_trap
     assert 20.0 < geom.glass < 28.0
-    assert geom.timber_fraction == 60.0 / 625.0
+    assert geom.timber_fraction == 0.0
+    assert geom.soffit_board == 0.04
+    assert geom.soffit_wool_depth > 0.3
 
 
 def test_study_ranks_splits_and_states_the_fem_decision():
@@ -154,14 +156,13 @@ def test_study_ranks_splits_and_states_the_fem_decision():
     text = study.report
     assert "Kitchen gable" in text
     assert "Living gable" in text
-    assert "Slope Flex" in text
     assert "bass FEM" in text
-    assert "80 mm" in text and "300 mm" in text
-    assert "Fill the cavity" in text
+    assert "80 mm" in text and "300 mm" in text and "130.5 mm" in text
+    assert "20 mm" in text
+    assert "No slope latě" in text
     assert "Keep the as-built" in text
-    assert "Keep the flush" in text
-    assert study.delta_t["flex-0"][125.0] > 0.05 * study.as_built_t[125.0]
-    assert study.delta_t["kitchen-1"][31.5] < -0.05 * study.as_built_t[31.5]
+    assert "Slope Flex" not in text
+    assert "flex-0" not in study.delta_t
     assert study.delta_t["living-0"][31.5] > 0.05 * study.as_built_t[31.5]
     # Axials from the full plan size, as marks rather than a solved mode.
     assert abs(study.axials["Y1"] - 343.0 / (2.0 * 11.1)) < 1e-6

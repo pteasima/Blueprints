@@ -1,10 +1,11 @@
 """Obývák 1.02 — příčný řez (panel A), parametrické 2D profily v Plane.XZ.
 
-Šikminy: NaturHeld 140, latě // krokvím, Flex, SDK, CD ⊥ krokvím, závěsy,
-pásky (3D: 45° X; zde jen průřez). Soffit: GKF lid on the pozednice above
-three Ø160 ducts; latový rost under the pipes, hung from the front CD and
-braced to the wall. The hidden gypsum butt is a light-gauge angle on that
-same CD. 3D: `models/obyvak.py`.
+Šikminy: NaturHeld 140 (80) screwed through GKF into CD ⊥ krokvím, závěsy,
+pásky (3D: 45° X; zde jen průřez). No slope latě and no Flex. Soffit: 40 mm
+NaturHeld on the side and bottom, mineral wool in the cavity, GKF lid on the
+pozednice above three Ø160 ducts; latový rost under the pipes, hung from the
+front CD and braced to the wall. The hidden gypsum butt is a light-gauge
+angle on that same CD. 3D: `models/obyvak.py`.
 
     python -m blueprints.export obyvak_section
 """
@@ -25,16 +26,14 @@ from obyvak_geom import (  # noqa: F401
     LABEL_RACKING_STRAP,
     LABEL_RAFTERS,
     LABEL_ROOFING,
-    LABEL_SLOPE_BATTENS,
     LABEL_SLOPE_CD,
-    LABEL_SLOPE_FLEX,
     LABEL_SLOPE_GKF,
     LABEL_SLOPE_NH,
     LABEL_SLOPE_NONIUS,
     LABEL_SOFFIT_BATTENS,
     LABEL_SOFFIT_CD,
     LABEL_SOFFIT_DUCT,
-    LABEL_SOFFIT_FLEX,
+    LABEL_SOFFIT_WOOL,
     LABEL_SOFFIT_GKF,
     LABEL_SOFFIT_NH,
     LABEL_SOFFIT_NONIUS,
@@ -105,12 +104,10 @@ def build(params: ObyvakParams | None = None):
 
     parts.append(xz_face(g.vata_pts(), LABEL_PLENUM_WOOL))
 
-    # Šikminy stack
+    # Šikminy stack. The board ends at the furniture line; the wedge under the
+    # lid is soffit mineral wool, not a slope quilt.
     parts.append(xz_face(g.sikmina_nh_pts(), LABEL_SLOPE_NH))
-    parts.append(xz_face(g.sikmina_flex_pts(), LABEL_SLOPE_FLEX))
-    parts.append(xz_face(g.soffit_flex_wedge_pts(), LABEL_SLOPE_FLEX))
-    # Lať // krokvím: continuous ribbon in this transverse cut (section through a lať).
-    parts.append(xz_face(g.sikmina_rost_ribbon_pts(), LABEL_SLOPE_BATTENS))
+    parts.append(xz_face(g.soffit_wool_wedge_pts(), LABEL_SOFFIT_WOOL))
     parts.append(xz_face(g.sikmina_sdk_pts(), LABEL_SLOPE_GKF))
     for quad in g.sikmina_cd_quads():
         parts.append(xz_face(quad, LABEL_SLOPE_CD))
@@ -126,12 +123,12 @@ def build(params: ObyvakParams | None = None):
             continue
         parts.append(xz_face(g.paska_quad(*st), LABEL_RACKING_STRAP))
 
-    # Soffit bay: NH L, Flex under the rail, ducts, GKF lid on the plate,
+    # Soffit bay: NH L, mineral wool under the rail, ducts, GKF lid on the plate,
     # horizontal CD + Nonius, plate cleat, rost hung from the front CD.
     parts.append(xz_face(g.soffit_nh_pts(), LABEL_SOFFIT_NH))
-    parts.append(xz_face(g.soffit_flex_pts(), LABEL_SOFFIT_FLEX))
+    parts.append(xz_face(g.soffit_wool_pts(), LABEL_SOFFIT_WOOL))
     fm = p.rost_d
-    z_wood0 = g.z_nabeh_bot + g.t_nh_face + p.wall_bracket_t
+    z_wood0 = g.z_nabeh_bot + g.t_soffit_face + p.wall_bracket_t
     x_wall = p.room_width - p.wall_plaster
     # Vertical lať beside the ducts, up to the lid, plus the underside lať.
     z_lat_top = g.z_soffit_lid

@@ -1,26 +1,26 @@
-Obývák layer impedance. Soffit size, roof pitch, trap depths, and the choice of materials stay fixed. Varied: wool versus air behind each 12.5 mm GKB, and the Flex fraction of the 40 mm slope lať.
+Obývák layer impedance. Soffit size, roof pitch, trap depths, the 80 mm slope board, and the choice of materials stay fixed. Varied: wool versus air behind each 12.5 mm GKB.
 
-Room volume 220 m³. Areas: slopes 71.0 m², soffit 11.6 m², each gable trap 8.6 m², glass 23.8 m², plaster 34.9 m², floor 54.4 m², cabinet front 25.6 m².
+Room volume 222 m³. Areas: slopes 71.0 m², soffit 11.8 m², each gable trap 8.8 m², glass 23.8 m², plaster 35.2 m², floor 54.4 m², cabinet front 25.6 m².
 
 Assumed flow resistivity: mineral wool 12000, NaturHeld 140 15000, Flex 8000, StoSilent facing 100000 Pa·s/m². GKB areal mass 10.0 kg/m², modelled as limp. Floor, glass, plaster, and cabinets use fixed absorption 0.05, 0.03, 0.04, 0.10. Absolute decay times move with those four numbers; the differences do not.
 
 Length axials Y1 15.5 Hz, Y2 30.9 Hz, Y3 46.4 Hz, X1 32.1 Hz. These use the full plan dimensions and are marks on the curves, not a wave solution.
 
-Kitchen gable: as-built wool 80 mm, air 97.5 mm (wool fraction 0.45). reactance zero 42 Hz; closed form if the wool is transparent 45 Hz; closed form if the wool is opaque 61 Hz.
-Bass-band mean field absorption (31.5–125 Hz) is 0.18. The GKB face is a bass resonator and a midrange reflector: every split is back near zero absorption by a few hundred hertz.
-Filling the cavity shortens the room decay past 5% (31.5 Hz -0.238 s (-16.5%, audible); 63 Hz -0.012 s (-1.1%); 125 Hz -0.003 s (-0.4%)). The same more-wool direction holds at half and double resistivity. Fill the cavity: wool 177.5 mm, air 0 mm (+0.84 m³ of wool on this gable). Air only goes the other way (31.5 Hz +0.045 s (+3.1%); 63 Hz +0.073 s (+6.7%, audible); 125 Hz +0.002 s (+0.3%)). Packing the cavity is also the simpler install.
+Kitchen gable: as-built wool 130.5 mm, air 47 mm (wool fraction 0.74). reactance zero 40 Hz; closed form if the wool is transparent 45 Hz; closed form if the wool is opaque 87 Hz.
+Bass-band mean field absorption (31.5–125 Hz) is 0.30. The GKB face is a bass resonator and a midrange reflector: every split is back near zero absorption by a few hundred hertz.
+Packing the remaining cavity onto the board changes the room by 31.5 Hz -0.104 s (-8.6%, audible); 63 Hz -0.012 s (-1.1%); 125 Hz -0.002 s (-0.2%). That remainder is the 27 mm front CD plus 20 mm clear of it, so the GKB leaf can move on the Sylomer washer. Keep the as-built split; do not bed the wool on the board.
 The bass-band ranking and the axial marks agree closely enough that a bass FEM is not justified for this gable.
 
 Living gable: as-built wool 300 mm, air 137.5 mm (wool fraction 0.69). reactance zero 28 Hz; closed form if the wool is transparent 29 Hz; closed form if the wool is opaque 51 Hz.
 Bass-band mean field absorption (31.5–125 Hz) is 0.32. The GKB face is a bass resonator and a midrange reflector: every split is back near zero absorption by a few hundred hertz.
-Filling the cavity does not clear a 5% room-decay change (31.5 Hz +0.069 s (+4.8%); 63 Hz -0.032 s (-2.9%); 125 Hz -0.002 s (-0.4%)). Emptying the wool does (31.5 Hz +0.806 s (+55.8%, audible); 63 Hz +0.063 s (+5.8%, audible); 125 Hz +0.004 s (+0.6%)). Keep the as-built 300 mm / 137.5 mm split.
+Filling the cavity does not clear a 5% room-decay change (31.5 Hz +0.049 s (+4.1%); 63 Hz -0.033 s (-3.0%); 125 Hz -0.003 s (-0.4%)). Emptying the wool does (31.5 Hz +0.537 s (+44.6%, audible); 63 Hz +0.065 s (+5.9%, audible); 125 Hz +0.005 s (+0.7%)). Keep the as-built 300 mm / 137.5 mm split.
 The trap coefficient by itself would move the wool fraction, and that call changes when the wool resistivity is halved or doubled.
 The bass-band ranking and the axial marks agree closely enough that a bass FEM is not justified for this gable.
 
-Slope Flex, relative to the as-built full fill. 63 Hz: empty lať +0.314 s, half fill +0.136 s (as-built T 1.09 s); 125 Hz: empty lať +0.160 s, half fill +0.064 s (as-built T 0.65 s); 250 Hz: empty lať +0.043 s, half fill +0.016 s (as-built T 0.43 s); 500 Hz: empty lať +0.003 s, half fill +0.001 s (as-built T 0.36 s). Leaving the lať partly empty moves the midrange decay by more than the 5 % just-noticeable difference. Keep the flush 40 mm Flex fill: it is also the simple install. A deeper lať is a framing change and is outside this comparison.
+Slopes: NaturHeld 140, 80 mm, with StoSilent 2+2 mm, screwed through the GKF into the CD. No slope latě and no NaturHeld Flex. Soffit side and bottom are NaturHeld 140, 40 mm; the cavity behind that face is mineral wool, stopped short of the ducts. As-built decay: 125 Hz 0.71 s, 500 Hz 0.36 s.
 
-Resistivity check (mineral wool and wood fibre together). σ×0.5 kitchen wool call: more-wool (bass-mean gain 0.13); σ×2 kitchen wool call: more-wool (bass-mean gain 0.18); σ×0.5 living wool call: more-wool (bass-mean gain 0.05); σ×2 living wool call: keep (bass-mean gain 0.02); σ×0.5 empty-lať ΔT(125 Hz) +0.170 s (audible); σ×2 empty-lať ΔT(125 Hz) +0.121 s (audible).
+Resistivity check (mineral wool and the wood-fibre board). σ×0.5 kitchen wool call: more-wool (bass-mean gain 0.05); σ×2 kitchen wool call: more-wool (bass-mean gain 0.04); σ×0.5 living wool call: more-wool (bass-mean gain 0.05); σ×2 living wool call: keep (bass-mean gain 0.02).
 
-Variable material at this split: gable wool 3.29 m³, slope Flex 2.57 m³ (lať timber excluded). The soffit stays on a full Flex fill and is not in that Flex volume.
+Material at this split: gable wool 3.78 m³, soffit mineral wool about 5.29 m³ (the horizontal cavity depth applied across the soffit face). The slopes are a wood-fibre board, not a Flex quilt.
 
 Field incidence is the Paris average out to 78°. Miki's formulas are extrapolated below the old Delany–Bazley bound f = 0.01 σ (120 Hz for the baseline wool); that extrapolation is the reason the closed-form panel frequencies are printed beside the curves.

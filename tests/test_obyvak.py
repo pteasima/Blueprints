@@ -23,16 +23,14 @@ from obyvak_geom import (  # noqa: E402
     LABEL_RACKING_STRAP,
     LABEL_RAFTERS,
     LABEL_ROOFING,
-    LABEL_SLOPE_BATTENS,
     LABEL_SLOPE_CD,
     LABEL_SLOPE_DIRECT,
-    LABEL_SLOPE_FLEX,
     LABEL_SLOPE_GKF,
     LABEL_SLOPE_NH,
     LABEL_SLOPE_NONIUS,
     LABEL_SOFFIT_BATTENS,
     LABEL_SOFFIT_CD,
-    LABEL_SOFFIT_FLEX,
+    LABEL_SOFFIT_WOOL,
     LABEL_SOFFIT_DUCT,
     LABEL_SOFFIT_GKF,
     LABEL_SOFFIT_NH,
@@ -94,28 +92,29 @@ def test_layout_ceiling_and_gable():
     # Rafter underside seats on pozednice top at plate mid-X.
     x_bear = g.poz_l0 + p.plate_w * 0.5
     assert abs(g.z_raf(x_bear) - (p.eave_wall_z + p.plate_h)) < 1.0
-    # Acoustic face + Flex pack + GKF match the contractor soft stack below CD.
+    # Slope board + foil + GKF. The soffit face is the thinner 40 mm board.
+    assert p.naturheld_t == 80.0
+    assert p.soffit_naturheld_t == 40.0
     assert abs(g.t_nh_face - (p.finish_t + p.basic_t + p.naturheld_t)) < 1e-9
-    assert abs(g.t_flex_pack - (p.rost_d + p.foil_t)) < 1e-9
-    assert abs(g.t_soft_below_sdk - 117.5) < 1e-9
-    assert abs(g.t_left - 224.5) < 1e-9
-    flex_pts = g.sikmina_flex_pts()
-    # Band is inner polyline then reversed outer. At the eave, thickness is the lať depth.
-    assert abs((flex_pts[-1][1] - flex_pts[0][1]) * g.cos - p.rost_d) < 1e-6
+    assert abs(g.t_soffit_face - (p.finish_t + p.basic_t + p.soffit_naturheld_t)) < 1e-9
+    assert abs(g.t_flex_pack - p.foil_t) < 1e-9
+    assert abs(g.t_soft_below_sdk - 97.5) < 1e-9
+    assert abs(g.t_left - 204.5) < 1e-9
+    # Kitchen wool stops 20 mm short of the back of the front CD.
+    assert abs(p.bass_k_wool - 130.5) < 1e-9
+    assert abs(p.bass_k_air - (p.cd_t + 20.0)) < 1e-9
+    assert abs(p.bass_k_wool + p.bass_k_air + p.bass_k_gkb - p.predstena_kitchen) < 1e-9
     assert g.l_hanger_right > g.l_hanger_left
     assert abs(g.z_nabeh_bot - (p.furniture_height + p.furniture_gap)) < 1e-9
-    assert g.x_nh_inner == g.x_furn + g.t_nh_face
-    # Slope latě and Flex run to the vertical soffit lať. The bulkhead top is their seat.
-    assert max(x for x, _z in g.sikmina_flex_pts()) == g.x_nh_inner
-    assert max(x for x, _z in g.sikmina_rost_ribbon_pts()) == g.x_nh_inner
-    # One 625 mm grid. The soffit bay does not start a second inset.
+    assert g.x_nh_inner == g.x_furn + g.t_soffit_face
+    # One 625 mm grid for the soffit latě. The bay does not start a second inset.
     slope_ys = g.sikmina_rost_y_stations(1.0, p.room_length - 1.0)
     soffit_ys = g.soffit_rost_y_stations(g.y_furn0 + 1.0, g.y_furn1 - 1.0, slope_ys)
     assert soffit_ys
     assert all(y in slope_ys for y in soffit_ys)
     restarted = g.sikmina_rost_y_stations(g.y_furn0 + 1.0, g.y_furn1 - 1.0)
     assert abs(soffit_ys[0] - restarted[0]) > 50.0
-    wedge = g.soffit_flex_wedge_pts()
+    wedge = g.soffit_wool_wedge_pts()
     assert max(x for x, _z in wedge) == g.x_nh_inner
     assert max(z for _x, z in wedge) == g.z_soffit_lid
     assert min(z for _x, z in wedge) < g.z_soffit_lid - 40.0
@@ -125,7 +124,11 @@ def test_layout_ceiling_and_gable():
     assert any(abs(x - g.x_nh_inner) < 1e-6 and abs(z - z_seat_in) < 1e-6 for x, z in nh_pts)
     assert any(abs(x - g.x_furn) < 1e-6 and abs(z - z_seat_out) < 1e-6 for x, z in nh_pts)
     assert z_seat_in < z_seat_out
-    assert max(z for _x, z in nh_pts) < g.z_soffit_lid - 40.0
+    # The vertical leg follows the slope-board attic face. It stays off the foil
+    # and the GKF, and it stays under the lid.
+    z_foil = g.z_slope_offset(g.x_furn, g.t_nh_face + g.t_flex_pack)
+    assert max(z for _x, z in nh_pts) < z_foil - 0.5
+    assert max(z for _x, z in nh_pts) < g.z_soffit_lid
     # Lattice still hangs at the rost. The gypsum joint is room-ward of that,
     # where the slope underside meets the lid — one CD cannot cover both lines.
     assert g.x_sdk_break == g.x_nh_inner
@@ -215,13 +218,13 @@ def test_mineral_wool_fills_rafter_bays():
 
 
 def test_sikminy_and_soffit_stack_in_3d():
-    """Šikminy NH / rost // krokvím / CD ⊥ / Flex and soffit box."""
+    """Šikminy NH screwed to CD, and the soffit box with mineral wool and its rost."""
     p = ObyvakParams()
     g = build_layout(p)
     shape, _ = build(p)
     nh = _labeled(shape, LABEL_SLOPE_NH) + _labeled(shape, LABEL_SOFFIT_NH)
-    flex = _labeled(shape, LABEL_SLOPE_FLEX) + _labeled(shape, LABEL_SOFFIT_FLEX)
-    rost = _labeled(shape, LABEL_SLOPE_BATTENS) + _labeled(shape, LABEL_SOFFIT_BATTENS)
+    wool = _labeled(shape, LABEL_SOFFIT_WOOL)
+    rost = _labeled(shape, LABEL_SOFFIT_BATTENS)
     cds = _labeled(shape, LABEL_SLOPE_CD) + _labeled(shape, LABEL_SOFFIT_CD)
     zaves = _labeled(shape, LABEL_SLOPE_NONIUS) + _labeled(shape, LABEL_SOFFIT_NONIUS)
     direct = _labeled(shape, LABEL_SLOPE_DIRECT)
@@ -232,8 +235,8 @@ def test_sikminy_and_soffit_stack_in_3d():
     assert all(c.bounding_box().center().X >= g.x_false - 1.0 for c in slope_nonius)
     pasky = _labeled(shape, LABEL_RACKING_STRAP)
     assert len(nh) >= 2  # slope NH + soffit L
-    assert len(flex) >= 2  # slope Flex + box Flex
-    assert len(rost) >= 8  # slope latě (along Y) + soffit frame
+    assert len(wool) >= 2  # cavity wool + the wedge under the lid
+    assert len(rost) >= 8  # soffit latě only; the slope has none
     assert len(cds) >= 5  # CD ⊥ krokvím along slope
     assert len(zaves) >= 10
     # ~6 straps/side (3 X pairs × 2 diagonals) along the 11 m length.
@@ -324,21 +327,10 @@ def test_sikminy_and_soffit_stack_in_3d():
         and c.bounding_box().max.Z > g.z_soffit_lid
     ]
     assert len(front_drops) >= 1
-    # Rafters are roof timber only — soffit-frame latě use *_battens.
+    # Rafters are roof timber only — soffit-frame latě use soffit_battens.
     for part in _labeled(shape, LABEL_RAFTERS):
         bb = part.bounding_box()
         assert not (bb.min.X >= g.x_furn - 1.0 and bb.max.Z <= g.z_gkf_horiz + 1.0)
-    # Slope latě are // krokvím: thin in Y, long along the slope (X),
-    # butted to the vertical soffit lať.
-    slope_rost = [
-        c
-        for c in rost
-        if c.bounding_box().min.X < 100.0 and c.bounding_box().max.X <= g.x_nh_inner + 1.0
-    ]
-    assert len(slope_rost) >= 5
-    assert all(c.bounding_box().size.Y < p.rost_spacing for c in slope_rost)
-    assert all(c.bounding_box().size.X > 500.0 for c in slope_rost)
-    assert all(abs(c.bounding_box().max.X - g.x_nh_inner) < 2.0 for c in slope_rost)
     # Šikminy pack runs wall-to-wall (bass traps sit under it, do not replace it).
     nh = _labeled(shape, LABEL_SLOPE_NH)
     assert any(c.bounding_box().size.Y > p.room_length - 10.0 for c in nh)
@@ -350,17 +342,18 @@ def test_sikminy_and_soffit_stack_in_3d():
     ]
     assert len(soffit_rost) >= 10
     assert all(c.bounding_box().size.Y < p.rost_spacing for c in soffit_rost)
-    slope_y = {round(c.bounding_box().center().Y, 1) for c in slope_rost}
     verticals = [
         c
         for c in soffit_rost
         if c.bounding_box().size.Z > 400.0 and c.bounding_box().size.X < p.rost_d + 5.0
     ]
     assert verticals
-    assert all(round(c.bounding_box().center().Y, 1) in slope_y for c in verticals)
+    vertical_ys = sorted(c.bounding_box().center().Y for c in verticals)
+    for a, b in zip(vertical_ys, vertical_ys[1:]):
+        assert abs((b - a) - p.rost_spacing) < 1.0
     wedges = [
         c
-        for c in _labeled(shape, LABEL_SLOPE_FLEX)
+        for c in wool
         if c.bounding_box().size.X < 200.0 and c.bounding_box().max.Z > g.z_soffit_lid - 5.0
     ]
     assert len(wedges) == 1
@@ -398,8 +391,8 @@ def test_sikminy_and_soffit_stack_in_3d():
         c
         for c in zaves
         if c.bounding_box().min.X >= p.room_width - p.wall_plaster - p.wall_bracket_leg - 5.0
-        and c.bounding_box().max.Z <= g.z_nabeh_bot + g.t_nh_face + p.wall_bracket_leg + 5.0
-        and c.bounding_box().min.Z <= g.z_nabeh_bot + g.t_nh_face + 5.0
+        and c.bounding_box().max.Z <= g.z_nabeh_bot + g.t_soffit_face + p.wall_bracket_leg + 5.0
+        and c.bounding_box().min.Z <= g.z_nabeh_bot + g.t_soffit_face + 5.0
     ]
     assert len(wall_braces) >= 4
 
@@ -561,13 +554,13 @@ def test_sikmina_drawing_scenes():
     lattice = specs["sikmina-lattice"]
     assert lattice["projection"] == "ortho"
     assert lattice["opacityDefault"] == 0
-    assert lattice["opacity"][LABEL_SLOPE_BATTENS] == 1
     assert lattice["opacity"][LABEL_SLOPE_CD] == 1
     assert lattice["opacity"][LABEL_SLOPE_DIRECT] == 1
     assert lattice["opacity"][LABEL_RAFTERS] == 1
     assert LABEL_MASONRY not in lattice["opacity"]
     assert LABEL_SLOPE_NH not in lattice["opacity"]
-    assert lattice["opacity"][LABEL_SLOPE_FLEX] == 0.18
+    assert "slope_naturheld_flex_50" not in lattice["opacity"]
+    assert "slope_battens" not in lattice["opacity"]
     assert lattice["opacity"][LABEL_SLOPE_GKF] == 0.35
     assert LABEL_ROOFING not in lattice["opacity"]
     assert len(lattice["cuts"]) == 3
@@ -599,7 +592,7 @@ def test_sikmina_drawing_scenes():
     assert section["opacity"][LABEL_MASONRY] == 1
     assert section["opacity"][LABEL_WALL_PLATE] == 1
     assert section["opacity"][LABEL_RAFTERS] == 1
-    assert section["opacity"][LABEL_SLOPE_BATTENS] == 1
+    assert "slope_battens" not in section["opacity"]
     assert section["opacity"][LABEL_SLOPE_CD] == 1
     assert section["opacity"][LABEL_SLOPE_DIRECT] == 1
     assert section["opacity"][LABEL_SOFFIT_BATTENS] == 1
@@ -609,9 +602,9 @@ def test_sikmina_drawing_scenes():
     board = 0.35
     assert section["opacity"][LABEL_PLENUM_WOOL] == wool
     assert section["opacity"][LABEL_SLOPE_NH] == wool
-    assert section["opacity"][LABEL_SLOPE_FLEX] == wool
+    assert "slope_naturheld_flex_50" not in section["opacity"]
     assert section["opacity"][LABEL_SOFFIT_NH] == wool
-    assert section["opacity"][LABEL_SOFFIT_FLEX] == wool
+    assert section["opacity"][LABEL_SOFFIT_WOOL] == wool
     assert section["opacity"][LABEL_SLOPE_GKF] == board
     assert section["opacity"][LABEL_SOFFIT_GKF] == board
     assert LABEL_FURNITURE not in section["opacity"]
@@ -630,8 +623,8 @@ def test_sikmina_drawing_scenes():
     joined = " ".join(
         ann["text"]["cs"] for ann in section["annotations"] if "text" in ann
     )
-    assert "NaturHeld 140, 60 mm" in joined
-    assert "Flex 50" in joined
+    assert "NaturHeld 140, 80 mm" in joined
+    assert "Flex" not in joined
     assert "Minerální vlna" in joined
     assert "plénum" not in joined.lower()
     joined_en = " ".join(
@@ -677,8 +670,7 @@ def test_3d_matches_section_and_elevation_masses():
         LABEL_ROOFING,
         LABEL_PLENUM_WOOL,
         LABEL_FURNITURE,
-        LABEL_SLOPE_FLEX,
-        LABEL_SOFFIT_FLEX,
+        LABEL_SOFFIT_WOOL,
         LABEL_POCKET_FRAME,
         LABEL_SLOPE_GKF,
         LABEL_SOFFIT_GKF,
@@ -686,7 +678,6 @@ def test_3d_matches_section_and_elevation_masses():
         LABEL_SLOPE_NH,
         LABEL_SOFFIT_NH,
         LABEL_GLAZING,
-        LABEL_SLOPE_BATTENS,
         LABEL_SOFFIT_BATTENS,
         LABEL_SLOPE_CD,
         LABEL_SOFFIT_CD,
@@ -924,7 +915,9 @@ def test_obyvak_3d_exports(tmp_path, monkeypatch):
     sec_labels = {c.label for c in sec.children}
     assert LABEL_FURNITURE in sec_labels
     assert "soffit" not in sec_labels
-    assert LABEL_SLOPE_FLEX in sec_labels
+    assert LABEL_SOFFIT_WOOL in sec_labels
+    assert "slope_naturheld_flex_50" not in sec_labels
+    assert "slope_battens" not in sec_labels
     assert LABEL_SLOPE_NH in sec_labels
     # Slice is snapped onto a krokev (875 grid); rost latě use 625 and may miss.
     assert LABEL_RAFTERS in sec_labels
