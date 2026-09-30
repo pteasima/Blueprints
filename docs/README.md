@@ -11,7 +11,7 @@ PR previews: https://pteasima.github.io/Blueprints/pr-preview/pr-\<N\>/ (removed
 
 `pages-content` updates the `pages-site` content branch and deploys it: the site root on a `main` push, `pr-preview/pr-<N>/` when a PR opens or its branch is pushed, and deletion of that folder when the PR closes. A feature-branch push publishes the open PR even if the `pull_request` event never arrives. `workflow_dispatch` is not available to the cloud agent token. `pages` is only a manual redeploy of whatever is already on `pages-site`.
 
-The agent confirms the preview URL is live, then tells the user it is ready. The user does not check the workflow or a second PR.
+The agent waits for `pages-content` to finish, checks that the preview URL loads the change, and only then says it is ready. The user does not watch the workflow.
 
 ## Layout
 
