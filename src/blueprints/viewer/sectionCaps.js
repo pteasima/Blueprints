@@ -17,6 +17,8 @@ import {
   triangulateCutSegments,
   worldPlanesToLocal,
 } from "./clipGeometry.js";
+import { patchMaterialForDepthPeel } from "./depthPeel.js";
+import { applyLayerDepthBias } from "./materials.js";
 
 /** Extra push per layer bias so coplanar neighbours don't z-fight (metres). */
 const BIAS_PUSH_M = 5e-5;
@@ -82,6 +84,11 @@ function capMaterial(src, planes) {
   // discards the fill (the face is the plane).
   mat.clippingPlanes = planes;
   mat.clipIntersection = false;
+  // Fresh material: the parent's onBeforeCompile does not come along.
+  // Logarithmic depth discards polygonOffset, so the cap needs the same
+  // FragDepth pull or it flickers against the shell it closes.
+  applyLayerDepthBias(mat, src.userData?.layerDepthBias || 0);
+  patchMaterialForDepthPeel(mat);
   mat.needsUpdate = true;
   return mat;
 }

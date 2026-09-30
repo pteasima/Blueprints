@@ -85,7 +85,17 @@ preview_url: https://pteasima.github.io/Blueprints/
 https://pteasima.github.io/Blueprints/pr-preview/pr-<N>/
 ```
 
-After `git push` + open PR, wait for `pages-content` then `pages` to go green. Use the sticky **Blueprints preview** comment on the PR (tappable on Cursor iOS), or paste `…/pr-preview/pr-<N>/` in chat. When the PR is merged or closed, that preview folder is deleted automatically. Export’s printed `preview_url` is still the production root (no PR context locally).
+Publishing is automatic. Pushing the PR branch, or opening or closing the PR, runs `pages-content`. That workflow writes `pr-preview/pr-<N>/` and deploys GitHub Pages. A push to `main` updates the production site. Closing or merging the PR deletes that preview. Export’s printed `preview_url` is still the production root (no PR context locally).
+
+The agent waits until `pages-content` has finished and the preview URL is actually serving the change, then tells the user that preview is ready:
+
+```text
+https://pteasima.github.io/Blueprints/pr-preview/pr-<N>/
+```
+
+Do not ask the user to open Actions, compare file URLs, hard-refresh, or look at a second pull request. They only wait to be told it is ready.
+
+A feature-branch push publishes the open PR even when GitHub does not deliver `pull_request` for that commit. Cloud agent tokens cannot `workflow_dispatch` this workflow (API 403). Do not open another PR to force a deploy. If no `pages-content` run appears, the branch is missing the feature-branch push trigger in `.github/workflows/pages-content.yml` — get that trigger onto the branch and push again.
 
 Hub links open **web viewers** (`viewer/?m=<id>`). In Safari, use the viewer’s **AR** control for Quick Look.
 

@@ -147,6 +147,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     canvas,
     antialias: true,
     alpha: false,
+    powerPreference: "high-performance",
     // Drawing capture reads the canvas after the frame; without this the
     // buffer is cleared before toBlob and the plate is blank.
     preserveDrawingBuffer: true,
@@ -440,12 +441,11 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   }
 
   function enterOrtho() {
-    // Known issues (see viewer README “Known ISO issues”):
-    // - Steep angles: opaque coplanar/near-coplanar faces can Z-fight (e.g.
-    //   interior podlehy bleeding through roof) even with no transparency.
-    // - FOV → ISO: sometimes a phantom near-plane clip looks like a section
-    //   cut with no cut active; orbiting alone in ISO usually does not.
-    //   Likely near/far or frustum handoff below — not fixed yet.
+    // Known issue (see viewer README “Known ISO issues”):
+    // FOV → ISO can show a phantom near-plane clip that looks like a section
+    // cut with no cut active. Orbiting alone in ISO usually does not.
+    // Likely near/far or frustum handoff below — not fixed yet.
+    // Coplanar face fights are handled by applyLayerDepthBias, not polygonOffset.
     if (projection === "ortho") return;
     lastHFovDeg = hFovDeg;
     const dist = camera.position.distanceTo(controls.target);
@@ -611,8 +611,17 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     const span = Math.max(size.x, size.y, size.z, 0.01);
     const dist = camera.position.distanceTo(controls.target);
     // Pull near plane in when close; keep far just past the far side of the model.
-    camera.near = Math.min(Math.max(dist / 200, span / 5000, 0.001), dist / 10);
-    camera.far = Math.max(dist + span * 4, span * 8, 10);
+    // Quantize so sub-millimetre orbit noise does not dirty the projection
+    // every frame and defeat the idle redraw skip.
+    const near =
+      Math.round(
+        Math.min(Math.max(dist / 200, span / 5000, 0.001), dist / 10) * 1e4,
+      ) / 1e4;
+    const far =
+      Math.round(Math.max(dist + span * 4, span * 8, 10) * 1e4) / 1e4;
+    if (camera.near === near && camera.far === far) return;
+    camera.near = near;
+    camera.far = far;
     camera.updateProjectionMatrix();
   }
 
@@ -656,7 +665,6 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       applyOpacityToMeshes(parts.get(name) || [], 1, { edgeMode });
     }
     updateBox();
-    applyClipping();
     syncPartOpacityUi();
   }
 
@@ -720,8 +728,11 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
           Object.prototype.hasOwnProperty.call(overrides, name)
             ? overrides[name]
             : def;
-        setPartOpacity(name, raw, { skipUi: true });
+        // One clip + edge rebuild after the loop. Per-part applyClipping
+        // rebuilt every fat line once per leaf and made scene changes stall.
+        setPartOpacity(name, raw, { skipUi: true, skipClip: true });
       }
+      updateBox();
       syncPartOpacityUi();
     }
 
@@ -825,7 +836,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   /**
    * @param {string} name
    * @param {number} opacity
-   * @param {{ skipUi?: boolean, detach?: boolean }} [opts]
+   * @param {{ skipUi?: boolean, detach?: boolean, skipClip?: boolean }} [opts]
    */
   function setPartOpacity(name, opacity, opts = {}) {
     const o = Math.max(0, Math.min(1, Number(opacity) || 0));
@@ -833,8 +844,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     if (o > 0) partLastNonZero.set(name, o);
     if (opts.detach) detachedLeaves.add(name);
     applyOpacityToMeshes(parts.get(name) || [], o, { edgeMode });
+    if (opts.skipClip) return;
     updateBox();
-    applyClipping();
     if (!opts.skipUi) syncPartOpacityUi();
   }
 
@@ -853,7 +864,6 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       applyOpacityToMeshes(parts.get(id) || [], o, { edgeMode });
     }
     updateBox();
-    applyClipping();
     syncPartOpacityUi();
   }
 
@@ -871,7 +881,6 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     if (o > 0) partLastNonZero.set(leafId, o);
     applyOpacityToMeshes(parts.get(leafId) || [], o, { edgeMode });
     updateBox();
-    applyClipping();
     syncPartOpacityUi();
   }
 
@@ -1446,6 +1455,13 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     if (!cut.locked) lockCut(cut);
     cut.t = Math.min(1, Math.max(0, Number(cutT)));
     cut.anchor = null;
+    // While the thumb is down, only move the clip planes. Rebuilding every
+    // fat line on each tick is what made the slider feel stuck. Silhouettes
+    // and caps catch up once, on release.
+    if (cutSliderActive) {
+      applyClipPlanes();
+      return;
+    }
     applyClipping();
   }
 
@@ -1498,19 +1514,33 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     return new THREE.Plane().setFromNormalAndCoplanarPoint(cut.normal, _point);
   }
 
-  function applyClipping() {
+  /**
+   * Point materials and edge strokes at the current cut planes.
+   * Does not rebuild line geometry or caps.
+   * @returns {THREE.Plane[]}
+   */
+  function applyClipPlanes() {
     const planes = lockedClipPlanes();
-    if (!root) return;
+    if (!root) return planes;
     root.traverse((obj) => {
       if (!obj.isMesh || !obj.material) return;
       if (isEdgeOverlay(obj) || isSectionCap(obj)) return;
       const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
       for (const m of mats) {
+        if (!m) continue;
+        const prevCount = m.clippingPlanes ? m.clippingPlanes.length : 0;
         m.clippingPlanes = planes;
         m.clipIntersection = false;
-        m.needsUpdate = true;
+        if (prevCount !== planes.length) m.needsUpdate = true;
       }
     });
+    applyEdgeClipping(root, planes);
+    return planes;
+  }
+
+  function applyClipping() {
+    const planes = applyClipPlanes();
+    if (!root) return;
     // Fill the cut. Clipping only discards fragments; without these faces a
     // solid opened on both ends reads as an empty tube.
     syncSectionCaps(parts, planes);
@@ -1535,6 +1565,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       const endSlider = () => {
         if (!cutSliderActive) return;
         cutSliderActive = false;
+        applyClipping();
         flushDeferredDraft();
       };
       const range = createCooperativeRange({
@@ -1576,43 +1607,37 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   // damping `change`, which would rebuild the cut UI mid-slider-drag.
   // `start` is user-gesture only (programmatic framing does not fire it).
   //
-  // Peel quality: OrbitControls `end` is unreliable on some touch/Safari
-  // paths (pointercancel without end → stuck in fast forever). Drive settle
-  // from canvas pointer lifecycle + window up/cancel instead.
+  // Peel the frame after the camera, pointer, and opacity/cut edits have
+  // stopped. A timer here just delays a hitch; the settled frame itself has
+  // to be cheap. Pointer-down forces the single sorted-alpha draw so a touch
+  // is never stuck behind the peel.
   let peelPointerDown = false;
-  /** @type {"fast" | "high"} */
-  let lastPeelQuality = "high";
-  const PEEL_SETTLE_MS = 10;
-  /** Squared metres — ignore float noise only (no orbit damping). */
-  const PEEL_MOVE_EPS2 = 1e-5;
   const peelCamPos = new THREE.Vector3();
   const peelCamTarget = new THREE.Vector3();
   let peelCamInited = false;
-  let peelLastMoveMs = 0;
 
-  function notePeelPointerDown() {
-    peelPointerDown = true;
-  }
-  function notePeelPointerUp() {
+  canvas.addEventListener(
+    "pointerdown",
+    () => {
+      peelPointerDown = true;
+    },
+    { capture: true },
+  );
+  const notePeelPointerUp = () => {
     peelPointerDown = false;
-    peelLastMoveMs = performance.now();
-  }
-
-  canvas.addEventListener("pointerdown", notePeelPointerDown, { capture: true });
+  };
   window.addEventListener("pointerup", notePeelPointerUp, { capture: true });
   window.addEventListener("pointercancel", notePeelPointerUp, { capture: true });
-  window.addEventListener("touchend", notePeelPointerUp, { capture: true });
-  window.addEventListener("touchcancel", notePeelPointerUp, { capture: true });
 
   controls.addEventListener("start", () => {
     clearCameraPresetHighlight();
-    notePeelPointerDown();
+    peelPointerDown = true;
   });
   controls.addEventListener("change", () => {
     syncViewZoomFromCamera();
   });
   controls.addEventListener("end", () => {
-    notePeelPointerUp();
+    peelPointerDown = false;
     if (suppressCameraChange) return;
     maybeSpawnDraftFromCamera();
   });
@@ -1944,6 +1969,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         }
       },
       onActiveChange: (on) => {
+        viewDirty = true;
         if (!measureBtn) return;
         measureBtn.classList.toggle("is-active", on);
         measureBtn.setAttribute("aria-pressed", on ? "true" : "false");
@@ -2088,6 +2114,103 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   }
 
   let prevUsedPeel = false;
+  /** Force a redraw (measure cursor, anything the stamps miss). */
+  let viewDirty = true;
+  /** @type {number[] | null} */
+  let camSig = null;
+  /** @type {string | null} */
+  let contentSig = null;
+  /** @type {"fast" | "high"} */
+  let lastPeelQuality = "fast";
+  /** @type {"fast" | "high" | null} */
+  let renderedPeelQuality = null;
+  /**
+   * After a scene or setting change, show one fast frame before merging
+   * batches, then peel on the following still frame. Camera let-go does not
+   * set this, so a warm peel still happens on the next still frame.
+   */
+  let holdFastForPrime = false;
+
+  canvas.addEventListener("pointermove", () => {
+    if (measureTool?.isActive()) viewDirty = true;
+  });
+  canvas.addEventListener("pointerup", () => {
+    if (measureTool?.isActive()) viewDirty = true;
+  });
+
+  /**
+   * Camera, projection, and drawing-buffer size. Idle frames compare this
+   * so a still view does not resubmit the scene.
+   * @returns {number[]}
+   */
+  function readCameraSig() {
+    const v = camera.view;
+    return [
+      camera.position.x,
+      camera.position.y,
+      camera.position.z,
+      camera.quaternion.x,
+      camera.quaternion.y,
+      camera.quaternion.z,
+      camera.quaternion.w,
+      camera.zoom,
+      camera.near,
+      camera.far,
+      camera.fov || 0,
+      camera.left,
+      camera.right,
+      camera.top,
+      camera.bottom,
+      controls.target.x,
+      controls.target.y,
+      controls.target.z,
+      canvas.width,
+      canvas.height,
+      v && v.enabled ? 1 : 0,
+      v ? v.offsetX : 0,
+      v ? v.offsetY : 0,
+      v ? v.fullWidth : 0,
+      v ? v.fullHeight : 0,
+      projection === "ortho" ? 1 : 0,
+    ];
+  }
+
+  function cameraSigChanged() {
+    const next = readCameraSig();
+    const prev = camSig;
+    let changed = !prev || prev.length !== next.length;
+    if (!changed && prev) {
+      for (let i = 0; i < next.length; i++) {
+        if (next[i] !== prev[i]) {
+          changed = true;
+          break;
+        }
+      }
+    }
+    if (changed) camSig = next;
+    return changed;
+  }
+
+  /**
+   * Cuts, opacities, material/edge mode, labels, locale, background.
+   * @returns {string}
+   */
+  function readContentSig() {
+    const bits = [
+      materialMode,
+      edgeMode,
+      getLocale(),
+      labelsOn ? "1" : "0",
+      String(sceneBg),
+    ];
+    const bg = scene?.background;
+    if (bg && bg.isColor) bits.push(bg.getHexString());
+    for (const [k, v] of partOpacity) bits.push(k, Number(v).toFixed(3));
+    for (const c of cuts) {
+      bits.push(String(c.id), c.locked ? "1" : "0", Number(c.t).toFixed(4));
+    }
+    return bits.join("|");
+  }
 
   function tick() {
     if (pauseTick) return;
@@ -2096,37 +2219,59 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     controls.update();
     // Keep near/far tight as orbit distance changes.
     if (root) updateCameraClipPlanes();
-    measureTool?.update();
-    annotations.update();
 
-    // Fast while pointer-down or camera moving; high ~10ms after last move.
-    // Settled path matches main-branch peels (full-res, 12 layers, no early-out).
     if (!peelCamInited) {
       peelCamPos.copy(camera.position);
       peelCamTarget.copy(controls.target);
       peelCamInited = true;
-      peelLastMoveMs = now;
     }
     const camMoved =
-      camera.position.distanceToSquared(peelCamPos) > PEEL_MOVE_EPS2 ||
-      controls.target.distanceToSquared(peelCamTarget) > PEEL_MOVE_EPS2;
+      camera.position.distanceToSquared(peelCamPos) > 1e-8 ||
+      controls.target.distanceToSquared(peelCamTarget) > 1e-8;
     peelCamPos.copy(camera.position);
     peelCamTarget.copy(controls.target);
-    if (peelPointerDown || camMoved) peelLastMoveMs = now;
 
-    const peelBusy =
-      peelPointerDown ||
-      now - peelLastMoveMs < PEEL_SETTLE_MS ||
-      frameAnim !== 0 ||
-      cutSliderActive;
-    lastPeelQuality = peelBusy ? "fast" : "high";
+    const contentNow = readContentSig();
+    const contentChanged = contentNow !== contentSig;
+    const camChanged = cameraSigChanged();
+    // Still frame, after the first picture: correct transparency. Anything
+    // in motion stays on one sorted-alpha draw.
+    if (contentChanged) holdFastForPrime = true;
+    const wantHigh =
+      !peelPointerDown &&
+      !camMoved &&
+      !contentChanged &&
+      !cutSliderActive &&
+      !frameAnim &&
+      !holdFastForPrime;
+    lastPeelQuality = wantHigh ? "high" : "fast";
+    const qualityUpgrade = lastPeelQuality !== renderedPeelQuality;
+    if (!viewDirty && !contentChanged && !camChanged && !qualityUpgrade && !holdFastForPrime) {
+      requestAnimationFrame(tick);
+      return;
+    }
+    viewDirty = false;
+    contentSig = contentNow;
+    renderedPeelQuality = lastPeelQuality;
+    if (!contentChanged) holdFastForPrime = false;
+
+    measureTool?.update();
+    annotations.update();
 
     const usedPeel = depthPeel.render(scene, camera, root, anyPartFaded, {
       quality: lastPeelQuality,
+      batchKey: contentNow,
+      // The frame that shows a new scene or slider value should paint before
+      // the geometry merge. The following still frame peels.
+      deferPrime: contentChanged,
     });
     // Re-apply slider opacities when leaving peel mode so materials cannot
-    // stay stuck translucent / depthWrite-off after a 100% scrub.
-    if (prevUsedPeel && !usedPeel) healOpacitiesFromState();
+    // stay stuck translucent / depthWrite-off after a 100% scrub. The abort
+    // path already presented sorted alpha, so a forced redraw just runs the
+    // failing peel a second time.
+    if (prevUsedPeel && !usedPeel) {
+      healOpacitiesFromState();
+    }
     prevUsedPeel = usedPeel;
     requestAnimationFrame(tick);
   }

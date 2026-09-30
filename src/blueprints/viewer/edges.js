@@ -47,7 +47,14 @@ const EDGE_NDC_DEPTH_BIAS = 1e-4;
  * no longer defines USE_LOGDEPTHBUF_EXT, and that overwrite made edge depth
  * incomparable to face log-depth (edges only survived against clear/background).
  */
-const EDGE_FRAG_DEPTH_BIAS = 5e-4;
+export const EDGE_FRAG_DEPTH_BIAS = 5e-4;
+
+/**
+ * Fat-line overlays live on this layer so an opaque frame can draw them
+ * without rasterizing every CAD face a second time. The camera stays on
+ * layer 0 for faces; the edge pass switches to this layer.
+ */
+export const EDGE_LAYER = 1;
 
 /** Cache-key bump when bias shader strategy changes. */
 const EDGE_BIAS_SHADER_REV = 2;
@@ -241,6 +248,95 @@ function createEdgeMaterial(planes, res, opacity = 1) {
 }
 
 /**
+ * Fat line used only inside a settled peel layer. The shader keeps fragments
+ * whose eye-space Z matches the current peel layer, so a rear stroke is
+ * composited behind the glass in front of it instead of stamped on top.
+ * Shared uniform objects are the peel pass's own; stage 0 (the fast path)
+ * never draws this line.
+ * @param {Float32Array} positions start/end xyz pairs, world space
+ * @param {number} opacity
+ * @param {THREE.Plane[]} planes
+ * @param {{
+ *   stage: { value: number },
+ *   prevZ: { value: THREE.Texture | null },
+ *   peelZ: { value: THREE.Texture | null },
+ *   opaqueZ: { value: THREE.Texture | null },
+ *   eps: { value: number },
+ *   resolution: { value: THREE.Vector2 },
+ * }} peel
+ * @returns {LineSegments2}
+ */
+export function createPeeledEdgeLine(positions, opacity, planes, peel) {
+  const o = Math.max(0, Math.min(1, Number(opacity) || 0));
+  const mat = createEdgeMaterial(planes, null, o);
+  mat.depthTest = false;
+  mat.depthWrite = false;
+  mat.transparent = true;
+  mat.opacity = o;
+  const prevCompile = mat.onBeforeCompile?.bind(mat);
+  const prevKey = mat.customProgramCacheKey?.bind(mat);
+  mat.customProgramCacheKey = () => `${prevKey ? prevKey() : "edge"}|peelEdge1`;
+  mat.onBeforeCompile = (shader, renderer) => {
+    prevCompile?.(shader, renderer);
+    shader.uniforms.uPeelStage = peel.stage;
+    shader.uniforms.tPrevViewZ = peel.prevZ;
+    shader.uniforms.tPeelViewZ = peel.peelZ;
+    shader.uniforms.tOpaqueViewZ = peel.opaqueZ;
+    shader.uniforms.uViewZEps = peel.eps;
+    shader.uniforms.uBpPeelRes = peel.resolution;
+    shader.vertexShader = shader.vertexShader.replace(
+      "void main() {",
+      "varying float vBpEdgeViewZ;\nvoid main() {",
+    );
+    shader.vertexShader = shader.vertexShader.replace(
+      "vec4 mvPosition = ( position.y < 0.5 ) ? start : end; // this is an approximation",
+      `vec4 mvPosition = ( position.y < 0.5 ) ? start : end; // this is an approximation
+			vBpEdgeViewZ = -mvPosition.z;`,
+    );
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "void main() {",
+      `uniform float uPeelStage;
+			uniform sampler2D tPrevViewZ;
+			uniform sampler2D tPeelViewZ;
+			uniform sampler2D tOpaqueViewZ;
+			uniform float uViewZEps;
+			uniform vec2 uBpPeelRes;
+			varying float vBpEdgeViewZ;
+			void main() {`,
+    );
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "gl_FragColor = vec4( diffuseColor.rgb, alpha );",
+      `if (uPeelStage > 0.5) {
+				vec2 peelUv = gl_FragCoord.xy / uBpPeelRes;
+				float opaqueZ = texture2D(tOpaqueViewZ, peelUv).r;
+				float prevZ = texture2D(tPrevViewZ, peelUv).r;
+				float edgeZ = vBpEdgeViewZ;
+				float eps = max(uViewZEps, 1e-3 * max(edgeZ, 1.0));
+				if (opaqueZ > 1e-4 && edgeZ >= opaqueZ - eps) discard;
+				if (edgeZ <= prevZ + eps) discard;
+				if (uPeelStage >= 1.5) {
+					float peelZ = texture2D(tPeelViewZ, peelUv).r;
+					if (peelZ > 50000.0) discard;
+					float peelEps = max(uViewZEps, 1e-2 * max(peelZ, 1.0));
+					if (edgeZ > peelZ + peelEps) discard;
+				}
+			}
+			gl_FragColor = vec4( diffuseColor.rgb, alpha );`,
+    );
+  };
+  mat.needsUpdate = true;
+  const geom = new LineSegmentsGeometry();
+  geom.setPositions(positions);
+  const line = new LineSegments2(geom, mat);
+  line.frustumCulled = false;
+  line.matrixAutoUpdate = false;
+  line.renderOrder = 1000;
+  line.raycast = () => {};
+  line.userData.isPeeledEdgeBatch = true;
+  return line;
+}
+
+/**
  * Dispose geometry/material and detach one overlay line object.
  * @param {THREE.Object3D} lines
  */
@@ -314,9 +410,11 @@ export function applyEdgeClipping(root, planes) {
     const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
     for (const m of mats) {
       if (!m) continue;
+      const prevCount = m.clippingPlanes ? m.clippingPlanes.length : 0;
       m.clippingPlanes = list;
       m.clipIntersection = false;
-      m.needsUpdate = true;
+      // Plane values are uniforms. Recompile only when the plane count changes.
+      if (prevCount !== list.length) m.needsUpdate = true;
     }
   });
 }
@@ -395,6 +493,7 @@ export function syncEdgeOverlays(partsMap, enabled, opts = {}) {
         overlay.userData.edgeLabel = label;
         overlay.raycast = () => {};
         overlay.renderOrder = 1000;
+        overlay.layers.set(EDGE_LAYER);
         mesh.add(overlay);
       } else {
         const mat = overlay.material;
@@ -409,6 +508,7 @@ export function syncEdgeOverlays(partsMap, enabled, opts = {}) {
           overlay.userData.edgeLabel = label;
           overlay.raycast = () => {};
           overlay.renderOrder = 1000;
+          overlay.layers.set(EDGE_LAYER);
           mesh.add(overlay);
         } else {
           if (mat.color) mat.color.setHex(EDGE_COLOR);
@@ -422,126 +522,138 @@ export function syncEdgeOverlays(partsMap, enabled, opts = {}) {
           mat.needsUpdate = true;
         }
       }
+      overlay.layers.set(EDGE_LAYER);
       rebuildOverlayGeometry(mesh, /** @type {any} */ (overlay), planes);
     }
   }
 }
 
-/** Shared depth-only material for the edge overlay depth prepass. */
-let edgeDepthPrepassMat = null;
-
 /**
- * @returns {THREE.MeshDepthMaterial}
+ * @param {THREE.Object3D} obj
+ * @returns {boolean}
  */
-function getEdgeDepthPrepassMaterial() {
-  if (!edgeDepthPrepassMat) {
-    edgeDepthPrepassMat = new THREE.MeshDepthMaterial({
-      depthTest: true,
-      depthWrite: true,
-      colorWrite: false,
-      side: THREE.DoubleSide,
-    });
-  }
-  return edgeDepthPrepassMat;
+function isFadedFace(obj) {
+  if (!obj.isMesh || isEdgeOverlay(obj)) return false;
+  const mat = Array.isArray(obj.material) ? obj.material[0] : obj.material;
+  return Boolean(mat && mat.transparent && mat.opacity < 1 - 1e-4);
 }
 
 /**
- * Collect clipping planes from the first CAD mesh (section cuts).
- * @param {THREE.Object3D} root
- * @returns {THREE.Plane[]}
- */
-function collectMeshClippingPlanes(root) {
-  /** @type {THREE.Plane[]} */
-  let planes = [];
-  root.traverse((obj) => {
-    if (
-      planes.length ||
-      isEdgeOverlay(obj) ||
-      obj.userData?.isSectionCap ||
-      !obj.isMesh ||
-      !obj.material
-    ) {
-      return;
-    }
-    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-    for (const mat of mats) {
-      if (mat?.clippingPlanes?.length) {
-        planes = mat.clippingPlanes;
-        return;
-      }
-    }
-  });
-  return planes;
-}
-
-/**
- * After depth-peel composite: refill depth from CAD meshes, then draw edges.
- * Edges are omitted from peel colour RTs (mesh shaders / parent visibility),
- * so this is the only place transparent-part edges appear while peeling.
+ * Faces first, then fat lines. Opaque frames reuse the colour-pass depth
+ * (`reuseDepth`). Peeled frames refill depth, because the composite quad is
+ * not the CAD depth and faded materials did not write one.
+ *
+ * The refill uses the real face shaders with colour writes off. MeshDepthMaterial
+ * encodes a different gl_FragDepth under logarithmic depth, so strokes that
+ * sit correctly on the fast path disappear once that buffer is in front of them.
+ * Faded faces stay out of the refill — they do not depth-write on the fast path
+ * either — so lines remain visible through transparent parts.
  *
  * @param {THREE.WebGLRenderer} renderer
  * @param {THREE.Scene} scene
  * @param {THREE.Camera} camera
  * @param {THREE.Object3D} root
+ * @param {{ reuseDepth?: boolean, opaqueEdgesOnly?: boolean }} [opts]
+ *   `reuseDepth` draws only the fat lines against the depth the colour pass
+ *   just wrote. Used for fully opaque frames and the fast sorted-alpha frame.
+ *   `opaqueEdgesOnly` skips strokes that already joined a peel layer (opacity under 1).
  */
-export function renderEdgeOverlayPass(renderer, scene, camera, root) {
+export function renderEdgeOverlayPass(renderer, scene, camera, root, opts = {}) {
   if (!root) return;
 
-  /** @type {{ mat: THREE.Material, colorWrite: boolean, depthWrite: boolean, depthTest: boolean, transparent: boolean }[]} */
-  const snaps = [];
+  const reuseDepth = Boolean(opts.reuseDepth);
   let anyEdge = false;
   root.traverse((obj) => {
-    if (isEdgeOverlay(obj)) {
-      anyEdge = true;
-      return;
-    }
-    if (!obj.isMesh || !obj.material) return;
-    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-    for (const mat of mats) {
-      if (!mat) continue;
-      snaps.push({
-        mat,
-        colorWrite: mat.colorWrite !== false,
-        depthWrite: mat.depthWrite !== false,
-        depthTest: mat.depthTest !== false,
-        transparent: Boolean(mat.transparent),
-      });
-    }
+    if (isEdgeOverlay(obj)) anyEdge = true;
   });
   if (!anyEdge) return;
 
   const prevAutoClear = renderer.autoClear;
   const prevBg = scene.background;
   const prevOverride = scene.overrideMaterial;
+  const prevLayers = camera.layers.mask;
   scene.background = null;
   renderer.autoClear = false;
 
-  // 1) Depth prepass via MeshDepthMaterial (reliable depth writes; respects cuts).
+  if (reuseDepth) {
+    // Lines sit on EDGE_LAYER, so the parent faces are not rasterized again.
+    // Their depth from the colour pass is still in this target.
+    setEdgeOverlaysVisible(root, true);
+    camera.layers.set(EDGE_LAYER);
+    renderer.render(scene, camera);
+    camera.layers.mask = prevLayers;
+    scene.background = prevBg;
+    scene.overrideMaterial = prevOverride;
+    renderer.autoClear = prevAutoClear;
+    return;
+  }
+
+  // 1) Depth from the opaque face shaders (colour off). Camera stays on
+  //    layer 0, so EDGE_LAYER strokes are not in this pass.
   setEdgeOverlaysVisible(root, false);
-  const depthMat = getEdgeDepthPrepassMaterial();
-  depthMat.clippingPlanes = collectMeshClippingPlanes(root);
-  depthMat.clipIntersection = false;
-  scene.overrideMaterial = depthMat;
-  renderer.clearDepth();
-  renderer.render(scene, camera);
+  /** @type {THREE.Object3D[]} */
+  const hiddenFades = [];
+  root.traverse((obj) => {
+    if (!isFadedFace(obj) || obj.visible === false) return;
+    hiddenFades.push(obj);
+    obj.visible = false;
+  });
+  /** @type {{ mat: THREE.Material, colorWrite: boolean, depthWrite: boolean }[]} */
+  const snaps = [];
+  const seen = new Set();
+  scene.traverse((obj) => {
+    if (!obj.isMesh || isEdgeOverlay(obj) || obj.visible === false) return;
+    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+    for (const mat of mats) {
+      if (!mat || seen.has(mat)) continue;
+      seen.add(mat);
+      snaps.push({
+        mat,
+        colorWrite: mat.colorWrite !== false,
+        depthWrite: mat.depthWrite !== false,
+      });
+      // Same log-depth and face bias as the fast path. Colour stays the peel.
+      mat.colorWrite = false;
+      mat.depthWrite = true;
+    }
+  });
   scene.overrideMaterial = null;
+  renderer.clearDepth();
+  try {
+    renderer.render(scene, camera);
+  } finally {
+    for (const snap of snaps) {
+      snap.mat.colorWrite = snap.colorWrite;
+      snap.mat.depthWrite = snap.depthWrite;
+    }
+    for (const obj of hiddenFades) obj.visible = true;
+  }
 
-  // 2) Edge colour only — meshes stay colour-silent so faded faces keep composite.
+  // 2) Edge colour only. Faces stay on layer 0; the depth prepass already
+  //    filled the buffer, so redrawing them (and flipping their transparent
+  //    flag) only burns a second full traversal. Strokes already composited
+  //    inside the peel stay hidden so they are not stamped on top of the glass.
   setEdgeOverlaysVisible(root, true);
-  for (const s of snaps) {
-    s.mat.colorWrite = false;
-    s.mat.depthWrite = false;
-    s.mat.depthTest = true;
-    s.mat.transparent = false;
+  /** @type {THREE.Object3D[]} */
+  const hiddenSoft = [];
+  if (opts.opaqueEdgesOnly) {
+    root.traverse((obj) => {
+      if (!isEdgeOverlay(obj)) return;
+      const mat = Array.isArray(obj.material) ? obj.material[0] : obj.material;
+      if (mat && mat.transparent && mat.opacity < 1 - 1e-4) {
+        hiddenSoft.push(obj);
+        obj.visible = false;
+      }
+    });
   }
-  renderer.render(scene, camera);
+  camera.layers.set(EDGE_LAYER);
+  try {
+    renderer.render(scene, camera);
+  } finally {
+    for (const obj of hiddenSoft) obj.visible = true;
+  }
+  camera.layers.mask = prevLayers;
 
-  for (const s of snaps) {
-    s.mat.colorWrite = s.colorWrite;
-    s.mat.depthWrite = s.depthWrite;
-    s.mat.depthTest = s.depthTest;
-    s.mat.transparent = s.transparent;
-  }
   scene.background = prevBg;
   scene.overrideMaterial = prevOverride;
   renderer.autoClear = prevAutoClear;
