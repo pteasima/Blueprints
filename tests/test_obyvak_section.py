@@ -12,15 +12,13 @@ from obyvak_geom import (  # noqa: E402
     LABEL_RACKING_STRAP,
     LABEL_RAFTERS,
     LABEL_ROOFING,
-    LABEL_SLOPE_BATTENS,
     LABEL_SLOPE_CD,
-    LABEL_SLOPE_FLEX,
     LABEL_SLOPE_GKF,
     LABEL_SLOPE_NH,
     LABEL_SLOPE_NONIUS,
     LABEL_SOFFIT_BATTENS,
     LABEL_SOFFIT_CD,
-    LABEL_SOFFIT_FLEX,
+    LABEL_SOFFIT_WOOL,
     LABEL_SOFFIT_GKF,
     LABEL_SOFFIT_NH,
     LABEL_SOFFIT_NONIUS,
@@ -32,7 +30,7 @@ def _source_h_start(p: ObyvakParams) -> float:
     """Independent copy of the legacy-sheet formula."""
     cos = math.cos(math.radians(p.roof_angle_deg))
     tan = math.tan(math.radians(p.roof_angle_deg))
-    t_soft = p.finish_t + p.basic_t + p.naturheld_t + p.rost_d + p.foil_t + p.sdk_t
+    t_soft = p.finish_t + p.basic_t + p.naturheld_t + p.foil_t + p.sdk_t
     t_left = p.plenum_t + p.cd_t + t_soft
     t_above = p.vent_t + p.dhv_t + p.counter_batten_t + p.batten_t + p.tile_t
     x_ridge = p.room_width / 2.0
@@ -48,7 +46,7 @@ def test_derived_matches_source_sheet():
     assert g.x_false == (p.room_width - p.furniture_width) / 2.0
     assert g.z_nabeh_bot == p.furniture_height + p.furniture_gap
     assert abs(g.h_start - _source_h_start(p)) < 1e-9
-    assert abs(g.h_start - 3124.4) < 2.0
+    assert abs(g.h_start - 3150.5) < 2.0
     assert g.z_gkf_horiz == g.h_start
     assert g.z_false == g.h_start + g.x_false * g.tan
     soffit_h = g.z_gkf_horiz - g.z_nabeh_bot
@@ -68,15 +66,13 @@ def test_obyvak_section_builds_and_exports(tmp_path, monkeypatch):
         "eps",
         LABEL_RAFTERS,
         LABEL_PLENUM_WOOL,
-        LABEL_SLOPE_FLEX,
-        LABEL_SOFFIT_FLEX,
+        LABEL_SOFFIT_WOOL,
         "furniture",
         LABEL_SLOPE_NH,
         LABEL_SOFFIT_NH,
         LABEL_ROOFING,
         LABEL_SLOPE_GKF,
         LABEL_SOFFIT_GKF,
-        LABEL_SLOPE_BATTENS,
         LABEL_SOFFIT_BATTENS,
         LABEL_SLOPE_CD,
         LABEL_SOFFIT_CD,
