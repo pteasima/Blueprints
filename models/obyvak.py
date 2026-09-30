@@ -12,20 +12,21 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
   on gable shells, three gable pocket doors (chodba on Y=0; spíž + zádveří on Y=L),
   and terrace glazing on the X=0 eave (opposite cabinets).
 - Floor slab is the clear room only; perimeter walls own the strip below z=0.
-- Šikminy: NaturHeld 140 → latě // krokvím + Flex between (flush) → foil + GKF
-  → CD ⊥ krokvím → přímý závěs 125 on the window slope, Nonius on the cabinet
-  slope → mineral wool (below and between rafters) → krokve 100/160 @ 875 + straps.
-  `rafters` = roof timber; `*_battens` = NH latě (zone-prefixed).
-- Soffit box: NH L over cabinets (20 mm gap); Flex + latový rost below a
-  service void; three Ø160 spiral ducts (HRV + AC) in that void; GKF lid
-  raised onto the pozednice (above the wall head, not the plaster). Slope GKF
-  butts the lid where the two planes meet, at full 12.5 mm. Slope latě and Flex
-  continue on that plane to the vertical soffit lať. A light-gauge angle
-  backs that hidden joint and screws to the rost CD; that CD keeps the only
-  Nonius for the corner. The rost hangs from it and braces to the eave wall.
-  The three ducts are already anchored to the wall and are not hung from this
-  box. Furniture and pozednice do not carry the box — the plate only cleats
-  the board edge.
+- Šikminy: NaturHeld 140 (80) screwed through foil + GKF into CD ⊥ krokvím
+  → přímý závěs 125 on the window slope, Nonius on the cabinet slope → mineral
+  wool (below and between rafters) → krokve 100/160 @ 875 + straps.
+  No slope latě and no Flex. `rafters` = roof timber; `soffit_battens` = the
+  soffit latový rost only.
+- Soffit box: 40 mm NH L over cabinets (20 mm gap); mineral wool + latový rost
+  below a service void; three Ø160 spiral ducts (HRV + AC) in that void; GKF
+  lid raised onto the pozednice (above the wall head, not the plaster). Slope
+  GKF butts the lid where the two planes meet, at full 12.5 mm. The slope
+  board ends at the furniture line; the soffit board butts it. A light-gauge
+  angle backs that hidden joint and screws to the rost CD; that CD keeps the
+  only Nonius for the corner. The rost hangs from it and braces to the eave
+  wall. The three ducts are already anchored to the wall and are not hung
+  from this box. Furniture and pozednice do not carry the box — the plate
+  only cleats the board edge.
 - Terrace eave (X=0): 100×100 columns in front of the glass at the pier centres
   stop one brick course below the ring beam; cabinet eave keeps a continuous wall
   with 300×300 columns standing in front of it on the room side (same Y grid).
@@ -74,16 +75,14 @@ from obyvak_geom import (
     LABEL_RACKING_STRAP,
     LABEL_RAFTERS,
     LABEL_ROOFING,
-    LABEL_SLOPE_BATTENS,
     LABEL_SLOPE_CD,
     LABEL_SLOPE_DIRECT,
-    LABEL_SLOPE_FLEX,
     LABEL_SLOPE_GKF,
     LABEL_SLOPE_NH,
     LABEL_SLOPE_NONIUS,
     LABEL_SOFFIT_BATTENS,
     LABEL_SOFFIT_CD,
-    LABEL_SOFFIT_FLEX,
+    LABEL_SOFFIT_WOOL,
     LABEL_SOFFIT_DUCT,
     LABEL_SOFFIT_GKF,
     LABEL_SOFFIT_NH,
@@ -493,7 +492,7 @@ def _bass_trap_parts(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
     bot_t = min(p.bass_bottom_sdk_t, p.bass_k_gkb) - gap * 0.5
     z_frame = p.predstena_bottom_z + gap + (bot_t + gap if bot_t > gap else 0.0)
 
-    # --- Kitchen Y=0: zeď → MW 80 → vzduch 97.5 → GKB 12.5 ---
+    # --- Kitchen Y=0: zeď → MW 130.5 → 20 mm clear of the front CD → CD 27 → GKB 12.5 ---
     y_k0 = gap
     y_k_wool1 = p.bass_k_wool - gap
     y_k_gkb0 = p.predstena_kitchen - p.bass_k_gkb + gap
@@ -830,27 +829,12 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         band = _shrink_closed_band(pts, gap)
         return _extrude_y(xz_face(band, label), y_ceil0, y_ceil1, label)
 
-    # 1) NaturHeld 140 room face
+    # 1) NaturHeld 140, 80 mm, screwed through the GKF into the CD. No latě, no Flex.
     parts.append(_add_band(g.sikmina_nh_pts(), LABEL_SLOPE_NH))
 
-    # 2) Latě // krokvím (spaced along Y) + Flex 50 between them
-    rost_parts: list = []
-    ribbon = g.sikmina_rost_ribbon_pts()
-    half_w = p.rost_w * 0.5
-    for yc in g.sikmina_rost_y_stations(y_ceil0, y_ceil1):
-        ya, yb = yc - half_w, yc + half_w
-        if yb <= ya:
-            continue
-        rost_parts.append(_extrude_y(xz_face(ribbon, LABEL_SLOPE_BATTENS), ya, yb, LABEL_SLOPE_BATTENS))
-    flex_slope = _add_band(g.sikmina_flex_pts(), LABEL_SLOPE_FLEX)
-    if rost_parts:
-        flex_slope = _cut_away(flex_slope, rost_parts, LABEL_SLOPE_FLEX)
-    parts.append(flex_slope)
-    parts.extend(rost_parts)
-
-    # Triangle under the lid, above the 40 mm pack, out to the vertical lať.
-    # Only the soffit bay has that lid.
-    wedge_pts = g.soffit_flex_wedge_pts()
+    # Triangle under the lid, above the slope board, out to the vertical lať.
+    # Only the soffit bay has that lid. Same mineral wool as the soffit cavity.
+    wedge_pts = g.soffit_wool_wedge_pts()
     x_w0 = wedge_pts[0][0] + gap
     z_w_top = g.z_soffit_lid - gap
     wedge = [
@@ -859,12 +843,9 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         (wedge_pts[1][0], z_w_top),
         (x_w0, z_w_top),
     ]
-    wedge_solid = _extrude_y(xz_face(wedge, LABEL_SLOPE_FLEX), y_soff0, y_soff1, LABEL_SLOPE_FLEX)
-    if rost_parts:
-        wedge_solid = _cut_away(wedge_solid, rost_parts, LABEL_SLOPE_FLEX)
-    parts.append(wedge_solid)
+    wedge_solid = _extrude_y(xz_face(wedge, LABEL_SOFFIT_WOOL), y_soff0, y_soff1, LABEL_SOFFIT_WOOL)
 
-    # 3) SDK
+    # 2) SDK
     parts.append(_add_band(g.sikmina_sdk_pts(), LABEL_SLOPE_GKF))
 
     # 4) CD ⊥ krokvím (spaced along slope, run along Y)
@@ -975,7 +956,8 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     # → bottom latě, wall angle as brace only.
     # Lid edge: continuous steel cleat on the plate cheek. Not a hang point.
     # Ducts are already anchored to the wall. This box only keeps them clear.
-    t = g.t_nh_face
+    t = g.t_soffit_face
+    t_slope = g.t_nh_face
     x_duct0, x_duct1 = g.soffit_duct_x_extent()
     lat_end = g.x_nh_inner + p.rost_d
     if x_duct0 < lat_end + 8.0:
@@ -991,9 +973,9 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     if g.z_soffit_duct_crown() > g.z_soffit_lid - 5.0:
         raise ValueError("soffit ducts do not fit under the lid on the pozednice")
 
-    # Top follows the Flex seat down to the vertical lať. 1 mm off each mate.
-    z_nh_out = g.z_slope_offset(g.x_nh_outer, t) - gap
-    z_nh_in = g.z_slope_plane_offset(g.x_nh_inner, t) - gap
+    # Top follows the slope-board attic face down to the vertical lať. 1 mm off each mate.
+    z_nh_out = g.z_slope_offset(g.x_nh_outer, t_slope) - gap
+    z_nh_in = g.z_slope_plane_offset(g.x_nh_inner, t_slope) - gap
     soffit_nh = [
         (g.x_nh_outer + gap, g.z_nabeh_bot + gap),
         (p.room_width - gap, g.z_nabeh_bot + gap),
@@ -1004,15 +986,15 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     ]
     parts.append(_extrude_y(xz_face(soffit_nh, LABEL_SOFFIT_NH), y_soff0, y_soff1, LABEL_SOFFIT_NH))
 
-    # Flex stays in the acoustic cavity, stopped short of the pipes. No timber cap.
+    # Mineral wool in the acoustic cavity, stopped short of the pipes.
     z_rail_top = g.z_soffit_rail()
-    flex_box = [
+    wool_box = [
         (g.x_nh_inner + gap, g.z_nabeh_bot + t + gap),
         (p.room_width - gap, g.z_nabeh_bot + t + gap),
         (p.room_width - gap, z_rail_top - gap),
         (g.x_nh_inner + gap, z_rail_top - gap),
     ]
-    flex_solid = _extrude_y(xz_face(flex_box, LABEL_SOFFIT_FLEX), y_soff0, y_soff1, LABEL_SOFFIT_FLEX)
+    wool_solid = _extrude_y(xz_face(wool_box, LABEL_SOFFIT_WOOL), y_soff0, y_soff1, LABEL_SOFFIT_WOOL)
 
     # Lid from the plane intersection onto the plate. No vertical riser.
     # The joint angle on the rost CD holds the board edge.
@@ -1179,11 +1161,14 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     if frame_parts:
         if service_steel:
             frame_parts = [_cut_away(f, service_steel, LABEL_SOFFIT_BATTENS) for f in frame_parts]
-        flex_solid = _cut_away(flex_solid, frame_parts + service_steel, LABEL_SOFFIT_FLEX)
-        parts.append(flex_solid)
+        wool_solid = _cut_away(wool_solid, frame_parts + service_steel, LABEL_SOFFIT_WOOL)
+        parts.append(wool_solid)
         parts.extend(frame_parts)
     else:
-        parts.append(flex_solid)
+        parts.append(wool_solid)
+    if angle_parts:
+        wedge_solid = _cut_away(wedge_solid, angle_parts, LABEL_SOFFIT_WOOL)
+    parts.append(wedge_solid)
     parts.extend(drop_parts)
     parts.extend(bracket_parts)
     parts.extend(cleat_parts)
@@ -1213,7 +1198,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         furniture = _cut_away(furniture, furn_col_parts, LABEL_FURNITURE)
         soffit_cut_labels = {
             LABEL_SOFFIT_NH,
-            LABEL_SOFFIT_FLEX,
+            LABEL_SOFFIT_WOOL,
             LABEL_SOFFIT_BATTENS,
             LABEL_SOFFIT_GKF,
             LABEL_SOFFIT_CD,
@@ -1409,7 +1394,7 @@ def _cut(normal: tuple[float, float, float], anchor: tuple[float, float, float])
 def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     """Two contractor plates of the šikmina.
 
-    Lattice is head-on to the window slope (true shape of latě // krokvím and CD).
+    Lattice is head-on to the window slope (true shape of the CD grid and hangers).
     Section looks along the room through one rafter bay and keeps both slopes
     plus the soffit. Masonry stays so the věnec under the pozednice is in the picture.
     """
@@ -1423,7 +1408,6 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     # Left-slope face. x_false is the end of the 40° run.
     x_face = 0.42 * g.x_false
     t_nh = g.t_nh_face
-    t_rost = t_nh + p.rost_d * 0.5
     t_gkf = t_nh + g.t_flex_pack + p.sdk_t * 0.5
     t_cd = t_nh + g.t_flex_pack + p.sdk_t + p.cd_t * 0.5
     t_cd_outer = t_nh + g.t_flex_pack + p.sdk_t + p.cd_t
@@ -1435,9 +1419,6 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     cd = [st for st in g.sikmina_cd_stations() if st[0] < g.x_false - 80.0]
     cd_a = cd[1] if len(cd) > 2 else cd[0]
     cd_b = cd[2] if len(cd) > 2 else cd[min(1, len(cd) - 1)]
-
-    rost = [y for y in g.sikmina_rost_y_stations(FACE_GAP, p.room_length - FACE_GAP) if y0 < y < y1]
-    rost_pair = (rost[0], rost[1]) if len(rost) > 1 else (y_mid - 312.0, y_mid + 313.0)
 
     # Middle bracing X sits near mid-length, on the rafter underside.
     y_ceil0 = FACE_GAP
@@ -1452,10 +1433,10 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     up_lat = (g.cos, g.sin, 0.0)
     slope_len = g.x_false / g.cos
     pad = 1.62
-    lat_target = on_face(0.28 * g.x_false, y_mid, t_rost)
+    lat_target = on_face(0.28 * g.x_false, y_mid, t_cd)
     lattice = {
         "id": "sikmina-lattice",
-        "title": _tx("Slopes — lattice", "Šikmina — rošt"),
+        "title": _tx("Slopes — CD and hangers", "Šikmina — CD a závěsy"),
         "project": "Obývák 1.02",
         "camera": _ortho_pose(
             lat_target,
@@ -1471,7 +1452,6 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
             _cut((-1.0, 0.0, 0.0), (g.x_ridge, y_mid, g.h_start)),
         ],
         "opacity": {
-            LABEL_SLOPE_BATTENS: 1,
             LABEL_SLOPE_CD: 1,
             LABEL_SLOPE_DIRECT: 1,
             LABEL_SLOPE_NONIUS: 1,
@@ -1479,23 +1459,15 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
             LABEL_RACKING_STRAP: 1,
             LABEL_WALL_PLATE: 1,
             # Head-on, the NaturHeld face covers the whole grid, so it stays
-            # off. Flex and the foil+GKF board are the same ghosts as the
-            # section, light enough that the battens and CD stay the picture.
-            LABEL_SLOPE_FLEX: 0.18,
+            # off. The foil+GKF board is ghosted so the CD stays the picture.
             LABEL_SLOPE_GKF: 0.35,
         },
         "opacityDefault": 0,
         "annotations": [
             _callout(
-                on_face(0.62 * g.x_false, rost_pair[0], t_rost),
-                "KVH battens 60×40\n// rafters @ 625",
-                "Latě KVH 60×40\n// krokvím @ 625",
-                (0.14, 0.08),
-            ),
-            _callout(
                 on_face(cd_a[0], y_mid, t_cd),
-                "CD 60×27 @ 625\nperpendicular to rafters",
-                "CD 60×27 @ 625\n⊥ krokvím",
+                "CD 60×27 @ 625\nperpendicular to rafters\nNaturHeld 140 screws through GKF",
+                "CD 60×27 @ 625\n⊥ krokvím\nNaturHeld 140 šroubován přes GKF",
                 (-0.22, 0.02),
             ),
             _callout(
@@ -1509,11 +1481,6 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
                 "Bracing strap 40×2\n45° across rafters",
                 "Páska 40×2\n45° přes krokve",
                 (0.16, -0.1),
-            ),
-            _dim(
-                on_face(0.48 * g.x_false, rost_pair[0], t_rost),
-                on_face(0.48 * g.x_false, rost_pair[1], t_rost),
-                0.055,
             ),
             _dim(
                 on_face(cd_a[0], y_mid - 280.0, t_cd),
@@ -1533,8 +1500,9 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     y_note = y_near + 30.0
     x_right = g.x_false + 0.62 * (g.x_furn - g.x_false)
     # Each cut face is its own layer, so a sliced solid stacks two of these.
-    # Wool stays the lighter tint. Foil is the 1 mm in the GKF solid, so the
-    # board is ghosted a step darker and the wood, CD, and hangers stay solid.
+    # Wool and the wood-fibre board stay the lighter tint. Foil is the 1 mm
+    # in the GKF solid, so that board is ghosted a step darker and the CD
+    # and hangers stay solid.
     wool = 0.18
     board = 0.35
     frame_x0 = g.left_eave - 80.0
@@ -1569,7 +1537,6 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
         "opacity": {
             LABEL_RAFTERS: 1,
             LABEL_WALL_PLATE: 1,
-            LABEL_SLOPE_BATTENS: 1,
             LABEL_SOFFIT_BATTENS: 1,
             LABEL_SLOPE_CD: 1,
             LABEL_SOFFIT_CD: 1,
@@ -1583,9 +1550,8 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
             LABEL_PLASTER: 1,
             LABEL_PLENUM_WOOL: wool,
             LABEL_SLOPE_NH: wool,
-            LABEL_SLOPE_FLEX: wool,
             LABEL_SOFFIT_NH: wool,
-            LABEL_SOFFIT_FLEX: wool,
+            LABEL_SOFFIT_WOOL: wool,
             LABEL_SLOPE_GKF: board,
             LABEL_SOFFIT_GKF: board,
         },
@@ -1593,15 +1559,9 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
         "annotations": [
             _callout(
                 on_face(0.28 * g.x_false, y_note, t_nh * 0.5),
-                "NaturHeld 140, 60 mm\nStoSilent Finish + Basic 2+2 mm",
-                "NaturHeld 140, 60 mm\nStoSilent Finish + Basic 2+2 mm",
+                "NaturHeld 140, 80 mm\nStoSilent Finish + Basic 2+2 mm\nscrewed through GKF into CD",
+                "NaturHeld 140, 80 mm\nStoSilent Finish + Basic 2+2 mm\nšroubováno přes GKF do CD",
                 (-0.12, -0.05),
-            ),
-            _callout(
-                on_face(0.42 * g.x_false, y_note, t_rost),
-                "KVH battens 60×40 @ 625\nNaturHeld Flex 50 between them",
-                "Latě KVH 60×40 @ 625\nNaturHeld Flex 50 mezi nimi",
-                (-0.12, -0.08),
             ),
             _callout(
                 on_face(0.55 * g.x_false, y_note, t_gkf),

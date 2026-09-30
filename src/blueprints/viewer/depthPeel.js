@@ -303,6 +303,8 @@ export function createDepthPeelRenderer(renderer) {
     depthTest: false,
     depthWrite: false,
     toneMapped: false,
+    // Default NormalBlending would mix with whatever the peel blit left bound.
+    blending: THREE.NoBlending,
   });
   const clearViewZQuad = new THREE.Mesh(
     new THREE.PlaneGeometry(2, 2),
@@ -310,6 +312,55 @@ export function createDepthPeelRenderer(renderer) {
   );
   const clearViewZScene = new THREE.Scene();
   clearViewZScene.add(clearViewZQuad);
+
+  // Half-float layer/accum. gl.clear is masked off after a depthWrite:false
+  // pass and is unreliable on Safari float targets; a replace quad is not.
+  const clearColorMat = new THREE.ShaderMaterial({
+    vertexShader: /* glsl */ `
+      void main() {
+        gl_Position = vec4(position.xy, 0.0, 1.0);
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      void main() {
+        gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+      }
+    `,
+    depthTest: false,
+    depthWrite: false,
+    toneMapped: false,
+    blending: THREE.NoBlending,
+  });
+  const clearColorQuad = new THREE.Mesh(
+    new THREE.PlaneGeometry(2, 2),
+    clearColorMat,
+  );
+  const clearColorScene = new THREE.Scene();
+  clearColorScene.add(clearColorQuad);
+
+  /**
+   * gl.clear honours the color and depth masks. The peel colour pass and the
+   * edge overlay both leave depthWrite false, so a later clear would keep the
+   * previous cut cap.
+   */
+  function forceBufferMasks() {
+    renderer.state.buffers.color.setMask(true);
+    renderer.state.buffers.depth.setMask(true);
+  }
+
+  /**
+   * Replace every pixel. Must be NoBlending: the accum blit blend is
+   * `src * (1 - dst.a) + dst`, which would keep the old cap.
+   * @param {THREE.WebGLRenderTarget} target
+   */
+  function clearColorTarget(target) {
+    forceBufferMasks();
+    const prev = renderer.autoClear;
+    renderer.setRenderTarget(target);
+    renderer.autoClear = false;
+    renderer.render(clearColorScene, compositeCamera);
+    renderer.autoClear = prev;
+  }
 
   // Linear eye-space Z for opaques; nearest wins via depthTest LESS.
   const opaqueViewZMat = new THREE.ShaderMaterial({
@@ -360,6 +411,7 @@ export function createDepthPeelRenderer(renderer) {
   function clearViewZTarget(target, value, opts = {}) {
     clearViewZMat.uniforms.uValue.value = value;
     const prev = renderer.autoClear;
+    forceBufferMasks();
     renderer.setRenderTarget(target);
     if (opts.clearDepth) {
       renderer.setClearColor(0x000000, 1);
@@ -846,6 +898,7 @@ export function createDepthPeelRenderer(renderer) {
     root.visible = false;
     scene.background = null;
     renderer.autoClear = false;
+    forceBufferMasks();
     renderer.clearDepth();
     renderer.render(scene, camera);
     root.visible = prevRoot;
@@ -1116,6 +1169,7 @@ export function createDepthPeelRenderer(renderer) {
     setMeshesVisible(transparent, false);
     setMeshesVisible(opaque, true);
     setEdgeOverlaysVisible(root, false);
+    forceBufferMasks();
     renderer.setRenderTarget(opaqueRT);
     renderer.setClearColor(0x000000, 0);
     renderer.clear();
@@ -1152,10 +1206,8 @@ export function createDepthPeelRenderer(renderer) {
     renderer.autoClear = true;
     peelUniforms.tOpaqueViewZ.value = opaqueViewZRT.texture;
 
-    // --- Accum empty ---
-    renderer.setRenderTarget(accumRT);
-    renderer.setClearColor(0x000000, 0);
-    renderer.clear();
+    // --- Accum empty (quad, not gl.clear: half-float + mask) ---
+    clearColorTarget(accumRT);
 
     clearViewZTarget(prevViewZRT, 0);
     peelUniforms.tPrevViewZ.value = prevViewZRT.texture;
@@ -1190,6 +1242,7 @@ export function createDepthPeelRenderer(renderer) {
         });
         syncPeelUniforms(mat);
       }
+      forceBufferMasks();
       renderer.setRenderTarget(peelViewZRT);
       renderer.setClearColor(0x000000, 1);
       renderer.clear(false, true, false);
@@ -1219,10 +1272,12 @@ export function createDepthPeelRenderer(renderer) {
         });
         syncPeelUniforms(mat);
       }
+      clearColorTarget(layerRT);
+      const prevLayerAuto = renderer.autoClear;
+      renderer.autoClear = false;
       renderer.setRenderTarget(layerRT);
-      renderer.setClearColor(0x000000, 0);
-      renderer.clear();
       renderTransparent(scene, camera, transparent);
+      renderer.autoClear = prevLayerAuto;
 
       // Transparent strokes join this layer. A rear line fails the peel test
       // until its own surface is the nearest remaining one, so it is blended
@@ -1316,6 +1371,8 @@ export function createDepthPeelRenderer(renderer) {
     blitQuad.geometry.dispose();
     clearViewZMat.dispose();
     clearViewZQuad.geometry.dispose();
+    clearColorMat.dispose();
+    clearColorQuad.geometry.dispose();
     opaqueViewZMat.dispose();
   }
 

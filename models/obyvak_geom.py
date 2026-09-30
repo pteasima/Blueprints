@@ -10,9 +10,7 @@ World:
 
 Šikminy stack (interior → attic; thicknesses ⊥ to the face unless noted):
 
-  StoSilent Top Finish + Top Basic + NaturHeld 140 (60)     → `slope_naturheld_140`
-  dřevěný rošt: latě KVH 60×40 @ ~625 // krokvím (⊥ CD)   → `slope_battens`
-  NaturHeld Flex 50 between those latě, flush (40)          → `slope_naturheld_flex_50`
+  StoSilent Top Finish + Top Basic + NaturHeld 140 (80)     → `slope_naturheld_140`
   vapour foil (~1) + GKF/RF 12.5                            → `slope_gkf`
   CD Rigips 60×27 @ ~625 ⊥ krokvím                          → `slope_cd`
   přímý závěs 125 on the window slope (void ~80)            → `slope_direct_hanger`
@@ -22,20 +20,27 @@ World:
   zavětrovací pásky 40×2 @ 45° X across krokve (racking)    → `racking_strap`
   (střešní latě / kontralatě above rafters stay in roofing)
 
-Right eave soffit box: NH L, Flex cavity + latový rost (latě @625, Flex between).
-Three Ø160 spiral ducts (HRV supply, HRV extract, AC) sit in a 2-over-1 pack
-against the cabinet eave, below the lid and above the column heads. They are
-already anchored to the wall; this box does not hang them. The GKF lid
-is raised so its top is flush with the pozednice and its cut end meets the plate
-cheek — above the wall head, not on the plaster. Slope GKF stops where that
-board's underside meets the lid. The latě and Flex continue on the same plane
-to the vertical soffit lať. The board stays 12.5 mm to a square end. A
+The 80 mm board is screwed through the GKF into the CD. There is no slope
+lať and no NaturHeld Flex. CD spacing stays 625 mm, which is the published
+NaturHeld 140 stud spacing.
+
+Right eave soffit box: 40 mm NaturHeld 140 + StoSilent on the side and the
+bottom, mineral wool in the cavity, latový rost (latě @625) hanging the box.
+The wool stops short of the ducts. Three Ø160 spiral ducts (HRV supply, HRV
+extract, AC) sit in a 2-over-1 pack against the cabinet eave, below the lid
+and above the column heads. They are already anchored to the wall; this box
+does not hang them. The GKF lid is raised so its top is flush with the
+pozednice and its cut end meets the plate cheek — above the wall head, not
+on the plaster. Slope GKF stops where that board's underside meets the lid.
+The slope board ends at the furniture line; the thinner soffit board butts it
+there, its top following the slope board's attic face so the joint is not a
+level cut through the slope pack. The board stays 12.5 mm to a square end. A
 light-gauge angle backs that hidden butt: a short leg on the slope board, a
 horizontal leg screwed to the rost CD. That CD is the only horizontal rail
 and the only Nonius row. No vertical riser. Furniture and the wall plate do
-not carry the box (the plate only fixes the board edge). CAD ids are
-zone-prefixed so the viewer can toggle / fade slopes, soffit, and bass traps
-independently.
+not carry the box (the plate only fixes the board edge). The soffit latě
+hang from that CD and brace to the eave wall. CAD ids are zone-prefixed so
+the viewer can toggle / fade slopes, soffit, and bass traps independently.
 """
 
 from __future__ import annotations
@@ -61,15 +66,13 @@ LABEL_WALL_GKF = "wall_gkf"
 LABEL_GLAZING = "glazing"
 # --- Slopes (šikminy) ---
 LABEL_SLOPE_NH = "slope_naturheld_140"
-LABEL_SLOPE_FLEX = "slope_naturheld_flex_50"
-LABEL_SLOPE_BATTENS = "slope_battens"
 LABEL_SLOPE_GKF = "slope_gkf"
 LABEL_SLOPE_CD = "slope_cd"
 LABEL_SLOPE_DIRECT = "slope_direct_hanger"
 LABEL_SLOPE_NONIUS = "slope_nonius"
 # --- Soffit (podhled) ---
 LABEL_SOFFIT_NH = "soffit_naturheld_140"
-LABEL_SOFFIT_FLEX = "soffit_naturheld_flex_50"
+LABEL_SOFFIT_WOOL = "soffit_mineral_wool"
 LABEL_SOFFIT_BATTENS = "soffit_battens"
 LABEL_SOFFIT_GKF = "soffit_gkf"
 LABEL_SOFFIT_CD = "soffit_cd"
@@ -106,8 +109,6 @@ PART_GROUPS = [
         "id": "slopes",
         "children": [
             LABEL_SLOPE_NH,
-            LABEL_SLOPE_FLEX,
-            LABEL_SLOPE_BATTENS,
             LABEL_SLOPE_GKF,
             LABEL_SLOPE_CD,
             LABEL_SLOPE_DIRECT,
@@ -118,7 +119,7 @@ PART_GROUPS = [
         "id": "soffit",
         "children": [
             LABEL_SOFFIT_NH,
-            LABEL_SOFFIT_FLEX,
+            LABEL_SOFFIT_WOOL,
             LABEL_SOFFIT_BATTENS,
             LABEL_SOFFIT_GKF,
             LABEL_SOFFIT_CD,
@@ -171,8 +172,10 @@ class ObyvakParams:
     cd_t: float = 27.0
     finish_t: float = 2.0
     basic_t: float = 2.0
-    naturheld_t: float = 60.0
-    flex_t: float = 60.0
+    # Slope board. Screwed through the GKF into the CD. No slope lať, no Flex.
+    naturheld_t: float = 80.0
+    # Soffit side and bottom only. Thinner than the slope board; they butt at X_FURN.
+    soffit_naturheld_t: float = 40.0
     foil_t: float = 1.0
     sdk_t: float = 12.5
     vent_t: float = 40.0
@@ -186,10 +189,14 @@ class ObyvakParams:
     predstena_kitchen: float = 190.0
     predstena_living: float = 450.0
     predstena_bottom_z: float = 2450.0
-    # Bass-trap stacks (detail sheets C/D) — wall → room; air gap is empty.
-    # Kitchen 190: MW 80 + vzduch 97.5 + GKB 12.5.
-    bass_k_wool: float = 80.0
-    bass_k_air: float = 97.5
+    # Bass-trap stacks — wall → room.
+    # Kitchen 190: wool stops 20 mm short of the back of the front CD so the
+    # GKB leaf can move on the Sylomer washer. The front CD (27) sits against
+    # the GKB, so the geometric cavity from the wool face to the GKB is
+    # 20 + 27 = 47 mm. That 47 mm is not an empty air spring. The rear CD
+    # stays at 80 mm from the wall, inside the wool (catalog reach ≤ ~120).
+    bass_k_wool: float = 130.5
+    bass_k_air: float = 47.0
     bass_k_gkb: float = 12.5
     bass_k_rear_reach: float = 80.0  # wall → rear CD (≤ catalog ~120)
     # Living 450: GKB 12.5 + vzduch 137.5 + MW 300 (mirrored).
@@ -225,7 +232,7 @@ class ObyvakParams:
         (7950.0, 2500.0),  # HS portal · obývák / zádveří
     )
     glass_t: float = 20.0
-    # Interior acoustic rost (latě holding NaturHeld) — // krokvím, ⊥ CD.
+    # Soffit latový rost only. The slope board screws to the CD; it has no latě.
     rost_w: float = 60.0
     rost_d: float = 40.0
     rost_spacing: float = 625.0
@@ -259,6 +266,8 @@ class ObyvakParams:
     def __post_init__(self) -> None:
         assert abs(self.bass_k_wool + self.bass_k_air + self.bass_k_gkb - self.predstena_kitchen) < 1e-9
         assert abs(self.bass_l_gkb + self.bass_l_air + self.bass_l_wool - self.predstena_living) < 1e-9
+        # 20 mm clear of the front CD, then the 27 mm profile, then the GKB.
+        assert abs(self.bass_k_air - (self.cd_t + 20.0)) < 1e-9
 
 
 class ObyvakLayout:
@@ -271,10 +280,12 @@ class ObyvakLayout:
         self.cos = math.cos(th)
         self.tan = math.tan(th)
 
-        # Room-facing acoustic face (Finish + Basic + NaturHeld 140).
+        # Slope face (Finish + Basic + NaturHeld 140, 80 mm). Soffit face is thinner.
         self.t_nh_face = p.finish_t + p.basic_t + p.naturheld_t
-        # Flex fills the 40 mm lať. Foil is the 1 mm seat under GKF — not a second Flex skin.
-        self.t_flex_pack = p.rost_d + p.foil_t
+        self.t_soffit_face = p.finish_t + p.basic_t + p.soffit_naturheld_t
+        # Foil is the 1 mm vapour seat between the slope board and the GKF.
+        # There is no slope lať and no Flex in this pack.
+        self.t_flex_pack = p.foil_t
         self.t_soft_below_sdk = self.t_nh_face + self.t_flex_pack + p.sdk_t
         self.t_left = p.plenum_t + p.cd_t + self.t_soft_below_sdk
         # Right-side hangers are longer: slope continues to X_FURN then drops.
@@ -299,9 +310,10 @@ class ObyvakLayout:
         self.z_soffit_lid = self.z_plate_top - p.sdk_t
         self.z_soffit = self.h_start + self.x_ridge * self.tan
         self.z_raf_top = self.z_raf_inner_ridge + p.rafter_t / self.cos
-        # Vertical NH outer face flush with slope NH ∩ furniture plane; thickness into box.
+        # Vertical soffit board butts the slope board at the furniture line.
+        # Its thickness is the soffit face, not the thicker slope board.
         self.x_nh_outer = self.x_furn
-        self.x_nh_inner = self.x_furn + self.t_nh_face
+        self.x_nh_inner = self.x_furn + self.t_soffit_face
         # Rost front. The gypsum joint is not here: the slope board is still
         # ~80 mm below the lid, so a riser at this line has nothing to screw to.
         self.x_sdk_break = self.x_nh_inner
@@ -402,8 +414,8 @@ class ObyvakLayout:
     def z_slope_plane_offset(self, x: float, t_perp: float) -> float:
         """Parallel offset on the right-slope plane, continued past X_FURN for GKF.
 
-        NH / Flex still break at the furniture line; only GKF follows this plane
-        into the soffit bay so the membrane can drop vertically onto the lid.
+        The slope board breaks at the furniture line. GKF follows this plane
+        into the soffit bay so the membrane can meet the lid.
         """
         if x <= self.x_furn:
             return self.z_slope_offset(x, t_perp)
@@ -452,26 +464,6 @@ class ObyvakLayout:
     def sikmina_nh_pts(self) -> list[tuple[float, float]]:
         """NaturHeld + StoSilent face on the slopes (perp thickness t_nh_face)."""
         return self._slope_band_pts(0.0, self.t_nh_face)
-
-    def _flex_band_pts(self, t0: float, t1: float) -> list[tuple[float, float]]:
-        """Flex / lať band on the slope plane, continued to the vertical soffit lať.
-
-        Past X_FURN the ceiling face is horizontal, but this pack stays on the
-        roof slope until it butts the plumb lať. `z_slope_offset` would flatten
-        there and leave the cavity above the bulkhead.
-        """
-        xs = [0.0, self.x_false, self.x_nh_inner]
-        inner = [(x, self.z_slope_plane_offset(x, t0)) for x in xs]
-        outer = [(x, self.z_slope_plane_offset(x, t1)) for x in xs]
-        return inner + list(reversed(outer))
-
-    def sikmina_flex_pts(self) -> list[tuple[float, float]]:
-        """Flex 50 between the latě, flush with the 40 mm lať. No quilt over them.
-
-        Runs to the vertical soffit lať so the bay above the bulkhead is filled.
-        """
-        t0 = self.t_nh_face
-        return self._flex_band_pts(t0, t0 + self.p.rost_d)
 
     def sikmina_sdk_pts(self) -> list[tuple[float, float]]:
         """GKF/RF on the slopes, ending where the underside meets the soffit lid."""
@@ -558,14 +550,6 @@ class ObyvakLayout:
             quads.append(quad)
         return quads
 
-    def sikmina_rost_ribbon_pts(self) -> list[tuple[float, float]]:
-        """XZ ribbon of one lať // krokvím (full šikmina run in the Flex zone).
-
-        Latě run eave→ridge (parallel to rafters); spacing is along Y, so a
-        transverse section that cuts a lať shows this continuous ribbon.
-        """
-        return self._flex_band_pts(self.t_nh_face, self.t_nh_face + self.p.rost_d)
-
     def y_stations(
         self, y0: float, y1: float, spacing: float, first_inset: float
     ) -> list[float]:
@@ -578,27 +562,29 @@ class ObyvakLayout:
         return out
 
     def sikmina_rost_y_stations(self, y0: float, y1: float) -> list[float]:
+        """625 mm centres. The slope has no latě; the soffit rost uses this module."""
         p = self.p
         return self.y_stations(y0, y1, p.rost_spacing, p.rost_first_inset)
 
     def soffit_rost_y_stations(
         self, bay0: float, bay1: float, slope_ys: list[float]
     ) -> list[float]:
-        """Soffit latě on the slope-lať centres, limited to the soffit bay.
+        """Soffit latě on the 625 mm module, limited to the soffit bay.
 
-        Restarting the 625 mm module at the předstěna, with its own inset,
-        shifted every vertical lať off the slope lať it is supposed to meet.
+        The module is not restarted at the předstěna, so the verticals stay
+        on one grid along the room.
         """
         half = self.p.rost_w * 0.5
         return [y for y in slope_ys if bay0 + half <= y <= bay1 - half]
 
-    def soffit_flex_wedge_pts(self) -> list[tuple[float, float]]:
-        """Flex above the 40 mm pack, under the lid, out to the vertical lať.
+    def soffit_wool_wedge_pts(self) -> list[tuple[float, float]]:
+        """Mineral wool under the lid, from the slope-board attic face to the vertical lať.
 
-        The pack top meets the lid at the gypsum joint and falls away toward
-        the eave. That triangle is still on the warm side of the lid.
+        The board ends at the furniture line. Past the gypsum joint the lid
+        sits above that attic face. The triangle is on the warm side of the
+        lid and is the same wool as the soffit cavity.
         """
-        t1 = self.t_nh_face + self.p.rost_d
+        t1 = self.t_nh_face
         x0 = self.x_gkf_kink
         x1 = self.x_nh_inner
         return [
@@ -696,9 +682,9 @@ class ObyvakLayout:
         return min(z for _, z in self.soffit_duct_centers()) - r
 
     def z_soffit_rail(self) -> float:
-        """Top of the soffit Flex, clear of the lower duct.
+        """Top of the soffit mineral wool, clear of the lower duct.
 
-        There is no timber cap and no hanger under the pipes. The quilt stops
+        There is no timber cap and no hanger under the pipes. The wool stops
         short of the metal so the wall-anchored ducts stay in an empty void.
         """
         return self.z_soffit_duct_bot() - self.p.duct_gap - 8.0
@@ -712,17 +698,17 @@ class ObyvakLayout:
     def soffit_nh_pts(self) -> list[tuple[float, float]]:
         """L-shaped NH+StoSilent on the soffit box: vertical face + underside.
 
-        The vertical leg butts the slope board. Its top follows the attic face
-        of that board — the seat of the Flex — down to the vertical lať, so the
-        pack can run through instead of stopping on a level cut. It does not
-        climb to the GKF. Room arris is the slope face meeting this vertical
-        face at X_FURN.
+        Both legs are the 40 mm soffit board. The vertical leg butts the
+        thicker slope board at X_FURN. Its top follows that slope board's
+        attic face down to the vertical lať, so the joint is not a level cut
+        through the slope pack. It does not climb to the GKF.
         """
         p = self.p
-        t = self.t_nh_face
+        t = self.t_soffit_face
+        t_slope = self.t_nh_face
         z0 = self.z_nabeh_bot
-        z_out = self.z_slope_offset(self.x_nh_outer, t)
-        z_in = self.z_slope_plane_offset(self.x_nh_inner, t)
+        z_out = self.z_slope_offset(self.x_nh_outer, t_slope)
+        z_in = self.z_slope_plane_offset(self.x_nh_inner, t_slope)
         return [
             (self.x_nh_outer, z0),
             (p.room_width, z0),
@@ -732,15 +718,14 @@ class ObyvakLayout:
             (self.x_nh_outer, z_out),
         ]
 
-    def soffit_flex_pts(self) -> list[tuple[float, float]]:
-        """Flex in the acoustic cavity only, stopped short of the ducts.
+    def soffit_wool_pts(self) -> list[tuple[float, float]]:
+        """Mineral wool in the acoustic cavity only, stopped short of the ducts.
 
         The service void above this line stays empty. The pipes are already
-        anchored to the wall and are not hung from this box. No timber lid
-        on the Flex.
+        anchored to the wall and are not hung from this box.
         """
         p = self.p
-        t = self.t_nh_face
+        t = self.t_soffit_face
         z_top = self.z_soffit_rail()
         return [
             (self.x_nh_inner, self.z_nabeh_bot + t),
