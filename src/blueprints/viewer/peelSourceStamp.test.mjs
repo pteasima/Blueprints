@@ -1,5 +1,6 @@
 /**
  * The settled peel must not reuse a batch after the cut fill is rebuilt.
+ * The slider value can already be final while that fill is still the old mesh.
  * Run: node peelSourceStamp.test.mjs
  */
 import assert from "node:assert/strict";
