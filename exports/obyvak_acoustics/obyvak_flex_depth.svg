@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1360" height="760" viewBox="0 0 1360 760">
+<rect width="100%" height="100%" fill="#f7f5f1"/>
+<style>text{font-family:system-ui,sans-serif;fill:#222}</style>
+<text x="64" y="34" font-size="15" font-weight="600">Room decay, rigid GKF (seconds)</text>
+<rect x="64" y="48" width="440" height="280" fill="#fff" stroke="#ddd"/>
+<line x1="134.4" y1="48" x2="134.4" y2="328" stroke="#eee"/>
+<text x="134.4" y="344" font-size="10" text-anchor="middle">31.5</text>
+<line x1="185.0" y1="48" x2="185.0" y2="328" stroke="#eee"/>
+<text x="185.0" y="344" font-size="10" text-anchor="middle">63</text>
+<line x1="234.9" y1="48" x2="234.9" y2="328" stroke="#eee"/>
+<text x="234.9" y="344" font-size="10" text-anchor="middle">125</text>
+<line x1="285.5" y1="48" x2="285.5" y2="328" stroke="#eee"/>
+<text x="285.5" y="344" font-size="10" text-anchor="middle">250</text>
+<line x1="336.0" y1="48" x2="336.0" y2="328" stroke="#eee"/>
+<text x="336.0" y="344" font-size="10" text-anchor="middle">500</text>
+<line x1="386.6" y1="48" x2="386.6" y2="328" stroke="#eee"/>
+<text x="386.6" y="344" font-size="10" text-anchor="middle">1000</text>
+<line x1="437.2" y1="48" x2="437.2" y2="328" stroke="#eee"/>
+<text x="437.2" y="344" font-size="10" text-anchor="middle">2000</text>
+<line x1="487.7" y1="48" x2="487.7" y2="328" stroke="#eee"/>
+<text x="487.7" y="344" font-size="10" text-anchor="middle">4000</text>
+<line x1="64" y1="248.3" x2="504" y2="248.3" stroke="#eee"/>
+<text x="56" y="251.3" font-size="10" text-anchor="end">0.4</text>
+<line x1="64" y1="168.6" x2="504" y2="168.6" stroke="#eee"/>
+<text x="56" y="171.6" font-size="10" text-anchor="end">0.8</text>
+<line x1="64" y1="88.9" x2="504" y2="88.9" stroke="#eee"/>
+<text x="56" y="91.9" font-size="10" text-anchor="end">1.2</text>
+<path d="M134.4,79.1 L151.8,108.0 L168.1,75.3 L185.0,61.3 L202.4,83.6 L218.7,116.0 L234.9,148.8 L252.9,180.4 L269.2,203.5 L285.5,221.3 L302.3,235.1 L319.8,245.1 L336.0,252.0 L352.9,256.8 L370.3,259.6 L386.6,261.0 L402.9,261.4 L420.9,261.1 L437.2,261.2 L453.4,262.3 L470.3,264.0 L487.7,265.2" fill="none" stroke="#9aa0a6" stroke-width="1.7"/>
+<line x1="516" y1="58" x2="532" y2="58" stroke="#9aa0a6" stroke-width="1.7"/>
+<text x="538" y="62" font-size="11" fill="#9aa0a6">0 mm</text>
+<path d="M134.4,112.1 L151.8,143.6 L168.1,132.2 L185.0,137.0 L202.4,160.3 L218.7,183.8 L234.9,204.1 L252.9,221.8 L269.2,233.8 L285.5,242.6 L302.3,249.0 L319.8,253.3 L336.0,256.0 L352.9,257.7 L370.3,258.3 L386.6,258.8 L402.9,259.5 L420.9,261.0 L437.2,262.1 L453.4,262.7 L470.3,263.8 L487.7,265.1" fill="none" stroke="#111111" stroke-width="2.2" stroke-dasharray="5 3"/>
+<line x1="516" y1="76" x2="532" y2="76" stroke="#111111" stroke-width="2.2" stroke-dasharray="5 3"/>
+<text x="538" y="80" font-size="11" fill="#111111">40 mm</text>
+<path d="M134.4,128.5 L151.8,159.6 L168.1,153.8 L185.0,161.0 L202.4,181.2 L218.7,200.4 L234.9,216.4 L252.9,230.1 L269.2,239.2 L285.5,245.8 L302.3,250.5 L319.8,253.6 L336.0,255.5 L352.9,256.7 L370.3,257.4 L386.6,258.4 L402.9,259.9 L420.9,261.3 L437.2,261.9 L453.4,262.7 L470.3,263.9 L487.7,265.1" fill="none" stroke="#b36b00" stroke-width="1.7"/>
+<line x1="516" y1="94" x2="532" y2="94" stroke="#b36b00" stroke-width="1.7"/>
+<text x="538" y="98" font-size="11" fill="#b36b00">60 mm</text>
+<path d="M134.4,168.3 L151.8,194.4 L168.1,194.0 L185.0,199.9 L202.4,212.0 L218.7,222.8 L234.9,231.5 L252.9,239.0 L269.2,243.9 L285.5,247.4 L302.3,250.0 L319.8,251.7 L336.0,253.3 L352.9,255.3 L370.3,257.3 L386.6,259.1 L402.9,260.1 L420.9,261.1 L437.2,261.9 L453.4,262.8 L470.3,263.8 L487.7,265.1" fill="none" stroke="#a33b32" stroke-width="1.7"/>
+<line x1="516" y1="112" x2="532" y2="112" stroke="#a33b32" stroke-width="1.7"/>
+<text x="538" y="116" font-size="11" fill="#a33b32">120 mm</text>
+<text x="700" y="34" font-size="15" font-weight="600">Rigid wall behind the Flex</text>
+<rect x="700" y="48" width="440" height="280" fill="#fff" stroke="#ddd"/>
+<line x1="700.0" y1="48" x2="700.0" y2="328" stroke="#eee"/>
+<text x="700.0" y="344" font-size="10" text-anchor="middle">0</text>
+<line x1="846.7" y1="48" x2="846.7" y2="328" stroke="#eee"/>
+<text x="846.7" y="344" font-size="10" text-anchor="middle">40</text>
+<line x1="920.0" y1="48" x2="920.0" y2="328" stroke="#eee"/>
+<text x="920.0" y="344" font-size="10" text-anchor="middle">60</text>
+<line x1="993.3" y1="48" x2="993.3" y2="328" stroke="#eee"/>
+<text x="993.3" y="344" font-size="10" text-anchor="middle">80</text>
+<line x1="1140.0" y1="48" x2="1140.0" y2="328" stroke="#eee"/>
+<text x="1140.0" y="344" font-size="10" text-anchor="middle">120</text>
+<line x1="700" y1="302.5" x2="1140" y2="302.5" stroke="#eee"/>
+<text x="692" y="305.5" font-size="10" text-anchor="end">0.4</text>
+<line x1="700" y1="251.6" x2="1140" y2="251.6" stroke="#eee"/>
+<text x="692" y="254.6" font-size="10" text-anchor="end">0.6</text>
+<line x1="700" y1="200.7" x2="1140" y2="200.7" stroke="#eee"/>
+<text x="692" y="203.7" font-size="10" text-anchor="end">0.8</text>
+<line x1="700" y1="149.8" x2="1140" y2="149.8" stroke="#eee"/>
+<text x="692" y="152.8" font-size="10" text-anchor="end">1</text>
+<line x1="700" y1="98.9" x2="1140" y2="98.9" stroke="#eee"/>
+<text x="692" y="101.9" font-size="10" text-anchor="end">1.2</text>
+<path d="M700.0,63.7 L773.3,118.5 L846.7,160.4 L920.0,191.0 L993.3,213.1 L1066.7,229.1 L1140.0,240.7" fill="none" stroke="#1f4e79" stroke-width="2.0"/>
+<line x1="1152" y1="58" x2="1168" y2="58" stroke="#1f4e79" stroke-width="2.0"/>
+<text x="1174" y="62" font-size="11" fill="#1f4e79">63 Hz</text>
+<path d="M700.0,175.5 L773.3,220.1 L846.7,246.2 L920.0,261.8 L993.3,271.4 L1066.7,277.4 L1140.0,281.1" fill="none" stroke="#b36b00" stroke-width="2.0"/>
+<line x1="1152" y1="76" x2="1168" y2="76" stroke="#b36b00" stroke-width="2.0"/>
+<text x="1174" y="80" font-size="11" fill="#b36b00">125 Hz</text>
+<path d="M700.0,268.1 L773.3,286.6 L846.7,295.2 L920.0,299.4 L993.3,301.1 L1066.7,301.6 L1140.0,301.4" fill="none" stroke="#2e7d4f" stroke-width="2.0"/>
+<line x1="1152" y1="94" x2="1168" y2="94" stroke="#2e7d4f" stroke-width="2.0"/>
+<text x="1174" y="98" font-size="11" fill="#2e7d4f">250 Hz</text>
+<path d="M700.0,307.3 L773.3,311.7 L846.7,312.4 L920.0,311.8 L993.3,310.7 L1066.7,309.7 L1140.0,309.0" fill="none" stroke="#a33b32" stroke-width="2.0"/>
+<line x1="1152" y1="112" x2="1168" y2="112" stroke="#a33b32" stroke-width="2.0"/>
+<text x="1174" y="116" font-size="11" fill="#a33b32">500 Hz</text>
+<text x="64" y="416" font-size="15" font-weight="600">Hung GKF, 80 mm wool behind</text>
+<rect x="64" y="430" width="440" height="280" fill="#fff" stroke="#ddd"/>
+<line x1="64.0" y1="430" x2="64.0" y2="710" stroke="#eee"/>
+<text x="64.0" y="726" font-size="10" text-anchor="middle">0</text>
+<line x1="210.7" y1="430" x2="210.7" y2="710" stroke="#eee"/>
+<text x="210.7" y="726" font-size="10" text-anchor="middle">40</text>
+<line x1="284.0" y1="430" x2="284.0" y2="710" stroke="#eee"/>
+<text x="284.0" y="726" font-size="10" text-anchor="middle">60</text>
+<line x1="357.3" y1="430" x2="357.3" y2="710" stroke="#eee"/>
+<text x="357.3" y="726" font-size="10" text-anchor="middle">80</text>
+<line x1="504.0" y1="430" x2="504.0" y2="710" stroke="#eee"/>
+<text x="504.0" y="726" font-size="10" text-anchor="middle">120</text>
+<line x1="64" y1="684.5" x2="504" y2="684.5" stroke="#eee"/>
+<text x="56" y="687.5" font-size="10" text-anchor="end">0.4</text>
+<line x1="64" y1="633.6" x2="504" y2="633.6" stroke="#eee"/>
+<text x="56" y="636.6" font-size="10" text-anchor="end">0.6</text>
+<line x1="64" y1="582.7" x2="504" y2="582.7" stroke="#eee"/>
+<text x="56" y="585.7" font-size="10" text-anchor="end">0.8</text>
+<line x1="64" y1="531.8" x2="504" y2="531.8" stroke="#eee"/>
+<text x="56" y="534.8" font-size="10" text-anchor="end">1</text>
+<line x1="64" y1="480.9" x2="504" y2="480.9" stroke="#eee"/>
+<text x="56" y="483.9" font-size="10" text-anchor="end">1.2</text>
+<path d="M64.0,663.4 L137.3,658.3 L210.7,653.1 L284.0,648.2 L357.3,643.8 L430.7,640.3 L504.0,637.8" fill="none" stroke="#1f4e79" stroke-width="2.0"/>
+<line x1="516" y1="440" x2="532" y2="440" stroke="#1f4e79" stroke-width="2.0"/>
+<text x="538" y="444" font-size="11" fill="#1f4e79">63 Hz</text>
+<path d="M64.0,500.5 L137.3,561.1 L210.7,601.0 L284.0,625.8 L357.3,641.3 L430.7,651.0 L504.0,657.2" fill="none" stroke="#b36b00" stroke-width="2.0"/>
+<line x1="516" y1="458" x2="532" y2="458" stroke="#b36b00" stroke-width="2.0"/>
+<text x="538" y="462" font-size="11" fill="#b36b00">125 Hz</text>
+<path d="M64.0,643.1 L137.3,664.9 L210.7,675.2 L284.0,680.1 L357.3,682.3 L430.7,683.1 L504.0,683.1" fill="none" stroke="#2e7d4f" stroke-width="2.0"/>
+<line x1="516" y1="476" x2="532" y2="476" stroke="#2e7d4f" stroke-width="2.0"/>
+<text x="538" y="480" font-size="11" fill="#2e7d4f">250 Hz</text>
+<path d="M64.0,688.7 L137.3,693.5 L210.7,694.3 L284.0,693.8 L357.3,692.7 L430.7,691.7 L504.0,691.0" fill="none" stroke="#a33b32" stroke-width="2.0"/>
+<line x1="516" y1="494" x2="532" y2="494" stroke="#a33b32" stroke-width="2.0"/>
+<text x="538" y="498" font-size="11" fill="#a33b32">500 Hz</text>
+<text x="700" y="416" font-size="15" font-weight="600">Slope α, rigid GKF</text>
+<rect x="700" y="430" width="440" height="280" fill="#fff" stroke="#ddd"/>
+<line x1="770.4" y1="430" x2="770.4" y2="710" stroke="#eee"/>
+<text x="770.4" y="726" font-size="10" text-anchor="middle">31.5</text>
+<line x1="821.0" y1="430" x2="821.0" y2="710" stroke="#eee"/>
+<text x="821.0" y="726" font-size="10" text-anchor="middle">63</text>
+<line x1="870.9" y1="430" x2="870.9" y2="710" stroke="#eee"/>
+<text x="870.9" y="726" font-size="10" text-anchor="middle">125</text>
+<line x1="921.5" y1="430" x2="921.5" y2="710" stroke="#eee"/>
+<text x="921.5" y="726" font-size="10" text-anchor="middle">250</text>
+<line x1="972.0" y1="430" x2="972.0" y2="710" stroke="#eee"/>
+<text x="972.0" y="726" font-size="10" text-anchor="middle">500</text>
+<line x1="1022.6" y1="430" x2="1022.6" y2="710" stroke="#eee"/>
+<text x="1022.6" y="726" font-size="10" text-anchor="middle">1000</text>
+<line x1="1073.2" y1="430" x2="1073.2" y2="710" stroke="#eee"/>
+<text x="1073.2" y="726" font-size="10" text-anchor="middle">2000</text>
+<line x1="1123.7" y1="430" x2="1123.7" y2="710" stroke="#eee"/>
+<text x="1123.7" y="726" font-size="10" text-anchor="middle">4000</text>
+<line x1="700" y1="710.0" x2="1140" y2="710.0" stroke="#eee"/>
+<text x="692" y="713.0" font-size="10" text-anchor="end">0</text>
+<line x1="700" y1="570.0" x2="1140" y2="570.0" stroke="#eee"/>
+<text x="692" y="573.0" font-size="10" text-anchor="end">0.5</text>
+<line x1="700" y1="430.0" x2="1140" y2="430.0" stroke="#eee"/>
+<text x="692" y="433.0" font-size="10" text-anchor="end">1</text>
+<path d="M770.4,700.6 L787.8,695.6 L804.1,689.0 L821.0,679.3 L838.4,665.7 L854.7,649.1 L870.9,628.6 L888.9,601.8 L905.2,574.9 L921.5,547.2 L938.3,519.5 L955.8,494.1 L972.0,474.7 L988.9,459.9 L1006.3,450.2 L1022.6,446.2 L1038.9,446.1 L1056.9,448.7 L1073.2,450.2 L1089.4,448.0 L1106.3,444.0 L1123.7,443.8" fill="none" stroke="#9aa0a6" stroke-width="1.7"/>
+<line x1="1152" y1="440" x2="1168" y2="440" stroke="#9aa0a6" stroke-width="1.7"/>
+<text x="1174" y="444" font-size="11" fill="#9aa0a6">0 mm</text>
+<path d="M770.4,685.6 L787.8,674.5 L804.1,660.9 L821.0,643.0 L838.4,620.7 L854.7,597.0 L870.9,571.8 L888.9,543.8 L905.2,520.2 L921.5,499.5 L938.3,482.2 L955.8,469.0 L972.0,461.0 L988.9,456.7 L1006.3,455.2 L1022.6,454.9 L1038.9,453.3 L1056.9,449.3 L1073.2,446.6 L1089.4,446.2 L1106.3,444.9 L1123.7,444.0" fill="none" stroke="#111111" stroke-width="2.2" stroke-dasharray="5 3"/>
+<line x1="1152" y1="458" x2="1168" y2="458" stroke="#111111" stroke-width="2.2" stroke-dasharray="5 3"/>
+<text x="1174" y="462" font-size="11" fill="#111111">40 mm</text>
+<path d="M770.4,676.3 L787.8,662.4 L804.1,645.8 L821.0,625.3 L838.4,601.1 L854.7,576.9 L870.9,552.6 L888.9,527.3 L905.2,507.2 L921.5,490.5 L938.3,477.3 L955.8,468.0 L972.0,462.8 L988.9,460.2 L1006.3,458.6 L1022.6,456.2 L1038.9,452.0 L1056.9,448.1 L1073.2,447.3 L1089.4,446.3 L1106.3,444.7 L1123.7,444.0" fill="none" stroke="#b36b00" stroke-width="1.7"/>
+<line x1="1152" y1="476" x2="1168" y2="476" stroke="#b36b00" stroke-width="1.7"/>
+<text x="1174" y="480" font-size="11" fill="#b36b00">60 mm</text>
+<path d="M770.4,646.9 L787.8,627.1 L804.1,606.4 L821.0,583.9 L838.4,561.0 L854.7,540.9 L870.9,523.1 L888.9,506.6 L905.2,494.8 L921.5,485.8 L938.3,479.1 L955.8,474.3 L972.0,470.3 L988.9,465.3 L1006.3,458.9 L1022.6,453.8 L1038.9,451.0 L1056.9,448.8 L1073.2,447.3 L1089.4,446.1 L1106.3,444.8 L1123.7,444.0" fill="none" stroke="#a33b32" stroke-width="1.7"/>
+<line x1="1152" y1="494" x2="1168" y2="494" stroke="#a33b32" stroke-width="1.7"/>
+<text x="1174" y="498" font-size="11" fill="#a33b32">120 mm</text>
+</svg>

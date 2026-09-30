@@ -42,6 +42,8 @@ THIRDS: tuple[float, ...] = (
 BASS_BANDS: tuple[float, ...] = (31.5, 40, 50, 63, 80, 100, 125)
 WOOL_FRACTIONS: tuple[float, ...] = (0.0, 0.25, 0.5, 0.75, 1.0)
 FLEX_FRACTIONS: tuple[float, ...] = (0.0, 0.25, 0.5, 0.75, 1.0)
+# Flush Flex behind the fixed 60 mm board, lať depth = Flex depth.
+FLEX_DEPTHS_MM: tuple[float, ...] = (0.0, 20.0, 40.0, 60.0, 80.0, 100.0, 120.0)
 # NaturHeld 140 screwed through the GKF onto the CD, no Flex and no lať.
 BOARD_ONLY_MM: tuple[float, ...] = (40.0, 60.0, 80.0, 100.0)
 # Leave the GKB free to move. Wool stops short of the leaf.
@@ -458,6 +460,7 @@ class Study:
     report: str
     svg: str
     followup_svg: str
+    flex_depth_svg: str
 
 
 def _trap_family(
@@ -632,8 +635,8 @@ def _flex_paragraph(geom: Geometry, delta_t: dict[str, dict[float, float]], as_b
         decision = (
             "Leaving the lať partly empty moves the midrange decay by more than "
             "the 5 % just-noticeable difference. Keep the flush 40 mm Flex fill: "
-            "it is also the simple install. A deeper lať is a framing change and "
-            "is outside this comparison."
+            "it is also the simple install. Depths other than this 40 mm lať are "
+            "in the Flex-depth note below."
         )
     else:
         decision = (
@@ -895,6 +898,196 @@ def _board_stability(geom: Geometry, res: Resistivity, plaster_m: float, board_m
     )
 
 
+def _hung_roof_stacks(
+    flex_m: float,
+    res: Resistivity,
+    board_m: float,
+    plaster_m: float,
+    gkf_mass: float,
+    cd_air_m: float,
+    plenum_m: float,
+) -> tuple[tuple[Layer, ...], tuple[Layer, ...]]:
+    """Bay and batten with a hung GKF and the wool plenum behind it. Room → rafter."""
+
+    def finish(layers: list[Layer]) -> tuple[Layer, ...]:
+        layers.append(("mass", gkf_mass, 0.0))
+        if cd_air_m > 1e-6:
+            layers.append(("air", cd_air_m, 0.0))
+        if plenum_m > 1e-6:
+            layers.append(("porous", plenum_m, res.mineral_wool))
+        return tuple(layers)
+
+    face = _face(plaster_m, board_m, res)
+    bay = list(face)
+    if flex_m > 1e-6:
+        bay.append(("porous", flex_m, res.wood_fibre_flex))
+    return finish(bay), finish(list(face))
+
+
+def _depth_alphas(
+    flex_m: float,
+    geom: Geometry,
+    res: Resistivity,
+    plaster_m: float,
+    board_m: float,
+    backing: str,
+    gkf_mass: float,
+    cd_air_m: float,
+    plenum_m: float,
+) -> dict[float, float]:
+    if backing == "rigid":
+        bay, lat = slope_stacks(flex_m, flex_m, res, board_m, plaster_m)
+    elif backing == "plenum":
+        bay, lat = _hung_roof_stacks(
+            flex_m, res, board_m, plaster_m, gkf_mass, cd_air_m, plenum_m
+        )
+    else:
+        raise ValueError(backing)
+    return {
+        freq: mixed_field_alpha(bay, lat, geom.timber_fraction, freq)
+        for freq in THIRDS
+    }
+
+
+def flex_depth_sweep(geom: Geometry, res: Resistivity, plaster_m: float, board_m: float) -> dict:
+    """Flush Flex from 0 to 120 mm, kitchen at the 20 mm clearance, both roof backings."""
+    ObyvakParams, _, _ = _models()
+    p = ObyvakParams()
+    gkf_mass = GKB_DENSITY * p.sdk_t / 1000.0
+    cd_air_m = p.cd_t / 1000.0
+    plenum_m = p.plenum_t / 1000.0
+    k_frac = 1.0 - LEAF_CLEARANCE_M / geom.kitchen_cavity
+    k_wool, k_air = _split(geom.kitchen_cavity, k_frac)
+    l_wool, l_air = _split(geom.living_cavity, geom.living_wool_fraction)
+    kitchen = trap_stack(k_wool, k_air, geom.gkb_mass, res.mineral_wool)
+    living = trap_stack(l_wool, l_air, geom.gkb_mass, res.mineral_wool)
+    fixed = {
+        freq: {
+            "kitchen": field_absorption(kitchen, freq),
+            "living": field_absorption(living, freq),
+            "soffit": soffit_field_alpha(geom, res, plaster_m, board_m, freq),
+        }
+        for freq in THIRDS
+    }
+
+    def times_for(slope_alpha: dict[float, float]) -> dict[float, float]:
+        bands = {
+            freq: {**fixed[freq], "slope": slope_alpha[freq]}
+            for freq in THIRDS
+        }
+        return room_times(geom, bands)
+
+    rigid_a: dict[float, dict[float, float]] = {}
+    rigid_t: dict[float, dict[float, float]] = {}
+    plenum_t: dict[float, dict[float, float]] = {}
+    for depth_mm in FLEX_DEPTHS_MM:
+        flex_m = depth_mm / 1000.0
+        rigid_alpha = _depth_alphas(
+            flex_m, geom, res, plaster_m, board_m, "rigid", gkf_mass, cd_air_m, plenum_m
+        )
+        plenum_alpha = _depth_alphas(
+            flex_m, geom, res, plaster_m, board_m, "plenum", gkf_mass, cd_air_m, plenum_m
+        )
+        rigid_a[depth_mm] = rigid_alpha
+        rigid_t[depth_mm] = times_for(rigid_alpha)
+        plenum_t[depth_mm] = times_for(plenum_alpha)
+    return {
+        "gkf_mass": gkf_mass,
+        "cd_air_m": cd_air_m,
+        "plenum_m": plenum_m,
+        "pitch_deg": p.roof_angle_deg,
+        "rigid_alpha": rigid_a,
+        "rigid_t": rigid_t,
+        "plenum_t": plenum_t,
+        "fixed": fixed,
+    }
+
+
+def _flex_depth_paragraph(geom: Geometry, sweep: dict) -> str:
+    rigid = sweep["rigid_t"]
+    plenum = sweep["plenum_t"]
+    fixed = sweep["fixed"]
+    bands = (63.0, 125.0, 250.0, 500.0, 1000.0, 2000.0)
+    lines = [
+        "Flex thickness behind the fixed 60 mm NaturHeld 140 and the 4 mm StoSilent. "
+        "The rest of the room is the recommended build: kitchen wool stopped 20 mm "
+        "short of the GKB, living trap as drawn, soffit at its built depth. "
+        "Each row is a flush lať of that depth (no empty gap in the bay). "
+        "Battens stay 60 mm wide at 625 mm centres and run the full depth. "
+        "Decay times, rigid GKF:"
+    ]
+    for depth in FLEX_DEPTHS_MM:
+        bits = [f"{freq:.0f} Hz {rigid[depth][freq]:.2f} s" for freq in bands]
+        lines.append(f"{depth:.0f} mm: " + "; ".join(bits) + ".")
+    drawn = 40.0
+    share_bits = []
+    for freq in bands:
+        slope = geom.slope * sweep["rigid_alpha"][drawn][freq]
+        soffit = geom.soffit * fixed[freq]["soffit"]
+        traps = geom.kitchen_trap * (fixed[freq]["kitchen"] + fixed[freq]["living"])
+        total = slope + soffit + traps
+        share_bits.append(
+            f"{freq:.0f} Hz slopes {slope:.0f} m², soffit {soffit:.0f} m², traps {traps:.0f} m² "
+            f"({100.0 * slope / total:.0f}% slopes)"
+        )
+    step_40_60_250 = rigid[60.0][250.0] - rigid[drawn][250.0]
+    step_40_60_125 = rigid[60.0][125.0] - rigid[drawn][125.0]
+    step_40_120_250 = rigid[120.0][250.0] - rigid[drawn][250.0]
+    step_40_120_500 = rigid[120.0][500.0] - rigid[drawn][500.0]
+    extra_120 = (120.0 - drawn) / 1000.0
+    headroom_120 = extra_120 / math.cos(math.radians(sweep["pitch_deg"]))
+    flex_40 = geom.slope * (1.0 - geom.timber_fraction) * drawn / 1000.0
+    flex_120 = geom.slope * (1.0 - geom.timber_fraction) * 120.0 / 1000.0
+    lines.append(
+        "Who is actually absorbing, at the drawn 40 mm: " + "; ".join(share_bits) + ". "
+        "From 125 Hz up the slopes are the room. The traps are finished by then, and the "
+        "soffit is about a sixth of the slope area."
+    )
+    lines.append(
+        f"Past 40 mm the speech band does not repay more Flex. "
+        f"40 → 60 mm changes 250 Hz by {step_40_60_250:+.3f} s "
+        f"({100.0 * step_40_60_250 / rigid[drawn][250.0]:+.1f}%) and 125 Hz by {step_40_60_125:+.3f} s "
+        f"({100.0 * step_40_60_125 / rigid[drawn][125.0]:+.1f}%). "
+        f"40 → 120 mm changes 250 Hz by {step_40_120_250:+.3f} s "
+        f"({100.0 * step_40_120_250 / rigid[drawn][250.0]:+.1f}%) and 500 Hz by {step_40_120_500:+.3f} s "
+        f"({100.0 * step_40_120_500 / rigid[drawn][500.0]:+.1f}%). "
+        f"At 40 mm the room is already at {rigid[drawn][250.0]:.2f} s (250 Hz) and "
+        f"{rigid[drawn][500.0]:.2f} s (500 Hz). For spoken word and ordinary TV or music in "
+        f"{geom.volume:.0f} m³, that mid band is the dry one; a pleasant living room sits "
+        "closer to half a second there than to a third. More slope depth would be spent "
+        "making the largest surface deader in the band the ear uses for speech."
+    )
+    lines.append(
+        "The rigid-GKF curve keeps shortening 63 Hz out to 120 mm. That part is the one "
+        "not to follow. The built roof is a 12.5 mm GKF on hangers, then a "
+        f"{_mm(sweep['cd_air_m'])} CD zone and about {_mm(sweep['plenum_m'])} of mineral wool "
+        f"up to the rafters (GKF mass {sweep['gkf_mass']:.0f} kg/m² in this check). "
+        f"With that backing, 63 Hz is {plenum[0.0][63.0]:.2f} s at no Flex and "
+        f"{plenum[120.0][63.0]:.2f} s at 120 mm: thicker Flex lengthens the bass, because it "
+        "covers a leaf that was already working. At 250 Hz and above the two backings "
+        f"agree (500 Hz at 40 mm is {rigid[drawn][500.0]:.2f} s rigid and "
+        f"{plenum[drawn][500.0]:.2f} s with the plenum). Trust the speech-band result. "
+        "Treat the 63 Hz 'keep adding Flex' result as an artefact of a rigid wall the roof is not."
+    )
+    step_60_80_125 = rigid[80.0][125.0] - rigid[60.0][125.0]
+    lines.append(
+        "For this living room, leave the Flex at 40 mm. "
+        "60 mm is the only thicker step still worth considering, and only if 125 Hz "
+        "still sounds woolly after the kitchen trap is thickened: it shortens 125 Hz past 5% "
+        "and stays inside 5% at 250 Hz. "
+        f"60 → 80 mm still shortens 125 Hz by {step_60_80_125:+.3f} s "
+        f"({100.0 * step_60_80_125 / rigid[60.0][125.0]:+.1f}%), just past 5%, and does nothing "
+        "you would hear at 250 Hz. The same step lengthens 63 Hz once the GKF is allowed to move. "
+        "That is a poor trade on the largest surface: the lowest octave belongs to the gable traps, "
+        "the soffit, and the wool already behind the hung board. "
+        f"120 mm of Flex is {flex_120:.1f} m³ against {flex_40:.1f} m³ at 40 mm. "
+        f"With the rafters fixed, that extra 80 mm drops the acoustic face about "
+        f"{headroom_120 * 1000:.0f} mm vertically on the {sweep['pitch_deg']:.0f}° pitch, "
+        "and it uses up the window-slope hanger zone if the face is held instead."
+    )
+    return "\n".join(lines)
+
+
 def build_report(study_bits: dict) -> str:
     geom: Geometry = study_bits["geometry"]
     axials: dict[str, float] = study_bits["axials"]
@@ -929,6 +1122,7 @@ def build_report(study_bits: dict) -> str:
         study_bits["mounting_text"],
         study_bits["soffit_text"],
         study_bits["flex_text"],
+        study_bits["flex_depth_text"],
         study_bits["board_text"],
         study_bits["sensitivity_text"],
         study_bits["volume_text"],
@@ -999,6 +1193,51 @@ def _append_chart(parts, box, title, ymin, ymax, series, vlines, y_format) -> No
     legend_y = oy + 14
     for name, freqs, values, color, stroke, dash in series:
         path = _series_path(freqs, values, x_of, y_of)
+        dash_attr = f' stroke-dasharray="{dash}"' if dash else ""
+        parts.append(
+            f'<path d="{path}" fill="none" stroke="{color}" stroke-width="{stroke}"{dash_attr}/>'
+        )
+        parts.append(
+            f'<line x1="{legend_x}" y1="{legend_y - 4}" x2="{legend_x + 16}" y2="{legend_y - 4}" '
+            f'stroke="{color}" stroke-width="{stroke}"{dash_attr}/>'
+        )
+        parts.append(
+            f'<text x="{legend_x + 22}" y="{legend_y}" font-size="11" fill="{color}">{_svg_escape(name)}</text>'
+        )
+        legend_y += 18
+
+
+def _append_depth_chart(parts, box, title, ymin, ymax, series, y_format) -> None:
+    """X is Flex thickness in mm, not frequency."""
+    ox, oy, w, h = box
+    xmin, xmax = 0.0, 120.0
+    parts.append(f'<text x="{ox}" y="{oy - 14}" font-size="15" font-weight="600">{_svg_escape(title)}</text>')
+    parts.append(f'<rect x="{ox}" y="{oy}" width="{w}" height="{h}" fill="#fff" stroke="#ddd"/>')
+
+    def x_of(depth: float) -> float:
+        return ox + w * (depth - xmin) / (xmax - xmin)
+
+    def y_of(value: float) -> float:
+        return oy + h * (1.0 - (value - ymin) / (ymax - ymin))
+
+    for tick in (0, 40, 60, 80, 120):
+        x = x_of(tick)
+        parts.append(f'<line x1="{x:.1f}" y1="{oy}" x2="{x:.1f}" y2="{oy + h}" stroke="#eee"/>')
+        parts.append(
+            f'<text x="{x:.1f}" y="{oy + h + 16}" font-size="10" text-anchor="middle">{tick:.0f}</text>'
+        )
+    for value in y_format:
+        if not ymin - 1e-9 <= value <= ymax + 1e-9:
+            continue
+        y = y_of(value)
+        parts.append(f'<line x1="{ox}" y1="{y:.1f}" x2="{ox + w}" y2="{y:.1f}" stroke="#eee"/>')
+        parts.append(
+            f'<text x="{ox - 8}" y="{y + 3:.1f}" font-size="10" text-anchor="end">{value:g}</text>'
+        )
+    legend_x = ox + w + 12
+    legend_y = oy + 14
+    for name, depths, values, color, stroke, dash in series:
+        path = _series_path(depths, values, x_of, y_of)
         dash_attr = f' stroke-dasharray="{dash}"' if dash else ""
         parts.append(
             f'<path d="{path}" fill="none" stroke="{color}" stroke-width="{stroke}"{dash_attr}/>'
@@ -1277,6 +1516,109 @@ def render_followup_svg(study: dict) -> str:
     return "\n".join(parts)
 
 
+def render_flex_depth_svg(sweep: dict) -> str:
+    """Room decay against Flex thickness, rigid GKF and hung GKF with plenum wool."""
+    width, height = 1360, 760
+    plot_w, plot_h = 440, 280
+    panels = [
+        (64, 48, plot_w, plot_h),
+        (700, 48, plot_w, plot_h),
+        (64, 430, plot_w, plot_h),
+        (700, 430, plot_w, plot_h),
+    ]
+    parts = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
+        '<rect width="100%" height="100%" fill="#f7f5f1"/>',
+        '<style>text{font-family:system-ui,sans-serif;fill:#222}</style>',
+    ]
+    freqs = list(THIRDS)
+    shown = (0.0, 40.0, 60.0, 120.0)
+    colors = {0.0: "#9aa0a6", 40.0: "#111111", 60.0: "#b36b00", 120.0: "#a33b32"}
+    series = []
+    for depth in shown:
+        series.append(
+            (
+                f"{depth:.0f} mm",
+                freqs,
+                [sweep["rigid_t"][depth][freq] for freq in freqs],
+                colors[depth],
+                2.2 if depth == 40.0 else 1.7,
+                "5 3" if depth == 40.0 else None,
+            )
+        )
+    peak = max(sweep["rigid_t"][0.0][freq] for freq in freqs)
+    _append_chart(
+        parts,
+        panels[0],
+        "Room decay, rigid GKF (seconds)",
+        0.0,
+        max(1.4, peak * 1.05),
+        series,
+        [],
+        (0.4, 0.8, 1.2),
+    )
+    depth_colors = {63.0: "#1f4e79", 125.0: "#b36b00", 250.0: "#2e7d4f", 500.0: "#a33b32"}
+    depths = list(FLEX_DEPTHS_MM)
+
+    def depth_series(times: dict) -> list:
+        out = []
+        for freq, color in depth_colors.items():
+            out.append(
+                (
+                    f"{freq:.0f} Hz",
+                    depths,
+                    [times[depth][freq] for depth in depths],
+                    color,
+                    2.0,
+                    None,
+                )
+            )
+        return out
+
+    _append_depth_chart(
+        parts,
+        panels[1],
+        "Rigid wall behind the Flex",
+        0.3,
+        1.4,
+        depth_series(sweep["rigid_t"]),
+        (0.4, 0.6, 0.8, 1.0, 1.2),
+    )
+    _append_depth_chart(
+        parts,
+        panels[2],
+        "Hung GKF, 80 mm wool behind",
+        0.3,
+        1.4,
+        depth_series(sweep["plenum_t"]),
+        (0.4, 0.6, 0.8, 1.0, 1.2),
+    )
+    alpha_series = []
+    for depth in shown:
+        alpha_series.append(
+            (
+                f"{depth:.0f} mm",
+                freqs,
+                [sweep["rigid_alpha"][depth][freq] for freq in freqs],
+                colors[depth],
+                2.2 if depth == 40.0 else 1.7,
+                "5 3" if depth == 40.0 else None,
+            )
+        )
+    _append_chart(
+        parts,
+        panels[3],
+        "Slope α, rigid GKF",
+        0.0,
+        1.0,
+        alpha_series,
+        [],
+        (0, 0.5, 1),
+    )
+    parts.append("</svg>")
+    return "\n".join(parts)
+
+
 def run_study(params=None, resistivity: Resistivity | None = None) -> Study:
     ObyvakParams, _, _ = _models()
     p = params or ObyvakParams()
@@ -1369,6 +1711,8 @@ def run_study(params=None, resistivity: Resistivity | None = None) -> Study:
     soffit_text = _soffit_paragraph(geom, as_built)
     board_text = _board_paragraph(as_t, board_delta, geom.timber_fraction)
     board_text += "\n" + _board_stability(geom, res, plaster_m, board_m)
+    flex_sweep = flex_depth_sweep(geom, res, plaster_m, board_m)
+    flex_depth_text = _flex_depth_paragraph(geom, flex_sweep)
     bits = {
         "geometry": geom,
         "resistivity": res,
@@ -1376,6 +1720,7 @@ def run_study(params=None, resistivity: Resistivity | None = None) -> Study:
         "kitchen_text": kitchen_text,
         "living_text": living_text,
         "flex_text": flex_text,
+        "flex_depth_text": flex_depth_text,
         "sensitivity_text": sensitivity_text,
         "volume_text": volume_text,
         "mounting_text": mounting_text,
@@ -1392,6 +1737,7 @@ def run_study(params=None, resistivity: Resistivity | None = None) -> Study:
     report = build_report(bits)
     svg = render_svg(bits)
     followup_svg = render_followup_svg(bits)
+    flex_depth_svg = render_flex_depth_svg(flex_sweep)
     return Study(
         geometry=geom,
         resistivity=res,
@@ -1406,6 +1752,7 @@ def run_study(params=None, resistivity: Resistivity | None = None) -> Study:
         report=report,
         svg=svg,
         followup_svg=followup_svg,
+        flex_depth_svg=flex_depth_svg,
     )
 
 
@@ -1416,12 +1763,17 @@ def write_outputs(study: Study, dest: Path | None = None) -> Path:
     (out / "report.txt").write_text(study.report, encoding="utf-8")
     (out / "obyvak_acoustics.svg").write_text(study.svg, encoding="utf-8")
     (out / "obyvak_soffit_variants.svg").write_text(study.followup_svg, encoding="utf-8")
+    (out / "obyvak_flex_depth.svg").write_text(study.flex_depth_svg, encoding="utf-8")
     import cairosvg
 
     cairosvg.svg2png(bytestring=study.svg.encode("utf-8"), write_to=str(out / "obyvak_acoustics.png"))
     cairosvg.svg2png(
         bytestring=study.followup_svg.encode("utf-8"),
         write_to=str(out / "obyvak_soffit_variants.png"),
+    )
+    cairosvg.svg2png(
+        bytestring=study.flex_depth_svg.encode("utf-8"),
+        write_to=str(out / "obyvak_flex_depth.png"),
     )
     artifacts = Path("/opt/cursor/artifacts")
     if artifacts.is_dir():
@@ -1432,6 +1784,10 @@ def write_outputs(study: Study, dest: Path | None = None) -> Path:
         cairosvg.svg2png(
             bytestring=study.followup_svg.encode("utf-8"),
             write_to=str(artifacts / "obyvak_soffit_variants.png"),
+        )
+        cairosvg.svg2png(
+            bytestring=study.flex_depth_svg.encode("utf-8"),
+            write_to=str(artifacts / "obyvak_flex_depth.png"),
         )
     return out
 

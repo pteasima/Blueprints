@@ -21,6 +21,7 @@ from blueprints.acoustics.obyvak import (
     axial_marks,
     board_only_stack,
     eyring_t,
+    flex_depth_sweep,
     room_geometry,
     run_study,
     trap_stack,
@@ -197,3 +198,22 @@ def test_bare_naturheld_boards_against_the_flex_slope():
     assert abs(study.board_delta[100.0][125.0]) < 0.05 * reference
     for freq in (63.0, 125.0, 250.0):
         assert study.board_alpha[100.0][freq] > study.board_alpha[40.0][freq]
+
+
+def test_flex_depth_for_a_living_room_stops_at_40_mm():
+    geom = room_geometry()
+    sweep = flex_depth_sweep(geom, Resistivity(), 0.004, 0.060)
+    rigid = sweep["rigid_t"]
+    plenum = sweep["plenum_t"]
+    # 500 Hz does not get shorter if the lať grows from 40 mm to 120 mm.
+    assert rigid[120.0][500.0] >= rigid[40.0][500.0]
+    # 60 mm still moves 125 Hz past 5%, and stays inside 5% at 250 Hz.
+    assert rigid[40.0][125.0] - rigid[60.0][125.0] > 0.05 * rigid[40.0][125.0]
+    assert rigid[40.0][250.0] - rigid[60.0][250.0] < 0.05 * rigid[40.0][250.0]
+    # The following 20 mm, 80 → 100, is inside 5% at 125 Hz.
+    assert rigid[80.0][125.0] - rigid[100.0][125.0] < 0.05 * rigid[80.0][125.0]
+    # A hung GKF with the wool plenum behind it: more Flex lengthens 63 Hz.
+    assert plenum[120.0][63.0] > plenum[0.0][63.0] + 0.05
+    # Speech frequencies do not depend on that backing.
+    assert abs(plenum[40.0][500.0] - rigid[40.0][500.0]) < 0.02
+    assert "For this living room, leave the Flex at 40 mm." in run_study().report
