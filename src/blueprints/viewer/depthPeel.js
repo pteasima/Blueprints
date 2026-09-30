@@ -50,6 +50,30 @@ export const PEEL_SCALE_FAST = 0.5;
 export const PEEL_SCALE_HIGH = 1;
 
 /**
+ * Identity of the meshes a peel batch was copied from. Cut caps are new
+ * meshes on release. Cut silhouettes keep the same line object and swap in a
+ * new geometry, so the child geometry id has to be part of this. The content
+ * key is only the slider value, and that value is already final while the
+ * fill is still at the previous plane.
+ * @param {THREE.Object3D[]} meshes
+ */
+export function peelSourceStamp(meshes) {
+  let stamp = String(meshes.length);
+  for (const mesh of meshes) {
+    const matId = Array.isArray(mesh.material) ? "m" : mesh.material?.id ?? 0;
+    stamp += `|${mesh.id}:${matId}:${mesh.geometry?.id ?? 0}`;
+    const kids = mesh.children;
+    if (!kids) continue;
+    for (let i = 0; i < kids.length; i++) {
+      const child = kids[i];
+      if (!child?.userData?.isEdgeOverlay) continue;
+      stamp += `>${child.id}:${child.geometry?.id ?? 0}`;
+    }
+  }
+  return stamp;
+}
+
+/**
  * Sentinel “no fragment / far” for view-Z colour targets.
  * Fits comfortably in float32; avoid float16 for peel Z.
  */
@@ -585,6 +609,12 @@ export function createDepthPeelRenderer(renderer) {
   const opaqueBatches = { meshes: [], sources: [], key: "" };
   /** Content stamp of the batches already built, so drag frames do not remerge. */
   let primedKey = "";
+  /**
+   * Mesh and cut-edge geometry the batches were copied from. The content
+   * stamp is the slider value; the filled cut face is rebuilt on release,
+   * after that value has already been recorded.
+   */
+  let primedStamp = "";
   const peelBatchScene = new THREE.Scene();
   const depthBatchScene = new THREE.Scene();
   const edgeBatchScene = new THREE.Scene();
@@ -620,6 +650,7 @@ export function createDepthPeelRenderer(renderer) {
     disposeSlot(opaqueBatches);
     disposeEdgeBatches();
     primedKey = "";
+    primedStamp = "";
   }
 
   /**
@@ -711,7 +742,15 @@ export function createDepthPeelRenderer(renderer) {
    */
   function primeBatches(root, opaque, transparent, batchKey) {
     if (!transparent.length) return;
-    if (batchKey && batchKey === primedKey && transBatches.meshes.length) return;
+    const stamp = `${peelSourceStamp(transparent)}#${peelSourceStamp(opaque)}`;
+    if (
+      batchKey &&
+      batchKey === primedKey &&
+      stamp === primedStamp &&
+      transBatches.meshes.length
+    ) {
+      return;
+    }
     ensureSlot(transBatches, root, transparent);
     ensureSlot(opaqueBatches, root, opaque);
     if (
@@ -720,6 +759,7 @@ export function createDepthPeelRenderer(renderer) {
     ) {
       primeEdgeBatches(transparent);
       primedKey = batchKey || "";
+      primedStamp = stamp;
     }
   }
 
