@@ -248,6 +248,95 @@ function createEdgeMaterial(planes, res, opacity = 1) {
 }
 
 /**
+ * Fat line used only inside a settled peel layer. The shader keeps fragments
+ * whose eye-space Z matches the current peel layer, so a rear stroke is
+ * composited behind the glass in front of it instead of stamped on top.
+ * Shared uniform objects are the peel pass's own; stage 0 (the fast path)
+ * never draws this line.
+ * @param {Float32Array} positions start/end xyz pairs, world space
+ * @param {number} opacity
+ * @param {THREE.Plane[]} planes
+ * @param {{
+ *   stage: { value: number },
+ *   prevZ: { value: THREE.Texture | null },
+ *   peelZ: { value: THREE.Texture | null },
+ *   opaqueZ: { value: THREE.Texture | null },
+ *   eps: { value: number },
+ *   resolution: { value: THREE.Vector2 },
+ * }} peel
+ * @returns {LineSegments2}
+ */
+export function createPeeledEdgeLine(positions, opacity, planes, peel) {
+  const o = Math.max(0, Math.min(1, Number(opacity) || 0));
+  const mat = createEdgeMaterial(planes, null, o);
+  mat.depthTest = false;
+  mat.depthWrite = false;
+  mat.transparent = true;
+  mat.opacity = o;
+  const prevCompile = mat.onBeforeCompile?.bind(mat);
+  const prevKey = mat.customProgramCacheKey?.bind(mat);
+  mat.customProgramCacheKey = () => `${prevKey ? prevKey() : "edge"}|peelEdge1`;
+  mat.onBeforeCompile = (shader, renderer) => {
+    prevCompile?.(shader, renderer);
+    shader.uniforms.uPeelStage = peel.stage;
+    shader.uniforms.tPrevViewZ = peel.prevZ;
+    shader.uniforms.tPeelViewZ = peel.peelZ;
+    shader.uniforms.tOpaqueViewZ = peel.opaqueZ;
+    shader.uniforms.uViewZEps = peel.eps;
+    shader.uniforms.uBpPeelRes = peel.resolution;
+    shader.vertexShader = shader.vertexShader.replace(
+      "void main() {",
+      "varying float vBpEdgeViewZ;\nvoid main() {",
+    );
+    shader.vertexShader = shader.vertexShader.replace(
+      "vec4 mvPosition = ( position.y < 0.5 ) ? start : end; // this is an approximation",
+      `vec4 mvPosition = ( position.y < 0.5 ) ? start : end; // this is an approximation
+			vBpEdgeViewZ = -mvPosition.z;`,
+    );
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "void main() {",
+      `uniform float uPeelStage;
+			uniform sampler2D tPrevViewZ;
+			uniform sampler2D tPeelViewZ;
+			uniform sampler2D tOpaqueViewZ;
+			uniform float uViewZEps;
+			uniform vec2 uBpPeelRes;
+			varying float vBpEdgeViewZ;
+			void main() {`,
+    );
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "gl_FragColor = vec4( diffuseColor.rgb, alpha );",
+      `if (uPeelStage > 0.5) {
+				vec2 peelUv = gl_FragCoord.xy / uBpPeelRes;
+				float opaqueZ = texture2D(tOpaqueViewZ, peelUv).r;
+				float prevZ = texture2D(tPrevViewZ, peelUv).r;
+				float edgeZ = vBpEdgeViewZ;
+				float eps = max(uViewZEps, 1e-3 * max(edgeZ, 1.0));
+				if (opaqueZ > 1e-4 && edgeZ >= opaqueZ - eps) discard;
+				if (edgeZ <= prevZ + eps) discard;
+				if (uPeelStage >= 1.5) {
+					float peelZ = texture2D(tPeelViewZ, peelUv).r;
+					if (peelZ > 50000.0) discard;
+					float peelEps = max(uViewZEps, 1e-2 * max(peelZ, 1.0));
+					if (edgeZ > peelZ + peelEps) discard;
+				}
+			}
+			gl_FragColor = vec4( diffuseColor.rgb, alpha );`,
+    );
+  };
+  mat.needsUpdate = true;
+  const geom = new LineSegmentsGeometry();
+  geom.setPositions(positions);
+  const line = new LineSegments2(geom, mat);
+  line.frustumCulled = false;
+  line.matrixAutoUpdate = false;
+  line.renderOrder = 1000;
+  line.raycast = () => {};
+  line.userData.isPeeledEdgeBatch = true;
+  return line;
+}
+
+/**
  * Dispose geometry/material and detach one overlay line object.
  * @param {THREE.Object3D} lines
  */
@@ -464,9 +553,10 @@ function isFadedFace(obj) {
  * @param {THREE.Scene} scene
  * @param {THREE.Camera} camera
  * @param {THREE.Object3D} root
- * @param {{ reuseDepth?: boolean }} [opts]
+ * @param {{ reuseDepth?: boolean, opaqueEdgesOnly?: boolean }} [opts]
  *   `reuseDepth` draws only the fat lines against the depth the colour pass
  *   just wrote. Used for fully opaque frames and the fast sorted-alpha frame.
+ *   `opaqueEdgesOnly` skips strokes that already joined a peel layer (opacity under 1).
  */
 export function renderEdgeOverlayPass(renderer, scene, camera, root, opts = {}) {
   if (!root) return;
@@ -541,10 +631,27 @@ export function renderEdgeOverlayPass(renderer, scene, camera, root, opts = {}) 
 
   // 2) Edge colour only. Faces stay on layer 0; the depth prepass already
   //    filled the buffer, so redrawing them (and flipping their transparent
-  //    flag) only burns a second full traversal.
+  //    flag) only burns a second full traversal. Strokes already composited
+  //    inside the peel stay hidden so they are not stamped on top of the glass.
   setEdgeOverlaysVisible(root, true);
+  /** @type {THREE.Object3D[]} */
+  const hiddenSoft = [];
+  if (opts.opaqueEdgesOnly) {
+    root.traverse((obj) => {
+      if (!isEdgeOverlay(obj)) return;
+      const mat = Array.isArray(obj.material) ? obj.material[0] : obj.material;
+      if (mat && mat.transparent && mat.opacity < 1 - 1e-4) {
+        hiddenSoft.push(obj);
+        obj.visible = false;
+      }
+    });
+  }
   camera.layers.set(EDGE_LAYER);
-  renderer.render(scene, camera);
+  try {
+    renderer.render(scene, camera);
+  } finally {
+    for (const obj of hiddenSoft) obj.visible = true;
+  }
   camera.layers.mask = prevLayers;
 
   scene.background = prevBg;

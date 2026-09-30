@@ -21,7 +21,12 @@
  */
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { isEdgeOverlay, renderEdgeOverlayPass, setEdgeOverlaysVisible } from "./edges.js";
+import {
+  createPeeledEdgeLine,
+  isEdgeOverlay,
+  renderEdgeOverlayPass,
+  setEdgeOverlaysVisible,
+} from "./edges.js";
 
 /**
  * Everitt peels for CAD shell stacking. Sorted alpha remains the emergency
@@ -530,6 +535,9 @@ export function createDepthPeelRenderer(renderer) {
   let primedKey = "";
   const peelBatchScene = new THREE.Scene();
   const depthBatchScene = new THREE.Scene();
+  const edgeBatchScene = new THREE.Scene();
+  /** @type {import("three/addons/lines/LineSegments2.js").LineSegments2[]} */
+  let edgeBatchLines = [];
 
   /**
    * @param {BatchSlot} slot
@@ -541,10 +549,104 @@ export function createDepthPeelRenderer(renderer) {
     slot.key = "";
   }
 
+  function disposeEdgeBatches() {
+    for (const line of edgeBatchLines) {
+      edgeBatchScene.remove(line);
+      line.geometry?.dispose?.();
+      const mat = line.material;
+      if (Array.isArray(mat)) {
+        for (const m of mat) m?.dispose?.();
+      } else {
+        mat?.dispose?.();
+      }
+    }
+    edgeBatchLines = [];
+  }
+
   function disposePeelBatches() {
     disposeSlot(transBatches);
     disposeSlot(opaqueBatches);
+    disposeEdgeBatches();
     primedKey = "";
+  }
+
+  /**
+   * World-space fat lines for faded parts, one line per opacity. Drawn into
+   * each peel layer so a stroke behind glass is blended behind that glass.
+   * Opaque-mode strokes stay at opacity 1 and are not included; the post pass
+   * draws those against opaque depth.
+   * @param {THREE.Mesh[]} transparent
+   */
+  function primeEdgeBatches(transparent) {
+    disposeEdgeBatches();
+    if (!transparent.length) return;
+    /** @type {Map<string, { opacity: number, planes: THREE.Plane[], chunks: Float32Array[] }>} */
+    const groups = new Map();
+    const p = new THREE.Vector3();
+    for (const mesh of transparent) {
+      /** @type {THREE.Object3D | null} */
+      let overlay = null;
+      for (const child of mesh.children) {
+        if (isEdgeOverlay(child)) {
+          overlay = child;
+          break;
+        }
+      }
+      if (!overlay?.geometry) continue;
+      const mat = /** @type {THREE.Material} */ (overlay.material);
+      const opacity =
+        mat && mat.transparent && typeof mat.opacity === "number" ? mat.opacity : 1;
+      if (!(opacity < 1 - 1e-4)) continue;
+      const start = overlay.geometry.getAttribute("instanceStart");
+      const end = overlay.geometry.getAttribute("instanceEnd");
+      if (!start || !end || !start.count) continue;
+      const key = opacity.toFixed(3);
+      let group = groups.get(key);
+      if (!group) {
+        group = {
+          opacity,
+          planes: mat.clippingPlanes || [],
+          chunks: [],
+        };
+        groups.set(key, group);
+      }
+      mesh.updateWorldMatrix(true, false);
+      const n = start.count;
+      const arr = new Float32Array(n * 6);
+      for (let i = 0; i < n; i++) {
+        p.fromBufferAttribute(start, i).applyMatrix4(mesh.matrixWorld);
+        arr[i * 6] = p.x;
+        arr[i * 6 + 1] = p.y;
+        arr[i * 6 + 2] = p.z;
+        p.fromBufferAttribute(end, i).applyMatrix4(mesh.matrixWorld);
+        arr[i * 6 + 3] = p.x;
+        arr[i * 6 + 4] = p.y;
+        arr[i * 6 + 5] = p.z;
+      }
+      group.chunks.push(arr);
+    }
+    const peel = {
+      stage: peelStageUniform,
+      prevZ: peelUniforms.tPrevViewZ,
+      peelZ: peelUniforms.tPeelViewZ,
+      opaqueZ: peelUniforms.tOpaqueViewZ,
+      eps: peelUniforms.uViewZEps,
+      resolution: peelUniforms.uResolution,
+    };
+    for (const group of groups.values()) {
+      let len = 0;
+      for (const chunk of group.chunks) len += chunk.length;
+      if (len < 6) continue;
+      const packed = new Float32Array(len);
+      let offset = 0;
+      for (const chunk of group.chunks) {
+        packed.set(chunk, offset);
+        offset += chunk.length;
+      }
+      const line = createPeeledEdgeLine(packed, group.opacity, group.planes, peel);
+      edgeBatchScene.add(line);
+      edgeBatchLines.push(line);
+    }
   }
 
   /**
@@ -564,6 +666,7 @@ export function createDepthPeelRenderer(renderer) {
       transBatches.sources.length === transparent.length &&
       opaqueBatches.sources.length === opaque.length
     ) {
+      primeEdgeBatches(transparent);
       primedKey = batchKey || "";
     }
   }
@@ -1121,6 +1224,24 @@ export function createDepthPeelRenderer(renderer) {
       renderer.clear();
       renderTransparent(scene, camera, transparent);
 
+      // Transparent strokes join this layer. A rear line fails the peel test
+      // until its own surface is the nearest remaining one, so it is blended
+      // behind the glass in front of it. Opaque strokes are a later pass.
+      if (edgeBatchLines.length && layerRT) {
+        for (const line of edgeBatchLines) {
+          const res = /** @type {{ set: (x: number, y: number) => void } | undefined} */ (
+            line.material?.resolution
+          );
+          res?.set(layerRT.width, layerRT.height);
+        }
+        const prevLayers = camera.layers.mask;
+        camera.layers.set(0);
+        renderer.autoClear = false;
+        renderer.render(edgeBatchScene, camera);
+        camera.layers.mask = prevLayers;
+        renderer.autoClear = true;
+      }
+
       anyLayerWritten = true;
 
       blitMat.uniforms.tSrc.value = layerRT.texture;
@@ -1167,14 +1288,16 @@ export function createDepthPeelRenderer(renderer) {
     renderer.autoClear = true;
     renderer.render(compositeScene, compositeCamera);
 
-    // Settled frames refill depth from opaque faces only, then draw CAD edges.
-    // The refill uses the face shaders (see renderEdgeOverlayPass), matching
-    // the fast path where faded materials keep depthWrite off.
+    // Opaque strokes (edge mode Opaque, or an unfaded part) refill depth from
+    // opaque faces and draw on top of the composite, so they read through glass.
+    // Faded strokes were already blended into the peel layers above.
     const notes = annotationNodes(scene);
     const prevNotes = notes.map((node) => node.visible);
     setNodesVisible(notes, false);
     if (highQuality && root) {
-      renderEdgeOverlayPass(renderer, scene, camera, root);
+      renderEdgeOverlayPass(renderer, scene, camera, root, {
+        opaqueEdgesOnly: edgeBatchLines.length > 0,
+      });
     }
     notes.forEach((node, i) => {
       node.visible = prevNotes[i];
