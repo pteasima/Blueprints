@@ -2263,7 +2263,10 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       batchKey: contentNow,
       // The frame that shows a new scene or slider value should paint before
       // the geometry merge. The following still frame peels.
-      deferPrime: contentChanged,
+      // While the thumb is down the clip plane moves and the filled cut face
+      // stays put until release. A snapshot from that pause is the leftover
+      // face once the view settles.
+      deferPrime: contentChanged || cutSliderActive,
     });
     // Re-apply slider opacities when leaving peel mode so materials cannot
     // stay stuck translucent / depthWrite-off after a 100% scrub. The abort
