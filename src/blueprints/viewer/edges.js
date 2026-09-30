@@ -439,51 +439,14 @@ export function syncEdgeOverlays(partsMap, enabled, opts = {}) {
   }
 }
 
-/** Shared depth-only material for the edge overlay depth prepass. */
-let edgeDepthPrepassMat = null;
-
 /**
- * @returns {THREE.MeshDepthMaterial}
+ * @param {THREE.Object3D} obj
+ * @returns {boolean}
  */
-function getEdgeDepthPrepassMaterial() {
-  if (!edgeDepthPrepassMat) {
-    edgeDepthPrepassMat = new THREE.MeshDepthMaterial({
-      depthTest: true,
-      depthWrite: true,
-      colorWrite: false,
-      side: THREE.DoubleSide,
-    });
-  }
-  return edgeDepthPrepassMat;
-}
-
-/**
- * Collect clipping planes from the first CAD mesh (section cuts).
- * @param {THREE.Object3D} root
- * @returns {THREE.Plane[]}
- */
-function collectMeshClippingPlanes(root) {
-  /** @type {THREE.Plane[]} */
-  let planes = [];
-  root.traverse((obj) => {
-    if (
-      planes.length ||
-      isEdgeOverlay(obj) ||
-      obj.userData?.isSectionCap ||
-      !obj.isMesh ||
-      !obj.material
-    ) {
-      return;
-    }
-    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-    for (const mat of mats) {
-      if (mat?.clippingPlanes?.length) {
-        planes = mat.clippingPlanes;
-        return;
-      }
-    }
-  });
-  return planes;
+function isFadedFace(obj) {
+  if (!obj.isMesh || isEdgeOverlay(obj)) return false;
+  const mat = Array.isArray(obj.material) ? obj.material[0] : obj.material;
+  return Boolean(mat && mat.transparent && mat.opacity < 1 - 1e-4);
 }
 
 /**
@@ -491,15 +454,19 @@ function collectMeshClippingPlanes(root) {
  * (`reuseDepth`). Peeled frames refill depth, because the composite quad is
  * not the CAD depth and faded materials did not write one.
  *
+ * The refill uses the real face shaders with colour writes off. MeshDepthMaterial
+ * encodes a different gl_FragDepth under logarithmic depth, so strokes that
+ * sit correctly on the fast path disappear once that buffer is in front of them.
+ * Faded faces stay out of the refill — they do not depth-write on the fast path
+ * either — so lines remain visible through transparent parts.
+ *
  * @param {THREE.WebGLRenderer} renderer
  * @param {THREE.Scene} scene
  * @param {THREE.Camera} camera
  * @param {THREE.Object3D} root
  * @param {{ reuseDepth?: boolean }} [opts]
  *   `reuseDepth` draws only the fat lines against the depth the colour pass
- *   just wrote. Used for fully opaque frames. Faded / peeled frames refill
- *   depth first — transparent materials did not write a usable buffer, and a
- *   peel composite quad is not the CAD depth.
+ *   just wrote. Used for fully opaque frames and the fast sorted-alpha frame.
  */
 export function renderEdgeOverlayPass(renderer, scene, camera, root, opts = {}) {
   if (!root) return;
@@ -531,29 +498,46 @@ export function renderEdgeOverlayPass(renderer, scene, camera, root, opts = {}) 
     return;
   }
 
-  // 1) Depth prepass via MeshDepthMaterial (reliable depth writes; respects cuts).
-  //    Camera stays on layer 0, so EDGE_LAYER strokes are not in this pass.
-  //    Faded faces stay out of this buffer — they do not depth-write in the
-  //    fast path either — so lines remain visible through transparent parts.
+  // 1) Depth from the opaque face shaders (colour off). Camera stays on
+  //    layer 0, so EDGE_LAYER strokes are not in this pass.
   setEdgeOverlaysVisible(root, false);
   /** @type {THREE.Object3D[]} */
   const hiddenFades = [];
   root.traverse((obj) => {
+    if (!isFadedFace(obj) || obj.visible === false) return;
+    hiddenFades.push(obj);
+    obj.visible = false;
+  });
+  /** @type {{ mat: THREE.Material, colorWrite: boolean, depthWrite: boolean }[]} */
+  const snaps = [];
+  const seen = new Set();
+  scene.traverse((obj) => {
     if (!obj.isMesh || isEdgeOverlay(obj) || obj.visible === false) return;
-    const mat = Array.isArray(obj.material) ? obj.material[0] : obj.material;
-    if (mat && mat.transparent && mat.opacity < 1 - 1e-4) {
-      hiddenFades.push(obj);
-      obj.visible = false;
+    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+    for (const mat of mats) {
+      if (!mat || seen.has(mat)) continue;
+      seen.add(mat);
+      snaps.push({
+        mat,
+        colorWrite: mat.colorWrite !== false,
+        depthWrite: mat.depthWrite !== false,
+      });
+      // Same log-depth and face bias as the fast path. Colour stays the peel.
+      mat.colorWrite = false;
+      mat.depthWrite = true;
     }
   });
-  const depthMat = getEdgeDepthPrepassMaterial();
-  depthMat.clippingPlanes = collectMeshClippingPlanes(root);
-  depthMat.clipIntersection = false;
-  scene.overrideMaterial = depthMat;
-  renderer.clearDepth();
-  renderer.render(scene, camera);
   scene.overrideMaterial = null;
-  for (const obj of hiddenFades) obj.visible = true;
+  renderer.clearDepth();
+  try {
+    renderer.render(scene, camera);
+  } finally {
+    for (const snap of snaps) {
+      snap.mat.colorWrite = snap.colorWrite;
+      snap.mat.depthWrite = snap.depthWrite;
+    }
+    for (const obj of hiddenFades) obj.visible = true;
+  }
 
   // 2) Edge colour only. Faces stay on layer 0; the depth prepass already
   //    filled the buffer, so redrawing them (and flipping their transparent

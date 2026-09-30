@@ -530,12 +530,6 @@ export function createDepthPeelRenderer(renderer) {
   let primedKey = "";
   const peelBatchScene = new THREE.Scene();
   const depthBatchScene = new THREE.Scene();
-  const depthPrepassMat = new THREE.MeshDepthMaterial({
-    depthTest: true,
-    depthWrite: true,
-    colorWrite: false,
-    side: THREE.DoubleSide,
-  });
 
   /**
    * @param {BatchSlot} slot
@@ -1174,28 +1168,13 @@ export function createDepthPeelRenderer(renderer) {
     renderer.render(compositeScene, compositeCamera);
 
     // Settled frames refill depth from opaque faces only, then draw CAD edges.
-    // Faded shells do not write this depth, so lines stay visible through them
-    // the way they do on the fast path (those materials keep depthWrite off).
+    // The refill uses the face shaders (see renderEdgeOverlayPass), matching
+    // the fast path where faded materials keep depthWrite off.
     const notes = annotationNodes(scene);
     const prevNotes = notes.map((node) => node.visible);
     setNodesVisible(notes, false);
     if (highQuality && root) {
-      depthPrepassMat.clippingPlanes = clipPlanes || [];
-      depthPrepassMat.clipIntersection = false;
-      setMeshesVisible(transparent, false);
-      setEdgeOverlaysVisible(root, false);
-      const prevOverride = scene.overrideMaterial;
-      scene.overrideMaterial = depthPrepassMat;
-      const prevAuto = renderer.autoClear;
-      renderer.autoClear = false;
-      renderer.clearDepth();
-      renderer.render(scene, camera);
-      renderer.autoClear = prevAuto;
-      scene.overrideMaterial = prevOverride;
-      setMeshesVisible(transparent, true);
-      renderEdgeOverlayPass(renderer, scene, camera, root, {
-        reuseDepth: true,
-      });
+      renderEdgeOverlayPass(renderer, scene, camera, root);
     }
     notes.forEach((node, i) => {
       node.visible = prevNotes[i];
@@ -1215,7 +1194,6 @@ export function createDepthPeelRenderer(renderer) {
     clearViewZMat.dispose();
     clearViewZQuad.geometry.dispose();
     opaqueViewZMat.dispose();
-    depthPrepassMat.dispose();
   }
 
   return {
