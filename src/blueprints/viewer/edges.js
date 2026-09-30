@@ -566,7 +566,10 @@ export function renderEdgeOverlayPass(renderer, scene, camera, root, opts = {}) 
   root.traverse((obj) => {
     if (isEdgeOverlay(obj)) anyEdge = true;
   });
-  if (!anyEdge) return;
+  if (!anyEdge) {
+    restoreBufferMasks(renderer);
+    return;
+  }
 
   const prevAutoClear = renderer.autoClear;
   const prevBg = scene.background;
@@ -585,6 +588,7 @@ export function renderEdgeOverlayPass(renderer, scene, camera, root, opts = {}) 
     scene.background = prevBg;
     scene.overrideMaterial = prevOverride;
     renderer.autoClear = prevAutoClear;
+    restoreBufferMasks(renderer);
     return;
   }
 
@@ -657,4 +661,16 @@ export function renderEdgeOverlayPass(renderer, scene, camera, root, opts = {}) 
   scene.background = prevBg;
   scene.overrideMaterial = prevOverride;
   renderer.autoClear = prevAutoClear;
+  // Peel colour pass and these fat lines leave depthWrite false. gl.clear on
+  // the next frame keeps the previous cut cap unless the masks are back on.
+  restoreBufferMasks(renderer);
+}
+
+/**
+ * gl.clear respects the write masks left by the last material.
+ * @param {THREE.WebGLRenderer} renderer
+ */
+function restoreBufferMasks(renderer) {
+  renderer.state.buffers.color.setMask(true);
+  renderer.state.buffers.depth.setMask(true);
 }
