@@ -36,7 +36,8 @@
       "soffit_battens",
       "soffit_gkf",
       "soffit_cd",
-      "soffit_nonius"
+      "soffit_nonius",
+      "soffit_duct"
     ]
   },
   {

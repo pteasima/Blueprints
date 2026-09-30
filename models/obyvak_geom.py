@@ -23,13 +23,19 @@ World:
   (střešní latě / kontralatě above rafters stay in roofing)
 
 Right eave soffit box: NH L, Flex cavity + latový rost (latě @625, Flex between).
-GKF is continuous for acoustics and copies the wooden lattice edge: slope GKF
-runs to `x_nh_inner` (rost front), a vertical return with a slope-cut top seats
-on the lid (lid extends past the front CD for a proper L), and that front CD
-hangs the box at the lattice edge. Horizontal CD @625 + Nonius above the lid;
-rost drop-hung from that grid and braced to the eave wall. Furniture /
-wall plate are not structural. CAD ids are zone-prefixed so the viewer can
-toggle / fade slopes, soffit, and bass traps independently.
+Three Ø160 spiral ducts (HRV supply, HRV extract, AC) sit in a 2-over-1 pack
+against the cabinet eave, below the lid and above the column heads. They are
+already anchored to the wall; this box does not hang them. The GKF lid
+is raised so its top is flush with the pozednice and its cut end meets the plate
+cheek — above the wall head, not on the plaster. Slope GKF stops where that
+board's underside meets the lid. The latě and Flex continue on the same plane
+to the vertical soffit lať. The board stays 12.5 mm to a square end. A
+light-gauge angle backs that hidden butt: a short leg on the slope board, a
+horizontal leg screwed to the rost CD. That CD is the only horizontal rail
+and the only Nonius row. No vertical riser. Furniture and the wall plate do
+not carry the box (the plate only fixes the board edge). CAD ids are
+zone-prefixed so the viewer can toggle / fade slopes, soffit, and bass traps
+independently.
 """
 
 from __future__ import annotations
@@ -68,6 +74,7 @@ LABEL_SOFFIT_BATTENS = "soffit_battens"
 LABEL_SOFFIT_GKF = "soffit_gkf"
 LABEL_SOFFIT_CD = "soffit_cd"
 LABEL_SOFFIT_NONIUS = "soffit_nonius"
+LABEL_SOFFIT_DUCT = "soffit_duct"
 # --- Bass traps ---
 LABEL_BASS_WOOL = "bass_mineral_wool"
 LABEL_BASS_GKB = "bass_gkb"
@@ -116,6 +123,7 @@ PART_GROUPS = [
             LABEL_SOFFIT_GKF,
             LABEL_SOFFIT_CD,
             LABEL_SOFFIT_NONIUS,
+            LABEL_SOFFIT_DUCT,
         ],
     },
     {
@@ -236,6 +244,13 @@ class ObyvakParams:
     # Short drop hangers: horizontal CD → soffit top rail (through GKF).
     soffit_drop_w: float = 20.0
     soffit_drop_t: float = 2.0
+    # Bare spiral ducts in the soffit void (HRV + AC). OD is the metal pipe.
+    # Pack is 2-over-1 against the cabinet plaster; gaps are what the 386 mm
+    # bay behind the NH face can actually give.
+    duct_od: float = 160.0
+    duct_gap: float = 5.0
+    duct_wall_gap: float = 6.0
+    duct_lid_gap: float = 10.0
     # Wall angle brackets at the eave (rear support only — not the hang point).
     wall_bracket_leg: float = 80.0
     wall_bracket_t: float = 3.0
@@ -278,14 +293,23 @@ class ObyvakLayout:
         self.z_false = self.h_start + self.x_false * self.tan
         self.z_gkf_horiz = self.h_start
         self.z_nabeh_bot = p.furniture_height + p.furniture_gap
+        # Soffit lid is not the šikmina datum. Board top flush with the pozednice
+        # so the cut end lands on the plate cheek, clear of the wall head.
+        self.z_plate_top = p.eave_wall_z + p.plate_h
+        self.z_soffit_lid = self.z_plate_top - p.sdk_t
         self.z_soffit = self.h_start + self.x_ridge * self.tan
         self.z_raf_top = self.z_raf_inner_ridge + p.rafter_t / self.cos
         # Vertical NH outer face flush with slope NH ∩ furniture plane; thickness into box.
         self.x_nh_outer = self.x_furn
         self.x_nh_inner = self.x_furn + self.t_nh_face
-        # GKF zlom flush with the wooden rost front: slope board meets a vertical
-        # return here, lid runs to the wall, break CD hangs the lattice at its edge.
+        # Rost front. The gypsum joint is not here: the slope board is still
+        # ~80 mm below the lid, so a riser at this line has nothing to screw to.
         self.x_sdk_break = self.x_nh_inner
+        # Where the slope-GKF underside meets the lid. Room-ward of the furniture
+        # line by a few centimetres — the boards butt, they do not step.
+        t0 = self.t_nh_face + self.t_flex_pack
+        z_under_furn = self.z_gkf_horiz + t0 / self.cos
+        self.x_gkf_kink = self.x_furn - (self.z_soffit_lid - z_under_furn) / self.tan
 
         self.xl_eps = -p.wall_plaster - p.wall_mason - p.wall_eps
         self.xl_mas = -p.wall_plaster - p.wall_mason
@@ -395,47 +419,62 @@ class ObyvakLayout:
             (p.room_width, self.z_gkf_horiz),
         ]
 
-    def _sikmina_xs(self) -> list[float]:
-        return [0.0, self.x_false, self.x_furn]
+    def _sikmina_xs(self, x_stop: float | None = None) -> list[float]:
+        """Break points of the room-face polyline. `x_stop` ends the right slope early."""
+        if x_stop is None or x_stop >= self.x_furn - 1.0:
+            return [0.0, self.x_false, self.x_furn]
+        return [0.0, self.x_false, x_stop]
 
     def _sikmina_sdk_xs(self) -> list[float]:
-        """Slope GKF runs past X_FURN to the vertical return at x_sdk_break."""
-        return [0.0, self.x_false, self.x_furn, self.x_sdk_break]
+        """Slope GKF ends where its underside meets the soffit lid."""
+        return [0.0, self.x_false, self.x_gkf_kink]
 
-    def _slope_band_pts(self, t0: float, t1: float) -> list[tuple[float, float]]:
-        """Closed XZ band on the šikminy (0→X_FURN) between two parallel offsets."""
-        xs = self._sikmina_xs()
+    def _slope_band_pts(
+        self, t0: float, t1: float, x_stop: float | None = None
+    ) -> list[tuple[float, float]]:
+        """Closed XZ band on the šikminy between two parallel offsets."""
+        xs = self._sikmina_xs(x_stop)
         inner = [(x, self.z_slope_offset(x, t0)) for x in xs]
         outer = [(x, self.z_slope_offset(x, t1)) for x in xs]
         return inner + list(reversed(outer))
 
     def _slope_sdk_band_pts(self, t0: float, t1: float) -> list[tuple[float, float]]:
-        """GKF band on the slope plane to x_sdk_break, with a mitered right-hand end.
+        """GKF band on the slope plane, square-ended where it meets the lid.
 
-        The terminal edge is cut ⊥ to the board (along the attic normal) so it
-        seats on the vertical return's slope-cut top instead of ending as a
-        blunt vertical face.
+        Both edges stop on the same vertical line. A miter aimed back along the
+        board shaved the cabinet slope from 12.5 mm down to a knife.
         """
         xs = self._sikmina_sdk_xs()
         inner = [(x, self.z_slope_plane_offset(x, t0)) for x in xs]
         outer = [(x, self.z_slope_plane_offset(x, t1)) for x in xs]
-        # Right-slope attic normal (up-left): end face = thickness along that normal.
-        dt = t1 - t0
-        x_i, z_i = inner[-1]
-        outer[-1] = (x_i - dt * self.sin, z_i + dt * self.cos)
         return inner + list(reversed(outer))
 
     def sikmina_nh_pts(self) -> list[tuple[float, float]]:
         """NaturHeld + StoSilent face on the slopes (perp thickness t_nh_face)."""
         return self._slope_band_pts(0.0, self.t_nh_face)
 
+    def _flex_band_pts(self, t0: float, t1: float) -> list[tuple[float, float]]:
+        """Flex / lať band on the slope plane, continued to the vertical soffit lať.
+
+        Past X_FURN the ceiling face is horizontal, but this pack stays on the
+        roof slope until it butts the plumb lať. `z_slope_offset` would flatten
+        there and leave the cavity above the bulkhead.
+        """
+        xs = [0.0, self.x_false, self.x_nh_inner]
+        inner = [(x, self.z_slope_plane_offset(x, t0)) for x in xs]
+        outer = [(x, self.z_slope_plane_offset(x, t1)) for x in xs]
+        return inner + list(reversed(outer))
+
     def sikmina_flex_pts(self) -> list[tuple[float, float]]:
-        """Flex 50 between the latě, flush with the 40 mm lať. No quilt over them."""
+        """Flex 50 between the latě, flush with the 40 mm lať. No quilt over them.
+
+        Runs to the vertical soffit lať so the bay above the bulkhead is filled.
+        """
         t0 = self.t_nh_face
-        return self._slope_band_pts(t0, t0 + self.p.rost_d)
+        return self._flex_band_pts(t0, t0 + self.p.rost_d)
 
     def sikmina_sdk_pts(self) -> list[tuple[float, float]]:
-        """GKF/RF on the slopes, continued past X_FURN to the vertical acoustic return."""
+        """GKF/RF on the slopes, ending where the underside meets the soffit lid."""
         t0 = self.t_nh_face + self.t_flex_pack
         return self._slope_sdk_band_pts(t0, t0 + self.p.sdk_t)
 
@@ -476,7 +515,11 @@ class ObyvakLayout:
     def sikmina_cd_stations(
         self,
     ) -> list[tuple[float, float, float, float, float, float]]:
-        """CD centers along the šikmina (⊥ krokvím — spaced along the slope)."""
+        """CD centers along the šikmina (⊥ krokvím — spaced along the slope).
+
+        The cabinet-slope run stops one module short of the gypsum joint. The
+        joint angle, not another CD, closes that bay.
+        """
         p = self.p
         return self._path_stations(p.cd_spacing, p.cd_first_inset)
 
@@ -521,7 +564,7 @@ class ObyvakLayout:
         Latě run eave→ridge (parallel to rafters); spacing is along Y, so a
         transverse section that cuts a lať shows this continuous ribbon.
         """
-        return self._slope_band_pts(self.t_nh_face, self.t_nh_face + self.p.rost_d)
+        return self._flex_band_pts(self.t_nh_face, self.t_nh_face + self.p.rost_d)
 
     def y_stations(
         self, y0: float, y1: float, spacing: float, first_inset: float
@@ -537,6 +580,33 @@ class ObyvakLayout:
     def sikmina_rost_y_stations(self, y0: float, y1: float) -> list[float]:
         p = self.p
         return self.y_stations(y0, y1, p.rost_spacing, p.rost_first_inset)
+
+    def soffit_rost_y_stations(
+        self, bay0: float, bay1: float, slope_ys: list[float]
+    ) -> list[float]:
+        """Soffit latě on the slope-lať centres, limited to the soffit bay.
+
+        Restarting the 625 mm module at the předstěna, with its own inset,
+        shifted every vertical lať off the slope lať it is supposed to meet.
+        """
+        half = self.p.rost_w * 0.5
+        return [y for y in slope_ys if bay0 + half <= y <= bay1 - half]
+
+    def soffit_flex_wedge_pts(self) -> list[tuple[float, float]]:
+        """Flex above the 40 mm pack, under the lid, out to the vertical lať.
+
+        The pack top meets the lid at the gypsum joint and falls away toward
+        the eave. That triangle is still on the warm side of the lid.
+        """
+        t1 = self.t_nh_face + self.p.rost_d
+        x0 = self.x_gkf_kink
+        x1 = self.x_nh_inner
+        return [
+            (x0, self.z_slope_plane_offset(x0, t1)),
+            (x1, self.z_slope_plane_offset(x1, t1)),
+            (x1, self.z_soffit_lid),
+            (x0, self.z_soffit_lid),
+        ]
 
     def rafter_y_stations(self, y0: float, y1: float) -> list[float]:
         p = self.p
@@ -596,86 +666,104 @@ class ObyvakLayout:
             (cx - tx * hw + nx * d, cz - tz * hw + nz * d),
         ]
 
+    def soffit_duct_pitch(self) -> float:
+        """Centre spacing of the upper pair (OD + gap). The lower duct nests on this."""
+        return self.p.duct_od + self.p.duct_gap
+
+    def soffit_duct_centers(self) -> list[tuple[float, float]]:
+        """XZ centres: wall-side upper, room-side upper, lower duct in the valley.
+
+        Packed against the cabinet plaster. The lid height is fixed by the
+        pozednice; this pack has to live under that board and above the columns.
+        """
+        p = self.p
+        r = p.duct_od * 0.5
+        pitch = self.soffit_duct_pitch()
+        x_wall = p.room_width - p.duct_wall_gap - r
+        x_room = x_wall - pitch
+        z_upper = self.z_soffit_lid - p.duct_lid_gap - r
+        vert = math.sqrt(max(pitch * pitch - (pitch * 0.5) ** 2, 0.0))
+        z_lower = z_upper - vert
+        x_lower = 0.5 * (x_wall + x_room)
+        return [(x_wall, z_upper), (x_room, z_upper), (x_lower, z_lower)]
+
+    def z_soffit_duct_crown(self) -> float:
+        r = self.p.duct_od * 0.5
+        return max(z for _, z in self.soffit_duct_centers()) + r
+
+    def z_soffit_duct_bot(self) -> float:
+        r = self.p.duct_od * 0.5
+        return min(z for _, z in self.soffit_duct_centers()) - r
+
+    def z_soffit_rail(self) -> float:
+        """Top of the soffit Flex, clear of the lower duct.
+
+        There is no timber cap and no hanger under the pipes. The quilt stops
+        short of the metal so the wall-anchored ducts stay in an empty void.
+        """
+        return self.z_soffit_duct_bot() - self.p.duct_gap - 8.0
+
+    def soffit_duct_x_extent(self) -> tuple[float, float]:
+        """Min/max X of the metal (not the centres)."""
+        r = self.p.duct_od * 0.5
+        xs = [x for x, _ in self.soffit_duct_centers()]
+        return min(xs) - r, max(xs) + r
+
     def soffit_nh_pts(self) -> list[tuple[float, float]]:
         """L-shaped NH+StoSilent on the soffit box: vertical face + underside.
 
-        Outer vertical face flush with the slope NH at X_FURN; thickness goes
-        into the box (toward the wall) so the junction has no step into the room.
+        The vertical leg butts the slope board. Its top follows the attic face
+        of that board — the seat of the Flex — down to the vertical lať, so the
+        pack can run through instead of stopping on a level cut. It does not
+        climb to the GKF. Room arris is the slope face meeting this vertical
+        face at X_FURN.
         """
         p = self.p
         t = self.t_nh_face
         z0 = self.z_nabeh_bot
-        z1 = self.z_gkf_horiz
+        z_out = self.z_slope_offset(self.x_nh_outer, t)
+        z_in = self.z_slope_plane_offset(self.x_nh_inner, t)
         return [
             (self.x_nh_outer, z0),
             (p.room_width, z0),
             (p.room_width, z0 + t),
             (self.x_nh_inner, z0 + t),
-            (self.x_nh_inner, z1),
-            (self.x_nh_outer, z1),
+            (self.x_nh_inner, z_in),
+            (self.x_nh_outer, z_out),
         ]
 
     def soffit_flex_pts(self) -> list[tuple[float, float]]:
-        """Flex cavity in the soffit box + small pack under slope GKF to the return.
+        """Flex in the acoustic cavity only, stopped short of the ducts.
 
-        Below Z_GKF: fills the NH L box. Between X_FURN and the vertical GKF
-        the top follows the slope-GKF underside (angled seat on the return).
+        The service void above this line stays empty. The pipes are already
+        anchored to the wall and are not hung from this box. No timber lid
+        on the Flex.
         """
         p = self.p
         t = self.t_nh_face
-        t0 = self.t_nh_face + self.t_flex_pack
-        xb = self.x_sdk_break
-        x_vert = xb - p.sdk_t  # room face of vertical GKF (= lid overhang start)
-        z_br = self.z_slope_plane_offset(xb, t0)
-        z_fu = self.z_slope_plane_offset(self.x_furn, t0)
-        z_vert_top = self.z_slope_plane_offset(x_vert, t0)
+        z_top = self.z_soffit_rail()
         return [
             (self.x_nh_inner, self.z_nabeh_bot + t),
             (p.room_width, self.z_nabeh_bot + t),
-            (p.room_width, self.z_gkf_horiz),
-            (x_vert, self.z_gkf_horiz),
-            (x_vert, z_vert_top),
-            (self.x_furn, z_fu),
-            (self.x_furn, self.z_gkf_horiz),
-            (self.x_nh_inner, self.z_gkf_horiz),
+            (p.room_width, z_top),
+            (self.x_nh_inner, z_top),
         ]
 
     def soffit_sdk_lid_pts(self) -> list[tuple[float, float]]:
-        """Horizontal GKF lid — extends past the front CD to seat the vertical return.
+        """Horizontal GKF lid above the ducts, ending on the pozednice cheek.
 
-        Runs from the room face of the vertical GKF to the eave wall so the
-        corner is a proper L (lid beyond the CD), not an edge-only touch.
+        Room edge is the plane where the slope board's underside meets this lid.
+        The far end is the plate face, not the plaster: the board is above the
+        wall head and crosses the setback onto the plate.
         """
         p = self.p
         t = p.sdk_t
-        x0 = self.x_sdk_break - p.sdk_t
+        x0 = self.x_gkf_kink
         return [
-            (x0, self.z_gkf_horiz),
-            (p.room_width, self.z_gkf_horiz),
-            (p.room_width, self.z_gkf_horiz + t),
-            (x0, self.z_gkf_horiz + t),
-        ]
-
-    def soffit_sdk_vertical_pts(self) -> list[tuple[float, float]]:
-        """Vertical GKF return at the rost front, seated on the lid overhang.
-
-        Attic face at `x_nh_inner` (CD front). Top is cut parallel to the slope
-        GKF underside so the two boards join on that angled face instead of
-        touching only at an edge. Bottom sits on the lid (which extends past CD).
-        """
-        p = self.p
-        t0 = self.t_nh_face + self.t_flex_pack
-        xb = self.x_sdk_break
-        x0 = xb - p.sdk_t
-        z_bot = self.z_gkf_horiz + p.sdk_t
-        # Angled top // slope GKF inner plane (miter seat).
-        z_top_attic = self.z_slope_plane_offset(xb, t0)
-        z_top_room = self.z_slope_plane_offset(x0, t0)
-        return [
-            (x0, z_bot),
-            (xb, z_bot),
-            (xb, z_top_attic),
-            (x0, z_top_room),
+            (x0, self.z_soffit_lid),
+            (self.poz_r0, self.z_soffit_lid),
+            (self.poz_r0, self.z_soffit_lid + t),
+            (x0, self.z_soffit_lid + t),
         ]
 
     def krov_pts(self) -> list[tuple[float, float]]:
@@ -708,16 +796,16 @@ class ObyvakLayout:
         """
         p = self.p
         t_below = self.t_soft_below_sdk + p.cd_t
-        # Follow the slope-GKF plane to the rost-front break, then step to the lid CD.
-        z_pack = self.z_slope_plane_offset(self.x_sdk_break, t_below)
-        z_horiz_cd_top = self.z_gkf_horiz + p.sdk_t + p.cd_t
+        z_slope_furn = self.z_slope_offset(self.x_furn, t_below)
+        z_horiz_cd_top = self.z_soffit_lid + p.sdk_t + p.cd_t
+        # The lid over the ducts is above the slope pack, so the wool steps up
+        # at the furniture line. Following the slope plane into the bay would
+        # cut through the NH face and the pipes.
         return [
             (0.0, self.z_slope_offset(0.0, t_below)),
             (self.x_false, self.z_slope_offset(self.x_false, t_below)),
-            (self.x_furn, self.z_slope_offset(self.x_furn, t_below)),
-            (self.x_sdk_break, z_pack),
-            # Step down at the rost-front GKF zlom onto the horizontal CD plane.
-            (self.x_sdk_break, z_horiz_cd_top),
+            (self.x_furn, z_slope_furn),
+            (self.x_furn, z_horiz_cd_top),
             (p.room_width, z_horiz_cd_top),
             (p.room_width, self.z_raf(p.room_width)),
             (self.x_ridge, self.z_raf(self.x_ridge)),
@@ -742,22 +830,72 @@ class ObyvakLayout:
         ]
 
     def horiz_cd_x_stations(self) -> list[float]:
-        """CD centres on the GKF lid: first flush with rost front, then @ spacing."""
+        """CD centre on the raised GKF lid.
+
+        One rail. The rost CD hangs the box and takes the joint angle. The
+        plate cleat fixes the board edge. The ducts are anchored to the wall,
+        so there is no second rail and no trapeze.
+        """
         p = self.p
-        # Front face of first CD at x_nh_inner (rost edge) → centre half a CD inboard.
         front = self.x_sdk_break + p.cd_w * 0.5
-        x1 = p.room_width - p.wall_plaster - p.cd_t - p.cd_first_inset
-        out = [front]
-        x = front + p.cd_spacing
-        while x <= x1:
-            out.append(x)
-            x += p.cd_spacing
-        return out
+        if front + p.cd_w * 0.5 > p.room_width - 1.0:
+            return []
+        return [front]
+
+    def soffit_joint_angle_quads(self) -> list[list[tuple[float, float]]]:
+        """Light-gauge angle on the hidden GKF butt, fixed to the rost CD.
+
+        Drawn at 2 mm so the section can see it; the real strip is about 0.6–1 mm.
+        Sloping leg: 40 mm along the attic face of the slope board, mitered down
+        onto the lid leg (the square end's attic corner sits a few millimetres
+        above that leg, so the bend is just past the board).
+        Horizontal leg: on the lid, from the joint to 1 mm short of the rost CD.
+        Lip: 20 mm up that CD's room web — the screw line. No second hanger.
+        """
+        p = self.p
+        t = 2.0
+        gap = 1.0
+        slope_leg = 40.0
+        lip_h = 20.0
+        z_lid_top = self.z_soffit_lid + p.sdk_t
+        z_attic = self.z_soffit_lid + p.sdk_t / self.cos
+        xk = self.x_gkf_kink
+        # Up the right slope, and the attic normal (up, toward the eave).
+        ux, uz = -self.cos, self.sin
+        nx, nz = self.sin, self.cos
+        # Seat is the top of the lid leg. The sloping strip is cut there so the
+        # two legs share that edge and do not stack.
+        z_seat = z_lid_top + gap + t
+
+        def on_board(s: float, offset: float) -> tuple[float, float]:
+            return (
+                xk + ux * s + nx * offset,
+                z_attic + uz * s + nz * offset,
+            )
+
+        def s_at_seat(offset: float) -> float:
+            return (z_seat - z_attic - offset * nz) / uz
+
+        a0 = on_board(s_at_seat(gap), gap)
+        b0 = on_board(s_at_seat(gap + t), gap + t)
+        a1 = on_board(slope_leg, gap)
+        b1 = on_board(slope_leg, gap + t)
+        x0 = xk + gap
+        x1 = self.x_sdk_break - gap
+        z0 = z_lid_top + gap
+        horiz = [(x0, z0), (x1, z0), (x1, z0 + t), (x0, z0 + t)]
+        lip = [
+            (x1 - t, z0 + t),
+            (x1, z0 + t),
+            (x1, z0 + t + lip_h),
+            (x1 - t, z0 + t + lip_h),
+        ]
+        return [[a0, a1, b1, b0], horiz, lip]
 
     def horiz_cd_quad(self, x: float) -> list[tuple[float, float]]:
         """XZ section of one horizontal CD sitting on the GKF lid."""
         p = self.p
-        z0 = self.z_gkf_horiz + p.sdk_t
+        z0 = self.z_soffit_lid + p.sdk_t
         hw = p.cd_w * 0.5
         d = p.cd_t
         return [
@@ -767,21 +905,48 @@ class ObyvakLayout:
             (x - hw, z0 + d),
         ]
 
-    def horiz_wall_ud_pts(self) -> list[tuple[float, float]]:
-        """UD/CD perimeter channel on the eave plaster, same Z as horizontal CD."""
+    def soffit_plate_cleat_quads(self) -> list[list[tuple[float, float]]]:
+        """Steel angle: plate cheek + underside of the GKF edge.
+
+        Perimeter fix only. The leg stays in the setback above the wall head
+        so it does not land on the masonry and does not enter the duct pack.
+        """
         p = self.p
-        x1 = p.room_width - p.wall_plaster
-        x0 = x1 - p.cd_t
-        z0 = self.z_gkf_horiz + p.sdk_t
-        return [(x0, z0), (x1, z0), (x1, z0 + p.cd_t), (x0, z0 + p.cd_t)]
+        t = p.wall_bracket_t
+        setback = self.poz_r0 - p.room_width
+        leg = min(p.wall_bracket_leg, max(setback - 15.0, t + 10.0))
+        x1 = self.poz_r0
+        z1 = self.z_soffit_lid
+        horiz = [
+            (x1 - leg, z1 - t),
+            (x1, z1 - t),
+            (x1, z1),
+            (x1 - leg, z1),
+        ]
+        vert = [
+            (x1 - t, z1 - leg),
+            (x1, z1 - leg),
+            (x1, z1),
+            (x1 - t, z1),
+        ]
+        return [horiz, vert]
+
+    def horiz_wall_ud_pts(self) -> list[tuple[float, float]]:
+        """Deprecated: the lid no longer ends on a UD on the plaster.
+
+        Returns the horizontal leg of the plate cleat for old callers.
+        """
+        return self.soffit_plate_cleat_quads()[0]
 
     def horiz_break_ud_pts(self) -> list[tuple[float, float]]:
-        """Deprecated alias: front soffit CD is the first horiz_cd station (rost-flush).
+        """Deprecated alias: the rost-front CD the joint angle screws to.
 
-        Kept for callers that still ask for a break profile; returns that front CD.
+        Kept for callers that still ask for a break profile; returns that rost CD.
         """
         xs = self.horiz_cd_x_stations()
-        return self.horiz_cd_quad(xs[0]) if xs else []
+        rost = self.x_sdk_break + self.p.cd_w * 0.5
+        hit = min(xs, key=lambda x: abs(x - rost)) if xs else None
+        return self.horiz_cd_quad(hit) if hit is not None else []
 
     def horiz_hanger_top_z(self, x: float) -> float:
         """Underside of rafter at x (hang point for Nonius over the soffit bay)."""
@@ -790,7 +955,7 @@ class ObyvakLayout:
     def horiz_hanger_bot_z(self) -> float:
         """Top of horizontal CD (Nonius seats here)."""
         p = self.p
-        return self.z_gkf_horiz + p.sdk_t + p.cd_t
+        return self.z_soffit_lid + p.sdk_t + p.cd_t
 
     def predstena_pts(self) -> list[tuple[float, float]]:
         p = self.p
@@ -840,6 +1005,15 @@ def xz_face(pts: list[tuple[float, float]], label: str) -> Face:
 
 def xz_rect(x: float, z: float, w: float, h: float, label: str) -> Face:
     return xz_face([(x, z), (x + w, z), (x + w, z + h), (x, z + h)], label)
+
+
+def xz_ngon(cx: float, cz: float, r: float, label: str, n: int = 24) -> Face:
+    """Regular polygon in XZ, used for a duct cut in the transverse section."""
+    pts = [
+        (cx + r * math.cos(2.0 * math.pi * i / n), cz + r * math.sin(2.0 * math.pi * i / n))
+        for i in range(n)
+    ]
+    return xz_face(pts, label)
 
 
 def xz_polyline(pts: list[tuple[float, float]], label: str) -> Wire:
