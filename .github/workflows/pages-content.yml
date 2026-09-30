@@ -59,9 +59,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # Closed PRs only need scripts (head branch may already be deleted).
-          lfs: ${{ !(github.event_name == 'pull_request' && github.event.action == 'closed') }}
-          ref: ${{ github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.pull_request.head.sha || github.sha }}
+          # A closed, unmerged PR only needs scripts (the head branch may be gone).
+          # A merge must check out the merge commit: the main push is often
+          # cancelled while this close run is the one that actually deploys.
+          lfs: ${{ !(github.event_name == 'pull_request' && github.event.action == 'closed' && !github.event.pull_request.merged) }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged && github.event.pull_request.merge_commit_sha || github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.pull_request.head.sha || github.sha }}
 
       - uses: actions/setup-python@v5
         with:
@@ -70,7 +72,8 @@ jobs:
       - name: Build web-viewer hub
         if: >
           github.event_name != 'pull_request' ||
-          github.event.action != 'closed'
+          github.event.action != 'closed' ||
+          github.event.pull_request.merged
         run: python scripts/build-preview-hub.py
 
       - name: Checkout pages-site content branch
@@ -84,6 +87,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           EVENT_ACTION: ${{ github.event.action || '' }}
           PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number || '' }}
+          PR_MERGED: ${{ github.event.pull_request.merged && 'true' || 'false' }}
           DISPATCH_ACTION: ${{ inputs.action || 'preview' }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -143,9 +147,19 @@ jobs:
 
           if [[ "$EVENT_NAME" == "pull_request" && "$EVENT_ACTION" == "closed" ]]; then
             python scripts/merge_pages_site.py remove pages-site "$PR_NUMBER"
+            # GitHub cancels an older pending run in this concurrency group.
+            # The main push at merge time is usually that older run, so this
+            # close has to publish the production root or the live site stays stale.
+            if [[ "$PR_MERGED" == "true" ]]; then
+              python scripts/build-preview-hub.py
+              seed_root_from_main_if_needed
+              python scripts/merge_pages_site.py root docs pages-site
+              echo "message=Publish production root and remove PR preview pr-${PR_NUMBER}" >> "$GITHUB_OUTPUT"
+            else
+              echo "message=Remove PR preview pr-${PR_NUMBER}" >> "$GITHUB_OUTPUT"
+            fi
             echo "mode=remove" >> "$GITHUB_OUTPUT"
             echo "pr=$PR_NUMBER" >> "$GITHUB_OUTPUT"
-            echo "message=Remove PR preview pr-${PR_NUMBER}" >> "$GITHUB_OUTPUT"
           elif [[ "$EVENT_NAME" == "pull_request" ]]; then
             seed_root_from_main_if_needed
             python scripts/merge_pages_site.py preview docs pages-site "$PR_NUMBER"
