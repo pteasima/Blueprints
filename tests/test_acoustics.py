@@ -19,6 +19,7 @@ from blueprints.acoustics.obyvak import (
     Resistivity,
     _split,
     axial_marks,
+    board_only_stack,
     eyring_t,
     room_geometry,
     run_study,
@@ -157,9 +158,12 @@ def test_study_ranks_splits_and_states_the_fem_decision():
     assert "Slope Flex" in text
     assert "bass FEM" in text
     assert "80 mm" in text and "300 mm" in text
-    assert "Fill the cavity" in text
+    assert "Leave the last 20 mm empty" in text
+    assert "Sylomer" in text
+    assert "Do not bed the wool on the board" in text
     assert "Keep the as-built" in text
     assert "Keep the flush" in text
+    assert "100 mm stays inside 5%" in text
     assert study.delta_t["flex-0"][125.0] > 0.05 * study.as_built_t[125.0]
     assert study.delta_t["kitchen-1"][31.5] < -0.05 * study.as_built_t[31.5]
     assert study.delta_t["living-0"][31.5] > 0.05 * study.as_built_t[31.5]
@@ -170,3 +174,26 @@ def test_study_ranks_splits_and_states_the_fem_decision():
     assert 0.0 in study.kitchen_alpha and 1.0 in study.kitchen_alpha
     kitchen_bass = [study.as_built_alpha[f]["kitchen"] for f in BASS_BANDS]
     assert max(kitchen_bass) > min(kitchen_bass)
+
+
+def test_soffit_is_the_deep_pack_not_the_slope_lat():
+    geom = room_geometry()
+    assert geom.soffit_flex_z > 0.30
+    assert geom.soffit_flex_z > 5.0 * geom.rost_depth
+    assert geom.soffit_air_z > 0.20
+    assert geom.soffit_horizontal + geom.soffit_vert_flex + geom.soffit_vert_air == geom.soffit
+    study = run_study()
+    # At the kitchen/slope handoff the deep pack beats a 40 mm clone of the slope.
+    assert study.as_built_alpha[80.0]["soffit"] > study.as_built_alpha[80.0]["slope"] + 0.15
+
+
+def test_bare_naturheld_boards_against_the_flex_slope():
+    stack = board_only_stack(0.060, 0.004, Resistivity())
+    assert [layer[0] for layer in stack] == ["porous", "porous"]
+    assert all(layer[1] > 0.0 for layer in stack)
+    study = run_study()
+    reference = study.as_built_t[125.0]
+    assert study.board_delta[60.0][125.0] > 0.05 * reference
+    assert abs(study.board_delta[100.0][125.0]) < 0.05 * reference
+    for freq in (63.0, 125.0, 250.0):
+        assert study.board_alpha[100.0][freq] > study.board_alpha[40.0][freq]
