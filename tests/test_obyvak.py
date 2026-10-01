@@ -97,8 +97,10 @@ def test_layout_ceiling_and_gable():
     assert p.soffit_naturheld_t == 40.0
     assert abs(g.t_nh_face - (p.finish_t + p.basic_t + p.naturheld_t)) < 1e-9
     assert abs(g.t_soffit_face - (p.finish_t + p.basic_t + p.soffit_naturheld_t)) < 1e-9
-    assert abs(g.t_flex_pack - p.foil_t) < 1e-9
-    assert abs(g.t_soft_below_sdk - 97.5) < 1e-9
+    assert abs(g.t_flex_pack - 0.0) < 1e-9
+    assert abs(g.t_foil_outer - g.t_foil_inner - p.foil_t) < 1e-9
+    assert abs(g.t_foil_inner - g.t_cd_outer) < 1e-9
+    assert abs(g.t_soft_below_sdk - (g.t_nh_face + p.sdk_t)) < 1e-9
     assert abs(g.t_left - 204.5) < 1e-9
     # Kitchen wool stops 20 mm short of the back of the front CD.
     assert abs(p.bass_k_wool - 130.5) < 1e-9
@@ -124,10 +126,10 @@ def test_layout_ceiling_and_gable():
     assert any(abs(x - g.x_nh_inner) < 1e-6 and abs(z - z_seat_in) < 1e-6 for x, z in nh_pts)
     assert any(abs(x - g.x_furn) < 1e-6 and abs(z - z_seat_out) < 1e-6 for x, z in nh_pts)
     assert z_seat_in < z_seat_out
-    # The vertical leg follows the slope-board attic face. It stays off the foil
-    # and the GKF, and it stays under the lid.
-    z_foil = g.z_slope_offset(g.x_furn, g.t_nh_face + g.t_flex_pack)
-    assert max(z for _x, z in nh_pts) < z_foil - 0.5
+    # The vertical leg follows the slope-board attic face. NH mates to GKF
+    # (foil is attic-side of CD); the board stays under the lid.
+    z_nh_out = g.z_slope_offset(g.x_furn, g.t_nh_face)
+    assert abs(max(z for _x, z in nh_pts) - z_nh_out) < 1e-6
     assert max(z for _x, z in nh_pts) < g.z_soffit_lid
     # Lattice still hangs at the rost. The gypsum joint is room-ward of that,
     # where the slope underside meets the lid — one CD cannot cover both lines.
@@ -233,6 +235,11 @@ def test_sikminy_and_soffit_stack_in_3d():
     slope_nonius = _labeled(shape, LABEL_SLOPE_NONIUS)
     assert slope_nonius
     assert all(c.bounding_box().center().X >= g.x_false - 1.0 for c in slope_nonius)
+    # First Nonius past the false ridge must use the true gap along the attic
+    # normal (not the face-X underestimate) — otherwise it looks like a Direct.
+    first_nonius = min(slope_nonius, key=lambda c: c.bounding_box().center().X)
+    fn = first_nonius.bounding_box()
+    assert (fn.size.X ** 2 + fn.size.Z ** 2) ** 0.5 > 250.0
     pasky = _labeled(shape, LABEL_RACKING_STRAP)
     assert len(nh) >= 2  # slope NH + soffit L
     assert len(wool) >= 2  # cavity wool + the wedge under the lid
@@ -584,7 +591,48 @@ def test_sikmina_drawing_scenes():
         texts.append(ann["text"]["cs"])
     assert any("625" in t for t in texts)
     assert any("krokv" in t.lower() for t in texts)
+    assert any("60×27 mm" in t for t in texts)
+    assert any("125 mm" in t for t in texts)
+    assert any("40×2 mm" in t for t in texts)
     assert not any("pozednic" in t.lower() or "věnc" in t.lower() for t in texts)
+
+    # Lattice callouts also share a left column (outside → in, top → bottom).
+    lat_callouts = [a for a in lattice["annotations"] if a["kind"] == "callout"]
+    assert len(lat_callouts) == 3
+    import math
+
+    from blueprints.scenes import cad_mm_to_gltf_m
+
+    up = lattice["camera"]["up"]
+    lx = lattice["camera"]["target"][0] - lattice["camera"]["position"][0]
+    ly = lattice["camera"]["target"][1] - lattice["camera"]["position"][1]
+    lz = lattice["camera"]["target"][2] - lattice["camera"]["position"][2]
+    ln = math.sqrt(lx * lx + ly * ly + lz * lz) or 1.0
+    look_n = (lx / ln, ly / ln, lz / ln)
+    hw, hh = lattice["camera"]["orthoFit"]
+    target = lattice["camera"]["target"]
+
+    label_ndc = []
+    for ann in lat_callouts:
+        gx, gy, gz = cad_mm_to_gltf_m(ann["anchor"])
+        dx, dy, dz = gx - target[0], gy - target[1], gz - target[2]
+        rx = look_n[1] * up[2] - look_n[2] * up[1]
+        ry = look_n[2] * up[0] - look_n[0] * up[2]
+        rz = look_n[0] * up[1] - look_n[1] * up[0]
+        sx = (dx * rx + dy * ry + dz * rz) / hw
+        sy = (dx * up[0] + dy * up[1] + dz * up[2]) / hh
+        label_ndc.append((sx + ann["offset"][0] * 2, sy + ann["offset"][1] * 2))
+    assert max(x for x, _ in label_ndc) - min(x for x, _ in label_ndc) < 0.05
+    assert all(-0.75 < x < -0.35 for x, _ in label_ndc)
+    by_y = [
+        a["text"]["en"].split("\n")[0]
+        for a, _ in sorted(
+            zip(lat_callouts, label_ndc), key=lambda pair: pair[1][1], reverse=True
+        )
+    ]
+    assert by_y[0].startswith("Bracing strap")
+    assert by_y[-1].startswith("CD")
+    assert any(t.startswith("Direct hanger") for t in by_y)
 
     section = specs["sikmina-section"]
     assert section["opacityDefault"] == 0
@@ -623,23 +671,83 @@ def test_sikmina_drawing_scenes():
     joined = " ".join(
         ann["text"]["cs"] for ann in section["annotations"] if "text" in ann
     )
-    assert "NaturHeld 140, 80 mm" in joined
+    assert "NaturHeld 140 80 mm" in joined
+    assert "přes GKF → CD" in joined or "přes GKF" in joined
+    assert "Jutafol 145 Al" in joined
+    assert "GKF 12,5 mm" in joined
+    assert "Vario" not in joined
     assert "Flex" not in joined
     assert "Minerální vlna" in joined
+    assert "160 mm mezi" in joined
+    assert "80 mm pod" in joined
     assert "plénum" not in joined.lower()
     joined_en = " ".join(
         ann["text"]["en"] for ann in section["annotations"] if "text" in ann
     )
     assert "Mineral wool" in joined_en
+    assert "160 mm between" in joined_en
+    assert "80 mm below" in joined_en
+    assert "Jutafol 145 Al" in joined_en
+    assert "GKF 12.5 mm" in joined_en
+    assert "through GKF" in joined_en
     assert "plenum" not in joined_en.lower()
     assert "Nonius" in joined
-    assert "125" in joined
+    assert "125 mm" in joined
+    assert "340/440 mm" in joined
+    # StoSilent must not own the through-GKF note.
+    for ann in section["annotations"]:
+        if ann.get("kind") != "callout":
+            continue
+        en = ann["text"]["en"]
+        if "StoSilent" in en and "NaturHeld" not in en:
+            assert "through GKF" not in en
     low = joined.lower()
     assert "přesah" not in low and "overhang" not in low
     assert "pozednic" not in low and "wall plate" not in low
     assert "věnc" not in low and "páska" not in low and "strap" not in low
     assert "40°" not in joined
     assert "soffit" not in low and "podhled" not in low
+
+    # Outside→in column: shared screen-X, tip Y = label Y (horizontal leaders).
+    callouts = [ann for ann in section["annotations"] if ann["kind"] == "callout"]
+    assert len(callouts) == 6
+    label_xs = []
+    label_ys = []
+    tip_ys = []
+    hw, hh = section["camera"]["orthoFit"]
+    target = section["camera"]["target"]
+    from blueprints.scenes import cad_mm_to_gltf_m
+
+    for ann in callouts:
+        gx, gy, _ = cad_mm_to_gltf_m(ann["anchor"])
+        ndc_x = (gx - target[0]) / hw
+        ndc_y = (gy - target[1]) / hh
+        lx = ndc_x + ann["offset"][0] * 2
+        ly = ndc_y + ann["offset"][1] * 2
+        label_xs.append(lx)
+        label_ys.append(ly)
+        tip_ys.append(ndc_y)
+        # Horizontal leader: label Y matches tip Y.
+        assert abs(ly - ndc_y) < 0.02
+    assert max(label_xs) - min(label_xs) < 0.05
+    assert all(-0.8 < x < -0.45 for x in label_xs)
+    # Top of column is outside (wool near ridge); bottom is room face (NaturHeld).
+    order = [t.split("\n")[0] for t in (a["text"]["en"] for a in callouts)]
+    by_y = [t for _, t in sorted(zip(label_ys, order), reverse=True)]
+    assert by_y[0].startswith("Mineral wool")
+    assert by_y[1].startswith("Direct hanger")
+    assert by_y[2].startswith("Jutafol")
+    assert by_y[-1].startswith("NaturHeld 140")
+    assert any(t.startswith("GKF") for t in by_y)
+    # Direct + Nonius share one note and one leader.
+    hang = next(a for a in callouts if a["text"]["en"].startswith("Direct hanger"))
+    assert "Nonius" in hang["text"]["en"]
+    assert hang["anchor"][0] < g.x_false
+    assert "tips" not in hang
+    # Tips walk down the slope — label Ys are spread, not stacked on one tip.
+    assert max(tip_ys) - min(tip_ys) > 0.25
+    assert section["opacity"][LABEL_SOFFIT_DUCT] == 1
+    assert section["opacity"]["slope_foil"] == board
 
 
 def test_write_scenes_json(tmp_path):

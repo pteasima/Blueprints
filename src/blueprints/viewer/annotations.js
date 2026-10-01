@@ -38,6 +38,23 @@ export function cadMmToGltf(point) {
 }
 
 /**
+ * Primary tip plus optional extras (`tips`). Label offset uses `anchor`.
+ * @param {{ anchor?: number[], tips?: number[][] }} ann
+ * @returns {number[][]}
+ */
+function calloutTips(ann) {
+  /** @type {number[][]} */
+  const tips = [];
+  if (Array.isArray(ann.anchor) && ann.anchor.length >= 3) tips.push(ann.anchor);
+  if (Array.isArray(ann.tips)) {
+    for (const tip of ann.tips) {
+      if (Array.isArray(tip) && tip.length >= 3) tips.push(tip);
+    }
+  }
+  return tips.length ? tips : [ann.anchor];
+}
+
+/**
  * @param {number} metres
  */
 export function formatMm(metres) {
@@ -268,12 +285,13 @@ export function createAnnotations(opts) {
         const text = resolveText(ann.text, locale);
         if (!text) continue;
         const sprite = makeTextLabel(text.split("\n"), ink, px);
-        const leader = makeFatLine(color);
-        group.add(leader, sprite);
+        const tips = calloutTips(ann);
+        const leaders = tips.map(() => makeFatLine(color));
+        group.add(...leaders, sprite);
         items.push({
           kind: "callout",
           sprite,
-          lines: [leader],
+          lines: leaders,
           data: ann,
         });
       } else if (ann.kind === "dim" && Array.isArray(ann.a) && Array.isArray(ann.b)) {
@@ -404,6 +422,7 @@ export function createAnnotations(opts) {
 
     for (const item of items) {
       if (item.kind === "callout") {
+        // Label offset is relative to the primary tip; extra tips only get leaders.
         const anchor = cadMmToGltf(item.data.anchor);
         const ndc = projectNdc(anchor, _a);
         const off = Array.isArray(item.data.offset) ? item.data.offset : [0.08, 0.06];
@@ -413,15 +432,19 @@ export function createAnnotations(opts) {
         placeSprite(item.sprite, label);
         const wpp = worldPerPixel(label);
         const half = wpp * item.sprite.userData.cssWidth * 0.5;
-        _end.copy(label).sub(anchor);
-        const len = _end.length();
-        if (len > half + wpp) {
-          _end.setLength(len - half);
-          _end.add(anchor);
-        } else {
-          _end.copy(label);
+        const tips = calloutTips(item.data);
+        for (let i = 0; i < item.lines.length; i += 1) {
+          const tip = cadMmToGltf(tips[i] || item.data.anchor);
+          _end.copy(label).sub(tip);
+          const len = _end.length();
+          if (len > half + wpp) {
+            _end.setLength(len - half);
+            _end.add(tip);
+          } else {
+            _end.copy(label);
+          }
+          setFatLine(item.lines[i], tip, _end);
         }
-        setFatLine(item.lines[0], anchor, _end);
       } else if (item.kind === "dim") {
         const pa = cadMmToGltf(item.data.a);
         const pb = cadMmToGltf(item.data.b);

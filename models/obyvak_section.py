@@ -27,6 +27,7 @@ from obyvak_geom import (  # noqa: F401
     LABEL_RAFTERS,
     LABEL_ROOFING,
     LABEL_SLOPE_CD,
+    LABEL_SLOPE_FOIL,
     LABEL_SLOPE_GKF,
     LABEL_SLOPE_NH,
     LABEL_SLOPE_NONIUS,
@@ -111,6 +112,7 @@ def build(params: ObyvakParams | None = None):
     parts.append(xz_face(g.sikmina_sdk_pts(), LABEL_SLOPE_GKF))
     for quad in g.sikmina_cd_quads():
         parts.append(xz_face(quad, LABEL_SLOPE_CD))
+    parts.append(xz_face(g.sikmina_foil_pts(), LABEL_SLOPE_FOIL))
     # Schematic hangers at a few CD stations; pásky = thin sections of 45° X straps.
     for st in g.sikmina_cd_stations()[::2]:
         xs = [pt[0] for pt in g.sikmina_cd_quad(*st)]

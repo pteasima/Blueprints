@@ -24,8 +24,9 @@ def _source_z_soffit(p: ObyvakParams) -> float:
     """Independent copy of the legacy bokorys formula (ridge-center soffit)."""
     cos = math.cos(math.radians(p.roof_angle_deg))
     tan = math.tan(math.radians(p.roof_angle_deg))
-    t_soft = p.finish_t + p.basic_t + p.naturheld_t + p.foil_t + p.sdk_t
-    t_left = p.plenum_t + p.cd_t + t_soft
+    t_soft = p.finish_t + p.basic_t + p.naturheld_t + p.sdk_t
+    # Foil sits attic-side of CD (below wool); still counts in the slope pack.
+    t_left = p.plenum_t + p.foil_t + p.cd_t + t_soft
     t_above = p.vent_t + p.dhv_t + p.counter_batten_t + p.batten_t + p.tile_t
     half = p.room_width / 2.0
     z_raf_inner_ridge = p.ridge_z - (t_above + p.rafter_t) / cos
