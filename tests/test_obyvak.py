@@ -710,7 +710,7 @@ def test_sikmina_drawing_scenes():
 
     # Outside→in column: callout labels share one screen-X, ordered top→bottom.
     callouts = [ann for ann in section["annotations"] if ann["kind"] == "callout"]
-    assert len(callouts) == 7
+    assert len(callouts) == 6
     label_xs = []
     label_ys = []
     hw, hh = section["camera"]["orthoFit"]
@@ -735,10 +735,11 @@ def test_sikmina_drawing_scenes():
     assert by_y[-1].startswith("NaturHeld 140")
     assert any(t.startswith("GKF") for t in by_y)
     assert any(t.startswith("Direct hanger") for t in by_y)
-    assert any(t.startswith("Nonius") for t in by_y)
-    # Nonius leader tips on the cabinet side of the false ridge.
-    nonius = next(a for a in callouts if a["text"]["en"].startswith("Nonius"))
-    assert nonius["anchor"][0] >= g.x_false
+    # Direct + Nonius share one label; second tip on the cabinet slope.
+    hang = next(a for a in callouts if a["text"]["en"].startswith("Direct hanger"))
+    assert "Nonius" in hang["text"]["en"]
+    assert hang["anchor"][0] < g.x_false
+    assert hang["tips"] and hang["tips"][0][0] >= g.x_false
     assert section["opacity"][LABEL_SOFFIT_DUCT] == 1
     assert section["opacity"]["slope_foil"] == board
 

@@ -344,7 +344,7 @@
         },
         "offset": [
           -0.193,
-          0.191
+          0.174
         ]
       },
       {
@@ -355,28 +355,19 @@
           4222.2
         ],
         "text": {
-          "en": "Direct hanger 125 mm\nCD → side of rafter",
-          "cs": "Přímý závěs 125 mm\nCD → bok krokve"
+          "en": "Direct hanger 125 mm (window)\nNonius 340/440 mm (cabinet)",
+          "cs": "Přímý závěs 125 mm (okna)\nNonius 340/440 mm (skříně)"
         },
         "offset": [
           -0.193,
-          0.091
-        ]
-      },
-      {
-        "kind": "callout",
-        "anchor": [
-          2533.5,
-          4696.0,
-          5401.9
+          0.056
         ],
-        "text": {
-          "en": "Nonius 340/440 mm\nCD → rafter",
-          "cs": "Nonius 340/440 mm\nCD → krokev"
-        },
-        "offset": [
-          -0.366,
-          -0.274
+        "tips": [
+          [
+            3491.1,
+            4696.0,
+            4710.3
+          ]
         ]
       },
       {
@@ -392,7 +383,7 @@
         },
         "offset": [
           -0.193,
-          -0.072
+          -0.036
         ]
       },
       {
@@ -408,7 +399,7 @@
         },
         "offset": [
           -0.193,
-          -0.155
+          -0.137
         ]
       },
       {
