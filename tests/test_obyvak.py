@@ -584,7 +584,48 @@ def test_sikmina_drawing_scenes():
         texts.append(ann["text"]["cs"])
     assert any("625" in t for t in texts)
     assert any("krokv" in t.lower() for t in texts)
+    assert any("60×27 mm" in t for t in texts)
+    assert any("125 mm" in t for t in texts)
+    assert any("40×2 mm" in t for t in texts)
     assert not any("pozednic" in t.lower() or "věnc" in t.lower() for t in texts)
+
+    # Lattice callouts also share a left column (outside → in, top → bottom).
+    lat_callouts = [a for a in lattice["annotations"] if a["kind"] == "callout"]
+    assert len(lat_callouts) == 3
+    import math
+
+    from blueprints.scenes import cad_mm_to_gltf_m
+
+    up = lattice["camera"]["up"]
+    lx = lattice["camera"]["target"][0] - lattice["camera"]["position"][0]
+    ly = lattice["camera"]["target"][1] - lattice["camera"]["position"][1]
+    lz = lattice["camera"]["target"][2] - lattice["camera"]["position"][2]
+    ln = math.sqrt(lx * lx + ly * ly + lz * lz) or 1.0
+    look_n = (lx / ln, ly / ln, lz / ln)
+    hw, hh = lattice["camera"]["orthoFit"]
+    target = lattice["camera"]["target"]
+
+    label_ndc = []
+    for ann in lat_callouts:
+        gx, gy, gz = cad_mm_to_gltf_m(ann["anchor"])
+        dx, dy, dz = gx - target[0], gy - target[1], gz - target[2]
+        rx = look_n[1] * up[2] - look_n[2] * up[1]
+        ry = look_n[2] * up[0] - look_n[0] * up[2]
+        rz = look_n[0] * up[1] - look_n[1] * up[0]
+        sx = (dx * rx + dy * ry + dz * rz) / hw
+        sy = (dx * up[0] + dy * up[1] + dz * up[2]) / hh
+        label_ndc.append((sx + ann["offset"][0] * 2, sy + ann["offset"][1] * 2))
+    assert max(x for x, _ in label_ndc) - min(x for x, _ in label_ndc) < 0.05
+    assert all(-0.75 < x < -0.35 for x, _ in label_ndc)
+    by_y = [
+        a["text"]["en"].split("\n")[0]
+        for a, _ in sorted(
+            zip(lat_callouts, label_ndc), key=lambda pair: pair[1][1], reverse=True
+        )
+    ]
+    assert by_y[0].startswith("Bracing strap")
+    assert by_y[-1].startswith("CD")
+    assert any(t.startswith("Direct hanger") for t in by_y)
 
     section = specs["sikmina-section"]
     assert section["opacityDefault"] == 0
@@ -623,23 +664,57 @@ def test_sikmina_drawing_scenes():
     joined = " ".join(
         ann["text"]["cs"] for ann in section["annotations"] if "text" in ann
     )
-    assert "NaturHeld 140, 80 mm" in joined
+    assert "NaturHeld 140 80 mm" in joined
+    assert "GKF 12,5 mm" in joined
+    assert "Fólie 1 mm" in joined
     assert "Flex" not in joined
     assert "Minerální vlna" in joined
+    assert "80 mm" in joined
     assert "plénum" not in joined.lower()
     joined_en = " ".join(
         ann["text"]["en"] for ann in section["annotations"] if "text" in ann
     )
     assert "Mineral wool" in joined_en
+    assert "GKF 12.5 mm" in joined_en
+    assert "Foil 1 mm" in joined_en
     assert "plenum" not in joined_en.lower()
     assert "Nonius" in joined
-    assert "125" in joined
+    assert "125 mm" in joined
+    assert "340/440 mm" in joined
     low = joined.lower()
     assert "přesah" not in low and "overhang" not in low
     assert "pozednic" not in low and "wall plate" not in low
     assert "věnc" not in low and "páska" not in low and "strap" not in low
     assert "40°" not in joined
     assert "soffit" not in low and "podhled" not in low
+
+    # Outside→in column: callout labels share one screen-X, ordered top→bottom.
+    callouts = [ann for ann in section["annotations"] if ann["kind"] == "callout"]
+    assert len(callouts) == 5
+    label_xs = []
+    label_ys = []
+    hw, hh = section["camera"]["orthoFit"]
+    target = section["camera"]["target"]
+    from blueprints.scenes import cad_mm_to_gltf_m
+
+    for ann in callouts:
+        gx, gy, _ = cad_mm_to_gltf_m(ann["anchor"])
+        ndc_x = (gx - target[0]) / hw
+        ndc_y = (gy - target[1]) / hh
+        lx = ndc_x + ann["offset"][0] * 2
+        ly = ndc_y + ann["offset"][1] * 2
+        label_xs.append(lx)
+        label_ys.append(ly)
+    assert max(label_xs) - min(label_xs) < 0.05
+    assert all(-0.75 < x < -0.4 for x in label_xs)
+    # Top of column is outside (wool); bottom is room face (NaturHeld).
+    order = [t.split("\n")[0] for t in (a["text"]["en"] for a in callouts)]
+    by_y = [t for _, t in sorted(zip(label_ys, order), reverse=True)]
+    assert by_y[0].startswith("Mineral wool")
+    assert by_y[-1].startswith("NaturHeld 140")
+    assert any("GKF" in t for t in by_y)
+    assert any("Direct hanger" in t for t in by_y)
+    assert any("Nonius" in a["text"]["en"] for a in callouts)
 
 
 def test_write_scenes_json(tmp_path):

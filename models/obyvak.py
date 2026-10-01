@@ -1331,6 +1331,70 @@ def _dim(
     return item
 
 
+def _ndc_offset(
+    anchor_ndc: tuple[float, float],
+    label_ndc: tuple[float, float],
+) -> tuple[float, float]:
+    """Callout ``offset`` is half the NDC delta (viewer does ``ndc + offset * 2``)."""
+    return (
+        0.5 * (label_ndc[0] - anchor_ndc[0]),
+        0.5 * (label_ndc[1] - anchor_ndc[1]),
+    )
+
+
+def _section_ndc(
+    anchor_cad: tuple[float, float, float],
+    target: list[float],
+    half_w: float,
+    half_h: float,
+) -> tuple[float, float]:
+    """Section looks along −Z; screen X/Y follow glTF X/Y."""
+    from blueprints.scenes import cad_mm_to_gltf_m
+
+    gx, gy, _ = cad_mm_to_gltf_m(anchor_cad)
+    return ((gx - target[0]) / half_w, (gy - target[1]) / half_h)
+
+
+def _lattice_ndc(
+    anchor_cad: tuple[float, float, float],
+    target: list[float],
+    look: tuple[float, float, float],
+    up: tuple[float, float, float],
+    half_w: float,
+    half_h: float,
+) -> tuple[float, float]:
+    """Head-on lattice: screen right = look × up, screen up = ``up``."""
+    from blueprints.scenes import cad_mm_to_gltf_m
+
+    gx, gy, gz = cad_mm_to_gltf_m(anchor_cad)
+    dx, dy, dz = gx - target[0], gy - target[1], gz - target[2]
+    # look × up = (0, 0, -1) for the šikmina lattice pose → screen +X = −glTF Z.
+    rx = look[1] * up[2] - look[2] * up[1]
+    ry = look[2] * up[0] - look[0] * up[2]
+    rz = look[0] * up[1] - look[1] * up[0]
+    sx = dx * rx + dy * ry + dz * rz
+    sy = dx * up[0] + dy * up[1] + dz * up[2]
+    return (sx / half_w, sy / half_h)
+
+
+def _column_label_ndcs(
+    n: int,
+    *,
+    col_x: float,
+    y_top: float,
+    y_bot: float,
+) -> list[tuple[float, float]]:
+    """Evenly spaced NDC points for a vertical label column (top → bottom)."""
+    if n <= 0:
+        return []
+    if n == 1:
+        return [(col_x, 0.5 * (y_top + y_bot))]
+    return [
+        (col_x, y_top + (y_bot - y_top) * i / (n - 1))
+        for i in range(n)
+    ]
+
+
 def _rafter_window(p: ObyvakParams, g: ObyvakLayout) -> tuple[float, float, float, float]:
     """Y slab through one krokev, clear of the column stations.
 
@@ -1397,20 +1461,23 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     Lattice is head-on to the window slope (true shape of the CD grid and hangers).
     Section looks along the room through one rafter bay and keeps both slopes
     plus the soffit. Masonry stays so the věnec under the pozednice is in the picture.
+
+    Callouts sit in one left-hand column, ordered outside → in, so the drawing
+    reads the stack without hunting around the plate.
     """
     y_near, y_far, raf_a, raf_b = _rafter_window(p, g)
-    y_lat0 = y_near
     # Lattice window: a few bays around that same rafter pair, still off the columns.
     y0 = raf_a - p.rafter_spacing * 0.35
     y1 = raf_b + p.rafter_spacing * 0.55
     y_mid = 0.5 * (y0 + y1)
 
-    # Left-slope face. x_false is the end of the 40° run.
-    x_face = 0.42 * g.x_false
+    # Left-slope face depths (room face → rafter).
     t_nh = g.t_nh_face
     t_gkf = t_nh + g.t_flex_pack + p.sdk_t * 0.5
     t_cd = t_nh + g.t_flex_pack + p.sdk_t + p.cd_t * 0.5
     t_cd_outer = t_nh + g.t_flex_pack + p.sdk_t + p.cd_t
+    t_hanger = t_cd_outer + 36.0
+    t_wool = g.t_left + p.rafter_t * 0.5
 
     def on_face(x: float, y: float, t_perp: float) -> tuple[float, float, float]:
         return (x, y, g.z_slope_offset(x, t_perp))
@@ -1420,31 +1487,88 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     cd_a = cd[1] if len(cd) > 2 else cd[0]
     cd_b = cd[2] if len(cd) > 2 else cd[min(1, len(cd) - 1)]
 
-    # Middle bracing X sits near mid-length, on the rafter underside.
-    y_ceil0 = FACE_GAP
-    y_span = (p.room_length - FACE_GAP) - y_ceil0
-    y_strap = y_ceil0 + 1.5 * y_span / 3.0
-    x_strap = 0.5 * g.x_false
-    strap_pt = (x_strap, y_strap, g.z_raf(x_strap))
+    nh_mm = f"{p.naturheld_t:g}"
+    sdk_mm = f"{p.sdk_t:g}".replace(".", ",")
+    sdk_mm_en = f"{p.sdk_t:g}"
+    foil_mm = f"{p.foil_t:g}"
+    finish_mm = f"{p.finish_t:g}"
+    basic_mm = f"{p.basic_t:g}"
+    cd_w = f"{p.cd_w:g}"
+    cd_t = f"{p.cd_t:g}"
+    cd_sp = f"{p.cd_spacing:g}"
+    strap_w = f"{p.strap_w:g}"
+    strap_t = f"{p.strap_t:g}"
+    plenum_mm = f"{p.plenum_t:g}"
+    raf_w = f"{p.rafter_w:g}"
+    raf_t = f"{p.rafter_t:g}"
 
     # Head-on: look along the attic normal, up along the slope.
     # glTF (x, z, −y). Screen right then runs along the room (CAD +Y).
     look_lat = (-g.sin, g.cos, 0.0)
     up_lat = (g.cos, g.sin, 0.0)
     slope_len = g.x_false / g.cos
-    pad = 1.62
+    # Extra width on the left for the label column (keep centres inside the plate).
+    pad_w = 1.88
+    pad_h = 1.55
+    lat_half_w = 0.5 * (y1 - y0) * 0.001 * pad_w
+    lat_half_h = 0.5 * slope_len * 0.001 * pad_h
     lat_target = on_face(0.28 * g.x_false, y_mid, t_cd)
+    lat_cam = _ortho_pose(lat_target, look_lat, up_lat, lat_half_w, lat_half_h)
+
+    # Lattice column: outside (rafter / strap) → in (CD toward the room).
+    # Anchors share one bay centreline and step down the slope so label Y
+    # can match anchor Y (horizontal leaders, no crossings).
+    y_lat = y_mid
+    x_out = min(0.62 * g.x_false, g.x_false - 120.0)
+    x_mid = 0.45 * g.x_false
+    x_in = max(cd_a[0], 0.28 * g.x_false)
+    lat_notes = [
+        (
+            (x_out, y_lat, g.z_raf(x_out)),
+            f"Bracing strap {strap_w}×{strap_t} mm\n45° across rafters",
+            f"Páska {strap_w}×{strap_t} mm\n45° přes krokve",
+        ),
+        (
+            on_face(x_mid, y_lat, t_hanger),
+            "Direct hanger 125 mm\nCD → side of rafter",
+            "Přímý závěs 125 mm\nCD → bok krokve",
+        ),
+        (
+            on_face(x_in, y_lat, t_cd),
+            f"CD {cd_w}×{cd_t} mm @ {cd_sp}\n⊥ rafters",
+            f"CD {cd_w}×{cd_t} mm @ {cd_sp}\n⊥ krokvím",
+        ),
+    ]
+    lat_annotations = []
+    for anchor, en, cs in lat_notes:
+        anchor_ndc = _lattice_ndc(
+            anchor, lat_cam["target"], look_lat, up_lat, lat_half_w, lat_half_h
+        )
+        # Same screen Y as the tip → horizontal leader into the left column.
+        label_ndc = (-0.55, anchor_ndc[1])
+        lat_annotations.append(
+            _callout(anchor, en, cs, _ndc_offset(anchor_ndc, label_ndc))
+        )
+    lat_annotations.extend(
+        [
+            _dim(
+                on_face(cd_a[0], y_mid - 280.0, t_cd),
+                on_face(cd_b[0], y_mid - 280.0, t_cd),
+                -0.045,
+            ),
+            _dim(
+                (0.32 * g.x_false, raf_a, g.z_raf(0.32 * g.x_false)),
+                (0.32 * g.x_false, raf_b, g.z_raf(0.32 * g.x_false)),
+                -0.06,
+            ),
+        ]
+    )
+
     lattice = {
         "id": "sikmina-lattice",
         "title": _tx("Slopes — CD and hangers", "Šikmina — CD a závěsy"),
         "project": "Obývák 1.02",
-        "camera": _ortho_pose(
-            lat_target,
-            look_lat,
-            up_lat,
-            0.5 * (y1 - y0) * 0.001 * pad,
-            0.5 * slope_len * 0.001 * pad,
-        ),
+        "camera": lat_cam,
         "projection": "ortho",
         "cuts": [
             _cut((0.0, 0.0, -1.0), (g.x_ridge, y0, g.h_start)),
@@ -1463,54 +1587,81 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
             LABEL_SLOPE_GKF: 0.35,
         },
         "opacityDefault": 0,
-        "annotations": [
-            _callout(
-                on_face(cd_a[0], y_mid, t_cd),
-                "CD 60×27 @ 625\nperpendicular to rafters\nNaturHeld 140 screws through GKF",
-                "CD 60×27 @ 625\n⊥ krokvím\nNaturHeld 140 šroubován přes GKF",
-                (-0.22, 0.02),
-            ),
-            _callout(
-                on_face(cd_b[0], raf_b, t_cd_outer + 40.0),
-                "Direct hanger 125\nCD → side of rafter",
-                "Přímý závěs 125\nCD → bok krokve",
-                (0.2, 0.06),
-            ),
-            _callout(
-                strap_pt,
-                "Bracing strap 40×2\n45° across rafters",
-                "Páska 40×2\n45° přes krokve",
-                (0.16, -0.1),
-            ),
-            _dim(
-                on_face(cd_a[0], y_mid - 280.0, t_cd),
-                on_face(cd_b[0], y_mid - 280.0, t_cd),
-                -0.045,
-            ),
-            _dim(
-                (0.32 * g.x_false, raf_a, g.z_raf(0.32 * g.x_false)),
-                (0.32 * g.x_false, raf_b, g.z_raf(0.32 * g.x_false)),
-                -0.06,
-            ),
-        ],
+        "annotations": lat_annotations,
     }
 
     # Section: kitchen → living, both slopes and the soffit, one rafter bay.
     # The soffit is in the picture with no callouts (its own plate comes later).
     y_note = y_near + 30.0
-    x_right = g.x_false + 0.62 * (g.x_furn - g.x_false)
+    x_stack = 0.42 * g.x_false
     # Each cut face is its own layer, so a sliced solid stacks two of these.
     # Wool and the wood-fibre board stay the lighter tint. Foil is the 1 mm
     # in the GKF solid, so that board is ghosted a step darker and the CD
     # and hangers stay solid.
     wool = 0.18
     board = 0.35
-    frame_x0 = g.left_eave - 80.0
+    # Extra left margin so the outside→in column sits clear of the eave.
+    # Callout sprites are centred on the column X, so leave ~0.3 NDC of pad
+    # inside the plate edge for the widest three-line note.
+    label_margin = 1600.0
+    frame_x0 = g.left_eave - 80.0 - label_margin
     frame_x1 = g.right_eave + 80.0
     frame_z0 = g.z_nabeh_bot - 180.0
     frame_z1 = p.ridge_z + 180.0
-    sec_pad_w = 1.18
+    sec_pad_w = 1.06
     sec_pad_h = 1.08
+    sec_half_w = 0.5 * (frame_x1 - frame_x0) * 0.001 * sec_pad_w
+    sec_half_h = 0.5 * (frame_z1 - frame_z0) * 0.001 * sec_pad_h
+    sec_cam = _ortho_pose(
+        (
+            0.5 * (frame_x0 + frame_x1),
+            y_near,
+            0.5 * (frame_z0 + frame_z1),
+        ),
+        (0.0, 0.0, -1.0),
+        (0.0, 1.0, 0.0),
+        sec_half_w,
+        sec_half_h,
+    )
+
+    # Outside (attic / rafter bay) → in (room face). All anchors on the window
+    # slope at one station so leaders stay short and parallel. Direct hanger and
+    # Nonius share one row (same hang role; Nonius is on the cabinet slope).
+    sec_notes = [
+        (
+            on_face(x_stack, y_note, t_wool),
+            f"Mineral wool {plenum_mm} mm\nunder + between {raf_w}/{raf_t} rafters",
+            f"Minerální vlna {plenum_mm} mm\npod + mezi krokvemi {raf_w}/{raf_t}",
+        ),
+        (
+            on_face(x_stack, y_note, t_hanger),
+            "Direct hanger 125 mm (window)\nNonius 340/440 mm (cabinet)",
+            "Přímý závěs 125 mm (okna)\nNonius 340/440 mm (skříně)",
+        ),
+        (
+            on_face(x_stack, y_note, t_cd),
+            f"CD {cd_w}×{cd_t} mm @ {cd_sp}\n⊥ rafters",
+            f"CD {cd_w}×{cd_t} mm @ {cd_sp}\n⊥ krokvím",
+        ),
+        (
+            on_face(x_stack, y_note, t_gkf),
+            f"Foil {foil_mm} mm + GKF {sdk_mm_en} mm",
+            f"Fólie {foil_mm} mm + GKF {sdk_mm} mm",
+        ),
+        (
+            on_face(x_stack, y_note, t_nh * 0.5),
+            f"NaturHeld 140 {nh_mm} mm\nStoSilent {finish_mm}+{basic_mm} mm · through GKF→CD",
+            f"NaturHeld 140 {nh_mm} mm\nStoSilent {finish_mm}+{basic_mm} mm · přes GKF→CD",
+        ),
+    ]
+    sec_labels = _column_label_ndcs(len(sec_notes), col_x=-0.58, y_top=0.42, y_bot=-0.48)
+    sec_annotations = []
+    for (anchor, en, cs), label_ndc in zip(sec_notes, sec_labels):
+        anchor_ndc = _section_ndc(anchor, sec_cam["target"], sec_half_w, sec_half_h)
+        sec_annotations.append(
+            _callout(anchor, en, cs, _ndc_offset(anchor_ndc, label_ndc))
+        )
+
     section = {
         "id": "sikmina-section",
         "title": _tx(
@@ -1518,17 +1669,7 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
             "Šikmina — řez\nkolmo na krokve",
         ),
         "project": "Obývák 1.02",
-        "camera": _ortho_pose(
-            (
-                0.5 * (frame_x0 + frame_x1),
-                y_near,
-                0.5 * (frame_z0 + frame_z1),
-            ),
-            (0.0, 0.0, -1.0),
-            (0.0, 1.0, 0.0),
-            0.5 * (frame_x1 - frame_x0) * 0.001 * sec_pad_w,
-            0.5 * (frame_z1 - frame_z0) * 0.001 * sec_pad_h,
-        ),
+        "camera": sec_cam,
         "projection": "ortho",
         "cuts": [
             _cut((0.0, 0.0, -1.0), (0.5 * g.x_false, y_near, g.h_start)),
@@ -1556,46 +1697,7 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
             LABEL_SOFFIT_GKF: board,
         },
         "opacityDefault": 0,
-        "annotations": [
-            _callout(
-                on_face(0.28 * g.x_false, y_note, t_nh * 0.5),
-                "NaturHeld 140, 80 mm\nStoSilent Finish + Basic 2+2 mm\nscrewed through GKF into CD",
-                "NaturHeld 140, 80 mm\nStoSilent Finish + Basic 2+2 mm\nšroubováno přes GKF do CD",
-                (-0.12, -0.05),
-            ),
-            _callout(
-                on_face(0.55 * g.x_false, y_note, t_gkf),
-                "Foil + GKF 12.5",
-                "Fólie + GKF 12,5",
-                (-0.1, -0.06),
-            ),
-            _callout(
-                on_face(0.68 * g.x_false, y_note, t_cd),
-                "CD 60×27 @ 625\nperpendicular to rafters",
-                "CD 60×27 @ 625\n⊥ krokvím",
-                (0.06, 0.05),
-            ),
-            _callout(
-                on_face(0.78 * g.x_false, y_note, t_cd_outer + 36.0),
-                "Direct hanger 125\nCD → side of rafter",
-                "Přímý závěs 125\nCD → bok krokve",
-                (0.08, 0.06),
-            ),
-            _callout(
-                # Mid-depth of the rafter bay: the void below and the fill between
-                # krokve are one mineral-wool solid.
-                on_face(0.5 * g.x_false, y_note, g.t_left + p.rafter_t * 0.5),
-                "Mineral wool",
-                "Minerální vlna",
-                (0.08, 0.05),
-            ),
-            _callout(
-                on_face(x_right, y_note, t_cd_outer + 80.0),
-                "Nonius 340/440\nCD → rafter",
-                "Nonius 340/440\nCD → krokev",
-                (0.1, 0.06),
-            ),
-        ],
+        "annotations": sec_annotations,
     }
     return [lattice, section]
 

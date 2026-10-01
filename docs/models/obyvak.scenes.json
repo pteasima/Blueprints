@@ -93,8 +93,8 @@
         -5.101
       ],
       "position": [
-        9.011966090356559,
-        -6.051463156631858,
+        8.652202123489301,
+        -5.622713156631857,
         -5.101
       ],
       "up": [
@@ -103,8 +103,8 @@
         0.0
       ],
       "orthoFit": [
-        1.3466250000000002,
-        2.5905807656799067
+        1.56275,
+        2.478642090619664
       ]
     },
     "projection": "ortho",
@@ -160,49 +160,49 @@
       {
         "kind": "callout",
         "anchor": [
-          547.7,
+          1519.0,
           5101.0,
-          3755.0
+          4692.1
         ],
         "text": {
-          "en": "CD 60×27 @ 625\nperpendicular to rafters\nNaturHeld 140 screws through GKF",
-          "cs": "CD 60×27 @ 625\n⊥ krokvím\nNaturHeld 140 šroubován přes GKF"
+          "en": "Bracing strap 40×2 mm\n45° across rafters",
+          "cs": "Páska 40×2 mm\n45° přes krokve"
         },
         "offset": [
-          -0.22,
-          0.02
+          -0.275,
+          0.0
         ]
       },
       {
         "kind": "callout",
         "anchor": [
-          1026.5,
-          5451.0,
-          4226.6
+          1102.5,
+          5101.0,
+          4285.1
         ],
         "text": {
-          "en": "Direct hanger 125\nCD → side of rafter",
-          "cs": "Přímý závěs 125\nCD → bok krokve"
+          "en": "Direct hanger 125 mm\nCD → side of rafter",
+          "cs": "Přímý závěs 125 mm\nCD → bok krokve"
         },
         "offset": [
-          0.2,
-          0.06
+          -0.275,
+          0.0
         ]
       },
       {
         "kind": "callout",
         "anchor": [
-          1225.0,
-          5550.0,
-          4445.4
+          686.0,
+          5101.0,
+          3871.0
         ],
         "text": {
-          "en": "Bracing strap 40×2\n45° across rafters",
-          "cs": "Páska 40×2\n45° přes krokve"
+          "en": "CD 60×27 mm @ 625\n⊥ rafters",
+          "cs": "CD 60×27 mm @ 625\n⊥ krokvím"
         },
         "offset": [
-          0.16,
-          -0.1
+          -0.275,
+          0.0
         ]
       },
       {
@@ -244,14 +244,14 @@
     "project": "Obývák 1.02",
     "camera": {
       "target": [
-        2.6750000000000003,
+        1.875,
         4.263800000000001,
         -4.666
       ],
       "position": [
-        2.6750000000000003,
+        1.875,
         4.263800000000001,
-        14.803999999999998
+        17.064
       ],
       "up": [
         0.0,
@@ -259,7 +259,7 @@
         0.0
       ],
       "orthoFit": [
-        3.894,
+        4.346,
         2.1317040000000005
       ]
     },
@@ -316,97 +316,81 @@
       {
         "kind": "callout",
         "anchor": [
-          686.0,
+          1029.0,
           4696.0,
-          3781.0
+          4385.3
         ],
         "text": {
-          "en": "NaturHeld 140, 80 mm\nStoSilent Finish + Basic 2+2 mm\nscrewed through GKF into CD",
-          "cs": "NaturHeld 140, 80 mm\nStoSilent Finish + Basic 2+2 mm\nšroubováno přes GKF do CD"
+          "en": "Mineral wool 80 mm\nunder + between 100/160 rafters",
+          "cs": "Minerální vlna 80 mm\npod + mezi krokvemi 100/160"
         },
         "offset": [
-          -0.12,
-          -0.05
+          -0.193,
+          0.181
         ]
       },
       {
         "kind": "callout",
         "anchor": [
-          1347.5,
+          1029.0,
           4696.0,
-          4400.3
+          4223.5
         ],
         "text": {
-          "en": "Foil + GKF 12.5",
-          "cs": "Fólie + GKF 12,5"
+          "en": "Direct hanger 125 mm (window)\nNonius 340/440 mm (cabinet)",
+          "cs": "Přímý závěs 125 mm (okna)\nNonius 340/440 mm (skříně)"
         },
         "offset": [
-          -0.1,
-          -0.06
+          -0.193,
+          0.107
         ]
       },
       {
         "kind": "callout",
         "anchor": [
-          1666.0,
+          1029.0,
           4696.0,
-          4693.4
+          4158.8
         ],
         "text": {
-          "en": "CD 60×27 @ 625\nperpendicular to rafters",
-          "cs": "CD 60×27 @ 625\n⊥ krokvím"
+          "en": "CD 60×27 mm @ 625\n⊥ rafters",
+          "cs": "CD 60×27 mm @ 625\n⊥ krokvím"
         },
         "offset": [
-          0.06,
-          0.05
+          -0.193,
+          0.01
         ]
       },
       {
         "kind": "callout",
         "anchor": [
-          1911.0,
+          1029.0,
           4696.0,
-          4963.6
+          4133.1
         ],
         "text": {
-          "en": "Direct hanger 125\nCD → side of rafter",
-          "cs": "Přímý závěs 125\nCD → bok krokve"
+          "en": "Foil 1 mm + GKF 12.5 mm",
+          "cs": "Fólie 1 mm + GKF 12,5 mm"
         },
         "offset": [
-          0.08,
-          0.06
+          -0.193,
+          -0.097
         ]
       },
       {
         "kind": "callout",
         "anchor": [
-          1225.0,
+          1029.0,
           4696.0,
-          4549.8
+          4068.8
         ],
         "text": {
-          "en": "Mineral wool",
-          "cs": "Minerální vlna"
+          "en": "NaturHeld 140 80 mm\nStoSilent 2+2 mm · through GKF→CD",
+          "cs": "NaturHeld 140 80 mm\nStoSilent 2+2 mm · přes GKF→CD"
         },
         "offset": [
-          0.08,
-          0.05
-        ]
-      },
-      {
-        "kind": "callout",
-        "anchor": [
-          3969.0,
-          4696.0,
-          4198.7
-        ],
-        "text": {
-          "en": "Nonius 340/440\nCD → rafter",
-          "cs": "Nonius 340/440\nCD → krokev"
-        },
-        "offset": [
-          0.1,
-          0.06
+          -0.193,
+          -0.194
         ]
       }
     ]
