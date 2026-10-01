@@ -708,11 +708,12 @@ def test_sikmina_drawing_scenes():
     assert "40°" not in joined
     assert "soffit" not in low and "podhled" not in low
 
-    # Outside→in column: callout labels share one screen-X, ordered top→bottom.
+    # Outside→in column: shared screen-X, tip Y = label Y (horizontal leaders).
     callouts = [ann for ann in section["annotations"] if ann["kind"] == "callout"]
     assert len(callouts) == 6
     label_xs = []
     label_ys = []
+    tip_ys = []
     hw, hh = section["camera"]["orthoFit"]
     target = section["camera"]["target"]
     from blueprints.scenes import cad_mm_to_gltf_m
@@ -725,21 +726,26 @@ def test_sikmina_drawing_scenes():
         ly = ndc_y + ann["offset"][1] * 2
         label_xs.append(lx)
         label_ys.append(ly)
+        tip_ys.append(ndc_y)
+        # Horizontal leader: label Y matches tip Y.
+        assert abs(ly - ndc_y) < 0.02
     assert max(label_xs) - min(label_xs) < 0.05
-    assert all(-0.75 < x < -0.4 for x in label_xs)
-    # Top of column is outside (wool); bottom is room face (NaturHeld).
+    assert all(-0.8 < x < -0.45 for x in label_xs)
+    # Top of column is outside (wool near ridge); bottom is room face (NaturHeld).
     order = [t.split("\n")[0] for t in (a["text"]["en"] for a in callouts)]
     by_y = [t for _, t in sorted(zip(label_ys, order), reverse=True)]
     assert by_y[0].startswith("Mineral wool")
-    assert by_y[1].startswith("Jutafol")
+    assert by_y[1].startswith("Direct hanger")
+    assert by_y[2].startswith("Jutafol")
     assert by_y[-1].startswith("NaturHeld 140")
     assert any(t.startswith("GKF") for t in by_y)
-    assert any(t.startswith("Direct hanger") for t in by_y)
-    # Direct + Nonius share one label; second tip on the cabinet slope.
+    # Direct + Nonius share one note and one leader.
     hang = next(a for a in callouts if a["text"]["en"].startswith("Direct hanger"))
     assert "Nonius" in hang["text"]["en"]
     assert hang["anchor"][0] < g.x_false
-    assert hang["tips"] and hang["tips"][0][0] >= g.x_false
+    assert "tips" not in hang
+    # Tips walk down the slope — label Ys are spread, not stacked on one tip.
+    assert max(tip_ys) - min(tip_ys) > 0.25
     assert section["opacity"][LABEL_SOFFIT_DUCT] == 1
     assert section["opacity"]["slope_foil"] == board
 

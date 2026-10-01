@@ -1397,16 +1397,35 @@ def _column_label_ndcs(
     col_x: float,
     y_top: float,
     y_bot: float,
+    weights: list[float] | None = None,
 ) -> list[tuple[float, float]]:
-    """Evenly spaced NDC points for a vertical label column (top → bottom)."""
+    """NDC points for a vertical label column (top → bottom).
+
+    Even spacing by default. With ``weights`` (e.g. line counts), centres are
+    placed so taller notes get a larger share of the column — neighbours do
+    not sit on each other's glyphs.
+    """
     if n <= 0:
         return []
     if n == 1:
         return [(col_x, 0.5 * (y_top + y_bot))]
-    return [
-        (col_x, y_top + (y_bot - y_top) * i / (n - 1))
-        for i in range(n)
-    ]
+    if not weights or len(weights) != n:
+        return [
+            (col_x, y_top + (y_bot - y_top) * i / (n - 1))
+            for i in range(n)
+        ]
+    # Pad half a slot above the first and below the last so multi-line notes
+    # stay inside the column band.
+    w = [max(float(v), 1.0) for v in weights]
+    total = sum(w)
+    span = y_top - y_bot
+    out: list[tuple[float, float]] = []
+    cursor = y_top
+    for wi in w:
+        slot = span * (wi / total)
+        out.append((col_x, cursor - 0.5 * slot))
+        cursor -= slot
+    return out
 
 
 def _rafter_window(p: ObyvakParams, g: ObyvakLayout) -> tuple[float, float, float, float]:
@@ -1491,7 +1510,9 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     t_cd = t_nh + g.t_flex_pack + p.sdk_t + p.cd_t * 0.5
     t_cd_outer = g.t_cd_outer
     t_foil = g.t_foil_inner + p.foil_t * 0.5
-    t_hanger = t_cd_outer + 36.0
+    # Hanger tip sits in the plenum above the foil — keep it clear of the
+    # foil tip so those two leaders do not share a point.
+    t_hanger = t_cd_outer + max(0.55 * p.plenum_t, 48.0)
     t_wool = g.t_left + p.rafter_t * 0.5
 
     def on_face(x: float, y: float, t_perp: float) -> tuple[float, float, float]:
@@ -1607,7 +1628,6 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     # Section: kitchen → living, both slopes and the soffit, one rafter bay.
     # The soffit is in the picture with no callouts (its own plate comes later).
     y_note = y_near + 30.0
-    x_stack = 0.42 * g.x_false
     # Each cut face is its own layer, so a sliced solid stacks two of these.
     # Wool and the wood-fibre board stay the lighter tint. Foil is the 1 mm
     # in the GKF solid, so that board is ghosted a step darker and the CD
@@ -1638,82 +1658,60 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
         sec_half_h,
     )
 
-    # Outside (attic / rafter bay) → in (room face). Direct + Nonius share one
-    # label; a second tip mid-hang on the cabinet slope draws the Nonius leader.
-    nonius_sts = []
-    for st in g.sikmina_cd_stations():
-        xs = [pt[0] for pt in g.sikmina_cd_quad(*st)]
-        if min(xs) < 1.0 or max(xs) > g.x_furn - 1.0:
-            continue
-        if st[0] >= g.x_false:
-            nonius_sts.append(st)
-    if nonius_sts:
-        # Prefer a bay clearly past the false ridge so the leader does not
-        # collapse onto the Direct tip near the peak.
-        prefer = g.x_false + 0.45 * (g.x_furn - g.x_false)
-        st_n = min(nonius_sts, key=lambda st: abs(st[0] - prefer))
-        x_nonius = sum(pt[0] for pt in g.sikmina_cd_quad(*st_n)) / 4.0
-        hang_len = max(
-            (
-                (g.z_raf(x_nonius) - g.z_slope_offset(x_nonius, g.t_cd_outer)) * g.cos
-            )
-            - 2.0,
-            20.0,
-        )
-        t_nonius_tip = g.t_cd_outer + 0.45 * hang_len
-    else:
-        x_nonius = g.x_false + 0.45 * (g.x_furn - g.x_false)
-        t_nonius_tip = t_cd_outer + 80.0
-
-    hang_direct = on_face(x_stack, y_note, t_hanger)
-    hang_nonius = on_face(x_nonius, y_note, t_nonius_tip)
-
+    # Outside (attic) → in (room). Tips walk down the window slope (ridge →
+    # eave) so tip Z spreads with the stack order. Labels share one column X
+    # and keep the tip's screen Y — horizontal leaders, no crossings through
+    # neighbouring notes (a single stack X made every upper leader cut down
+    # through the notes below).
+    x_wool, x_hang, x_foil, x_cd, x_gkf, x_nh = (
+        0.86 * g.x_false,
+        0.68 * g.x_false,
+        0.50 * g.x_false,
+        0.34 * g.x_false,
+        0.20 * g.x_false,
+        0.08 * g.x_false,
+    )
     sec_notes = [
         (
-            on_face(x_stack, y_note, t_wool),
+            on_face(x_wool, y_note, t_wool),
             f"Mineral wool\n{raf_t} mm between + {plenum_mm} mm below rafters",
             f"Minerální vlna\n{raf_t} mm mezi + {plenum_mm} mm pod krokvemi",
-            None,
         ),
         (
-            on_face(x_stack, y_note, t_foil),
-            "Jutafol 145 Al",
-            "Jutafol 145 Al",
-            None,
-        ),
-        (
-            hang_direct,
+            on_face(x_hang, y_note, t_hanger),
             "Direct hanger 125 mm (window)\nNonius 340/440 mm (cabinet)",
             "Přímý závěs 125 mm (okna)\nNonius 340/440 mm (skříně)",
-            [hang_nonius],
         ),
         (
-            on_face(x_stack, y_note, t_cd),
+            on_face(x_foil, y_note, t_foil),
+            "Jutafol 145 Al",
+            "Jutafol 145 Al",
+        ),
+        (
+            on_face(x_cd, y_note, t_cd),
             f"CD {cd_w}×{cd_t} mm @ {cd_sp}\n⊥ rafters",
             f"CD {cd_w}×{cd_t} mm @ {cd_sp}\n⊥ krokvím",
-            None,
         ),
         (
-            on_face(x_stack, y_note, t_gkf),
+            on_face(x_gkf, y_note, t_gkf),
             f"GKF {sdk_mm_en} mm",
             f"GKF {sdk_mm} mm",
-            None,
         ),
         (
-            on_face(x_stack, y_note, t_nh * 0.5),
+            on_face(x_nh, y_note, t_nh * 0.5),
             f"NaturHeld 140 {nh_mm} mm\nthrough GKF → CD\n"
             f"StoSilent Finish + Basic {finish_mm}+{basic_mm} mm",
             f"NaturHeld 140 {nh_mm} mm\npřes GKF → CD\n"
             f"StoSilent Finish + Basic {finish_mm}+{basic_mm} mm",
-            None,
         ),
     ]
-    sec_labels = _column_label_ndcs(len(sec_notes), col_x=-0.58, y_top=0.52, y_bot=-0.55)
+    col_x = -0.62
     sec_annotations = []
-    for (anchor, en, cs, tips), label_ndc in zip(sec_notes, sec_labels):
-        anchor_ndc = _section_ndc(anchor, sec_cam["target"], sec_half_w, sec_half_h)
+    for anchor, en, cs in sec_notes:
+        tip_ndc = _section_ndc(anchor, sec_cam["target"], sec_half_w, sec_half_h)
+        label_ndc = (col_x, tip_ndc[1])
         sec_annotations.append(
-            _callout(anchor, en, cs, _ndc_offset(anchor_ndc, label_ndc), tips=tips)
+            _callout(anchor, en, cs, _ndc_offset(tip_ndc, label_ndc))
         )
 
     section = {
