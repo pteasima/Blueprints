@@ -89,12 +89,12 @@
     "camera": {
       "target": [
         0.6860000000000002,
-        3.871036843368142,
+        3.86973143607881,
         -5.101
       ],
       "position": [
         8.652202123489301,
-        -5.622713156631857,
+        -5.624018563921188,
         -5.101
       ],
       "up": [
@@ -178,7 +178,7 @@
         "anchor": [
           1102.5,
           5101.0,
-          4285.1
+          4283.8
         ],
         "text": {
           "en": "Direct hanger 125 mm\nCD → side of rafter",
@@ -194,7 +194,7 @@
         "anchor": [
           686.0,
           5101.0,
-          3871.0
+          3869.7
         ],
         "text": {
           "en": "CD 60×27 mm @ 625\n⊥ rafters",
@@ -210,12 +210,12 @@
         "a": [
           547.7,
           4821.0,
-          3755.0
+          3753.7
         ],
         "b": [
           1026.5,
           4821.0,
-          4156.7
+          4155.4
         ],
         "offset": -0.045
       },
@@ -299,6 +299,7 @@
       "slope_direct_hanger": 1,
       "slope_nonius": 1,
       "soffit_nonius": 1,
+      "soffit_duct": 1,
       "racking_strap": 1,
       "roofing": 1,
       "masonry": 1,
@@ -306,6 +307,7 @@
       "plaster": 1,
       "plenum_wool": 0.18,
       "slope_naturheld_140": 0.18,
+      "slope_foil": 0.35,
       "soffit_naturheld_140": 0.18,
       "soffit_mineral_wool": 0.18,
       "slope_gkf": 0.35,
@@ -321,12 +323,12 @@
           4385.3
         ],
         "text": {
-          "en": "Mineral wool 80 mm\nunder + between 100/160 rafters",
-          "cs": "Minerální vlna 80 mm\npod + mezi krokvemi 100/160"
+          "en": "Mineral wool\n160 mm between + 80 mm below rafters",
+          "cs": "Minerální vlna\n160 mm mezi + 80 mm pod krokvemi"
         },
         "offset": [
           -0.193,
-          0.181
+          0.231
         ]
       },
       {
@@ -334,15 +336,15 @@
         "anchor": [
           1029.0,
           4696.0,
-          4223.5
+          4175.8
         ],
         "text": {
-          "en": "Direct hanger 125 mm (window)\nNonius 340/440 mm (cabinet)",
-          "cs": "Přímý závěs 125 mm (okna)\nNonius 340/440 mm (skříně)"
+          "en": "Jutafol 145 Al",
+          "cs": "Jutafol 145 Al"
         },
         "offset": [
           -0.193,
-          0.107
+          0.191
         ]
       },
       {
@@ -350,7 +352,39 @@
         "anchor": [
           1029.0,
           4696.0,
-          4158.8
+          4222.2
+        ],
+        "text": {
+          "en": "Direct hanger 125 mm\nCD → side of rafter",
+          "cs": "Přímý závěs 125 mm\nCD → bok krokve"
+        },
+        "offset": [
+          -0.193,
+          0.091
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          2533.5,
+          4696.0,
+          5401.9
+        ],
+        "text": {
+          "en": "Nonius 340/440 mm\nCD → rafter",
+          "cs": "Nonius 340/440 mm\nCD → krokev"
+        },
+        "offset": [
+          -0.366,
+          -0.274
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          1029.0,
+          4696.0,
+          4157.5
         ],
         "text": {
           "en": "CD 60×27 mm @ 625\n⊥ rafters",
@@ -358,7 +392,7 @@
         },
         "offset": [
           -0.193,
-          0.01
+          -0.072
         ]
       },
       {
@@ -366,15 +400,15 @@
         "anchor": [
           1029.0,
           4696.0,
-          4133.1
+          4131.8
         ],
         "text": {
-          "en": "Foil 1 mm + GKF 12.5 mm",
-          "cs": "Fólie 1 mm + GKF 12,5 mm"
+          "en": "GKF 12.5 mm",
+          "cs": "GKF 12,5 mm"
         },
         "offset": [
           -0.193,
-          -0.097
+          -0.155
         ]
       },
       {
@@ -385,12 +419,12 @@
           4068.8
         ],
         "text": {
-          "en": "NaturHeld 140 80 mm\nStoSilent 2+2 mm · through GKF→CD",
-          "cs": "NaturHeld 140 80 mm\nStoSilent 2+2 mm · přes GKF→CD"
+          "en": "NaturHeld 140 80 mm\nthrough GKF → CD\nStoSilent Finish + Basic 2+2 mm",
+          "cs": "NaturHeld 140 80 mm\npřes GKF → CD\nStoSilent Finish + Basic 2+2 mm"
         },
         "offset": [
           -0.193,
-          -0.194
+          -0.229
         ]
       }
     ]
