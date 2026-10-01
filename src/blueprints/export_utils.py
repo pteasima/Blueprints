@@ -188,6 +188,14 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "roughness": 0.35,
         "metallic": 0.7,
     },
+    "slope_foil": {
+        "fill": (200, 205, 215),
+        "line": (90, 95, 110),
+        "dxf": ColorIndex.CYAN,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.25,
+        "metallic": 0.85,
+    },
     "slope_direct_hanger": {
         "fill": (150, 150, 160),
         "line": (70, 70, 80),
@@ -313,6 +321,7 @@ SECTION_LAYER_ORDER = [
     "slope_naturheld_140",
     "slope_gkf",
     "slope_cd",
+    "slope_foil",
     "slope_direct_hanger",
     "slope_nonius",
     "soffit_naturheld_140",

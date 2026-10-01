@@ -13,6 +13,7 @@ from obyvak_geom import (  # noqa: E402
     LABEL_RAFTERS,
     LABEL_ROOFING,
     LABEL_SLOPE_CD,
+    LABEL_SLOPE_FOIL,
     LABEL_SLOPE_GKF,
     LABEL_SLOPE_NH,
     LABEL_SLOPE_NONIUS,
@@ -30,8 +31,9 @@ def _source_h_start(p: ObyvakParams) -> float:
     """Independent copy of the legacy-sheet formula."""
     cos = math.cos(math.radians(p.roof_angle_deg))
     tan = math.tan(math.radians(p.roof_angle_deg))
-    t_soft = p.finish_t + p.basic_t + p.naturheld_t + p.foil_t + p.sdk_t
-    t_left = p.plenum_t + p.cd_t + t_soft
+    t_soft = p.finish_t + p.basic_t + p.naturheld_t + p.sdk_t
+    # Foil sits attic-side of CD (below wool); still counts in the slope pack.
+    t_left = p.plenum_t + p.foil_t + p.cd_t + t_soft
     t_above = p.vent_t + p.dhv_t + p.counter_batten_t + p.batten_t + p.tile_t
     x_ridge = p.room_width / 2.0
     z_raf_inner_ridge = p.ridge_z - (t_above + p.rafter_t) / cos
@@ -75,6 +77,7 @@ def test_obyvak_section_builds_and_exports(tmp_path, monkeypatch):
         LABEL_SOFFIT_GKF,
         LABEL_SOFFIT_BATTENS,
         LABEL_SLOPE_CD,
+        LABEL_SLOPE_FOIL,
         LABEL_SOFFIT_CD,
     ):
         assert name in labels

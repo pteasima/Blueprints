@@ -12,9 +12,10 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
   on gable shells, three gable pocket doors (chodba on Y=0; spíž + zádveří on Y=L),
   and terrace glazing on the X=0 eave (opposite cabinets).
 - Floor slab is the clear room only; perimeter walls own the strip below z=0.
-- Šikminy: NaturHeld 140 (80) screwed through foil + GKF into CD ⊥ krokvím
-  → přímý závěs 125 on the window slope, Nonius on the cabinet slope → mineral
-  wool (below and between rafters) → krokve 100/160 @ 875 + straps.
+- Šikminy: NaturHeld 140 (80) screwed through GKF into CD ⊥ krokvím
+  → Jutafol 145 Al on the attic face of the CD → přímý závěs 125 on the
+  window slope, Nonius on the cabinet slope → mineral wool (80 mm below +
+  160 mm between rafters) → krokve 100/160 @ 875 + straps.
   No slope latě and no Flex. `rafters` = roof timber; `soffit_battens` = the
   soffit latový rost only.
 - Soffit box: 40 mm NH L over cabinets (20 mm gap); mineral wool + latový rost
@@ -77,6 +78,7 @@ from obyvak_geom import (
     LABEL_ROOFING,
     LABEL_SLOPE_CD,
     LABEL_SLOPE_DIRECT,
+    LABEL_SLOPE_FOIL,
     LABEL_SLOPE_GKF,
     LABEL_SLOPE_NH,
     LABEL_SLOPE_NONIUS,
@@ -864,7 +866,8 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
             continue
         hang_quad = g.hanger_quad(*st)
         # Window slope stays parallel to the rafters (~80 mm). Direct hanger 125.
-        # Cabinet slope opens toward the furniture line. Nonius only there.
+        # Cabinet slope opens toward the furniture line — Nonius from the false
+        # ridge onward (pack peak at x_false, left of the roof ridge).
         hang_label = LABEL_SLOPE_DIRECT if st[0] < g.x_false else LABEL_SLOPE_NONIUS
         for yc in ceil_rafter_ys:
             zaves_parts.append(
@@ -876,6 +879,12 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
                 )
             )
     parts.extend(zaves_parts)
+
+    # 5b) Jutafol 145 Al — attic face of CD, below mineral wool. Hangers pierce it.
+    foil_part = _add_band(g.sikmina_foil_pts(), LABEL_SLOPE_FOIL)
+    if zaves_parts:
+        foil_part = _cut_away(foil_part, zaves_parts, LABEL_SLOPE_FOIL)
+    parts.append(foil_part)
 
     # 6) Zavětrovací pásky: long thin 40×2 straps at 45°, crossing into X on each slope.
     # ~6 per side (3 X pairs) along the 11 m room length — racking restraint along Y.
@@ -943,9 +952,10 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
 
     parts.extend(paska_parts)
 
-    # Mineral wool must not swallow CD / hangers / pásky.
+    # Mineral wool must not swallow CD / hangers / foil / pásky.
     if cd_parts or zaves_parts or paska_parts:
-        vata = _cut_away(vata, cd_parts + zaves_parts + paska_parts, LABEL_PLENUM_WOOL)
+        tools = cd_parts + zaves_parts + paska_parts + [foil_part]
+        vata = _cut_away(vata, tools, LABEL_PLENUM_WOOL)
         for i, part in enumerate(parts):
             if part.label == LABEL_PLENUM_WOOL:
                 parts[i] = vata
@@ -1475,7 +1485,8 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     t_nh = g.t_nh_face
     t_gkf = t_nh + g.t_flex_pack + p.sdk_t * 0.5
     t_cd = t_nh + g.t_flex_pack + p.sdk_t + p.cd_t * 0.5
-    t_cd_outer = t_nh + g.t_flex_pack + p.sdk_t + p.cd_t
+    t_cd_outer = g.t_cd_outer
+    t_foil = g.t_foil_inner + p.foil_t * 0.5
     t_hanger = t_cd_outer + 36.0
     t_wool = g.t_left + p.rafter_t * 0.5
 
@@ -1490,7 +1501,6 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     nh_mm = f"{p.naturheld_t:g}"
     sdk_mm = f"{p.sdk_t:g}".replace(".", ",")
     sdk_mm_en = f"{p.sdk_t:g}"
-    foil_mm = f"{p.foil_t:g}"
     finish_mm = f"{p.finish_t:g}"
     basic_mm = f"{p.basic_t:g}"
     cd_w = f"{p.cd_w:g}"
@@ -1624,19 +1634,40 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
         sec_half_h,
     )
 
-    # Outside (attic / rafter bay) → in (room face). All anchors on the window
-    # slope at one station so leaders stay short and parallel. Direct hanger and
-    # Nonius share one row (same hang role; Nonius is on the cabinet slope).
+    # Outside (attic / rafter bay) → in (room face). Direct hangers stay on the
+    # window slope; Nonius anchors on the cabinet slope so its leader does not
+    # share the Direct tip. Column order is still outside → in.
+    x_nonius = None
+    for st in g.sikmina_cd_stations():
+        xs = [pt[0] for pt in g.sikmina_cd_quad(*st)]
+        if min(xs) < 1.0 or max(xs) > g.x_furn - 1.0:
+            continue
+        if st[0] >= g.x_false:
+            x_nonius = sum(xs) / len(xs)
+            break
+    if x_nonius is None:
+        x_nonius = g.x_false + 0.35 * (g.x_furn - g.x_false)
+
     sec_notes = [
         (
             on_face(x_stack, y_note, t_wool),
-            f"Mineral wool {plenum_mm} mm\nunder + between {raf_w}/{raf_t} rafters",
-            f"Minerální vlna {plenum_mm} mm\npod + mezi krokvemi {raf_w}/{raf_t}",
+            f"Mineral wool\n{raf_t} mm between + {plenum_mm} mm below rafters",
+            f"Minerální vlna\n{raf_t} mm mezi + {plenum_mm} mm pod krokvemi",
+        ),
+        (
+            on_face(x_stack, y_note, t_foil),
+            "Jutafol 145 Al",
+            "Jutafol 145 Al",
         ),
         (
             on_face(x_stack, y_note, t_hanger),
-            "Direct hanger 125 mm (window)\nNonius 340/440 mm (cabinet)",
-            "Přímý závěs 125 mm (okna)\nNonius 340/440 mm (skříně)",
+            "Direct hanger 125 mm\nCD → side of rafter",
+            "Přímý závěs 125 mm\nCD → bok krokve",
+        ),
+        (
+            on_face(x_nonius, y_note, t_cd_outer + 80.0),
+            "Nonius 340/440 mm\nCD → rafter",
+            "Nonius 340/440 mm\nCD → krokev",
         ),
         (
             on_face(x_stack, y_note, t_cd),
@@ -1645,16 +1676,18 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
         ),
         (
             on_face(x_stack, y_note, t_gkf),
-            f"Foil {foil_mm} mm + GKF {sdk_mm_en} mm",
-            f"Fólie {foil_mm} mm + GKF {sdk_mm} mm",
+            f"GKF {sdk_mm_en} mm",
+            f"GKF {sdk_mm} mm",
         ),
         (
             on_face(x_stack, y_note, t_nh * 0.5),
-            f"NaturHeld 140 {nh_mm} mm\nStoSilent {finish_mm}+{basic_mm} mm · through GKF→CD",
-            f"NaturHeld 140 {nh_mm} mm\nStoSilent {finish_mm}+{basic_mm} mm · přes GKF→CD",
+            f"NaturHeld 140 {nh_mm} mm\nthrough GKF → CD\n"
+            f"StoSilent Finish + Basic {finish_mm}+{basic_mm} mm",
+            f"NaturHeld 140 {nh_mm} mm\npřes GKF → CD\n"
+            f"StoSilent Finish + Basic {finish_mm}+{basic_mm} mm",
         ),
     ]
-    sec_labels = _column_label_ndcs(len(sec_notes), col_x=-0.58, y_top=0.42, y_bot=-0.48)
+    sec_labels = _column_label_ndcs(len(sec_notes), col_x=-0.58, y_top=0.52, y_bot=-0.55)
     sec_annotations = []
     for (anchor, en, cs), label_ndc in zip(sec_notes, sec_labels):
         anchor_ndc = _section_ndc(anchor, sec_cam["target"], sec_half_w, sec_half_h)
@@ -1684,6 +1717,7 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
             LABEL_SLOPE_DIRECT: 1,
             LABEL_SLOPE_NONIUS: 1,
             LABEL_SOFFIT_NONIUS: 1,
+            LABEL_SOFFIT_DUCT: 1,
             LABEL_RACKING_STRAP: 1,
             LABEL_ROOFING: 1,
             LABEL_MASONRY: 1,
@@ -1691,6 +1725,7 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
             LABEL_PLASTER: 1,
             LABEL_PLENUM_WOOL: wool,
             LABEL_SLOPE_NH: wool,
+            LABEL_SLOPE_FOIL: board,
             LABEL_SOFFIT_NH: wool,
             LABEL_SOFFIT_WOOL: wool,
             LABEL_SLOPE_GKF: board,

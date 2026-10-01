@@ -11,8 +11,9 @@ World:
 Šikminy stack (interior → attic; thicknesses ⊥ to the face unless noted):
 
   StoSilent Top Finish + Top Basic + NaturHeld 140 (80)     → `slope_naturheld_140`
-  vapour foil (~1) + GKF/RF 12.5                            → `slope_gkf`
+  GKF/RF 12.5                                               → `slope_gkf`
   CD Rigips 60×27 @ ~625 ⊥ krokvím                          → `slope_cd`
+  Jutafol 145 Al vapour barrier (~1)                        → `slope_foil`
   přímý závěs 125 on the window slope (void ~80)            → `slope_direct_hanger`
   Nonius on the cabinet slope (gap opens to ~370)           → `slope_nonius`
   minerální vlna: void below krokve + bays between them    → `plenum_wool`
@@ -20,8 +21,10 @@ World:
   zavětrovací pásky 40×2 @ 45° X across krokve (racking)    → `racking_strap`
   (střešní latě / kontralatě above rafters stay in roofing)
 
-The 80 mm board is screwed through the GKF into the CD. There is no slope
-lať and no NaturHeld Flex. CD spacing stays 625 mm, which is the published
+The 80 mm board is screwed through the GKF into the CD. Foil sits on the
+attic side of the CD (below the mineral wool), matching the rest of the
+house (Jutafol 145 Al — not a variable membrane). There is no slope lať
+and no NaturHeld Flex. CD spacing stays 625 mm, which is the published
 NaturHeld 140 stud spacing.
 
 Right eave soffit box: 40 mm NaturHeld 140 + StoSilent on the side and the
@@ -68,6 +71,7 @@ LABEL_GLAZING = "glazing"
 LABEL_SLOPE_NH = "slope_naturheld_140"
 LABEL_SLOPE_GKF = "slope_gkf"
 LABEL_SLOPE_CD = "slope_cd"
+LABEL_SLOPE_FOIL = "slope_foil"
 LABEL_SLOPE_DIRECT = "slope_direct_hanger"
 LABEL_SLOPE_NONIUS = "slope_nonius"
 # --- Soffit (podhled) ---
@@ -111,6 +115,7 @@ PART_GROUPS = [
             LABEL_SLOPE_NH,
             LABEL_SLOPE_GKF,
             LABEL_SLOPE_CD,
+            LABEL_SLOPE_FOIL,
             LABEL_SLOPE_DIRECT,
             LABEL_SLOPE_NONIUS,
         ],
@@ -283,11 +288,14 @@ class ObyvakLayout:
         # Slope face (Finish + Basic + NaturHeld 140, 80 mm). Soffit face is thinner.
         self.t_nh_face = p.finish_t + p.basic_t + p.naturheld_t
         self.t_soffit_face = p.finish_t + p.basic_t + p.soffit_naturheld_t
-        # Foil is the 1 mm vapour seat between the slope board and the GKF.
-        # There is no slope lať and no Flex in this pack.
-        self.t_flex_pack = p.foil_t
+        # Foil is attic-side of the CD (below mineral wool), not between NH and GKF.
+        # t_flex_pack stays 0 — NH screws through GKF straight into CD.
+        self.t_flex_pack = 0.0
         self.t_soft_below_sdk = self.t_nh_face + self.t_flex_pack + p.sdk_t
-        self.t_left = p.plenum_t + p.cd_t + self.t_soft_below_sdk
+        self.t_cd_outer = self.t_soft_below_sdk + p.cd_t
+        self.t_foil_inner = self.t_cd_outer
+        self.t_foil_outer = self.t_foil_inner + p.foil_t
+        self.t_left = p.plenum_t + p.foil_t + p.cd_t + self.t_soft_below_sdk
         # Right-side hangers are longer: slope continues to X_FURN then drops.
         self.t_extra = p.furniture_width * self.sin
         self.l_hanger_left = p.plenum_t
@@ -470,6 +478,10 @@ class ObyvakLayout:
         t0 = self.t_nh_face + self.t_flex_pack
         return self._slope_sdk_band_pts(t0, t0 + self.p.sdk_t)
 
+    def sikmina_foil_pts(self) -> list[tuple[float, float]]:
+        """Jutafol 145 Al on the attic side of the CD (below mineral wool)."""
+        return self._slope_band_pts(self.t_foil_inner, self.t_foil_outer)
+
     def _sikmina_segments(self) -> list[tuple[tuple[float, float], tuple[float, float]]]:
         """Ceiling polyline segments on the šikminy (room face), left then right."""
         a = (0.0, self.h_start)
@@ -607,15 +619,26 @@ class ObyvakLayout:
         nx: float,
         nz: float,
     ) -> list[tuple[float, float]]:
-        """Thin steel hanger prism from CD outer face up toward the rafter."""
+        """Thin steel hanger prism from CD outer face up toward the rafter.
+
+        Hang length is the distance along the room-normal from the CD outer
+        face to the rafter underside. Evaluating the gap at the room-face X
+        underestimates it on the cabinet slope: past the false ridge the
+        normal pushes the CD toward +X, where the void has already opened.
+        """
         p = self.p
-        t_cd_outer = self.t_nh_face + self.t_flex_pack + p.sdk_t + p.cd_t
-        # Perp length of plenum / hanger to rafter underside at this x.
-        z_cd = self.z_slope_offset(x, t_cd_outer)
-        z_raf = self.z_raf(x)
-        hang = max((z_raf - z_cd) * self.cos - 2.0, 20.0)
+        t_cd_outer = self.t_cd_outer
         cx = x + nx * t_cd_outer
         cz = z + nz * t_cd_outer
+        # Solve cz + t·nz = z_raf(cx + t·nx) for t > 0 (along the attic normal).
+        lo, hi = 0.0, 800.0
+        for _ in range(40):
+            mid = 0.5 * (lo + hi)
+            if cz + mid * nz < self.z_raf(cx + mid * nx):
+                lo = mid
+            else:
+                hi = mid
+        hang = max(0.5 * (lo + hi) - 2.0, 20.0)
         hw = p.hanger_w * 0.5
         return [
             (cx - tx * hw, cz - tz * hw),
@@ -780,7 +803,8 @@ class ObyvakLayout:
         and the bay fill is not in the plane.
         """
         p = self.p
-        t_below = self.t_soft_below_sdk + p.cd_t
+        # Wool sits above the foil (attic side of CD).
+        t_below = self.t_foil_outer
         z_slope_furn = self.z_slope_offset(self.x_furn, t_below)
         z_horiz_cd_top = self.z_soffit_lid + p.sdk_t + p.cd_t
         # The lid over the ducts is above the slope pack, so the wool steps up

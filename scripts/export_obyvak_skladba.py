@@ -79,6 +79,10 @@ URL_RF = "https://www.rigips.cz/produkty/protipozarni-deska-rf-df/"
 URL_RF_DEK = (
     "https://www.dek.cz/produkty/detail/3630042500-sadrokarton-po-deska-rf-12-5mm-1250-2000mm"
 )
+URL_JUTAFOL = "https://www.juta.cz/cs/produkty/parozabrany"
+URL_JUTAFOL_SHOP = (
+    "https://www.izomat.cz/parozabrana-juta-jutafol-n-al-170-special.html"
+)
 URL_GKB = "https://www.rigips.cz/produkty/stavebni-deska-rb-a/"
 URL_CD = "https://www.rigips.cz/produkty/r-cd-profil/"
 URL_CD_DEK = "https://www.dek.cz/produkty/vypis/4167-cd-profily-na-strop/28565-rigips"
@@ -263,6 +267,7 @@ PRICE = {
     "nh80_m2": (534.0, f"přírodnístavba.cz · {URL_NATURHELD_80}"),
     "nh40_m2": (266.0, f"přírodnístavba.cz · {URL_NATURHELD_40}"),
     "rf_m2": (115.88, f"DEK · {URL_RF_DEK}"),
+    "jutafol_m2": (35.73, f"IZOMAT JUTAFOL N AL 170 Speciál · {URL_JUTAFOL_SHOP}"),
     "gkb_m2": (96.0, "NonstopStavebniny / DEK RB~GKB orientačně"),
     "cd_bm": (29.21, f"DEK R-CD · {URL_CD_DEK}"),
     "direct_ks": (6.27, f"DEK KB510154 · {URL_DIRECT_DEK}"),
@@ -350,16 +355,19 @@ def build_lines(q) -> dict[str, list[Line]]:
         Line(
             4,
             "Parozábrana",
-            "Parotěsná fólie",
-            "Výrobek dosud nezvolen",
-            f"≈ {p.foil_t:.0f} mm (model)",
+            "Reflexní parozábrana Al",
+            _product("Jutafol 145 Al (JUTA; retail N AL 170 Speciál 75 m²)", URL_JUTAFOL),
+            "Al reflex · Sd vysoké · role 1,5×50 m",
             face_s,
             "m²",
             10,
-            None,
-            "—",
-            "Nedořešeno: typ / Sd / systém pásek.",
-            True,
+            PRICE["jutafol_m2"][0],
+            PRICE["jutafol_m2"][1],
+            f"Na attic straně CD, pod minerální vlnou (stejně jako zbytek domu — "
+            f"ne proměnlivá fólie). Plocha šikmin {face_s:.2f} m². "
+            f"S rezervou 10 % ≈ {_fmt(face_s * 1.1, 1)} m² "
+            f"≈ {_ceil_pack(face_s * 1.1, 75.0)}× role 75 m². "
+            "Přesahy: JUTAFOL SP AL / SP 1.",
         ),
         Line(
             5,
@@ -789,16 +797,15 @@ def build_lines(q) -> dict[str, list[Line]]:
         Line(
             5,
             "Parozábrana",
-            "Fólie",
-            "Výrobek dosud nezvolen",
-            "—",
+            "Jutafol 145 Al",
+            _product("Jutafol 145 Al", URL_JUTAFOL),
+            "role 75 m²",
             face_s,
             "m²",
             10,
-            None,
-            "—",
-            "Nedořešeno.",
-            True,
+            PRICE["jutafol_m2"][0],
+            PRICE["jutafol_m2"][1],
+            f"Šikminy {face_s:.2f} m² (+10 % ≈ {_fmt(face_s * 1.1, 1)} m²). Nad CD, pod vlnou.",
         ),
         Line(
             6,

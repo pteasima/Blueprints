@@ -97,8 +97,10 @@ def test_layout_ceiling_and_gable():
     assert p.soffit_naturheld_t == 40.0
     assert abs(g.t_nh_face - (p.finish_t + p.basic_t + p.naturheld_t)) < 1e-9
     assert abs(g.t_soffit_face - (p.finish_t + p.basic_t + p.soffit_naturheld_t)) < 1e-9
-    assert abs(g.t_flex_pack - p.foil_t) < 1e-9
-    assert abs(g.t_soft_below_sdk - 97.5) < 1e-9
+    assert abs(g.t_flex_pack - 0.0) < 1e-9
+    assert abs(g.t_foil_outer - g.t_foil_inner - p.foil_t) < 1e-9
+    assert abs(g.t_foil_inner - g.t_cd_outer) < 1e-9
+    assert abs(g.t_soft_below_sdk - (g.t_nh_face + p.sdk_t)) < 1e-9
     assert abs(g.t_left - 204.5) < 1e-9
     # Kitchen wool stops 20 mm short of the back of the front CD.
     assert abs(p.bass_k_wool - 130.5) < 1e-9
@@ -124,10 +126,10 @@ def test_layout_ceiling_and_gable():
     assert any(abs(x - g.x_nh_inner) < 1e-6 and abs(z - z_seat_in) < 1e-6 for x, z in nh_pts)
     assert any(abs(x - g.x_furn) < 1e-6 and abs(z - z_seat_out) < 1e-6 for x, z in nh_pts)
     assert z_seat_in < z_seat_out
-    # The vertical leg follows the slope-board attic face. It stays off the foil
-    # and the GKF, and it stays under the lid.
-    z_foil = g.z_slope_offset(g.x_furn, g.t_nh_face + g.t_flex_pack)
-    assert max(z for _x, z in nh_pts) < z_foil - 0.5
+    # The vertical leg follows the slope-board attic face. NH mates to GKF
+    # (foil is attic-side of CD); the board stays under the lid.
+    z_nh_out = g.z_slope_offset(g.x_furn, g.t_nh_face)
+    assert abs(max(z for _x, z in nh_pts) - z_nh_out) < 1e-6
     assert max(z for _x, z in nh_pts) < g.z_soffit_lid
     # Lattice still hangs at the rost. The gypsum joint is room-ward of that,
     # where the slope underside meets the lid — one CD cannot cover both lines.
@@ -233,6 +235,11 @@ def test_sikminy_and_soffit_stack_in_3d():
     slope_nonius = _labeled(shape, LABEL_SLOPE_NONIUS)
     assert slope_nonius
     assert all(c.bounding_box().center().X >= g.x_false - 1.0 for c in slope_nonius)
+    # First Nonius past the false ridge must use the true gap along the attic
+    # normal (not the face-X underestimate) — otherwise it looks like a Direct.
+    first_nonius = min(slope_nonius, key=lambda c: c.bounding_box().center().X)
+    fn = first_nonius.bounding_box()
+    assert (fn.size.X ** 2 + fn.size.Z ** 2) ** 0.5 > 250.0
     pasky = _labeled(shape, LABEL_RACKING_STRAP)
     assert len(nh) >= 2  # slope NH + soffit L
     assert len(wool) >= 2  # cavity wool + the wedge under the lid
@@ -665,22 +672,35 @@ def test_sikmina_drawing_scenes():
         ann["text"]["cs"] for ann in section["annotations"] if "text" in ann
     )
     assert "NaturHeld 140 80 mm" in joined
+    assert "přes GKF → CD" in joined or "přes GKF" in joined
+    assert "Jutafol 145 Al" in joined
     assert "GKF 12,5 mm" in joined
-    assert "Fólie 1 mm" in joined
+    assert "Vario" not in joined
     assert "Flex" not in joined
     assert "Minerální vlna" in joined
-    assert "80 mm" in joined
+    assert "160 mm mezi" in joined
+    assert "80 mm pod" in joined
     assert "plénum" not in joined.lower()
     joined_en = " ".join(
         ann["text"]["en"] for ann in section["annotations"] if "text" in ann
     )
     assert "Mineral wool" in joined_en
+    assert "160 mm between" in joined_en
+    assert "80 mm below" in joined_en
+    assert "Jutafol 145 Al" in joined_en
     assert "GKF 12.5 mm" in joined_en
-    assert "Foil 1 mm" in joined_en
+    assert "through GKF" in joined_en
     assert "plenum" not in joined_en.lower()
     assert "Nonius" in joined
     assert "125 mm" in joined
     assert "340/440 mm" in joined
+    # StoSilent must not own the through-GKF note.
+    for ann in section["annotations"]:
+        if ann.get("kind") != "callout":
+            continue
+        en = ann["text"]["en"]
+        if "StoSilent" in en and "NaturHeld" not in en:
+            assert "through GKF" not in en
     low = joined.lower()
     assert "přesah" not in low and "overhang" not in low
     assert "pozednic" not in low and "wall plate" not in low
@@ -690,7 +710,7 @@ def test_sikmina_drawing_scenes():
 
     # Outside→in column: callout labels share one screen-X, ordered top→bottom.
     callouts = [ann for ann in section["annotations"] if ann["kind"] == "callout"]
-    assert len(callouts) == 5
+    assert len(callouts) == 7
     label_xs = []
     label_ys = []
     hw, hh = section["camera"]["orthoFit"]
@@ -711,10 +731,16 @@ def test_sikmina_drawing_scenes():
     order = [t.split("\n")[0] for t in (a["text"]["en"] for a in callouts)]
     by_y = [t for _, t in sorted(zip(label_ys, order), reverse=True)]
     assert by_y[0].startswith("Mineral wool")
+    assert by_y[1].startswith("Jutafol")
     assert by_y[-1].startswith("NaturHeld 140")
-    assert any("GKF" in t for t in by_y)
-    assert any("Direct hanger" in t for t in by_y)
-    assert any("Nonius" in a["text"]["en"] for a in callouts)
+    assert any(t.startswith("GKF") for t in by_y)
+    assert any(t.startswith("Direct hanger") for t in by_y)
+    assert any(t.startswith("Nonius") for t in by_y)
+    # Nonius leader tips on the cabinet side of the false ridge.
+    nonius = next(a for a in callouts if a["text"]["en"].startswith("Nonius"))
+    assert nonius["anchor"][0] >= g.x_false
+    assert section["opacity"][LABEL_SOFFIT_DUCT] == 1
+    assert section["opacity"]["slope_foil"] == board
 
 
 def test_write_scenes_json(tmp_path):
