@@ -4,6 +4,10 @@ Parametric 2D/3D models in Python ([build123d](https://github.com/gumyr/build123
 
 Treat developer-experience friction (especially Cloud Agent onboarding) as part of the work. If setup, docs, or the export loop wastes time, fix it in-repo or propose the environment change — do not only work around it for one session.
 
+## Pull request branches
+
+When a pull request branch is behind `main`, rebase that feature branch onto `main` and force-push the feature branch. Do not merge `main` into the feature branch. The only exception is a branch that someone else is also committing to.
+
 ## Architectural modelling (physical building first)
 
 These are **building assemblies**, not decorative meshes. Before coding solids, reason as a house designer / structural engineer / contractor:
