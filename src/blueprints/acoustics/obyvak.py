@@ -1080,6 +1080,7 @@ def _sweep_table(
     ]
     csv_rows: list[list[str]] = []
     taped_coverage: list[dict] = []
+    built_default: str | None = None
     for edge in ("taped", "hinges"):
         pack = edges[edge]
         options_by_pair: dict[tuple[str, str], list] = {}
@@ -1127,6 +1128,19 @@ def _sweep_table(
                     f"{_fill_cell(geom.kitchen_cavity, k_frac):>14}"
                     f"{_fill_cell(geom.living_cavity, l_frac):>14}"
                 )
+                if (
+                    edge == "taped"
+                    and kitchen_name == "625 vertical"
+                    and living_name == "1000 horizontal"
+                    and case == "as-built"
+                ):
+                    built_default = (
+                        "The built gables are kitchen 625 vertical and living 1000 horizontal, "
+                        "with the as-built wool. That is the model default. "
+                        f"Room decay is {times[31.5]:.2f} s at 31.5 Hz, "
+                        f"{times[63.0]:.2f} s at 63 Hz and {times[125.0]:.2f} s at 125 Hz. "
+                        "The sweep below keeps the other lattices and the wool grid."
+                    )
                 if case == "coverage":
                     record = {
                         "kitchen": kitchen_name,
@@ -1189,6 +1203,8 @@ def _sweep_table(
                 f"The worst band in that pick is {best_ratio:.2f} times the lowest decay "
                 "that band reaches on this edge."
             )
+    if built_default:
+        summary.insert(3, built_default)
     summary.append(_wool_sentence("Kitchen", taped_coverage, geom.kitchen_cavity, as_built_k, "k_frac"))
     summary.append(_wool_sentence("Living", taped_coverage, geom.living_cavity, as_built_l, "l_frac"))
     average_note = _average_disagreement(edges["taped"], names, geom, shared, taped_coverage)
@@ -1943,6 +1959,8 @@ def run_study(
     """Panel-on-cavity traps for each lattice, then the room decay.
 
     ``lattices`` defaults to 625 vertical, 1000 horizontal, and 400 vertical.
+    The built model is kitchen 625 vertical and living 1000 horizontal; the
+    report leads with that pair and still writes the full sweep.
     ``wool_fractions``, when set, replaces the wool grid on both gables. Otherwise
     the kitchen sweeps six thicknesses up to the 47 mm air limit, and the living
     gable uses 0, 100, 200, 300, 328.1 and 437.5 mm.

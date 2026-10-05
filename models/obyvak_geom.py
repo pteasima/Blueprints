@@ -28,7 +28,7 @@ and no NaturHeld Flex. CD spacing stays 625 mm, which is the published
 NaturHeld 140 stud spacing.
 
 Right eave soffit box: 40 mm NaturHeld 140 + StoSilent on the side and the
-bottom, mineral wool in the cavity, latový rost (latě @625) hanging the box.
+bottom, mineral wool in the cavity, a CD/UD rost (@625) hanging the box.
 The wool stops short of the ducts. Three Ø160 spiral ducts (HRV supply, HRV
 extract, AC) sit in a 2-over-1 pack against the cabinet eave, below the lid
 and above the column heads. They are already anchored to the wall; this box
@@ -41,8 +41,9 @@ level cut through the slope pack. The board stays 12.5 mm to a square end. A
 light-gauge angle backs that hidden butt: a short leg on the slope board, a
 horizontal leg screwed to the rost CD. That CD is the only horizontal rail
 and the only Nonius row. No vertical riser. Furniture and the wall plate do
-not carry the box (the plate only fixes the board edge). The soffit latě
-hang from that CD and brace to the eave wall. CAD ids are zone-prefixed so
+not carry the box (the plate only fixes the board edge). The soffit CD
+studs hang from that CD and brace into a UD on the eave wall. There is no
+timber in the kastlík frame. CAD ids are zone-prefixed so
 the viewer can toggle / fade slopes, soffit, and bass traps independently.
 """
 
@@ -77,9 +78,9 @@ LABEL_SLOPE_NONIUS = "slope_nonius"
 # --- Soffit (podhled) ---
 LABEL_SOFFIT_NH = "soffit_naturheld_140"
 LABEL_SOFFIT_WOOL = "soffit_mineral_wool"
-LABEL_SOFFIT_BATTENS = "soffit_battens"
 LABEL_SOFFIT_GKF = "soffit_gkf"
 LABEL_SOFFIT_CD = "soffit_cd"
+LABEL_SOFFIT_UD = "soffit_ud"
 LABEL_SOFFIT_NONIUS = "soffit_nonius"
 LABEL_SOFFIT_DUCT = "soffit_duct"
 # --- Bass traps ---
@@ -125,9 +126,9 @@ PART_GROUPS = [
         "children": [
             LABEL_SOFFIT_NH,
             LABEL_SOFFIT_WOOL,
-            LABEL_SOFFIT_BATTENS,
             LABEL_SOFFIT_GKF,
             LABEL_SOFFIT_CD,
+            LABEL_SOFFIT_UD,
             LABEL_SOFFIT_NONIUS,
             LABEL_SOFFIT_DUCT,
         ],
@@ -237,15 +238,14 @@ class ObyvakParams:
         (7950.0, 2500.0),  # HS portal · obývák / zádveří
     )
     glass_t: float = 20.0
-    # Soffit latový rost only. The slope board screws to the CD; it has no latě.
-    rost_w: float = 60.0
-    rost_d: float = 40.0
+    # Y grid of the kastlík CD studs. The section is CD 60×27, not a timber lať.
     rost_spacing: float = 625.0
     rost_first_inset: float = 90.0
-    # CD grid holding SDK — ⊥ krokvím.
+    # CD grid holding SDK — ⊥ krokvím. UD is the wall channel the soffit CDs enter.
     cd_w: float = 60.0
     cd_spacing: float = 625.0
     cd_first_inset: float = 90.0
+    ud_w: float = 28.0
     # Rafters (spacing along Y) + bracing straps on underside.
     rafter_w: float = 100.0
     rafter_spacing: float = 875.0
@@ -574,23 +574,23 @@ class ObyvakLayout:
         return out
 
     def sikmina_rost_y_stations(self, y0: float, y1: float) -> list[float]:
-        """625 mm centres. The slope has no latě; the soffit rost uses this module."""
+        """625 mm centres. The slope has no latě; the soffit CD studs use this module."""
         p = self.p
         return self.y_stations(y0, y1, p.rost_spacing, p.rost_first_inset)
 
     def soffit_rost_y_stations(
         self, bay0: float, bay1: float, slope_ys: list[float]
     ) -> list[float]:
-        """Soffit latě on the 625 mm module, limited to the soffit bay.
+        """Soffit CD studs on the 625 mm module, limited to the soffit bay.
 
         The module is not restarted at the předstěna, so the verticals stay
         on one grid along the room.
         """
-        half = self.p.rost_w * 0.5
+        half = self.p.cd_w * 0.5
         return [y for y in slope_ys if bay0 + half <= y <= bay1 - half]
 
     def soffit_wool_wedge_pts(self) -> list[tuple[float, float]]:
-        """Mineral wool under the lid, from the slope-board attic face to the vertical lať.
+        """Mineral wool under the lid, from the slope-board attic face to the vertical CD.
 
         The board ends at the furniture line. Past the gypsum joint the lid
         sits above that attic face. The triangle is on the warm side of the

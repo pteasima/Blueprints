@@ -38,8 +38,8 @@ from obyvak_geom import (
     LABEL_SLOPE_CD,
     LABEL_SLOPE_DIRECT,
     LABEL_SLOPE_NONIUS,
-    LABEL_SOFFIT_BATTENS,
     LABEL_SOFFIT_CD,
+    LABEL_SOFFIT_UD,
     LABEL_SOFFIT_DUCT,
     LABEL_SOFFIT_NONIUS,
     LABEL_SOFFIT_WOOL,
@@ -239,9 +239,15 @@ def collect_quantities():
         "trap_face": trap_face,
         "lid_area": lid_area,
         "slope_cd_lm": _length_m(by[LABEL_SLOPE_CD]),
-        "soffit_cd_lm": _length_m(by[LABEL_SOFFIT_CD]),
+        "soffit_cd_lm": _length_m(
+            [c for c in by[LABEL_SOFFIT_CD] if c.bounding_box().size.Y > 1000.0]
+        ),
+        "soffit_rost_cd_lm": _length_m(
+            [c for c in by[LABEL_SOFFIT_CD] if c.bounding_box().size.Y <= 1000.0]
+        ),
+        "soffit_ud_lm": _length_m(by[LABEL_SOFFIT_UD]),
+        "n_soffit_rost_cd": len([c for c in by[LABEL_SOFFIT_CD] if c.bounding_box().size.Y <= 1000.0]),
         "bass_cd_lm": _length_m(by[LABEL_BASS_CD]),
-        "battens_lm": _length_m(by[LABEL_SOFFIT_BATTENS]),
         "strap_lm": _length_m(by[LABEL_RACKING_STRAP]),
         "duct_lm": _length_m(by[LABEL_SOFFIT_DUCT]),
         "n_direct": len(by[LABEL_SLOPE_DIRECT]),
@@ -253,7 +259,7 @@ def collect_quantities():
         "cleat_lm": _length_m(cleats) if cleats else soffit_y / 1000.0,
         "n_bass_hanger": len(by[LABEL_BASS_HANGER]),
         "n_rafters": len(by[LABEL_RAFTERS]),
-        "n_battens": len(by[LABEL_SOFFIT_BATTENS]),
+        "n_soffit_ud": len(by[LABEL_SOFFIT_UD]),
         "n_ducts": len(by[LABEL_SOFFIT_DUCT]),
         "plenum_wool_m3": _volume_m3(by[LABEL_PLENUM_WOOL]),
         "soffit_wool_m3": _volume_m3(by[LABEL_SOFFIT_WOOL]),
@@ -275,7 +281,6 @@ PRICE = {
     "nonius_bot_ks": (10.43, f"DEK spodní CD · {URL_NONIUS_BOT_DEK}"),
     "nonius_pin_ks": (2.98, f"IZOMAT závlačka · {URL_NONIUS_PIN_SHOP}"),
     "trmen_ks": (477.0, "ceník Rigips KB517112 (sci-data / distributor) — ověřit nabídkou"),
-    "latte_bm": (45.0, "orientační řezivo KVH/latě CZ e-shopy"),
     "strap_bm": (25.0, "orientační ocelová páska 40×2"),
     "duct_bm": (180.0, "orientační spirála Ø160 pozink"),
     "angle_bm": (55.0, "orientační L-profil / tenký úhelník"),
@@ -524,16 +529,18 @@ def build_lines(q) -> dict[str, list[Line]]:
         ),
         Line(
             5,
-            "Latový rošt",
-            "Dřevěné latě",
-            "Latě 60×40 mm",
-            f"{p.rost_w:.0f}×{p.rost_d:.0f} @ {p.rost_spacing:.0f}",
-            q["battens_lm"],
+            "Rošt kastlíku",
+            "Profil CD 60×27",
+            _product("Rigips R-CD 27/60/27", URL_CD),
+            f"60×27 @ {p.rost_spacing:.0f}",
+            q["soffit_rost_cd_lm"],
             "bm",
-            12,
-            PRICE["latte_bm"][0],
-            PRICE["latte_bm"][1],
-            f"{q['n_battens']} prvků (svislé + spodní).",
+            10,
+            PRICE["cd_bm"][0],
+            PRICE["cd_bm"][1],
+            f"{q['n_soffit_rost_cd']} prvků (svislé + spodní). "
+            f"UD {p.ud_w:.0f}×{p.cd_t:.0f} u zdi {q['soffit_ud_lm']:.2f} bm "
+            f"({q['n_soffit_ud']} ks). Žádné latě, žádné podložky.",
         ),
         Line(
             6,
@@ -576,7 +583,7 @@ def build_lines(q) -> dict[str, list[Line]]:
         ),
         Line(
             9,
-            "Drop CD → latový rošt",
+            "Drop CD → svislý CD",
             "Krátký ocelový závěs",
             "Výrobek dosud nezvolen",
             f"{p.soffit_drop_w:.0f}×{p.soffit_drop_t:.0f} mm",
@@ -665,13 +672,13 @@ def build_lines(q) -> dict[str, list[Line]]:
             "Rám CD / UW",
             "Profil CD 60×27",
             _product("Rigips R-CD 27/60/27", URL_CD),
-            f"60×27 @ {p.cd_spacing:.0f}",
+            "kuchyň 625 svisle + dořez; obývák 1000 + dořez",
             q["bass_cd_lm"],
             "bm",
             10,
             PRICE["cd_bm"][0],
             PRICE["cd_bm"][1],
-            "UW detaily dle montáže — v modelu jako CD.",
+            "Lišty pod spárou: kuchyň 2000 mm, obývák 1250 a 2500 mm, na CD. UW v modelu jako CD.",
         ),
         Line(
             "A3",
@@ -736,7 +743,7 @@ def build_lines(q) -> dict[str, list[Line]]:
     nonius_ks = q["n_slope_nonius"] + q["n_soffit_nonius"]
     wool = q["plenum_wool_m3"] + q["soffit_wool_m3"] + q["bass_wool_m3"]
     gkf = face_s + q["lid_area"]
-    cd = q["slope_cd_lm"] + q["soffit_cd_lm"] + q["bass_cd_lm"]
+    cd = q["slope_cd_lm"] + q["soffit_cd_lm"] + q["soffit_rost_cd_lm"] + q["bass_cd_lm"]
 
     souhrn = [
         Line(
@@ -902,16 +909,17 @@ def build_lines(q) -> dict[str, list[Line]]:
         ),
         Line(
             13,
-            "Latě 60×40",
-            "Řezivo",
-            "Latě 60×40",
-            "60×40",
-            q["battens_lm"],
+            "UD 28×27",
+            "UD profil",
+            "Rigips UD (obvod kastlíku)",
+            f"{p.ud_w:.0f}×{p.cd_t:.0f}",
+            q["soffit_ud_lm"],
             "bm",
-            12,
-            PRICE["latte_bm"][0],
-            PRICE["latte_bm"][1],
-            "Kastlík.",
+            10,
+            PRICE["cd_bm"][0],
+            PRICE["cd_bm"][1],
+            "U obvodové zdi kastlíku. Cena orientačně jako R-CD — UD ověřit nabídkou.",
+            True,
         ),
         Line(
             14,

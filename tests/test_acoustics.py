@@ -168,6 +168,8 @@ def test_study_ranks_splits_and_states_the_fem_decision():
     assert "No slope latě" in text
     assert "cut" in text
     assert "625 vertical" in text and "1000 horizontal" in text
+    assert "The built gables are kitchen 625 vertical and living 1000 horizontal" in text
+    assert "model default" in text
     assert "simply supported" in text
     assert "Hairline cracks" in text
     assert "31.5 Hz benefit" in text

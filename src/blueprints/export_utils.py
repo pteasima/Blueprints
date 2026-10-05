@@ -228,13 +228,13 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "roughness": 0.95,
         "metallic": 0.0,
     },
-    "soffit_battens": {
-        "fill": (160, 100, 30),
-        "line": (90, 50, 10),
-        "dxf": ColorIndex.YELLOW,
+    "soffit_ud": {
+        "fill": (120, 120, 130),
+        "line": (60, 60, 70),
+        "dxf": ColorIndex.CYAN,
         "weight": SECTION_LINE_WEIGHT,
-        "roughness": 0.58,
-        "metallic": 0.0,
+        "roughness": 0.35,
+        "metallic": 0.7,
     },
     "soffit_gkf": {
         "fill": (230, 230, 235),
@@ -326,7 +326,7 @@ SECTION_LAYER_ORDER = [
     "slope_nonius",
     "soffit_naturheld_140",
     "soffit_mineral_wool",
-    "soffit_battens",
+    "soffit_ud",
     "soffit_gkf",
     "soffit_cd",
     "soffit_nonius",
