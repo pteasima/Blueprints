@@ -293,7 +293,7 @@
     "opacity": {
       "rafters": 1,
       "wall_plate": 1,
-      "soffit_battens": 1,
+      "soffit_ud": 1,
       "slope_cd": 1,
       "soffit_cd": 1,
       "slope_direct_hanger": 1,
