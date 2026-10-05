@@ -2,8 +2,13 @@
 
 The outline comes from ``predstena_pts`` (millimetres). Vertical CD lines and
 horizontal joint rails cut that polygon into bays, including the triangles and
-trapezoids under the roof. The perimeter is not a stud: the first CD sits one
-module inset in from the edge, same rule as the drawn bass frame.
+trapezoids under the roof.
+
+The default stud rule puts a profile on both edges and splits the width into
+equal bays as close as possible to the target module. Sides, the rake, and the
+bottom line are simply supported: the 2–5 mm bead sits outside that screw line.
+``studs="inset"`` keeps the older module, which starts one inset in and closes
+with a short bay at the far edge.
 
 A new layout is a ``LatticeSpec``. Pass explicit centre lists, or a spacing.
 ``625 vertical`` and ``1000 horizontal`` are the two candidates.
@@ -39,10 +44,18 @@ class LatticeSpec:
     cd_x_mm: tuple[float, ...] | None = None
     rail_above_bottom_mm: tuple[float, ...] | None = None
     board: str = ""
+    # ``even``: profile on both edges, equal bays nearest the target module.
+    # ``inset``: the older frame, one inset in, with a closer at the far edge.
+    studs: str = "even"
+    # ``supported``: sides, rake, and the bottom line are a screw line.
+    # ``free``: the older model, where the outline was an unsupported edge.
+    perimeter: str = "supported"
 
     def cd_lines(self, width_mm: float, default_inset_mm: float) -> tuple[float, ...]:
         if self.cd_x_mm is not None:
-            return tuple(sorted(x for x in self.cd_x_mm if 0.0 < x < width_mm))
+            return tuple(sorted(x for x in self.cd_x_mm if 0.0 <= x <= width_mm))
+        if self.studs == "even":
+            return tuple(_even_stations(width_mm, self.cd_spacing_mm))
         inset = self.inset_mm if self.inset_mm is not None else default_inset_mm
         return tuple(_module_stations(width_mm, self.cd_spacing_mm, inset))
 
@@ -122,7 +135,16 @@ def layout_gable(
     cd_x = spec.cd_lines(x_right - x_left, inset_mm)
     cd_x = tuple(x_left + x for x in cd_x)
     rails = spec.rail_heights(z_bottom, z_max)
-    bays = _bays(outline, cd_x, rails, x_left, x_right, z_bottom, z_max)
+    bays = _bays(
+        outline,
+        cd_x,
+        rails,
+        x_left,
+        x_right,
+        z_bottom,
+        z_max,
+        support_outline=spec.perimeter == "supported",
+    )
     notes = _notes(spec, cd_x, rails, x_left, x_right, z_bottom, bays)
     return GableLayout(spec, tuple(bays), cd_x, rails, outline, tuple(notes), width, z_bottom)
 
@@ -253,6 +275,19 @@ def layout_svg(layout: GableLayout, subtitle: str = "") -> str:
     return "\n".join(parts)
 
 
+def _even_stations(length_mm: float, spacing_mm: float) -> list[float]:
+    """Profile at both edges, then equal bays as close as possible to ``spacing_mm``.
+
+    The count of bays is the integer nearest ``length / spacing``. The edges
+    themselves are in the list, so the drawing shows the perimeter profile.
+    """
+    if spacing_mm <= 1.0 or length_mm <= 1.0:
+        raise ValueError("length and spacing must be positive")
+    n_bays = max(1, int(round(length_mm / spacing_mm)))
+    step = length_mm / n_bays
+    return [step * i for i in range(n_bays + 1)]
+
+
 def _module_stations(length_mm: float, spacing_mm: float, inset_mm: float) -> list[float]:
     """Centres from ``inset`` stepping by ``spacing``, with a closer at the far inset.
 
@@ -286,6 +321,8 @@ def _bays(
     x_right: float,
     z_bottom: float,
     z_max: float,
+    *,
+    support_outline: bool,
 ) -> list[Bay]:
     xs = [x_left, *cd_x, x_right]
     xs = _unique(xs)
@@ -306,10 +343,10 @@ def _bays(
             area_mm2 = abs(_shoelace(clipped))
             if area_mm2 < 800.0:
                 continue
-            left = "supported" if _on_support(clipped, support_x, x=x0) else "free"
-            right = "supported" if _on_support(clipped, support_x, x=x1) else "free"
-            bottom = "supported" if _on_support(clipped, support_z, z=z0) else "free"
-            top = "supported" if _on_support(clipped, support_z, z=z1) else "free"
+            left = _edge_label(clipped, outline, support_x, support_outline, x=x0)
+            right = _edge_label(clipped, outline, support_x, support_outline, x=x1)
+            bottom = _edge_label(clipped, outline, support_z, support_outline, z=z0)
+            top = _edge_label(clipped, outline, support_z, support_outline, z=z1)
             poly_m = tuple((x / 1000.0, z / 1000.0) for x, z in clipped)
             bx0 = min(x for x, _ in poly_m)
             bx1 = max(x for x, _ in poly_m)
@@ -331,12 +368,31 @@ def _notes(
     bays: list[Bay],
 ) -> list[str]:
     notes: list[str] = []
-    gaps = _gaps([x_left, *cd_x, x_right])
-    if gaps:
+    # Even stations already include both edges, so the raw list has a zero gap
+    # at each end until the duplicates are dropped.
+    gaps = _gaps(_unique([x_left, *cd_x, x_right]))
+    if spec.studs == "even" and spec.cd_x_mm is None and gaps:
+        step = gaps[0]
+        n_bays = len(gaps)
+        notes.append(
+            f"A profile on both edges, then {n_bays} equal bays of {step:.0f} mm "
+            f"(target {spec.cd_spacing_mm:.0f} mm)."
+        )
+        if spec.perimeter == "supported":
+            notes.append(
+                "Sides, the rake, and the bottom line are simply supported. "
+                "The 2–5 mm bead sits outside that screw line."
+            )
+        if spec.cd_spacing_mm >= 1000.0 or step >= 1000.0:
+            notes.append(
+                "This spacing is at the top of a normal finished wall. "
+                "Hairline cracks at the joints are a risk."
+            )
+    elif gaps:
         edge = min(gaps[0], gaps[-1])
         notes.append(
             f"The module starts {edge:.0f} mm in from the gable edge, so the perimeter "
-            "strip is a narrow free-edged field, not a full bay."
+            "strip is a narrow field beside the first stud."
         )
         for left, right in zip(gaps, gaps[1:]):
             small = min(left, right)
@@ -358,7 +414,10 @@ def _notes(
         notes.append("Rail heights were passed in as a list.")
     if rails:
         lifted = ", ".join(f"{z - z_bottom:.0f} mm" for z in rails)
-        notes.append(f"Horizontal rails sit {lifted} above the soft joint at the bottom.")
+        if spec.perimeter == "supported":
+            notes.append(f"Horizontal rails sit {lifted} above the bottom screw line.")
+        else:
+            notes.append(f"Horizontal rails sit {lifted} above the soft joint at the bottom.")
     else:
         notes.append("No horizontal rail lands inside this outline.")
     unsupported = sum(1 for bay in bays if bay.left == bay.right == bay.bottom == bay.top == "free")
@@ -414,6 +473,65 @@ def _kind(poly: list[tuple[float, float]], area_mm2: float) -> str:
     if len(poly) == 4:
         return "trapezoid"
     return "polygon"
+
+
+def _edge_label(
+    poly: list[tuple[float, float]],
+    outline: tuple[tuple[float, float], ...],
+    supports: set[float],
+    support_outline: bool,
+    *,
+    x: float | None = None,
+    z: float | None = None,
+) -> str:
+    """``perimeter`` stays simply supported. ``supported`` follows the sheet model."""
+    if support_outline and _on_outline(poly, outline, x=x, z=z):
+        return "perimeter"
+    if _on_support(poly, supports, x=x, z=z):
+        return "supported"
+    return "free"
+
+
+def _on_outline(
+    poly: list[tuple[float, float]],
+    outline: tuple[tuple[float, float], ...],
+    *,
+    x: float | None = None,
+    z: float | None = None,
+) -> bool:
+    return _outline_overlap(poly, outline, x=x, z=z) > 30.0
+
+
+def _outline_overlap(
+    poly: list[tuple[float, float]],
+    outline: tuple[tuple[float, float], ...],
+    *,
+    x: float | None = None,
+    z: float | None = None,
+) -> float:
+    """Length of this cell edge that also lies on the gable outline."""
+    total = 0.0
+    boundary = list(zip(outline, outline[1:] + outline[:1]))
+    for (x0, z0), (x1, z1) in zip(poly, poly[1:] + poly[:1]):
+        if x is not None:
+            if abs(x0 - x) > 1.5 or abs(x1 - x) > 1.5:
+                continue
+            lo, hi = sorted((z0, z1))
+        else:
+            if z is None or abs(z0 - z) > 1.5 or abs(z1 - z) > 1.5:
+                continue
+            lo, hi = sorted((x0, x1))
+        for (a0, b0), (a1, b1) in boundary:
+            if x is not None:
+                if abs(a0 - x) > 1.5 or abs(a1 - x) > 1.5:
+                    continue
+                olo, ohi = sorted((b0, b1))
+            else:
+                if abs(b0 - z) > 1.5 or abs(b1 - z) > 1.5:
+                    continue
+                olo, ohi = sorted((a0, a1))
+            total += max(0.0, min(hi, ohi) - max(lo, olo))
+    return total
 
 
 def _on_support(poly: list[tuple[float, float]], supports: set[float], *, x: float | None = None, z: float | None = None) -> bool:

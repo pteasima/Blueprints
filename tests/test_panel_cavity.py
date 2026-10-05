@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 
-from blueprints.acoustics.lattice import CANDIDATES, layout_gable
+from blueprints.acoustics.lattice import CANDIDATES, LatticeSpec, layout_gable
 from blueprints.acoustics.layers import (
     C0,
     field_absorption,
@@ -119,7 +119,8 @@ def test_gable_layout_keeps_the_cut_fields_and_the_area():
         assert abs(layout.area - area) < 0.02
         assert layout.n_cut > 0
         assert layout.bays
-        assert layout.cd_x_mm[0] == pytest_approx(params.cd_first_inset)
+        assert layout.cd_x_mm[0] == pytest_approx(min(x for x, _ in outline))
+        assert layout.cd_x_mm[-1] == pytest_approx(max(x for x, _ in outline))
 
 
 def pytest_approx(value: float, tol: float = 1e-6):
@@ -158,3 +159,92 @@ def test_gable_stud_spacing_moves_the_kitchen_peak():
         systems = tuple(solve_modes(bay, plate) for bay in layout.bays)
         peaks[spec.name] = first_absorption_peak_hz(systems, plate, cavity, n=48)
     assert peaks["625 vertical"] > peaks["1000 horizontal"] + 10.0
+
+
+def test_even_studs_and_supported_perimeter_are_the_default():
+    """A profile on both edges, equal bays, and no free strip along the outline."""
+    ObyvakParams, _, build_layout = _models()
+    params = ObyvakParams()
+    outline = build_layout(params).predstena_pts()
+    x_left = min(x for x, _ in outline)
+    x_right = max(x for x, _ in outline)
+    width = x_right - x_left
+    z_bottom = min(z for _, z in outline)
+    for spec in CANDIDATES:
+        assert spec.studs == "even"
+        assert spec.perimeter == "supported"
+        layout = layout_gable(outline, spec, inset_mm=params.cd_first_inset)
+        stations = [x - x_left for x in layout.cd_x_mm]
+        assert stations[0] == pytest_approx(0.0)
+        assert stations[-1] == pytest_approx(width)
+        gaps = [b - a for a, b in zip(stations, stations[1:])]
+        n_bays = max(1, round(width / spec.cd_spacing_mm))
+        assert len(gaps) == n_bays
+        step = width / n_bays
+        assert all(abs(gap - step) < 0.5 for gap in gaps)
+        assert any(f"{n_bays} equal bays of {step:.0f} mm" in note for note in layout.notes)
+        # The old 90 mm start and the short closer are gone.
+        assert min(gaps) > 400.0
+        bottom = [
+            bay
+            for bay in layout.bays
+            if abs(bay.z0 * 1000.0 - z_bottom) < 2.0
+        ]
+        assert bottom
+        assert all(bay.bottom == "perimeter" for bay in bottom)
+        assert any(bay.left == "perimeter" for bay in bottom)
+        assert any(bay.right == "perimeter" for bay in bottom)
+        interior = [bay for bay in bottom if bay.left == "supported" and bay.right == "supported"]
+        assert interior
+        hinged = interior[0].with_edge("continuous")
+        assert hinged.left == "continuous" and hinged.right == "continuous"
+        assert hinged.bottom == "simple"
+        edge_bay = next(bay for bay in bottom if bay.left == "perimeter")
+        held = edge_bay.with_edge("continuous")
+        assert held.left == "simple"
+        assert held.bottom == "simple"
+        # A cut field still has a rake. Its outline edges are not a free strip.
+        cut = [bay for bay in layout.bays if bay.kind != "rectangle"]
+        assert cut
+        narrow_free = [
+            bay
+            for bay in layout.bays
+            if bay.span_x < 0.2
+            and bay.left == "free"
+            and bay.right == "free"
+        ]
+        assert not narrow_free
+    text = " ".join(describe for spec in CANDIDATES for describe in layout_gable(outline, spec, inset_mm=params.cd_first_inset).notes)
+    assert "simply supported" in text
+    assert "Hairline cracks" in text
+
+
+def test_inset_studs_still_start_one_module_in():
+    ObyvakParams, _, build_layout = _models()
+    params = ObyvakParams()
+    outline = build_layout(params).predstena_pts()
+    spec = LatticeSpec(
+        name="old 625",
+        orientation="vertical",
+        cd_spacing_mm=625.0,
+        studs="inset",
+        perimeter="free",
+    )
+    layout = layout_gable(outline, spec, inset_mm=params.cd_first_inset)
+    x_left = min(x for x, _ in outline)
+    assert layout.cd_x_mm[0] - x_left == pytest_approx(params.cd_first_inset)
+    assert any(bay.left == "free" or bay.bottom == "free" for bay in layout.bays)
+
+
+def test_full_wool_lateral_path_is_the_porous_stack():
+    """A full cavity has no open-air layer for the shape to slide through."""
+    sigma = Resistivity().mineral_wool
+    freq = 31.5
+    depth = 0.4375
+    kx = math.pi / 1.07
+    wool = Cavity(0.0, depth, sigma).impedance(freq, kx)
+    porous = surface_impedance_kx((("porous", depth, sigma),), freq, kx)
+    air = Cavity(depth, 0.0, sigma).impedance(freq, kx)
+    # Cavity rounds kx to 0.001 m⁻¹ before the stack, so the two calls are not bit-identical.
+    assert abs(wool - porous) < 0.05 * abs(porous)
+    assert wool.real > air.real * 5.0

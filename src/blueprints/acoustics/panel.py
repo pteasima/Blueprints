@@ -36,7 +36,9 @@ moment (a hinge).
 ``continuous`` — the board is one taped sheet, so under a long bass wave the
 fields either side of a stud prop each other and the slope at the stud is
 zero. That is stiffer than a hinge. It is not a vice on the flange.
-The trap perimeter (bottom, sides, top against the slope) is free.
+Sides, the rake, and the bottom line are screwed to a perimeter profile.
+That edge is simply supported: there is no neighbouring field to prop it.
+The 2–5 mm bead sits outside the screw line and is not part of the plate.
 """
 
 from __future__ import annotations
@@ -142,6 +144,9 @@ class Bay:
         def conv(label: str) -> str:
             if label == "free":
                 return "free"
+            # The perimeter profile has no bay on the other side, so it stays a hinge.
+            if label == "perimeter":
+                return "simple"
             return edge
 
         return Bay(
@@ -211,7 +216,12 @@ def cc_strip_frequency(width: float, rigidity: float, mu: float) -> float:
 
 @dataclass
 class Cavity:
-    """Air gap then wool, on a rigid wall. Depths in metres."""
+    """Air gap then wool, on a rigid wall. Depths in metres.
+
+    A full fill has ``air_m`` of 0. The lateral wavenumber then runs through
+    the wool only. There is no open-air layer left for the shape to slosh
+    through.
+    """
 
     air_m: float
     wool_m: float
@@ -468,6 +478,55 @@ def _line_span(poly: tuple[tuple[float, float], ...], *, x: float | None = None,
     return lo, hi
 
 
+def _slant_window(
+    xs: np.ndarray,
+    zs: np.ndarray,
+    poly: tuple[tuple[float, float], ...],
+    mask: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray] | None:
+    """Factor that is zero on each slanted edge of the bay, and its gradient.
+
+    A rake screw line is not a side of the bounding box. Multiplying by the
+    inward distance pins the leaf on that line (simply supported). Axis-aligned
+    studs and the perimeter profile are already in the edge families.
+    """
+    edges: list[tuple[float, float, float, float]] = []
+    area = 0.0
+    pts = list(poly)
+    for (x0, z0), (x1, z1) in zip(pts, pts[1:] + pts[:1]):
+        area += x0 * z1 - x1 * z0
+        if abs(x1 - x0) > 1.5e-3 and abs(z1 - z0) > 1.5e-3:
+            edges.append((x0, z0, x1, z1))
+    if not edges:
+        return None
+    sign = 1.0 if area >= 0.0 else -1.0
+    x_col = xs[:, None]
+    z_row = zs[None, :]
+    window = np.ones(mask.shape)
+    grad_x = np.zeros(mask.shape)
+    grad_z = np.zeros(mask.shape)
+    for x0, z0, x1, z1 in edges:
+        ex, ez = x1 - x0, z1 - z0
+        length = math.hypot(ex, ez)
+        if length < 1e-9:
+            continue
+        dist = sign * ((x_col - x0) * ez - (z_row - z0) * ex) / length
+        dist = np.clip(dist, 0.0, None)
+        inside = dist[mask]
+        scale = float(inside.max()) if inside.size else 0.0
+        if scale < 1e-6:
+            continue
+        factor = dist / scale
+        fx = sign * ez / (length * scale)
+        fz = sign * (-ex) / (length * scale)
+        grad_x = grad_x * factor + window * fx
+        grad_z = grad_z * factor + window * fz
+        window = window * factor
+    if not np.any(mask) or float(window[mask].max()) < 1e-8:
+        return None
+    return window, grad_x, grad_z
+
+
 def _ritz(bay: Bay, rigidity: float, nu: float, mu: float, k_rot: float) -> ModalSystem:
     nx = nz = _N_GRID
     n = _N_FUNC
@@ -491,6 +550,15 @@ def _ritz(bay: Bay, rigidity: float, nu: float, mu: float, k_rot: float) -> Moda
     xs = bay.x0 + xi * a
     zs = bay.z0 + eta * b
     mask = _point_in_polygon(xs, zs, bay.polygon)
+    slant = _slant_window(xs, zs, bay.polygon, mask)
+    if slant is not None:
+        s_fac, sx_fac, sz_fac = slant
+        wxx = s_fac * wxx + 2.0 * sx_fac * wx
+        wzz = s_fac * wzz + 2.0 * sz_fac * wz
+        wxz = s_fac * wxz + sx_fac * wz + sz_fac * wx
+        wx = sx_fac * w + s_fac * wx
+        wz = sz_fac * w + s_fac * wz
+        w = s_fac * w
     d_a = (a / nx) * (b / nz)
     mr = mask.reshape(-1)
     if int(mr.sum()) < 8:
