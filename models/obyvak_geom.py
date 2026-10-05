@@ -1,7 +1,9 @@
 """Shared Obývák 1.02 parameters and 2D sketch helpers (mm).
 
 World:
-  X = eave ↔ eave (room_width), Y = kitchen ↔ living (room_length), Z up.
+  X = eave ↔ eave (room_width), Y = living gable ↔ kitchen gable (room_length), Z up.
+  The living gable is Y=0 (one sliding door, 450 mm trap). The kitchen gable
+  is Y=L (two sliding doors, 190 mm trap).
 
 2D drawings sit in Plane.XZ for the orthographic exporter:
   section X = transverse, elevation X = longitudinal (world Y).
@@ -218,24 +220,25 @@ class ObyvakParams:
     bass_bottom_sdk_t: float = 12.5
     pouzdro_d: float = 120.0
     pocket_door_h: float = 2450.0
-    # Clearance from the kitchen-cabinet eave (X=room_width) to the spíž opening.
+    # Clearance from the cabinet eave (X=room_width) to the far-gable opening at x=3700.
     pocket_spiz_inset: float = 650.0
-    # (gable, x0, width) — "kitchen"=Y=0 (předstěna 190), "living"=Y=L (předstěna 450).
-    # Cutaway camera is at −X,−Y: near/right gable = Y=0, far/left gable = Y=L.
-    # Spíž must sit on the far gable (Y=L), not on the near/right wall with chodba.
-    # Chodba stays Y=0 window corner; zádveří stays Y=L window corner; spíž Y=L cabinet inset.
+    # (gable, x0, width). Openings stay put. The gable with two doors is the
+    # kitchen and carries the 190 mm trap; the gable with one door is the
+    # living room and carries the 450 mm trap.
+    # Y=0 (living): one opening, window corner, x=0, 1000 mm.
+    # Y=L (kitchen): window corner x=0, 1100 mm, and cabinet-eave x=3700, 1000 mm.
     pocket_doors: tuple[tuple[str, float, float], ...] = (
-        ("kitchen", 0.0, 1000.0),  # chodba · roh u oken · near gable Y=0
-        ("living", 3700.0, 1000.0),  # spíž · far gable Y=L · 5350 − 650 − 1000
-        ("living", 0.0, 1100.0),  # zádveří · roh u oken · far gable Y=L
+        ("living", 0.0, 1000.0),  # one door · window corner · living gable Y=0
+        ("kitchen", 3700.0, 1000.0),  # kitchen gable Y=L · 5350 − 650 − 1000
+        ("kitchen", 0.0, 1100.0),  # kitchen gable Y=L · window corner
     )
     # Window wall (X=0, opposite cabinets): 2× HS 2500 + fixed 4500, h=2500 (D.1.1.03).
     window_h: float = 2500.0
     # (y0, width) along Y from kitchen→living; ~200 mm piers between bays.
     eave_windows: tuple[tuple[float, float], ...] = (
-        (550.0, 2500.0),  # HS portal · kuchyně / chodba
+        (550.0, 2500.0),  # HS portal · living gable (Y=0, one sliding door)
         (3250.0, 4500.0),  # velké fixní / posuvné sklo
-        (7950.0, 2500.0),  # HS portal · obývák / zádveří
+        (7950.0, 2500.0),  # HS portal · kitchen gable (Y=L, two sliding doors)
     )
     glass_t: float = 20.0
     # Y grid of the kastlík CD studs. The section is CD 60×27, not a timber lať.
@@ -342,16 +345,17 @@ class ObyvakLayout:
         self.poz_l0 = self.xl_mas + p.wall_mason * 0.5 - p.plate_w * 0.5
         self.poz_r0 = self.xr_int + p.wall_plaster + p.wall_mason * 0.5 - p.plate_w * 0.5
 
-        self.x_pred_l = p.predstena_kitchen
-        self.x_pred_r = p.room_length - p.predstena_living
+        # Elevation X is world Y. Y=0 is the deep living trap; Y=L is the shallow kitchen trap.
+        self.x_pred_l = p.predstena_living
+        self.x_pred_r = p.room_length - p.predstena_kitchen
 
         self.yl_eps = -p.wall_plaster - p.wall_mason - p.wall_eps
         self.yl_mas = -p.wall_plaster - p.wall_mason
         self.yr_int = p.room_length
         self.yr_mas = p.room_length + p.wall_plaster + p.wall_mason
         self.yr_eps = self.yr_mas + p.wall_eps
-        self.y_pred_l = p.predstena_kitchen
-        self.y_pred_r = p.room_length - p.predstena_living
+        self.y_pred_l = p.predstena_living
+        self.y_pred_r = p.room_length - p.predstena_kitchen
         self.y_roof0 = self.yl_eps - p.ridge_runout
         self.y_roof1 = self.yr_eps + p.ridge_runout
         # Cabinet/soffit run is not on either 2D sheet; default = clear span between gable predstěny.

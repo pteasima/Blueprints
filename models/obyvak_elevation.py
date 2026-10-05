@@ -1,8 +1,9 @@
 """Obývák 1.02 — bokorys od oken (štít–štít), 2D profily v Plane.XZ.
 
-X v tomto výkrese = světlá délka kuchyně↔obývák (v 3D to bude Y).
+X v tomto výkrese = světlá délka obývák↔kuchyň (v 3D to bude Y).
 Z up. Podhled je vodorovný pod hřebenem — žádný A-rám vlevo/vpravo.
-Předstěny 190 (KK) a 450 (obývák) od Z=2450 k podhledu — sizes unchanged.
+X=0 is the living gable: one sliding door, 450 mm trap. The far end is the
+kitchen gable: two sliding doors, 190 mm trap. Depths themselves are unchanged.
 Below: SDK face + local pouzdro pockets (not full-wall pouzdro).
 
     python -m blueprints.export obyvak_elevation
@@ -63,19 +64,19 @@ def build(params: ObyvakParams | None = None):
         xz_rect(span + p.wall_plaster, -p.floor_t, p.wall_mason, h_gable + p.floor_t, LABEL_MASONRY)
     )
 
-    # Low SDK in front of pouzdro (covers pocket); předstěny above stay 190 / 450.
+    # Low SDK in front of pouzdro (covers pocket); předstěny above stay 450 / 190.
     face_t = max(p.sdk_t, 12.5)
     parts.append(xz_rect(p.pouzdro_d, 0.0, face_t, p.pocket_door_h, LABEL_WALL_GKF))
     parts.append(xz_rect(span - p.pouzdro_d - face_t, 0.0, face_t, p.pocket_door_h, LABEL_WALL_GKF))
     parts.append(xz_rect(0.0, 0.0, p.pouzdro_d, p.pocket_door_h, LABEL_POCKET_FRAME))
     parts.append(xz_rect(span - p.pouzdro_d, 0.0, p.pouzdro_d, p.pocket_door_h, LABEL_POCKET_FRAME))
 
-    # Předstěny — never resize (190 kitchen / 450 living).
+    # Předstěny — depths stay 450 living at X=0, 190 kitchen at the far end.
     parts.append(
         xz_rect(
             0.0,
             p.predstena_bottom_z,
-            p.predstena_kitchen,
+            p.predstena_living,
             h_gable - p.predstena_bottom_z,
             LABEL_BASS_WOOL,
         )
@@ -84,7 +85,7 @@ def build(params: ObyvakParams | None = None):
         xz_rect(
             g.x_pred_r,
             p.predstena_bottom_z,
-            p.predstena_living,
+            p.predstena_kitchen,
             h_gable - p.predstena_bottom_z,
             LABEL_BASS_WOOL,
         )

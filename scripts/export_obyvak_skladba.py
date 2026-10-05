@@ -672,13 +672,13 @@ def build_lines(q) -> dict[str, list[Line]]:
             "Rám CD / UW",
             "Profil CD 60×27",
             _product("Rigips R-CD 27/60/27", URL_CD),
-            "kuchyň 625 svisle + dořez; obývák 1000 + dořez",
+            "kuchyň (Y=L, dva posuvné, 190) 625 svisle + dořez; obývák (Y=0, jedny, 450) 1000 + dořez",
             q["bass_cd_lm"],
             "bm",
             10,
             PRICE["cd_bm"][0],
             PRICE["cd_bm"][1],
-            "Lišty pod spárou: kuchyň 2000 mm, obývák 1250 a 2500 mm, na CD. UW v modelu jako CD.",
+            "Lišty pod spárou: kuchyň 2000 mm na dvouposuvném štítu, obývák 1250 a 2500 mm na jednoposuvném. UW v modelu jako CD.",
         ),
         Line(
             "A3",
@@ -718,7 +718,7 @@ def build_lines(q) -> dict[str, list[Line]]:
             10,
             None,
             "—",
-            f"Split {p.bass_k_wool}+{p.bass_k_air}+{p.bass_k_gkb} = {p.predstena_kitchen:.0f} mm.",
+            f"Split {p.bass_k_wool}+{p.bass_k_air}+{p.bass_k_gkb} = {p.predstena_kitchen:.0f} mm. Štít se dvěma posuvnými dveřmi.",
             True,
         ),
         Line(
@@ -732,7 +732,7 @@ def build_lines(q) -> dict[str, list[Line]]:
             10,
             None,
             "—",
-            f"Split {p.bass_l_gkb}+{p.bass_l_air}+{p.bass_l_wool} = {p.predstena_living:.0f} mm.",
+            f"Split {p.bass_l_gkb}+{p.bass_l_air}+{p.bass_l_wool} = {p.predstena_living:.0f} mm. Štít s jedněmi posuvnými dveřmi, subwoofer v rohu u TV.",
             True,
         ),
     ]

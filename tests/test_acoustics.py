@@ -169,13 +169,17 @@ def test_study_ranks_splits_and_states_the_fem_decision():
     assert "cut" in text
     assert "625 vertical" in text and "1000 horizontal" in text
     assert "The built gables are kitchen 625 vertical and living 1000 horizontal" in text
+    assert "two sliding doors" in text
+    assert "one sliding door" in text
+    assert "do not cut" in text
     assert "model default" in text
     assert "simply supported" in text
     assert "Hairline cracks" in text
     assert "31.5 Hz benefit" in text
     assert "coverage" in text
     assert "hinges" in text
-    assert "400 vertical" in text
+    assert "Four pairs" in text
+    assert "400 vertical" not in text
     assert "wool_grid.csv" in text
     assert "as-built" in text
     assert "Slope Flex" not in text
@@ -206,7 +210,7 @@ def test_study_ranks_splits_and_states_the_fem_decision():
         else:
             assert f"{row.case}: {row.winner} (same winner)" in text
     assert text.startswith("Wool and lattice sweep")
-    assert by_name["400 vertical"].kitchen_peak_hz > by_name["625 vertical"].kitchen_peak_hz
+    assert set(by_name) == {"625 vertical", "1000 horizontal"}
     assert len(next(iter(study.kitchen_alpha.values()))) == 6
     assert len(next(iter(study.living_alpha.values()))) == 6
     assert study.sweep_csv.splitlines()[0].startswith("edge,kitchen_lattice")
