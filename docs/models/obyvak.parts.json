@@ -32,9 +32,9 @@
     "children": [
       "soffit_naturheld_140",
       "soffit_mineral_wool",
-      "soffit_battens",
       "soffit_gkf",
       "soffit_cd",
+      "soffit_ud",
       "soffit_nonius",
       "soffit_duct"
     ]
