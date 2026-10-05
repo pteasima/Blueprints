@@ -4,11 +4,13 @@ The outline comes from ``predstena_pts`` (millimetres). Vertical CD lines and
 horizontal joint rails cut that polygon into bays, including the triangles and
 trapezoids under the roof.
 
-The default stud rule puts a profile on both edges and splits the width into
-equal bays as close as possible to the target module. Sides, the rake, and the
+``625 vertical`` starts at one edge and steps a stock 625 mm module, then one
+make-up bay at the far edge, so a 1250 mm board joint lands on a stud.
+``1000 horizontal`` keeps equal bays nearest 1000 mm (1070 mm on this gable).
+A 1250×2500 board is cut to two of those bays. Sides, the rake, and the
 bottom line are simply supported: the 2–5 mm bead sits outside that screw line.
-``studs="inset"`` keeps the older module, which starts one inset in and closes
-with a short bay at the far edge.
+``studs="even"`` is the equal-bay rule. ``studs="inset"`` is the older frame,
+one inset in, with a closer at the far edge.
 
 A new layout is a ``LatticeSpec``. Pass explicit centre lists, or a spacing.
 ``625 vertical`` and ``1000 horizontal`` are the two candidates.
@@ -44,9 +46,10 @@ class LatticeSpec:
     cd_x_mm: tuple[float, ...] | None = None
     rail_above_bottom_mm: tuple[float, ...] | None = None
     board: str = ""
+    # ``makeup``: stock module from one edge, one make-up bay at the far edge.
     # ``even``: profile on both edges, equal bays nearest the target module.
     # ``inset``: the older frame, one inset in, with a closer at the far edge.
-    studs: str = "even"
+    studs: str = "makeup"
     # ``supported``: sides, rake, and the bottom line are a screw line.
     # ``free``: the older model, where the outline was an unsupported edge.
     perimeter: str = "supported"
@@ -56,6 +59,8 @@ class LatticeSpec:
             return tuple(sorted(x for x in self.cd_x_mm if 0.0 <= x <= width_mm))
         if self.studs == "even":
             return tuple(_even_stations(width_mm, self.cd_spacing_mm))
+        if self.studs == "makeup":
+            return tuple(_makeup_stations(width_mm, self.cd_spacing_mm))
         inset = self.inset_mm if self.inset_mm is not None else default_inset_mm
         return tuple(_module_stations(width_mm, self.cd_spacing_mm, inset))
 
@@ -81,14 +86,16 @@ LATTICE_625 = LatticeSpec(
     orientation="vertical",
     cd_spacing_mm=625.0,
     rail_spacing_mm=2000.0,
-    board="1250×2000 boards stood vertical, long joints on every second CD",
+    board="1250×2000 boards stood vertical, joints on every second CD, one make-up bay at the far edge",
+    studs="makeup",
 )
 LATTICE_1000 = LatticeSpec(
     name="1000 horizontal",
     orientation="horizontal",
     cd_spacing_mm=1000.0,
     rail_spacing_mm=1250.0,
-    board="2000 edge horizontal, CD at 1000 mm, a rail under every 1250 mm joint",
+    board="1250×2500 boards cut to two bays, joints on the studs",
+    studs="even",
 )
 CANDIDATES: tuple[LatticeSpec, ...] = (LATTICE_625, LATTICE_1000)
 
@@ -275,6 +282,24 @@ def layout_svg(layout: GableLayout, subtitle: str = "") -> str:
     return "\n".join(parts)
 
 
+def _makeup_stations(length_mm: float, spacing_mm: float) -> list[float]:
+    """Profile at the start, then exact modules, then one make-up bay at the far edge.
+
+    5350 mm at 625 mm is eight stock bays and a 350 mm bay. A 1250 mm board
+    joint then lands on a stud. The far edge is still a screw line.
+    """
+    if spacing_mm <= 1.0 or length_mm <= 1.0:
+        raise ValueError("length and spacing must be positive")
+    xs = [0.0]
+    x = spacing_mm
+    while x < length_mm - 0.5:
+        xs.append(x)
+        x += spacing_mm
+    if length_mm - xs[-1] > 0.5:
+        xs.append(length_mm)
+    return xs
+
+
 def _even_stations(length_mm: float, spacing_mm: float) -> list[float]:
     """Profile at both edges, then equal bays as close as possible to ``spacing_mm``.
 
@@ -378,15 +403,29 @@ def _notes(
             f"A profile on both edges, then {n_bays} equal bays of {step:.0f} mm "
             f"(target {spec.cd_spacing_mm:.0f} mm)."
         )
-        if spec.perimeter == "supported":
-            notes.append(
-                "Sides, the rake, and the bottom line are simply supported. "
-                "The 2–5 mm bead sits outside that screw line."
-            )
         if spec.cd_spacing_mm >= 1000.0 or step >= 1000.0:
+            two = 2.0 * step
+            notes.append(
+                f"Boards are 1250×2500 cut to {two:.0f} mm, two bays each, so the joints "
+                "fall on studs. The offcut is waste."
+            )
             notes.append(
                 "This spacing is at the top of a normal finished wall. "
                 "Hairline cracks at the joints are a risk."
+            )
+    elif spec.studs == "makeup" and spec.cd_x_mm is None and gaps:
+        makeup = gaps[-1]
+        if abs(makeup - spec.cd_spacing_mm) <= 1.0:
+            notes.append(
+                f"Studs every {spec.cd_spacing_mm:.0f} mm from edge to edge. "
+                "The width is an exact number of modules, so there is no make-up bay."
+            )
+        else:
+            n_stock = len(gaps) - 1
+            notes.append(
+                f"Studs every {spec.cd_spacing_mm:.0f} mm from the left edge "
+                f"({n_stock} bays), then one make-up bay of {makeup:.0f} mm at the far edge. "
+                "Stock 1250 mm boards land their joints on those studs."
             )
     elif gaps:
         edge = min(gaps[0], gaps[-1])
@@ -408,6 +447,11 @@ def _notes(
                     "separate layout. Pass cd_x_mm to even it out."
                 )
                 break
+    if spec.perimeter == "supported" and spec.studs in ("even", "makeup"):
+        notes.append(
+            "Sides, the rake, and the bottom line are simply supported. "
+            "The 2–5 mm bead sits outside that screw line."
+        )
     if spec.cd_x_mm is not None:
         notes.append("CD centres were passed in as a list.")
     if spec.rail_above_bottom_mm is not None:

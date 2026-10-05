@@ -3,28 +3,28 @@
 <style>text{font-family:system-ui,sans-serif;fill:#222}</style>
 <text x="56.0" y="28" font-size="18" font-weight="600">625 vertical</text>
 <text x="56.0" y="48" font-size="13">Both gables, same outline. Kitchen 190 mm deep, living 450 mm deep.</text>
-<polygon points="56.0,572.9 164.9,572.9 164.9,353.2 56.0,444.6" fill="#f3d7b0" stroke="#8a8175" stroke-width="0.6"/>
-<polygon points="164.9,572.9 273.8,572.9 273.8,261.8 164.9,353.2" fill="#f3d7b0" stroke="#8a8175" stroke-width="0.6"/>
-<polygon points="273.8,572.9 339.7,572.9 382.7,572.9 382.7,206.5 339.7,206.5 273.8,261.8" fill="#f3d7b0" stroke="#8a8175" stroke-width="0.6"/>
-<polygon points="339.7,206.5 382.7,206.5 382.7,170.5" fill="#f3d7b0" stroke="#8a8175" stroke-width="0.6"/>
-<polygon points="382.7,572.9 491.6,572.9 491.6,206.5 382.7,206.5" fill="#d5e3f2" stroke="#8a8175" stroke-width="0.6"/>
-<polygon points="382.7,206.5 491.6,206.5 491.6,79.1 382.7,170.5" fill="#f3d7b0" stroke="#8a8175" stroke-width="0.6"/>
-<polygon points="491.6,572.9 504.8,572.9 600.4,572.9 600.4,206.5 504.8,206.5 491.6,206.5" fill="#f3d7b0" stroke="#8a8175" stroke-width="0.6"/>
-<polygon points="491.6,206.5 504.8,206.5 600.4,206.5 600.4,148.3 504.8,68.0 491.6,79.1" fill="#f3d7b0" stroke="#8a8175" stroke-width="0.6"/>
-<polygon points="600.4,572.9 669.9,572.9 709.3,572.9 709.3,239.6 669.9,206.5 600.4,206.5" fill="#f3d7b0" stroke="#8a8175" stroke-width="0.6"/>
-<polygon points="600.4,206.5 669.9,206.5 600.4,148.3" fill="#f3d7b0" stroke="#8a8175" stroke-width="0.6"/>
-<polygon points="709.3,572.9 818.2,572.9 818.2,331.0 709.3,239.6" fill="#f3d7b0" stroke="#8a8175" stroke-width="0.6"/>
-<polygon points="818.2,572.9 927.1,572.9 927.1,422.4 818.2,331.0" fill="#f3d7b0" stroke="#8a8175" stroke-width="0.6"/>
-<polygon points="927.1,572.9 953.6,572.9 1036.0,572.9 1036.0,444.6 953.6,444.6 927.1,422.4" fill="#f3d7b0" stroke="#8a8175" stroke-width="0.6"/>
+<polygon points="56.0,572.9 170.5,572.9 170.5,348.5 56.0,444.6" fill="#f3d7b0" stroke="#8a8175" stroke-width="0.6"/>
+<polygon points="170.5,572.9 285.0,572.9 285.0,252.4 170.5,348.5" fill="#f3d7b0" stroke="#8a8175" stroke-width="0.6"/>
+<polygon points="285.0,572.9 339.7,572.9 399.5,572.9 399.5,206.5 339.7,206.5 285.0,252.4" fill="#f3d7b0" stroke="#8a8175" stroke-width="0.6"/>
+<polygon points="339.7,206.5 399.5,206.5 399.5,156.4" fill="#f3d7b0" stroke="#8a8175" stroke-width="0.6"/>
+<polygon points="399.5,572.9 504.8,572.9 513.9,572.9 513.9,206.5 504.8,206.5 399.5,206.5" fill="#f3d7b0" stroke="#8a8175" stroke-width="0.6"/>
+<polygon points="399.5,206.5 504.8,206.5 513.9,206.5 513.9,75.7 504.8,68.0 399.5,156.4" fill="#f3d7b0" stroke="#8a8175" stroke-width="0.6"/>
+<polygon points="513.9,572.9 628.4,572.9 628.4,206.5 513.9,206.5" fill="#d5e3f2" stroke="#8a8175" stroke-width="0.6"/>
+<polygon points="513.9,206.5 628.4,206.5 628.4,171.8 513.9,75.7" fill="#f3d7b0" stroke="#8a8175" stroke-width="0.6"/>
+<polygon points="628.4,572.9 669.9,572.9 742.9,572.9 742.9,267.8 669.9,206.5 628.4,206.5" fill="#f3d7b0" stroke="#8a8175" stroke-width="0.6"/>
+<polygon points="628.4,206.5 669.9,206.5 628.4,171.8" fill="#f3d7b0" stroke="#8a8175" stroke-width="0.6"/>
+<polygon points="742.9,572.9 857.4,572.9 857.4,363.9 742.9,267.8" fill="#f3d7b0" stroke="#8a8175" stroke-width="0.6"/>
+<polygon points="857.4,572.9 953.6,572.9 971.9,572.9 971.9,444.6 953.6,444.6 857.4,363.9" fill="#f3d7b0" stroke="#8a8175" stroke-width="0.6"/>
+<polygon points="971.9,572.9 1036.0,572.9 1036.0,444.6 971.9,444.6" fill="#d5e3f2" stroke="#8a8175" stroke-width="0.6"/>
 <line x1="56.0" y1="572.9" x2="56.0" y2="444.6" stroke="#1f4e79" stroke-width="2"/>
-<line x1="164.9" y1="572.9" x2="164.9" y2="353.2" stroke="#1f4e79" stroke-width="2"/>
-<line x1="273.8" y1="572.9" x2="273.8" y2="261.8" stroke="#1f4e79" stroke-width="2"/>
-<line x1="382.7" y1="572.9" x2="382.7" y2="170.5" stroke="#1f4e79" stroke-width="2"/>
-<line x1="491.6" y1="572.9" x2="491.6" y2="79.1" stroke="#1f4e79" stroke-width="2"/>
-<line x1="600.4" y1="572.9" x2="600.4" y2="148.3" stroke="#1f4e79" stroke-width="2"/>
-<line x1="709.3" y1="572.9" x2="709.3" y2="239.6" stroke="#1f4e79" stroke-width="2"/>
-<line x1="818.2" y1="572.9" x2="818.2" y2="331.0" stroke="#1f4e79" stroke-width="2"/>
-<line x1="927.1" y1="572.9" x2="927.1" y2="422.4" stroke="#1f4e79" stroke-width="2"/>
+<line x1="170.5" y1="572.9" x2="170.5" y2="348.5" stroke="#1f4e79" stroke-width="2"/>
+<line x1="285.0" y1="572.9" x2="285.0" y2="252.4" stroke="#1f4e79" stroke-width="2"/>
+<line x1="399.5" y1="572.9" x2="399.5" y2="156.4" stroke="#1f4e79" stroke-width="2"/>
+<line x1="513.9" y1="572.9" x2="513.9" y2="75.7" stroke="#1f4e79" stroke-width="2"/>
+<line x1="628.4" y1="572.9" x2="628.4" y2="171.8" stroke="#1f4e79" stroke-width="2"/>
+<line x1="742.9" y1="572.9" x2="742.9" y2="267.8" stroke="#1f4e79" stroke-width="2"/>
+<line x1="857.4" y1="572.9" x2="857.4" y2="363.9" stroke="#1f4e79" stroke-width="2"/>
+<line x1="971.9" y1="572.9" x2="971.9" y2="444.6" stroke="#1f4e79" stroke-width="2"/>
 <line x1="1036.0" y1="572.9" x2="1036.0" y2="444.6" stroke="#1f4e79" stroke-width="2"/>
 <line x1="339.7" y1="206.5" x2="669.9" y2="206.5" stroke="#a33b32" stroke-width="2"/>
 <polygon points="56.0,572.9 1036.0,572.9 1036.0,444.6 953.6,444.6 504.8,68.0 56.0,444.6" fill="none" stroke="#222" stroke-width="1.6"/>
@@ -39,6 +39,6 @@
 <text x="1072.0" y="130.0" font-size="12">full rectangle</text>
 <rect x="1052.0" y="142.0" width="14" height="10" fill="#f3d7b0" stroke="#666"/>
 <text x="1072.0" y="152.0" font-size="12">cut field</text>
-<text x="1052.0" y="172.0" font-size="12">13 fields, 12 cut</text>
+<text x="1052.0" y="172.0" font-size="12">13 fields, 11 cut</text>
 <text x="1052.0" y="190.0" font-size="12">8.78 m²</text>
 </svg>

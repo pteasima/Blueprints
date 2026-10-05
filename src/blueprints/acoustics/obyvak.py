@@ -833,7 +833,7 @@ def _plain_answer(
         for run in runs
     )
     parts = [
-        "In short. " + peaks + ". A smaller field sits higher. That is the stud spacing doing its job."
+        "In short. " + peaks + "."
     ]
     if audible:
         band_bits = []
@@ -874,19 +874,29 @@ def _plain_answer(
     return " ".join(parts)
 
 
-# Previous published run: free perimeter, 90 mm inset, 170 mm closer, same wool
-# (kitchen 130.5 mm / 47 mm air, living cavity full). Peaks in that run were at the
-# as-built wool, so the living peak was at 300 mm rather than a full cavity.
+# Previous run on this branch: one lateral wavenumber per mode, so the piston
+# never saw the air spring, and 625 was nine equal bays of 594 mm. Same wool
+# (kitchen 130.5 mm / 47 mm air, living cavity full). Peaks are at that wool.
 _PREVIOUS_FIXED = {
     ("625 vertical", "625 vertical"): {
-        "t": {31.5: 1.93, 63.0: 0.94, 125.0: 0.70},
-        "kitchen_peak": 57.0,
-        "living_peak": 59.0,
+        "t": {31.5: 1.96, 63.0: 0.97, 125.0: 0.70},
+        "kitchen_peak": 61.0,
+        "living_peak": 72.0,
     },
     ("1000 horizontal", "1000 horizontal"): {
-        "t": {31.5: 1.46, 63.0: 1.10, 125.0: 0.66},
-        "kitchen_peak": 22.0,
-        "living_peak": 24.0,
+        "t": {31.5: 1.59, 63.0: 1.15, 125.0: 0.67},
+        "kitchen_peak": 19.0,
+        "living_peak": 37.0,
+    },
+    ("625 vertical", "1000 horizontal"): {
+        "t": {31.5: 1.63, 63.0: 1.04, 125.0: 0.69},
+        "kitchen_peak": 61.0,
+        "living_peak": 37.0,
+    },
+    ("1000 horizontal", "625 vertical"): {
+        "t": {31.5: 1.91, 63.0: 1.07, 125.0: 0.68},
+        "kitchen_peak": 19.0,
+        "living_peak": 72.0,
     },
 }
 
@@ -897,6 +907,7 @@ def _fixed_wool_table(
     shared: dict[float, dict[str, float]],
     kitchen_key: float,
     living_key: float,
+    depth_peaks: dict[str, dict[str, float]] | None = None,
 ) -> str:
     """Room decay at the fixed wool, including the two mixed gable pairings."""
     by_name = {run.name: run for run in runs}
@@ -915,16 +926,17 @@ def _fixed_wool_table(
             f"{_split_text(geom.kitchen_cavity, kitchen_key)}, living "
             f"{_split_text(geom.living_cavity, living_key)}. "
             "Sides, the rake, and the bottom line are simply supported. "
-            "Studs sit on both edges and the bays between them are equal. "
-            "1000 horizontal is at the top of normal finished-wall spacing. "
-            "The even split is the nearest equal bay, which lands past 1000 mm. "
-            "Hairline cracks at the joints are a risk."
+            "625 vertical is a stock 625 mm module from the left edge plus one "
+            "make-up bay. 1000 horizontal keeps equal bays, with boards cut to "
+            "two bays. 1000 horizontal is at the top of normal finished-wall "
+            "spacing. Hairline cracks at the joints are a risk."
         ),
         (
             f"{'code':<6}{'kitchen / living':<42}{'31.5 s':>8}{'63 s':>8}{'125 s':>8}"
             f"{'kit peak':>12}{'liv peak':>12}"
         ),
     ]
+    saved: dict[tuple[str, str, str], dict[float, float]] = {}
     for code, kitchen_name, living_name in pairings:
         kitchen = by_name[kitchen_name]
         living = by_name[living_name]
@@ -941,6 +953,7 @@ def _fixed_wool_table(
             f"{times[31.5]:8.2f}{times[63.0]:8.2f}{times[125.0]:8.2f}"
             f"{kitchen.kitchen_peak_hz:10.0f} Hz{living.living_full_peak_hz:10.0f} Hz"
         )
+        saved[(code, kitchen_name, living_name)] = times
         previous = _PREVIOUS_FIXED.get((kitchen_name, living_name))
         if previous is None:
             lines.append(f"{'':6}no previous run")
@@ -954,10 +967,109 @@ def _fixed_wool_table(
             f"{living.living_full_peak_hz - previous['living_peak']:+10.0f} Hz"
         )
     lines.append(
-        "The previous run had free edges, a 90 mm inset, and a 170 mm closer. "
-        "Its room times above are at this same wool. Its living peaks were at "
-        "300 mm of wool, so the living-peak change mixes the full fill with the new edges."
+        "The previous run gave every mode one high lateral wavenumber, so the "
+        "air spring did not depend on depth. Its 625 bays were equal 594 mm "
+        "fields. 1000 horizontal was already 1070 mm. The wool is the same."
     )
+    lines.append(_pairing_verdict(saved, by_name))
+    if depth_peaks:
+        lines.append(_depth_sanity_text(depth_peaks))
+    wide = by_name.get("1000 horizontal")
+    narrow = by_name.get("625 vertical")
+    full_wide = saved.get(("C", "1000 horizontal", "1000 horizontal"))
+    if narrow is not None and abs(narrow.best_living - 1.0) < 0.02:
+        lines.append("On 625 vertical the wool grid still fills the living cavity.")
+    if wide is not None and full_wide is not None and abs(wide.best_living - 1.0) >= 0.02:
+        lines.append(
+            "On 1000 horizontal the wool grid prefers "
+            f"{_split_text(geom.living_cavity, wide.best_living)} on the living gable, "
+            "not a full cavity. With that lattice on both gables the room at 31.5 Hz is "
+            f"{full_wide[31.5]:.2f} s when the living cavity is full and "
+            f"{wide.best_t[31.5]:.2f} s at the grid's pick."
+        )
+    elif wide is not None and abs(wide.best_living - 1.0) < 0.02:
+        lines.append("On 1000 horizontal the wool grid still fills the living cavity.")
+    return "\n".join(lines)
+
+
+def _pairing_verdict(
+    saved: dict[tuple[str, str, str], dict[float, float]],
+    by_name: dict[str, LatticeResult],
+) -> str:
+    """A against B by the three bands, with the subwoofer under the living trap."""
+    a_key = ("A", "625 vertical", "1000 horizontal")
+    b_key = ("B", "1000 horizontal", "625 vertical")
+    if a_key not in saved or b_key not in saved:
+        return ""
+    a_times, b_times = saved[a_key], saved[b_key]
+    notes = []
+    a_wins = 0
+    b_wins = 0
+    for freq in _ROOM_BANDS:
+        if a_times[freq] + 0.02 < b_times[freq]:
+            a_wins += 1
+            notes.append(
+                f"at {_hz(freq)} Hz, A is lower ({a_times[freq]:.2f} s against {b_times[freq]:.2f} s)"
+            )
+        elif b_times[freq] + 0.02 < a_times[freq]:
+            b_wins += 1
+            notes.append(
+                f"at {_hz(freq)} Hz, B is lower ({b_times[freq]:.2f} s against {a_times[freq]:.2f} s)"
+            )
+        else:
+            notes.append(f"at {_hz(freq)} Hz the two pairings are within 0.02 s")
+    if notes:
+        notes[0] = notes[0][0].upper() + notes[0][1:]
+    living_a = by_name["1000 horizontal"].living_full_peak_hz
+    living_b = by_name["625 vertical"].living_full_peak_hz
+    if a_times[31.5] + 0.02 < b_times[31.5]:
+        hold = (
+            "Option A still holds: the subwoofer sits in the living-room corner, "
+            "under the living trap, and A is the lower decay at 31.5 Hz."
+        )
+    elif b_times[31.5] + 0.02 < a_times[31.5]:
+        hold = (
+            "Option A does not hold. The subwoofer sits in the living-room corner, "
+            "under the living trap, and B is the lower decay at 31.5 Hz."
+        )
+    else:
+        hold = (
+            "At 31.5 Hz, A and B are within 0.02 s. The subwoofer under the living "
+            "trap does not separate them."
+        )
+    return (
+        "A is kitchen 625 vertical with living 1000 horizontal. "
+        "B is kitchen 1000 horizontal with living 625 vertical. "
+        + "; ".join(notes)
+        + f". Living first peak {living_a:.0f} Hz on A and {living_b:.0f} Hz on B. "
+        + hold
+        + " The average of the three bands is not the decision."
+    )
+
+
+def _depth_sanity_text(depth_peaks: dict[str, dict[str, float]]) -> str:
+    """Same lattice at 190 mm and at 450 mm, air and a full wool fill."""
+    lines = ["Depth check, same lattice, first peak:"]
+    for name in ("625 vertical", "1000 horizontal"):
+        row = depth_peaks.get(name)
+        if not row:
+            continue
+        lines.append(
+            f"{name}: air 190 mm {row['air_190']:.0f} Hz, air 450 mm {row['air_450']:.0f} Hz; "
+            f"wool 190 mm {row['wool_190']:.0f} Hz, wool 450 mm {row['wool_450']:.0f} Hz."
+        )
+    if "625 vertical" in depth_peaks and "1000 horizontal" in depth_peaks:
+        lattice = abs(depth_peaks["625 vertical"]["air_190"] - depth_peaks["1000 horizontal"]["air_190"])
+        depth = abs(depth_peaks["625 vertical"]["air_190"] - depth_peaks["625 vertical"]["air_450"])
+        if depth >= lattice:
+            which = "Depth moves the first peak more than the lattice does."
+        else:
+            which = "The lattice moves the first peak more than the depth does."
+        lines.append(
+            f"On pure air, 190 to 450 mm moves 625 vertical by {depth:.0f} Hz. "
+            f"Swapping to 1000 horizontal at 190 mm moves it by {lattice:.0f} Hz. "
+            + which
+        )
     return "\n".join(lines)
 
 
@@ -1020,9 +1132,9 @@ def build_report(bits: dict) -> str:
             "to CD studs. The old estimate treated each board as a loose sheet in front "
             "of the wool. This one lets the board bend between the studs. A smaller field "
             "is stiffer, so its note sits higher. The air behind an open stud can slide "
-            "sideways, so a field pinned on the CDs does not keep the full air spring of "
-            "a loose sheet. A wide field can therefore sit below the loose-sheet note, "
-            "and a close field can sit above it."
+            "sideways. The uniform part of the same field still sees the full depth "
+            "of the cavity, so a deeper gable sits lower. Only the ripple of the "
+            "shape slides sideways and loses the air spring."
         ),
         (
             f"Room volume {geom.volume:.0f} m³. Areas: slopes {geom.slope:.1f} m², "
@@ -1532,6 +1644,7 @@ def run_study(
     plate = Plate()
     results: list[LatticeResult] = []
     air_alphas: dict[str, float] = {}
+    depth_peaks: dict[str, dict[str, float]] = {}
     for layout in layouts:
         systems = _systems(layout, plate)
         kitchen = _alpha_family(
@@ -1558,6 +1671,12 @@ def run_study(
             Cavity(geom.living_cavity, 0.0, res.mineral_wool),
         )
         air_alphas[layout.spec.name] = air_only
+        depth_peaks[layout.spec.name] = {
+            "air_190": first_absorption_peak_hz(systems, plate, Cavity(0.190, 0.0, res.mineral_wool), n=64),
+            "air_450": first_absorption_peak_hz(systems, plate, Cavity(0.450, 0.0, res.mineral_wool), n=64),
+            "wool_190": first_absorption_peak_hz(systems, plate, Cavity(0.0, 0.190, res.mineral_wool), n=64),
+            "wool_450": first_absorption_peak_hz(systems, plate, Cavity(0.0, 0.450, res.mineral_wool), n=64),
+        }
         best_k, best_l = _select_pair(kitchen, living, geom, shared, _ROOM_BANDS)
         as_t = _times_for(kitchen[as_built_k], living[as_built_l], geom, shared, THIRDS)
         best_t = _times_for(kitchen[best_k], living[best_l], geom, shared, THIRDS)
@@ -1611,7 +1730,9 @@ def run_study(
         "centre_t": centre_t,
         "slope_text": _slope_paragraph(p, centre_t),
         "volume_text": _volumes(geom, as_wool_k, as_wool_l),
-        "fixed_table": _fixed_wool_table(run_tuple, geom, shared, as_built_k, living_full_key),
+        "fixed_table": _fixed_wool_table(
+            run_tuple, geom, shared, as_built_k, living_full_key, depth_peaks
+        ),
         "wool_path_text": _wool_path_text(
             run_tuple, air_alphas, as_built_k, living_full_key, res.mineral_wool
         ),

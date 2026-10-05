@@ -3,8 +3,18 @@
 The leaf is a thin plate. Each bay between CD studs and joint rails has its
 own bending shapes. Those shapes push on the air and wool behind the leaf.
 The cavity is the same layered stack as the old limp-sheet model (room → air
-→ wool → rigid wall), evaluated at the shape's lateral wavenumber so air can
-move sideways between bays. It is not a set of sealed boxes.
+→ wool → rigid wall). It is not a set of sealed boxes.
+
+A bending shape is not one lateral wavenumber. The (1,1) field of a 0.6–1 m
+bay carries a large uniform volume velocity (about 8/π² of its projection).
+Under a long bass wave that piston part must see the cavity at the incident
+trace wavenumber, so the air spring still depends on depth. The zero-mean
+ripple of the same shape is what travels sideways, and that part is loaded
+at the shape's own lateral wavenumber. Modes share one piston pressure, so
+the admittance is a coupled matrix, not a sum of independent resonators.
+See ``_admittance``. A Fourier expansion of every cut bay was the other
+option; the piston split keeps the same mean term for a roof-cut polygon,
+where the Ritz shape has no integer indices.
 
 A very large bay with the bending stiffness removed sums back to the limp
 sheet: mass in series with that same cavity. See ``analytic_ss_system``.
@@ -686,24 +696,48 @@ def _admittance(
     mu: float,
     cavity: Cavity,
 ) -> complex:
+    """Area-averaged velocity over incident pressure.
+
+    Each mode is split into its mean and a zero-mean remainder. The mean,
+    shared by every mode, is one piston: it sees ``Z`` at the incident trace
+    wavenumber, so a shallow cavity is a stiffer spring than a deep one.
+    The remainder sees ``Z`` at that mode's own lateral wavenumber. When the
+    two impedances are equal the cross terms cancel and each mode stands
+    alone, which is the old formula. When they differ, adding per-mode
+    admittances would count the shared spring once per mode, so the modal
+    amplitudes are solved together.
+    """
     omega = 2.0 * math.pi * freq
-    if system.area <= 0.0 or omega <= 0.0:
+    if system.area <= 0.0 or omega <= 0.0 or mu <= 0.0:
         return 0j
-    k_trace = omega / C0 * math.sin(theta)
+    k_trace = abs(omega / C0 * math.sin(theta))
     total = 0j
-    for mode in system.modes:
-        k_lat = math.hypot(mode.k_lat, k_trace)
-        z_cav = cavity.impedance(freq, k_lat)
-        denom = mode.omega**2 * (1.0 + 1j * eta) - omega**2 + 1j * omega * z_cav / mu
-        if abs(denom) < 1e-18:
-            continue
-        total += 1j * omega * mode.gamma**2 / (system.area * denom)
+    modes = system.modes
+    n = len(modes)
+    if n:
+        z_piston = cavity.impedance(freq, k_trace)
+        z_lat = np.empty(n, dtype=complex)
+        gamma = np.empty(n, dtype=complex)
+        spring = np.empty(n, dtype=complex)
+        for i, mode in enumerate(modes):
+            z_lat[i] = cavity.impedance(freq, math.hypot(mode.k_lat, k_trace))
+            gamma[i] = mode.gamma
+            spring[i] = mode.omega**2 * (1.0 + 1j * eta) - omega**2
+        # Loading of q_k on mode i:
+        #   δ_ik jω Z_lat / μ  +  jω γ_i γ_k / A (Z_piston − Z_lat,k)
+        matrix = np.diag(spring + 1j * omega * z_lat / mu)
+        matrix += (1j * omega / system.area) * np.outer(gamma, gamma * (z_piston - z_lat))
+        try:
+            amplitudes = np.linalg.solve(matrix, gamma)
+        except np.linalg.LinAlgError:
+            amplitudes = np.linalg.lstsq(matrix, gamma, rcond=None)[0]
+        total = 1j * omega * np.dot(gamma, amplitudes) / system.area
     if system.tail > 0.0:
-        z_cav = cavity.impedance(freq, abs(k_trace))
+        z_cav = cavity.impedance(freq, k_trace)
         limp = 1j * omega * mu + z_cav
         if abs(limp) > 1e-18:
             total += system.tail / limp
-    return total
+    return complex(total)
 
 
 def _alpha_from_admittance(admittance: complex, theta: float) -> float:

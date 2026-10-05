@@ -1,18 +1,25 @@
-Fixed wool on every row: kitchen 130.5 mm wool, 47 mm air, living 437.5 mm wool, 0 mm air. Sides, the rake, and the bottom line are simply supported. Studs sit on both edges and the bays between them are equal. 1000 horizontal is at the top of normal finished-wall spacing. The even split is the nearest equal bay, which lands past 1000 mm. Hairline cracks at the joints are a risk.
+Fixed wool on every row: kitchen 130.5 mm wool, 47 mm air, living 437.5 mm wool, 0 mm air. Sides, the rake, and the bottom line are simply supported. 625 vertical is a stock 625 mm module from the left edge plus one make-up bay. 1000 horizontal keeps equal bays, with boards cut to two bays. 1000 horizontal is at the top of normal finished-wall spacing. Hairline cracks at the joints are a risk.
 code  kitchen / living                            31.5 s    63 s   125 s    kit peak    liv peak
-C     625 vertical / 625 vertical                   1.96    0.97    0.70        61 Hz        72 Hz
-      change from the previous run                 +0.03   +0.03   -0.00        +4 Hz       +13 Hz
-C     1000 horizontal / 1000 horizontal             1.59    1.15    0.67        19 Hz        37 Hz
-      change from the previous run                 +0.13   +0.05   +0.01        -3 Hz       +13 Hz
-A     625 vertical / 1000 horizontal                1.63    1.04    0.69        61 Hz        37 Hz
-      no previous run
-B     1000 horizontal / 625 vertical                1.91    1.07    0.68        19 Hz        72 Hz
-      no previous run
-The previous run had free edges, a 90 mm inset, and a 170 mm closer. Its room times above are at this same wool. Its living peaks were at 300 mm of wool, so the living-peak change mixes the full fill with the new edges.
+C     625 vertical / 625 vertical                   1.95    0.93    0.69        51 Hz        70 Hz
+      change from the previous run                 -0.01   -0.04   -0.01       -10 Hz        -2 Hz
+C     1000 horizontal / 1000 horizontal             1.47    1.13    0.66        37 Hz        40 Hz
+      change from the previous run                 -0.12   -0.02   -0.01       +18 Hz        +3 Hz
+A     625 vertical / 1000 horizontal                1.64    1.00    0.68        51 Hz        40 Hz
+      change from the previous run                 +0.01   -0.04   -0.01       -10 Hz        +3 Hz
+B     1000 horizontal / 625 vertical                1.71    1.05    0.67        37 Hz        70 Hz
+      change from the previous run                 -0.20   -0.02   -0.01       +18 Hz        -2 Hz
+The previous run gave every mode one high lateral wavenumber, so the air spring did not depend on depth. Its 625 bays were equal 594 mm fields. 1000 horizontal was already 1070 mm. The wool is the same.
+A is kitchen 625 vertical with living 1000 horizontal. B is kitchen 1000 horizontal with living 625 vertical. At 31.5 Hz, A is lower (1.64 s against 1.71 s); at 63 Hz, A is lower (1.00 s against 1.05 s); at 125 Hz the two pairings are within 0.02 s. Living first peak 40 Hz on A and 70 Hz on B. Option A still holds: the subwoofer sits in the living-room corner, under the living trap, and A is the lower decay at 31.5 Hz. The average of the three bands is not the decision.
+Depth check, same lattice, first peak:
+625 vertical: air 190 mm 68 Hz, air 450 mm 57 Hz; wool 190 mm 72 Hz, wool 450 mm 68 Hz.
+1000 horizontal: air 190 mm 40 Hz, air 450 mm 34 Hz; wool 190 mm 46 Hz, wool 450 mm 40 Hz.
+On pure air, 190 to 450 mm moves 625 vertical by 11 Hz. Swapping to 1000 horizontal at 190 mm moves it by 28 Hz. The lattice moves the first peak more than the depth does.
+On 625 vertical the wool grid still fills the living cavity.
+On 1000 horizontal the wool grid prefers 328.1 mm wool, 109.4 mm air on the living gable, not a full cavity. With that lattice on both gables the room at 31.5 Hz is 1.47 s when the living cavity is full and 1.33 s at the grid's pick.
 
-On the living gable, with the cavity full of wool, 1000 horizontal still absorbs more at 31.5 Hz (0.44) than 625 vertical (0.05). The 31.5 Hz benefit survives the full fill. The sideways path is through the wool (12000 Pa·s/m²), not through an open air gap. The same shapes on an open air cavity of that depth, which is not the build, would absorb 0.06 (1000 horizontal) and 0.01 (625 vertical). The kitchen still has 47 mm of air behind the leaf, so that gable can still move air sideways through the clearance. Its 31.5 Hz absorption is 0.06 on 1000 horizontal and 0.01 on 625 vertical.
+On the living gable, with the cavity full of wool, 1000 horizontal still absorbs more at 31.5 Hz (0.41) than 625 vertical (0.06). The 31.5 Hz benefit survives the full fill. The sideways path is through the wool (12000 Pa·s/m²), not through an open air gap. The same shapes on an open air cavity of that depth, which is not the build, would absorb 0.05 (1000 horizontal) and 0.00 (625 vertical). The kitchen still has 47 mm of air behind the leaf, so that gable can still move air sideways through the clearance. Its 31.5 Hz absorption is 0.28 on 1000 horizontal and 0.01 on 625 vertical.
 
-The gable boards are one 12.5 mm plasterboard, taped and skimmed, screwed to CD studs. The old estimate treated each board as a loose sheet in front of the wool. This one lets the board bend between the studs. A smaller field is stiffer, so its note sits higher. The air behind an open stud can slide sideways, so a field pinned on the CDs does not keep the full air spring of a loose sheet. A wide field can therefore sit below the loose-sheet note, and a close field can sit above it.
+The gable boards are one 12.5 mm plasterboard, taped and skimmed, screwed to CD studs. The old estimate treated each board as a loose sheet in front of the wool. This one lets the board bend between the studs. A smaller field is stiffer, so its note sits higher. The air behind an open stud can slide sideways. The uniform part of the same field still sees the full depth of the cavity, so a deeper gable sits lower. Only the ripple of the shape slides sideways and loses the air spring.
 
 Room volume 222 m³. Areas: slopes 71.0 m², soffit 11.8 m², each gable trap 8.8 m², glass 23.8 m², plaster 35.2 m², floor 54.4 m², cabinet front 25.6 m². Both gables use the same outline. The kitchen předstěna is 190 mm deep and the living one is 450 mm deep.
 
@@ -20,9 +27,9 @@ Board: E = 2.5 GPa, Poisson 0.25, loss factor 0.015, 10.0 kg/m². Poisson betwee
 
 Length axials Y1 15.5 Hz, Y2 30.9 Hz, Y3 46.4 Hz, X1 32.1 Hz. These use the full plan dimensions and are marks on the curves, not a wave solution.
 
-625 vertical: 1250×2000 boards stood vertical, long joints on every second CD. 10 vertical CDs, 1 horizontal rail, 13 fields (1 rectangles, 12 cut by the roof or the perimeter). Field area 8.78 m², of which 7.60 m² is cut. Widths 235–594 mm, heights 197–2000 mm. A profile on both edges, then 9 equal bays of 594 mm (target 625 mm). Sides, the rake, and the bottom line are simply supported. The 2–5 mm bead sits outside that screw line. Horizontal rails sit 2000 mm above the bottom screw line. Size groups (short side × long side, counting the cut outline): 4× about 600×2000 mm (4.68 m²); 1× about 600×1800 mm (0.93 m²); 1× about 600×1700 mm (0.86 m²); 1× about 600×1300 mm (0.64 m²); 1× about 600×1200 mm (0.56 m²); 1× about 600×800 mm (0.43 m²).
+625 vertical: 1250×2000 boards stood vertical, joints on every second CD, one make-up bay at the far edge. 10 vertical CDs, 1 horizontal rail, 13 fields (2 rectangles, 11 cut by the roof or the perimeter). Field area 8.78 m², of which 7.29 m² is cut. Widths 226–625 mm, heights 190–2000 mm. Studs every 625 mm from the left edge (8 bays), then one make-up bay of 350 mm at the far edge. Stock 1250 mm boards land their joints on those studs. Sides, the rake, and the bottom line are simply supported. The 2–5 mm bead sits outside that screw line. Horizontal rails sit 2000 mm above the bottom screw line. Size groups (short side × long side, counting the cut outline): 4× about 600×2000 mm (4.90 m²); 1× about 600×1750 mm (0.93 m²); 1× about 600×1650 mm (0.88 m²); 1× about 600×1200 mm (0.60 m²); 1× about 600×1150 mm (0.55 m²); 1× about 600×750 mm (0.33 m²).
 
-1000 horizontal: 2000 edge horizontal, CD at 1000 mm, a rail under every 1250 mm joint. 6 vertical CDs, 2 horizontal rails, 10 fields (1 rectangles, 9 cut by the roof or the perimeter). Field area 8.78 m², of which 7.45 m² is cut. Widths 415–1070 mm, heights 256–1250 mm. A profile on both edges, then 5 equal bays of 1070 mm (target 1000 mm). Sides, the rake, and the bottom line are simply supported. The 2–5 mm bead sits outside that screw line. This spacing is at the top of a normal finished wall. Hairline cracks at the joints are a risk. Horizontal rails sit 1250 mm, 2500 mm above the bottom screw line. Size groups (short side × long side, counting the cut outline): 6× about 1050×1250 mm (7.27 m²); 1× about 1050×1200 mm (0.91 m²); 1× about 850×1050 mm (0.45 m²); 1× about 250×600 mm (0.08 m²); 1× about 350×400 mm (0.07 m²).
+1000 horizontal: 1250×2500 boards cut to two bays, joints on the studs. 6 vertical CDs, 2 horizontal rails, 10 fields (1 rectangles, 9 cut by the roof or the perimeter). Field area 8.78 m², of which 7.45 m² is cut. Widths 415–1070 mm, heights 256–1250 mm. A profile on both edges, then 5 equal bays of 1070 mm (target 1000 mm). Boards are 1250×2500 cut to 2140 mm, two bays each, so the joints fall on studs. The offcut is waste. This spacing is at the top of a normal finished wall. Hairline cracks at the joints are a risk. Sides, the rake, and the bottom line are simply supported. The 2–5 mm bead sits outside that screw line. Horizontal rails sit 1250 mm, 2500 mm above the bottom screw line. Size groups (short side × long side, counting the cut outline): 6× about 1050×1250 mm (7.27 m²); 1× about 1050×1200 mm (0.91 m²); 1× about 850×1050 mm (0.45 m²); 1× about 250×600 mm (0.08 m²); 1× about 350×400 mm (0.07 m²).
 
 Loose sheet, bending stiffness removed: kitchen reactance zero 40 Hz (closed form if the wool were transparent air, 45 Hz); living reactance zero 28 Hz (transparent-air closed form 29 Hz). A very large bay with the stiffness removed falls back on these notes. That is the check that the plate model still contains the old limp sheet.
 
@@ -30,77 +37,77 @@ Kitchen gable, 190 mm. As built: 130.5 mm wool, 47 mm air. The air gap stays at 
 
 Living gable, 450 mm. As built: 300 mm wool, 137.5 mm air. This cavity can be empty or full; the 20 mm clearance does not bind here.
 
-625 vertical. Kitchen first peak about 61 Hz, third-octave high points 63 Hz (0.36). Kitchen band absorption at the as-built wool: 31.5 Hz 0.01, 63 Hz 0.36, 125 Hz 0.03. Living first peak about 61 Hz, third-octave high points 63 Hz (0.27). Living band absorption at the as-built wool: 31.5 Hz 0.01, 63 Hz 0.27, 125 Hz 0.03.
+625 vertical. Kitchen first peak about 51 Hz, third-octave high points 63 Hz (0.49). Kitchen band absorption at the as-built wool: 31.5 Hz 0.01, 63 Hz 0.49, 125 Hz 0.05. Living first peak about 57 Hz, third-octave high points 63 Hz (0.59). Living band absorption at the as-built wool: 31.5 Hz 0.03, 63 Hz 0.59, 125 Hz 0.04.
 
 625 vertical wool on the grid: kitchen 130.5 mm wool, 47 mm air, living 437.5 mm wool, 0 mm air. That pair has the lowest average room decay at 31.5, 63 and 125 Hz.
 
-Moving 625 vertical off the as-built wool changes the room by 31.5 Hz -0.047 s (-2.3%); 63 Hz -0.052 s (-5.1%, audible); 125 Hz -0.008 s (-1.2%).
+Moving 625 vertical off the as-built wool stays inside 5% at 31.5, 63 and 125 Hz (31.5 Hz -0.030 s (-1.5%); 63 Hz +0.023 s (+2.5%); 125 Hz -0.005 s (-0.8%)). The thickness is not worth changing for the decay time.
 
 625 vertical: the kitchen wool in that pair sits on the 20 mm clearance, which is as much wool as this gable can take.
 
-625 vertical at the as-built wool, against the loose sheet: 31.5 Hz +0.803 s (+66.7%, audible); 63 Hz -0.073 s (-6.6%, audible); 125 Hz -0.000 s (-0.1%).
+625 vertical at the as-built wool, against the loose sheet: 31.5 Hz +0.774 s (+64.3%, audible); 63 Hz -0.192 s (-17.5%, audible); 125 Hz -0.006 s (-0.8%).
 
-625 vertical at its best wool, against the loose sheet: 31.5 Hz +0.756 s (+62.8%, audible); 63 Hz -0.125 s (-11.4%, audible); 125 Hz -0.009 s (-1.2%).
+625 vertical at its best wool, against the loose sheet: 31.5 Hz +0.744 s (+61.8%, audible); 63 Hz -0.169 s (-15.4%, audible); 125 Hz -0.011 s (-1.6%).
 
-1000 horizontal. Kitchen first peak about 19 Hz, third-octave high points 80 Hz (0.14), 125 Hz (0.17). Kitchen band absorption at the as-built wool: 31.5 Hz 0.06, 63 Hz 0.03, 125 Hz 0.17. Living first peak about 21 Hz, third-octave high points 125 Hz (0.21). Living band absorption at the as-built wool: 31.5 Hz 0.06, 63 Hz 0.02, 125 Hz 0.21.
+1000 horizontal. Kitchen first peak about 37 Hz, third-octave high points 40 Hz (0.55), 80 Hz (0.15), 125 Hz (0.22). Kitchen band absorption at the as-built wool: 31.5 Hz 0.28, 63 Hz 0.06, 125 Hz 0.22. Living first peak about 32 Hz, third-octave high points 31.5 Hz (0.66), 80 Hz (0.12), 125 Hz (0.21). Living band absorption at the as-built wool: 31.5 Hz 0.66, 63 Hz 0.06, 125 Hz 0.21.
 
-1000 horizontal wool on the grid: kitchen 130.5 mm wool, 47 mm air, living 437.5 mm wool, 0 mm air. That pair has the lowest average room decay at 31.5, 63 and 125 Hz.
+1000 horizontal wool on the grid: kitchen 130.5 mm wool, 47 mm air, living 328.1 mm wool, 109.4 mm air. That pair has the lowest average room decay at 31.5, 63 and 125 Hz.
 
-Moving 1000 horizontal off the as-built wool changes the room by 31.5 Hz -0.308 s (-16.2%, audible); 63 Hz -0.083 s (-6.8%, audible); 125 Hz +0.010 s (+1.5%).
+Moving 1000 horizontal off the as-built wool stays inside 5% at 31.5, 63 and 125 Hz (31.5 Hz -0.002 s (-0.1%); 63 Hz -0.002 s (-0.1%); 125 Hz -0.000 s (-0.1%)). The thickness is not worth changing for the decay time.
 
 1000 horizontal: the kitchen wool in that pair sits on the 20 mm clearance, which is as much wool as this gable can take.
 
-1000 horizontal at the as-built wool, against the loose sheet: 31.5 Hz +0.695 s (+57.7%, audible); 63 Hz +0.134 s (+12.3%, audible); 125 Hz -0.046 s (-6.6%, audible).
+1000 horizontal at the as-built wool, against the loose sheet: 31.5 Hz +0.130 s (+10.8%, audible); 63 Hz +0.104 s (+9.4%, audible); 125 Hz -0.052 s (-7.4%, audible).
 
-1000 horizontal at its best wool, against the loose sheet: 31.5 Hz +0.387 s (+32.1%, audible); 63 Hz +0.051 s (+4.7%); 125 Hz -0.036 s (-5.2%, audible).
+1000 horizontal at its best wool, against the loose sheet: 31.5 Hz +0.129 s (+10.7%, audible); 63 Hz +0.102 s (+9.3%, audible); 125 Hz -0.052 s (-7.4%, audible).
 
 The loose-sheet room decay at the band centre (the old single-frequency average) is 31.5 Hz 1.20 s, 63 Hz 1.10 s, 125 Hz 0.71 s. Comparisons above use a third-octave average on both the loose sheet and the studded board, with the same 16 angles, so a narrow peak is not a single-bin spike. The loose sheet is the previous calculation of this same wall, not a way to build the předstěna without studs. Where a lattice is slower than that loose sheet, the old number was optimistic in that band.
 
 Lattices at their best wool, room decay:
 
-31.5 Hz: 625 vertical 1.96 s, 1000 horizontal 1.59 s. 1000 horizontal is lower by 0.369 s (18.8%, past 5%).
+31.5 Hz: 625 vertical 1.95 s, 1000 horizontal 1.33 s. 1000 horizontal is lower by 0.615 s (31.6%, past 5%).
 
-63 Hz: 625 vertical 0.97 s, 1000 horizontal 1.15 s. 625 vertical is lower by 0.176 s (15.4%, past 5%).
+63 Hz: 625 vertical 0.93 s, 1000 horizontal 1.20 s. 625 vertical is lower by 0.270 s (22.6%, past 5%).
 
-125 Hz: 625 vertical 0.70 s, 1000 horizontal 0.67 s. 1000 horizontal is lower by 0.028 s (4.0%, inside 5%).
+125 Hz: 625 vertical 0.69 s, 1000 horizontal 0.65 s. 1000 horizontal is lower by 0.041 s (6.0%, past 5%).
 
 The same comparison with the wool left at the as-built thickness:
 
-31.5 Hz: 625 vertical 2.01 s, 1000 horizontal 1.90 s. 1000 horizontal is lower by 0.108 s (5.4%, past 5%).
+31.5 Hz: 625 vertical 1.98 s, 1000 horizontal 1.33 s. 1000 horizontal is lower by 0.643 s (32.5%, past 5%).
 
-63 Hz: 625 vertical 1.02 s, 1000 horizontal 1.23 s. 625 vertical is lower by 0.207 s (16.8%, past 5%).
+63 Hz: 625 vertical 0.91 s, 1000 horizontal 1.20 s. 625 vertical is lower by 0.295 s (24.6%, past 5%).
 
-125 Hz: 625 vertical 0.70 s, 1000 horizontal 0.66 s. 1000 horizontal is lower by 0.046 s (6.5%, past 5%).
+125 Hz: 625 vertical 0.70 s, 1000 horizontal 0.65 s. 1000 horizontal is lower by 0.046 s (6.6%, past 5%).
 
-The lattice difference clears 5% in 31.5 Hz, 63 Hz. Where the bands point at different lattices, each note wants a different field size; the average across 31.5, 63 and 125 Hz is only a summary. That average picks 1000 horizontal. A bass FEM is not required to see this gap. It is the tool for a spacing or a cut field this model only sketches.
+The lattice difference clears 5% in 31.5 Hz, 63 Hz, 125 Hz. Where the bands point at different lattices, each note wants a different field size; the average across 31.5, 63 and 125 Hz is only a summary. That average picks 1000 horizontal. A bass FEM is not required to see this gap. It is the tool for a spacing or a cut field this model only sketches.
 
-In short. 625 vertical near 61 Hz on the kitchen gable and 61 Hz on the living gable; 1000 horizontal near 19 Hz on the kitchen gable and 21 Hz on the living gable. A smaller field sits higher. That is the stud spacing doing its job. Past 5%: at 31.5 Hz, 1000 horizontal is the lower decay; at 63 Hz, 625 vertical is the lower decay. The average of the three bands picks 1000 horizontal. That average is a summary. A band you care about can point the other way. Best wool is the same for both lattices: kitchen 130.5 mm wool, 47 mm air, living 437.5 mm wool, 0 mm air.
+In short. 625 vertical near 51 Hz on the kitchen gable and 57 Hz on the living gable; 1000 horizontal near 37 Hz on the kitchen gable and 32 Hz on the living gable. Past 5%: at 31.5 Hz, 1000 horizontal is the lower decay; at 63 Hz, 625 vertical is the lower decay; at 125 Hz, 1000 horizontal is the lower decay. The average of the three bands picks 1000 horizontal. That average is a summary. A band you care about can point the other way. Best wool for 625 vertical: kitchen 130.5 mm wool, 47 mm air, living 437.5 mm wool, 0 mm air. Best wool for 1000 horizontal: kitchen 130.5 mm wool, 47 mm air, living 328.1 mm wool, 109.4 mm air.
 
 Half and double the wood-fibre resistivity move the slopes and the soffit. Those surfaces are the same for every lattice, so they do not change which lattice wins or which wool split is best. Mineral-wool resistivity is in the cases below, together with the plate.
 
 Sensitivity, judged by the average decay at 31.5, 63 and 125 Hz. Baseline winner: 1000 horizontal.
 
-half plate stiffness: 1000 horizontal (same winner). Mean decay 625 vertical 1.175 s, 1000 horizontal 1.116 s. Best wool 625 vertical kitchen 0 mm, living 437.5 mm, 1000 horizontal kitchen 130.5 mm, living 437.5 mm. Best wool moves: 625 vertical kitchen wool fraction 0.74 → 0.00. Mean decay of the lattices is past 5%.
+half plate stiffness: 1000 horizontal (same winner). Mean decay 625 vertical 1.157 s, 1000 horizontal 1.006 s. Best wool 625 vertical kitchen 130.5 mm, living 437.5 mm, 1000 horizontal kitchen 130.5 mm, living 328.1 mm. Best wool split stays on the same grid step. Mean decay of the lattices is past 5%.
 
-double plate stiffness: 1000 horizontal (same winner). Mean decay 625 vertical 1.289 s, 1000 horizontal 1.136 s. Best wool 625 vertical kitchen 130.5 mm, living 437.5 mm, 1000 horizontal kitchen 130.5 mm, living 437.5 mm. Best wool split stays on the same grid step. Mean decay of the lattices is past 5%.
+double plate stiffness: 1000 horizontal (same winner). Mean decay 625 vertical 1.283 s, 1000 horizontal 1.158 s. Best wool 625 vertical kitchen 130.5 mm, living 437.5 mm, 1000 horizontal kitchen 130.5 mm, living 437.5 mm. Best wool moves: 1000 horizontal living wool fraction 0.75 → 1.00. Mean decay of the lattices is past 5%.
 
-low loss factor: 1000 horizontal (same winner). Mean decay 625 vertical 1.221 s, 1000 horizontal 1.142 s. Best wool 625 vertical kitchen 130.5 mm, living 437.5 mm, 1000 horizontal kitchen 130.5 mm, living 437.5 mm. Best wool split stays on the same grid step. Mean decay of the lattices is past 5%.
+low loss factor: 1000 horizontal (same winner). Mean decay 625 vertical 1.193 s, 1000 horizontal 1.063 s. Best wool 625 vertical kitchen 130.5 mm, living 437.5 mm, 1000 horizontal kitchen 130.5 mm, living 328.1 mm. Best wool split stays on the same grid step. Mean decay of the lattices is past 5%.
 
-high loss factor: 1000 horizontal (same winner). Mean decay 625 vertical 1.197 s, 1000 horizontal 1.128 s. Best wool 625 vertical kitchen 130.5 mm, living 437.5 mm, 1000 horizontal kitchen 130.5 mm, living 437.5 mm. Best wool split stays on the same grid step. Mean decay of the lattices is past 5%.
+high loss factor: 1000 horizontal (same winner). Mean decay 625 vertical 1.186 s, 1000 horizontal 1.059 s. Best wool 625 vertical kitchen 130.5 mm, living 437.5 mm, 1000 horizontal kitchen 130.5 mm, living 328.1 mm. Best wool split stays on the same grid step. Mean decay of the lattices is past 5%.
 
-half wool resistivity: 1000 horizontal (same winner). Mean decay 625 vertical 1.201 s, 1000 horizontal 1.113 s. Best wool 625 vertical kitchen 130.5 mm, living 437.5 mm, 1000 horizontal kitchen 130.5 mm, living 437.5 mm. Best wool split stays on the same grid step. Mean decay of the lattices is past 5%.
+half wool resistivity: 1000 horizontal (same winner). Mean decay 625 vertical 1.189 s, 1000 horizontal 1.071 s. Best wool 625 vertical kitchen 130.5 mm, living 437.5 mm, 1000 horizontal kitchen 130.5 mm, living 437.5 mm. Best wool moves: 1000 horizontal living wool fraction 0.75 → 1.00. Mean decay of the lattices is past 5%.
 
-double wool resistivity: 1000 horizontal (same winner). Mean decay 625 vertical 1.222 s, 1000 horizontal 1.165 s. Best wool 625 vertical kitchen 130.5 mm, living 437.5 mm, 1000 horizontal kitchen 0 mm, living 437.5 mm. Best wool moves: 1000 horizontal kitchen wool fraction 0.74 → 0.00. Mean decay of the lattices is inside 5%.
+double wool resistivity: 1000 horizontal (same winner). Mean decay 625 vertical 1.187 s, 1000 horizontal 1.062 s. Best wool 625 vertical kitchen 130.5 mm, living 328.1 mm, 1000 horizontal kitchen 130.5 mm, living 218.8 mm. Best wool moves: 625 vertical living wool fraction 1.00 → 0.75; 1000 horizontal living wool fraction 0.75 → 0.50. Mean decay of the lattices is past 5%.
 
-independent bays: 625 vertical (flips the winner). The two averages stay inside 5%, so this change of name is not a result to build on. Mean decay 625 vertical 1.083 s, 1000 horizontal 1.100 s. Best wool 625 vertical kitchen 130.5 mm, living 437.5 mm, 1000 horizontal kitchen 0 mm, living 437.5 mm. Best wool moves: 1000 horizontal kitchen wool fraction 0.74 → 0.00. Mean decay of the lattices is inside 5%.
+independent bays: 1000 horizontal (same winner). Mean decay 625 vertical 1.083 s, 1000 horizontal 0.993 s. Best wool 625 vertical kitchen 130.5 mm, living 328.1 mm, 1000 horizontal kitchen 130.5 mm, living 328.1 mm. Best wool moves: 625 vertical living wool fraction 1.00 → 0.75. Mean decay of the lattices is past 5%.
 
-elastic CD flange: 625 vertical (flips the winner). The two averages stay inside 5%, so this change of name is not a result to build on. Mean decay 625 vertical 1.085 s, 1000 horizontal 1.101 s. Best wool 625 vertical kitchen 130.5 mm, living 437.5 mm, 1000 horizontal kitchen 130.5 mm, living 437.5 mm. Best wool split stays on the same grid step. Mean decay of the lattices is inside 5%.
+elastic CD flange: 1000 horizontal (same winner). Mean decay 625 vertical 1.096 s, 1000 horizontal 1.002 s. Best wool 625 vertical kitchen 130.5 mm, living 437.5 mm, 1000 horizontal kitchen 130.5 mm, living 328.1 mm. Best wool split stays on the same grid step. Mean decay of the lattices is past 5%.
 
-light board: 1000 horizontal (same winner). Mean decay 625 vertical 1.235 s, 1000 horizontal 1.119 s. Best wool 625 vertical kitchen 130.5 mm, living 437.5 mm, 1000 horizontal kitchen 130.5 mm, living 437.5 mm. Best wool split stays on the same grid step. Mean decay of the lattices is past 5%.
+light board: 1000 horizontal (same winner). Mean decay 625 vertical 1.220 s, 1000 horizontal 1.090 s. Best wool 625 vertical kitchen 130.5 mm, living 437.5 mm, 1000 horizontal kitchen 130.5 mm, living 328.1 mm. Best wool split stays on the same grid step. Mean decay of the lattices is past 5%.
 
-heavy board: 1000 horizontal (same winner). Mean decay 625 vertical 1.207 s, 1000 horizontal 1.150 s. Best wool 625 vertical kitchen 130.5 mm, living 437.5 mm, 1000 horizontal kitchen 130.5 mm, living 437.5 mm. Best wool split stays on the same grid step. Mean decay of the lattices is inside 5%.
+heavy board: 1000 horizontal (same winner). Mean decay 625 vertical 1.183 s, 1000 horizontal 1.061 s. Best wool 625 vertical kitchen 130.5 mm, living 437.5 mm, 1000 horizontal kitchen 130.5 mm, living 328.1 mm. Best wool split stays on the same grid step. Mean decay of the lattices is past 5%.
 
-These cases change which lattice has the lower average, and the two averages stay inside 5%, so the new name is not a result to build on: independent bays; elastic CD flange. A measurement would be the way to settle that edge detail.
+No sensitivity case flips the winner.
 
 Slopes: NaturHeld 140, 80 mm, with StoSilent 2+2 mm, screwed through the GKF into the CD. No slope latě and no NaturHeld Flex. Soffit side and bottom are NaturHeld 140, 40 mm; the cavity behind that face is mineral wool, stopped short of the ducts. Loose-sheet room decay at the band centre: 125 Hz 0.71 s, 500 Hz 0.36 s.
 

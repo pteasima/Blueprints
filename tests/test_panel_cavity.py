@@ -161,8 +161,8 @@ def test_gable_stud_spacing_moves_the_kitchen_peak():
     assert peaks["625 vertical"] > peaks["1000 horizontal"] + 10.0
 
 
-def test_even_studs_and_supported_perimeter_are_the_default():
-    """A profile on both edges, equal bays, and no free strip along the outline."""
+def test_buildable_studs_keep_a_supported_perimeter():
+    """625 is a stock module plus one make-up bay. 1000 stays equal. Edges are screwed."""
     ObyvakParams, _, build_layout = _models()
     params = ObyvakParams()
     outline = build_layout(params).predstena_pts()
@@ -170,26 +170,17 @@ def test_even_studs_and_supported_perimeter_are_the_default():
     x_right = max(x for x, _ in outline)
     width = x_right - x_left
     z_bottom = min(z for _, z in outline)
+    by_name = {spec.name: spec for spec in CANDIDATES}
+    assert by_name["625 vertical"].studs == "makeup"
+    assert by_name["1000 horizontal"].studs == "even"
     for spec in CANDIDATES:
-        assert spec.studs == "even"
         assert spec.perimeter == "supported"
         layout = layout_gable(outline, spec, inset_mm=params.cd_first_inset)
         stations = [x - x_left for x in layout.cd_x_mm]
         assert stations[0] == pytest_approx(0.0)
         assert stations[-1] == pytest_approx(width)
         gaps = [b - a for a, b in zip(stations, stations[1:])]
-        n_bays = max(1, round(width / spec.cd_spacing_mm))
-        assert len(gaps) == n_bays
-        step = width / n_bays
-        assert all(abs(gap - step) < 0.5 for gap in gaps)
-        assert any(f"{n_bays} equal bays of {step:.0f} mm" in note for note in layout.notes)
-        # The old 90 mm start and the short closer are gone.
-        assert min(gaps) > 400.0
-        bottom = [
-            bay
-            for bay in layout.bays
-            if abs(bay.z0 * 1000.0 - z_bottom) < 2.0
-        ]
+        bottom = [bay for bay in layout.bays if abs(bay.z0 * 1000.0 - z_bottom) < 2.0]
         assert bottom
         assert all(bay.bottom == "perimeter" for bay in bottom)
         assert any(bay.left == "perimeter" for bay in bottom)
@@ -203,18 +194,32 @@ def test_even_studs_and_supported_perimeter_are_the_default():
         held = edge_bay.with_edge("continuous")
         assert held.left == "simple"
         assert held.bottom == "simple"
-        # A cut field still has a rake. Its outline edges are not a free strip.
-        cut = [bay for bay in layout.bays if bay.kind != "rectangle"]
-        assert cut
-        narrow_free = [
+        assert any(bay.kind != "rectangle" for bay in layout.bays)
+        assert not [
             bay
             for bay in layout.bays
-            if bay.span_x < 0.2
-            and bay.left == "free"
-            and bay.right == "free"
+            if bay.span_x < 0.2 and bay.left == "free" and bay.right == "free"
         ]
-        assert not narrow_free
-    text = " ".join(describe for spec in CANDIDATES for describe in layout_gable(outline, spec, inset_mm=params.cd_first_inset).notes)
+        if spec.name == "625 vertical":
+            assert all(abs(gap - 625.0) < 0.5 for gap in gaps[:-1])
+            makeup = width - 625.0 * (len(gaps) - 1)
+            assert abs(gaps[-1] - makeup) < 0.5
+            assert 300.0 < gaps[-1] < 400.0
+            assert any("make-up bay" in note for note in layout.notes)
+            # A 1250 mm board joint falls on a stud.
+            assert any(abs(station - 1250.0) < 0.5 for station in stations)
+        else:
+            n_bays = max(1, round(width / spec.cd_spacing_mm))
+            step = width / n_bays
+            assert len(gaps) == n_bays
+            assert all(abs(gap - step) < 0.5 for gap in gaps)
+            assert any(f"cut to {2 * step:.0f} mm" in note for note in layout.notes)
+            assert any("waste" in note for note in layout.notes)
+    text = " ".join(
+        note
+        for spec in CANDIDATES
+        for note in layout_gable(outline, spec, inset_mm=params.cd_first_inset).notes
+    )
     assert "simply supported" in text
     assert "Hairline cracks" in text
 
@@ -281,3 +286,56 @@ def test_depth_sensitivity_beats_lattice_on_air_cavity():
     depth_delta = abs(p_625_shallow - p_625_deep)
     lattice_delta = abs(p_625_shallow - p_1000_shallow)
     assert depth_delta >= lattice_delta - 1.0, (depth_delta, lattice_delta, p_625_shallow, p_625_deep, p_1000_shallow)
+
+
+def test_wool_depth_lowers_the_peak_at_fixed_bay():
+    """Full wool, like open air, must still move the peak when the cavity gets deeper."""
+    plate = Plate(edge="simple")
+    sigma = Resistivity().mineral_wool
+    for width, height in ((0.625, 2.0), (1.07, 1.25)):
+        system = analytic_ss_system(width, height, plate.flexural_rigidity, plate.mu, m_max=7)
+        shallow = first_absorption_peak_hz(
+            (system,), plate, Cavity(0.0, 0.19, sigma), f_lo=12.0, f_hi=140.0, n=80
+        )
+        deep = first_absorption_peak_hz(
+            (system,), plate, Cavity(0.0, 0.45, sigma), f_lo=12.0, f_hi=140.0, n=80
+        )
+        assert deep < shallow - 3.0, (width, height, shallow, deep)
+
+
+def test_soft_modal_path_meets_the_limp_mass_air_note():
+    """Stiffness removed, tail off: the modes themselves carry the air spring."""
+    geom = room_geometry()
+    res = Resistivity()
+    plate = Plate(e_pa=0.0, eta=0.0)
+    system = analytic_ss_system(4.0, 4.0, 0.0, plate.mu, m_max=11, tail=False)
+    assert system.tail == 0.0
+    for cavity_m, fraction in (
+        (geom.kitchen_cavity, geom.kitchen_wool_fraction),
+        (geom.living_cavity, geom.living_wool_fraction),
+    ):
+        wool, air = _split(cavity_m, fraction)
+        limp = reactance_zero_hz(trap_stack(wool, air, geom.gkb_mass, res.mineral_wool))
+        found = normal_reactance_zero_hz(system, plate, Cavity(air, wool, res.mineral_wool))
+        assert limp is not None and found is not None
+        assert abs(found - limp) < 3.0, (limp, found)
+
+
+def test_stiff_peak_stays_near_the_mass_air_limit():
+    """A pinned field is only partly a piston, so it can sit a little under the limp note.
+
+    About a third of the (1,1) modal mass is zero-mean ripple. That part does
+    not carry the depth spring, and the higher shapes are too stiff to fill
+    the uniform motion in. The shortfall on these two bays stays under 8 Hz.
+    The old bug ignored depth altogether.
+    """
+    plate = Plate(edge="simple")
+    res = Resistivity()
+    for width, height in ((0.625, 2.0), (1.07, 1.25)):
+        system = analytic_ss_system(width, height, plate.flexural_rigidity, plate.mu, m_max=7, tail=False)
+        for air, wool in ((0.19, 0.0), (0.45, 0.0), (0.0, 0.19), (0.0, 0.45)):
+            cavity = Cavity(air, wool, res.mineral_wool)
+            limp = reactance_zero_hz(trap_stack(wool, air, plate.mu, res.mineral_wool))
+            peak = first_absorption_peak_hz((system,), plate, cavity, f_lo=12.0, f_hi=160.0, n=80)
+            assert limp is not None
+            assert peak > limp - 8.0, (width, height, air, wool, peak, limp)
