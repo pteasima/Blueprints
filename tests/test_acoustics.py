@@ -166,6 +166,8 @@ def test_study_ranks_splits_and_states_the_fem_decision():
     assert "simply supported" in text
     assert "Hairline cracks" in text
     assert "31.5 Hz benefit" in text
+    assert "best living wool" in text
+    assert "hinges" in text
     assert "Slope Flex" not in text
     assert "flex-0" not in study.delta_t
     # Axials from the full plan size, as marks rather than a solved mode.

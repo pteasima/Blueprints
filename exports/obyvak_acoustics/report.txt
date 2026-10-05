@@ -1,4 +1,4 @@
-Fixed wool on every row: kitchen 130.5 mm wool, 47 mm air, living 437.5 mm wool, 0 mm air. Sides, the rake, and the bottom line are simply supported. 625 vertical is a stock 625 mm module from the left edge plus one make-up bay. 1000 horizontal keeps equal bays, with boards cut to two bays. 1000 horizontal is at the top of normal finished-wall spacing. Hairline cracks at the joints are a risk.
+The C, A and B rows are a full living cavity: kitchen 130.5 mm wool, 47 mm air, living 437.5 mm wool, 0 mm air. The extra A rows keep that kitchen wool and vary the living wool or the edge. Sides, the rake, and the bottom line are simply supported. 625 vertical is a stock 625 mm module from the left edge plus one make-up bay. 1000 horizontal keeps equal bays, with boards cut to two bays. 1000 horizontal is at the top of normal finished-wall spacing. Hairline cracks at the joints are a risk.
 code  kitchen / living                            31.5 s    63 s   125 s    kit peak    liv peak
 C     625 vertical / 625 vertical                   1.95    0.93    0.69        51 Hz        70 Hz
       change from the previous run                 -0.01   -0.04   -0.01       -10 Hz        -2 Hz
@@ -6,6 +6,12 @@ C     1000 horizontal / 1000 horizontal             1.47    1.13    0.66        
       change from the previous run                 -0.12   -0.02   -0.01       +18 Hz        +3 Hz
 A     625 vertical / 1000 horizontal                1.64    1.00    0.68        51 Hz        40 Hz
       change from the previous run                 +0.01   -0.04   -0.01       -10 Hz        +3 Hz
+      living 437.5 mm wool, 0 mm air. Kitchen wool stays 130.5 mm wool, 47 mm air.
+A     625 / 1000, best living wool                  1.48    1.05    0.67        51 Hz        32 Hz
+      living 328.1 mm wool, 109.4 mm air. Kitchen wool stays 130.5 mm wool, 47 mm air.
+A     625 / 1000, best wool, hinges                 1.39    1.07    0.70        32 Hz        27 Hz
+      living 328.1 mm wool, 109.4 mm air. Inner studs are hinges. The perimeter stays simply supported.
+Partial fill is worth it for A: 328.1 mm wool, 109.4 mm air on the living gable moves the room by 31.5 Hz -0.17 s against the full fill. Hinge edges, against that same wool, move the room by 31.5 Hz -0.09 s.
 B     1000 horizontal / 625 vertical                1.71    1.05    0.67        37 Hz        70 Hz
       change from the previous run                 -0.20   -0.02   -0.01       +18 Hz        -2 Hz
 The previous run gave every mode one high lateral wavenumber, so the air spring did not depend on depth. Its 625 bays were equal 594 mm fields. 1000 horizontal was already 1070 mm. The wool is the same.

@@ -901,6 +901,141 @@ _PREVIOUS_FIXED = {
 }
 
 
+def _best_living_for_kitchen(
+    kitchen_curve: dict[float, float],
+    living_family: dict[float, dict[float, float]],
+    geom: Geometry,
+    shared: dict[float, dict[str, float]],
+) -> float:
+    """Living fraction with the lowest mean decay when the kitchen curve is fixed."""
+    best_frac = next(iter(living_family))
+    best_mean = float("inf")
+    for frac, curve in living_family.items():
+        times = _times_for(kitchen_curve, curve, geom, shared, _ROOM_BANDS)
+        mean = _mean_t(times)
+        if mean < best_mean - 1e-9:
+            best_mean = mean
+            best_frac = frac
+    return best_frac
+
+
+def _audible_shift(before: dict[float, float], after: dict[float, float]) -> list[str]:
+    """Bands where the room decay moves by at least 5% of the longer time."""
+    moved = []
+    for freq in _ROOM_BANDS:
+        gap = after[freq] - before[freq]
+        ref = max(before[freq], after[freq], 0.05)
+        if abs(gap) >= 0.05 * ref:
+            moved.append(f"{_hz(freq)} Hz {gap:+.2f} s")
+    return moved
+
+
+def _option_a_followups(
+    runs: tuple[LatticeResult, ...],
+    systems: dict[str, tuple],
+    layouts: tuple,
+    plate: Plate,
+    geom: Geometry,
+    shared: dict[float, dict[str, float]],
+    kitchen_key: float,
+    living_full_key: float,
+    sigma: float,
+) -> dict[str, list[str] | str]:
+    """Best living wool for A, then the same fill with hinged inner studs."""
+    by_name = {run.name: run for run in runs}
+    if "625 vertical" not in by_name or "1000 horizontal" not in by_name:
+        return {"rows": [], "note": ""}
+    if "625 vertical" not in systems or "1000 horizontal" not in systems:
+        return {"rows": [], "note": ""}
+    kitchen = by_name["625 vertical"]
+    living = by_name["1000 horizontal"]
+    best_frac = _best_living_for_kitchen(
+        kitchen.kitchen_alpha[kitchen_key], living.living_alpha, geom, shared
+    )
+    _, best_wool, best_air = constrained_split(geom.living_cavity, best_frac, 0.0)
+    opt_times = _times_for(
+        kitchen.kitchen_alpha[kitchen_key],
+        living.living_alpha[best_frac],
+        geom,
+        shared,
+        _ROOM_BANDS,
+    )
+    full_times = _times_for(
+        kitchen.kitchen_alpha[kitchen_key],
+        living.living_alpha[living_full_key],
+        geom,
+        shared,
+        _ROOM_BANDS,
+    )
+    opt_living_peak = first_absorption_peak_hz(
+        systems["1000 horizontal"],
+        plate,
+        Cavity(best_air, best_wool, sigma),
+    )
+    hinge_plate = plate.with_changes(edge="simple")
+    layout_by_name = {layout.spec.name: layout for layout in layouts}
+    hinge_kitchen = _systems(layout_by_name["625 vertical"], hinge_plate)
+    hinge_living = _systems(layout_by_name["1000 horizontal"], hinge_plate)
+    k_wool = kitchen_key * geom.kitchen_cavity
+    k_air = geom.kitchen_cavity - k_wool
+    kitchen_cavity = Cavity(k_air, k_wool, sigma)
+    living_cavity = Cavity(best_air, best_wool, sigma)
+    hinge_k = {
+        freq: weighted_band_alpha(hinge_kitchen, freq, hinge_plate, kitchen_cavity)
+        for freq in _ROOM_BANDS
+    }
+    hinge_l = {
+        freq: weighted_band_alpha(hinge_living, freq, hinge_plate, living_cavity)
+        for freq in _ROOM_BANDS
+    }
+    hinge_times = _times_for(hinge_k, hinge_l, geom, shared, _ROOM_BANDS)
+    hinge_k_peak = first_absorption_peak_hz(hinge_kitchen, hinge_plate, kitchen_cavity)
+    hinge_l_peak = first_absorption_peak_hz(hinge_living, hinge_plate, living_cavity)
+    wool_text = _split_text(geom.living_cavity, best_frac)
+    rows = [
+        _a_row("A", "625 / 1000, best living wool", opt_times, kitchen.kitchen_peak_hz, opt_living_peak),
+        f"{'':6}living {wool_text}. Kitchen wool stays {_split_text(geom.kitchen_cavity, kitchen_key)}.",
+        _a_row("A", "625 / 1000, best wool, hinges", hinge_times, hinge_k_peak, hinge_l_peak),
+        f"{'':6}living {wool_text}. Inner studs are hinges. The perimeter stays simply supported.",
+    ]
+    wool_move = _audible_shift(full_times, opt_times)
+    edge_move = _audible_shift(opt_times, hinge_times)
+    if abs(best_frac - living_full_key) < 0.02:
+        wool_sentence = "Partial fill does not win for A. The grid still fills the living cavity."
+    elif not wool_move:
+        wool_sentence = (
+            f"The grid prefers {wool_text} on the living gable, and the room stays inside "
+            "5% of the full fill at 31.5, 63 and 125 Hz, so the partial fill is not worth changing."
+        )
+    else:
+        wool_sentence = (
+            f"Partial fill is worth it for A: {wool_text} on the living gable moves the room by "
+            + ", ".join(wool_move)
+            + " against the full fill."
+        )
+    if not edge_move:
+        edge_sentence = " Hinge edges stay inside 5% of the taped sheet at those three bands."
+    else:
+        edge_sentence = (
+            " Hinge edges, against that same wool, move the room by " + ", ".join(edge_move) + "."
+        )
+    return {"rows": rows, "note": wool_sentence + edge_sentence}
+
+
+def _a_row(
+    code: str,
+    label: str,
+    times: dict[float, float],
+    kitchen_peak: float,
+    living_peak: float,
+) -> str:
+    return (
+        f"{code:<6}{label:<42}"
+        f"{times[31.5]:8.2f}{times[63.0]:8.2f}{times[125.0]:8.2f}"
+        f"{kitchen_peak:10.0f} Hz{living_peak:10.0f} Hz"
+    )
+
+
 def _fixed_wool_table(
     runs: tuple[LatticeResult, ...],
     geom: Geometry,
@@ -908,6 +1043,7 @@ def _fixed_wool_table(
     kitchen_key: float,
     living_key: float,
     depth_peaks: dict[str, dict[str, float]] | None = None,
+    a_follow: dict | None = None,
 ) -> str:
     """Room decay at the fixed wool, including the two mixed gable pairings."""
     by_name = {run.name: run for run in runs}
@@ -922,9 +1058,10 @@ def _fixed_wool_table(
     )
     lines = [
         (
-            "Fixed wool on every row: kitchen "
+            "The C, A and B rows are a full living cavity: kitchen "
             f"{_split_text(geom.kitchen_cavity, kitchen_key)}, living "
             f"{_split_text(geom.living_cavity, living_key)}. "
+            "The extra A rows keep that kitchen wool and vary the living wool or the edge. "
             "Sides, the rake, and the bottom line are simply supported. "
             "625 vertical is a stock 625 mm module from the left edge plus one "
             "make-up bay. 1000 horizontal keeps equal bays, with boards cut to "
@@ -957,15 +1094,24 @@ def _fixed_wool_table(
         previous = _PREVIOUS_FIXED.get((kitchen_name, living_name))
         if previous is None:
             lines.append(f"{'':6}no previous run")
-            continue
-        lines.append(
-            f"{'':6}{'change from the previous run':<42}"
-            f"{times[31.5] - previous['t'][31.5]:+8.2f}"
-            f"{times[63.0] - previous['t'][63.0]:+8.2f}"
-            f"{times[125.0] - previous['t'][125.0]:+8.2f}"
-            f"{kitchen.kitchen_peak_hz - previous['kitchen_peak']:+10.0f} Hz"
-            f"{living.living_full_peak_hz - previous['living_peak']:+10.0f} Hz"
-        )
+        else:
+            lines.append(
+                f"{'':6}{'change from the previous run':<42}"
+                f"{times[31.5] - previous['t'][31.5]:+8.2f}"
+                f"{times[63.0] - previous['t'][63.0]:+8.2f}"
+                f"{times[125.0] - previous['t'][125.0]:+8.2f}"
+                f"{kitchen.kitchen_peak_hz - previous['kitchen_peak']:+10.0f} Hz"
+                f"{living.living_full_peak_hz - previous['living_peak']:+10.0f} Hz"
+            )
+        if code == "A":
+            lines.append(
+                f"{'':6}living {_split_text(geom.living_cavity, living_key)}. "
+                f"Kitchen wool stays {_split_text(geom.kitchen_cavity, kitchen_key)}."
+            )
+            if a_follow and a_follow.get("rows"):
+                lines.extend(a_follow["rows"])
+                if a_follow.get("note"):
+                    lines.append(str(a_follow["note"]))
     lines.append(
         "The previous run gave every mode one high lateral wavenumber, so the "
         "air spring did not depend on depth. Its 625 bays were equal 594 mm "
@@ -1645,8 +1791,10 @@ def run_study(
     results: list[LatticeResult] = []
     air_alphas: dict[str, float] = {}
     depth_peaks: dict[str, dict[str, float]] = {}
+    systems_by_name: dict[str, tuple] = {}
     for layout in layouts:
         systems = _systems(layout, plate)
+        systems_by_name[layout.spec.name] = systems
         kitchen = _alpha_family(
             systems, plate, geom.kitchen_cavity, k_min_air,
             k_fracs, res.mineral_wool, THIRDS, FIELD_ANGLES, BAND_SAMPLES,
@@ -1731,7 +1879,23 @@ def run_study(
         "slope_text": _slope_paragraph(p, centre_t),
         "volume_text": _volumes(geom, as_wool_k, as_wool_l),
         "fixed_table": _fixed_wool_table(
-            run_tuple, geom, shared, as_built_k, living_full_key, depth_peaks
+            run_tuple,
+            geom,
+            shared,
+            as_built_k,
+            living_full_key,
+            depth_peaks,
+            _option_a_followups(
+                run_tuple,
+                systems_by_name,
+                layouts,
+                plate,
+                geom,
+                shared,
+                as_built_k,
+                living_full_key,
+                res.mineral_wool,
+            ),
         ),
         "wool_path_text": _wool_path_text(
             run_tuple, air_alphas, as_built_k, living_full_key, res.mineral_wool
