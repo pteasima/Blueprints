@@ -16,12 +16,17 @@ from blueprints.acoustics.layers import (
 )
 from blueprints.acoustics.obyvak import (
     BASS_BANDS,
+    LIVING_WOOL_M,
     Resistivity,
+    _fractions_from_metres,
+    _kitchen_wool_metres,
     _split,
     axial_marks,
+    band_floors,
     eyring_t,
     room_geometry,
     run_study,
+    select_coverage,
     trap_stack,
 )
 
@@ -166,8 +171,11 @@ def test_study_ranks_splits_and_states_the_fem_decision():
     assert "simply supported" in text
     assert "Hairline cracks" in text
     assert "31.5 Hz benefit" in text
-    assert "best living wool" in text
+    assert "coverage" in text
     assert "hinges" in text
+    assert "400 vertical" in text
+    assert "wool_grid.csv" in text
+    assert "as-built" in text
     assert "Slope Flex" not in text
     assert "flex-0" not in study.delta_t
     # Axials from the full plan size, as marks rather than a solved mode.
@@ -195,5 +203,47 @@ def test_study_ranks_splits_and_states_the_fem_decision():
             assert f"{row.case}: {row.winner} (flips the winner)" in text
         else:
             assert f"{row.case}: {row.winner} (same winner)" in text
+    assert text.startswith("Wool and lattice sweep")
+    assert by_name["400 vertical"].kitchen_peak_hz > by_name["625 vertical"].kitchen_peak_hz
+    assert len(next(iter(study.kitchen_alpha.values()))) == 6
+    assert len(next(iter(study.living_alpha.values()))) == 6
+    assert study.sweep_csv.splitlines()[0].startswith("edge,kitchen_lattice")
+    assert "taped" in study.sweep_csv and "hinges" in study.sweep_csv
     kitchen_bass = [study.as_built_alpha[f]["kitchen"] for f in BASS_BANDS]
     assert max(kitchen_bass) > min(kitchen_bass)
+
+
+def test_coverage_keeps_the_worst_band_from_running_away():
+    uneven = {31.5: 1.05, 63.0: 1.05, 125.0: 2.0}
+    even = {31.5: 1.4, 63.0: 1.4, 125.0: 1.4}
+    floors = {31.5: 1.0, 63.0: 1.0, 125.0: 1.0}
+    label, _times, ratio = select_coverage([("uneven", uneven), ("even", even)], floors)
+    assert label == "even"
+    assert abs(ratio - 1.4) < 1e-9
+    assert (1.05 + 1.05 + 2.0) / 3.0 < 1.4
+
+
+def test_coverage_tie_breaks_toward_the_lower_average_then_earlier_row():
+    low_mean = {31.5: 1.5, 63.0: 1.0, 125.0: 1.0}
+    flat = {31.5: 1.5, 63.0: 1.5, 125.0: 1.5}
+    floors = {31.5: 1.0, 63.0: 1.0, 125.0: 1.0}
+    label, _times, ratio = select_coverage([("flat", flat), ("low", low_mean)], floors)
+    assert label == "low"
+    assert abs(ratio - 1.5) < 1e-9
+    same = {31.5: 1.2, 63.0: 1.2, 125.0: 1.2}
+    label, _times, _ratio = select_coverage(
+        [("first", same), ("second", dict(same))], band_floors([same])
+    )
+    assert label == "first"
+
+
+def test_default_wool_grid_matches_the_clearance_and_the_living_list():
+    kitchen = _fractions_from_metres(0.1775, _kitchen_wool_metres(0.1775, 0.047), 0.047)
+    living = _fractions_from_metres(0.4375, LIVING_WOOL_M, 0.0)
+    assert len(kitchen) == 6
+    assert kitchen[0] == 0.0
+    assert abs(kitchen[-1] * 0.1775 - 0.1305) < 1e-4
+    assert all(0.1775 * (1.0 - fraction) >= 0.047 - 1e-9 for fraction in kitchen)
+    assert living[0] == 0.0 and living[-1] == 1.0
+    assert any(abs(fraction - 0.75) < 1e-4 for fraction in living)
+    assert any(abs(fraction * 0.4375 - 0.300) < 1e-3 for fraction in living)

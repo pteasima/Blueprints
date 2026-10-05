@@ -4,16 +4,20 @@ The outline comes from ``predstena_pts`` (millimetres). Vertical CD lines and
 horizontal joint rails cut that polygon into bays, including the triangles and
 trapezoids under the roof.
 
-``625 vertical`` starts at one edge and steps a stock 625 mm module, then one
-make-up bay at the far edge, so a 1250 mm board joint lands on a stud.
-``1000 horizontal`` keeps equal bays nearest 1000 mm (1070 mm on this gable).
-A 1250×2500 board is cut to two of those bays. Sides, the rake, and the
-bottom line are simply supported: the 2–5 mm bead sits outside that screw line.
-``studs="even"`` is the equal-bay rule. ``studs="inset"`` is the older frame,
-one inset in, with a closer at the far edge.
+``625 vertical``, ``1000 horizontal``, and ``400 vertical`` each start at one
+edge and step a stock module, then one make-up bay at the far edge. A
+1250×2000 board lands its joint on a stud when it is stood up on the 625
+module, or laid flat on the 1000 module. The 400 mm module is a stiff check:
+a 1250 mm joint does not land on every stud, and the make-up bay is whatever
+the real width leaves (150 mm on a 5350 mm gable). ``studs="even"`` keeps the
+older equal-bay split (1070 mm on this gable for a 1000 mm target). Sides,
+the rake, and the bottom line are simply supported: the 2–5 mm bead sits
+outside that screw line. ``studs="inset"`` is the older frame, one inset in,
+with a closer at the far edge.
 
 A new layout is a ``LatticeSpec``. Pass explicit centre lists, or a spacing.
-``625 vertical`` and ``1000 horizontal`` are the two candidates.
+The three candidates are ``625 vertical``, ``1000 horizontal``, and
+``400 vertical``.
 """
 
 from __future__ import annotations
@@ -94,10 +98,27 @@ LATTICE_1000 = LatticeSpec(
     orientation="horizontal",
     cd_spacing_mm=1000.0,
     rail_spacing_mm=1250.0,
-    board="1250×2500 boards cut to two bays, joints on the studs",
+    board="1250×2000 boards laid horizontally, joints on the studs, one make-up bay at the far edge",
+    studs="makeup",
+)
+# The older equal split. Not a candidate. Pass it to ``run_study`` to compare.
+LATTICE_1000_EVEN = LatticeSpec(
+    name="1000 horizontal even",
+    orientation="horizontal",
+    cd_spacing_mm=1000.0,
+    rail_spacing_mm=1250.0,
+    board="1250×2500 boards cut to two equal bays",
     studs="even",
 )
-CANDIDATES: tuple[LatticeSpec, ...] = (LATTICE_625, LATTICE_1000)
+LATTICE_400 = LatticeSpec(
+    name="400 vertical",
+    orientation="vertical",
+    cd_spacing_mm=400.0,
+    rail_spacing_mm=2000.0,
+    board="1250×2000 boards stood vertical, a stiff check, one make-up bay at the far edge",
+    studs="makeup",
+)
+CANDIDATES: tuple[LatticeSpec, ...] = (LATTICE_625, LATTICE_1000, LATTICE_400)
 
 
 @dataclass(frozen=True)
@@ -424,9 +445,24 @@ def _notes(
             n_stock = len(gaps) - 1
             notes.append(
                 f"Studs every {spec.cd_spacing_mm:.0f} mm from the left edge "
-                f"({n_stock} bays), then one make-up bay of {makeup:.0f} mm at the far edge. "
-                "Stock 1250 mm boards land their joints on those studs."
+                f"({n_stock} bays), then one make-up bay of {makeup:.0f} mm at the far edge."
             )
+            if spec.cd_spacing_mm >= 999.0:
+                notes.append(
+                    "Whole 1250×2000 boards laid horizontally cover two bays, so the joints "
+                    "fall on studs. A rail sits under every 1250 mm joint."
+                )
+                notes.append(
+                    "1000 mm is at the top of normal finished-wall spacing. "
+                    "Hairline cracks at the joints are a risk."
+                )
+            elif _module_lands(1250.0, spec.cd_spacing_mm):
+                notes.append("Stock 1250 mm boards land their joints on those studs.")
+            else:
+                notes.append(
+                    "This spacing is a stiff check. A 1250 mm board joint does not "
+                    "land on every stud."
+                )
     elif gaps:
         edge = min(gaps[0], gaps[-1])
         notes.append(
@@ -486,6 +522,14 @@ def _size_buckets(layout: GableLayout) -> list[str]:
 
 def _count(n: int, singular: str, plural: str) -> str:
     return f"{n} {singular if n == 1 else plural}"
+
+
+def _module_lands(joint_mm: float, spacing_mm: float) -> bool:
+    """True when ``joint_mm`` is a whole number of modules."""
+    if spacing_mm <= 1.0:
+        return False
+    count = round(joint_mm / spacing_mm)
+    return count >= 1 and abs(count * spacing_mm - joint_mm) < 1.0
 
 
 def _gaps(stations: list[float]) -> list[float]:

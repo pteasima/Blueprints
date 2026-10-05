@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 
-from blueprints.acoustics.lattice import CANDIDATES, LatticeSpec, layout_gable
+from blueprints.acoustics.lattice import CANDIDATES, LATTICE_1000_EVEN, LatticeSpec, layout_gable
 from blueprints.acoustics.layers import (
     C0,
     field_absorption,
@@ -162,7 +162,7 @@ def test_gable_stud_spacing_moves_the_kitchen_peak():
 
 
 def test_buildable_studs_keep_a_supported_perimeter():
-    """625 is a stock module plus one make-up bay. 1000 stays equal. Edges are screwed."""
+    """Each candidate is a stock module plus one make-up bay. Edges are screwed."""
     ObyvakParams, _, build_layout = _models()
     params = ObyvakParams()
     outline = build_layout(params).predstena_pts()
@@ -172,7 +172,8 @@ def test_buildable_studs_keep_a_supported_perimeter():
     z_bottom = min(z for _, z in outline)
     by_name = {spec.name: spec for spec in CANDIDATES}
     assert by_name["625 vertical"].studs == "makeup"
-    assert by_name["1000 horizontal"].studs == "even"
+    assert by_name["1000 horizontal"].studs == "makeup"
+    assert by_name["400 vertical"].studs == "makeup"
     for spec in CANDIDATES:
         assert spec.perimeter == "supported"
         layout = layout_gable(outline, spec, inset_mm=params.cd_first_inset)
@@ -200,21 +201,23 @@ def test_buildable_studs_keep_a_supported_perimeter():
             for bay in layout.bays
             if bay.span_x < 0.2 and bay.left == "free" and bay.right == "free"
         ]
-        if spec.name == "625 vertical":
-            assert all(abs(gap - 625.0) < 0.5 for gap in gaps[:-1])
-            makeup = width - 625.0 * (len(gaps) - 1)
-            assert abs(gaps[-1] - makeup) < 0.5
-            assert 300.0 < gaps[-1] < 400.0
-            assert any("make-up bay" in note for note in layout.notes)
-            # A 1250 mm board joint falls on a stud.
-            assert any(abs(station - 1250.0) < 0.5 for station in stations)
+        assert all(abs(gap - spec.cd_spacing_mm) < 0.5 for gap in gaps[:-1])
+        makeup = width - spec.cd_spacing_mm * (len(gaps) - 1)
+        assert abs(gaps[-1] - makeup) < 0.5
+        assert any("make-up bay" in note for note in layout.notes)
+        if spec.name == "400 vertical":
+            # 5350 mm is not a multiple of 400, so the closer is about 150 mm, not 350.
+            assert 100.0 < gaps[-1] < 200.0
+            assert any("stiff check" in note for note in layout.notes)
+            assert any("does not land on every stud" in note for note in layout.notes)
         else:
-            n_bays = max(1, round(width / spec.cd_spacing_mm))
-            step = width / n_bays
-            assert len(gaps) == n_bays
-            assert all(abs(gap - step) < 0.5 for gap in gaps)
-            assert any(f"cut to {2 * step:.0f} mm" in note for note in layout.notes)
-            assert any("waste" in note for note in layout.notes)
+            assert 300.0 < gaps[-1] < 400.0
+            # A board joint falls on a stud: 1250 mm on the 625 module, 2000 mm on the 1000 module.
+            joint = 1250.0 if spec.name == "625 vertical" else 2000.0
+            assert any(abs(station - joint) < 0.5 for station in stations)
+        if spec.name == "1000 horizontal":
+            assert any("laid horizontally" in note for note in layout.notes)
+            assert any("1250 mm joint" in note for note in layout.notes)
     text = " ".join(
         note
         for spec in CANDIDATES
@@ -222,6 +225,25 @@ def test_buildable_studs_keep_a_supported_perimeter():
     )
     assert "simply supported" in text
     assert "Hairline cracks" in text
+
+
+def test_even_1000_split_can_still_be_run():
+    """The 1070 mm equal bays stay available. They are not the default."""
+    ObyvakParams, _, build_layout = _models()
+    params = ObyvakParams()
+    outline = build_layout(params).predstena_pts()
+    x_left = min(x for x, _ in outline)
+    width = max(x for x, _ in outline) - x_left
+    layout = layout_gable(outline, LATTICE_1000_EVEN, inset_mm=params.cd_first_inset)
+    stations = [x - x_left for x in layout.cd_x_mm]
+    gaps = [b - a for a, b in zip(stations, stations[1:])]
+    n_bays = max(1, round(width / 1000.0))
+    step = width / n_bays
+    assert LATTICE_1000_EVEN.studs == "even"
+    assert len(gaps) == n_bays
+    assert all(abs(gap - step) < 0.5 for gap in gaps)
+    assert step > 1000.0
+    assert any("cut to" in note for note in layout.notes)
 
 
 def test_inset_studs_still_start_one_module_in():
