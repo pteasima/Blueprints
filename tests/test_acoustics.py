@@ -157,17 +157,38 @@ def test_study_ranks_splits_and_states_the_fem_decision():
     assert "Kitchen gable" in text
     assert "Living gable" in text
     assert "bass FEM" in text
+    assert "5%" in text
     assert "80 mm" in text and "300 mm" in text and "130.5 mm" in text
     assert "20 mm" in text
     assert "No slope latě" in text
-    assert "Keep the as-built" in text
+    assert "cut" in text
+    assert "625 vertical" in text and "1000 horizontal" in text
     assert "Slope Flex" not in text
     assert "flex-0" not in study.delta_t
-    assert study.delta_t["living-0"][31.5] > 0.05 * study.as_built_t[31.5]
     # Axials from the full plan size, as marks rather than a solved mode.
     assert abs(study.axials["Y1"] - 343.0 / (2.0 * 11.1)) < 1e-6
     assert abs(study.axials["X1"] - 343.0 / (2.0 * 5.35)) < 1e-6
-    # As-built bass absorption is finite and the grid includes the empty and full cavities.
-    assert 0.0 in study.kitchen_alpha and 1.0 in study.kitchen_alpha
+    # Loose-sheet notes stay in the windows the limp model already had.
+    assert study.kitchen_limp_hz is not None and 38.0 < study.kitchen_limp_hz < 48.0
+    assert study.living_limp_hz is not None and 24.0 < study.living_limp_hz < 32.0
+    # Closer studs raise the note. If this fails, the lattice is not in the model.
+    by_name = {run.name: run for run in study.lattices}
+    assert by_name["625 vertical"].kitchen_peak_hz > by_name["1000 horizontal"].kitchen_peak_hz
+    assert by_name["625 vertical"].living_peak_hz > by_name["1000 horizontal"].living_peak_hz
+    # Kitchen wool never eats the 20 mm clearance in front of the CD.
+    for family in study.kitchen_alpha.values():
+        assert 0.0 in family
+        for fraction in family:
+            air = study.geometry.kitchen_cavity * (1.0 - fraction)
+            assert air >= 0.047 - 1e-6
+    for family in study.living_alpha.values():
+        assert 0.0 in family and 1.0 in family
+    for row in study.robustness:
+        snippet = f"{row.case}: {row.winner}"
+        assert snippet in text
+        if row.flipped:
+            assert f"{row.case}: {row.winner} (flips the winner)" in text
+        else:
+            assert f"{row.case}: {row.winner} (same winner)" in text
     kitchen_bass = [study.as_built_alpha[f]["kitchen"] for f in BASS_BANDS]
     assert max(kitchen_bass) > min(kitchen_bass)

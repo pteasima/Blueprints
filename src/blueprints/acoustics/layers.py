@@ -115,6 +115,77 @@ def surface_impedance(
     return transfer[0][0] / t21
 
 
+def _tan_stable(w: complex) -> complex:
+    """tan(w) via tanh, stable when w is largely imaginary (evanescent trace)."""
+    return -1j * cmath.tanh(1j * w)
+
+
+def _layer_specific(kind: str, sigma: float, freq: float, kx: float, rho: float, c: float) -> tuple[complex, complex]:
+    """(specific impedance p/v_z, normal wavenumber) at lateral wavenumber kx."""
+    omega = 2.0 * math.pi * freq
+    k0 = omega / c
+    if kind == "air":
+        kz = _decaying_kz(complex(k0), kx)
+        if abs(kz) < 1e-14:
+            return complex(1e12, 0.0), kz
+        return (rho * c) * (k0 / kz), kz
+    if kind == "porous":
+        zc, kc = miki(freq, sigma, rho=rho, c=c)
+        kz = _decaying_kz(kc, kx)
+        if abs(kz) < 1e-18:
+            return complex(1e12, 0.0), kz
+        return zc * kc / kz, kz
+    raise ValueError(f"unknown cavity layer {kind!r}")
+
+
+def _advance_impedance(z_back: complex, z_spec: complex, kz: complex, thickness: float) -> complex:
+    """Rigid-backed layer recursion, room-ward. Z = -j z cot(kz d) when z_back is rigid."""
+    if thickness <= 0.0:
+        return z_back
+    if abs(z_spec) < 1e-18:
+        return z_back
+    tangent = _tan_stable(kz * thickness)
+    # Nearly rigid back: Z = z / (j tan) = -j z cot.
+    if abs(z_back) > 1e8 * max(1.0, abs(z_spec)):
+        if abs(tangent) < 1e-14:
+            return complex(1e12, 0.0)
+        return z_spec / (1j * tangent)
+    ratio = z_back / z_spec
+    denom = 1.0 + 1j * ratio * tangent
+    if abs(denom) < 1e-18:
+        return complex(1e12, 0.0)
+    return z_spec * (ratio + 1j * tangent) / denom
+
+
+def surface_impedance_kx(
+    stack: Sequence[Layer],
+    freq: float,
+    kx: float,
+    rho: float = RHO0,
+    c: float = C0,
+) -> complex:
+    """Surface impedance at one lateral wavenumber.
+
+    ``kx`` may exceed k0 (a bending shape that is finer than the sound
+    wavelength). The stack still runs room → rigid wall. A mass layer, if
+    present, adds jωm in series. Evanescent traces use a tanh form so a
+    thick wool layer does not overflow.
+    """
+    if freq <= 0.0:
+        raise ValueError("frequency must be positive")
+    omega = 2.0 * math.pi * freq
+    z_back = complex(1e15, 0.0)
+    for kind, thickness, sigma in reversed(tuple(stack)):
+        if kind == "mass":
+            z_back = z_back + 1j * omega * thickness
+            continue
+        if thickness <= 0.0:
+            continue
+        z_spec, kz = _layer_specific(kind, sigma, freq, kx, rho, c)
+        z_back = _advance_impedance(z_back, z_spec, kz, thickness)
+    return z_back
+
+
 def absorption(
     stack: Sequence[Layer],
     freq: float,
