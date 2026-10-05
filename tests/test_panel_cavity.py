@@ -248,3 +248,36 @@ def test_full_wool_lateral_path_is_the_porous_stack():
     # Cavity rounds kx to 0.001 m⁻¹ before the stack, so the two calls are not bit-identical.
     assert abs(wool - porous) < 0.05 * abs(porous)
     assert wool.real > air.real * 5.0
+
+
+def test_air_cavity_depth_lowers_peak_at_fixed_bay():
+    """Piston air spring must survive modal coupling.
+
+    At normal incidence the (1,1) bay has a large uniform volume-velocity
+    component, so a pure-air cavity's depth must still move the absorption
+    peak (toward the limp mass–air note as the bay gets large). Evaluating
+    the cavity only at the mode's high k_lat makes the field evanescent and
+    depth-blind; that is a bug, not physics.
+    """
+    plate = Plate(edge="simple")
+    system = analytic_ss_system(0.625, 2.0, plate.flexural_rigidity, plate.mu, m_max=7)
+    shallow = Cavity(0.19, 0.0, 12_000.0)
+    deep = Cavity(0.45, 0.0, 12_000.0)
+    peak_shallow = first_absorption_peak_hz((system,), plate, shallow, f_lo=12.0, f_hi=120.0, n=96)
+    peak_deep = first_absorption_peak_hz((system,), plate, deep, f_lo=12.0, f_hi=120.0, n=96)
+    assert peak_deep < peak_shallow - 5.0, (peak_shallow, peak_deep)
+
+
+def test_depth_sensitivity_beats_lattice_on_air_cavity():
+    """190→450 mm air must move the peak at least as much as 625×2000→1000×1250."""
+    plate = Plate(edge="simple")
+    bay_625 = analytic_ss_system(0.625, 2.0, plate.flexural_rigidity, plate.mu, m_max=7)
+    bay_1000 = analytic_ss_system(1.0, 1.25, plate.flexural_rigidity, plate.mu, m_max=7)
+    shallow = Cavity(0.19, 0.0, 12_000.0)
+    deep = Cavity(0.45, 0.0, 12_000.0)
+    p_625_shallow = first_absorption_peak_hz((bay_625,), plate, shallow, f_lo=12.0, f_hi=120.0, n=96)
+    p_625_deep = first_absorption_peak_hz((bay_625,), plate, deep, f_lo=12.0, f_hi=120.0, n=96)
+    p_1000_shallow = first_absorption_peak_hz((bay_1000,), plate, shallow, f_lo=12.0, f_hi=120.0, n=96)
+    depth_delta = abs(p_625_shallow - p_625_deep)
+    lattice_delta = abs(p_625_shallow - p_1000_shallow)
+    assert depth_delta >= lattice_delta - 1.0, (depth_delta, lattice_delta, p_625_shallow, p_625_deep, p_1000_shallow)
