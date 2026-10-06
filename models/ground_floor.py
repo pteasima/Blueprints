@@ -23,6 +23,10 @@ W-023 stays a 100 mm glazed band with only OP28 removed.
 Door and window leaves are thin panels in the void: timber doors, glazing
 for windows and for the W-023 run. Plain openings stay empty.
 
+W-004 and W-014 are the 120 mm closed squares on the silná layer. The file
+keeps them as short walls because IfcColumn is deferred. Neither axis meets
+another wall, so at overview scale they read as two thin vertical bars.
+
     python -m blueprints.export ground_floor
 """
 
@@ -392,9 +396,33 @@ def _opening_scene(doc: dict) -> dict:
     }
 
 
+def _posts_scene(doc: dict) -> dict:
+    """W-004 and W-014, the two free-standing 120 mm squares."""
+    wall_a = next(item for item in doc["walls"] if item["id"] == "W-004")
+    wall_b = next(item for item in doc["walls"] if item["id"] == "W-014")
+    def mid(wall):
+        (sx, sy), (ex, ey), _length = _axis(wall)
+        return (sx + ex) / 2.0, (sy + ey) / 2.0
+    ax, ay = mid(wall_a)
+    bx, by = mid(wall_b)
+    px, py = (ax + bx) / 2.0, (ay + by) / 2.0
+    # Close enough that a 120 mm square reads as a column, still framing both.
+    eye = (px + 6.0, py - 1.6, 1.8)
+    target = (px, py, 1.5)
+    return {
+        "id": "posts",
+        "hFovDeg": 58,
+        "camera": {
+            "target": cad_mm_to_gltf_m((_mm(target[0]), _mm(target[1]), _mm(target[2]))),
+            "position": cad_mm_to_gltf_m((_mm(eye[0]), _mm(eye[1]), _mm(eye[2]))),
+            "up": [0.0, 1.0, 0.0],
+        },
+    }
+
+
 def scenes() -> list[dict]:
     doc = load_document()
-    return [_overview_scene(doc), _opening_scene(doc)]
+    return [_overview_scene(doc), _opening_scene(doc), _posts_scene(doc)]
 
 
 def part_groups() -> list[dict]:
