@@ -1,9 +1,14 @@
 """RD Šíma ground floor — walls and the openings cut through them.
 
 Source: ``inputs/ground_floor/ground-floor.yaml``, vendored from
-pteasima/yaml-ifc @ 7cbed81. Lengths in that file are metres. Solids are
+pteasima/yaml-ifc @ 4ad102f. Lengths in that file are metres. Solids are
 millimetres, the same as the other build123d models, so the existing viewer
 path (glTF metres, Z-up CAD → Y-up) applies unchanged.
+
+Each wall that has a body is extruded from ``yaml_ifc.footprints``. Those
+polygons are the butt joints IfcOpenShell builds for the file's
+``connections``: the relating wall runs through, and the related wall is
+trimmed to its face. Corner geometry is not computed here.
 
 Wall height: no wall in the file has ``Height``. yaml-ifc extrudes a wall
 that has a thickness (or a footprint/profile) and no height by 3 m
@@ -13,8 +18,9 @@ and ``IfcSpace`` is not in the file. The obývák roof section is one room,
 not a storey wall height, so it is not applied here.
 
 W-017 has no ``Thickness``. The axis is the drawn silná line, not a measured
-centreline. A 50 mm band is centred on that line so the wall is a solid and
-OP19 can be cut through it. yaml-ifc would otherwise emit no wall body.
+centreline. ``footprints`` leaves it out. A 50 mm band is centred on that
+line so the wall is a solid and OP19 can be cut through it. yaml-ifc would
+otherwise emit no wall body.
 
 OP27 and OP29 store ``HeadHeight`` only. Height and sill are not invented
 (yaml-ifc gives those openings no solid), so they are not cut. Their host
@@ -36,7 +42,8 @@ import math
 from pathlib import Path
 
 import yaml
-from build123d import Align, Box, Color, Compound, Pos, Rot
+from build123d import Align, Box, Color, Compound, Face, Pos, Rot, Solid, Vector, Wire
+from yaml_ifc import footprints
 
 from blueprints.export_utils import SECTION_LAYERS
 from blueprints.scenes import cad_mm_to_gltf_m
@@ -47,7 +54,7 @@ MODEL_LABEL = "RD Šíma 1.NP"
 EXPORT_KIND = "solid"
 
 SOURCE_REPO = "pteasima/yaml-ifc"
-SOURCE_COMMIT = "7cbed81"
+SOURCE_COMMIT = "4ad102f"
 SOURCE_PATH = (
     Path(__file__).resolve().parents[1] / "inputs" / "ground_floor" / "ground-floor.yaml"
 )
@@ -144,7 +151,7 @@ def _overlap(a0: float, a1: float, b0: float, b1: float) -> float:
     return max(0.0, min(a1, b1) - max(a0, b0))
 
 
-def _cutter(along, width, sill, oheight, length, thickness, wheight, pad: float):
+def _cutter(along, width, sill, oheight, length, y0, y1, wheight, pad: float):
     x0, w = along, width
     z0, h = sill, oheight
     if along <= pad:
@@ -157,13 +164,15 @@ def _cutter(along, width, sill, oheight, length, thickness, wheight, pad: float)
         h += pad
     if sill + oheight >= wheight - pad:
         h += pad
-    depth = thickness + 2.0 * pad
-    return Pos(x0, 0.0, z0) * Box(w, depth, h, align=(Align.MIN, Align.CENTER, Align.MIN))
+    depth = (y1 - y0) + 2.0 * pad
+    return Pos(x0, (y0 + y1) / 2.0, z0) * Box(
+        w, depth, h, align=(Align.MIN, Align.CENTER, Align.MIN)
+    )
 
 
-def _subtract_opening(wall, along, width, sill, oheight, length, thickness, wheight):
+def _subtract_opening(wall, along, width, sill, oheight, length, y0, y1, wheight):
     for pad in (CUT_PAD_MM, 10.0):
-        cutter = _cutter(along, width, sill, oheight, length, thickness, wheight, pad)
+        cutter = _cutter(along, width, sill, oheight, length, y0, y1, wheight, pad)
         try:
             cut = wall - cutter
         except Exception:
@@ -215,6 +224,41 @@ def _wall_label(wall_id: str) -> str:
     return LABEL_GLAZING if wall_id in GLAZED_WALLS else LABEL_MASONRY
 
 
+def _local_ring_mm(ring, sx: float, sy: float, ux: float, uy: float) -> list[tuple[float, float]]:
+    """Plan metres in the Axis frame → millimetres in the wall's local XY."""
+    points: list[tuple[float, float]] = []
+    for x, y in ring:
+        dx, dy = float(x) - sx, float(y) - sy
+        local = ((dx * ux + dy * uy) * MM, (-dx * uy + dy * ux) * MM)
+        if points and abs(points[-1][0] - local[0]) < 1e-4 and abs(points[-1][1] - local[1]) < 1e-4:
+            continue
+        points.append(local)
+    if (
+        len(points) > 1
+        and abs(points[0][0] - points[-1][0]) < 1e-4
+        and abs(points[0][1] - points[-1][1]) < 1e-4
+    ):
+        points.pop()
+    if len(points) < 3:
+        raise ValueError("footprint ring has fewer than 3 corners")
+    return points
+
+
+def _extrude_plan(points: list[tuple[float, float]], height: float):
+    face = Face(Wire.make_polygon([Vector(x, y, 0.0) for x, y in points]))
+    try:
+        return Solid.extrude(face, (0.0, 0.0, height))
+    except Exception:
+        return Solid.extrude(face.reversed(), (0.0, 0.0, height))
+
+
+def _span_y(body, thickness: float) -> tuple[float, float]:
+    """Local Y extent the opening cutter has to cross."""
+    bounds = body.bounding_box()
+    half = thickness / 2.0
+    return min(float(bounds.min.Y), -half), max(float(bounds.max.Y), half)
+
+
 def build(path: Path | None = None):
     doc = load_document(path)
     walls = doc.get("walls") or []
@@ -248,6 +292,9 @@ def build(path: Path | None = None):
         if opening["VoidsElement"] not in wall_by_id:
             raise ValueError(f"{opening['id']} voids unknown wall {opening['VoidsElement']}")
 
+    rings = footprints(doc)
+    omitted = [wall["id"] for wall in walls if wall["id"] not in rings]
+
     for wall in walls:
         frame = _axis(wall)
         if frame is None:
@@ -258,8 +305,16 @@ def build(path: Path | None = None):
             thickness_filled.append(wall["id"])
         height_m = _height_m(wall)
         length, thickness, height = _mm(length_m), _mm(thick_m), _mm(height_m)
-        uncut_mm3 += length * thickness * height
-        body = Box(length, thickness, height, align=(Align.MIN, Align.CENTER, Align.MIN))
+        ux, uy = (ex - sx) / length_m, (ey - sy) / length_m
+        ring = rings.get(wall["id"])
+        if ring is None:
+            if not filled:
+                raise ValueError(f"{wall['id']} has a thickness but yaml_ifc.footprints omitted it")
+            body = Box(length, thickness, height, align=(Align.MIN, Align.CENTER, Align.MIN))
+        else:
+            body = _extrude_plan(_local_ring_mm(ring, sx, sy, ux, uy), height)
+        uncut_mm3 += float(body.volume)
+        y0, y1 = _span_y(body, thickness)
         label = _wall_label(wall["id"])
         leaves = []
 
@@ -290,7 +345,7 @@ def build(path: Path | None = None):
                 failed.append(opening["id"])
                 continue
             body, ok = _subtract_opening(
-                body, along, width, sill, oheight, length, thickness, height
+                body, along, width, sill, oheight, length, y0, y1, height
             )
             if not ok:
                 failed.append(opening["id"])
@@ -312,7 +367,9 @@ def build(path: Path | None = None):
         angle = math.degrees(math.atan2(ey - sy, ex - sx))
         origin = (_mm(sx), _mm(sy), _mm(_base_z_m(wall, storey_z)))
         for solid in _solids(body):
-            parts.append(_place(solid, origin, angle, label))
+            placed = _place(solid, origin, angle, label)
+            placed.wall_id = wall["id"]
+            parts.append(placed)
         for leaf, leaf_label in leaves:
             for solid in _solids(leaf):
                 parts.append(_place(solid, origin, angle, leaf_label))
@@ -328,7 +385,9 @@ def build(path: Path | None = None):
             "openings_cut": len(cut_ids),
             "wall_height_m": DEFAULT_WALL_HEIGHT_M,
             "w017_thickness_m": MISSING_THICKNESS_M,
+            "footprints": len(rings),
         },
+        "footprints_omitted": omitted,
         "openings_cut": cut_ids,
         "openings_skipped": skipped,
         "openings_failed": failed,
@@ -378,8 +437,9 @@ def _opening_scene(doc: dict) -> dict:
     wall = next(item for item in doc["walls"] if item["id"] == OPENING_VIEW_WALL)
     (sx, sy), (ex, ey), length = _axis(wall)
     ux, uy = (ex - sx) / length, (ey - sy) / length
-    # Door OP39a and window OP39b occupy along 0.30–2.50 m.
-    along = 1.40
+    # Door OP39a (along 0.475 m) and window OP39b (along 1.575 m) sit side by side.
+    # The shared point is the middle of that pair after the axis snap.
+    along = 1.575
     px, py = sx + ux * along, sy + uy * along
     # East of W-060 and north of W-025 (y ≈ 11.6). A camera south of that
     # wall sits against its face and never sees the door and the window.
@@ -420,9 +480,78 @@ def _posts_scene(doc: dict) -> dict:
     }
 
 
+# Butt-joint close-ups. The target is the related wall's snapped end, which
+# is the centre-line intersection stored in the YAML. The eye offset is only
+# a camera position; the wall solids come from yaml_ifc.footprints.
+CORNER_VIEWS = (
+    {
+        "id": "L-W054-W001",
+        "related": "W-001",
+        "end": "ATSTART",
+        "eye_m": (-1.15, -1.2, 2.8),
+        "target_z_m": 0.35,
+        "hFovDeg": 42,
+    },
+    {
+        "id": "L-W026-W030",
+        "related": "W-030",
+        "end": "ATEND",
+        "eye_m": (-1.25, -1.35, 2.7),
+        "target_z_m": 0.35,
+        "hFovDeg": 42,
+    },
+    {
+        "id": "T-W029-W050",
+        "related": "W-050",
+        "end": "ATEND",
+        "eye_m": (1.15, -2.15, 1.85),
+        "target_z_m": 1.05,
+        "hFovDeg": 40,
+    },
+    {
+        "id": "T-W030-W018",
+        "related": "W-018",
+        "end": "ATSTART",
+        "eye_m": (1.7, 1.15, 1.7),
+        "target_z_m": 1.05,
+        "hFovDeg": 40,
+    },
+)
+
+
+def _end_m(wall: dict, kind: str) -> tuple[float, float]:
+    frame = _axis(wall)
+    if frame is None:
+        raise ValueError(f"{wall.get('id')} has no axis")
+    (sx, sy), (ex, ey), _length = frame
+    return (sx, sy) if kind == "ATSTART" else (ex, ey)
+
+
+def _corner_scene(doc: dict, spec: dict) -> dict:
+    wall = next(item for item in doc["walls"] if item["id"] == spec["related"])
+    px, py = _end_m(wall, spec["end"])
+    ex, ey, ez = spec["eye_m"]
+    eye = (px + ex, py + ey, ez)
+    target = (px, py, spec["target_z_m"])
+    return {
+        "id": spec["id"],
+        "hFovDeg": spec["hFovDeg"],
+        "camera": {
+            "target": cad_mm_to_gltf_m((_mm(target[0]), _mm(target[1]), _mm(target[2]))),
+            "position": cad_mm_to_gltf_m((_mm(eye[0]), _mm(eye[1]), _mm(eye[2]))),
+            "up": [0.0, 1.0, 0.0],
+        },
+    }
+
+
 def scenes() -> list[dict]:
     doc = load_document()
-    return [_overview_scene(doc), _opening_scene(doc), _posts_scene(doc)]
+    return [
+        _overview_scene(doc),
+        _opening_scene(doc),
+        _posts_scene(doc),
+        *(_corner_scene(doc, spec) for spec in CORNER_VIEWS),
+    ]
 
 
 def part_groups() -> list[dict]:
