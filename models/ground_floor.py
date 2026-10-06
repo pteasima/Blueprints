@@ -544,6 +544,54 @@ def _corner_scene(doc: dict, spec: dict) -> dict:
     }
 
 
+# Plan close-ups of the same four joints. Half-extent is metres: a square
+# view is about 2.7 m across, wide enough to read the butt and the two walls.
+PLAN_HALF_M = 1.35
+PLAN_CUT_Z_M = 1.0
+
+
+def _plan_scene(scene_id: str, px: float, py: float, half_x_m: float, half_y_m: float) -> dict:
+    """Top-down orthographic view with a horizontal cut at 1 m.
+
+    The cut normal is glTF −Y (CAD down), so the storey above 1 m is removed
+    and the caps are the plan footprints.
+    """
+    return {
+        "id": scene_id,
+        "projection": "ortho",
+        "cuts": [
+            {
+                "normal": [0.0, -1.0, 0.0],
+                "anchor": [_mm(px), _mm(py), _mm(PLAN_CUT_Z_M)],
+            }
+        ],
+        "camera": {
+            "target": cad_mm_to_gltf_m((_mm(px), _mm(py), 0.0)),
+            "position": cad_mm_to_gltf_m((_mm(px), _mm(py), _mm(30.0))),
+            "up": [0.0, 0.0, -1.0],
+            "orthoFit": [half_x_m, half_y_m],
+        },
+    }
+
+
+def _plan_corner_scene(doc: dict, spec: dict) -> dict:
+    wall = next(item for item in doc["walls"] if item["id"] == spec["related"])
+    px, py = _end_m(wall, spec["end"])
+    return _plan_scene(f"plan-{spec['id']}", px, py, PLAN_HALF_M, PLAN_HALF_M)
+
+
+def _plan_overview_scene(doc: dict) -> dict:
+    x0, y0, _z0, x1, y1, _z1 = _bounds_mm(doc)
+    pad = 1000.0
+    return _plan_scene(
+        "plan",
+        ((x0 + x1) / 2.0) / MM,
+        ((y0 + y1) / 2.0) / MM,
+        ((x1 - x0) / 2.0 + pad) / MM,
+        ((y1 - y0) / 2.0 + pad) / MM,
+    )
+
+
 def scenes() -> list[dict]:
     doc = load_document()
     return [
@@ -551,6 +599,8 @@ def scenes() -> list[dict]:
         _opening_scene(doc),
         _posts_scene(doc),
         *(_corner_scene(doc, spec) for spec in CORNER_VIEWS),
+        _plan_overview_scene(doc),
+        *(_plan_corner_scene(doc, spec) for spec in CORNER_VIEWS),
     ]
 
 

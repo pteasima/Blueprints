@@ -16,9 +16,12 @@ from ground_floor import (  # noqa: E402
     LABEL_MASONRY,
     MISSING_THICKNESS_M,
     OPENING_VIEW_WALL,
+    PLAN_CUT_Z_M,
+    PLAN_HALF_M,
     SOURCE_COMMIT,
     SOURCE_PATH,
     build,
+    scenes,
 )
 
 
@@ -129,3 +132,23 @@ def test_butt_corners_do_not_overlap():
         row = by_end[(spec["related"], spec["end"])]
         kind = "T" if row["RelatingConnectionType"] == "ATPATH" else "L"
         assert spec["id"].startswith(f"{kind}-")
+
+
+def test_plan_scenes_keep_the_perspective_views():
+    specs = {item["id"]: item for item in scenes()}
+    assert {"overview", "opening", "posts"} <= set(specs)
+    for spec in CORNER_VIEWS:
+        assert spec["id"] in specs
+        assert "projection" not in specs[spec["id"]]
+        plan = specs[f"plan-{spec['id']}"]
+        assert plan["projection"] == "ortho"
+        assert plan["cuts"][0]["normal"] == [0.0, -1.0, 0.0]
+        assert plan["cuts"][0]["anchor"][2] == pytest.approx(PLAN_CUT_Z_M * 1000.0)
+        assert plan["camera"]["orthoFit"] == [PLAN_HALF_M, PLAN_HALF_M]
+        assert plan["camera"]["up"] == [0.0, 0.0, -1.0]
+    overview = specs["plan"]
+    assert overview["projection"] == "ortho"
+    assert overview["cuts"][0]["anchor"][2] == PLAN_CUT_Z_M * 1000.0
+    half_x, half_y = overview["camera"]["orthoFit"]
+    assert half_x > 20
+    assert half_y > 8
