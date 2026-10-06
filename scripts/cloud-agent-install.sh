@@ -24,4 +24,4 @@ fi
 source .venv/bin/activate
 python -m pip install -U pip
 python -m pip install -e ".[dev]"
-python -c "import build123d, cairosvg; from pxr import Usd"
+python -c "import build123d, cairosvg, ifcopenshell, yaml_ifc; from pxr import Usd"
