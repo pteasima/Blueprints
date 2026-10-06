@@ -36,7 +36,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from blueprints.acoustics.lattice import (
-    CANDIDATES,
+    LATTICE_1000,
+    LATTICE_625,
     LatticeSpec,
     describe_layout,
     layout_gable,
@@ -1045,31 +1046,47 @@ def _sweep_table(
 ) -> tuple[str, str]:
     """Summary rows for every pair and edge, plus the full wool grid as CSV."""
     pairs = [(kitchen, living) for kitchen in names for living in names]
-    summary: list[str] = [
-        (
-            "Wool and lattice sweep. Each gable is a stock module from the left edge "
-            "plus one make-up bay at the far edge. Sides, the rake, and the bottom "
-            "line are simply supported. 625 vertical is eight 625 mm bays plus the "
-            "make-up bay. 1000 horizontal is five 1000 mm bays from whole 1250×2000 "
-            "boards laid flat, with a rail under every 1250 mm joint, plus the make-up "
-            "bay. 400 vertical is the stiff check: regular 400 mm bays plus whatever "
+    lattice_bits = [
+        "Wool and lattice sweep. Each gable is a stock module from the left edge "
+        "plus one make-up bay at the far edge. Sides, the rake, and the bottom "
+        "line are simply supported."
+    ]
+    if "625 vertical" in names:
+        lattice_bits.append("625 vertical is eight 625 mm bays plus the make-up bay.")
+    if "1000 horizontal" in names:
+        lattice_bits.append(
+            "1000 horizontal is five 1000 mm bays from whole 1250×2000 boards laid "
+            "flat, with a rail under every 1250 mm joint, plus the make-up bay."
+        )
+    if "400 vertical" in names:
+        lattice_bits.append(
+            "400 vertical is the stiff check: regular 400 mm bays plus whatever "
             "make-up the real width leaves. A 1250 mm joint does not land on every "
             "400 mm stud."
-        ),
+        )
+    n_pairs = len(names) * len(names)
+    pair_word = "Four pairs" if n_pairs == 4 else f"{n_pairs} pairs"
+    summary: list[str] = [
+        " ".join(lattice_bits),
         (
-            "Nine pairs, every kitchen lattice with every living lattice. Kitchen wool "
-            "runs from none to 130.5 mm in six steps, and the air gap stays at least "
-            "47 mm. Living wool is 0, 100, 200, 300, 328.1 and 437.5 mm. As built is "
-            "kitchen 130.5 mm wool and 47 mm air, living 300 mm wool and 137.5 mm air. "
-            "The taped continuous diaphragm is the base. Inner studs as hinges are the "
-            "sensitivity; the perimeter stays simply supported."
+            f"{pair_word}, every kitchen lattice with every living lattice. The kitchen "
+            "gable is the wall with two sliding doors and the 190 mm trap. The living "
+            "gable is the wall with one sliding door and the 450 mm trap. Both gables "
+            "share one outline. The doors stop at 2450 mm, the bottom of the trap, so "
+            "they do not cut its area. Kitchen wool runs from none to 130.5 mm in six "
+            "steps, and the air gap stays at least 47 mm. Living wool is 0, 100, 200, "
+            "300, 328.1 and 437.5 mm. As built is kitchen 130.5 mm wool and 47 mm air, "
+            "living 300 mm wool and 137.5 mm air. The taped continuous diaphragm is the "
+            "base. Inner studs as hinges are the sensitivity; the perimeter stays "
+            "simply supported."
         ),
         (
             "Coverage picks, for each pair, the wool that keeps the worst band as close "
             "as possible to the lowest decay that band reaches anywhere on that edge. "
-            "A large subwoofer sits in the living corner, under the living trap, so a "
-            "weak band is not traded away for a better average. The three-band average "
-            "is an extra row only when that wool differs. The full grid is wool_grid.csv."
+            "A large subwoofer sits in the living corner by the TV, under the 450 mm "
+            "trap on the one-door gable, so a weak band is not traded away for a better "
+            "average. The three-band average is an extra row only when that wool differs. "
+            "The full grid is wool_grid.csv."
         ),
         (
             f"{'edge':<8}{'pair':<40}{'case':<10}"
@@ -1080,6 +1097,8 @@ def _sweep_table(
     ]
     csv_rows: list[list[str]] = []
     taped_coverage: list[dict] = []
+    taped_as_built: dict[tuple[str, str], tuple[dict[float, float], float, float]] = {}
+    built_default: str | None = None
     for edge in ("taped", "hinges"):
         pack = edges[edge]
         options_by_pair: dict[tuple[str, str], list] = {}
@@ -1127,6 +1146,8 @@ def _sweep_table(
                     f"{_fill_cell(geom.kitchen_cavity, k_frac):>14}"
                     f"{_fill_cell(geom.living_cavity, l_frac):>14}"
                 )
+                if edge == "taped" and case == "as-built":
+                    taped_as_built[(kitchen_name, living_name)] = (times, k_frac, l_frac)
                 if case == "coverage":
                     record = {
                         "kitchen": kitchen_name,
@@ -1134,6 +1155,7 @@ def _sweep_table(
                         "k_frac": k_frac,
                         "l_frac": l_frac,
                         "ratio": ratio,
+                        "times": times,
                     }
                     coverage_rows.append(record)
                     if edge == "taped":
@@ -1189,6 +1211,37 @@ def _sweep_table(
                 f"The worst band in that pick is {best_ratio:.2f} times the lowest decay "
                 "that band reaches on this edge."
             )
+        if edge == "taped" and coverage_rows:
+            winner = min(coverage_rows, key=lambda row: (row["ratio"], _mean_t(row["times"])))
+            as_times, _as_k, _as_l = taped_as_built[(winner["kitchen"], winner["living"])]
+            cover_times = winner["times"]
+            moved = [
+                freq
+                for freq in _ROOM_BANDS
+                if abs(cover_times[freq] - as_times[freq]) > 0.05 * as_times[freq]
+            ]
+            if moved:
+                shown = cover_times
+                wool_note = (
+                    "with the coverage wool, because that split moves "
+                    + ", ".join(f"{_hz(freq)} Hz" for freq in moved)
+                    + " by more than 5%"
+                )
+            else:
+                shown = as_times
+                wool_note = (
+                    "with the as-built wool. The coverage wool stays inside 5% "
+                    "on 31.5, 63 and 125 Hz, so the thickness is left as built"
+                )
+            built_default = (
+                f"The built gables are kitchen {winner['kitchen']} and living {winner['living']}, "
+                f"{wool_note}. That is the model default. "
+                f"Room decay is {shown[31.5]:.2f} s at 31.5 Hz, "
+                f"{shown[63.0]:.2f} s at 63 Hz and {shown[125.0]:.2f} s at 125 Hz. "
+                "The sweep below is the other pairings and the wool grid."
+            )
+    if built_default:
+        summary.insert(3, built_default)
     summary.append(_wool_sentence("Kitchen", taped_coverage, geom.kitchen_cavity, as_built_k, "k_frac"))
     summary.append(_wool_sentence("Living", taped_coverage, geom.living_cavity, as_built_l, "l_frac"))
     average_note = _average_disagreement(edges["taped"], names, geom, shared, taped_coverage)
@@ -1390,7 +1443,7 @@ def _pairing_verdict(
         "B is kitchen 1000 horizontal with living 625 vertical. "
         + "; ".join(notes)
         + f". Living first peak {living_a:.0f} Hz on A and {living_b:.0f} Hz on B "
-        "at a full living cavity. The coverage table is the comparison across all nine pairs."
+        "at a full living cavity. The coverage table is the comparison across the lattice pairs."
     )
 
 
@@ -1491,7 +1544,8 @@ def build_report(bits: dict) -> str:
             f"glass {geom.glass:.1f} m², plaster {geom.plaster:.1f} m², "
             f"floor {geom.floor:.1f} m², cabinet front {geom.furniture:.1f} m². "
             "Both gables use the same outline. The kitchen předstěna is 190 mm deep "
-            "and the living one is 450 mm deep."
+            "on the two-door gable, and the living one is 450 mm deep on the one-door "
+            "gable. The pocket doors stop at the trap bottom, so they do not cut the trap area."
         ),
         (
             f"Board: E = 2.5 GPa, Poisson 0.25, loss factor 0.015, "
@@ -1942,7 +1996,9 @@ def run_study(
 ) -> Study:
     """Panel-on-cavity traps for each lattice, then the room decay.
 
-    ``lattices`` defaults to 625 vertical, 1000 horizontal, and 400 vertical.
+    ``lattices`` defaults to 625 vertical and 1000 horizontal, the four pairings
+    of those two. 400 vertical stays available on ``CANDIDATES`` and is not in
+    this decision. The report leads with the taped coverage winner.
     ``wool_fractions``, when set, replaces the wool grid on both gables. Otherwise
     the kitchen sweeps six thicknesses up to the 47 mm air limit, and the living
     gable uses 0, 100, 200, 300, 328.1 and 437.5 mm.
@@ -1955,7 +2011,7 @@ def run_study(
     geom = room_geometry(p)
     plaster_m, board_m = _face_thicknesses(p)
     axials = axial_frequencies(geom)
-    specs = lattices if lattices is not None else CANDIDATES
+    specs = lattices if lattices is not None else (LATTICE_625, LATTICE_1000)
     if not specs:
         raise ValueError("run_study needs at least one lattice")
 

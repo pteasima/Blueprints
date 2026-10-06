@@ -1,7 +1,9 @@
 """Shared Obývák 1.02 parameters and 2D sketch helpers (mm).
 
 World:
-  X = eave ↔ eave (room_width), Y = kitchen ↔ living (room_length), Z up.
+  X = eave ↔ eave (room_width), Y = living gable ↔ kitchen gable (room_length), Z up.
+  The living gable is Y=0 (one sliding door, 450 mm trap). The kitchen gable
+  is Y=L (two sliding doors, 190 mm trap).
 
 2D drawings sit in Plane.XZ for the orthographic exporter:
   section X = transverse, elevation X = longitudinal (world Y).
@@ -28,7 +30,7 @@ and no NaturHeld Flex. CD spacing stays 625 mm, which is the published
 NaturHeld 140 stud spacing.
 
 Right eave soffit box: 40 mm NaturHeld 140 + StoSilent on the side and the
-bottom, mineral wool in the cavity, latový rost (latě @625) hanging the box.
+bottom, mineral wool in the cavity, a CD/UD rost (@625) hanging the box.
 The wool stops short of the ducts. Three Ø160 spiral ducts (HRV supply, HRV
 extract, AC) sit in a 2-over-1 pack against the cabinet eave, below the lid
 and above the column heads. They are already anchored to the wall; this box
@@ -41,8 +43,9 @@ level cut through the slope pack. The board stays 12.5 mm to a square end. A
 light-gauge angle backs that hidden butt: a short leg on the slope board, a
 horizontal leg screwed to the rost CD. That CD is the only horizontal rail
 and the only Nonius row. No vertical riser. Furniture and the wall plate do
-not carry the box (the plate only fixes the board edge). The soffit latě
-hang from that CD and brace to the eave wall. CAD ids are zone-prefixed so
+not carry the box (the plate only fixes the board edge). The soffit CD
+studs hang from that CD and brace into a UD on the eave wall. There is no
+timber in the kastlík frame. CAD ids are zone-prefixed so
 the viewer can toggle / fade slopes, soffit, and bass traps independently.
 """
 
@@ -77,9 +80,9 @@ LABEL_SLOPE_NONIUS = "slope_nonius"
 # --- Soffit (podhled) ---
 LABEL_SOFFIT_NH = "soffit_naturheld_140"
 LABEL_SOFFIT_WOOL = "soffit_mineral_wool"
-LABEL_SOFFIT_BATTENS = "soffit_battens"
 LABEL_SOFFIT_GKF = "soffit_gkf"
 LABEL_SOFFIT_CD = "soffit_cd"
+LABEL_SOFFIT_UD = "soffit_ud"
 LABEL_SOFFIT_NONIUS = "soffit_nonius"
 LABEL_SOFFIT_DUCT = "soffit_duct"
 # --- Bass traps ---
@@ -125,9 +128,9 @@ PART_GROUPS = [
         "children": [
             LABEL_SOFFIT_NH,
             LABEL_SOFFIT_WOOL,
-            LABEL_SOFFIT_BATTENS,
             LABEL_SOFFIT_GKF,
             LABEL_SOFFIT_CD,
+            LABEL_SOFFIT_UD,
             LABEL_SOFFIT_NONIUS,
             LABEL_SOFFIT_DUCT,
         ],
@@ -217,35 +220,35 @@ class ObyvakParams:
     bass_bottom_sdk_t: float = 12.5
     pouzdro_d: float = 120.0
     pocket_door_h: float = 2450.0
-    # Clearance from the kitchen-cabinet eave (X=room_width) to the spíž opening.
+    # Clearance from the cabinet eave (X=room_width) to the far-gable opening at x=3700.
     pocket_spiz_inset: float = 650.0
-    # (gable, x0, width) — "kitchen"=Y=0 (předstěna 190), "living"=Y=L (předstěna 450).
-    # Cutaway camera is at −X,−Y: near/right gable = Y=0, far/left gable = Y=L.
-    # Spíž must sit on the far gable (Y=L), not on the near/right wall with chodba.
-    # Chodba stays Y=0 window corner; zádveří stays Y=L window corner; spíž Y=L cabinet inset.
+    # (gable, x0, width). Openings stay put. The gable with two doors is the
+    # kitchen and carries the 190 mm trap; the gable with one door is the
+    # living room and carries the 450 mm trap.
+    # Y=0 (living): one opening, window corner, x=0, 1000 mm.
+    # Y=L (kitchen): window corner x=0, 1100 mm, and cabinet-eave x=3700, 1000 mm.
     pocket_doors: tuple[tuple[str, float, float], ...] = (
-        ("kitchen", 0.0, 1000.0),  # chodba · roh u oken · near gable Y=0
-        ("living", 3700.0, 1000.0),  # spíž · far gable Y=L · 5350 − 650 − 1000
-        ("living", 0.0, 1100.0),  # zádveří · roh u oken · far gable Y=L
+        ("living", 0.0, 1000.0),  # one door · window corner · living gable Y=0
+        ("kitchen", 3700.0, 1000.0),  # kitchen gable Y=L · 5350 − 650 − 1000
+        ("kitchen", 0.0, 1100.0),  # kitchen gable Y=L · window corner
     )
     # Window wall (X=0, opposite cabinets): 2× HS 2500 + fixed 4500, h=2500 (D.1.1.03).
     window_h: float = 2500.0
     # (y0, width) along Y from kitchen→living; ~200 mm piers between bays.
     eave_windows: tuple[tuple[float, float], ...] = (
-        (550.0, 2500.0),  # HS portal · kuchyně / chodba
+        (550.0, 2500.0),  # HS portal · living gable (Y=0, one sliding door)
         (3250.0, 4500.0),  # velké fixní / posuvné sklo
-        (7950.0, 2500.0),  # HS portal · obývák / zádveří
+        (7950.0, 2500.0),  # HS portal · kitchen gable (Y=L, two sliding doors)
     )
     glass_t: float = 20.0
-    # Soffit latový rost only. The slope board screws to the CD; it has no latě.
-    rost_w: float = 60.0
-    rost_d: float = 40.0
+    # Y grid of the kastlík CD studs. The section is CD 60×27, not a timber lať.
     rost_spacing: float = 625.0
     rost_first_inset: float = 90.0
-    # CD grid holding SDK — ⊥ krokvím.
+    # CD grid holding SDK — ⊥ krokvím. UD is the wall channel the soffit CDs enter.
     cd_w: float = 60.0
     cd_spacing: float = 625.0
     cd_first_inset: float = 90.0
+    ud_w: float = 28.0
     # Rafters (spacing along Y) + bracing straps on underside.
     rafter_w: float = 100.0
     rafter_spacing: float = 875.0
@@ -342,16 +345,17 @@ class ObyvakLayout:
         self.poz_l0 = self.xl_mas + p.wall_mason * 0.5 - p.plate_w * 0.5
         self.poz_r0 = self.xr_int + p.wall_plaster + p.wall_mason * 0.5 - p.plate_w * 0.5
 
-        self.x_pred_l = p.predstena_kitchen
-        self.x_pred_r = p.room_length - p.predstena_living
+        # Elevation X is world Y. Y=0 is the deep living trap; Y=L is the shallow kitchen trap.
+        self.x_pred_l = p.predstena_living
+        self.x_pred_r = p.room_length - p.predstena_kitchen
 
         self.yl_eps = -p.wall_plaster - p.wall_mason - p.wall_eps
         self.yl_mas = -p.wall_plaster - p.wall_mason
         self.yr_int = p.room_length
         self.yr_mas = p.room_length + p.wall_plaster + p.wall_mason
         self.yr_eps = self.yr_mas + p.wall_eps
-        self.y_pred_l = p.predstena_kitchen
-        self.y_pred_r = p.room_length - p.predstena_living
+        self.y_pred_l = p.predstena_living
+        self.y_pred_r = p.room_length - p.predstena_kitchen
         self.y_roof0 = self.yl_eps - p.ridge_runout
         self.y_roof1 = self.yr_eps + p.ridge_runout
         # Cabinet/soffit run is not on either 2D sheet; default = clear span between gable predstěny.
@@ -574,23 +578,23 @@ class ObyvakLayout:
         return out
 
     def sikmina_rost_y_stations(self, y0: float, y1: float) -> list[float]:
-        """625 mm centres. The slope has no latě; the soffit rost uses this module."""
+        """625 mm centres. The slope has no latě; the soffit CD studs use this module."""
         p = self.p
         return self.y_stations(y0, y1, p.rost_spacing, p.rost_first_inset)
 
     def soffit_rost_y_stations(
         self, bay0: float, bay1: float, slope_ys: list[float]
     ) -> list[float]:
-        """Soffit latě on the 625 mm module, limited to the soffit bay.
+        """Soffit CD studs on the 625 mm module, limited to the soffit bay.
 
         The module is not restarted at the předstěna, so the verticals stay
         on one grid along the room.
         """
-        half = self.p.rost_w * 0.5
+        half = self.p.cd_w * 0.5
         return [y for y in slope_ys if bay0 + half <= y <= bay1 - half]
 
     def soffit_wool_wedge_pts(self) -> list[tuple[float, float]]:
-        """Mineral wool under the lid, from the slope-board attic face to the vertical lať.
+        """Mineral wool under the lid, from the slope-board attic face to the vertical CD.
 
         The board ends at the furniture line. Past the gypsum joint the lid
         sits above that attic face. The triangle is on the warm side of the

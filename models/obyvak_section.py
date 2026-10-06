@@ -3,7 +3,7 @@
 Šikminy: NaturHeld 140 (80) screwed through GKF into CD ⊥ krokvím, závěsy,
 pásky (3D: 45° X; zde jen průřez). No slope latě and no Flex. Soffit: 40 mm
 NaturHeld on the side and bottom, mineral wool in the cavity, GKF lid on the
-pozednice above three Ø160 ducts; latový rost under the pipes, hung from the
+pozednice above three Ø160 ducts; CD/UD rost under the pipes, hung from the
 front CD and braced to the wall. The hidden gypsum butt is a light-gauge
 angle on that same CD. 3D: `models/obyvak.py`.
 
@@ -31,8 +31,8 @@ from obyvak_geom import (  # noqa: F401
     LABEL_SLOPE_GKF,
     LABEL_SLOPE_NH,
     LABEL_SLOPE_NONIUS,
-    LABEL_SOFFIT_BATTENS,
     LABEL_SOFFIT_CD,
+    LABEL_SOFFIT_UD,
     LABEL_SOFFIT_DUCT,
     LABEL_SOFFIT_WOOL,
     LABEL_SOFFIT_GKF,
@@ -126,32 +126,36 @@ def build(params: ObyvakParams | None = None):
         parts.append(xz_face(g.paska_quad(*st), LABEL_RACKING_STRAP))
 
     # Soffit bay: NH L, mineral wool under the rail, ducts, GKF lid on the plate,
-    # horizontal CD + Nonius, plate cleat, rost hung from the front CD.
+    # horizontal CD + Nonius, plate cleat, CD/UD rost hung from the front CD.
     parts.append(xz_face(g.soffit_nh_pts(), LABEL_SOFFIT_NH))
     parts.append(xz_face(g.soffit_wool_pts(), LABEL_SOFFIT_WOOL))
-    fm = p.rost_d
+    fd = p.cd_t
+    ud = p.ud_w
     z_wood0 = g.z_nabeh_bot + g.t_soffit_face + p.wall_bracket_t
     x_wall = p.room_width - p.wall_plaster
-    # Vertical lať beside the ducts, up to the lid, plus the underside lať.
+    x_ud1 = x_wall - p.wall_bracket_t
+    x_ud0 = x_ud1 - ud
+    # Vertical CD beside the ducts, up to the lid, plus the bottom CD into the UD.
     z_lat_top = g.z_soffit_lid
     parts.append(
         xz_rect(
             g.x_nh_inner,
             z_wood0,
-            fm,
+            fd,
             max(8.0, z_lat_top - z_wood0),
-            LABEL_SOFFIT_BATTENS,
+            LABEL_SOFFIT_CD,
         )
     )
     parts.append(
         xz_rect(
-            g.x_nh_inner + fm,
+            g.x_nh_inner + fd,
             z_wood0,
-            max(8.0, x_wall - (g.x_nh_inner + fm)),
-            fm,
-            LABEL_SOFFIT_BATTENS,
+            max(8.0, x_ud0 - (g.x_nh_inner + fd)),
+            fd,
+            LABEL_SOFFIT_CD,
         )
     )
+    parts.append(xz_rect(x_ud0, z_wood0, ud, fd, LABEL_SOFFIT_UD))
     parts.append(xz_face(g.soffit_sdk_lid_pts(), LABEL_SOFFIT_GKF))
     r_duct = p.duct_od * 0.5
     for cx, cz in g.soffit_duct_centers():
@@ -168,10 +172,10 @@ def build(params: ObyvakParams | None = None):
         parts.append(xz_face(quad, LABEL_SOFFIT_NONIUS))
     for quad in g.soffit_plate_cleat_quads():
         parts.append(xz_face(quad, LABEL_SOFFIT_NONIUS))
-    # Screw through the lid into the rost CD (schematic) + wall angle.
+    # Screw through the lid into the vertical CD (schematic) + wall angle.
     rost_x = g.x_sdk_break + p.cd_w * 0.5
     if any(abs(x - rost_x) < 1.0 for x in g.horiz_cd_x_stations()):
-        xc = rost_x
+        xc = g.x_nh_inner + fd * 0.5
         z_drop0 = z_lat_top
         z_drop1 = g.z_soffit_lid + p.sdk_t
         parts.append(

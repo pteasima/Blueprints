@@ -46,7 +46,8 @@ def test_soffit_and_predsteny_match_source_sheet():
     assert abs(g.z_soffit - 5395.1) < 1.0
     assert p.predstena_kitchen == 190.0
     assert p.predstena_living == 450.0
-    assert g.x_pred_r == p.room_length - p.predstena_living
+    assert g.x_pred_l == p.predstena_living
+    assert g.x_pred_r == p.room_length - p.predstena_kitchen
     _, section_meta = build_section()
     assert abs(g.h_start - section_meta["derived"]["h_start"]) < 1e-9
 
@@ -71,8 +72,8 @@ def test_elevation_geometry_is_horizontal_not_aframe():
     assert len(pred) == 2
     boxes = sorted((c.bounding_box().min.X, c.bounding_box().max.X) for c in pred)
     assert abs(boxes[0][0] - 0.0) < 1e-6
-    assert abs(boxes[0][1] - p.predstena_kitchen) < 1e-6
-    assert abs(boxes[1][0] - (p.room_length - p.predstena_living)) < 1e-6
+    assert abs(boxes[0][1] - p.predstena_living) < 1e-6
+    assert abs(boxes[1][0] - (p.room_length - p.predstena_kitchen)) < 1e-6
     assert abs(boxes[1][1] - p.room_length) < 1e-6
     for face in pred:
         bb = face.bounding_box()

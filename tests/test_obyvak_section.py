@@ -17,8 +17,8 @@ from obyvak_geom import (  # noqa: E402
     LABEL_SLOPE_GKF,
     LABEL_SLOPE_NH,
     LABEL_SLOPE_NONIUS,
-    LABEL_SOFFIT_BATTENS,
     LABEL_SOFFIT_CD,
+    LABEL_SOFFIT_UD,
     LABEL_SOFFIT_WOOL,
     LABEL_SOFFIT_GKF,
     LABEL_SOFFIT_NH,
@@ -75,7 +75,7 @@ def test_obyvak_section_builds_and_exports(tmp_path, monkeypatch):
         LABEL_ROOFING,
         LABEL_SLOPE_GKF,
         LABEL_SOFFIT_GKF,
-        LABEL_SOFFIT_BATTENS,
+        LABEL_SOFFIT_UD,
         LABEL_SLOPE_CD,
         LABEL_SLOPE_FOIL,
         LABEL_SOFFIT_CD,
@@ -85,6 +85,7 @@ def test_obyvak_section_builds_and_exports(tmp_path, monkeypatch):
     assert "podhled" not in labels
     assert "NaturHeld 140" not in labels
     assert "sdk" not in labels
+    assert "soffit_battens" not in labels
     assert meta["derived"]["cd_count"] >= 5
     paths = export_section(shape, "obyvak_section")
     assert paths["svg"].exists()

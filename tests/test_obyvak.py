@@ -6,6 +6,7 @@ sys.path.insert(0, str(ROOT / "models"))
 
 from obyvak import (  # noqa: E402
     FACE_GAP,
+    bass_cd_centres,
     build,
     build_elevation_slice,
     build_section_slice,
@@ -28,8 +29,8 @@ from obyvak_geom import (  # noqa: E402
     LABEL_SLOPE_GKF,
     LABEL_SLOPE_NH,
     LABEL_SLOPE_NONIUS,
-    LABEL_SOFFIT_BATTENS,
     LABEL_SOFFIT_CD,
+    LABEL_SOFFIT_UD,
     LABEL_SOFFIT_WOOL,
     LABEL_SOFFIT_DUCT,
     LABEL_SOFFIT_GKF,
@@ -79,8 +80,9 @@ def test_layout_ceiling_and_gable():
     x0, z0 = crown[i0]
     xr, zr = crown[ir]
     assert abs((zr - z0) / (xr - x0) - g.tan) < 1e-9
-    assert g.y_furn0 == p.predstena_kitchen
-    assert g.y_furn1 == p.room_length - p.predstena_living
+    assert g.y_furn0 == p.predstena_living
+    assert g.y_furn1 == p.room_length - p.predstena_kitchen
+    assert abs((g.y_furn1 - g.y_furn0) - (p.room_length - p.predstena_kitchen - p.predstena_living)) < 1e-9
     assert p.roof_overhang == 80.0
     assert abs(g.left_eave - (g.xl_eps - p.roof_overhang)) < 1e-9
     assert abs(g.column_top_z - (p.eave_wall_z - p.venec_h)) < 1e-9
@@ -226,7 +228,11 @@ def test_sikminy_and_soffit_stack_in_3d():
     shape, _ = build(p)
     nh = _labeled(shape, LABEL_SLOPE_NH) + _labeled(shape, LABEL_SOFFIT_NH)
     wool = _labeled(shape, LABEL_SOFFIT_WOOL)
-    rost = _labeled(shape, LABEL_SOFFIT_BATTENS)
+    rost = [
+        c
+        for c in _labeled(shape, LABEL_SOFFIT_CD)
+        if c.bounding_box().size.Y < 500.0
+    ]
     cds = _labeled(shape, LABEL_SLOPE_CD) + _labeled(shape, LABEL_SOFFIT_CD)
     zaves = _labeled(shape, LABEL_SLOPE_NONIUS) + _labeled(shape, LABEL_SOFFIT_NONIUS)
     direct = _labeled(shape, LABEL_SLOPE_DIRECT)
@@ -243,7 +249,8 @@ def test_sikminy_and_soffit_stack_in_3d():
     pasky = _labeled(shape, LABEL_RACKING_STRAP)
     assert len(nh) >= 2  # slope NH + soffit L
     assert len(wool) >= 2  # cavity wool + the wedge under the lid
-    assert len(rost) >= 8  # soffit latě only; the slope has none
+    assert len(rost) >= 8  # soffit CD studs only; the slope has none
+    assert "soffit_battens" not in {c.label for c in shape.children}
     assert len(cds) >= 5  # CD ⊥ krokvím along slope
     assert len(zaves) >= 10
     # ~6 straps/side (3 X pairs × 2 diagonals) along the 11 m length.
@@ -334,14 +341,14 @@ def test_sikminy_and_soffit_stack_in_3d():
         and c.bounding_box().max.Z > g.z_soffit_lid
     ]
     assert len(front_drops) >= 1
-    # Rafters are roof timber only — soffit-frame latě use soffit_battens.
+    # Rafters are roof timber only — the kastlík frame is CD/UD.
     for part in _labeled(shape, LABEL_RAFTERS):
         bb = part.bounding_box()
         assert not (bb.min.X >= g.x_furn - 1.0 and bb.max.Z <= g.z_gkf_horiz + 1.0)
     # Šikminy pack runs wall-to-wall (bass traps sit under it, do not replace it).
     nh = _labeled(shape, LABEL_SLOPE_NH)
     assert any(c.bounding_box().size.Y > p.room_length - 10.0 for c in nh)
-    # Soffit rost is a lattice (latě @625), not full-depth solid boards.
+    # Soffit rost is a CD lattice (@625), not full-depth solid boards.
     soffit_rost = [
         c
         for c in rost
@@ -352,12 +359,19 @@ def test_sikminy_and_soffit_stack_in_3d():
     verticals = [
         c
         for c in soffit_rost
-        if c.bounding_box().size.Z > 400.0 and c.bounding_box().size.X < p.rost_d + 5.0
+        if c.bounding_box().size.Z > 400.0 and c.bounding_box().size.X < p.cd_t + 5.0
     ]
     assert verticals
     vertical_ys = sorted(c.bounding_box().center().Y for c in verticals)
     for a, b in zip(vertical_ys, vertical_ys[1:]):
         assert abs((b - a) - p.rost_spacing) < 1.0
+    assert all(abs(c.bounding_box().size.X - (p.cd_t - FACE_GAP)) < 1.5 for c in verticals)
+    uds = _labeled(shape, LABEL_SOFFIT_UD)
+    assert len(uds) == 1
+    ud = uds[0].bounding_box()
+    assert ud.size.Y > 1000.0
+    assert abs(ud.size.X - (p.ud_w - FACE_GAP)) < 1.0
+    assert abs(ud.size.Z - (p.cd_t - FACE_GAP)) < 1.0
     wedges = [
         c
         for c in wool
@@ -384,7 +398,7 @@ def test_sikminy_and_soffit_stack_in_3d():
     ]
     assert len(soffit_hangers) >= 4
     assert all(abs(c.bounding_box().center().X - rost_x) < p.cd_w for c in soffit_hangers)
-    # Underside latě brace to the wall. No second horizontal row under the ducts.
+    # Bottom CDs run to the wall UD. No second horizontal row under the ducts.
     soffit_rost = [c for c in rost if c.bounding_box().min.X >= g.x_nh_inner - 1.0]
     assert len(soffit_rost) >= 15
     top_rails = [
@@ -411,7 +425,7 @@ def test_soffit_hangs_from_cd_not_furniture_or_pozednice():
     shape, _ = build(p)
     # No rost/CD/zaves share volume with furniture.
     furn = _labeled(shape, LABEL_FURNITURE)[0]
-    for label in (LABEL_SOFFIT_BATTENS, LABEL_SOFFIT_CD, LABEL_SOFFIT_NONIUS):
+    for label in (LABEL_SOFFIT_CD, LABEL_SOFFIT_UD, LABEL_SOFFIT_NONIUS):
         for part in _labeled(shape, label):
             if part.bounding_box().min.X < g.x_furn - 1.0:
                 continue
@@ -446,7 +460,7 @@ def test_soffit_ducts_sit_under_lid_on_wall_plate():
         assert bb.max.Z < g.z_soffit_lid - 5.0
         assert bb.min.Z > g.column_top_z + 10.0
         assert bb.max.X < p.room_width - 4.0
-        assert bb.min.X > g.x_nh_inner + p.rost_d + 5.0
+        assert bb.min.X > g.x_nh_inner + p.cd_t + 5.0
     # 2-over-1: two crowns at the same height, one nested below.
     crowns = sorted(d.bounding_box().max.Z for d in ducts)
     assert abs(crowns[1] - crowns[2]) < 1.0
@@ -643,7 +657,8 @@ def test_sikmina_drawing_scenes():
     assert "slope_battens" not in section["opacity"]
     assert section["opacity"][LABEL_SLOPE_CD] == 1
     assert section["opacity"][LABEL_SLOPE_DIRECT] == 1
-    assert section["opacity"][LABEL_SOFFIT_BATTENS] == 1
+    assert section["opacity"][LABEL_SOFFIT_UD] == 1
+    assert "soffit_battens" not in section["opacity"]
     assert section["opacity"][LABEL_SOFFIT_CD] == 1
     assert section["opacity"][LABEL_SOFFIT_NONIUS] == 1
     wool = 0.18
@@ -786,7 +801,7 @@ def test_3d_matches_section_and_elevation_masses():
         LABEL_SLOPE_NH,
         LABEL_SOFFIT_NH,
         LABEL_GLAZING,
-        LABEL_SOFFIT_BATTENS,
+        LABEL_SOFFIT_UD,
         LABEL_SLOPE_CD,
         LABEL_SOFFIT_CD,
         LABEL_SLOPE_NONIUS,
@@ -838,14 +853,14 @@ def test_3d_matches_section_and_elevation_masses():
         assert abs(bb.min.X - x_furn_col0) < 2.0
         assert bb.max.X <= p.room_width + 1.0  # not inside the wall
 
-    # Bass traps: kitchen MW+GKB (190) and living GKB+MW (450).
+    # Bass traps: living MW at Y=0 (450) and kitchen MW at Y=L (190).
     bass_wool = _labeled(shape, LABEL_BASS_WOOL)
     assert len(bass_wool) == 2
-    kitchen_wool, living_wool = sorted(bass_wool, key=lambda s: s.bounding_box().min.Y)
-    assert abs(kitchen_wool.bounding_box().min.Y - FACE_GAP) < 1e-6
-    assert abs(kitchen_wool.bounding_box().size.Y - (p.bass_k_wool - 2 * FACE_GAP)) < 1.0
-    assert abs(living_wool.bounding_box().max.Y - (p.room_length - FACE_GAP)) < 1e-6
+    living_wool, kitchen_wool = sorted(bass_wool, key=lambda s: s.bounding_box().min.Y)
+    assert abs(living_wool.bounding_box().min.Y - FACE_GAP) < 1e-6
     assert abs(living_wool.bounding_box().size.Y - (p.bass_l_wool - 2 * FACE_GAP)) < 1.0
+    assert abs(kitchen_wool.bounding_box().max.Y - (p.room_length - FACE_GAP)) < 1e-6
+    assert abs(kitchen_wool.bounding_box().size.Y - (p.bass_k_wool - 2 * FACE_GAP)) < 1.0
 
     bass_gkb = [
         c
@@ -854,9 +869,9 @@ def test_3d_matches_section_and_elevation_masses():
         and c.bounding_box().size.Y < 30.0  # vertical membrane face (~12.5)
     ]
     assert len(bass_gkb) >= 2
-    k_gkb, l_gkb = sorted(bass_gkb, key=lambda s: s.bounding_box().min.Y)[:2]
-    assert abs(k_gkb.bounding_box().max.Y - (p.predstena_kitchen - FACE_GAP)) < 1.0
-    assert abs(l_gkb.bounding_box().min.Y - (g.y_pred_r + FACE_GAP)) < 1.0
+    l_gkb, k_gkb = sorted(bass_gkb, key=lambda s: s.bounding_box().min.Y)[:2]
+    assert abs(l_gkb.bounding_box().max.Y - (p.predstena_living - FACE_GAP)) < 1.0
+    assert abs(k_gkb.bounding_box().min.Y - (g.y_pred_r + FACE_GAP)) < 1.0
     # Short rear třmeny exist at both gables (no hangers into krov).
     bass_trmeny = _labeled(shape, LABEL_BASS_HANGER)
     assert len(bass_trmeny) >= 4
@@ -917,33 +932,34 @@ def test_3d_matches_section_and_elevation_masses():
     assert l_sdk.max.Y <= min(part.bounding_box().min.Y for part in l_pouzdra) + 1e-6
     # Walk-through door holes only: SDK volume well below a solid full-width board.
     full_sdk_vol = (p.room_width - 2 * FACE_GAP) * face_t * (p.pocket_door_h - FACE_GAP)
-    assert sdk_faces[0].volume < full_sdk_vol * 0.9  # one kitchen door hole (chodba)
-    assert sdk_faces[1].volume < full_sdk_vol * 0.75  # two living door holes (spíž + zádveří)
+    assert sdk_faces[0].volume < full_sdk_vol * 0.9  # one living door hole at Y=0
+    assert sdk_faces[1].volume < full_sdk_vol * 0.75  # two kitchen door holes at Y=L
     # Předstěny depths immutable.
     assert p.predstena_kitchen == 190.0
     assert p.predstena_living == 450.0
 
-    # Spíž on far gable (Y=L) with zádveří; chodba alone on near gable (Y=0).
-    kitchen_doors = [d for d in p.pocket_doors if d[0] == "kitchen"]
-    living_doors = sorted(
-        [d for d in p.pocket_doors if d[0] == "living"], key=lambda d: d[1]
+    # Two kitchen doors stay on Y=L; the single living door stays on Y=0.
+    kitchen_doors = sorted(
+        [d for d in p.pocket_doors if d[0] == "kitchen"], key=lambda d: d[1]
     )
-    assert len(kitchen_doors) == 1
-    assert len(living_doors) == 2
-    assert kitchen_doors[0][1] == 0.0  # chodba · window corner · Y=0
-    assert living_doors[0][1] == 0.0  # zádveří · window corner · Y=L
-    assert abs(living_doors[1][1] - (p.room_width - p.pocket_spiz_inset - 1000.0)) < 1e-6
-    kitchen_pouzdra = [part for part in pouzdra if part.bounding_box().max.Y < p.room_length / 2]
-    living_pouzdra = [part for part in pouzdra if part.bounding_box().min.Y > p.room_length / 2]
-    assert len(kitchen_pouzdra) == 1
-    assert len(living_pouzdra) == 2
-    # Explicit: pantry pouzdro is on the living/far gable, not kitchen/near.
-    spiz = [
+    living_doors = [d for d in p.pocket_doors if d[0] == "living"]
+    assert len(kitchen_doors) == 2
+    assert len(living_doors) == 1
+    assert living_doors[0][1] == 0.0 and living_doors[0][2] == 1000.0
+    assert kitchen_doors[0][1] == 0.0 and kitchen_doors[0][2] == 1100.0
+    assert abs(kitchen_doors[1][1] - (p.room_width - p.pocket_spiz_inset - 1000.0)) < 1e-6
+    assert kitchen_doors[1][2] == 1000.0
+    living_pouzdra = [part for part in pouzdra if part.bounding_box().max.Y < p.room_length / 2]
+    kitchen_pouzdra = [part for part in pouzdra if part.bounding_box().min.Y > p.room_length / 2]
+    assert len(living_pouzdra) == 1
+    assert len(kitchen_pouzdra) == 2
+    # The cabinet-eave opening stays on the far (kitchen) gable.
+    far_opening = [
         part
-        for part in living_pouzdra
+        for part in kitchen_pouzdra
         if part.bounding_box().min.X > p.room_width * 0.4
     ]
-    assert len(spiz) == 1
+    assert len(far_opening) == 1
     glass = _labeled(shape, LABEL_GLAZING)
     assert len(glass) == len(p.eave_windows)
     for (y0, width), pane in zip(
@@ -1027,7 +1043,7 @@ def test_obyvak_3d_exports(tmp_path, monkeypatch):
     assert "slope_naturheld_flex_50" not in sec_labels
     assert "slope_battens" not in sec_labels
     assert LABEL_SLOPE_NH in sec_labels
-    # Slice is snapped onto a krokev (875 grid); rost latě use 625 and may miss.
+    # Slice is snapped onto a krokev (875 grid); soffit CD studs use 625 and may miss.
     assert LABEL_RAFTERS in sec_labels
     assert "predstena" not in sec_labels
 
@@ -1037,6 +1053,117 @@ def test_obyvak_3d_exports(tmp_path, monkeypatch):
     assert LABEL_BASS_WOOL in elev_labels  # schematic trap massing at gables
     assert LABEL_WALL_GKF in elev_labels
     assert "koruna" not in elev_labels
+
+
+def test_soffit_acoustics_ignore_the_steel_section():
+    """CD/UD replaces the timber latě. The acoustic stack stays the 40 mm board."""
+    from blueprints.acoustics.obyvak import room_geometry
+
+    geom = room_geometry()
+    assert geom.soffit_board == 0.04
+    assert abs(geom.soffit - 11.82517944478819) < 1e-6
+    assert abs(geom.soffit_wool_depth - 0.44760580837556746) < 1e-9
+    assert abs(geom.soffit_air_depth - 0.32589419162443256) < 1e-9
+
+
+def test_default_gable_lattices_and_as_built_wool():
+    """Kitchen is 625 vertical plus a 350 mm bay; living is 1000 horizontal plus 350 mm."""
+    p = ObyvakParams()
+    g = build_layout(p)
+    assert abs(p.bass_k_wool - 130.5) < 1e-9
+    assert abs(p.bass_k_air - 47.0) < 1e-9
+    assert abs(p.bass_l_wool - 300.0) < 1e-9
+    assert abs(p.bass_l_air - 137.5) < 1e-9
+    kitchen = bass_cd_centres(p.room_width, 625.0, p.cd_w, FACE_GAP)
+    living = bass_cd_centres(p.room_width, 1000.0, p.cd_w, FACE_GAP)
+    assert kitchen[1:-1] == [625.0, 1250.0, 1875.0, 2500.0, 3125.0, 3750.0, 4375.0, 5000.0]
+    assert abs(kitchen[0] - (p.cd_w * 0.5 + FACE_GAP)) < 1e-6
+    assert abs(kitchen[-1] - (p.room_width - p.cd_w * 0.5 - FACE_GAP)) < 1e-6
+    assert abs(8 * 625.0 - 5000.0) < 1e-9
+    assert abs(p.room_width - 5000.0 - 350.0) < 1e-6
+    assert living[1:-1] == [1000.0, 2000.0, 3000.0, 4000.0, 5000.0]
+
+    shape, _ = build(p)
+    cds = _labeled(shape, LABEL_BASS_CD)
+
+    def vertical_xs(side: str) -> list[float]:
+        xs = []
+        for part in cds:
+            bb = part.bounding_box()
+            if bb.size.Z < 400.0 or abs(bb.size.X - p.cd_w) > 2.0:
+                continue
+            if side == "kitchen" and bb.min.Y < p.room_length * 0.5:
+                continue
+            if side == "living" and bb.max.Y > p.room_length * 0.5:
+                continue
+            xs.append(round(bb.center().X, 1))
+        return sorted(set(xs))
+
+    assert vertical_xs("kitchen") == [round(x, 1) for x in kitchen]
+    assert vertical_xs("living") == [round(x, 1) for x in living]
+
+    def joint_zs(side: str) -> list[float]:
+        zs = []
+        for part in cds:
+            bb = part.bounding_box()
+            if bb.size.X < 200.0 or bb.size.Z > p.cd_t + 1.0:
+                continue
+            if bb.center().Z < p.predstena_bottom_z + 400.0:
+                continue
+            if bb.max.Z > g.z_ceil(bb.center().X) - p.cd_t - 5.0:
+                continue
+            if side == "kitchen" and bb.min.Y < p.room_length * 0.5:
+                continue
+            if side == "living" and bb.max.Y > p.room_length * 0.5:
+                continue
+            zs.append(bb.center().Z)
+        return zs
+
+    kitchen_rails = joint_zs("kitchen")
+    living_rails = joint_zs("living")
+    assert any(abs(z - (p.predstena_bottom_z + 2000.0)) < 2.0 for z in kitchen_rails)
+    assert not any(abs(z - (p.predstena_bottom_z + 1250.0)) < 2.0 for z in kitchen_rails)
+    assert any(abs(z - (p.predstena_bottom_z + 1250.0)) < 2.0 for z in living_rails)
+    assert any(abs(z - (p.predstena_bottom_z + 2500.0)) < 2.0 for z in living_rails)
+
+
+def test_shallow_trap_is_on_the_two_door_gable():
+    """The 190 mm trap (wool 130.5 / air 47) sits on the gable with two sliding doors."""
+    p = ObyvakParams()
+    assert p.pocket_door_h <= p.predstena_bottom_z
+    kitchen = [d for d in p.pocket_doors if d[0] == "kitchen"]
+    living = [d for d in p.pocket_doors if d[0] == "living"]
+    assert len(kitchen) == 2
+    assert len(living) == 1
+    # Openings stay at the coordinates already in the model.
+    assert sorted((d[1], d[2]) for d in kitchen) == [(0.0, 1100.0), (3700.0, 1000.0)]
+    assert (living[0][1], living[0][2]) == (0.0, 1000.0)
+
+    shape, _ = build(p)
+    wool = _labeled(shape, LABEL_BASS_WOOL)
+    shallow = min(wool, key=lambda s: s.bounding_box().size.Y)
+    deep = max(wool, key=lambda s: s.bounding_box().size.Y)
+    assert abs(shallow.bounding_box().size.Y - (p.bass_k_wool - 2 * FACE_GAP)) < 1.0
+    assert abs(deep.bounding_box().size.Y - (p.bass_l_wool - 2 * FACE_GAP)) < 1.0
+    assert shallow.bounding_box().min.Y > p.room_length * 0.5
+    assert deep.bounding_box().max.Y < p.room_length * 0.5
+
+    pouzdra = _labeled(shape, LABEL_POCKET_FRAME)
+
+    def far(part) -> bool:
+        return part.bounding_box().min.Y > p.room_length * 0.5
+
+    assert sum(1 for part in pouzdra if far(part)) == 2
+    assert sum(1 for part in pouzdra if not far(part)) == 1
+    assert far(shallow)
+    sdk = [
+        c
+        for c in _labeled(shape, LABEL_WALL_GKF)
+        if c.bounding_box().max.Z <= p.pocket_door_h + 1.0
+    ]
+    two_door_face = next(c for c in sdk if far(c))
+    one_door_face = next(c for c in sdk if not far(c))
+    assert two_door_face.volume < one_door_face.volume
 
 
 def test_part_groups_tree():
