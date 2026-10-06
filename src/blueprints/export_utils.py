@@ -99,6 +99,14 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "roughness": 0.45,
         "metallic": 0.0,
     },
+    "door": {
+        "fill": (210, 140, 70),
+        "line": (120, 70, 30),
+        "dxf": ColorIndex.YELLOW,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.55,
+        "metallic": 0.0,
+    },
     "wall_plate": {
         "fill": (200, 85, 10),
         "line": (110, 40, 0),
@@ -310,6 +318,7 @@ SECTION_LAYER_ORDER = [
     "venec",
     "plaster",
     "furniture",
+    "door",
     "wall_plate",
     "pocket_frame",
     "wall_gkf",
@@ -376,6 +385,7 @@ def export_shape(
     formats: tuple[str, ...] = ("step", "stl"),
     scenes: list | None = None,
     part_groups: list | None = None,
+    label: str | None = None,
 ) -> dict[str, Path]:
     """Export a solid under exports/<model_name>/.
 
@@ -407,6 +417,7 @@ def export_shape(
         stem=stem,
         scenes=scenes,
         part_groups=part_groups,
+        label=label,
     )
     publish_to_artifacts(model_name, written)
     return written
@@ -1069,6 +1080,7 @@ def _maybe_write_usdz(
     stem: str = "model",
     scenes: list | None = None,
     part_groups: list | None = None,
+    label: str | None = None,
 ) -> None:
     stl_path = written.get("stl")
     if stl_path is None or not stl_path.is_file():
@@ -1107,6 +1119,7 @@ def _maybe_write_usdz(
             glb_path=written.get("glb"),
             scenes=scenes,
             part_groups=part_groups,
+            label=label,
         )
         if hub is not None:
             written["preview_hub"] = hub
