@@ -51,7 +51,11 @@ def main(argv: list[str] | None = None) -> int:
         paths = export_section(shape, model_name)
     else:
         paths = export_shape(
-            shape, model_name, scenes=scenes, part_groups=part_groups
+            shape,
+            model_name,
+            scenes=scenes,
+            part_groups=part_groups,
+            label=getattr(mod, "MODEL_LABEL", None),
         )
 
     params = meta.get("derived") or getattr(mod, "PARAMS", meta.get("params", {}))

@@ -6,3 +6,4 @@ Parametric ports live under `models/`.
 - `obyvak/make_stit_bokorys_8bdb.py` — gable elevation from the windows (štít–štít, předstěny 190/450). Ported as `models/obyvak_elevation.py`. Combined 3D massing: `models/obyvak.py`.
 - `obyvak/make_bass_kuchyne_12ed.py` — detail basstrap kuchyně 190 (hybrid stack + short rear třmen).
 - `obyvak/make_bass_obyvak_0a95.py` — detail basstrap obývák 450 (mirrored stack). Layered in `models/obyvak.py` 3D.
+- `ground_floor/ground-floor.yaml` — RD Šíma 1.NP walls and openings, vendored from yaml-ifc @ `7cbed81`. Ported as `models/ground_floor.py`.
