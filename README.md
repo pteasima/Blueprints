@@ -2,7 +2,9 @@
 
 Parametric 2D/3D house and furniture models in Python, using [build123d](https://github.com/gumyr/build123d) (Open CASCADE).
 
-This repo is meant for Cursor agent workflows: edit parameters, regenerate geometry, export STEP/STL and viewer drawings, and review diffs + screenshots from the Cursor iOS app or desktop. Agent operating notes (always attach PNG previews, Cloud Agent bootstrap) live in [`AGENTS.md`](AGENTS.md).
+This repo is meant for Cursor agent workflows: edit parameters, regenerate geometry, export STEP/STL and viewer drawings, and review diffs + screenshots from the Cursor iOS app or desktop.
+
+Process for agents and contributors is in [AGENTS.md](AGENTS.md).
 
 ## Why build123d (vs plain ezdxf)
 

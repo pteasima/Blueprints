@@ -2,11 +2,15 @@
 
 Parametric 2D/3D models in Python ([build123d](https://github.com/gumyr/build123d)). Humans review geometry in chat, mostly from PNG previews.
 
-Treat developer-experience friction (especially Cloud Agent onboarding) as part of the work. If setup, docs, or the export loop wastes time, fix it in-repo or propose the environment change — do not only work around it for one session.
+All process for this repo lives in this file. Humans are agents too. Do not add a `CONTRIBUTING.md`; a second process file would drift from this one.
 
-## Pull request branches
+Treat developer-experience friction (especially Cloud Agent onboarding) as part of the work. If setup, docs, or the export loop wastes time, fix it in-repo or propose the environment change — do not only work around it for one session. A one-off workaround leaves the next session with the same break.
 
-When a pull request branch is behind `main`, rebase that feature branch onto `main` and force-push the feature branch. Do not merge `main` into the feature branch. The only exception is a branch that someone else is also committing to.
+## Pull requests
+
+Open every pull request as a draft. A draft means agents are still working. Ready for review means it is the repo owner's turn. Mark a pull request ready only when CI is green and you have reviewed the diff yourself. If another agent launched you, leave the pull request as a draft and report back to that agent instead.
+
+When a pull request branch is behind `main`, rebase that feature branch onto `main` and force-push the feature branch. Do not merge `main` into the feature branch. Pull requests merge to `main` only by squash, so a merge from `main` would fold upstream history into that squash; a rebase keeps the branch a linear stack of its own work. Force-push only the feature branch. The ruleset on `main` blocks force-pushes and deletion. The only exception is a branch that someone else is also committing to, because a rebase would rewrite commits they still have locally.
 
 ## Architectural modelling (physical building first)
 
@@ -126,7 +130,9 @@ source .venv/bin/activate
 python -m pytest
 ```
 
-Default to **asking the human to test UI changes manually** (especially phone / Safari / Quick Look). Do **not** start `computerUse` / GUI walkthroughs unless the human asks for that, or a non-UI bug needs interactive reproduction after automated checks fail. Prefer `pytest`, export smoke, and the live Pages URL for verification.
+GitHub Actions runs this suite on pull requests and on pushes to `main`, with a read-only token (`permissions: contents: read`).
+
+Default to **asking the human to test UI changes manually** (especially phone / Safari / Quick Look). Do **not** start `computerUse` / GUI walkthroughs unless the human asks for that, or a non-UI bug needs interactive reproduction after automated checks fail. Prefer `pytest`, export smoke, and the live Pages URL for verification. The agent desktop cannot stand in for a phone, Safari, or Quick Look.
 
 ## Cursor Cloud specific instructions
 
