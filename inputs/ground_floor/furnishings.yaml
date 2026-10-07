@@ -63,6 +63,24 @@
 # Clear of the inner faces, to the island outline: west 1.754, east 8.146,
 # north 1.800, south 1.050.
 #
+# West-wall run, across from the island, between OP25 and OP24. The notes
+# are the left-hand column. North to south: A 850, B 800, C 850 (2500).
+# Facing the west wall, left is south and right is north. In A the 250
+# pull-out is south and the dishwasher is north. In B the bin is south and
+# the compost is north; that is a property on the one 800 box.
+# W-050 starts at y=10.25. OP24 is AlongAxis 0, width 1.1, so y 10.25–11.35
+# (north jamb 11.35). OP25 is AlongAxis 3.6, width 1.1, so y 13.85–14.95
+# (south jamb 13.85). The clear gap is 2500. The run fills it: y 11.35–13.85.
+# Clearance at each jamb is 0. The island is left where it is.
+# Bases are 600 deep and 930 high, backs on the inner face x=18.8, fronts
+# facing east. RefDirection [0, 1]: Origin is the south-east corner, Width
+# runs north, Depth runs west. The Bosch dishwasher is the real
+# 598×550×865, centred in the north 600 of A, back on the wall.
+# Wall cabinets: depth 350, height 900, bottom at 1550 (620 above the 930
+# counter), top at 2450. Elevation 1.55.
+# The Teka bowl is an IfcSanitaryTerminal, 750×440×200, centred in the 800,
+# top flush with 930. The disposer and the tap are not modelled.
+#
 # One whole element per box. The list key is the IFC class:
 #   furniture, systemFurniture, sanitaryTerminals, electricAppliances,
 #   lightFixtures, coverings.
@@ -251,6 +269,92 @@ systemFurniture:
     Width: 0.7
     Depth: 0.6
     Height: 0.93
+  - id: SF-A250
+    Name: "Západ 250 úklid"
+    Description: "Section A, south side. Cleaning pull-out, 250. Left when facing the west wall."
+    PredefinedType: USERDEFINED
+    ObjectType: BaseCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [19.4, 13.0]
+    RefDirection: [0, 1]
+    Width: 0.25
+    Depth: 0.6
+    Height: 0.93
+  - id: SF-AH850
+    Name: "Západ horní 850 sklenice"
+    Description: "Section A wall cabinet, glasses, 850. Depth 350, bottom 1550, height 900, top 2450."
+    PredefinedType: USERDEFINED
+    ObjectType: WallCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [19.15, 13.0]
+    Elevation: 1.55
+    RefDirection: [0, 1]
+    Width: 0.85
+    Depth: 0.35
+    Height: 0.9
+  - id: SF-B800
+    Name: "Západ 800 dřez"
+    Description: "Section B. One 800 sink base for the Teka BE LINEA RS15 71.40. Bin on the south, compost on the north."
+    PredefinedType: USERDEFINED
+    ObjectType: BaseCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [19.4, 12.2]
+    RefDirection: [0, 1]
+    Width: 0.8
+    Depth: 0.6
+    Height: 0.93
+    PropertySets:
+      - Name: Pset_BaseContents
+        Properties:
+          South: "kos"
+          North: "kompost"
+  - id: SF-BH800
+    Name: "Západ horní 800 talíře"
+    Description: "Section B wall cabinet, plates. Depth 350, bottom 1550, height 900, top 2450."
+    PredefinedType: USERDEFINED
+    ObjectType: WallCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [19.15, 12.2]
+    Elevation: 1.55
+    RefDirection: [0, 1]
+    Width: 0.8
+    Depth: 0.35
+    Height: 0.9
+  - id: SF-C850
+    Name: "Západ 850 odpad"
+    Description: "Section C. Sorted waste, 850."
+    PredefinedType: USERDEFINED
+    ObjectType: BaseCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [19.4, 11.35]
+    RefDirection: [0, 1]
+    Width: 0.85
+    Depth: 0.6
+    Height: 0.93
+  - id: SF-CH850
+    Name: "Západ horní 850"
+    Description: "Section C wall cabinet, 850. Stick blender, bowls, measuring cups. Depth 350, bottom 1550, height 900, top 2450."
+    PredefinedType: USERDEFINED
+    ObjectType: WallCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [19.15, 11.35]
+    Elevation: 1.55
+    RefDirection: [0, 1]
+    Width: 0.85
+    Depth: 0.35
+    Height: 0.9
+sanitaryTerminals:
+  - id: SN-RS15
+    Name: "Teka BE LINEA RS15 71.40"
+    Description: "Undermount sink in SF-B800. Overall 750×440, bowl 710×400×200. Centred in the 800. Top flush with the 930 counter."
+    PredefinedType: SINK
+    ContainedInStructure: SP-1.02
+    Origin: [19.32, 12.225]
+    Elevation: 0.73
+    RefDirection: [0, 1]
+    Width: 0.75
+    Depth: 0.44
+    Height: 0.2
 electricAppliances:
   - id: EA-WQ9I
     Name: "Whirlpool WQ9I MO2L EF"
@@ -261,3 +365,13 @@ electricAppliances:
     Width: 0.908
     Depth: 0.716
     Height: 1.876
+  - id: EA-SBD6ECX
+    Name: "Bosch SBD6ECX12E"
+    Description: "Fully integrated dishwasher, 598×550×865, in the north 600 of section A. Right when facing the west wall. Back on the wall, 1 mm clear of each side of the niche."
+    PredefinedType: DISHWASHER
+    ContainedInStructure: SP-1.02
+    Origin: [19.35, 13.251]
+    RefDirection: [0, 1]
+    Width: 0.598
+    Depth: 0.55
+    Height: 0.865

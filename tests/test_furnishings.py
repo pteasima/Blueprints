@@ -134,25 +134,32 @@ def _one_cabinet():
     )
 
 
-# id, list, type field, origin, ref or None, width, depth, height, hinge or None.
-# Type field is ObjectType for a cabinet and PredefinedType for the fridge.
-# File order within each list. The appliance follows the cabinets because
-# electricAppliances is the later list. See furnishings.yaml.
+# id, list, type field, origin, ref or None, width, depth, height, hinge or None, elevation or None.
+# Type field is ObjectType for a cabinet and PredefinedType for an appliance or the sink.
+# File order within each list. sanitaryTerminals sits between the cabinets and the appliances.
 KITCHEN = (
-    ("SF-T1", "systemFurniture", "TallCabinet", [18.8, 15.0], None, 0.75, 0.6, 2.45, "L"),
-    ("SF-T2", "systemFurniture", "TallCabinet", [20.458, 15.0], None, 0.6, 0.6, 2.45, "R"),
-    ("SF-T3", "systemFurniture", "TallCabinet", [21.058, 15.0], None, 0.6, 0.6, 2.45, None),
-    ("SF-T4", "systemFurniture", "TallCabinet", [21.658, 15.0], None, 0.5, 0.6, 2.45, None),
-    ("SF-I500a", "systemFurniture", "BaseCabinet", [20.554, 13.8], [0.0, -1.0], 0.5, 0.6, 0.93, None),
-    ("SF-I600a", "systemFurniture", "BaseCabinet", [20.554, 13.3], [0.0, -1.0], 0.6, 0.6, 0.93, None),
-    ("SF-I500b", "systemFurniture", "BaseCabinet", [20.554, 12.7], [0.0, -1.0], 0.5, 0.6, 0.93, None),
-    ("SF-I600b", "systemFurniture", "BaseCabinet", [20.554, 12.2], [0.0, -1.0], 0.6, 0.6, 0.93, None),
-    ("SF-I300", "systemFurniture", "BaseCabinet", [20.554, 11.6], [0.0, -1.0], 0.3, 0.6, 0.93, None),
-    ("SF-E600a", "systemFurniture", "BaseCabinet", [21.754, 13.2], [0.0, 1.0], 0.6, 0.6, 0.93, None),
-    ("SF-E600b", "systemFurniture", "BaseCabinet", [21.754, 12.6], [0.0, 1.0], 0.6, 0.6, 0.93, None),
-    ("SF-E600c", "systemFurniture", "BaseCabinet", [21.754, 12.0], [0.0, 1.0], 0.6, 0.6, 0.93, None),
-    ("SF-E700", "systemFurniture", "BaseCabinet", [21.754, 11.3], [0.0, 1.0], 0.7, 0.6, 0.93, None),
-    ("EA-WQ9I", "electricAppliances", "FRIDGE_FREEZER", [19.55, 14.884], None, 0.908, 0.716, 1.876, None),
+    ("SF-T1", "systemFurniture", "TallCabinet", [18.8, 15.0], None, 0.75, 0.6, 2.45, "L", None),
+    ("SF-T2", "systemFurniture", "TallCabinet", [20.458, 15.0], None, 0.6, 0.6, 2.45, "R", None),
+    ("SF-T3", "systemFurniture", "TallCabinet", [21.058, 15.0], None, 0.6, 0.6, 2.45, None, None),
+    ("SF-T4", "systemFurniture", "TallCabinet", [21.658, 15.0], None, 0.5, 0.6, 2.45, None, None),
+    ("SF-I500a", "systemFurniture", "BaseCabinet", [20.554, 13.8], [0.0, -1.0], 0.5, 0.6, 0.93, None, None),
+    ("SF-I600a", "systemFurniture", "BaseCabinet", [20.554, 13.3], [0.0, -1.0], 0.6, 0.6, 0.93, None, None),
+    ("SF-I500b", "systemFurniture", "BaseCabinet", [20.554, 12.7], [0.0, -1.0], 0.5, 0.6, 0.93, None, None),
+    ("SF-I600b", "systemFurniture", "BaseCabinet", [20.554, 12.2], [0.0, -1.0], 0.6, 0.6, 0.93, None, None),
+    ("SF-I300", "systemFurniture", "BaseCabinet", [20.554, 11.6], [0.0, -1.0], 0.3, 0.6, 0.93, None, None),
+    ("SF-E600a", "systemFurniture", "BaseCabinet", [21.754, 13.2], [0.0, 1.0], 0.6, 0.6, 0.93, None, None),
+    ("SF-E600b", "systemFurniture", "BaseCabinet", [21.754, 12.6], [0.0, 1.0], 0.6, 0.6, 0.93, None, None),
+    ("SF-E600c", "systemFurniture", "BaseCabinet", [21.754, 12.0], [0.0, 1.0], 0.6, 0.6, 0.93, None, None),
+    ("SF-E700", "systemFurniture", "BaseCabinet", [21.754, 11.3], [0.0, 1.0], 0.7, 0.6, 0.93, None, None),
+    ("SF-A250", "systemFurniture", "BaseCabinet", [19.4, 13.0], [0.0, 1.0], 0.25, 0.6, 0.93, None, None),
+    ("SF-AH850", "systemFurniture", "WallCabinet", [19.15, 13.0], [0.0, 1.0], 0.85, 0.35, 0.9, None, 1.55),
+    ("SF-B800", "systemFurniture", "BaseCabinet", [19.4, 12.2], [0.0, 1.0], 0.8, 0.6, 0.93, None, None),
+    ("SF-BH800", "systemFurniture", "WallCabinet", [19.15, 12.2], [0.0, 1.0], 0.8, 0.35, 0.9, None, 1.55),
+    ("SF-C850", "systemFurniture", "BaseCabinet", [19.4, 11.35], [0.0, 1.0], 0.85, 0.6, 0.93, None, None),
+    ("SF-CH850", "systemFurniture", "WallCabinet", [19.15, 11.35], [0.0, 1.0], 0.85, 0.35, 0.9, None, 1.55),
+    ("SN-RS15", "sanitaryTerminals", "SINK", [19.32, 12.225], [0.0, 1.0], 0.75, 0.44, 0.2, None, 0.73),
+    ("EA-WQ9I", "electricAppliances", "FRIDGE_FREEZER", [19.55, 14.884], None, 0.908, 0.716, 1.876, None, None),
+    ("EA-SBD6ECX", "electricAppliances", "DISHWASHER", [19.35, 13.251], [0.0, 1.0], 0.598, 0.55, 0.865, None, None),
 )
 
 
@@ -170,12 +177,12 @@ def test_furnishings_file_has_the_space_and_the_kitchen_boxes():
     for field in ("Origin", "Width", "Depth", "Height", "ObjectType"):
         assert field not in space
     for key in FURNISHING_KEYS:
-        if key not in ("systemFurniture", "electricAppliances"):
+        if key not in ("systemFurniture", "electricAppliances", "sanitaryTerminals"):
             assert key not in doc
     records = furnishing_records(doc)
     assert [item["id"] for item in records] == [row[0] for row in KITCHEN]
     for record, expected in zip(records, KITCHEN):
-        element_id, list_key, kind, origin, ref, width, depth, height, hinge = expected
+        element_id, list_key, kind, origin, ref, width, depth, height, hinge, elevation = expected
         assert record["list"] == list_key
         assert record["ContainedInStructure"] == ROOM_ID
         assert record["Origin"] == origin
@@ -183,11 +190,18 @@ def test_furnishings_file_has_the_space_and_the_kitchen_boxes():
         assert record["Width"] == width
         assert record["Depth"] == depth
         assert record["Height"] == height
-        assert "Elevation" not in record
+        if elevation is None:
+            assert "Elevation" not in record
+        else:
+            assert record["Elevation"] == elevation
         if list_key == "systemFurniture":
             assert record["label"] == LABEL_CABINET
             assert record["ObjectType"] == kind
             assert record["PredefinedType"] == "USERDEFINED"
+        elif list_key == "sanitaryTerminals":
+            assert record["label"] == "sink"
+            assert record["PredefinedType"] == kind
+            assert "ObjectType" not in record
         else:
             assert record["label"] == "appliance"
             assert record["PredefinedType"] == kind
@@ -210,35 +224,43 @@ def test_build_extrudes_walls_and_the_kitchen_boxes():
     assert meta["derived"]["furnishings_commit"] == "34e1597"
     placed = [child for child in shape.children if getattr(child, "furnishing_id", None)]
     assert [child.furnishing_id for child in placed] == [row[0] for row in KITCHEN]
-    assert {child.label for child in placed} == {LABEL_CABINET, "appliance"}
+    assert {child.label for child in placed} == {LABEL_CABINET, "appliance", "sink"}
     labels = {child.label for child in shape.children}
-    assert {LABEL_MASONRY, LABEL_GLAZING, LABEL_DOOR, LABEL_CABINET, "appliance"} <= labels
-    assert labels.isdisjoint({"sink", "furniture", "rug", "light"})
-    # World plan of the placed solids, before the 1 mm inset. z1 is the top.
+    assert {LABEL_MASONRY, LABEL_GLAZING, LABEL_DOOR, LABEL_CABINET, "appliance", "sink"} <= labels
+    assert labels.isdisjoint({"furniture", "rug", "light"})
+    # World plan of the placed solids, before the 1 mm inset. z0 is the base, z1 the top.
     expected_mm = {
-        "SF-T1": (18800, 19550, 15000, 15600, 2450),
-        "SF-T2": (20458, 21058, 15000, 15600, 2450),
-        "SF-T3": (21058, 21658, 15000, 15600, 2450),
-        "SF-T4": (21658, 22158, 15000, 15600, 2450),
-        "SF-I500a": (20554, 21154, 13300, 13800, 930),
-        "SF-I600a": (20554, 21154, 12700, 13300, 930),
-        "SF-I500b": (20554, 21154, 12200, 12700, 930),
-        "SF-I600b": (20554, 21154, 11600, 12200, 930),
-        "SF-I300": (20554, 21154, 11300, 11600, 930),
-        "SF-E600a": (21154, 21754, 13200, 13800, 930),
-        "SF-E600b": (21154, 21754, 12600, 13200, 930),
-        "SF-E600c": (21154, 21754, 12000, 12600, 930),
-        "SF-E700": (21154, 21754, 11300, 12000, 930),
-        "EA-WQ9I": (19550, 20458, 14884, 15600, 1876),
+        "SF-T1": (18800, 19550, 15000, 15600, 0, 2450),
+        "SF-T2": (20458, 21058, 15000, 15600, 0, 2450),
+        "SF-T3": (21058, 21658, 15000, 15600, 0, 2450),
+        "SF-T4": (21658, 22158, 15000, 15600, 0, 2450),
+        "SF-I500a": (20554, 21154, 13300, 13800, 0, 930),
+        "SF-I600a": (20554, 21154, 12700, 13300, 0, 930),
+        "SF-I500b": (20554, 21154, 12200, 12700, 0, 930),
+        "SF-I600b": (20554, 21154, 11600, 12200, 0, 930),
+        "SF-I300": (20554, 21154, 11300, 11600, 0, 930),
+        "SF-E600a": (21154, 21754, 13200, 13800, 0, 930),
+        "SF-E600b": (21154, 21754, 12600, 13200, 0, 930),
+        "SF-E600c": (21154, 21754, 12000, 12600, 0, 930),
+        "SF-E700": (21154, 21754, 11300, 12000, 0, 930),
+        "SF-A250": (18800, 19400, 13000, 13250, 0, 930),
+        "SF-AH850": (18800, 19150, 13000, 13850, 1550, 2450),
+        "SF-B800": (18800, 19400, 12200, 13000, 0, 930),
+        "SF-BH800": (18800, 19150, 12200, 13000, 1550, 2450),
+        "SF-C850": (18800, 19400, 11350, 12200, 0, 930),
+        "SF-CH850": (18800, 19150, 11350, 12200, 1550, 2450),
+        "SN-RS15": (18880, 19320, 12225, 12975, 730, 930),
+        "EA-WQ9I": (19550, 20458, 14884, 15600, 0, 1876),
+        "EA-SBD6ECX": (18800, 19350, 13251, 13849, 0, 865),
     }
     for child in placed:
-        x0, x1, y0, y1, z1 = expected_mm[child.furnishing_id]
+        x0, x1, y0, y1, z0, z1 = expected_mm[child.furnishing_id]
         bb = child.bounding_box()
         assert bb.min.X == pytest.approx(x0 + 0.5, abs=0.1)
         assert bb.max.X == pytest.approx(x1 - 0.5, abs=0.1)
         assert bb.min.Y == pytest.approx(y0 + 0.5, abs=0.1)
         assert bb.max.Y == pytest.approx(y1 - 0.5, abs=0.1)
-        assert bb.min.Z == pytest.approx(0.5, abs=0.1)
+        assert bb.min.Z == pytest.approx(z0 + 0.5, abs=0.1)
         assert bb.max.Z == pytest.approx(z1 - 0.5, abs=0.1)
         assert ROOM_X0 * 1000 - 1 <= bb.min.X and bb.max.X <= ROOM_X1 * 1000 + 1
         assert ROOM_Y0 * 1000 - 1 <= bb.min.Y and bb.max.Y <= ROOM_Y1 * 1000 + 1
@@ -256,7 +278,8 @@ def test_furnishings_yaml_round_trips(tmp_path):
     assert model.by_type("IfcFurniture") == []
     cabinets = [row for row in KITCHEN if row[1] == "systemFurniture"]
     assert len(model.by_type("IfcSystemFurnitureElement")) == len(cabinets)
-    assert len(model.by_type("IfcElectricAppliance")) == 1
+    assert len(model.by_type("IfcElectricAppliance")) == 2
+    assert len(model.by_type("IfcSanitaryTerminal")) == 1
 
 
 def test_converter_places_a_fixture_box(tmp_path):
