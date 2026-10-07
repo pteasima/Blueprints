@@ -1,6 +1,86 @@
 # Room 1.02 (obývák) furnishings. yaml-ifc at commit 34e1597.
 #
-# No elements. The lists are omitted until a placement is written here.
+# KitchenPlan.jpg (2448×1809). Two groups: the tall run on the north wall,
+# and the freestanding island. Counter 930. Tall cabinets 2450, the height
+# Petr wrote. Product cards other than the fridge, and STŮL LIBRA, are not
+# cabinets. The Ninja KT200EU card (pixel x 1123–1241) is a kettle.
+#
+# Registration. Image y is down, world Y is north. The door scale stands:
+#   px/mm = 0.28986. The two "1100" labels are OP25 and OP24, 3600 mm
+#   between centres: pixel y 442.5 ↔ world y 14.40, pixel y 1486 ↔ world
+#   y 10.80.
+#   X is the same scale. It is not taken from the red handwriting. The west
+#   wall's two faces are the verticals at pixel x=22 and x=93 (71 px ≈
+#   245 mm, the 250 mm wall). The inner face is x=93 ↔ world x=18.80.
+#   world_x = 18.80 + (px - 93) / 0.28986 / 1000
+#   world_y = 14.40 - (py - 442.5) / 0.28986 / 1000
+# The red mark above the island is a handwritten 1200, the island's overall
+# width, not a 7200 dimension. The long line at pixel y=1719 (x=93 to
+# x=2176, 2083 px ≈ 7188 mm) is a DWG dimension; the island does not use it.
+#
+# Tall run, west to east, backs on the north inner face y=15.6. Note x-spans
+# (sticky yellow), then the world x those spans map to:
+#   T1    px 89–287    → 18.79–19.47   "dvere 60L, sirka skrine az ke zdi (~75)"
+#   fridge note 338–513 → 19.65–20.25  "naproti pruchodu (ne v rohu)"
+#   fridge card 294–534 → 19.49–20.32
+#   T2    px 533–688   → 20.32–20.85   "nahore dvere 60R"
+#   T3    the card gap 688–858 → 20.85–21.44  (DGC 7465, M 2230)
+#   T4    px 858–1045  → 21.44–22.09   "zbyva sirka cca 50"
+# T1 is 750, from the west inner face to the fridge, which matches the note
+# (~75) and the note's east edge within 80 mm. The fridge is its real
+# 908×716×1876, packed against T1. T2 and T3 are 600, T4 is 500.
+# Tall carcasses are 600 deep. The fridge is 716 deep and projects 116 mm
+# past the cabinet faces; the run is not deepened to match it.
+# Fronts face south: Origin is the south-west corner, Width runs east,
+# Depth runs north (RefDirection omitted, the default [1, 0]).
+# yaml-ifc has no hinge field. 60L and 60R are PropertySets named
+# Pset_CabinetDoor, property HingeSide, on SF-T1 and SF-T2. L/R is as you
+# face the front. T3 and T4 do not state a hinge.
+# The fridge is IfcElectricAppliance, PredefinedType FRIDGE_FREEZER.
+# FREESTANDINGFRIDGE is not in the yaml-ifc enum. It is aligned to OP25,
+# the north door in the west wall W-050 (y 13.85–14.95). Its south face is
+# y=14.884, 66 mm south of that door's north jamb, so the appliance stands
+# in the line of the doorway and T1 keeps it out of the north-west corner.
+# OP28, the wide south opening (x 22.05–26.45), is east of this note.
+# OP24 is the south door on the same wall. T4's east face (x=22.158) nicks
+# pier W-052 (x 22.15–22.45, projecting to y=15.35) by 8 mm. The pier is
+# not cut out of the box.
+#
+# Island. Outer stroke centres: west x=594.5, east x=956, north y=622,
+# south y=1335 (drawn about 1253×2460). The 2500×1200 boxes are centred on
+# that rectangle: west 20.554, east 21.754, north 13.800, south 11.300.
+# The faint line at x≈773 (world x≈21.15) is the split. Two rows, each 600
+# deep, overall 2500×1200, counter 930.
+#   West row, faces west. RefDirection [0, -1]: Origin is the north-west
+#   corner, Width runs south, Depth runs east. Modules north to south
+#   500, 600, 500, 600, 300. The green rectangular sink is in the north
+#   500. The two round bowls cross the second 500 and the second 600.
+#   East row, faces east. This is the plinth and robot-dock side. The east
+#   half has no module lines (top and bottom returns only), so the 2500 is
+#   split 600/600/600/700 from north to south, the 700 at the south.
+#   RefDirection [0, 1]: Origin is the south-east corner, Width runs north,
+#   Depth runs west.
+# Clear of the inner faces, to the island outline: west 1.754, east 8.146,
+# north 1.800, south 1.050.
+#
+# West-wall run, across from the island, between OP25 and OP24. The notes
+# are the left-hand column. North to south: A 850, B 800, C 850 (2500).
+# Facing the west wall, left is south and right is north. In A the 250
+# pull-out is south and the dishwasher is north. In B the bin is south and
+# the compost is north; that is a property on the one 800 box.
+# W-050 starts at y=10.25. OP24 is AlongAxis 0, width 1.1, so y 10.25–11.35
+# (north jamb 11.35). OP25 is AlongAxis 3.6, width 1.1, so y 13.85–14.95
+# (south jamb 13.85). The clear gap is 2500. The run fills it: y 11.35–13.85.
+# Clearance at each jamb is 0. The island is left where it is.
+# Bases are 600 deep and 930 high, backs on the inner face x=18.8, fronts
+# facing east. RefDirection [0, 1]: Origin is the south-east corner, Width
+# runs north, Depth runs west. The Bosch dishwasher is the real
+# 598×550×865, centred in the north 600 of A, back on the wall.
+# Wall cabinets: depth 350, height 900, bottom at 1550 (620 above the 930
+# counter), top at 2450. Elevation 1.55.
+# The Teka bowl is an IfcSanitaryTerminal, 750×440×200, centred in the 800,
+# top flush with 930. The disposer and the tap are not modelled.
+#
 # One whole element per box. The list key is the IFC class:
 #   furniture, systemFurniture, sanitaryTerminals, electricAppliances,
 #   lightFixtures, coverings.
@@ -39,3 +119,259 @@ walls: []
 openings: []
 doors: []
 windows: []
+systemFurniture:
+  - id: SF-T1
+    Name: "Vysoká 750 dvere 60L"
+    Description: "Tall run, west end. Door 600 hinged on the left. Width is the gap from the west wall to the fridge, the note's ~75."
+    PredefinedType: USERDEFINED
+    ObjectType: TallCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [18.8, 15.0]
+    Width: 0.75
+    Depth: 0.6
+    Height: 2.45
+    PropertySets:
+      - Name: Pset_CabinetDoor
+        Properties:
+          HingeSide: "L"
+          DoorWidth: 0.6
+  - id: SF-T2
+    Name: "Vysoká 600 dvere 60R"
+    Description: "Tall run. Door 600 hinged on the right. Note: nahore dvere 60R."
+    PredefinedType: USERDEFINED
+    ObjectType: TallCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [20.458, 15.0]
+    Width: 0.6
+    Depth: 0.6
+    Height: 2.45
+    PropertySets:
+      - Name: Pset_CabinetDoor
+        Properties:
+          HingeSide: "R"
+          DoorWidth: 0.6
+  - id: SF-T3
+    Name: "Vysoká 600 trouba"
+    Description: "Oven column, 600. Miele DGC 7465 and M 2230. Box only."
+    PredefinedType: USERDEFINED
+    ObjectType: TallCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [21.058, 15.0]
+    Width: 0.6
+    Depth: 0.6
+    Height: 2.45
+  - id: SF-T4
+    Name: "Vysoká 500"
+    Description: "Tall run, east end. Note: zbyva sirka cca 50. Modelled 500. The same note allows 600 if a drinks fridge goes underneath. East face nicks pier W-052 by 8 mm."
+    PredefinedType: USERDEFINED
+    ObjectType: TallCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [21.658, 15.0]
+    Width: 0.5
+    Depth: 0.6
+    Height: 2.45
+  - id: SF-I500a
+    Name: "Ostrov západ 500 dřez"
+    Description: "Island, west row, north module. Red 500. Green rectangular single sink. Faces west."
+    PredefinedType: USERDEFINED
+    ObjectType: BaseCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [20.554, 13.8]
+    RefDirection: [0, -1]
+    Width: 0.5
+    Depth: 0.6
+    Height: 0.93
+  - id: SF-I600a
+    Name: "Ostrov západ 600"
+    Description: "Island, west row. First red 600, south of the rectangular sink. Faces west."
+    PredefinedType: USERDEFINED
+    ObjectType: BaseCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [20.554, 13.3]
+    RefDirection: [0, -1]
+    Width: 0.6
+    Depth: 0.6
+    Height: 0.93
+  - id: SF-I500b
+    Name: "Ostrov západ 500"
+    Description: "Island, west row. Red 500. North of the two round bowls, which cross into SF-I600b. Faces west."
+    PredefinedType: USERDEFINED
+    ObjectType: BaseCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [20.554, 12.7]
+    RefDirection: [0, -1]
+    Width: 0.5
+    Depth: 0.6
+    Height: 0.93
+  - id: SF-I600b
+    Name: "Ostrov západ 600 mísy"
+    Description: "Island, west row. Second red 600. The two green round bowls sit across this module and SF-I500b. Faces west."
+    PredefinedType: USERDEFINED
+    ObjectType: BaseCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [20.554, 12.2]
+    RefDirection: [0, -1]
+    Width: 0.6
+    Depth: 0.6
+    Height: 0.93
+  - id: SF-I300
+    Name: "Ostrov západ 300"
+    Description: "Island, west row, south end. Red 300. Faces west."
+    PredefinedType: USERDEFINED
+    ObjectType: BaseCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [20.554, 11.6]
+    RefDirection: [0, -1]
+    Width: 0.3
+    Depth: 0.6
+    Height: 0.93
+  - id: SF-E600a
+    Name: "Ostrov východ 600"
+    Description: "Island, east row, north module. No module line is drawn on this side. 600 of 600/600/600/700, north to south. Plinth and robot-dock side. Faces east."
+    PredefinedType: USERDEFINED
+    ObjectType: BaseCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [21.754, 13.2]
+    RefDirection: [0, 1]
+    Width: 0.6
+    Depth: 0.6
+    Height: 0.93
+  - id: SF-E600b
+    Name: "Ostrov východ 600"
+    Description: "Island, east row. Second 600. Faces east."
+    PredefinedType: USERDEFINED
+    ObjectType: BaseCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [21.754, 12.6]
+    RefDirection: [0, 1]
+    Width: 0.6
+    Depth: 0.6
+    Height: 0.93
+  - id: SF-E600c
+    Name: "Ostrov východ 600"
+    Description: "Island, east row. Third 600. Faces east."
+    PredefinedType: USERDEFINED
+    ObjectType: BaseCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [21.754, 12.0]
+    RefDirection: [0, 1]
+    Width: 0.6
+    Depth: 0.6
+    Height: 0.93
+  - id: SF-E700
+    Name: "Ostrov východ 700"
+    Description: "Island, east row, south end. The remaining 700. Faces east."
+    PredefinedType: USERDEFINED
+    ObjectType: BaseCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [21.754, 11.3]
+    RefDirection: [0, 1]
+    Width: 0.7
+    Depth: 0.6
+    Height: 0.93
+  - id: SF-A250
+    Name: "Západ 250 úklid"
+    Description: "Section A, south side. Cleaning pull-out, 250. Left when facing the west wall."
+    PredefinedType: USERDEFINED
+    ObjectType: BaseCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [19.4, 13.0]
+    RefDirection: [0, 1]
+    Width: 0.25
+    Depth: 0.6
+    Height: 0.93
+  - id: SF-AH850
+    Name: "Západ horní 850 sklenice"
+    Description: "Section A wall cabinet, glasses, 850. Depth 350, bottom 1550, height 900, top 2450."
+    PredefinedType: USERDEFINED
+    ObjectType: WallCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [19.15, 13.0]
+    Elevation: 1.55
+    RefDirection: [0, 1]
+    Width: 0.85
+    Depth: 0.35
+    Height: 0.9
+  - id: SF-B800
+    Name: "Západ 800 dřez"
+    Description: "Section B. One 800 sink base for the Teka BE LINEA RS15 71.40. Bin on the south, compost on the north."
+    PredefinedType: USERDEFINED
+    ObjectType: BaseCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [19.4, 12.2]
+    RefDirection: [0, 1]
+    Width: 0.8
+    Depth: 0.6
+    Height: 0.93
+    PropertySets:
+      - Name: Pset_BaseContents
+        Properties:
+          South: "kos"
+          North: "kompost"
+  - id: SF-BH800
+    Name: "Západ horní 800 talíře"
+    Description: "Section B wall cabinet, plates. Depth 350, bottom 1550, height 900, top 2450."
+    PredefinedType: USERDEFINED
+    ObjectType: WallCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [19.15, 12.2]
+    Elevation: 1.55
+    RefDirection: [0, 1]
+    Width: 0.8
+    Depth: 0.35
+    Height: 0.9
+  - id: SF-C850
+    Name: "Západ 850 odpad"
+    Description: "Section C. Sorted waste, 850."
+    PredefinedType: USERDEFINED
+    ObjectType: BaseCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [19.4, 11.35]
+    RefDirection: [0, 1]
+    Width: 0.85
+    Depth: 0.6
+    Height: 0.93
+  - id: SF-CH850
+    Name: "Západ horní 850"
+    Description: "Section C wall cabinet, 850. Stick blender, bowls, measuring cups. Depth 350, bottom 1550, height 900, top 2450."
+    PredefinedType: USERDEFINED
+    ObjectType: WallCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [19.15, 11.35]
+    Elevation: 1.55
+    RefDirection: [0, 1]
+    Width: 0.85
+    Depth: 0.35
+    Height: 0.9
+sanitaryTerminals:
+  - id: SN-RS15
+    Name: "Teka BE LINEA RS15 71.40"
+    Description: "Undermount sink in SF-B800. Overall 750×440, bowl 710×400×200. Centred in the 800. Top flush with the 930 counter."
+    PredefinedType: SINK
+    ContainedInStructure: SP-1.02
+    Origin: [19.32, 12.225]
+    Elevation: 0.73
+    RefDirection: [0, 1]
+    Width: 0.75
+    Depth: 0.44
+    Height: 0.2
+electricAppliances:
+  - id: EA-WQ9I
+    Name: "Whirlpool WQ9I MO2L EF"
+    Description: "Side-by-side fridge-freezer, 908×716×1876. Note: naproti pruchodu (ne v rohu), with a water connection. Aligned to OP25. Not a cabinet."
+    PredefinedType: FRIDGE_FREEZER
+    ContainedInStructure: SP-1.02
+    Origin: [19.55, 14.884]
+    Width: 0.908
+    Depth: 0.716
+    Height: 1.876
+  - id: EA-SBD6ECX
+    Name: "Bosch SBD6ECX12E"
+    Description: "Fully integrated dishwasher, 598×550×865, in the north 600 of section A. Right when facing the west wall. Back on the wall, 1 mm clear of each side of the niche."
+    PredefinedType: DISHWASHER
+    ContainedInStructure: SP-1.02
+    Origin: [19.35, 13.251]
+    RefDirection: [0, 1]
+    Width: 0.598
+    Depth: 0.55
+    Height: 0.865

@@ -34,8 +34,8 @@ keeps them as short walls because IfcColumn is deferred. Neither axis meets
 another wall, so at overview scale they read as two thin vertical bars.
 
 Kitchen and living furniture is a second file, ``furnishings.yaml``, the
-same commit's furnishings schema. The file has the room space and no
-elements. An element added later is one box: the ``IfcExtrudedAreaSolid``
+same commit's furnishings schema. The file has the room space, the kitchen
+boxes, and the fridge. Each element is one box: the ``IfcExtrudedAreaSolid``
 that ``yaml_ifc`` writes (placement origin at the minimum corner, profile
 centred so the box fills Width × Depth × Height). This model does not read
 those sizes itself. Solids are inset by 1 mm so flush modules do not share
