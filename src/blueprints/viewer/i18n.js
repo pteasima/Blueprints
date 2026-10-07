@@ -13,6 +13,12 @@ const PART_EN = {
   soffit: "Soffit",
   bass_traps: "Bass traps",
   furniture: "Furniture",
+  interior: "Interior",
+  cabinet: "Cabinets",
+  appliance: "Appliances",
+  sink: "Sink",
+  rug: "Rug",
+  light: "Lights",
   door: "Door",
   other: "Other",
   floor: "Floor",
@@ -54,6 +60,12 @@ const PART_CS = {
   soffit: "Podhled",
   bass_traps: "Basstrapy",
   furniture: "Nábytek",
+  interior: "Interiér",
+  cabinet: "Skříňky",
+  appliance: "Spotřebiče",
+  sink: "Dřez",
+  rug: "Koberec",
+  light: "Svítidla",
   door: "Dveře",
   other: "Ostatní",
   floor: "Podlaha",
@@ -123,6 +135,9 @@ const UI_EN = {
   "scene.gable": "Gable",
   "scene.sikmina-lattice": "Slopes lattice",
   "scene.sikmina-section": "Slopes section",
+  "scene.kitchen-living": "Kitchen toward living",
+  "scene.living-kitchen": "Living toward kitchen",
+  "scene.kitchen-run": "Kitchen cabinets",
 };
 
 const UI_CS = {
@@ -159,6 +174,9 @@ const UI_CS = {
   "scene.gable": "Štít",
   "scene.sikmina-lattice": "Šikmina — rošt",
   "scene.sikmina-section": "Šikmina — řez",
+  "scene.kitchen-living": "Kuchyň k obýváku",
+  "scene.living-kitchen": "Obývák ke kuchyni",
+  "scene.kitchen-run": "Kuchyňská linka",
 };
 
 /** @type {Record<Locale, Record<string, string>>} */

@@ -33,6 +33,13 @@ W-004 and W-014 are the 120 mm closed squares on the silná layer. The file
 keeps them as short walls because IfcColumn is deferred. Neither axis meets
 another wall, so at overview scale they read as two thin vertical bars.
 
+Kitchen and living furniture is a second file, ``furnishings.yaml``. Each
+element is one box (yaml-ifc furnishings, commit 34e1597): Origin at the
+minimum corner, Width / Depth / Height, Name, PredefinedType, ObjectType.
+The vendored package is still the walls commit; it does not write these
+boxes. Solids are inset by 1 mm so flush modules do not share a face.
+Walls are not moved to make a box fit.
+
     python -m blueprints.export ground_floor
 """
 
@@ -42,7 +49,19 @@ import math
 from pathlib import Path
 
 import yaml
-from build123d import Align, Box, Color, Compound, Face, Pos, Rot, Solid, Vector, Wire
+from build123d import (
+    Align,
+    Box,
+    Color,
+    Compound,
+    Face,
+    Plane,
+    Pos,
+    Rot,
+    Solid,
+    Vector,
+    Wire,
+)
 from yaml_ifc import footprints
 
 from blueprints.export_utils import SECTION_LAYERS
@@ -58,6 +77,9 @@ SOURCE_COMMIT = "4ad102f"
 SOURCE_PATH = (
     Path(__file__).resolve().parents[1] / "inputs" / "ground_floor" / "ground-floor.yaml"
 )
+FURNISHINGS_PATH = SOURCE_PATH.with_name("furnishings.yaml")
+# yaml-ifc furnishings field list. The package itself stays at SOURCE_COMMIT.
+FURNISHINGS_COMMIT = "34e1597"
 
 # yaml-ifc ``DEFAULT_WALL_HEIGHT``. Not written back into the YAML.
 DEFAULT_WALL_HEIGHT_M = 3.0
@@ -77,6 +99,44 @@ LEAF_GAP_MM = 15.0
 LABEL_MASONRY = "masonry"
 LABEL_GLAZING = "glazing"
 LABEL_DOOR = "door"
+LABEL_CABINET = "cabinet"
+LABEL_APPLIANCE = "appliance"
+LABEL_SINK = "sink"
+LABEL_FURNITURE = "furniture"
+LABEL_RUG = "rug"
+LABEL_LIGHT = "light"
+
+# YAML list → viewer label. Spaces are not extruded.
+FURNISHING_LISTS = (
+    "systemFurniture",
+    "appliances",
+    "sanitaryTerminals",
+    "furniture",
+    "coverings",
+    "lightFixtures",
+)
+FURNISHING_LABELS = {
+    "systemFurniture": LABEL_CABINET,
+    "appliances": LABEL_APPLIANCE,
+    "sanitaryTerminals": LABEL_SINK,
+    "furniture": LABEL_FURNITURE,
+    "coverings": LABEL_RUG,
+    "lightFixtures": LABEL_LIGHT,
+}
+# Clear room 1.02, metres, from the wall footprints. See furnishings.yaml.
+ROOM_ID = "SP-1.02"
+ROOM_X0 = 18.8
+ROOM_X1 = 29.9
+ROOM_Y0 = 10.25
+ROOM_Y1 = 15.6
+# 300 mm piers in front of the north wall (W-052, W-053).
+ROOM_PIERS_M = (
+    (22.15, 22.45, 15.35, 15.6),
+    (25.15, 25.45, 15.35, 15.6),
+)
+# Shrink each solid so two flush boxes do not share a face.
+MESH_GAP_MM = 1.0
+_BOX_FIELDS = ("Origin", "Width", "Depth", "Height", "Name", "PredefinedType", "ObjectType")
 
 
 def load_document(path: Path | None = None) -> dict:
@@ -86,6 +146,108 @@ def load_document(path: Path | None = None) -> dict:
     if not isinstance(doc, dict):
         raise ValueError(f"{source} is not a yaml-ifc mapping")
     return doc
+
+
+def load_furnishings(path: Path | None = None) -> dict:
+    """Furnishings document. Missing file means the walls-only model."""
+    source = path or FURNISHINGS_PATH
+    if not source.is_file():
+        return {}
+    with source.open(encoding="utf-8") as handle:
+        doc = yaml.safe_load(handle)
+    if not isinstance(doc, dict):
+        raise ValueError(f"{source} is not a yaml-ifc mapping")
+    _validate_furnishings(doc, source)
+    return doc
+
+
+def _validate_furnishings(doc: dict, source: Path) -> None:
+    spaces = doc.get("spaces") or []
+    space_ids = set()
+    for space in spaces:
+        sid = space.get("id")
+        if not sid or sid in space_ids:
+            raise ValueError(f"{source} has a space without a unique id")
+        space_ids.add(sid)
+        for field in ("Name", "Origin", "Width", "Depth", "Height"):
+            if space.get(field) is None:
+                raise ValueError(f"{sid} is missing {field}")
+    seen: set[str] = set()
+    for key in FURNISHING_LISTS:
+        for element in doc.get(key) or []:
+            eid = element.get("id")
+            if not eid or eid in seen:
+                raise ValueError(f"{source} has a furnishing without a unique id")
+            seen.add(eid)
+            for field in _BOX_FIELDS:
+                if element.get(field) is None:
+                    raise ValueError(f"{eid} is missing {field}")
+            family = str(element["ObjectType"])
+            if not family.isalpha():
+                raise ValueError(f"{eid} ObjectType {family!r} is not a family name")
+            for size_name in ("Width", "Depth", "Height"):
+                if float(element[size_name]) <= 0:
+                    raise ValueError(f"{eid} has a non-positive {size_name}")
+            origin = element["Origin"]
+            if len(origin) != 3:
+                raise ValueError(f"{eid} Origin must be three coordinates")
+            host = element.get("ContainedInStructure")
+            if host is not None and host not in space_ids:
+                raise ValueError(f"{eid} is contained in unknown space {host}")
+
+
+def furnishing_records(doc: dict | None = None) -> list[dict]:
+    """Each box plus its YAML list name. Spaces are not included."""
+    furn = doc if doc is not None else load_furnishings()
+    records = []
+    for key in FURNISHING_LISTS:
+        for element in furn.get(key) or []:
+            records.append({**element, "list": key, "label": FURNISHING_LABELS[key]})
+    return records
+
+
+def _ref_axes(element: dict) -> tuple[tuple[float, float], tuple[float, float]]:
+    """Local X (Width) and Y (Depth) in plan. Y is Z × X."""
+    ref = element.get("RefDirection") or (1.0, 0.0)
+    rx, ry = float(ref[0]), float(ref[1])
+    norm = math.hypot(rx, ry)
+    if norm < 1e-12:
+        raise ValueError(f"{element.get('id')} has a zero RefDirection")
+    rx, ry = rx / norm, ry / norm
+    return (rx, ry), (-ry, rx)
+
+
+def _furnishing_solid(element: dict):
+    """Box in millimetres. Origin is the local minimum corner."""
+    (rx, ry), _ = _ref_axes(element)
+    ox, oy, oz = (float(v) for v in element["Origin"])
+    width, depth, height = (
+        _mm(float(element["Width"])),
+        _mm(float(element["Depth"])),
+        _mm(float(element["Height"])),
+    )
+    gap = min(MESH_GAP_MM, width * 0.25, depth * 0.25, height * 0.25)
+    plane = Plane(
+        origin=(_mm(ox), _mm(oy), _mm(oz)),
+        x_dir=(rx, ry, 0.0),
+        z_dir=(0.0, 0.0, 1.0),
+    )
+    box = Pos(gap / 2.0, gap / 2.0, gap / 2.0) * Box(
+        width - gap,
+        depth - gap,
+        height - gap,
+        align=(Align.MIN, Align.MIN, Align.MIN),
+    )
+    shape = plane * box
+    label = element["label"]
+    painted = _paint(shape, label)
+    painted.furnishing_id = element["id"]
+    painted.furnishing_list = element["list"]
+    return painted
+
+
+def _furnishing_parts(doc: dict) -> list:
+    return [_furnishing_solid(element) for element in furnishing_records(doc)]
 
 
 def _color(label: str) -> Color:
@@ -259,8 +421,12 @@ def _span_y(body, thickness: float) -> tuple[float, float]:
     return min(float(bounds.min.Y), -half), max(float(bounds.max.Y), half)
 
 
-def build(path: Path | None = None):
+def build(path: Path | None = None, furnishings_path: Path | None = None):
     doc = load_document(path)
+    furn_path = furnishings_path
+    if furn_path is None:
+        furn_path = (path or SOURCE_PATH).with_name("furnishings.yaml")
+    furnishings = load_furnishings(furn_path)
     walls = doc.get("walls") or []
     openings = doc.get("openings") or []
     doors = {
@@ -374,6 +540,9 @@ def build(path: Path | None = None):
             for solid in _solids(leaf):
                 parts.append(_place(solid, origin, angle, leaf_label))
 
+    furnishing_parts = _furnishing_parts(furnishings)
+    parts.extend(furnishing_parts)
+
     assembly = Compound(obj=parts, children=parts, label=MODEL_NAME)
     removed = (uncut_mm3 - cut_mm3) / 1e9
     meta = {
@@ -386,6 +555,8 @@ def build(path: Path | None = None):
             "wall_height_m": DEFAULT_WALL_HEIGHT_M,
             "w017_thickness_m": MISSING_THICKNESS_M,
             "footprints": len(rings),
+            "furnishings": len(furnishing_parts),
+            "furnishings_commit": FURNISHINGS_COMMIT,
         },
         "footprints_omitted": omitted,
         "openings_cut": cut_ids,
@@ -592,6 +763,56 @@ def _plan_overview_scene(doc: dict) -> dict:
     )
 
 
+def _room_scene(
+    scene_id: str,
+    eye: tuple[float, float, float],
+    target: tuple[float, float, float],
+    fov: float,
+    title: dict,
+) -> dict:
+    """Perspective inside room 1.02. Eye and target are storey metres."""
+    return {
+        "id": scene_id,
+        "hFovDeg": fov,
+        "title": title,
+        "project": "RD Šíma 1.NP",
+        "camera": {
+            "target": cad_mm_to_gltf_m(tuple(_mm(v) for v in target)),
+            "position": cad_mm_to_gltf_m(tuple(_mm(v) for v in eye)),
+            "up": [0.0, 1.0, 0.0],
+        },
+    }
+
+
+# Same three glances as the owner's SketchUp views.
+# kitchen-living: standing in the kitchen, looking east toward the sofa.
+# living-kitchen: standing by the sofa, looking west; glass is on the left.
+# kitchen-run: looking north at the cabinet wall; tall units on the left.
+FURNITURE_VIEWS = (
+    {
+        "id": "kitchen-living",
+        "eye": (19.3, 12.0, 1.55),
+        "target": (27.2, 13.6, 0.95),
+        "hFovDeg": 52,
+        "title": {"en": "Kitchen toward the living room", "cs": "Kuchyň k obýváku"},
+    },
+    {
+        "id": "living-kitchen",
+        "eye": (28.9, 10.7, 1.55),
+        "target": (21.2, 14.2, 1.05),
+        "hFovDeg": 52,
+        "title": {"en": "Living room toward the kitchen", "cs": "Obývák ke kuchyni"},
+    },
+    {
+        "id": "kitchen-run",
+        "eye": (22.7, 12.35, 1.55),
+        "target": (20.2, 15.35, 1.25),
+        "hFovDeg": 50,
+        "title": {"en": "Kitchen cabinet wall", "cs": "Kuchyňská linka"},
+    },
+)
+
+
 def scenes() -> list[dict]:
     doc = load_document()
     return [
@@ -601,6 +822,10 @@ def scenes() -> list[dict]:
         *(_corner_scene(doc, spec) for spec in CORNER_VIEWS),
         _plan_overview_scene(doc),
         *(_plan_corner_scene(doc, spec) for spec in CORNER_VIEWS),
+        *(
+            _room_scene(spec["id"], spec["eye"], spec["target"], spec["hFovDeg"], spec["title"])
+            for spec in FURNITURE_VIEWS
+        ),
     ]
 
 
@@ -609,7 +834,18 @@ def part_groups() -> list[dict]:
         {
             "id": "shell",
             "children": [LABEL_MASONRY, LABEL_GLAZING, LABEL_DOOR],
-        }
+        },
+        {
+            "id": "interior",
+            "children": [
+                LABEL_CABINET,
+                LABEL_APPLIANCE,
+                LABEL_SINK,
+                LABEL_FURNITURE,
+                LABEL_RUG,
+                LABEL_LIGHT,
+            ],
+        },
     ]
 
 

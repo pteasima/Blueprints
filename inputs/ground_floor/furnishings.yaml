@@ -1,0 +1,347 @@
+# Kitchen and living furniture for room 1.02 (obývák), rough boxes the owner edits.
+#
+# Schema follows yaml-ifc furnishings (commit 34e1597): one box per element.
+# Origin is the minimum corner in storey metres (X east, Y north, Z up).
+# Width is along +X, Depth along +Y, Height along +Z. RefDirection is omitted
+# because every box is axis-aligned. ObjectType is a family name with no size.
+# ContainedInStructure points at the IfcSpace for this room.
+#
+# The private yaml-ifc tree at 34e1597 is not in this checkout (the vendored
+# package is still the walls commit 4ad102f). These lists use the field names
+# from that furnishings release. Walls stay in ground-floor.yaml; do not move
+# them to make a box fit.
+#
+# Room 1.02 clear rectangle, measured from the wall footprints:
+#   west  W-050 east face   x = 18.80
+#   east  W-056 west face   x = 29.90   (clear length 11.10 m)
+#   south gable ends        y = 10.25   (W-023 glass is 25 mm further south)
+#   north W-029 south face  y = 15.60   (clear width 5.35 m)
+# Kitchen is the west end (W-050 has two pocket doors: OP24 at the glass,
+# OP25 toward the cabinet wall). Living is the east end (W-056 has one
+# pocket door, OP33, at the glass). The terrace glazing is the south wall.
+# Cabinets sit on the solid north wall, which is the cabinet eave.
+#
+# Two 300 mm piers stand in front of that north wall and the boxes stop
+# short of them:
+#   W-052  x 22.15–22.45, y 15.35–15.60
+#   W-053  x 25.15–25.45, y 15.35–15.60
+#
+# Assumptions (edit the numbers; the solids follow this file):
+# - Base modules 600 deep and 900 high, wall modules 350 deep, tall units
+#   and the fridge 2100 high. Widths are 600 or 800. The island is three
+#   600 modules wide and 900 deep.
+# - The SketchUp shows a window over the sink. W-029 has no opening, so
+#   there is no wall cabinet over the sink and no new window.
+# - Oven, cooktop and sink are thin boxes on the base modules, not a
+#   second carcass. The hood is a ceiling hood under a short wall cabinet.
+# - The sectional is one box (its overall footprint), not an L of two.
+# - Track lights hang at 2.45 m, under the low side of the 2.50–5.05 m
+#   clear height. The ground-floor model has no ceiling.
+# - Bar stools are chairs. There is one rug, under the sofa.
+schema: IFC4 ADD2 TC1
+units:
+  LengthUnit: METRE
+spaces:
+  - id: SP-1.02
+    Name: "1.02 Obývák"
+    LongName: "Obývák a kuchyň"
+    PredefinedType: INTERNAL
+    ObjectType: LivingRoom
+    Origin: [18.8, 10.25, 0]
+    Width: 11.1
+    Depth: 5.35
+    Height: 5.05
+systemFurniture:
+  - id: SF-spiz
+    Name: "Spíž"
+    PredefinedType: USERDEFINED
+    ObjectType: TallCabinet
+    Origin: [18.8, 15.0, 0]
+    Width: 0.6
+    Depth: 0.6
+    Height: 2.1
+    ContainedInStructure: SP-1.02
+  - id: SF-zasuvky
+    Name: "Zásuvky"
+    PredefinedType: USERDEFINED
+    ObjectType: BaseCabinet
+    Origin: [20.0, 15.0, 0]
+    Width: 0.6
+    Depth: 0.6
+    Height: 0.9
+    ContainedInStructure: SP-1.02
+  - id: SF-trouba-skrin
+    Name: "Skříňka trouby"
+    PredefinedType: USERDEFINED
+    ObjectType: BaseCabinet
+    Origin: [20.6, 15.0, 0]
+    Width: 0.6
+    Depth: 0.6
+    Height: 0.9
+    ContainedInStructure: SP-1.02
+  - id: SF-drez-skrin
+    Name: "Skříňka dřezu"
+    PredefinedType: USERDEFINED
+    ObjectType: BaseCabinet
+    Origin: [21.2, 15.0, 0]
+    Width: 0.8
+    Depth: 0.6
+    Height: 0.9
+    ContainedInStructure: SP-1.02
+  - id: SF-horni-zasuvky
+    Name: "Horní skříňka"
+    PredefinedType: USERDEFINED
+    ObjectType: WallCabinet
+    Origin: [20.0, 15.25, 1.4]
+    Width: 0.6
+    Depth: 0.35
+    Height: 0.8
+    ContainedInStructure: SP-1.02
+  - id: SF-horni-digestor
+    Name: "Horní skříňka nad digestoří"
+    PredefinedType: USERDEFINED
+    ObjectType: WallCabinet
+    Origin: [20.6, 15.25, 1.92]
+    Width: 0.6
+    Depth: 0.35
+    Height: 0.28
+    ContainedInStructure: SP-1.02
+  - id: SF-ostrov
+    Name: "Ostrůvek"
+    PredefinedType: USERDEFINED
+    ObjectType: Island
+    Origin: [20.4, 13.05, 0]
+    Width: 1.8
+    Depth: 0.9
+    Height: 0.9
+    ContainedInStructure: SP-1.02
+appliances:
+  - id: AP-lednice
+    Name: "Lednice"
+    PredefinedType: REFRIGERATOR
+    ObjectType: Refrigerator
+    Origin: [19.4, 15.0, 0]
+    Width: 0.6
+    Depth: 0.6
+    Height: 2.1
+    ContainedInStructure: SP-1.02
+  - id: AP-trouba
+    Name: "Trouba"
+    PredefinedType: USERDEFINED
+    ObjectType: Oven
+    Origin: [20.63, 14.978, 0.18]
+    Width: 0.54
+    Depth: 0.02
+    Height: 0.58
+    ContainedInStructure: SP-1.02
+  - id: AP-varna
+    Name: "Varná deska"
+    PredefinedType: ELECTRICCOOKER
+    ObjectType: Cooktop
+    Origin: [20.66, 15.06, 0.902]
+    Width: 0.48
+    Depth: 0.48
+    Height: 0.02
+    ContainedInStructure: SP-1.02
+  - id: AP-digestor
+    Name: "Digestoř"
+    PredefinedType: USERDEFINED
+    ObjectType: RangeHood
+    Origin: [20.6, 14.95, 1.48]
+    Width: 0.6
+    Depth: 0.65
+    Height: 0.4
+    ContainedInStructure: SP-1.02
+sanitaryTerminals:
+  - id: ST-drez
+    Name: "Dřez"
+    PredefinedType: SINK
+    ObjectType: Sink
+    Origin: [21.38, 15.12, 0.902]
+    Width: 0.5
+    Depth: 0.36
+    Height: 0.15
+    ContainedInStructure: SP-1.02
+furniture:
+  - id: FN-bar-1
+    Name: "Barová židle"
+    PredefinedType: CHAIR
+    ObjectType: BarStool
+    Origin: [20.55, 12.61, 0]
+    Width: 0.4
+    Depth: 0.42
+    Height: 0.65
+    ContainedInStructure: SP-1.02
+  - id: FN-bar-2
+    Name: "Barová židle"
+    PredefinedType: CHAIR
+    ObjectType: BarStool
+    Origin: [21.1, 12.61, 0]
+    Width: 0.4
+    Depth: 0.42
+    Height: 0.65
+    ContainedInStructure: SP-1.02
+  - id: FN-bar-3
+    Name: "Barová židle"
+    PredefinedType: CHAIR
+    ObjectType: BarStool
+    Origin: [21.65, 12.61, 0]
+    Width: 0.4
+    Depth: 0.42
+    Height: 0.65
+    ContainedInStructure: SP-1.02
+  - id: FN-stul
+    Name: "Jídelní stůl"
+    PredefinedType: TABLE
+    ObjectType: DiningTable
+    Origin: [23.2, 12.5, 0]
+    Width: 1.8
+    Depth: 0.9
+    Height: 0.75
+    ContainedInStructure: SP-1.02
+  - id: FN-zidle-s1
+    Name: "Židle"
+    PredefinedType: CHAIR
+    ObjectType: Chair
+    Origin: [23.35, 12.0, 0]
+    Width: 0.45
+    Depth: 0.48
+    Height: 0.9
+    ContainedInStructure: SP-1.02
+  - id: FN-zidle-s2
+    Name: "Židle"
+    PredefinedType: CHAIR
+    ObjectType: Chair
+    Origin: [23.9, 12.0, 0]
+    Width: 0.45
+    Depth: 0.48
+    Height: 0.9
+    ContainedInStructure: SP-1.02
+  - id: FN-zidle-s3
+    Name: "Židle"
+    PredefinedType: CHAIR
+    ObjectType: Chair
+    Origin: [24.45, 12.0, 0]
+    Width: 0.45
+    Depth: 0.48
+    Height: 0.9
+    ContainedInStructure: SP-1.02
+  - id: FN-zidle-n1
+    Name: "Židle"
+    PredefinedType: CHAIR
+    ObjectType: Chair
+    Origin: [23.35, 13.42, 0]
+    Width: 0.45
+    Depth: 0.48
+    Height: 0.9
+    ContainedInStructure: SP-1.02
+  - id: FN-zidle-n2
+    Name: "Židle"
+    PredefinedType: CHAIR
+    ObjectType: Chair
+    Origin: [23.9, 13.42, 0]
+    Width: 0.45
+    Depth: 0.48
+    Height: 0.9
+    ContainedInStructure: SP-1.02
+  - id: FN-zidle-n3
+    Name: "Židle"
+    PredefinedType: CHAIR
+    ObjectType: Chair
+    Origin: [24.45, 13.42, 0]
+    Width: 0.45
+    Depth: 0.48
+    Height: 0.9
+    ContainedInStructure: SP-1.02
+  - id: FN-pohovka
+    Name: "Sedací souprava"
+    PredefinedType: SOFA
+    ObjectType: SectionalSofa
+    Origin: [26.0, 11.15, 0.012]
+    Width: 2.7
+    Depth: 1.6
+    Height: 0.85
+    ContainedInStructure: SP-1.02
+  - id: FN-stolek-z
+    Name: "Odkládací stolek"
+    PredefinedType: TABLE
+    ObjectType: SideTable
+    Origin: [25.45, 11.75, 0.012]
+    Width: 0.45
+    Depth: 0.45
+    Height: 0.5
+    ContainedInStructure: SP-1.02
+  - id: FN-stolek-v
+    Name: "Odkládací stolek"
+    PredefinedType: TABLE
+    ObjectType: SideTable
+    Origin: [28.8, 11.75, 0.012]
+    Width: 0.45
+    Depth: 0.45
+    Height: 0.5
+    ContainedInStructure: SP-1.02
+  - id: FN-tv
+    Name: "TV stolek"
+    PredefinedType: USERDEFINED
+    ObjectType: TvUnit
+    Origin: [26.45, 15.15, 0]
+    Width: 1.8
+    Depth: 0.45
+    Height: 0.42
+    ContainedInStructure: SP-1.02
+  - id: FN-komoda
+    Name: "Komoda"
+    PredefinedType: USERDEFINED
+    ObjectType: Sideboard
+    Origin: [28.35, 15.15, 0]
+    Width: 1.2
+    Depth: 0.45
+    Height: 0.78
+    ContainedInStructure: SP-1.02
+  - id: FN-police
+    Name: "Police"
+    PredefinedType: SHELF
+    ObjectType: Shelf
+    Origin: [28.35, 15.32, 1.35]
+    Width: 1.2
+    Depth: 0.28
+    Height: 0.72
+    ContainedInStructure: SP-1.02
+  - id: FN-rostlina
+    Name: "Závěsná police"
+    PredefinedType: SHELF
+    ObjectType: PlantShelf
+    Origin: [28.55, 15.4, 2.18]
+    Width: 0.8
+    Depth: 0.2
+    Height: 0.05
+    ContainedInStructure: SP-1.02
+coverings:
+  - id: CV-koberec
+    Name: "Koberec"
+    PredefinedType: USERDEFINED
+    ObjectType: Rug
+    Origin: [25.8, 10.9, 0]
+    Width: 3.0
+    Depth: 2.2
+    Height: 0.01
+    ContainedInStructure: SP-1.02
+lightFixtures:
+  - id: LF-lista-linka
+    Name: "Lišta nad linkou"
+    PredefinedType: DIRECTIONSOURCE
+    ObjectType: TrackLight
+    Origin: [20.0, 14.82, 2.45]
+    Width: 2.0
+    Depth: 0.04
+    Height: 0.04
+    ContainedInStructure: SP-1.02
+  - id: LF-lista-ostrov
+    Name: "Lišta nad ostrůvkem"
+    PredefinedType: DIRECTIONSOURCE
+    ObjectType: TrackLight
+    Origin: [20.4, 13.48, 2.45]
+    Width: 1.8
+    Depth: 0.04
+    Height: 0.04
+    ContainedInStructure: SP-1.02
