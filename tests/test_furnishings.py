@@ -134,15 +134,13 @@ def _one_cabinet():
     )
 
 
-# Red widths and the outlines on the dark card. Depths 0.6 and 1.2 are the
-# inferred ones (base depth, island depth); see furnishings.yaml.
+# Island column, north to south. Depth 1.2 is the column width. See furnishings.yaml.
 KITCHEN = (
-    ("SF-N500", [18.8, 15.0], None, 0.5, 0.6, 0.93),
-    ("SF-N7200", [19.3, 15.0], None, 7.2, 0.6, 0.93),
-    ("SF-I600a", [18.8, 13.8], [0.0, -1.0], 0.6, 1.2, 0.93),
-    ("SF-I600b", [18.8, 13.2], [0.0, -1.0], 0.6, 1.2, 0.93),
-    ("SF-I500", [18.8, 12.6], [0.0, -1.0], 0.5, 1.2, 0.93),
-    ("SF-I300", [18.8, 12.1], [0.0, -1.0], 0.3, 1.2, 0.93),
+    ("SF-I500a", [20.554, 13.8], [0.0, -1.0], 0.5, 1.2, 0.93),
+    ("SF-I600a", [20.554, 13.3], [0.0, -1.0], 0.6, 1.2, 0.93),
+    ("SF-I500b", [20.554, 12.7], [0.0, -1.0], 0.5, 1.2, 0.93),
+    ("SF-I600b", [20.554, 12.2], [0.0, -1.0], 0.6, 1.2, 0.93),
+    ("SF-I300", [20.554, 11.6], [0.0, -1.0], 0.3, 1.2, 0.93),
 )
 
 
@@ -191,12 +189,11 @@ def test_build_extrudes_walls_and_the_kitchen_boxes():
     assert labels.isdisjoint({"appliance", "sink", "furniture", "rug", "light"})
     # World plan of the placed solids. Inset is 1 mm, so the box sits 0.5 mm inside.
     expected_mm = {
-        "SF-N500": (18800, 19300, 15000, 15600),
-        "SF-N7200": (19300, 26500, 15000, 15600),
-        "SF-I600a": (18800, 20000, 13200, 13800),
-        "SF-I600b": (18800, 20000, 12600, 13200),
-        "SF-I500": (18800, 20000, 12100, 12600),
-        "SF-I300": (18800, 20000, 11800, 12100),
+        "SF-I500a": (20554, 21754, 13300, 13800),
+        "SF-I600a": (20554, 21754, 12700, 13300),
+        "SF-I500b": (20554, 21754, 12200, 12700),
+        "SF-I600b": (20554, 21754, 11600, 12200),
+        "SF-I300": (20554, 21754, 11300, 11600),
     }
     for child in placed:
         x0, x1, y0, y1 = expected_mm[child.furnishing_id]
