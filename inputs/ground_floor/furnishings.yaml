@@ -1,39 +1,67 @@
 # Room 1.02 (obývák) furnishings. yaml-ifc at commit 34e1597.
 #
-# Kitchen boxes only, from KitchenPlan.jpg (2448×1809). The island is the
-# blue column on the dark panel: five modules, north to south, red widths
-# 500, 600, 500, 600, 300 (2500). The green rectangle is the single sink in
-# the north 500. The two green round bowls sit across the second 500 and the
-# second 600. Depth is the column's east-west width, modelled at 1200.
-# One BaseCabinet per module, counter 930. No hinge: the blue strokes are
-# the outline. Product cards, the yellow notes, and STŮL LIBRA are not
-# cabinets. The ostrov note (plinth on the other side) is why the column is
-# freestanding.
+# KitchenPlan.jpg (2448×1809). Two groups: the tall run on the north wall,
+# and the freestanding island. Counter 930. Tall cabinets 2450, the height
+# Petr wrote. Product cards other than the fridge, and STŮL LIBRA, are not
+# cabinets. The Ninja KT200EU card (pixel x 1123–1241) is a kettle.
 #
-# Not a wall run. The red 7200 sits above the column, on the top blue line.
-# There is no cabinet outline along the north wall, so there is no SF-N7200
-# and no separate wall 500. The same 7200 is the long dimension line at the
-# bottom of the sheet (see registration). The readable "11100" at pixel
-# (1636, 1375) is the room width; at this scale that line is 3208 px and
-# does not fit the 2448 px frame, so it is not a base cabinet. "5350" is
-# not a readable glyph. 2450 is the door-height note stacked under each
-# 1100 (48 px below it, 166 mm), not a plan length and not a tall unit.
-#
-# Registration, pixel to storey (image y down, world Y north):
-#   px/mm = 0.28986. The two "1100" labels are OP25 and OP24, door width
-#   1100, centers 3600 mm apart: pixel y 442.5 ↔ world y 14.40 (OP25),
-#   pixel y 1486 ↔ world y 10.80 (OP24).
-#   Anchor X: the bottom dimension line y=1719 runs x=93 to x=2175
-#   (2082 px = 7182 mm), the 7200, starting at the west inner face.
-#   pixel x=93 ↔ world x=18.80.
+# Registration. Image y is down, world Y is north. The door scale stands:
+#   px/mm = 0.28986. The two "1100" labels are OP25 and OP24, 3600 mm
+#   between centres: pixel y 442.5 ↔ world y 14.40, pixel y 1486 ↔ world
+#   y 10.80.
+#   X is the same scale. It is not taken from the red handwriting. The west
+#   wall's two faces are the verticals at pixel x=22 and x=93 (71 px ≈
+#   245 mm, the 250 mm wall). The inner face is x=93 ↔ world x=18.80.
 #   world_x = 18.80 + (px - 93) / 0.28986 / 1000
 #   world_y = 14.40 - (py - 442.5) / 0.28986 / 1000
-# Column stroke centres: west x=594.5, east x=956, north y=622, south y=1335
-# (drawn 1253×2460 mm). The 1200×2500 boxes are centred on that rectangle.
-# A line at x≈773 splits the width near 600+600, but the east half has no
-# module divisions (top and bottom returns only), so this is one 1200-deep
-# row, not two back-to-back cabinet rows. The east return is the plinth side.
-# Clear of the inner faces: west 1.754, east 8.146, north 1.800, south 1.050.
+# The red mark above the island is a handwritten 1200, the island's overall
+# width, not a 7200 dimension. The long line at pixel y=1719 (x=93 to
+# x=2176, 2083 px ≈ 7188 mm) is a DWG dimension; the island does not use it.
+#
+# Tall run, west to east, backs on the north inner face y=15.6. Note x-spans
+# (sticky yellow), then the world x those spans map to:
+#   T1    px 89–287    → 18.79–19.47   "dvere 60L, sirka skrine az ke zdi (~75)"
+#   fridge note 338–513 → 19.65–20.25  "naproti pruchodu (ne v rohu)"
+#   fridge card 294–534 → 19.49–20.32
+#   T2    px 533–688   → 20.32–20.85   "nahore dvere 60R"
+#   T3    the card gap 688–858 → 20.85–21.44  (DGC 7465, M 2230)
+#   T4    px 858–1045  → 21.44–22.09   "zbyva sirka cca 50"
+# T1 is 750, from the west inner face to the fridge, which matches the note
+# (~75) and the note's east edge within 80 mm. The fridge is its real
+# 908×716×1876, packed against T1. T2 and T3 are 600, T4 is 500.
+# Tall carcasses are 600 deep. The fridge is 716 deep and projects 116 mm
+# past the cabinet faces; the run is not deepened to match it.
+# Fronts face south: Origin is the south-west corner, Width runs east,
+# Depth runs north (RefDirection omitted, the default [1, 0]).
+# yaml-ifc has no hinge field. 60L and 60R are PropertySets named
+# Pset_CabinetDoor, property HingeSide, on SF-T1 and SF-T2. L/R is as you
+# face the front. T3 and T4 do not state a hinge.
+# The fridge is IfcElectricAppliance, PredefinedType FRIDGE_FREEZER.
+# FREESTANDINGFRIDGE is not in the yaml-ifc enum. It is aligned to OP25,
+# the north door in the west wall W-050 (y 13.85–14.95). Its south face is
+# y=14.884, 66 mm south of that door's north jamb, so the appliance stands
+# in the line of the doorway and T1 keeps it out of the north-west corner.
+# OP28, the wide south opening (x 22.05–26.45), is east of this note.
+# OP24 is the south door on the same wall. T4's east face (x=22.158) nicks
+# pier W-052 (x 22.15–22.45, projecting to y=15.35) by 8 mm. The pier is
+# not cut out of the box.
+#
+# Island. Outer stroke centres: west x=594.5, east x=956, north y=622,
+# south y=1335 (drawn about 1253×2460). The 2500×1200 boxes are centred on
+# that rectangle: west 20.554, east 21.754, north 13.800, south 11.300.
+# The faint line at x≈773 (world x≈21.15) is the split. Two rows, each 600
+# deep, overall 2500×1200, counter 930.
+#   West row, faces west. RefDirection [0, -1]: Origin is the north-west
+#   corner, Width runs south, Depth runs east. Modules north to south
+#   500, 600, 500, 600, 300. The green rectangular sink is in the north
+#   500. The two round bowls cross the second 500 and the second 600.
+#   East row, faces east. This is the plinth and robot-dock side. The east
+#   half has no module lines (top and bottom returns only), so the 2500 is
+#   split 600/600/600/700 from north to south, the 700 at the south.
+#   RefDirection [0, 1]: Origin is the south-east corner, Width runs north,
+#   Depth runs west.
+# Clear of the inner faces, to the island outline: west 1.754, east 8.146,
+# north 1.800, south 1.050.
 #
 # One whole element per box. The list key is the IFC class:
 #   furniture, systemFurniture, sanitaryTerminals, electricAppliances,
@@ -74,58 +102,162 @@ openings: []
 doors: []
 windows: []
 systemFurniture:
+  - id: SF-T1
+    Name: "Vysoká 750 dvere 60L"
+    Description: "Tall run, west end. Door 600 hinged on the left. Width is the gap from the west wall to the fridge, the note's ~75."
+    PredefinedType: USERDEFINED
+    ObjectType: TallCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [18.8, 15.0]
+    Width: 0.75
+    Depth: 0.6
+    Height: 2.45
+    PropertySets:
+      - Name: Pset_CabinetDoor
+        Properties:
+          HingeSide: "L"
+          DoorWidth: 0.6
+  - id: SF-T2
+    Name: "Vysoká 600 dvere 60R"
+    Description: "Tall run. Door 600 hinged on the right. Note: nahore dvere 60R."
+    PredefinedType: USERDEFINED
+    ObjectType: TallCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [20.458, 15.0]
+    Width: 0.6
+    Depth: 0.6
+    Height: 2.45
+    PropertySets:
+      - Name: Pset_CabinetDoor
+        Properties:
+          HingeSide: "R"
+          DoorWidth: 0.6
+  - id: SF-T3
+    Name: "Vysoká 600 trouba"
+    Description: "Oven column, 600. Miele DGC 7465 and M 2230. Box only."
+    PredefinedType: USERDEFINED
+    ObjectType: TallCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [21.058, 15.0]
+    Width: 0.6
+    Depth: 0.6
+    Height: 2.45
+  - id: SF-T4
+    Name: "Vysoká 500"
+    Description: "Tall run, east end. Note: zbyva sirka cca 50. Modelled 500. The same note allows 600 if a drinks fridge goes underneath. East face nicks pier W-052 by 8 mm."
+    PredefinedType: USERDEFINED
+    ObjectType: TallCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [21.658, 15.0]
+    Width: 0.5
+    Depth: 0.6
+    Height: 2.45
   - id: SF-I500a
-    Name: "Ostrov 500 dřez"
-    Description: "Island, north module. Red 500. Green rectangular single sink."
+    Name: "Ostrov západ 500 dřez"
+    Description: "Island, west row, north module. Red 500. Green rectangular single sink. Faces west."
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
     Origin: [20.554, 13.8]
     RefDirection: [0, -1]
     Width: 0.5
-    Depth: 1.2
+    Depth: 0.6
     Height: 0.93
   - id: SF-I600a
-    Name: "Ostrov 600"
-    Description: "Island. First red 600, south of the rectangular sink."
+    Name: "Ostrov západ 600"
+    Description: "Island, west row. First red 600, south of the rectangular sink. Faces west."
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
     Origin: [20.554, 13.3]
     RefDirection: [0, -1]
     Width: 0.6
-    Depth: 1.2
+    Depth: 0.6
     Height: 0.93
   - id: SF-I500b
-    Name: "Ostrov 500"
-    Description: "Island. Red 500. North of the two round bowls, which cross into SF-I600b."
+    Name: "Ostrov západ 500"
+    Description: "Island, west row. Red 500. North of the two round bowls, which cross into SF-I600b. Faces west."
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
     Origin: [20.554, 12.7]
     RefDirection: [0, -1]
     Width: 0.5
-    Depth: 1.2
+    Depth: 0.6
     Height: 0.93
   - id: SF-I600b
-    Name: "Ostrov 600 mísy"
-    Description: "Island. Second red 600. The two green round bowls sit across this module and SF-I500b."
+    Name: "Ostrov západ 600 mísy"
+    Description: "Island, west row. Second red 600. The two green round bowls sit across this module and SF-I500b. Faces west."
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
     Origin: [20.554, 12.2]
     RefDirection: [0, -1]
     Width: 0.6
-    Depth: 1.2
+    Depth: 0.6
     Height: 0.93
   - id: SF-I300
-    Name: "Ostrov 300"
-    Description: "Island, south end. Red 300."
+    Name: "Ostrov západ 300"
+    Description: "Island, west row, south end. Red 300. Faces west."
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
     Origin: [20.554, 11.6]
     RefDirection: [0, -1]
     Width: 0.3
-    Depth: 1.2
+    Depth: 0.6
     Height: 0.93
+  - id: SF-E600a
+    Name: "Ostrov východ 600"
+    Description: "Island, east row, north module. No module line is drawn on this side. 600 of 600/600/600/700, north to south. Plinth and robot-dock side. Faces east."
+    PredefinedType: USERDEFINED
+    ObjectType: BaseCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [21.754, 13.2]
+    RefDirection: [0, 1]
+    Width: 0.6
+    Depth: 0.6
+    Height: 0.93
+  - id: SF-E600b
+    Name: "Ostrov východ 600"
+    Description: "Island, east row. Second 600. Faces east."
+    PredefinedType: USERDEFINED
+    ObjectType: BaseCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [21.754, 12.6]
+    RefDirection: [0, 1]
+    Width: 0.6
+    Depth: 0.6
+    Height: 0.93
+  - id: SF-E600c
+    Name: "Ostrov východ 600"
+    Description: "Island, east row. Third 600. Faces east."
+    PredefinedType: USERDEFINED
+    ObjectType: BaseCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [21.754, 12.0]
+    RefDirection: [0, 1]
+    Width: 0.6
+    Depth: 0.6
+    Height: 0.93
+  - id: SF-E700
+    Name: "Ostrov východ 700"
+    Description: "Island, east row, south end. The remaining 700. Faces east."
+    PredefinedType: USERDEFINED
+    ObjectType: BaseCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [21.754, 11.3]
+    RefDirection: [0, 1]
+    Width: 0.7
+    Depth: 0.6
+    Height: 0.93
+electricAppliances:
+  - id: EA-WQ9I
+    Name: "Whirlpool WQ9I MO2L EF"
+    Description: "Side-by-side fridge-freezer, 908×716×1876. Note: naproti pruchodu (ne v rohu), with a water connection. Aligned to OP25. Not a cabinet."
+    PredefinedType: FRIDGE_FREEZER
+    ContainedInStructure: SP-1.02
+    Origin: [19.55, 14.884]
+    Width: 0.908
+    Depth: 0.716
+    Height: 1.876
