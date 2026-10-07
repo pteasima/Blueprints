@@ -340,5 +340,83 @@
         1.35
       ]
     }
+  },
+  {
+    "id": "kitchen-living",
+    "hFovDeg": 52,
+    "title": {
+      "en": "Kitchen toward the living room",
+      "cs": "Kuchyň k obýváku"
+    },
+    "project": "RD Šíma 1.NP",
+    "camera": {
+      "target": [
+        27.2,
+        0.9500000000000001,
+        -13.6
+      ],
+      "position": [
+        19.3,
+        1.55,
+        -12.0
+      ],
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "id": "living-kitchen",
+    "hFovDeg": 52,
+    "title": {
+      "en": "Living room toward the kitchen",
+      "cs": "Obývák ke kuchyni"
+    },
+    "project": "RD Šíma 1.NP",
+    "camera": {
+      "target": [
+        21.2,
+        1.05,
+        -14.200000000000001
+      ],
+      "position": [
+        28.900000000000002,
+        1.55,
+        -10.700000000000001
+      ],
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "id": "kitchen-run",
+    "hFovDeg": 50,
+    "title": {
+      "en": "Kitchen cabinet wall",
+      "cs": "Kuchyňská linka"
+    },
+    "project": "RD Šíma 1.NP",
+    "camera": {
+      "target": [
+        20.2,
+        1.25,
+        -15.35
+      ],
+      "position": [
+        22.7,
+        1.55,
+        -12.35
+      ],
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ]
+    }
   }
 ]
