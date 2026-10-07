@@ -1,7 +1,7 @@
 """RD Šíma ground floor — walls and the openings cut through them.
 
 Source: ``inputs/ground_floor/ground-floor.yaml``, vendored from
-pteasima/yaml-ifc @ 4ad102f. Lengths in that file are metres. Solids are
+pteasima/yaml-ifc @ 34e1597. Lengths in that file are metres. Solids are
 millimetres, the same as the other build123d models, so the existing viewer
 path (glTF metres, Z-up CAD → Y-up) applies unchanged.
 
@@ -33,12 +33,13 @@ W-004 and W-014 are the 120 mm closed squares on the silná layer. The file
 keeps them as short walls because IfcColumn is deferred. Neither axis meets
 another wall, so at overview scale they read as two thin vertical bars.
 
-Kitchen and living furniture is a second file, ``furnishings.yaml``. Each
-element is one box (yaml-ifc furnishings, commit 34e1597): Origin at the
-minimum corner, Width / Depth / Height, Name, PredefinedType, ObjectType.
-The vendored package is still the walls commit; it does not write these
-boxes. Solids are inset by 1 mm so flush modules do not share a face.
-Walls are not moved to make a box fit.
+Kitchen and living furniture is a second file, ``furnishings.yaml``, the
+same commit's furnishings schema. Each element is one box. The solid is
+the ``IfcExtrudedAreaSolid`` that ``yaml_ifc`` writes (placement origin at
+the minimum corner, profile centred so the box fills Width × Depth ×
+Height). This model does not read those sizes itself. Solids are inset by
+1 mm so flush modules do not share a face. Walls are not moved to make a
+box fit. The space has no body.
 
     python -m blueprints.export ground_floor
 """
@@ -48,7 +49,6 @@ from __future__ import annotations
 import math
 from pathlib import Path
 
-import yaml
 from build123d import (
     Align,
     Box,
@@ -62,7 +62,11 @@ from build123d import (
     Vector,
     Wire,
 )
-from yaml_ifc import footprints
+from ifcopenshell.util.placement import get_local_placement
+from yaml_ifc import footprints, validation_errors
+from yaml_ifc.supported import FURNISHINGS, PSET_NAME
+from yaml_ifc.to_ifc import build_ifc
+from yaml_ifc.yamlio import load as load_yaml_ifc
 
 from blueprints.export_utils import SECTION_LAYERS
 from blueprints.scenes import cad_mm_to_gltf_m
@@ -73,13 +77,11 @@ MODEL_LABEL = "RD Šíma 1.NP"
 EXPORT_KIND = "solid"
 
 SOURCE_REPO = "pteasima/yaml-ifc"
-SOURCE_COMMIT = "4ad102f"
+SOURCE_COMMIT = "34e1597"
 SOURCE_PATH = (
     Path(__file__).resolve().parents[1] / "inputs" / "ground_floor" / "ground-floor.yaml"
 )
 FURNISHINGS_PATH = SOURCE_PATH.with_name("furnishings.yaml")
-# yaml-ifc furnishings field list. The package itself stays at SOURCE_COMMIT.
-FURNISHINGS_COMMIT = "34e1597"
 
 # yaml-ifc ``DEFAULT_WALL_HEIGHT``. Not written back into the YAML.
 DEFAULT_WALL_HEIGHT_M = 3.0
@@ -106,23 +108,17 @@ LABEL_FURNITURE = "furniture"
 LABEL_RUG = "rug"
 LABEL_LIGHT = "light"
 
-# YAML list → viewer label. Spaces are not extruded.
-FURNISHING_LISTS = (
-    "systemFurniture",
-    "appliances",
-    "sanitaryTerminals",
-    "furniture",
-    "coverings",
-    "lightFixtures",
-)
+# YAML list → viewer label. The list keys are yaml-ifc's, not a local guess.
+# Spaces are not extruded.
 FURNISHING_LABELS = {
     "systemFurniture": LABEL_CABINET,
-    "appliances": LABEL_APPLIANCE,
+    "electricAppliances": LABEL_APPLIANCE,
     "sanitaryTerminals": LABEL_SINK,
     "furniture": LABEL_FURNITURE,
     "coverings": LABEL_RUG,
     "lightFixtures": LABEL_LIGHT,
 }
+FURNISHING_LISTS = tuple(key for key, _ifc_class, _type_class in FURNISHINGS)
 # Clear room 1.02, metres, from the wall footprints. See furnishings.yaml.
 ROOM_ID = "SP-1.02"
 ROOM_X0 = 18.8
@@ -136,16 +132,12 @@ ROOM_PIERS_M = (
 )
 # Shrink each solid so two flush boxes do not share a face.
 MESH_GAP_MM = 1.0
-_BOX_FIELDS = ("Origin", "Width", "Depth", "Height", "Name", "PredefinedType", "ObjectType")
+# Drawing note for room 1.02. Not an IfcSpace field.
+ROOM_CLEAR_M = 5.05
 
 
 def load_document(path: Path | None = None) -> dict:
-    source = path or SOURCE_PATH
-    with source.open(encoding="utf-8") as handle:
-        doc = yaml.safe_load(handle)
-    if not isinstance(doc, dict):
-        raise ValueError(f"{source} is not a yaml-ifc mapping")
-    return doc
+    return load_yaml_ifc(path or SOURCE_PATH)
 
 
 def load_furnishings(path: Path | None = None) -> dict:
@@ -153,51 +145,11 @@ def load_furnishings(path: Path | None = None) -> dict:
     source = path or FURNISHINGS_PATH
     if not source.is_file():
         return {}
-    with source.open(encoding="utf-8") as handle:
-        doc = yaml.safe_load(handle)
-    if not isinstance(doc, dict):
-        raise ValueError(f"{source} is not a yaml-ifc mapping")
-    _validate_furnishings(doc, source)
-    return doc
-
-
-def _validate_furnishings(doc: dict, source: Path) -> None:
-    spaces = doc.get("spaces") or []
-    space_ids = set()
-    for space in spaces:
-        sid = space.get("id")
-        if not sid or sid in space_ids:
-            raise ValueError(f"{source} has a space without a unique id")
-        space_ids.add(sid)
-        for field in ("Name", "Origin", "Width", "Depth", "Height"):
-            if space.get(field) is None:
-                raise ValueError(f"{sid} is missing {field}")
-    seen: set[str] = set()
-    for key in FURNISHING_LISTS:
-        for element in doc.get(key) or []:
-            eid = element.get("id")
-            if not eid or eid in seen:
-                raise ValueError(f"{source} has a furnishing without a unique id")
-            seen.add(eid)
-            for field in _BOX_FIELDS:
-                if element.get(field) is None:
-                    raise ValueError(f"{eid} is missing {field}")
-            family = str(element["ObjectType"])
-            if not family.isalpha():
-                raise ValueError(f"{eid} ObjectType {family!r} is not a family name")
-            for size_name in ("Width", "Depth", "Height"):
-                if float(element[size_name]) <= 0:
-                    raise ValueError(f"{eid} has a non-positive {size_name}")
-            origin = element["Origin"]
-            if len(origin) != 3:
-                raise ValueError(f"{eid} Origin must be three coordinates")
-            host = element.get("ContainedInStructure")
-            if host is not None and host not in space_ids:
-                raise ValueError(f"{eid} is contained in unknown space {host}")
+    return load_yaml_ifc(source)
 
 
 def furnishing_records(doc: dict | None = None) -> list[dict]:
-    """Each box plus its YAML list name. Spaces are not included."""
+    """Each YAML element plus its list name. Spaces are not included."""
     furn = doc if doc is not None else load_furnishings()
     records = []
     for key in FURNISHING_LISTS:
@@ -206,48 +158,88 @@ def furnishing_records(doc: dict | None = None) -> list[dict]:
     return records
 
 
-def _ref_axes(element: dict) -> tuple[tuple[float, float], tuple[float, float]]:
-    """Local X (Width) and Y (Depth) in plan. Y is Z × X."""
-    ref = element.get("RefDirection") or (1.0, 0.0)
-    rx, ry = float(ref[0]), float(ref[1])
-    norm = math.hypot(rx, ry)
-    if norm < 1e-12:
-        raise ValueError(f"{element.get('id')} has a zero RefDirection")
-    rx, ry = rx / norm, ry / norm
-    return (rx, ry), (-ry, rx)
+def _yaml_id(product) -> str:
+    for rel in product.IsDefinedBy or []:
+        if not rel.is_a("IfcRelDefinesByProperties"):
+            continue
+        pset = rel.RelatingPropertyDefinition
+        if getattr(pset, "Name", None) != PSET_NAME:
+            continue
+        for prop in pset.HasProperties or []:
+            if prop.Name == "id" and prop.NominalValue is not None:
+                return str(prop.NominalValue.wrappedValue)
+    return str(product.Name)
 
 
-def _furnishing_solid(element: dict):
-    """Box in millimetres. Origin is the local minimum corner."""
-    (rx, ry), _ = _ref_axes(element)
-    ox, oy, oz = (float(v) for v in element["Origin"])
-    width, depth, height = (
-        _mm(float(element["Width"])),
-        _mm(float(element["Depth"])),
-        _mm(float(element["Height"])),
-    )
+def _body_extrusion(product):
+    representation = product.Representation
+    if representation is None:
+        return None
+    for shape in representation.Representations or []:
+        if shape.RepresentationIdentifier != "Body":
+            continue
+        for item in shape.Items or []:
+            if item.is_a("IfcExtrudedAreaSolid"):
+                return item
+    return None
+
+
+def _corner_size(product, solid) -> tuple[float, float, float]:
+    """Width, depth, height in metres, from a corner-origin rectangle."""
+    profile = solid.SweptArea
+    if profile is None or not profile.is_a("IfcRectangleProfileDef"):
+        raise ValueError(f"{product.Name} body is not a rectangular box")
+    width, depth = float(profile.XDim), float(profile.YDim)
+    centre = profile.Position.Location.Coordinates
+    if abs(float(centre[0]) - width / 2.0) > 1e-4 or abs(float(centre[1]) - depth / 2.0) > 1e-4:
+        raise ValueError(f"{product.Name} box is not placed on its minimum corner")
+    location = solid.Position.Location.Coordinates
+    if any(abs(float(value)) > 1e-4 for value in location):
+        raise ValueError(f"{product.Name} extrusion is not at the placement origin")
+    return width, depth, float(solid.Depth)
+
+
+def _solid_from_product(product, label: str, list_key: str):
+    """build123d box from the converter's extrusion, in millimetres."""
+    solid = _body_extrusion(product)
+    if solid is None:
+        return None
+    width, depth, height = (_mm(value) for value in _corner_size(product, solid))
+    matrix = get_local_placement(product.ObjectPlacement)
+    origin = tuple(float(matrix[index, 3]) * MM for index in range(3))
+    x_dir = tuple(float(matrix[index, 0]) for index in range(3))
+    z_dir = tuple(float(matrix[index, 2]) for index in range(3))
     gap = min(MESH_GAP_MM, width * 0.25, depth * 0.25, height * 0.25)
-    plane = Plane(
-        origin=(_mm(ox), _mm(oy), _mm(oz)),
-        x_dir=(rx, ry, 0.0),
-        z_dir=(0.0, 0.0, 1.0),
-    )
+    plane = Plane(origin=origin, x_dir=x_dir, z_dir=z_dir)
     box = Pos(gap / 2.0, gap / 2.0, gap / 2.0) * Box(
         width - gap,
         depth - gap,
         height - gap,
         align=(Align.MIN, Align.MIN, Align.MIN),
     )
-    shape = plane * box
-    label = element["label"]
-    painted = _paint(shape, label)
-    painted.furnishing_id = element["id"]
-    painted.furnishing_list = element["list"]
+    painted = _paint(plane * box, label)
+    painted.furnishing_id = _yaml_id(product)
+    painted.furnishing_list = list_key
     return painted
 
 
 def _furnishing_parts(doc: dict) -> list:
-    return [_furnishing_solid(element) for element in furnishing_records(doc)]
+    """Boxes the converter writes. A partial size has no solid."""
+    if not doc or not any(doc.get(key) for key in FURNISHING_LISTS):
+        return []
+    if set(FURNISHING_LABELS) != set(FURNISHING_LISTS):
+        raise ValueError("viewer labels do not match yaml-ifc furnishing lists")
+    model = build_ifc(doc)
+    errors = validation_errors(model)
+    if errors:
+        raise ValueError("yaml-ifc furnishings failed validation: " + "; ".join(errors))
+    parts = []
+    for key, ifc_class, _type_class in FURNISHINGS:
+        for product in model.by_type(ifc_class):
+            part = _solid_from_product(product, FURNISHING_LABELS[key], key)
+            if part is not None:
+                parts.append(part)
+    return parts
 
 
 def _color(label: str) -> Color:
@@ -556,7 +548,7 @@ def build(path: Path | None = None, furnishings_path: Path | None = None):
             "w017_thickness_m": MISSING_THICKNESS_M,
             "footprints": len(rings),
             "furnishings": len(furnishing_parts),
-            "furnishings_commit": FURNISHINGS_COMMIT,
+            "furnishings_commit": SOURCE_COMMIT,
         },
         "footprints_omitted": omitted,
         "openings_cut": cut_ids,
