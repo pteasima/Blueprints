@@ -1,4 +1,4 @@
-"""Room 1.02 furnishings: an empty document, and the converter path on a fixture."""
+"""Room 1.02 furnishings: the kitchen boxes, and the converter path on a fixture."""
 
 from pathlib import Path
 import sys
@@ -18,6 +18,10 @@ from ground_floor import (  # noqa: E402
     LABEL_MASONRY,
     MESH_GAP_MM,
     ROOM_ID,
+    ROOM_X0,
+    ROOM_X1,
+    ROOM_Y0,
+    ROOM_Y1,
     SOURCE_COMMIT,
     _furnishing_parts,
     build,
@@ -130,7 +134,19 @@ def _one_cabinet():
     )
 
 
-def test_furnishings_file_has_the_space_and_no_elements():
+# Red widths and the outlines on the dark card. Depths 0.6 and 1.2 are the
+# inferred ones (base depth, island depth); see furnishings.yaml.
+KITCHEN = (
+    ("SF-N500", [18.8, 15.0], None, 0.5, 0.6, 0.93),
+    ("SF-N7200", [19.3, 15.0], None, 7.2, 0.6, 0.93),
+    ("SF-I600a", [18.8, 13.8], [0.0, -1.0], 0.6, 1.2, 0.93),
+    ("SF-I600b", [18.8, 13.2], [0.0, -1.0], 0.6, 1.2, 0.93),
+    ("SF-I500", [18.8, 12.6], [0.0, -1.0], 0.5, 1.2, 0.93),
+    ("SF-I300", [18.8, 12.1], [0.0, -1.0], 0.3, 1.2, 0.93),
+)
+
+
+def test_furnishings_file_has_the_space_and_the_kitchen_boxes():
     doc = load_furnishings()
     assert FURNISHINGS_PATH.is_file()
     assert SOURCE_COMMIT == "34e1597"
@@ -144,19 +160,55 @@ def test_furnishings_file_has_the_space_and_no_elements():
     for field in ("Origin", "Width", "Depth", "Height", "ObjectType"):
         assert field not in space
     for key in FURNISHING_KEYS:
-        assert key not in doc
-    assert furnishing_records(doc) == []
+        if key != "systemFurniture":
+            assert key not in doc
+    records = furnishing_records(doc)
+    assert [item["id"] for item in records] == [row[0] for row in KITCHEN]
+    for record, expected in zip(records, KITCHEN):
+        cabinet_id, origin, ref, width, depth, height = expected
+        assert record["list"] == "systemFurniture"
+        assert record["label"] == LABEL_CABINET
+        assert record["ObjectType"] == "BaseCabinet"
+        assert record["PredefinedType"] == "USERDEFINED"
+        assert record["ContainedInStructure"] == ROOM_ID
+        assert record["Origin"] == origin
+        assert record.get("RefDirection") == ref
+        assert record["Width"] == width
+        assert record["Depth"] == depth
+        assert record["Height"] == height
+        assert "Elevation" not in record
 
 
-def test_build_extrudes_walls_and_no_furnishings():
+def test_build_extrudes_walls_and_the_kitchen_boxes():
     shape, meta = build()
-    assert meta["derived"]["furnishings"] == 0
+    assert meta["derived"]["furnishings"] == len(KITCHEN)
     assert meta["derived"]["furnishings_commit"] == "34e1597"
     placed = [child for child in shape.children if getattr(child, "furnishing_id", None)]
-    assert placed == []
+    assert [child.furnishing_id for child in placed] == [row[0] for row in KITCHEN]
+    assert {child.label for child in placed} == {LABEL_CABINET}
     labels = {child.label for child in shape.children}
-    assert {LABEL_MASONRY, LABEL_GLAZING, LABEL_DOOR} <= labels
-    assert labels.isdisjoint({"cabinet", "appliance", "sink", "furniture", "rug", "light"})
+    assert {LABEL_MASONRY, LABEL_GLAZING, LABEL_DOOR, LABEL_CABINET} <= labels
+    assert labels.isdisjoint({"appliance", "sink", "furniture", "rug", "light"})
+    # World plan of the placed solids. Inset is 1 mm, so the box sits 0.5 mm inside.
+    expected_mm = {
+        "SF-N500": (18800, 19300, 15000, 15600),
+        "SF-N7200": (19300, 26500, 15000, 15600),
+        "SF-I600a": (18800, 20000, 13200, 13800),
+        "SF-I600b": (18800, 20000, 12600, 13200),
+        "SF-I500": (18800, 20000, 12100, 12600),
+        "SF-I300": (18800, 20000, 11800, 12100),
+    }
+    for child in placed:
+        x0, x1, y0, y1 = expected_mm[child.furnishing_id]
+        bb = child.bounding_box()
+        assert bb.min.X == pytest.approx(x0 + 0.5, abs=0.1)
+        assert bb.max.X == pytest.approx(x1 - 0.5, abs=0.1)
+        assert bb.min.Y == pytest.approx(y0 + 0.5, abs=0.1)
+        assert bb.max.Y == pytest.approx(y1 - 0.5, abs=0.1)
+        assert bb.min.Z == pytest.approx(0.5, abs=0.1)
+        assert bb.max.Z == pytest.approx(930 - 0.5, abs=0.1)
+        assert ROOM_X0 * 1000 - 1 <= bb.min.X and bb.max.X <= ROOM_X1 * 1000 + 1
+        assert ROOM_Y0 * 1000 - 1 <= bb.min.Y and bb.max.Y <= ROOM_Y1 * 1000 + 1
 
 
 def test_furnishings_yaml_round_trips(tmp_path):
@@ -169,7 +221,7 @@ def test_furnishings_yaml_round_trips(tmp_path):
     _same(original, restored)
     assert len(model.by_type("IfcSpace")) == 1
     assert model.by_type("IfcFurniture") == []
-    assert model.by_type("IfcSystemFurnitureElement") == []
+    assert len(model.by_type("IfcSystemFurnitureElement")) == len(KITCHEN)
     assert model.by_type("IfcElectricAppliance") == []
 
 

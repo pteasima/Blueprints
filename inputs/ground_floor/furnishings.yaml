@@ -1,6 +1,47 @@
 # Room 1.02 (obývák) furnishings. yaml-ifc at commit 34e1597.
 #
-# No elements. The lists are omitted until a placement is written here.
+# Kitchen boxes only, from KitchenPlan.jpg (Petr's red/blue sketch on the
+# dark card, over a DWG screenshot). Product cards and the yellow notes are
+# not cabinets. No hinge is recorded: the blue lines are the outlines, and
+# no swing mark is separate from those lines.
+#
+# Register. The DWG dimensions on the screenshot are the clear sizes already
+# in ground-floor.yaml, so the sketch is placed in that frame (X east, Y
+# north), not by the card's pixel position on the screenshot:
+#   11100  room clear east-west, inner faces x 18.8 to 29.9 (W-050, W-056)
+#   5350   room clear north-south, y 10.25 to 15.6 (south wall, W-029)
+#   2450   south-glazing widths OP27 and OP29, and the door-leaf height
+#   1100   door widths OP24 and OP25 (west) and OP33 (east)
+#   250    north piers W-052 and W-053 project to y 15.35
+#   7200   red overall on the long blue bar, not a second wall length
+# The north inner face is the cabinet wall (11100 can take a 7200 run;
+# the west clear is only 5350). Counter height is 930. Nothing on the
+# sketch is a tall unit, so nothing is built to 2450.
+#
+# Run, against the north wall, depth 600 inferred (standard base; the 500
+# box is drawn nearly square, 600/500). The 500 is its own outline with the
+# single green sink, at the west end. The 7200 is the long bar beside it,
+# not a length that already includes the 500.
+#   SF-N500   red 500, green circle, west end
+#   SF-N7200  red 7200, the long bar. One box: the bar is not subdivided.
+# The two piers fall inside SF-N7200 (250 projection inside the 600 depth).
+# The box is the run; the piers are not cut out of it.
+#
+# Island. The dark card on the right is STŮL LIBRA: the note says a 120x240
+# table aligned with the island and the sofa, so that card is a dining table
+# and is not a cabinet. The island is the lower blue rectangle on the card,
+# the one with two green sinks. Its red widths, top to bottom, are 600, 600,
+# 500, 300 (the upper 500 is the wall sink, not this stack). 2000 long.
+# Depth 1200 is inferred: the outline is about 1.85 times as long as it is
+# wide, nearer 2000x1200 than 2000x600, and a double sink wants that depth.
+# Long axis north-south, as drawn (perpendicular to the 7200 bar). The two
+# bowls sit in the middle of the outline; the 500 is the module whose number
+# is written on them. The outline's west edge lines up with the wall-sink
+# box, so the island starts at the same inner face, x 18.8, and the 1200
+# depth runs east. A gap of about one aisle (the sketch's clear band is
+# ~1.2 m at the 500-module scale) puts the north end at y 13.8. OP25's jamb
+# is y 13.85, so the opening is clear; the west face is on W-050.
+#
 # One whole element per box. The list key is the IFC class:
 #   furniture, systemFurniture, sanitaryTerminals, electricAppliances,
 #   lightFixtures, coverings.
@@ -39,3 +80,68 @@ walls: []
 openings: []
 doors: []
 windows: []
+systemFurniture:
+  - id: SF-N500
+    Name: "Dřez 500"
+    Description: "North run, west end. Red 500 beside the single green sink. Depth 600 inferred."
+    PredefinedType: USERDEFINED
+    ObjectType: BaseCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [18.8, 15.0]
+    Width: 0.5
+    Depth: 0.6
+    Height: 0.93
+  - id: SF-N7200
+    Name: "Linka 7200"
+    Description: "North run. Red 7200 on the long blue bar, east of the 500. Not subdivided. Depth 600 inferred."
+    PredefinedType: USERDEFINED
+    ObjectType: BaseCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [19.3, 15.0]
+    Width: 7.2
+    Depth: 0.6
+    Height: 0.93
+  - id: SF-I600a
+    Name: "Ostrov 600 sever"
+    Description: "Island, north module. First red 600 under the wall sink. Depth 1200 inferred from the outline."
+    PredefinedType: USERDEFINED
+    ObjectType: BaseCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [18.8, 13.8]
+    RefDirection: [0, -1]
+    Width: 0.6
+    Depth: 1.2
+    Height: 0.93
+  - id: SF-I600b
+    Name: "Ostrov 600"
+    Description: "Island. Second red 600, south of SF-I600a."
+    PredefinedType: USERDEFINED
+    ObjectType: BaseCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [18.8, 13.2]
+    RefDirection: [0, -1]
+    Width: 0.6
+    Depth: 1.2
+    Height: 0.93
+  - id: SF-I500
+    Name: "Ostrov dřez 500"
+    Description: "Island sink module. Red 500 written across the two green bowls."
+    PredefinedType: USERDEFINED
+    ObjectType: BaseCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [18.8, 12.6]
+    RefDirection: [0, -1]
+    Width: 0.5
+    Depth: 1.2
+    Height: 0.93
+  - id: SF-I300
+    Name: "Ostrov 300"
+    Description: "Island, south end. Red 300."
+    PredefinedType: USERDEFINED
+    ObjectType: BaseCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [18.8, 12.1]
+    RefDirection: [0, -1]
+    Width: 0.3
+    Depth: 1.2
+    Height: 0.93
