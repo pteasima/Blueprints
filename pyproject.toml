@@ -10,8 +10,8 @@ dependencies = [
     "usd-core>=24.8",
     "openpyxl>=3.1",
     "PyYAML>=6.0",
-    # yaml-ifc footprints (vendored under vendor/yaml-ifc). Pinned to the
-    # release that writes butt joints; 0.8.5 is what that commit tests against.
+    # yaml-ifc (vendored under vendor/yaml-ifc) at 34e1597. 0.8.5 is what
+    # that commit tests against.
     "ifcopenshell==0.8.5",
 ]
 

@@ -1,0 +1,41 @@
+# Room 1.02 (obývák) furnishings. yaml-ifc at commit 34e1597.
+#
+# No elements. The lists are omitted until a placement is written here.
+# One whole element per box. The list key is the IFC class:
+#   furniture, systemFurniture, sanitaryTerminals, electricAppliances,
+#   lightFixtures, coverings.
+# Origin is the plan corner [x, y] in storey metres (X east, Y north).
+# Elevation is the base Z; omitted means 0. Width is local X, Depth local Y,
+# Height up. RefDirection omitted means [1, 0]. ObjectType is a family name.
+#
+# The space is the room an element can belong to. It has no body.
+# Clear height in the drawing for 1.02 is 2.50–5.05 m, and that is not a field.
+schema: IFC4 ADD2 TC1
+units:
+  LengthUnit: METRE
+project:
+  id: PRJ
+  Name: "RD Šíma"
+  Aggregates: [SITE]
+site:
+  id: SITE
+  Name: "Bor u Tachova"
+  RefElevation: 472.1
+  Aggregates: [BLD]
+building:
+  id: BLD
+  Name: "RD Šíma"
+  Aggregates: [STOREY-1NP]
+storey:
+  id: STOREY-1NP
+  Name: "1.NP"
+  Elevation: 0
+spaces:
+  - id: SP-1.02
+    Name: "1.02 Obývák"
+    LongName: "Obývák a kuchyň"
+    PredefinedType: INTERNAL
+walls: []
+openings: []
+doors: []
+windows: []

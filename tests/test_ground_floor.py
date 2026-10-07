@@ -81,7 +81,8 @@ def test_ground_floor_builds_and_cuts_openings():
     assert bb.max.Y - bb.min.Y > 14_000
 
     labels = {child.label for child in shape.children}
-    assert labels == {"masonry", "glazing", "door"}
+    assert {"masonry", "glazing", "door"} <= labels
+    assert derived["furnishings"] == 0
     host = next(wall for wall in walls if wall["id"] == OPENING_VIEW_WALL)
     hosted = [item["id"] for item in openings if item["VoidsElement"] == host["id"]]
     assert "OP39a" in hosted and "OP39b" in hosted
