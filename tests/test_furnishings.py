@@ -1,4 +1,4 @@
-"""Room 1.02 furniture: one yaml-ifc box per element, clear of the walls."""
+"""Room 1.02 furnishings: an empty document, and the converter path on a fixture."""
 
 from pathlib import Path
 import sys
@@ -12,23 +12,12 @@ from ground_floor import (  # noqa: E402
     FURNISHINGS_PATH,
     FURNISHING_LISTS,
     FURNITURE_VIEWS,
-    LABEL_APPLIANCE,
     LABEL_CABINET,
     LABEL_DOOR,
-    LABEL_FURNITURE,
     LABEL_GLAZING,
-    LABEL_LIGHT,
     LABEL_MASONRY,
-    LABEL_RUG,
-    LABEL_SINK,
     MESH_GAP_MM,
-    ROOM_CLEAR_M,
     ROOM_ID,
-    ROOM_PIERS_M,
-    ROOM_X0,
-    ROOM_X1,
-    ROOM_Y0,
-    ROOM_Y1,
     SOURCE_COMMIT,
     _furnishing_parts,
     build,
@@ -38,27 +27,17 @@ from ground_floor import (  # noqa: E402
 )
 from yaml_ifc import read_ifc, validation_errors, write_ifc
 from yaml_ifc.to_ifc import build_ifc
-from yaml_ifc.yamlio import load as load_yaml_ifc
+from yaml_ifc.yamlio import dump, load as load_yaml_ifc
 
-MODULE_WIDTHS = {0.3, 0.4, 0.45, 0.6, 0.8, 0.9}
-# West gable pocket doors, storey Y, from the opening AlongAxis.
-WEST_DOORS_Y = ((10.25, 11.35), (13.85, 14.95))
-# East gable pocket door at the glass.
-EAST_DOOR_Y = (10.25, 11.35)
-
-
-def _aabb(element):
-    """Axis-aligned box. Origin is the plan corner; Elevation defaults to 0."""
-    x, y = (float(v) for v in element["Origin"])
-    z = float(element.get("Elevation") or 0.0)
-    return (
-        x,
-        y,
-        z,
-        x + float(element["Width"]),
-        y + float(element["Depth"]),
-        z + float(element["Height"]),
-    )
+# Spec lists. Absent from the room file until a placement is written.
+FURNISHING_KEYS = (
+    "furniture",
+    "systemFurniture",
+    "sanitaryTerminals",
+    "electricAppliances",
+    "lightFixtures",
+    "coverings",
+)
 
 
 def _same(left, right, path=""):
@@ -87,24 +66,75 @@ def _same(left, right, path=""):
         raise AssertionError(f"{path} {left!r} != {right!r}")
 
 
-def _overlap(a, b) -> float:
-    dx = min(a[3], b[3]) - max(a[0], b[0])
-    dy = min(a[4], b[4]) - max(a[1], b[1])
-    dz = min(a[5], b[5]) - max(a[2], b[2])
-    if dx > 1e-6 and dy > 1e-6 and dz > 1e-6:
-        return dx * dy * dz
-    return 0.0
+def _aabb(element):
+    """Axis-aligned box. Origin is the plan corner; Elevation defaults to 0."""
+    x, y = (float(v) for v in element["Origin"])
+    z = float(element.get("Elevation") or 0.0)
+    return (
+        x,
+        y,
+        z,
+        x + float(element["Width"]),
+        y + float(element["Depth"]),
+        z + float(element["Height"]),
+    )
 
 
-def _inside(point, box) -> bool:
-    x, y, z = point
-    return box[0] < x < box[3] and box[1] < y < box[4] and box[2] < z < box[5]
+def _shell(**lists):
+    """A furnishings document. Lists are added only by the caller."""
+    doc = {
+        "schema": "IFC4 ADD2 TC1",
+        "units": {"LengthUnit": "METRE"},
+        "project": {"id": "PRJ", "Name": "RD Šíma", "Aggregates": ["SITE"]},
+        "site": {
+            "id": "SITE",
+            "Name": "Bor u Tachova",
+            "RefElevation": 472.1,
+            "Aggregates": ["BLD"],
+        },
+        "building": {"id": "BLD", "Name": "RD Šíma", "Aggregates": ["STOREY-1NP"]},
+        "storey": {"id": "STOREY-1NP", "Name": "1.NP", "Elevation": 0},
+        "spaces": [
+            {
+                "id": ROOM_ID,
+                "Name": "1.02 Obývák",
+                "LongName": "Obývák a kuchyň",
+                "PredefinedType": "INTERNAL",
+            }
+        ],
+        "walls": [],
+        "openings": [],
+        "doors": [],
+        "windows": [],
+    }
+    doc.update(lists)
+    return doc
 
 
-def test_furnishings_follow_the_box_schema():
+def _one_cabinet():
+    """One module, used only by tests. Not written into furnishings.yaml."""
+    return _shell(
+        systemFurniture=[
+            {
+                "id": "SF-test",
+                "Name": "Test cabinet",
+                "PredefinedType": "USERDEFINED",
+                "ObjectType": "BaseCabinet",
+                "ContainedInStructure": ROOM_ID,
+                "Origin": [19.0, 15.0],
+                "Width": 0.6,
+                "Depth": 0.6,
+                "Height": 0.9,
+            }
+        ]
+    )
+
+
+def test_furnishings_file_has_the_space_and_no_elements():
     doc = load_furnishings()
     assert FURNISHINGS_PATH.is_file()
     assert SOURCE_COMMIT == "34e1597"
+    assert set(FURNISHING_LISTS) == set(FURNISHING_KEYS)
     assert doc["walls"] == []
     spaces = doc["spaces"]
     assert [space["id"] for space in spaces] == [ROOM_ID]
@@ -113,130 +143,75 @@ def test_furnishings_follow_the_box_schema():
     assert space["Name"] == "1.02 Obývák"
     for field in ("Origin", "Width", "Depth", "Height", "ObjectType"):
         assert field not in space
-
-    records = furnishing_records(doc)
-    assert records
-    by_id = {item["id"]: item for item in records}
-    assert len(by_id) == len(records)
-
-    for item in records:
-        assert item["list"] in FURNISHING_LISTS
-        assert str(item["ObjectType"]).isalpha()
-        assert item["ContainedInStructure"] == ROOM_ID
-        assert "RefDirection" not in item
-        assert len(item["Origin"]) == 2
-        box = _aabb(item)
-        assert box[0] >= ROOM_X0 - 1e-9
-        assert box[3] <= ROOM_X1 + 1e-9
-        assert box[1] >= ROOM_Y0 - 1e-9
-        assert box[4] <= ROOM_Y1 + 1e-9
-        assert box[2] >= -1e-9
-        assert box[5] <= ROOM_CLEAR_M + 1e-9
-        for pier in ROOM_PIERS_M:
-            pier_box = (pier[0], pier[2], -1.0, pier[1], pier[3], 10.0)
-            assert _overlap(box, pier_box) == 0.0, item["id"]
-
-    for i, left in enumerate(records):
-        for right in records[i + 1 :]:
-            assert _overlap(_aabb(left), _aabb(right)) == 0.0, (left["id"], right["id"])
-
-    # Eyes for the three SketchUp-like views stand in the clear floor.
-    for spec in FURNITURE_VIEWS:
-        for item in records:
-            assert not _inside(spec["eye"], _aabb(item)), (spec["id"], item["id"])
+    for key in FURNISHING_KEYS:
+        assert key not in doc
+    assert furnishing_records(doc) == []
 
 
-def test_element_types_match_the_owner_mapping():
-    records = furnishing_records()
-    by_type: dict[tuple, list] = {}
-    for item in records:
-        by_type.setdefault((item["list"], item["PredefinedType"], item["ObjectType"]), []).append(
-            item
-        )
-
-    def ids(key):
-        return [item["id"] for item in by_type[key]]
-
-    cabinets = [item for item in records if item["list"] == "systemFurniture"]
-    assert cabinets
-    assert all(item["PredefinedType"] == "USERDEFINED" for item in cabinets)
-    assert {item["ObjectType"] for item in cabinets} == {
-        "TallCabinet",
-        "BaseCabinet",
-        "WallCabinet",
-        "Island",
-    }
-    for item in cabinets:
-        if item["ObjectType"] == "Island":
-            assert item["Width"] == pytest.approx(1.8)
-            assert item["Depth"] == pytest.approx(0.9)
-        else:
-            assert item["Width"] in MODULE_WIDTHS
-        if item["ObjectType"] == "BaseCabinet":
-            assert item["Depth"] == pytest.approx(0.6)
-            assert item["Height"] == pytest.approx(0.9)
-            assert item["Origin"][1] + item["Depth"] == pytest.approx(ROOM_Y1)
-        if item["ObjectType"] == "WallCabinet":
-            assert item["Depth"] == pytest.approx(0.35)
-            assert item["Origin"][1] + item["Depth"] == pytest.approx(ROOM_Y1)
-        if item["ObjectType"] == "TallCabinet":
-            assert item["Depth"] == pytest.approx(0.6)
-            assert item["Origin"][1] + item["Depth"] == pytest.approx(ROOM_Y1)
-
-    assert ids(("electricAppliances", "ELECTRICCOOKER", "Cooktop")) == ["AP-varna"]
-    assert ids(("electricAppliances", "REFRIGERATOR", "BuiltInFridge")) == ["AP-lednice"]
-    assert ids(("electricAppliances", "USERDEFINED", "BuiltInOven")) == ["AP-trouba"]
-    assert ids(("electricAppliances", "USERDEFINED", "CeilingHood")) == ["AP-digestor"]
-    fridge = by_type[("electricAppliances", "REFRIGERATOR", "BuiltInFridge")][0]
-    assert fridge["Width"] == pytest.approx(0.6)
-    assert fridge["Depth"] == pytest.approx(0.6)
-    assert fridge["Origin"][1] + fridge["Depth"] == pytest.approx(ROOM_Y1)
-
-    assert ids(("sanitaryTerminals", "SINK", "KitchenSink")) == ["ST-drez"]
-
-    tables = [item for item in records if item["PredefinedType"] == "TABLE"]
-    assert {item["ObjectType"] for item in tables} == {"DiningTable", "SideTable"}
-    assert sum(1 for item in tables if item["ObjectType"] == "SideTable") == 2
-    chairs = [item for item in records if item["PredefinedType"] == "CHAIR"]
-    assert {item["ObjectType"] for item in chairs} == {"DiningChair", "BarStool"}
-    sofas = [item for item in records if item["PredefinedType"] == "SOFA"]
-    assert len(sofas) == 1 and sofas[0]["ObjectType"] == "SectionalSofa"
-    shelves = [item for item in records if item["PredefinedType"] == "SHELF"]
-    assert {item["ObjectType"] for item in shelves} == {"WallShelf", "HangingPlantShelf"}
-    assert ids(("furniture", "USERDEFINED", "Sideboard")) == ["FN-komoda"]
-    assert ids(("furniture", "USERDEFINED", "TvUnit")) == ["FN-tv"]
-    assert ids(("coverings", "USERDEFINED", "Rug")) == ["CV-koberec"]
-    lights = [item for item in records if item["list"] == "lightFixtures"]
-    assert len(lights) == 2
-    assert all(item["PredefinedType"] == "DIRECTIONSOURCE" for item in lights)
-    assert all(item["ObjectType"] == "TrackLight" for item in lights)
+def test_build_extrudes_walls_and_no_furnishings():
+    shape, meta = build()
+    assert meta["derived"]["furnishings"] == 0
+    assert meta["derived"]["furnishings_commit"] == "34e1597"
+    placed = [child for child in shape.children if getattr(child, "furnishing_id", None)]
+    assert placed == []
+    labels = {child.label for child in shape.children}
+    assert {LABEL_MASONRY, LABEL_GLAZING, LABEL_DOOR} <= labels
+    assert labels.isdisjoint({"cabinet", "appliance", "sink", "furniture", "rug", "light"})
 
 
-def test_furniture_keeps_the_door_openings_clear():
-    """Boxes may touch a wall face. They do not stand in a door opening."""
-    for item in furnishing_records():
-        box = _aabb(item)
-        if box[0] < ROOM_X0 + 0.05:
-            for y0, y1 in WEST_DOORS_Y:
-                assert _overlap(box, (ROOM_X0, y0, 0, ROOM_X0 + 0.6, y1, 2.45)) == 0.0
-        if box[3] > ROOM_X1 - 0.5:
-            y0, y1 = EAST_DOOR_Y
-            assert _overlap(box, (ROOM_X1 - 0.6, y0, 0, ROOM_X1, y1, 2.45)) == 0.0
+def test_furnishings_yaml_round_trips(tmp_path):
+    original = load_yaml_ifc(FURNISHINGS_PATH)
+    ifc_path = tmp_path / "furnishings.ifc"
+    model = write_ifc(original, ifc_path)
+    assert validation_errors(model) == []
+    restored, skipped = read_ifc(ifc_path)
+    assert skipped == {}
+    _same(original, restored)
+    assert len(model.by_type("IfcSpace")) == 1
+    assert model.by_type("IfcFurniture") == []
+    assert model.by_type("IfcSystemFurnitureElement") == []
+    assert model.by_type("IfcElectricAppliance") == []
+
+
+def test_converter_places_a_fixture_box(tmp_path):
+    """The loading path, on a document that is not the room file."""
+    doc = _one_cabinet()
+    path = tmp_path / "furnishings.yaml"
+    dump(doc, path)
+    loaded = load_furnishings(path)
+    records = furnishing_records(loaded)
+    assert [item["id"] for item in records] == ["SF-test"]
+    assert records[0]["list"] == "systemFurniture"
+    assert records[0]["label"] == LABEL_CABINET
+    assert len(records[0]["Origin"]) == 2
+
+    shape, meta = build(furnishings_path=path)
+    assert meta["derived"]["furnishings"] == 1
+    placed = [child for child in shape.children if getattr(child, "furnishing_id", None)]
+    assert [child.furnishing_id for child in placed] == ["SF-test"]
+    assert placed[0].label == LABEL_CABINET
+    box = _aabb(records[0])
+    bb = placed[0].bounding_box()
+    assert bb.min.X >= box[0] * 1000.0 - 0.05
+    assert bb.min.Y >= box[1] * 1000.0 - 0.05
+    assert bb.min.Z >= box[2] * 1000.0 - 0.05
+    assert bb.max.X <= box[3] * 1000.0 + 0.05
+    assert bb.max.Y <= box[4] * 1000.0 + 0.05
+    assert bb.max.Z <= box[5] * 1000.0 + 0.05
+    assert placed[0].volume > 0
+
+    ifc_path = tmp_path / "fixture.ifc"
+    model = write_ifc(load_yaml_ifc(path), ifc_path)
+    assert validation_errors(model) == []
+    restored, skipped = read_ifc(ifc_path)
+    assert skipped == {}
+    _same(load_yaml_ifc(path), restored)
+    assert len(model.by_type("IfcSystemFurnitureElement")) == 1
 
 
 def test_ref_direction_turns_width_in_plan():
-    doc = {
-        "schema": "IFC4 ADD2 TC1",
-        "units": {"LengthUnit": "METRE"},
-        "project": {"id": "PRJ", "Aggregates": ["SITE"]},
-        "site": {"id": "SITE", "Aggregates": ["BLD"]},
-        "building": {"id": "BLD", "Aggregates": ["S1"]},
-        "storey": {"id": "S1", "Elevation": 0},
-        "walls": [],
-        "openings": [],
-        "doors": [],
-        "windows": [],
-        "systemFurniture": [
+    doc = _shell(
+        systemFurniture=[
             {
                 "id": "SF-turned",
                 "Name": "Turned",
@@ -248,8 +223,8 @@ def test_ref_direction_turns_width_in_plan():
                 "Height": 0.5,
                 "RefDirection": [0.0, 1.0],
             }
-        ],
-    }
+        ]
+    )
     solid = _furnishing_parts(doc)[0]
     bb = solid.bounding_box()
     # Width along +Y, depth along −X, inset by half the mesh gap.
@@ -262,35 +237,11 @@ def test_ref_direction_turns_width_in_plan():
     assert bb.max.Z == pytest.approx(500.0 - half, abs=0.05)
 
 
-def test_build_places_every_box_inside_its_yaml_footprint():
-    doc = load_furnishings()
-    records = {item["id"]: item for item in furnishing_records(doc)}
-    shape, meta = build()
-    assert meta["derived"]["furnishings"] == len(records)
-    placed = [child for child in shape.children if getattr(child, "furnishing_id", None)]
-    assert {child.furnishing_id for child in placed} == set(records)
-    labels = {child.label for child in placed}
-    assert labels == {
-        LABEL_CABINET,
-        LABEL_APPLIANCE,
-        LABEL_SINK,
-        LABEL_FURNITURE,
-        LABEL_RUG,
-        LABEL_LIGHT,
-    }
-    wall_labels = {child.label for child in shape.children if getattr(child, "wall_id", None)}
-    assert wall_labels <= {LABEL_MASONRY, LABEL_GLAZING}
-    assert LABEL_DOOR in {child.label for child in shape.children}
-    for child in placed:
-        box = _aabb(records[child.furnishing_id])
-        bb = child.bounding_box()
-        assert bb.min.X >= box[0] * 1000.0 - 0.05
-        assert bb.min.Y >= box[1] * 1000.0 - 0.05
-        assert bb.min.Z >= box[2] * 1000.0 - 0.05
-        assert bb.max.X <= box[3] * 1000.0 + 0.05
-        assert bb.max.Y <= box[4] * 1000.0 + 0.05
-        assert bb.max.Z <= box[5] * 1000.0 + 0.05
-        assert child.volume > 0
+def test_userdefined_without_object_type_is_rejected():
+    doc = _one_cabinet()
+    doc["systemFurniture"][0].pop("ObjectType")
+    with pytest.raises(ValueError, match="ObjectType"):
+        build_ifc(doc)
 
 
 def test_furniture_scenes_keep_the_existing_views():
@@ -302,23 +253,3 @@ def test_furniture_scenes_keep_the_existing_views():
         assert "projection" not in scene
         assert scene["camera"]["up"] == [0.0, 1.0, 0.0]
         assert scene["hFovDeg"] == spec["hFovDeg"]
-
-
-def test_furnishings_yaml_round_trips(tmp_path):
-    original = load_yaml_ifc(FURNISHINGS_PATH)
-    ifc_path = tmp_path / "furnishings.ifc"
-    model = write_ifc(original, ifc_path)
-    assert validation_errors(model) == []
-    restored, skipped = read_ifc(ifc_path)
-    assert skipped == {}
-    _same(original, restored)
-    assert len(model.by_type("IfcSpace")) == 1
-    assert len(model.by_type("IfcElectricAppliance")) == 4
-    assert len(model.by_type("IfcSystemFurnitureElement")) == 7
-
-
-def test_userdefined_without_object_type_is_rejected():
-    doc = load_yaml_ifc(FURNISHINGS_PATH)
-    doc["systemFurniture"][0].pop("ObjectType")
-    with pytest.raises(ValueError, match="ObjectType"):
-        build_ifc(doc)
