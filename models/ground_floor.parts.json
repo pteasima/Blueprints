@@ -6,5 +6,16 @@
       "glazing",
       "door"
     ]
+  },
+  {
+    "id": "interior",
+    "children": [
+      "cabinet",
+      "appliance",
+      "sink",
+      "furniture",
+      "rug",
+      "light"
+    ]
   }
 ]
