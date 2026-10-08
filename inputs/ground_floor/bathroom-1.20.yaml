@@ -18,16 +18,10 @@
 # Wall joint 2.000 mm (rectified porcelain). Floor joints are derived, not stored.
 # Floor grid: full tiles at the drain (southwest). GridOrigin is that corner.
 # Cuts land on the door side: 369 mm along the east wall, 119 mm along the north wall.
-# East and south wall vertical joints use the same origin, so they line up in plan
-# with the floor module lines. Those walls have no opening, so the only cut is the
-# room remainder (119 mm on the east, 369 mm on the south).
-# North wall: the floor grid would leave a 27 mm strip above the door, where a
-# joint falls just inside the opening. The grid starts at the door's west jamb
-# instead. A full tile meets the jamb. The 100 mm east of the door is the pier.
-# West wall: the floor grid would leave a 173 mm piece beside the window and split
-# the 250 mm pier north of the window into 129 mm and 119 mm. The grid starts at
-# the window's south jamb. A full tile meets that jamb and the pier is one 250 mm
-# tile. Vertical joints on the north and west walls do not meet the floor joints.
+# Every wall uses that same origin. Vertical joints continue the floor's 602 mm
+# plan pitch. The window and the door cut whatever tiles they cross; the grid
+# does not restart on a jamb. The north wall keeps the piece above the door
+# where a joint falls just inside the opening (about 27 mm).
 # Bottom course follows the slope (BottomCut follow-slope) with a constant 2 mm
 # vertical gap. At the drain corner the bottom tile is a full 1200 mm tall.
 # Two courses, no top strip. The top edge is level. The soffit is 2.500 m.
@@ -118,7 +112,7 @@ coverings:
       Inside: [31.2, 7.0]
   - id: CLAD-N
     Name: North wall tiles
-    Description: Grid starts at the door's west jamb. A shared floor grid would leave a 27 mm strip above the door.
+    Description: Vertical joints continue the floor grid from the southwest corner. The door cuts the tiles it crosses, including the short piece above the opening.
     PredefinedType: CLADDING
     ObjectType: PoetryStone
     ContainedInStructure: SP-1.20
@@ -128,7 +122,7 @@ coverings:
       Thickness: 0.0085
       Tile: [0.6, 1.2]
       Joint: 0.002
-      GridOrigin: [31.325, 7.95]
+      GridOrigin: [30.15, 6.025]
       BottomCut: follow-slope
       BottomJoint: 0.002
       Courses: 2
@@ -162,7 +156,7 @@ coverings:
       Inside: [31.2, 7.0]
   - id: CLAD-W
     Name: West wall tiles
-    Description: Grid starts at the window's south jamb so the pier north of the window is one tile. Vertical joints do not follow the floor.
+    Description: Vertical joints continue the floor grid from the southwest corner. The window and the pier cut the tiles they cross.
     PredefinedType: CLADDING
     ObjectType: PoetryStone
     ContainedInStructure: SP-1.20
@@ -172,7 +166,7 @@ coverings:
       Thickness: 0.0085
       Tile: [0.6, 1.2]
       Joint: 0.002
-      GridOrigin: [30.15, 6.8]
+      GridOrigin: [30.15, 6.025]
       BottomCut: follow-slope
       BottomJoint: 0.002
       Courses: 2

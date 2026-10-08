@@ -14,18 +14,21 @@ from bathroom_120 import (  # noqa: E402
     LABEL_TILE,
     ROOM_DEPTH,
     ROOM_WIDTH,
+    ROOM_X0,
+    ROOM_X1,
+    ROOM_Y0,
+    ROOM_Y1,
     SOURCE_PATH,
-    choices,
     floor_tiles_mm,
     head_mm,
     layout,
     load_document,
     parts,
     scenes,
+    small_pieces,
     validate,
     wall_tiles_mm,
 )
-from yaml_ifc.tiling import wall_layout  # noqa: E402
 
 
 PITCH_MM = 602.0
@@ -112,66 +115,96 @@ def test_floor_starts_with_full_tiles_at_the_drain():
     assert info["floor"]["GridOrigin"] == [30.15, 6.025]
 
 
-def test_walls_keep_one_cut_and_drop_alignment_at_the_openings():
+def _world_edges(wall):
+    frame = wall["result"]["frame"]
+    xs, ys = set(), set()
+    for piece in wall["result"]["tiles"]:
+        for along, _z in piece["polygon"]:
+            x = frame["start"][0] + frame["dx"] * float(along)
+            y = frame["start"][1] + frame["dy"] * float(along)
+            xs.add(float(x))
+            ys.add(float(y))
+    return xs, ys
+
+
+def _nearest(value, edges):
+    return min(abs(value - edge) for edge in edges)
+
+
+def test_walls_continue_the_floor_grid():
     info = layout()
     walls = wall_tiles_mm(info)
+    origin = info["floor"]["GridOrigin"]
+    assert all(wall["layout"]["GridOrigin"] == origin for wall in info["walls"])
     assert _widths(walls["CLAD-E"]) == pytest.approx([600, 600, 600, 119] * 2, abs=0.05)
     assert _widths(walls["CLAD-S"]) == pytest.approx([600, 600, 600, 369] * 2, abs=0.05)
-    # North: 573 + 600 on the west pier, 600 + 298 above the door, 100 mm pier.
+    # North: floor pitch from the southwest corner. The door cuts what it crosses.
     assert sorted(_widths(walls["CLAD-N"], 0)) == pytest.approx([100, 573, 600], abs=0.05)
     assert sorted(_widths(walls["CLAD-N"], 1)) == pytest.approx(
-        [100, 298, 573, 600, 600], abs=0.05
+        [27, 100, 269, 573, 600, 600], abs=0.05
     )
-    assert min(_widths(walls["CLAD-N"])) == pytest.approx(100.0, abs=0.05)
-    # West: 173 at the drain, full tile at the window, 298 under it, 250 mm pier.
+    # West: the window and the pier cut the same pitch. No jamb start.
     assert sorted(_widths(walls["CLAD-W"], 0)) == pytest.approx(
-        [173, 250, 298, 600, 600], abs=0.05
+        [119, 129, 173, 427, 471, 600], abs=0.05
     )
-    assert min(_widths(walls["CLAD-W"])) > 150
-    notes = " ".join(choices(info))
-    assert "West wall" in notes and "North wall" in notes
-    # East and south still share the floor origin.
-    by_id = {wall["id"]: wall["layout"]["GridOrigin"] for wall in info["walls"]}
-    assert by_id["CLAD-E"] == info["floor"]["GridOrigin"]
-    assert by_id["CLAD-S"] == info["floor"]["GridOrigin"]
-    assert by_id["CLAD-N"][0] == pytest.approx(31.325)
-    assert by_id["CLAD-W"][1] == pytest.approx(6.8)
+    assert sorted(_widths(walls["CLAD-W"], 1)) == pytest.approx(
+        [119, 129, 173, 427, 471, 600], abs=0.05
+    )
+    notes = small_pieces(info)
+    assert notes == [
+        "CLAD-N course 1: 27.0 mm wide, along 1175.0–1202.0 mm, "
+        "height 260.4–260.4 mm, top 2360.4 mm"
+    ]
 
 
-def test_shared_floor_grid_would_add_the_thin_pieces():
-    """The pieces Petr ruled out, computed on the floor origin and not built."""
+def test_wall_floor_joints_meet_at_the_corners():
+    """Module boundaries match. The plan-tile vs wall-tile joint edge stays under 0.1 mm."""
     info = layout()
-    plane = info["plane"]
-    footprint = info["footprint"]
-    floor_origin = info["floor"]["GridOrigin"]
+    pitch = info["joints"].plan_pitch_x
+    origin = info["floor"]["GridOrigin"]
+    floor_x, floor_y = set(), set()
+    for ring in info["floor_tiles"]:
+        for x, y in ring:
+            floor_x.add(float(x))
+            floor_y.add(float(y))
+    by_id = {wall["id"]: wall for wall in info["walls"]}
+    north_x, _north_y = _world_edges(by_id["CLAD-N"])
+    south_x, _south_y = _world_edges(by_id["CLAD-S"])
+    _east_x, east_y = _world_edges(by_id["CLAD-E"])
+    _west_x, west_y = _world_edges(by_id["CLAD-W"])
 
-    def widths(layout_row):
-        tile = layout_row["TileLayout"] if "TileLayout" in layout_row else layout_row
-        result = wall_layout(
-            plane,
-            tile["Tile"],
-            tile["Joint"],
-            tile["Courses"],
-            tile["BottomJoint"],
-            floor_origin,
-            tile["Axis"],
-            tile["Inside"],
-            tile.get("Openings") or (),
-            z_min=info["z_min"],
-            footprint=footprint,
-        )
-        found = []
-        for piece in result["tiles"]:
-            polygon = piece["polygon"]
-            span = max(point[0] for point in polygon) - min(point[0] for point in polygon)
-            found.append(span * 1000)
-        return found
+    def module_lines(start, low, high):
+        lines = []
+        n = 0
+        while True:
+            value = start + n * pitch
+            if value > high + 1e-9:
+                break
+            if value >= low - 1e-9:
+                lines.append(value)
+            n += 1
+        return lines
 
-    by_id = {row["id"]: row for row in info["doc"]["coverings"]}
-    north = widths(by_id["CLAD-N"])
-    west = widths(by_id["CLAD-W"])
-    assert min(north) == pytest.approx(27.0, abs=0.5)
-    assert any(abs(width - 129.0) < 1.0 for width in west)
+    for value in module_lines(origin[0], ROOM_X0, ROOM_X1):
+        assert _nearest(value, floor_x) < 5e-5
+        assert _nearest(value, north_x) < 5e-5
+        assert _nearest(value, south_x) < 5e-5
+    for value in module_lines(origin[1], ROOM_Y0, ROOM_Y1):
+        assert _nearest(value, floor_y) < 5e-5
+        assert _nearest(value, east_y) < 5e-5
+        assert _nearest(value, west_y) < 5e-5
+
+    # Both sides of each joint, not the drain notch (300 mm off the grid).
+    for edge in floor_x:
+        if min(abs(edge - line) for line in module_lines(origin[0], ROOM_X0, ROOM_X1)) > 0.003:
+            continue
+        assert _nearest(edge, north_x) < 1e-4
+        assert _nearest(edge, south_x) < 1e-4
+    for edge in floor_y:
+        if min(abs(edge - line) for line in module_lines(origin[1], ROOM_Y0, ROOM_Y1)) > 0.003:
+            continue
+        assert _nearest(edge, east_y) < 1e-4
+        assert _nearest(edge, west_y) < 1e-4
 
 
 def test_bottom_course_is_full_height_at_the_drain_and_level_on_top():

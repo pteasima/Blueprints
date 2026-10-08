@@ -360,36 +360,28 @@ def head_mm(info: dict | None = None) -> float:
     return float(info["levels"]["head"]) * MM
 
 
-def choices(info: dict | None = None) -> list[str]:
-    """Where the fewest-cuts rule overrode a continuous floor grid."""
+def small_pieces(info: dict | None = None, limit_mm: float = 100.0) -> list[str]:
+    """Wall tiles narrower than ``limit_mm``. The floor grid is not shifted to avoid them."""
     info = info if info is not None else layout()
     notes = []
-    by_id = {wall["id"]: wall for wall in info["walls"]}
-    floor_origin = [float(v) for v in info["floor"]["GridOrigin"]]
-
-    def shifted(wall_id: str) -> bool:
-        origin = [float(v) for v in by_id[wall_id]["layout"]["GridOrigin"]]
-        return any(abs(a - b) > 1e-6 for a, b in zip(origin, floor_origin))
-
-    if shifted("CLAD-W"):
-        notes.append(
-            "West wall vertical joints do not follow the floor grid. "
-            "A shared grid would put a 173 mm piece against the window and split "
-            "the 250 mm pier north of the window into 129 mm and 119 mm. "
-            "The grid starts at the window's south jamb: a full 600 mm tile meets "
-            "the jamb, the south end is one 173 mm cut, and the pier is one 250 mm tile. "
-            "That 173 mm tile is still 1200 mm tall at the drain corner."
-        )
-    if shifted("CLAD-N"):
-        notes.append(
-            "North wall vertical joints do not follow the floor grid. "
-            "A shared grid would leave a 27 mm strip above the door, where a joint "
-            "falls just inside the opening. The grid starts at the door's west jamb: "
-            "a full 600 mm tile meets the jamb, the west end of the wall is one 573 mm cut, "
-            "and the 100 mm east of the door is the pier, one tile. "
-            "Above the door the head cuts the upper course to about 260 mm; "
-            "that band is one full width and one 298 mm remainder, not a sliver."
-        )
+    for wall_id, tiles in wall_tiles_mm(info).items():
+        for tile in tiles:
+            if tile["width_mm"] >= limit_mm:
+                continue
+            notes.append(
+                "{wall} course {course}: {width:.1f} mm wide, "
+                "along {a0:.1f}–{a1:.1f} mm, "
+                "height {h0:.1f}–{h1:.1f} mm, top {top:.1f} mm".format(
+                    wall=wall_id,
+                    course=tile["course"],
+                    width=tile["width_mm"],
+                    a0=tile["along0_mm"],
+                    a1=tile["along1_mm"],
+                    h0=tile["height_min_mm"],
+                    h1=tile["height_mm"],
+                    top=tile["top_mm"],
+                )
+            )
     return notes
 
 
@@ -431,8 +423,9 @@ def report(doc: dict | None = None) -> str:
                     top=tile["top_mm"],
                 )
             )
-    for note in choices(info):
-        lines.append(note)
+    lines.append("Pieces under 100 mm:")
+    small = small_pieces(info)
+    lines.extend(small if small else ["  none"])
     return "\n".join(lines)
 
 
