@@ -112,7 +112,7 @@ coverings:
       Inside: [31.2, 7.0]
   - id: CLAD-N
     Name: North wall tiles
-    Description: Vertical joints continue the floor grid from the southwest corner. The door cuts the tiles it crosses, including the short piece above the opening.
+    Description: Vertical joints continue the floor grid from the southwest corner. The door notches the tile it crosses. The 27 mm piece above the opening is a leg of the 600 mm tile, not a separate strip.
     PredefinedType: CLADDING
     ObjectType: PoetryStone
     ContainedInStructure: SP-1.20
@@ -156,7 +156,7 @@ coverings:
       Inside: [31.2, 7.0]
   - id: CLAD-W
     Name: West wall tiles
-    Description: Vertical joints continue the floor grid from the southwest corner. The window and the pier cut the tiles they cross.
+    Description: Vertical joints continue the floor grid from the southwest corner. The window notches the upper-course tiles it crosses. The lower course runs through under the sill as one tile per module.
     PredefinedType: CLADDING
     ObjectType: PoetryStone
     ContainedInStructure: SP-1.20

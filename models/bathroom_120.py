@@ -18,7 +18,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from build123d import Color, Face, Pos, Solid, Vector, Wire
-from shapely.geometry import Polygon
+from shapely.geometry import LineString, Polygon
 from shapely.ops import unary_union
 
 from yaml_ifc import floor_joint_widths, plane_elevation
@@ -42,6 +42,13 @@ LABEL_DRAIN = "drain"
 MM = 1000.0
 # Behind the tile face, so a 2 mm joint is a dark line rather than a coplanar seam.
 GROUT_RECESS_M = 0.0005
+# Pieces of one module meet. The 2 mm grid joint is wider than this, so it stays.
+_ABUT_M = 0.0005
+# Grout strips share a module only when they are the same band. A tall vertical
+# joint must not bridge the 2 mm course joint into the next module.
+_Z_MATCH_M = 0.0003
+# Slope over one module is under 10 mm. A step taller than this is an opening.
+_NOTCH_MM = 20.0
 
 # Clear inner faces. The YAML is the source; these are the same corners.
 ROOM_X0 = 30.15
@@ -76,6 +83,113 @@ def _walls(doc: dict) -> list[dict]:
     ]
 
 
+def _open_ring(coords) -> list[tuple[float, float]]:
+    ring = [(float(x), float(y)) for x, y in coords]
+    if len(ring) >= 2 and ring[0] == ring[-1]:
+        ring = ring[:-1]
+    return ring
+
+
+def _drop_colinear(ring, tol: float = 1e-12) -> list[tuple[float, float]]:
+    """Drop vertices that do not turn. A shared jamb edge must not stay as a line."""
+    if len(ring) < 4:
+        return ring
+    kept = []
+    count = len(ring)
+    for index in range(count):
+        ax, ay = ring[(index - 1) % count]
+        bx, by = ring[index]
+        cx, cy = ring[(index + 1) % count]
+        cross = (bx - ax) * (cy - by) - (by - ay) * (cx - bx)
+        if abs(cross) <= tol:
+            continue
+        kept.append((bx, by))
+    return kept if len(kept) >= 3 else ring
+
+
+def _spans(polygon):
+    ss = [float(point[0]) for point in polygon]
+    zs = [float(point[1]) for point in polygon]
+    return (min(ss), max(ss)), (min(zs), max(zs))
+
+
+def _s_gap(left, right) -> float:
+    """Positive when the s-intervals are apart, negative when they overlap."""
+    return max(left[0], right[0]) - min(left[1], right[1])
+
+
+def _merge_wall_pieces(pieces, *, match_z: bool) -> list[dict]:
+    """Join pieces of one module that an opening edge cut apart.
+
+    Tiles merge on s-contact alone, so a sloped bottom course becomes one
+    trapezoid and an opening becomes an L, a U, or a height cut. Grout also
+    requires the same z-span: the 2 mm course joint must not union with the
+    tall vertical joint, or the grout network becomes one polygon with holes.
+    """
+    if not pieces:
+        return []
+    by_course: dict[int, list] = {}
+    for piece in pieces:
+        by_course.setdefault(int(piece["course"]), []).append(piece)
+    merged = []
+    for course, group in by_course.items():
+        spans = [_spans(piece["polygon"]) for piece in group]
+        parent = list(range(len(group)))
+
+        def find(index, parent=parent):
+            while parent[index] != index:
+                parent[index] = parent[parent[index]]
+                index = parent[index]
+            return index
+
+        for i in range(len(group)):
+            for j in range(i + 1, len(group)):
+                if _s_gap(spans[i][0], spans[j][0]) > _ABUT_M:
+                    continue
+                if match_z:
+                    zi, zj = spans[i][1], spans[j][1]
+                    if abs(zi[0] - zj[0]) > _Z_MATCH_M or abs(zi[1] - zj[1]) > _Z_MATCH_M:
+                        continue
+                ri, rj = find(i), find(j)
+                if ri != rj:
+                    parent[rj] = ri
+        clusters: dict[int, list] = {}
+        for index, piece in enumerate(group):
+            clusters.setdefault(find(index), []).append(piece)
+        for cluster in clusters.values():
+            merged.extend(_union_cluster(course, cluster))
+    merged.sort(key=lambda piece: (piece["course"], _spans(piece["polygon"])[0][0]))
+    return merged
+
+
+def _union_cluster(course: int, cluster: list) -> list[dict]:
+    sloped = any(piece.get("sloped") for piece in cluster)
+    if len(cluster) == 1:
+        polygon = _drop_colinear(_open_ring(cluster[0]["polygon"]))
+        piece = {"course": course, "polygon": polygon}
+        if sloped:
+            piece["sloped"] = True
+        return [piece]
+    geom = unary_union([Polygon(piece["polygon"]) for piece in cluster])
+    if not geom.is_valid:
+        geom = geom.buffer(0)
+    geoms = list(geom.geoms) if geom.geom_type == "MultiPolygon" else [geom]
+    pieces = []
+    for shape in geoms:
+        if shape.geom_type != "Polygon" or shape.area <= 1e-10:
+            continue
+        if shape.interiors:
+            raise ValueError("a merged wall piece encloses an opening; keep that void")
+        polygon = _drop_colinear(_open_ring(shape.exterior.coords))
+        piece = {"course": course, "polygon": polygon}
+        if sloped:
+            piece["sloped"] = True
+        pieces.append(piece)
+    if not pieces:
+        raise ValueError("wall pieces unioned to nothing")
+    return pieces
+
+
 def layout(doc: dict | None = None) -> dict:
     """Tile and grout rings in storey metres, plus the shared course lines."""
     doc = doc if doc is not None else load_document()
@@ -102,25 +216,26 @@ def layout(doc: dict | None = None) -> dict:
     walls = []
     for row in _walls(doc):
         tile = row["TileLayout"]
-        walls.append(
-            {
-                "id": row["id"],
-                "layout": tile,
-                "result": wall_layout(
-                    plane,
-                    tile["Tile"],
-                    tile["Joint"],
-                    tile["Courses"],
-                    tile["BottomJoint"],
-                    tile["GridOrigin"],
-                    tile["Axis"],
-                    tile["Inside"],
-                    tile.get("Openings") or (),
-                    z_min=z_min,
-                    footprint=footprint,
-                ),
-            }
+        result = wall_layout(
+            plane,
+            tile["Tile"],
+            tile["Joint"],
+            tile["Courses"],
+            tile["BottomJoint"],
+            tile["GridOrigin"],
+            tile["Axis"],
+            tile["Inside"],
+            tile.get("Openings") or (),
+            z_min=z_min,
+            footprint=footprint,
         )
+        # An opening edge splits every course, including tiles the opening
+        # does not reach. Join those pieces so one module is one tile: a
+        # notch where the opening actually cuts, one quadrilateral where it
+        # does not.
+        result["tiles"] = _merge_wall_pieces(result["tiles"], match_z=False)
+        result["grout"] = _merge_wall_pieces(result["grout"], match_z=True)
+        walls.append({"id": row["id"], "layout": tile, "result": result})
     return {
         "doc": doc,
         "plane": plane,
@@ -322,28 +437,101 @@ def floor_tiles_mm(info: dict | None = None) -> list[dict]:
     return rows
 
 
+def _profile_rows(polygon) -> list[dict]:
+    """Height of the tile between each pair of stations along the wall."""
+    poly = Polygon(polygon)
+    if not poly.is_valid:
+        poly = poly.buffer(0)
+    stations = sorted({round(float(point[0]), 6) for point in poly.exterior.coords})
+    rows = []
+    for left, right in zip(stations, stations[1:]):
+        if right - left <= 1e-7:
+            continue
+        mid = (left + right) / 2.0
+        hit = poly.intersection(LineString([(mid, -2.0), (mid, 12.0)]))
+        zs = _intersection_z(hit)
+        if len(zs) < 2:
+            continue
+        z0, z1 = min(zs), max(zs)
+        rows.append(
+            {
+                "along0_mm": left * MM,
+                "along1_mm": right * MM,
+                "height_mm": (z1 - z0) * MM,
+                "top_mm": z1 * MM,
+                "bottom_mm": z0 * MM,
+            }
+        )
+    return rows
+
+
+def _intersection_z(hit) -> list[float]:
+    if hit.is_empty:
+        return []
+    geoms = list(hit.geoms) if hasattr(hit, "geoms") else [hit]
+    zs = []
+    for geom in geoms:
+        if geom.geom_type == "LineString":
+            zs.extend(float(point[1]) for point in geom.coords)
+        elif geom.geom_type == "Point":
+            zs.append(float(geom.y))
+    return zs
+
+
+def _coalesce_rows(rows: list[dict]) -> list[dict]:
+    """Join stations that only sample a straight slope, and keep a real step."""
+    if not rows:
+        return []
+    out = [dict(rows[0])]
+    for row in rows[1:]:
+        prev = out[-1]
+        same = (
+            abs(prev["top_mm"] - row["top_mm"]) < _NOTCH_MM
+            and abs(prev["bottom_mm"] - row["bottom_mm"]) < _NOTCH_MM
+        )
+        if not same:
+            out.append(dict(row))
+            continue
+        prev["along1_mm"] = row["along1_mm"]
+        prev["height_mm"] = max(prev["height_mm"], row["height_mm"])
+        prev["top_mm"] = max(prev["top_mm"], row["top_mm"])
+        prev["bottom_mm"] = min(prev["bottom_mm"], row["bottom_mm"])
+    return out
+
+
+def _vertex_heights_mm(polygon) -> list[float]:
+    """Tile height at each station. A slope reports both ends, not the midpoint."""
+    by_s: dict[float, list[float]] = {}
+    for along, z in polygon:
+        by_s.setdefault(round(float(along), 6), []).append(float(z))
+    heights = []
+    for values in by_s.values():
+        if len(values) >= 2:
+            heights.append((max(values) - min(values)) * MM)
+    return heights or [0.0]
+
+
 def _wall_tile_mm(tile: dict) -> dict:
     polygon = tile["polygon"]
     ss = [float(point[0]) for point in polygon]
     zs = [float(point[1]) for point in polygon]
     s0, s1 = min(ss), max(ss)
-    # Height at each end of a trapezoid: top z minus the bottom z at that s.
-    by_s: dict[float, list[float]] = {}
-    for s, z in polygon:
-        key = round(float(s), 6)
-        by_s.setdefault(key, []).append(float(z))
-    heights = []
-    for values in by_s.values():
-        heights.append((max(values) - min(values)) * MM)
+    rows = _coalesce_rows(_profile_rows(polygon))
+    heights = _vertex_heights_mm(polygon)
+    tallest = max(row["height_mm"] for row in rows) if rows else max(heights)
+    notched = len(rows) > 1 and any(tallest - row["height_mm"] > _NOTCH_MM for row in rows)
     return {
         "course": int(tile["course"]),
         "along0_mm": s0 * MM,
         "along1_mm": s1 * MM,
         "width_mm": (s1 - s0) * MM,
-        "height_mm": max(heights) if heights else 0.0,
-        "height_min_mm": min(heights) if heights else 0.0,
+        "height_mm": max(heights),
+        "height_min_mm": min(heights),
         "top_mm": max(zs) * MM,
         "bottom_mm": min(zs) * MM,
+        "notched": notched,
+        "height_cut": (not notched) and max(heights) < 1000.0,
+        "rows": rows,
     }
 
 
@@ -361,7 +549,7 @@ def head_mm(info: dict | None = None) -> float:
 
 
 def small_pieces(info: dict | None = None, limit_mm: float = 100.0) -> list[str]:
-    """Wall tiles narrower than ``limit_mm``. The floor grid is not shifted to avoid them."""
+    """Separate wall tiles narrower than ``limit_mm``. A notch leg is not its own tile."""
     info = info if info is not None else layout()
     notes = []
     for wall_id, tiles in wall_tiles_mm(info).items():
@@ -383,6 +571,20 @@ def small_pieces(info: dict | None = None, limit_mm: float = 100.0) -> list[str]
                 )
             )
     return notes
+
+
+def _row_note(row: dict, tile: dict) -> str:
+    width = row["along1_mm"] - row["along0_mm"]
+    short = tile["height_mm"] - row["height_mm"] > _NOTCH_MM
+    span = f"{row['along0_mm']:.1f}–{row['along1_mm']:.1f} mm"
+    if not short:
+        return f"      {span}: full height, top {row['top_mm']:.3f} mm"
+    if row["bottom_mm"] > tile["bottom_mm"] + _NOTCH_MM:
+        name = "leg" if width < 100.0 else "band"
+        kind = f"{width:.1f} mm {name} above {row['bottom_mm']:.3f} mm"
+    else:
+        kind = f"{width:.1f} mm cut, top {row['top_mm']:.3f} mm"
+    return f"      {span}: {kind}, {row['height_mm']:.3f} mm tall"
 
 
 def report(doc: dict | None = None) -> str:
@@ -409,23 +611,41 @@ def report(doc: dict | None = None) -> str:
         lines.append(
             f"  {row['width_mm']:.3f} x {row['depth_mm']:.3f} mm plan ({kind})"
         )
-    lines.append("Wall tiles (width, height at the two ends, top):")
+    lines.append("Wall tiles (one per grid module and course):")
     for wall_id, tiles in wall_tiles_mm(info).items():
         lines.append(f"  {wall_id}")
         for tile in tiles:
+            if tile["notched"]:
+                kind = "notched"
+            elif tile["height_cut"]:
+                kind = (
+                    "height cut, bottom {bottom:.3f} mm".format(bottom=tile["bottom_mm"])
+                )
+            else:
+                kind = "full module"
             lines.append(
-                "    course {course}: {width:.3f} mm wide, "
-                "{h0:.3f}–{h1:.3f} mm tall, top {top:.3f} mm".format(
+                "    course {course}: {width:.3f} mm module, "
+                "along {a0:.1f}–{a1:.1f} mm, "
+                "{h0:.3f}–{h1:.3f} mm tall, top {top:.3f} mm ({kind})".format(
                     course=tile["course"],
                     width=tile["width_mm"],
+                    a0=tile["along0_mm"],
+                    a1=tile["along1_mm"],
                     h0=tile["height_min_mm"],
                     h1=tile["height_mm"],
                     top=tile["top_mm"],
+                    kind=kind,
                 )
             )
-    lines.append("Pieces under 100 mm:")
+            if tile["notched"]:
+                for row in tile["rows"]:
+                    lines.append(_row_note(row, tile))
+    lines.append("Separate tiles under 100 mm:")
     small = small_pieces(info)
-    lines.extend(small if small else ["  none"])
+    if small:
+        lines.extend(f"  {note}" for note in small)
+    else:
+        lines.append("  none")
     return "\n".join(lines)
 
 
