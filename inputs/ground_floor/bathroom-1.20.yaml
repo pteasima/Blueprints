@@ -1,3 +1,15 @@
+# TODO (open, waiting on site data from Petr; noted 2026-10-08):
+# - Tile size: ABK's Poetry Stone catalogue gives rectified 8.5 mm work sizes
+#   of 596x596 (60x60) and 596x1194 (60x120), batch averages. Tile: [0.6, 1.2]
+#   below is nominal and 4 mm too big per tile. Decide the joint: 2 mm gives a
+#   598 mm grid, 4 mm keeps a 600 mm grid. Check the actual delivered batch.
+# - Slope origin: move the 0 point from the northeast room corner to the door
+#   corner, exactly where the door leaf sits in the opening. The northeast
+#   corner height then follows from the plane. Needs the door's mounting
+#   position in the opening (along the wall and depth in the reveal).
+# - Room dimensions: replace the drawing faces below with on-site measurements
+#   so the cuts are millimetre exact.
+# - Then update tests/test_bathroom_120.py and produce a blueprint for the tiler.
 # Room 1.20 (technical bathroom by the entrance hall), in storey coordinates.
 # Adapted from yaml-ifc samples/bathroom.yaml at 0f96c26. Lengths are metres.
 # Clear inner faces, checked against ground-floor.yaml:
