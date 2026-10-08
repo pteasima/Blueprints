@@ -48,6 +48,9 @@ export const SOLID_COLORS = {
   bass_gkb: [230, 230, 235],
   bass_cd: [120, 120, 130],
   bass_wall_hanger: [90, 90, 100],
+  tile: [222, 205, 176],
+  grout: [48, 46, 44],
+  drain: [176, 184, 190],
 };
 
 /**
@@ -94,6 +97,9 @@ export const LAYER_DEPTH_BIAS = {
   slope_naturheld_140: 13,
   soffit_naturheld_140: 13,
   glazing: 14,
+  tile: 5,
+  grout: 4,
+  drain: 7,
 };
 
 /**
@@ -586,6 +592,24 @@ export const REALISTIC_PRESETS = {
     color: [90, 90, 100],
     roughness: 0.4,
     metalness: 0.75,
+    map: "metal",
+  },
+  tile: {
+    color: [222, 205, 176],
+    roughness: 0.42,
+    metalness: 0.0,
+    map: "none",
+  },
+  grout: {
+    color: [48, 46, 44],
+    roughness: 0.9,
+    metalness: 0.0,
+    map: "none",
+  },
+  drain: {
+    color: [176, 184, 190],
+    roughness: 0.28,
+    metalness: 0.7,
     map: "metal",
   },
 };

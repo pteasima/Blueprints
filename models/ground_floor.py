@@ -1,7 +1,7 @@
 """RD Šíma ground floor — walls and the openings cut through them.
 
 Source: ``inputs/ground_floor/ground-floor.yaml``, vendored from
-pteasima/yaml-ifc @ 34e1597. Lengths in that file are metres. Solids are
+pteasima/yaml-ifc @ 0f96c26. Lengths in that file are metres. Solids are
 millimetres, the same as the other build123d models, so the existing viewer
 path (glTF metres, Z-up CAD → Y-up) applies unchanged.
 
@@ -41,6 +41,11 @@ centred so the box fills Width × Depth × Height). This model does not read
 those sizes itself. Solids are inset by 1 mm so flush modules do not share
 a face. Walls are not moved to make a box fit. The space has no body.
 
+Bathroom 1.20 is a third file, ``bathroom-1.20.yaml``. Floor tiles, wall
+tiles, grout, and the ACO point drain are the solids ``yaml_ifc`` lays out
+for that file. The screed, the membrane, and the ceiling have no measured
+thickness and are not extruded.
+
     python -m blueprints.export ground_floor
 """
 
@@ -68,6 +73,14 @@ from yaml_ifc.supported import FURNISHINGS, PSET_NAME
 from yaml_ifc.to_ifc import build_ifc
 from yaml_ifc.yamlio import load as load_yaml_ifc
 
+from bathroom_120 import (
+    LABEL_DRAIN,
+    LABEL_GROUT,
+    LABEL_TILE,
+    head_mm as bathroom_head_mm,
+    parts as bathroom_parts,
+    scenes as bathroom_scenes,
+)
 from blueprints.export_utils import SECTION_LAYERS
 from blueprints.scenes import cad_mm_to_gltf_m
 
@@ -77,7 +90,7 @@ MODEL_LABEL = "RD Šíma 1.NP"
 EXPORT_KIND = "solid"
 
 SOURCE_REPO = "pteasima/yaml-ifc"
-SOURCE_COMMIT = "34e1597"
+SOURCE_COMMIT = "0f96c26"
 SOURCE_PATH = (
     Path(__file__).resolve().parents[1] / "inputs" / "ground_floor" / "ground-floor.yaml"
 )
@@ -534,6 +547,8 @@ def build(path: Path | None = None, furnishings_path: Path | None = None):
 
     furnishing_parts = _furnishing_parts(furnishings)
     parts.extend(furnishing_parts)
+    bath_parts = bathroom_parts()
+    parts.extend(bath_parts)
 
     assembly = Compound(obj=parts, children=parts, label=MODEL_NAME)
     removed = (uncut_mm3 - cut_mm3) / 1e9
@@ -549,6 +564,9 @@ def build(path: Path | None = None, furnishings_path: Path | None = None):
             "footprints": len(rings),
             "furnishings": len(furnishing_parts),
             "furnishings_commit": SOURCE_COMMIT,
+            "bathroom_tiles": sum(1 for part in bath_parts if part.label == LABEL_TILE),
+            "bathroom_grout": sum(1 for part in bath_parts if part.label == LABEL_GROUT),
+            "bathroom_head_mm": round(bathroom_head_mm(), 3),
         },
         "footprints_omitted": omitted,
         "openings_cut": cut_ids,
@@ -818,6 +836,7 @@ def scenes() -> list[dict]:
             _room_scene(spec["id"], spec["eye"], spec["target"], spec["hFovDeg"], spec["title"])
             for spec in FURNITURE_VIEWS
         ),
+        *bathroom_scenes(),
     ]
 
 
@@ -837,6 +856,10 @@ def part_groups() -> list[dict]:
                 LABEL_RUG,
                 LABEL_LIGHT,
             ],
+        },
+        {
+            "id": "bathroom",
+            "children": [LABEL_TILE, LABEL_GROUT, LABEL_DRAIN],
         },
     ]
 
