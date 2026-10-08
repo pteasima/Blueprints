@@ -17,5 +17,13 @@
       "rug",
       "light"
     ]
+  },
+  {
+    "id": "bathroom",
+    "children": [
+      "tile",
+      "grout",
+      "drain"
+    ]
   }
 ]

@@ -1,0 +1,233 @@
+# Room 1.20 (technical bathroom by the entrance hall), in storey coordinates.
+# Adapted from yaml-ifc samples/bathroom.yaml at 0f96c26. Lengths are metres.
+# Clear inner faces, checked against ground-floor.yaml:
+#   west  x=30.15  (W-054 inner face)
+#   east  x=32.325 (W-057 inner face)
+#   south y=6.025  (W-009 inner face)
+#   north y=7.95   (W-015 inner face)
+# Clear size 2.175 m east-west by 1.925 m north-south.
+# +X east, +Y north. The door is in the north wall. The drain is the southwest
+# corner, diagonally opposite the door.
+# 0 is the finished floor of the entrance hall. The plane is 0 at the northeast
+# corner (the door corner) and falls toward the drain. Nowhere in the room is above 0.
+# Gradient is the 1.5% diagonal, stored to 6 decimals:
+#   diagonal 2.904522 m, fall 43.566 mm.
+#   along the walls, 1.1232% east-west and 0.9941% north-south.
+# Across any 800 mm east-west, including the door leaf, the fall is 8.986 mm.
+# No threshold. The joint at the leaf is silicone; it is not a grout module.
+# Wall joint 2.000 mm (rectified porcelain). Floor joints are derived, not stored.
+# Floor grid: full tiles at the drain (southwest). GridOrigin is that corner.
+# Cuts land on the door side: 369 mm along the east wall, 119 mm along the north wall.
+# Every wall uses that same origin. Vertical joints continue the floor's 602 mm
+# plan pitch. The window and the door cut whatever tiles they cross; the grid
+# does not restart on a jamb. The north wall keeps the piece above the door
+# where a joint falls just inside the opening (about 27 mm).
+# Bottom course follows the slope (BottomCut follow-slope) with a constant 2 mm
+# vertical gap. At the drain corner the bottom tile is a full 1200 mm tall.
+# Two courses, no top strip. The top edge is level. The soffit is 2.500 m.
+# W-054's axis stops at the window and W-015's axis stops at the door's east jamb.
+# The tile still covers the clear faces, including the 250 mm west pier and the
+# 100 mm north pier. Those piers are the wall segments; they are not extra strips.
+# Screed thickness, adhesive, membrane thickness, and the drain body below the
+# grate are not measured, so they are not extruded. The grate solid is a nominal
+# 8 mm and is not written back.
+schema: IFC4 ADD2 TC1
+units:
+  LengthUnit: METRE
+project:
+  id: PRJ
+  Name: "RD Šíma"
+  Aggregates: [SITE]
+site:
+  id: SITE
+  Name: "Bor u Tachova"
+  RefElevation: 472.1
+  Aggregates: [BLD]
+building:
+  id: BLD
+  Name: "RD Šíma"
+  Aggregates: [STOREY-1NP]
+storey:
+  id: STOREY-1NP
+  Name: "1.NP"
+  Elevation: 0
+spaces:
+  - id: SP-1.20
+    Name: Koupelna
+    LongName: "1.20"
+    PredefinedType: INTERNAL
+walls: []
+openings: []
+doors: []
+windows: []
+slabs:
+  - id: SLAB-1.20
+    Name: Screed
+    Description: Screed struck to the finished-floor plane. Bedding thickness is not measured. Underfloor heating is in the screed.
+    PredefinedType: FLOOR
+    ObjectType: Screed
+    ContainedInStructure: SP-1.20
+    Plane:
+      Origin: [32.325, 7.95]
+      Elevation: 0
+      Gradient: [0.011232, 0.009941]
+    Footprint:
+      - [30.15, 6.025]
+      - [32.325, 6.025]
+      - [32.325, 7.95]
+      - [30.15, 7.95]
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          UnderfloorHeating: true
+coverings:
+  - id: CEIL-1.20
+    Name: Suspended ceiling
+    Description: Soffit at 2.5 m. Board thickness is not measured.
+    PredefinedType: CEILING
+    ObjectType: SuspendedCeiling
+    ContainedInStructure: SP-1.20
+    Origin: [30.15, 6.025]
+    Elevation: 2.5
+    Width: 2.175
+    Depth: 1.925
+  - id: CLAD-E
+    Name: East wall tiles
+    PredefinedType: CLADDING
+    ObjectType: PoetryStone
+    ContainedInStructure: SP-1.20
+    Plane: SLAB-1.20
+    TileLayout:
+      Product: ABK Poetry Stone Trani Beige
+      Thickness: 0.0085
+      Tile: [0.6, 1.2]
+      Joint: 0.002
+      GridOrigin: [30.15, 6.025]
+      BottomCut: follow-slope
+      BottomJoint: 0.002
+      Courses: 2
+      Axis:
+        Start: [32.325, 6.025]
+        End: [32.325, 7.95]
+      Inside: [31.2, 7.0]
+  - id: CLAD-N
+    Name: North wall tiles
+    Description: Vertical joints continue the floor grid from the southwest corner. The door notches the tile it crosses. The 27 mm piece above the opening is a leg of the 600 mm tile, not a separate strip.
+    PredefinedType: CLADDING
+    ObjectType: PoetryStone
+    ContainedInStructure: SP-1.20
+    Plane: SLAB-1.20
+    TileLayout:
+      Product: ABK Poetry Stone Trani Beige
+      Thickness: 0.0085
+      Tile: [0.6, 1.2]
+      Joint: 0.002
+      GridOrigin: [30.15, 6.025]
+      BottomCut: follow-slope
+      BottomJoint: 0.002
+      Courses: 2
+      Axis:
+        Start: [30.15, 7.95]
+        End: [32.325, 7.95]
+      Inside: [31.2, 7.0]
+      Openings:
+        - AlongAxis: 1.175
+          Width: 0.9
+          SillHeight: 0
+          Height: 2.1
+  - id: CLAD-S
+    Name: South wall tiles
+    PredefinedType: CLADDING
+    ObjectType: PoetryStone
+    ContainedInStructure: SP-1.20
+    Plane: SLAB-1.20
+    TileLayout:
+      Product: ABK Poetry Stone Trani Beige
+      Thickness: 0.0085
+      Tile: [0.6, 1.2]
+      Joint: 0.002
+      GridOrigin: [30.15, 6.025]
+      BottomCut: follow-slope
+      BottomJoint: 0.002
+      Courses: 2
+      Axis:
+        Start: [30.15, 6.025]
+        End: [32.325, 6.025]
+      Inside: [31.2, 7.0]
+  - id: CLAD-W
+    Name: West wall tiles
+    Description: Vertical joints continue the floor grid from the southwest corner. The window notches the upper-course tiles it crosses. The lower course runs through under the sill as one tile per module.
+    PredefinedType: CLADDING
+    ObjectType: PoetryStone
+    ContainedInStructure: SP-1.20
+    Plane: SLAB-1.20
+    TileLayout:
+      Product: ABK Poetry Stone Trani Beige
+      Thickness: 0.0085
+      Tile: [0.6, 1.2]
+      Joint: 0.002
+      GridOrigin: [30.15, 6.025]
+      BottomCut: follow-slope
+      BottomJoint: 0.002
+      Courses: 2
+      Axis:
+        Start: [30.15, 6.025]
+        End: [30.15, 7.95]
+      Inside: [31.2, 7.0]
+      Openings:
+        - AlongAxis: 0.775
+          Width: 0.9
+          SillHeight: 1.75
+          Height: 0.75
+  - id: FLR-1.20
+    Name: Floor tiles
+    PredefinedType: FLOORING
+    ObjectType: PoetryStone
+    ContainedInStructure: SP-1.20
+    Plane: SLAB-1.20
+    TileLayout:
+      Product: ABK Poetry Stone Trani Beige
+      Thickness: 0.0085
+      Tile: [0.6, 0.6]
+      WallJoint: 0.002
+      GridOrigin: [30.15, 6.025]
+      JointInset: 0.002
+      Footprint:
+        - [30.15, 6.025]
+        - [32.325, 6.025]
+        - [32.325, 7.95]
+        - [30.15, 7.95]
+      Cutouts:
+        - - [30.15, 6.025]
+          - [30.45, 6.025]
+          - [30.45, 6.325]
+          - [30.15, 6.325]
+  - id: MEM-1.20
+    Name: Waterproofing
+    Description: Membrane over the whole floor, 100–150 mm up the walls, at least 2 m in the shower (drain) corner, taped at the door. No thickness is measured.
+    PredefinedType: MEMBRANE
+    ObjectType: WaterproofingMembrane
+    ContainedInStructure: SP-1.20
+    Plane: SLAB-1.20
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          UpstandMin: 0.1
+          UpstandMax: 0.15
+          ShowerUpstandMin: 2
+          DoorEdge: taped
+wasteTerminals:
+  - id: DRAIN-1.20
+    Name: ACO 450420
+    PredefinedType: FLOORTRAP
+    ObjectType: PointDrain
+    ContainedInStructure: SP-1.20
+    Origin: [30.15, 6.025]
+    Width: 0.3
+    Depth: 0.3
+    Plane: SLAB-1.20
+    PropertySets:
+      - Name: Pset_ManufacturerTypeInformation
+        Properties:
+          Manufacturer: ACO
+          ArticleNumber: "450420"

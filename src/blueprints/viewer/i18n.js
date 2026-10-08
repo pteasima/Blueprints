@@ -52,6 +52,10 @@ const PART_EN = {
   bass_gkb: "GKB plasterboard",
   bass_cd: "CD frame",
   bass_wall_hanger: "CD wall hanger",
+  bathroom: "Bathroom 1.20",
+  tile: "Tiles",
+  grout: "Grout",
+  drain: "Floor drain",
 };
 
 const PART_CS = {
@@ -99,6 +103,10 @@ const PART_CS = {
   bass_gkb: "GKB sádrokarton",
   bass_cd: "CD rám",
   bass_wall_hanger: "Třmen CD",
+  bathroom: "Koupelna 1.20",
+  tile: "Dlažba",
+  grout: "Spáry",
+  drain: "Podlahová vpusť",
 };
 
 const UI_EN = {
@@ -138,6 +146,9 @@ const UI_EN = {
   "scene.kitchen-living": "Kitchen toward living",
   "scene.living-kitchen": "Living toward kitchen",
   "scene.kitchen-run": "Kitchen cabinets",
+  "scene.bathroom-floor": "1.20 floor tiles",
+  "scene.bathroom": "1.20 room",
+  "scene.bathroom-door": "1.20 door and slope",
 };
 
 const UI_CS = {
@@ -177,6 +188,9 @@ const UI_CS = {
   "scene.kitchen-living": "Kuchyň k obýváku",
   "scene.living-kitchen": "Obývák ke kuchyni",
   "scene.kitchen-run": "Kuchyňská linka",
+  "scene.bathroom-floor": "1.20 dlažba",
+  "scene.bathroom": "1.20 koupelna",
+  "scene.bathroom-door": "1.20 práh a spád",
 };
 
 /** @type {Record<Locale, Record<string, string>>} */

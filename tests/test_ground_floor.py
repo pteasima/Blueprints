@@ -9,6 +9,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "models"))
 
+from bathroom_120 import drain_bottom_z_mm  # noqa: E402
 from ground_floor import (  # noqa: E402
     CORNER_VIEWS,
     DEFAULT_WALL_HEIGHT_M,
@@ -75,8 +76,12 @@ def test_ground_floor_builds_and_cuts_openings():
     assert meta["removed_volume_m3"] == pytest.approx(expected, rel=1e-6)
 
     bb = shape.bounding_box()
-    assert bb.min.Z == pytest.approx(0.0, abs=1e-6)
+    # Bathroom 1.20 falls below the entrance-hall datum. The grate is the lowest solid.
+    assert bb.min.Z == pytest.approx(drain_bottom_z_mm(), abs=0.5)
+    assert bb.min.Z < -40.0
     assert bb.max.Z == pytest.approx(DEFAULT_WALL_HEIGHT_M * 1000.0, abs=1.0)
+    assert derived["bathroom_tiles"] > 20
+    assert derived["bathroom_head_mm"] == pytest.approx(2360.434, abs=0.001)
     assert bb.max.X - bb.min.X > 40_000
     assert bb.max.Y - bb.min.Y > 14_000
 
@@ -137,7 +142,7 @@ def test_butt_corners_do_not_overlap():
 
 def test_plan_scenes_keep_the_perspective_views():
     specs = {item["id"]: item for item in scenes()}
-    assert {"overview", "opening", "posts"} <= set(specs)
+    assert {"overview", "opening", "posts", "bathroom-floor", "bathroom", "bathroom-door"} <= set(specs)
     for spec in CORNER_VIEWS:
         assert spec["id"] in specs
         assert "projection" not in specs[spec["id"]]

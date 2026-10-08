@@ -13,10 +13,16 @@ import ifcopenshell.util.placement
 import ifcopenshell.util.unit
 import numpy as np
 
+from yaml_ifc import tiling
 from yaml_ifc.ids import connection_yaml_id, is_derived
 from yaml_ifc.supported import (
+    CABLE_SEGMENT_PSET,
+    CUSTOM_PSET,
+    DERIVED_PORT,
+    ELECTRICAL,
     FURNISHINGS,
     FURNISHING_SIZE,
+    LIGHT_FIXTURE_PSET,
     ORIGINATING_SYSTEM,
     PSET_AXIS,
     PSET_MATERIAL_FROM_THICKNESS,
@@ -118,9 +124,25 @@ def _supported(element):
     return any(element.is_a(name) for name in SUPPORTED_CLASSES)
 
 
+def _derived_port_ids(model):
+    """Ports nested in a supported element are the cable graph, not leftovers."""
+    found = set()
+    for rel in model.by_type("IfcRelNests"):
+        owner = rel.RelatingObject
+        if owner is None or not _supported(owner):
+            continue
+        for obj in rel.RelatedObjects or []:
+            if obj.is_a(DERIVED_PORT):
+                found.add(obj.id())
+    return found
+
+
 def _skip_counts(model):
+    derived = _derived_port_ids(model)
     counts = Counter()
     for product in model.by_type("IfcProduct"):
+        if product.id() in derived:
+            continue
         if not _supported(product):
             counts[product.is_a()] += 1
     return counts
@@ -594,7 +616,34 @@ class Reader:
         container = contained_in.get(element)
         if container is not None and container.is_a("IfcSpace"):
             entity["ContainedInStructure"] = self.by_product.get(container) or self._id_for(container)
+        if element.is_a("IfcLightFixture"):
+            _lift_light(entity)
+        if element.is_a("IfcCableSegment"):
+            _lift_cores(entity)
+        if book.get("id"):
+            _lift_plane(entity, book)
+            _lift_tiles(entity, book)
         return _ordered_furnishing(entity)
+
+    def _slab(self, element, contained_in):
+        book = _pset_map(element)
+        entity = self._common(element, book)
+        _put(entity, "ObjectType", _object_type_text(element))
+        if "PredefinedType" not in entity:
+            typed = _defining_type(element)
+            fallback = _enum(getattr(typed, "PredefinedType", None)) if typed is not None else None
+            if fallback:
+                entity["PredefinedType"] = fallback
+        if book.get("id"):
+            _lift_plane(entity, book)
+            if "FootprintText" in book:
+                entity["Footprint"] = tiling.decode_points(book["FootprintText"])
+            if "SlabThickness" in book:
+                entity["Thickness"] = book["SlabThickness"]
+        container = contained_in.get(element)
+        if container is not None and container.is_a("IfcSpace"):
+            entity["ContainedInStructure"] = self.by_product.get(container) or self._id_for(container)
+        return _ordered_slab(entity)
 
     def _filler(self, element, fill_of):
         book = _pset_map(element)
@@ -673,12 +722,28 @@ class Reader:
         for rel in model.by_type("IfcRelContainedInSpatialStructure"):
             for related in rel.RelatedElements or []:
                 contained_in[related] = rel.RelatingStructure
+        slabs = [_strip(self._slab(slab, contained_in)) for slab in model.by_type("IfcSlab")]
         furnishing_lists = {}
-        for key, ifc_class, _type_class in FURNISHINGS:
-            furnishing_lists[key] = [
-                _strip(self._furnishing(element, contained_in))
-                for element in model.by_type(ifc_class)
-            ]
+        cable_rows = []
+        for key, ifc_class, _type_class in (*FURNISHINGS, *ELECTRICAL):
+            elements = model.by_type(ifc_class)
+            rows = [_strip(self._furnishing(element, contained_in)) for element in elements]
+            furnishing_lists[key] = rows
+            if ifc_class == "IfcCableSegment":
+                cable_rows = list(zip(elements, rows))
+        waste = [
+            _strip(self._furnishing(element, contained_in))
+            for element in model.by_type("IfcWasteTerminal")
+        ]
+        for element, entity in cable_rows:
+            self._attach_cable_ends(element, entity)
+            route = self._cable_route(element)
+            if route:
+                entity["Route"] = route
+            ordered = _ordered_furnishing(entity)
+            entity.clear()
+            entity.update(ordered)
+        circuits = [_strip(self._circuit(circuit)) for circuit in model.by_type("IfcDistributionCircuit")]
 
         site_extra = {}
         if site.RefElevation is not None:
@@ -702,16 +767,145 @@ class Reader:
             document["spaces"] = spaces
         # The original lists stay present when empty, so a walls-only file
         # comes back with openings, doors, and windows still written.
+        # Slabs and waste terminals are omitted when the file has none, the
+        # same way spaces are, so a walls-only file does not grow a key.
         document["walls"] = walls
+        if slabs:
+            document["slabs"] = slabs
         if connections:
             document["connections"] = connections
         document["openings"] = openings
         document["doors"] = doors
         document["windows"] = windows
-        for key, _ifc_class, _type_class in FURNISHINGS:
+        for key, _ifc_class, _type_class in (*FURNISHINGS, *ELECTRICAL):
             if furnishing_lists[key]:
                 document[key] = furnishing_lists[key]
+            if key == "sanitaryTerminals" and waste:
+                document["wasteTerminals"] = waste
+        if circuits:
+            document["circuits"] = circuits
         return document
+
+    def _id_of(self, element):
+        found = self.by_product.get(element)
+        if found:
+            return found
+        for product, yaml_id in self.by_product.items():
+            if product.id() == element.id():
+                return yaml_id
+        return None
+
+    def _port_owners(self):
+        owners = {}
+        for rel in self.model.by_type("IfcRelNests"):
+            for obj in rel.RelatedObjects or []:
+                if obj.is_a(DERIVED_PORT):
+                    owners[obj.id()] = rel.RelatingObject
+        return owners
+
+    def _port_links(self):
+        links = {}
+        for rel in self.model.by_type("IfcRelConnectsPorts"):
+            if rel.RelatingPort is None or rel.RelatedPort is None:
+                continue
+            links.setdefault(rel.RelatingPort.id(), []).append(rel.RelatedPort)
+            links.setdefault(rel.RelatedPort.id(), []).append(rel.RelatingPort)
+        return links
+
+    def _attach_cable_ends(self, segment, entity):
+        """Restore From and To from the cable's own inlet and outlet.
+
+        A cable that is itself an endpoint of another cable carries extra
+        ports. Those are not this segment's ends. The writer names the
+        segment's own ports ``{id}:sink`` and ``{id}:source``. A cable with
+        exactly one unlabelled sink and one unlabelled source uses those.
+        """
+        owners = self._port_owners()
+        links = self._port_links()
+        yaml_id = entity.get("id")
+        named = {}
+        sinks = []
+        sources = []
+
+        def other_id(port):
+            others = links.get(port.id()) or []
+            if len(others) != 1:
+                return None
+            other_owner = owners.get(others[0].id())
+            if other_owner is None:
+                return None
+            return self._id_of(other_owner)
+
+        for port in self.model.by_type(DERIVED_PORT):
+            owner = owners.get(port.id())
+            if owner is None or owner.id() != segment.id():
+                continue
+            ref = other_id(port)
+            if not ref:
+                continue
+            name = port.Name or ""
+            if yaml_id and name == f"{yaml_id}:sink":
+                named["From"] = ref
+            elif yaml_id and name == f"{yaml_id}:source":
+                named["To"] = ref
+            elif _enum(port.FlowDirection) == "SINK":
+                sinks.append(ref)
+            elif _enum(port.FlowDirection) == "SOURCE":
+                sources.append(ref)
+        if "From" in named:
+            entity["From"] = named["From"]
+        elif len(sinks) == 1:
+            entity["From"] = sinks[0]
+        if "To" in named:
+            entity["To"] = named["To"]
+        elif len(sources) == 1:
+            entity["To"] = sources[0]
+
+    def _cable_route(self, element):
+        """Axis polyline in storey coordinates. The swept-disk directrix is the fallback.
+
+        The disk radius is a nominal solid and is not a YAML value.
+        """
+        curves = []
+        for item in _items(element, "Axis"):
+            points = _curve_points(item)
+            if len(points) >= 2 and all(len(point) >= 3 for point in points):
+                curves = points
+                break
+        if not curves:
+            for item in _items(element, "Body"):
+                for node in _body_tree(item):
+                    directrix = getattr(node, "Directrix", None)
+                    points = _curve_points(directrix)
+                    if len(points) >= 2 and all(len(point) >= 3 for point in points):
+                        curves = points
+                        break
+                if curves:
+                    break
+        if not curves:
+            return None
+        route = []
+        for point in curves:
+            storey = self._to_storey(element.ObjectPlacement, point)
+            route.append([self._metres(storey[0]), self._metres(storey[1]), self._metres(storey[2])])
+        return route
+
+    def _circuit(self, circuit):
+        book = _pset_map(circuit)
+        entity = self._common(circuit, book)
+        _put(entity, "ObjectType", None if not circuit.ObjectType else str(circuit.ObjectType))
+        _put(entity, "LongName", circuit.LongName)
+        assigns = []
+        for rel in self.model.by_type("IfcRelAssignsToGroup"):
+            if rel.RelatingGroup is None or rel.RelatingGroup.id() != circuit.id():
+                continue
+            for obj in rel.RelatedObjects or []:
+                ref = self._id_of(obj)
+                if ref:
+                    assigns.append(ref)
+        if assigns:
+            entity["Assigns"] = assigns
+        return _ordered_circuit(entity)
 
     def _connections(self):
         rows = []
@@ -774,9 +968,101 @@ def _close(a, b):
     return abs(a[0] - b[0]) < 1e-6 and abs(a[1] - b[1]) < 1e-6
 
 
+def _lift_cores(entity):
+    """NumberOfCores is a YAML field, not a PropertySets echo."""
+    kept = []
+    for pset in entity.get("PropertySets") or []:
+        props = dict(pset.get("Properties") or {})
+        if pset.get("Name") == CABLE_SEGMENT_PSET and "NumberOfCores" in props:
+            entity["NumberOfCores"] = props.pop("NumberOfCores")
+        if props:
+            kept.append({"Name": pset.get("Name"), "Properties": props})
+    if kept:
+        entity["PropertySets"] = kept
+    else:
+        entity.pop("PropertySets", None)
+
+
+def _lift_light(entity):
+    """Wattage and the CCT range are YAML fields, not a PropertySets echo."""
+    kept = []
+    for pset in entity.get("PropertySets") or []:
+        props = dict(pset.get("Properties") or {})
+        name = pset.get("Name")
+        if name == LIGHT_FIXTURE_PSET and "TotalWattage" in props:
+            entity["Wattage"] = props.pop("TotalWattage")
+        if name == CUSTOM_PSET:
+            for key in ("CctMin", "CctMax"):
+                if key in props:
+                    entity[key] = props.pop(key)
+        if props:
+            kept.append({"Name": name, "Properties": props})
+    if kept:
+        entity["PropertySets"] = kept
+    else:
+        entity.pop("PropertySets", None)
+
+
 def _strip(entity):
     entity.pop("_book", None)
     return entity
+
+
+def _lift_plane(entity, book):
+    """Restore an authored plane. A reference stays a reference."""
+    if "PlaneRef" in book:
+        entity["Plane"] = book["PlaneRef"]
+        return
+    if not any(key in book for key in ("PlaneOriginX", "PlaneOriginY", "PlaneElevation")):
+        return
+    entity["Plane"] = {
+        "Origin": [book.get("PlaneOriginX"), book.get("PlaneOriginY")],
+        "Elevation": book.get("PlaneElevation"),
+        "Gradient": [book.get("PlaneGradientX"), book.get("PlaneGradientY")],
+    }
+
+
+def _lift_tiles(entity, book):
+    """Restore a tile layout. Generated breps are not read."""
+    if "TileThickness" not in book and "TileAlong" not in book:
+        return
+    layout = {}
+    if "TileProduct" in book:
+        layout["Product"] = book["TileProduct"]
+    if "TileThickness" in book:
+        layout["Thickness"] = book["TileThickness"]
+    if "TileAlong" in book or "TileAcross" in book:
+        layout["Tile"] = [book.get("TileAlong"), book.get("TileAcross")]
+    if "TileWallJoint" in book:
+        layout["WallJoint"] = book["TileWallJoint"]
+    if "WallTileAlong" in book or "WallTileAcross" in book:
+        layout["WallTile"] = [book.get("WallTileAlong"), book.get("WallTileAcross")]
+    if "TileJoint" in book:
+        layout["Joint"] = book["TileJoint"]
+    if "GridOriginX" in book or "GridOriginY" in book:
+        layout["GridOrigin"] = [book.get("GridOriginX"), book.get("GridOriginY")]
+    if "BottomCut" in book:
+        layout["BottomCut"] = book["BottomCut"]
+    if "BottomJoint" in book:
+        layout["BottomJoint"] = book["BottomJoint"]
+    if "TileCourses" in book:
+        layout["Courses"] = book["TileCourses"]
+    if "JointInset" in book:
+        layout["JointInset"] = book["JointInset"]
+    if "FootprintText" in book:
+        layout["Footprint"] = tiling.decode_points(book["FootprintText"])
+    if "CutoutsText" in book:
+        layout["Cutouts"] = tiling.decode_cutouts(book["CutoutsText"])
+    if any(key in book for key in ("AxisStartX", "AxisStartY", "AxisEndX", "AxisEndY")):
+        layout["Axis"] = {
+            "Start": [book.get("AxisStartX"), book.get("AxisStartY")],
+            "End": [book.get("AxisEndX"), book.get("AxisEndY")],
+        }
+    if "InsideX" in book or "InsideY" in book:
+        layout["Inside"] = [book.get("InsideX"), book.get("InsideY")]
+    if "OpeningsText" in book:
+        layout["Openings"] = tiling.decode_openings(book["OpeningsText"])
+    entity["TileLayout"] = layout
 
 
 def _pick(entity, keys):
@@ -807,6 +1093,26 @@ def _ordered_wall(entity):
             "Footprint",
             "Profile",
             "MaterialLayers",
+            "PropertySets",
+        ),
+    )
+
+
+def _ordered_slab(entity):
+    return _pick(
+        entity,
+        (
+            "id",
+            "Name",
+            "GlobalId",
+            "Description",
+            "Tag",
+            "PredefinedType",
+            "ObjectType",
+            "ContainedInStructure",
+            "Plane",
+            "Footprint",
+            "Thickness",
             "PropertySets",
         ),
     )
@@ -847,6 +1153,32 @@ def _ordered_furnishing(entity):
             "Width",
             "Depth",
             "Height",
+            "Plane",
+            "TileLayout",
+            "From",
+            "To",
+            "Route",
+            "NumberOfCores",
+            "Wattage",
+            "CctMin",
+            "CctMax",
+            "PropertySets",
+        ),
+    )
+
+
+def _ordered_circuit(entity):
+    return _pick(
+        entity,
+        (
+            "id",
+            "Name",
+            "GlobalId",
+            "Description",
+            "ObjectType",
+            "LongName",
+            "PredefinedType",
+            "Assigns",
             "PropertySets",
         ),
     )

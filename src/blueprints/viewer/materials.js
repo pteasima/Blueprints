@@ -48,6 +48,9 @@ export const SOLID_COLORS = {
   bass_gkb: [230, 230, 235],
   bass_cd: [120, 120, 130],
   bass_wall_hanger: [90, 90, 100],
+  tile: [222, 205, 176],
+  grout: [48, 46, 44],
+  drain: [176, 184, 190],
 };
 
 /**
@@ -94,17 +97,23 @@ export const LAYER_DEPTH_BIAS = {
   slope_naturheld_140: 13,
   soffit_naturheld_140: 13,
   glazing: 14,
+  // Physically in front of the masonry. A frag-depth pull here was larger
+  // than the tile thickness at house scale, so hidden box edges read through.
+  tile: 0,
+  grout: 0,
+  drain: 0,
 };
 
 /**
  * Encoded window-Z pulled toward the camera per {@link LAYER_DEPTH_BIAS} step.
- * Two times the top bias (glazing = 14) stays under the edge-stroke FragDepth
- * pull in `edges.js` (`EDGE_FRAG_DEPTH_BIAS`), so outlines remain in front.
+ * At a ~160 m depth range this is ~0.3 mm per step, under the tile thickness,
+ * so a masonry face cannot surface through the floor. Edge strokes add one
+ * extra step (`edgeFragDepthBias`) plus a 0.35 mm view-space pull.
  */
-export const LAYER_FRAG_DEPTH_STEP = 1.5e-5;
+export const LAYER_FRAG_DEPTH_STEP = 2e-6;
 
 /** Cache-key bump when the face-bias shader changes. */
-export const LAYER_DEPTH_SHADER_REV = 1;
+export const LAYER_DEPTH_SHADER_REV = 2;
 
 /**
  * Pull a face forward in the log-depth buffer. Polygon offset never survives
@@ -586,6 +595,24 @@ export const REALISTIC_PRESETS = {
     color: [90, 90, 100],
     roughness: 0.4,
     metalness: 0.75,
+    map: "metal",
+  },
+  tile: {
+    color: [222, 205, 176],
+    roughness: 0.42,
+    metalness: 0.0,
+    map: "none",
+  },
+  grout: {
+    color: [48, 46, 44],
+    roughness: 0.9,
+    metalness: 0.0,
+    map: "none",
+  },
+  drain: {
+    color: [176, 184, 190],
+    roughness: 0.28,
+    metalness: 0.7,
     map: "metal",
   },
 };

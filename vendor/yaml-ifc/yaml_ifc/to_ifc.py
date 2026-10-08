@@ -8,24 +8,35 @@ import ifcopenshell.api.geometry
 import ifcopenshell.util.element
 import ifcopenshell.validate
 
+from yaml_ifc import tiling
 from yaml_ifc.ids import connection_yaml_id, global_id
 from yaml_ifc.joints import install_priority_fix
 from yaml_ifc.supported import (
+    CABLE_SEGMENT_PSET,
+    CUSTOM_PSET,
+    DEFAULT_CABLE_RADIUS,
+    DEFAULT_GRATE_THICKNESS,
     DEFAULT_OPENING_DEPTH,
     DEFAULT_WALL_HEIGHT,
     DERIVED_MATERIAL_NAME,
+    ELECTRICAL,
     FURNISHINGS,
     FURNISHING_SIZE,
     FURNITURE_TYPE_CLASS,
     HEADER_FILE_NAME,
     HEADER_TIMESTAMP,
+    INTEGER_MEASURE,
+    LIGHT_FIXTURE_PSET,
+    MEASURED_PROPERTIES,
     ORIGINATING_SYSTEM,
+    POWER_MEASURE,
     PREDEFINED_TYPES,
     PSET_AXIS,
     PSET_MATERIAL_FROM_THICKNESS,
     PSET_NAME,
     RELATED_CONNECTION_TYPES,
     RELATING_CONNECTION_TYPES,
+    TEMPERATURE_MEASURE,
     TYPE_PREDEFINED_REQUIRED,
 )
 
@@ -85,6 +96,30 @@ def _check_predefined(element, ifc_class):
         raise ValueError(f"{element['id']} PredefinedType USERDEFINED needs an ObjectType")
 
 
+def _uses_measure(doc, measure):
+    names = {name for name, kind in MEASURED_PROPERTIES.items() if kind == measure}
+
+    def walk(value):
+        if isinstance(value, dict):
+            props = value.get("Properties")
+            if isinstance(props, dict) and any(name in props for name in names):
+                return True
+            return any(walk(item) for item in value.values())
+        if isinstance(value, list):
+            return any(walk(item) for item in value)
+        return False
+
+    if measure == POWER_MEASURE:
+        for light in doc.get("lightFixtures") or []:
+            if light.get("Wattage") is not None:
+                return True
+    if measure == TEMPERATURE_MEASURE:
+        for light in doc.get("lightFixtures") or []:
+            if light.get("CctMin") is not None or light.get("CctMax") is not None:
+                return True
+    return walk(doc)
+
+
 def validation_errors(model):
     logger = ifcopenshell.validate.json_logger()
     ifcopenshell.validate.validate(model, logger)
@@ -111,9 +146,11 @@ class Builder:
         self._spatial()
         self._spaces()
         self._elements()
+        self._ports()
         self._types()
         self._connections()
         self._containment()
+        self._circuits()
 
     def _stamp_header(self):
         header = self.file.header
@@ -151,7 +188,13 @@ class Builder:
             values["PlacementRelTo"] = parent
         return self.file.create_entity("IfcLocalPlacement", **values)
 
-    def _nominal(self, value):
+    def _nominal(self, value, measure=None):
+        if measure:
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise ValueError(f"{measure} needs a number")
+            if measure == INTEGER_MEASURE:
+                return self.file.create_entity(measure, int(value))
+            return self.file.create_entity(measure, float(value))
         if isinstance(value, bool):
             wrapped = self.file.create_entity("IfcBoolean", bool(value))
         elif isinstance(value, int):
@@ -193,7 +236,15 @@ class Builder:
         area = f.create_entity("IfcSIUnit", UnitType="AREAUNIT", Name="SQUARE_METRE")
         volume = f.create_entity("IfcSIUnit", UnitType="VOLUMEUNIT", Name="CUBIC_METRE")
         angle = f.create_entity("IfcSIUnit", UnitType="PLANEANGLEUNIT", Name="RADIAN")
-        units = f.create_entity("IfcUnitAssignment", Units=[length, area, volume, angle])
+        assigned = [length, area, volume, angle]
+        # Declared only when a measure needs them, so a walls-only file stays put.
+        if _uses_measure(self.doc, POWER_MEASURE):
+            assigned.append(f.create_entity("IfcSIUnit", UnitType="POWERUNIT", Name="WATT"))
+        if _uses_measure(self.doc, TEMPERATURE_MEASURE):
+            assigned.append(
+                f.create_entity("IfcSIUnit", UnitType="THERMODYNAMICTEMPERATUREUNIT", Name="KELVIN")
+            )
+        units = f.create_entity("IfcUnitAssignment", Units=assigned)
         origin = self._point(0.0, 0.0, 0.0)
         wcs = f.create_entity(
             "IfcAxis2Placement3D",
@@ -314,26 +365,34 @@ class Builder:
             RelatedObjects=children,
         )
 
-    def _user_psets(self, product, entity):
-        for index, pset in enumerate(entity.get("PropertySets") or []):
-            props = []
-            for name, value in (pset.get("Properties") or {}).items():
-                props.append(
+    def _user_psets(self, product, entity, groups=None):
+        if groups is None:
+            groups = []
+            for pset in entity.get("PropertySets") or []:
+                props = [
+                    (str(name), MEASURED_PROPERTIES.get(str(name)), value)
+                    for name, value in (pset.get("Properties") or {}).items()
+                ]
+                groups.append((pset.get("Name") or "Pset", props))
+        for index, (name, props) in enumerate(groups):
+            created_props = []
+            for prop_name, measure, value in props:
+                created_props.append(
                     self.file.create_entity(
                         "IfcPropertySingleValue",
-                        Name=str(name),
-                        NominalValue=self._nominal(value),
+                        Name=prop_name,
+                        NominalValue=self._nominal(value, measure),
                     )
                 )
             created = self.file.create_entity(
                 "IfcPropertySet",
-                GlobalId=self._gid(f"userpset:{index}:{pset.get('Name')}", entity["id"]),
-                Name=pset.get("Name") or "Pset",
-                HasProperties=props,
+                GlobalId=self._gid(f"userpset:{index}:{name}", entity["id"]),
+                Name=name,
+                HasProperties=created_props,
             )
             self.file.create_entity(
                 "IfcRelDefinesByProperties",
-                GlobalId=self._gid(f"userdefines:{index}:{pset.get('Name')}", entity["id"]),
+                GlobalId=self._gid(f"userdefines:{index}:{name}", entity["id"]),
                 RelatedObjects=[product],
                 RelatingPropertyDefinition=created,
             )
@@ -352,14 +411,23 @@ class Builder:
             for element in self.doc.get(key) or []:
                 contained.append(self._filler(element, kind))
         self.contained_by_space = {}
-        for key, ifc_class, type_class in FURNISHINGS:
+
+        def _hold(element, product):
+            container = element.get("ContainedInStructure")
+            if container:
+                if container not in self.space_ids:
+                    raise ValueError(f"{element['id']} is contained in unknown space {container}")
+                self.contained_by_space.setdefault(container, []).append(product)
+            else:
+                contained.append(product)
+
+        for slab in self.doc.get("slabs") or []:
+            _hold(slab, self._slab(slab))
+        for key, ifc_class, type_class in (*FURNISHINGS, *ELECTRICAL):
             for element in self.doc.get(key) or []:
-                product = self._furnishing(element, ifc_class, type_class)
-                container = element.get("ContainedInStructure")
-                if container:
-                    self.contained_by_space.setdefault(container, []).append(product)
-                else:
-                    contained.append(product)
+                _hold(element, self._furnishing(element, ifc_class, type_class))
+        for terminal in self.doc.get("wasteTerminals") or []:
+            _hold(terminal, self._furnishing(terminal, "IfcWasteTerminal", "IfcWasteTerminalType"))
         self.contained = contained
 
     def _wall_frame(self, wall):
@@ -763,6 +831,10 @@ class Builder:
         container = element.get("ContainedInStructure")
         if container is not None and container not in self.space_ids:
             raise ValueError(f"{yaml_id} is contained in unknown space {container}")
+        if ifc_class == "IfcWasteTerminal" and element.get("Plane") is not None:
+            if elevation is not None:
+                raise ValueError(f"{yaml_id} Elevation is taken from its Plane")
+            z = tiling.plane_elevation(self._plane(element), ox, oy)
         parent = self.placements[container] if container else self.storey_placement
         placement = self._local((ox, oy, z), (ux, uy, 0.0), parent)
         sizes = []
@@ -774,8 +846,23 @@ class Builder:
             if float(value) <= 0:
                 raise ValueError(f"{yaml_id} {key} must be positive")
             sizes.append(value)
+        route_local = None
+        if ifc_class == "IfcCableSegment":
+            route_local = self._route_local(element, (ox, oy, z), (ux, uy))
+        elif element.get("Route") is not None:
+            raise ValueError(f"{yaml_id} Route belongs on a cable")
         shape = None
-        if all(size is not None for size in sizes):
+        if element.get("TileLayout") and any(size is not None for size in sizes):
+            raise ValueError(f"{yaml_id} TileLayout replaces the box")
+        if route_local is not None:
+            if all(size is not None for size in sizes):
+                raise ValueError(f"{yaml_id} Route and a box are both set")
+            shape = self._cable_shape(route_local)
+        elif element.get("TileLayout"):
+            shape = self._tile_shape(element)
+        elif ifc_class == "IfcWasteTerminal" and element.get("Plane") is not None:
+            shape = self._grate_shape(element, sizes)
+        elif all(size is not None for size in sizes):
             shape = self._shape(
                 [("Body", "SweptSolid", self.body, self._box(sizes[0], sizes[1], sizes[2]))]
             )
@@ -801,12 +888,535 @@ class Builder:
         for key, size in zip(FURNISHING_SIZE, sizes):
             if size is not None:
                 book[key] = size
+        self._note_plane(element, book)
+        self._note_tiles(element, book)
         self._pset(product, book, yaml_id)
-        self._user_psets(product, element)
+        self._user_psets(product, element, self._property_groups(element, ifc_class))
         self._note_type(element, type_class, product)
         self.products[yaml_id] = product
         self.placements[yaml_id] = placement
         return product
+
+    def _element(self, yaml_id):
+        for key in ("slabs", "coverings", "wasteTerminals", "walls"):
+            for element in self.doc.get(key) or []:
+                if element.get("id") == yaml_id:
+                    return element
+        raise ValueError(f"unknown element {yaml_id}")
+
+    def _plane(self, element):
+        """The finished-surface plane, inlined or referenced by id."""
+        plane = element.get("Plane")
+        if isinstance(plane, str):
+            owner = self._element(plane)
+            plane = owner.get("Plane")
+            if isinstance(plane, str) or not isinstance(plane, dict):
+                raise ValueError(f"{element['id']} Plane {element.get('Plane')} is not a plane")
+        if not isinstance(plane, dict):
+            raise ValueError(f"{element['id']} needs a Plane")
+        origin = plane.get("Origin")
+        gradient = plane.get("Gradient")
+        if (
+            not isinstance(origin, (list, tuple))
+            or len(origin) != 2
+            or not isinstance(gradient, (list, tuple))
+            or len(gradient) != 2
+            or plane.get("Elevation") is None
+        ):
+            raise ValueError(f"{element['id']} Plane needs Origin, Elevation, and Gradient")
+        return {
+            "Origin": [float(origin[0]), float(origin[1])],
+            "Elevation": float(plane["Elevation"]),
+            "Gradient": [float(gradient[0]), float(gradient[1])],
+        }
+
+    def _note_plane(self, element, book):
+        plane = element.get("Plane")
+        if plane is None:
+            return
+        if isinstance(plane, str):
+            book["PlaneRef"] = plane
+            return
+        parsed = self._plane(element)
+        book["PlaneOriginX"] = plane["Origin"][0]
+        book["PlaneOriginY"] = plane["Origin"][1]
+        book["PlaneElevation"] = plane["Elevation"]
+        book["PlaneGradientX"] = plane["Gradient"][0]
+        book["PlaneGradientY"] = plane["Gradient"][1]
+        if parsed["Gradient"] != [float(plane["Gradient"][0]), float(plane["Gradient"][1])]:
+            raise ValueError(f"{element['id']} Plane gradient is not a pair of numbers")
+
+    def _note_tiles(self, element, book):
+        layout = element.get("TileLayout")
+        if layout is None:
+            return
+        if not isinstance(layout, dict):
+            raise ValueError(f"{element['id']} TileLayout must be a mapping")
+        if layout.get("Product"):
+            book["TileProduct"] = layout["Product"]
+        if layout.get("Thickness") is None:
+            raise ValueError(f"{element['id']} TileLayout needs Thickness")
+        book["TileThickness"] = layout["Thickness"]
+        tile = layout.get("Tile")
+        if not isinstance(tile, (list, tuple)) or len(tile) != 2:
+            raise ValueError(f"{element['id']} TileLayout.Tile must be [along, across]")
+        book["TileAlong"] = tile[0]
+        book["TileAcross"] = tile[1]
+        if layout.get("Joint") is not None:
+            book["TileJoint"] = layout["Joint"]
+        if layout.get("WallJoint") is not None:
+            book["TileWallJoint"] = layout["WallJoint"]
+        if layout.get("WallTile") is not None:
+            wall_tile = layout["WallTile"]
+            book["WallTileAlong"] = wall_tile[0]
+            book["WallTileAcross"] = wall_tile[1]
+        origin = layout.get("GridOrigin")
+        if not isinstance(origin, (list, tuple)) or len(origin) != 2:
+            raise ValueError(f"{element['id']} TileLayout needs GridOrigin")
+        book["GridOriginX"] = origin[0]
+        book["GridOriginY"] = origin[1]
+        if layout.get("BottomCut") is not None:
+            if layout["BottomCut"] != tiling.BOTTOM_CUT:
+                raise ValueError(
+                    f"{element['id']} BottomCut must be {tiling.BOTTOM_CUT}"
+                )
+            book["BottomCut"] = layout["BottomCut"]
+        if layout.get("BottomJoint") is not None:
+            book["BottomJoint"] = layout["BottomJoint"]
+        if layout.get("Courses") is not None:
+            courses = layout["Courses"]
+            if isinstance(courses, bool) or not isinstance(courses, int) or courses < 1:
+                raise ValueError(f"{element['id']} Courses must be a positive integer")
+            book["TileCourses"] = courses
+        if layout.get("JointInset") is not None:
+            book["JointInset"] = layout["JointInset"]
+        if layout.get("Footprint"):
+            book["FootprintText"] = tiling.encode_points(layout["Footprint"])
+        if layout.get("Cutouts"):
+            book["CutoutsText"] = tiling.encode_cutouts(layout["Cutouts"])
+        axis = layout.get("Axis")
+        if axis:
+            book["AxisStartX"] = axis["Start"][0]
+            book["AxisStartY"] = axis["Start"][1]
+            book["AxisEndX"] = axis["End"][0]
+            book["AxisEndY"] = axis["End"][1]
+        inside = layout.get("Inside")
+        if inside:
+            book["InsideX"] = inside[0]
+            book["InsideY"] = inside[1]
+        if layout.get("Openings"):
+            book["OpeningsText"] = tiling.encode_openings(layout["Openings"])
+
+    def _brep(self, vertices, faces):
+        points = [self._point(*vertex) for vertex in vertices]
+        ifc_faces = []
+        for face in faces:
+            loop = self.file.create_entity("IfcPolyLoop", Polygon=[points[index] for index in face])
+            bound = self.file.create_entity("IfcFaceOuterBound", Bound=loop, Orientation=True)
+            ifc_faces.append(self.file.create_entity("IfcFace", Bounds=[bound]))
+        shell = self.file.create_entity("IfcClosedShell", CfsFaces=ifc_faces)
+        return self.file.create_entity("IfcFacetedBrep", Outer=shell)
+
+    def _brep_shape(self, meshes):
+        items = [self._brep(vertices, faces) for vertices, faces in meshes if faces]
+        representation = self.file.create_entity(
+            "IfcShapeRepresentation",
+            ContextOfItems=self.body,
+            RepresentationIdentifier="Body",
+            RepresentationType="Brep",
+            Items=items,
+        )
+        return self.file.create_entity("IfcProductDefinitionShape", Representations=[representation])
+
+    def _floor_meshes(self, element, layout):
+        plane = self._plane(element)
+        floor_tile = layout["Tile"]
+        wall_tile = layout.get("WallTile") or floor_tile
+        if layout.get("WallJoint") is None:
+            raise ValueError(f"{element['id']} floor TileLayout needs WallJoint")
+        result = tiling.floor_layout(
+            plane,
+            floor_tile,
+            wall_tile,
+            layout["WallJoint"],
+            layout["GridOrigin"],
+            layout["Footprint"],
+            layout.get("Cutouts") or (),
+            layout.get("JointInset") or 0.0,
+        )
+        gradient = plane["Gradient"]
+        thickness = layout["Thickness"]
+
+        def z_at(x, y):
+            return tiling.plane_elevation(plane, x, y)
+
+        meshes = []
+        for ring in (*result["tiles"], *result["grout"]):
+            meshes.append(tiling.sloped_shell(ring, z_at, thickness, gradient))
+        return meshes
+
+    def _wall_meshes(self, element, layout):
+        plane = self._plane(element)
+        if layout.get("Joint") is None or layout.get("Courses") is None:
+            raise ValueError(f"{element['id']} wall TileLayout needs Joint and Courses")
+        if layout.get("BottomCut") != tiling.BOTTOM_CUT:
+            raise ValueError(f"{element['id']} BottomCut must be {tiling.BOTTOM_CUT}")
+        if layout.get("BottomJoint") is None or layout.get("Inside") is None:
+            raise ValueError(f"{element['id']} wall TileLayout needs BottomJoint and Inside")
+        owner = element
+        if isinstance(element.get("Plane"), str):
+            owner = self._element(element["Plane"])
+        footprint = layout.get("Footprint") or owner.get("Footprint")
+        result = tiling.wall_layout(
+            plane,
+            layout["Tile"],
+            layout["Joint"],
+            layout["Courses"],
+            layout["BottomJoint"],
+            layout["GridOrigin"],
+            layout["Axis"],
+            layout["Inside"],
+            layout.get("Openings") or (),
+            footprint=footprint,
+        )
+        thickness = layout["Thickness"]
+        meshes = []
+        for piece in (*result["tiles"], *result["grout"]):
+            meshes.append(tiling.wall_shell(piece["polygon"], result["frame"], thickness))
+        return meshes
+
+    def _tile_shape(self, element):
+        layout = element["TileLayout"]
+        if layout.get("Footprint"):
+            meshes = self._floor_meshes(element, layout)
+        elif layout.get("Axis"):
+            meshes = self._wall_meshes(element, layout)
+        else:
+            raise ValueError(f"{element['id']} TileLayout needs a Footprint or an Axis")
+        if not meshes:
+            raise ValueError(f"{element['id']} produced no tiles")
+        return self._brep_shape(meshes)
+
+    def _grate_shape(self, element, sizes):
+        if sizes[0] is None or sizes[1] is None:
+            raise ValueError(f"{element['id']} needs Width and Depth")
+        plane = self._plane(element)
+        origin = element.get("Origin") or [0, 0]
+        ox, oy = float(origin[0]), float(origin[1])
+        corner = tiling.plane_elevation(plane, ox, oy)
+        thickness = sizes[2] if sizes[2] is not None else DEFAULT_GRATE_THICKNESS
+        ring = [(0.0, 0.0), (float(sizes[0]), 0.0), (float(sizes[0]), float(sizes[1])), (0.0, float(sizes[1]))]
+
+        def z_at(x, y):
+            return tiling.plane_elevation(plane, ox + x, oy + y) - corner
+
+        return self._brep_shape([tiling.sloped_shell(ring, z_at, thickness, plane["Gradient"])])
+
+    def _slab(self, slab):
+        yaml_id = slab["id"]
+        if yaml_id in self.products:
+            raise ValueError(f"duplicate id {yaml_id}")
+        _check_predefined(slab, "IfcSlab")
+        container = slab.get("ContainedInStructure")
+        if container is not None and container not in self.space_ids:
+            raise ValueError(f"{yaml_id} is contained in unknown space {container}")
+        parent = self.placements[container] if container else self.storey_placement
+        placement = self._local((0.0, 0.0, 0.0), (1.0, 0.0, 0.0), parent)
+        shape = None
+        if slab.get("Thickness") is not None and slab.get("Footprint") and isinstance(slab.get("Plane"), dict):
+            plane = self._plane(slab)
+            ring = [(float(x), float(y)) for x, y in slab["Footprint"]]
+
+            def z_at(x, y):
+                return tiling.plane_elevation(plane, x, y)
+
+            shape = self._brep_shape(
+                [tiling.sloped_shell(ring, z_at, slab["Thickness"], plane["Gradient"])]
+            )
+        values = {
+            "GlobalId": global_id(yaml_id, slab.get("GlobalId")),
+            "Name": self._named(slab, yaml_id),
+            "ObjectPlacement": placement,
+            "Representation": shape,
+        }
+        for key in ("Description", "Tag", "ObjectType", "PredefinedType"):
+            if slab.get(key) is not None:
+                values[key] = slab[key]
+        product = self.file.create_entity("IfcSlab", **values)
+        book = {"id": yaml_id}
+        self._note_plane(slab, book)
+        if slab.get("Footprint"):
+            book["FootprintText"] = tiling.encode_points(slab["Footprint"])
+        if slab.get("Thickness") is not None:
+            book["SlabThickness"] = slab["Thickness"]
+        self._pset(product, book, yaml_id)
+        self._user_psets(product, slab)
+        self._note_type(slab, "IfcSlabType", product)
+        self.products[yaml_id] = product
+        self.placements[yaml_id] = placement
+        return product
+
+    def _property_groups(self, element, ifc_class):
+        groups = []
+        for pset in element.get("PropertySets") or []:
+            props = [
+                (str(name), MEASURED_PROPERTIES.get(str(name)), value)
+                for name, value in (pset.get("Properties") or {}).items()
+            ]
+            groups.append([pset.get("Name") or "Pset", props])
+        if ifc_class != "IfcLightFixture":
+            if any(element.get(key) is not None for key in ("Wattage", "CctMin", "CctMax")):
+                raise ValueError(f"{element['id']} Wattage and CCT belong on a light fixture")
+        else:
+            self._light_measures(element, groups)
+        if ifc_class == "IfcCableSegment":
+            self._core_count(element, groups)
+        elif element.get("NumberOfCores") is not None:
+            raise ValueError(f"{element['id']} NumberOfCores belongs on a cable")
+        return [(name, props) for name, props in groups]
+
+    def _light_measures(self, element, groups):
+        extras = []
+        if element.get("Wattage") is not None:
+            wattage = _number(element["Wattage"], f"{element['id']} Wattage")
+            if float(wattage) < 0:
+                raise ValueError(f"{element['id']} Wattage must not be negative")
+            extras.append((LIGHT_FIXTURE_PSET, [("TotalWattage", POWER_MEASURE, wattage)]))
+        bounds = []
+        for key in ("CctMin", "CctMax"):
+            if element.get(key) is None:
+                continue
+            bound = _number(element[key], f"{element['id']} {key}")
+            if float(bound) < 0:
+                raise ValueError(f"{element['id']} {key} must not be negative")
+            bounds.append((key, TEMPERATURE_MEASURE, bound))
+        if (
+            element.get("CctMin") is not None
+            and element.get("CctMax") is not None
+            and float(element["CctMin"]) > float(element["CctMax"])
+        ):
+            raise ValueError(f"{element['id']} CctMin is above CctMax")
+        if bounds:
+            extras.append((CUSTOM_PSET, bounds))
+        for name, props in extras:
+            self._merge_group(element, groups, name, props)
+
+    def _core_count(self, element, groups):
+        if element.get("NumberOfCores") is None:
+            return
+        number = _number(element["NumberOfCores"], f"{element['id']} NumberOfCores")
+        if isinstance(number, float) and not float(number).is_integer():
+            raise ValueError(f"{element['id']} NumberOfCores must be an integer")
+        count = int(number)
+        if count < 1:
+            raise ValueError(f"{element['id']} NumberOfCores must be positive")
+        self._merge_group(
+            element,
+            groups,
+            CABLE_SEGMENT_PSET,
+            [("NumberOfCores", INTEGER_MEASURE, count)],
+        )
+
+    def _merge_group(self, element, groups, name, props):
+        for group in groups:
+            if group[0] != name:
+                continue
+            existing = {prop[0] for prop in group[1]}
+            for prop in props:
+                if prop[0] in existing:
+                    raise ValueError(f"{element['id']} {name}.{prop[0]} is set twice")
+                group[1].append(prop)
+            return
+        groups.append([name, list(props)])
+
+    def _model_axis_context(self):
+        """3D axis context for a cable route. Created only when a route is written.
+
+        Wall axes stay on the plan context. Adding this subcontext to every
+        file would change the ground-floor bytes.
+        """
+        context = getattr(self, "model_axis", None)
+        if context is not None:
+            return context
+        context = self.file.create_entity(
+            "IfcGeometricRepresentationSubContext",
+            ContextIdentifier="Axis",
+            ContextType="Model",
+            ParentContext=self.context,
+            TargetView="GRAPH_VIEW",
+        )
+        self.model_axis = context
+        return context
+
+    def _route_local(self, element, origin, ref):
+        """Storey-frame Route, in the cable's local placement.
+
+        The YAML point is metres: x, y as Origin, z as Elevation. The curve
+        is written From toward To, which is the inlet end toward the outlet.
+        """
+        route = element.get("Route")
+        if route is None:
+            return None
+        yaml_id = element["id"]
+        if not isinstance(route, list) or len(route) < 2:
+            raise ValueError(f"{yaml_id} Route needs at least two points")
+        ox, oy, oz = origin
+        ux, uy = ref
+        span = math.hypot(ux, uy)
+        ux, uy = ux / span, uy / span
+        local = []
+        for index, point in enumerate(route):
+            where = f"{yaml_id} Route point {index}"
+            if not isinstance(point, (list, tuple)) or len(point) != 3:
+                raise ValueError(f"{where} must be [x, y, z]")
+            x = float(_number(point[0], where))
+            y = float(_number(point[1], where))
+            z = float(_number(point[2], where))
+            dx, dy = x - ox, y - oy
+            local.append((dx * ux + dy * uy, -dx * uy + dy * ux, z - oz))
+            if len(local) >= 2 and math.dist(local[-2], local[-1]) <= TOL:
+                raise ValueError(f"{yaml_id} Route has a zero-length segment")
+        return local
+
+    def _cable_shape(self, local):
+        """One segment: Axis Curve3D polyline, Body swept disk along that curve.
+
+        IfcCableFitting joins two segments at a junction. A bend is a vertex
+        of this polyline, not a fitting. IfcSweptDiskSolidPolygonal (a filleted
+        polyline sweep) is not in IFC4.
+        """
+        polyline = self.file.create_entity(
+            "IfcPolyline",
+            Points=[self._point(*point) for point in local],
+        )
+        disk = self.file.create_entity(
+            "IfcSweptDiskSolid",
+            Directrix=polyline,
+            Radius=DEFAULT_CABLE_RADIUS,
+        )
+        return self._shape(
+            [
+                ("Axis", "Curve3D", self._model_axis_context(), polyline),
+                ("Body", "AdvancedSweptSolid", self.body, disk),
+            ]
+        )
+
+    def _cable_system(self, cable_id):
+        found = []
+        for circuit in self.doc.get("circuits") or []:
+            if cable_id not in (circuit.get("Assigns") or []):
+                continue
+            predefined = circuit.get("PredefinedType")
+            if predefined:
+                allowed = PREDEFINED_TYPES["IfcDistributionCircuit"]
+                if predefined not in allowed:
+                    raise ValueError(
+                        f"{circuit['id']} PredefinedType {predefined} is not valid for IfcDistributionCircuit"
+                    )
+                found.append(predefined)
+        if len(set(found)) == 1:
+            return found[0]
+        return "ELECTRICAL"
+
+    def _port(self, token, flow, system):
+        return self.file.create_entity(
+            "IfcDistributionPort",
+            GlobalId=global_id(f"port:{token}"),
+            Name=token,
+            FlowDirection=flow,
+            PredefinedType="CABLE",
+            SystemType=system,
+        )
+
+    def _connect_ports(self, token, relating, related):
+        self.file.create_entity(
+            "IfcRelConnectsPorts",
+            GlobalId=global_id(f"ports:{token}"),
+            RelatingPort=relating,
+            RelatedPort=related,
+        )
+
+    def _ports(self):
+        """One cable is four ports: source, cable in, cable out, sink.
+
+        IfcRelNests owns the ports. IfcRelConnectsPorts joins them. The cable
+        is not a RealizingElement, because it is already in the chain.
+        """
+        nested = {}
+        for cable in self.doc.get("cables") or []:
+            yaml_id = cable["id"]
+            src_id = cable.get("From")
+            dst_id = cable.get("To")
+            if not src_id or not dst_id:
+                raise ValueError(f"{yaml_id} needs From and To")
+            if src_id == dst_id or src_id == yaml_id or dst_id == yaml_id:
+                raise ValueError(f"{yaml_id} cannot connect an endpoint to itself")
+            system = self._cable_system(yaml_id)
+            segment = self.products.get(yaml_id)
+            src = self.products.get(src_id)
+            dst = self.products.get(dst_id)
+            if segment is None:
+                raise ValueError(f"unknown cable {yaml_id}")
+            for ref, product in ((src_id, src), (dst_id, dst)):
+                if product is None:
+                    raise ValueError(f"{yaml_id} endpoint {ref} is unknown")
+                if not product.is_a("IfcDistributionElement"):
+                    raise ValueError(f"{yaml_id} endpoint {ref} is not a distribution element")
+            src_port = self._port(f"{src_id}:{yaml_id}:source", "SOURCE", system)
+            cable_in = self._port(f"{yaml_id}:sink", "SINK", system)
+            cable_out = self._port(f"{yaml_id}:source", "SOURCE", system)
+            dst_port = self._port(f"{dst_id}:{yaml_id}:sink", "SINK", system)
+            nested.setdefault(src_id, []).append(src_port)
+            nested.setdefault(yaml_id, []).extend((cable_in, cable_out))
+            nested.setdefault(dst_id, []).append(dst_port)
+            self._connect_ports(f"{yaml_id}:up", src_port, cable_in)
+            self._connect_ports(f"{yaml_id}:down", cable_out, dst_port)
+        for owner_id, ports in nested.items():
+            self.file.create_entity(
+                "IfcRelNests",
+                GlobalId=global_id(f"nest:{owner_id}"),
+                RelatingObject=self.products[owner_id],
+                RelatedObjects=ports,
+            )
+
+    def _circuits(self):
+        for circuit in self.doc.get("circuits") or []:
+            yaml_id = circuit["id"]
+            if yaml_id in self.products:
+                raise ValueError(f"duplicate id {yaml_id}")
+            _check_predefined(circuit, "IfcDistributionCircuit")
+            values = {
+                "GlobalId": global_id(yaml_id, circuit.get("GlobalId")),
+                "Name": self._named(circuit, yaml_id),
+            }
+            for key in ("Description", "ObjectType", "LongName", "PredefinedType"):
+                if circuit.get(key) is not None:
+                    values[key] = circuit[key]
+            product = self.file.create_entity("IfcDistributionCircuit", **values)
+            self._pset(product, {"id": yaml_id}, yaml_id)
+            self._user_psets(product, circuit)
+            assigns = circuit.get("Assigns")
+            if assigns:
+                related = []
+                seen = set()
+                for ref in assigns:
+                    if ref in seen:
+                        raise ValueError(f"{yaml_id} assigns {ref} twice")
+                    seen.add(ref)
+                    target = self.products.get(ref)
+                    if target is None:
+                        raise ValueError(f"{yaml_id} assigns unknown element {ref}")
+                    related.append(target)
+                self.file.create_entity(
+                    "IfcRelAssignsToGroup",
+                    GlobalId=self._gid("circuit", yaml_id),
+                    RelatedObjects=related,
+                    RelatedObjectsType="PRODUCT",
+                    RelatingGroup=product,
+                )
+            elif assigns is not None:
+                raise ValueError(f"{yaml_id} Assigns is empty")
+            self.products[yaml_id] = product
 
     def _note_type(self, element, type_class, product):
         predefined = element.get("PredefinedType")

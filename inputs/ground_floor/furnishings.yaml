@@ -1,4 +1,6 @@
-# Room 1.02 (obývák) furnishings. yaml-ifc at commit 34e1597.
+# Room 1.02 (obývák) furnishings. Written for yaml-ifc at commit 34e1597.
+# The vendored package is now 0f96c26. Upstream's furnishings sample at that
+# commit is a generic kitchen and is not this file.
 #
 # KitchenPlan.jpg (2448×1809). Two groups: the tall run on the north wall,
 # and the freestanding island. Counter 930. Tall cabinets 2450, the height

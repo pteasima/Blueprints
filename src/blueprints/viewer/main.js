@@ -1929,6 +1929,69 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     return { png: plate.png, pdf: plate.pdf, stem: plate.stem };
   };
 
+  /**
+   * Headless camera for preview captures. position/target/up are glTF metres.
+   * @param {{
+   *   position?: number[],
+   *   target?: number[],
+   *   up?: number[],
+   *   projection?: "perspective" | "ortho",
+   *   hFovDeg?: number,
+   * }} opts
+   */
+  window.blueprintSetView = (opts = {}) => {
+    if (!root || !opts) return false;
+    const proj = opts.projection === "ortho" ? "ortho" : "perspective";
+    const fov = Number.isFinite(Number(opts.hFovDeg)) ? Number(opts.hFovDeg) : hFovDeg;
+    if (proj === "perspective" && projection === "ortho") leaveOrtho(fov);
+    if (proj === "perspective") setHFov(fov, { reframe: false });
+    withSuppressedCameraChange(() => {
+      suppressViewZoomSync = true;
+      const up = new THREE.Vector3(0, 1, 0);
+      if (Array.isArray(opts.up) && opts.up.length >= 3) {
+        up.set(Number(opts.up[0]) || 0, Number(opts.up[1]) || 0, Number(opts.up[2]) || 0);
+        if (up.lengthSq() > 1e-12) up.normalize();
+        else up.set(0, 1, 0);
+      }
+      perspCamera.up.copy(up);
+      orthoCamera.up.copy(up);
+      camera.up.copy(up);
+      if (Array.isArray(opts.target)) {
+        controls.target.set(
+          Number(opts.target[0]) || 0,
+          Number(opts.target[1]) || 0,
+          Number(opts.target[2]) || 0,
+        );
+      }
+      if (Array.isArray(opts.position)) {
+        camera.position.set(
+          Number(opts.position[0]) || 0,
+          Number(opts.position[1]) || 0,
+          Number(opts.position[2]) || 0,
+        );
+      }
+      camera.lookAt(controls.target);
+      if (proj === "ortho") {
+        const dist = camera.position.distanceTo(controls.target);
+        const vFovRad = hFovDegToVFovRad(fov, canvasAspect());
+        sizeOrthoFrustum(dist, vFovRad);
+        viewZoom = 1;
+        if (projection !== "ortho") {
+          setActiveCamera(orthoCamera);
+          projection = "ortho";
+        }
+        applyCombinedZoom();
+        syncFovUi();
+      }
+      updateBox();
+      updateCameraClipPlanes();
+      controls.update();
+      suppressViewZoomSync = false;
+    });
+    viewDirty = true;
+    return true;
+  };
+
   if (labelBtn) {
     labelBtn.addEventListener("click", () => {
       labelsOn = !labelsOn;

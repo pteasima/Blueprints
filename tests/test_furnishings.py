@@ -166,7 +166,7 @@ KITCHEN = (
 def test_furnishings_file_has_the_space_and_the_kitchen_boxes():
     doc = load_furnishings()
     assert FURNISHINGS_PATH.is_file()
-    assert SOURCE_COMMIT == "34e1597"
+    assert SOURCE_COMMIT == "0f96c26"
     assert set(FURNISHING_LISTS) == set(FURNISHING_KEYS)
     assert doc["walls"] == []
     spaces = doc["spaces"]
@@ -221,7 +221,7 @@ def test_furnishings_file_has_the_space_and_the_kitchen_boxes():
 def test_build_extrudes_walls_and_the_kitchen_boxes():
     shape, meta = build()
     assert meta["derived"]["furnishings"] == len(KITCHEN)
-    assert meta["derived"]["furnishings_commit"] == "34e1597"
+    assert meta["derived"]["furnishings_commit"] == "0f96c26"
     placed = [child for child in shape.children if getattr(child, "furnishing_id", None)]
     assert [child.furnishing_id for child in placed] == [row[0] for row in KITCHEN]
     assert {child.label for child in placed} == {LABEL_CABINET, "appliance", "sink"}
