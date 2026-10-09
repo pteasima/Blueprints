@@ -7,7 +7,7 @@ description: >-
 
 # Structure
 
-Parts floating in mid-air, or making no physical sense, is the risk. This came from a gable roof where agents produced physically impossible models. It does not apply to surface finishes (tiling, cladding, furniture placement).
+The risk is parts floating in mid-air, or making no physical sense. This came from a gable roof where agents produced physically impossible models. It does not apply to surface finishes (tiling, cladding, furniture placement).
 
 These are **building assemblies**, not decorative meshes. Before coding solids, reason as a house designer / structural engineer / contractor:
 
