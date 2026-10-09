@@ -38,6 +38,18 @@ export function cadMmToGltf(point) {
 }
 
 /**
+ * @param {string | number | null | undefined} value
+ * @param {number} fallback
+ */
+function parseColor(value, fallback) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string") return fallback;
+  const hex = value.trim().replace("#", "");
+  if (!/^[0-9a-fA-F]{6}$/.test(hex)) return fallback;
+  return Number.parseInt(hex, 16);
+}
+
+/**
  * Primary tip plus optional extras (`tips`). Label offset uses `anchor`.
  * @param {{ anchor?: number[], tips?: number[][] }} ann
  * @returns {number[][]}
@@ -171,18 +183,23 @@ function makeTextLabel(lines, ink, fontPx, anchor = "center") {
 /**
  * @param {number} color
  */
-function makeFatLine(color) {
+function makeFatLine(color, dashed = false) {
   const geom = new LineGeometry();
   geom.setPositions([0, 0, 0, 0, 0, 0]);
   const mat = new LineMaterial({
     color,
-    linewidth: 1.75,
+    linewidth: dashed ? 2.4 : 1.75,
     depthTest: false,
     depthWrite: false,
     transparent: true,
     toneMapped: false,
     worldUnits: false,
+    dashed: Boolean(dashed),
+    dashSize: 0.08,
+    gapSize: 0.06,
+    dashScale: 1,
   });
+  if (dashed) mat.dashed = true;
   const line = new Line2(geom, mat);
   line.renderOrder = 25;
   line.frustumCulled = false;
@@ -208,10 +225,12 @@ function setFatLine(line, a, b) {
  *   getLocale: () => string,
  *   getVisibleWidthM: () => number | null,
  *   getTarget: () => THREE.Vector3,
+ *   getExaggeration?: () => number,
  * }} opts
  */
 export function createAnnotations(opts) {
   const { scene, getCamera, getCanvas, getLocale, getVisibleWidthM, getTarget } = opts;
+  const getExaggeration = opts.getExaggeration || (() => 1);
   const group = new THREE.Group();
   group.name = "Annotations";
   group.userData.blueprintAnnotations = true;
@@ -308,6 +327,24 @@ export function createAnnotations(opts) {
           lines: [extA, extB, dim, tickA, tickB],
           data: ann,
         });
+      } else if (
+        ann.kind === "line" &&
+        Array.isArray(ann.points) &&
+        ann.points.length >= 2
+      ) {
+        const color = parseColor(ann.color, inkColor());
+        const main = makeFatLine(color, Boolean(ann.dashed));
+        /** @type {Line2[]} */
+        const lines = [main];
+        if (ann.arrow) {
+          lines.push(makeFatLine(color, false), makeFatLine(color, false));
+        }
+        let sprite = null;
+        const text = resolveText(ann.text, locale);
+        if (text) sprite = makeTextLabel(text.split("\n"), ink, px);
+        group.add(...lines);
+        if (sprite) group.add(sprite);
+        items.push({ kind: "line", sprite, lines, data: ann });
       }
     }
 
@@ -328,6 +365,17 @@ export function createAnnotations(opts) {
    * @param {THREE.Vector3} world
    * @param {THREE.Vector3} [out]
    */
+  /**
+   * CAD mm → glTF metres, with the scene's vertical exaggeration on glTF Y.
+   * @param {number[]} point
+   */
+  function cadPoint(point) {
+    const v = cadMmToGltf(point);
+    const k = getExaggeration();
+    if (k !== 1) v.y *= k;
+    return v;
+  }
+
   function projectNdc(world, out = _ndc) {
     return out.copy(world).project(getCamera());
   }
@@ -423,7 +471,7 @@ export function createAnnotations(opts) {
     for (const item of items) {
       if (item.kind === "callout") {
         // Label offset is relative to the primary tip; extra tips only get leaders.
-        const anchor = cadMmToGltf(item.data.anchor);
+        const anchor = cadPoint(item.data.anchor);
         const ndc = projectNdc(anchor, _a);
         const off = Array.isArray(item.data.offset) ? item.data.offset : [0.08, 0.06];
         const lx = ndc.x + Number(off[0] || 0) * 2;
@@ -434,7 +482,7 @@ export function createAnnotations(opts) {
         const half = wpp * item.sprite.userData.cssWidth * 0.5;
         const tips = calloutTips(item.data);
         for (let i = 0; i < item.lines.length; i += 1) {
-          const tip = cadMmToGltf(tips[i] || item.data.anchor);
+          const tip = cadPoint(tips[i] || item.data.anchor);
           _end.copy(label).sub(tip);
           const len = _end.length();
           if (len > half + wpp) {
@@ -446,8 +494,8 @@ export function createAnnotations(opts) {
           setFatLine(item.lines[i], tip, _end);
         }
       } else if (item.kind === "dim") {
-        const pa = cadMmToGltf(item.data.a);
-        const pb = cadMmToGltf(item.data.b);
+        const pa = cadPoint(item.data.a);
+        const pb = cadPoint(item.data.b);
         const na = projectNdc(pa, _a);
         const nb = projectNdc(pb, _b);
         let dx = nb.x - na.x;
@@ -504,6 +552,33 @@ export function createAnnotations(opts) {
           item.sprite.userData.labelText = label;
         }
         placeSprite(item.sprite, _mid);
+      } else if (item.kind === "line") {
+        const pts = item.data.points.map((point) => cadPoint(point));
+        const flat = [];
+        for (const p of pts) flat.push(p.x, p.y, p.z);
+        item.lines[0].geometry.setPositions(flat);
+        item.lines[0].computeLineDistances();
+        if (item.data.arrow && pts.length >= 2 && item.lines.length >= 3) {
+          const tail = pts[pts.length - 2];
+          const head = pts[pts.length - 1];
+          const dir = head.clone().sub(tail);
+          if (dir.lengthSq() > 1e-12) {
+            dir.normalize();
+            const wpp = worldPerPixel(head);
+            const back = dir.clone().multiplyScalar(-wpp * 16);
+            const side = new THREE.Vector3()
+              .crossVectors(dir, getCamera().up)
+              .normalize()
+              .multiplyScalar(wpp * 7);
+            if (side.lengthSq() < 1e-16) side.set(wpp * 7, 0, 0);
+            setFatLine(item.lines[1], head, head.clone().add(back).add(side));
+            setFatLine(item.lines[2], head, head.clone().add(back).sub(side));
+          }
+        }
+        if (item.sprite) {
+          const mid = pts[0].clone().lerp(pts[pts.length - 1], 0.5);
+          placeSprite(item.sprite, mid);
+        }
       }
     }
 

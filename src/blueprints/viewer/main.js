@@ -165,6 +165,17 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
 
   scene = new THREE.Scene();
   scene.background = new THREE.Color(sceneBg);
+  /** Scales glTF Y (CAD Z) about elevation 0. 1 on every scene that does not ask. */
+  let verticalExaggeration = 1;
+  const zScaleGroup = new THREE.Group();
+  zScaleGroup.name = "VerticalExaggeration";
+  scene.add(zScaleGroup);
+
+  function setVerticalExaggeration(factor) {
+    const k = Number(factor);
+    verticalExaggeration = Number.isFinite(k) && k > 0 ? k : 1;
+    zScaleGroup.scale.set(1, verticalExaggeration, 1);
+  }
 
   /** Horizontal FOV degrees (user-facing). Three.js uses vertical FOV. */
   const FOV_MIN = 30;
@@ -201,6 +212,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       return (camera.right - camera.left) / zoom;
     },
     getTarget: () => controls.target,
+    getExaggeration: () => verticalExaggeration,
   });
 
   /** @type {ReturnType<typeof createCooperativeRange> | null} */
@@ -254,7 +266,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     "",
     (gltf) => {
       root = gltf.scene;
-      scene.add(root);
+      zScaleGroup.add(root);
       root.traverse((obj) => {
         if (!obj.isMesh) return;
         const raw = obj.name || obj.parent?.name || "part";
@@ -672,6 +684,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     if (!root) return;
     activeSceneSpec = null;
     annotations.clear();
+    setVerticalExaggeration(1);
     resetDefaultOpacities();
     syncDrawingButton();
     syncLabelButton();
@@ -713,6 +726,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   function applyScene(spec) {
     if (!root || !spec) return;
     activeSceneSpec = spec;
+    setVerticalExaggeration(spec.verticalExaggeration);
+    const zScale = verticalExaggeration;
 
     const hasOpacity =
       spec.opacityDefault != null ||
@@ -754,6 +769,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         let cutT = Math.min(1, Math.max(0, Number(c.t) || 0));
         if (Array.isArray(c.anchor) && c.anchor.length >= 3) {
           anchor = cadMmToGltf(c.anchor);
+          anchor.y *= zScale;
           const { near, far } = projectBoxOntoNormal(normal);
           const s = anchor.dot(normal);
           cutT = Math.min(1, Math.max(0, (s - near) / Math.max(far - near, 1e-6)));
@@ -801,12 +817,12 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         camera.up.copy(up);
         controls.target.set(
           Number(cam.target[0]) || 0,
-          Number(cam.target[1]) || 0,
+          (Number(cam.target[1]) || 0) * zScale,
           Number(cam.target[2]) || 0,
         );
         camera.position.set(
           Number(cam.position[0]) || 0,
-          Number(cam.position[1]) || 0,
+          (Number(cam.position[1]) || 0) * zScale,
           Number(cam.position[2]) || 0,
         );
         camera.lookAt(controls.target);
@@ -817,7 +833,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         ) {
           sizeOrthoToContent(
             Number(cam.orthoFit[0]) || 0.1,
-            Number(cam.orthoFit[1]) || 0.1,
+            (Number(cam.orthoFit[1]) || 0.1) * zScale,
           );
         }
         updateBox();
