@@ -12,7 +12,21 @@ Open every pull request as a draft. A draft means agents are still working. Read
 
 When a pull request branch is behind `main`, rebase that feature branch onto `main` and force-push the feature branch. Do not merge `main` into the feature branch. Pull requests merge to `main` only by squash, so a merge from `main` would fold upstream history into that squash; a rebase keeps the branch a linear stack of its own work. Force-push only the feature branch. The ruleset on `main` blocks force-pushes and deletion. The only exception is a branch that someone else is also committing to, because a rebase would rewrite commits they still have locally.
 
-## Architectural modelling (physical building first)
+## Measure first
+
+Prefer building the model and measuring it over hand calculation. Use code and tests to get numbers, and use reasoning to decide what to try next. Do not derive millimetre values by hand when the model can report them. Example: start tiling from the reference corner at level zero, build, measure the far corner, then shift.
+
+## Sanity bounds
+
+When a task builds something and reports resulting values, compare them against the plausible range the prompt gives, or an obvious physical range. Flag anything outside that range as a question in the pull request. Do not accept it silently.
+
+## Reviewable steps
+
+If the owner cannot verify a model change without a view, build that view first in rough form, then make the model change. Polish presentation (drawing style, extra plates) only after the numbers are agreed. Each step should end in something the owner can accept or reject quickly.
+
+## Architectural modelling (structural assemblies)
+
+Structural assemblies only: roofs, framing, anything load-bearing or stacked, where parts floating in mid-air or making no physical sense is the real risk. This section came from a gable roof where agents produced physically impossible models. It does not apply to surface finishes (tiling, cladding, furniture placement).
 
 These are **building assemblies**, not decorative meshes. Before coding solids, reason as a house designer / structural engineer / contractor:
 
