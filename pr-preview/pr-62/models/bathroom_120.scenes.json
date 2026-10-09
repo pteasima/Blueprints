@@ -1,0 +1,1312 @@
+[
+  {
+    "id": "bathroom-floor",
+    "projection": "ortho",
+    "title": {
+      "en": "Bathroom 1.20 floor",
+      "cs": "Koupelna 1.20 dlažba"
+    },
+    "project": "RD Šíma 1.NP",
+    "cuts": [
+      {
+        "normal": [
+          0.0,
+          -1.0,
+          0.0
+        ],
+        "anchor": [
+          31237.5,
+          6987.500000000001,
+          120.0
+        ]
+      }
+    ],
+    "camera": {
+      "target": [
+        31.2375,
+        0.0,
+        -6.987500000000001
+      ],
+      "position": [
+        31.2375,
+        30.0,
+        -6.987500000000001
+      ],
+      "up": [
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "orthoFit": [
+        1.5,
+        1.4
+      ]
+    }
+  },
+  {
+    "id": "bathroom",
+    "hFovDeg": 50,
+    "title": {
+      "en": "Bathroom 1.20",
+      "cs": "Koupelna 1.20"
+    },
+    "project": "RD Šíma 1.NP",
+    "camera": {
+      "target": [
+        30.7,
+        0.35000000000000003,
+        -6.4
+      ],
+      "position": [
+        31.900000000000002,
+        1.55,
+        -7.4
+      ],
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "id": "bathroom-door",
+    "hFovDeg": 40,
+    "title": {
+      "en": "Bathroom 1.20 door",
+      "cs": "Koupelna 1.20 práh"
+    },
+    "project": "RD Šíma 1.NP",
+    "camera": {
+      "target": [
+        32.1,
+        0.06,
+        -7.9
+      ],
+      "position": [
+        31.2,
+        0.42,
+        -7.0
+      ],
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "id": "bathroom-plan",
+    "projection": "ortho",
+    "title": {
+      "en": "Bathroom 1.20 — floor tiles",
+      "cs": "Koupelna 1.20 — dlažba"
+    },
+    "project": "RD Šíma 1.NP",
+    "cuts": [
+      {
+        "normal": [
+          0.0,
+          -1.0,
+          0.0
+        ],
+        "anchor": [
+          31237.5,
+          7037.5,
+          120.0
+        ]
+      }
+    ],
+    "camera": {
+      "target": [
+        31.2375,
+        0.0,
+        -7.0375000000000005
+      ],
+      "position": [
+        31.2375,
+        30.0,
+        -7.0375000000000005
+      ],
+      "up": [
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "orthoFit": [
+        2.15,
+        1.95
+      ]
+    },
+    "annotations": [
+      {
+        "kind": "callout",
+        "anchor": [
+          31237.5,
+          7037.5,
+          40.0
+        ],
+        "text": {
+          "en": "ABK Poetry Stone 596×596\nwall joint 2.000 mm\nfloor joint 2.034 mm E–W\nfloor joint 2.033 mm N–S\nplan pitch 598 mm",
+          "cs": "ABK Poetry Stone 596×596\nspára stěny 2.000 mm\nspára podlahy 2.034 mm V–Z\nspára podlahy 2.033 mm S–J\nmodul 598 mm"
+        },
+        "offset": [
+          0.38,
+          0.16
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          30150.0,
+          6025.0,
+          -43.5
+        ],
+        "text": {
+          "en": "Drain / SW\n-43.489 mm",
+          "cs": "Vpusť / JZ\n-43.489 mm"
+        },
+        "offset": [
+          -0.16,
+          -0.1
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          32325.0,
+          6025.0,
+          -20.1
+        ],
+        "text": {
+          "en": "SE\n-20.140 mm",
+          "cs": "JV\n-20.140 mm"
+        },
+        "offset": [
+          0.12,
+          -0.1
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          32325.0,
+          7950.0,
+          0.0
+        ],
+        "text": {
+          "en": "NE\n+0.026 mm",
+          "cs": "SV\n+0.026 mm"
+        },
+        "offset": [
+          0.12,
+          0.08
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          30150.0,
+          7950.0,
+          -23.3
+        ],
+        "text": {
+          "en": "NW\n-23.323 mm",
+          "cs": "SZ\n-23.323 mm"
+        },
+        "offset": [
+          -0.14,
+          0.08
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          32225.0,
+          8050.0,
+          0.0
+        ],
+        "text": {
+          "en": "0 east jamb\n0.000 mm",
+          "cs": "0 východní ostění\n0.000 mm"
+        },
+        "offset": [
+          0.1,
+          0.12
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          31325.0,
+          8050.0,
+          -9.7
+        ],
+        "text": {
+          "en": "West jamb\n-9.662 mm",
+          "cs": "Západní ostění\n-9.662 mm"
+        },
+        "offset": [
+          -0.16,
+          0.12
+        ]
+      },
+      {
+        "kind": "dim",
+        "a": [
+          30150.0,
+          5805.0,
+          0.0
+        ],
+        "b": [
+          30746.0,
+          5805.0,
+          0.0
+        ],
+        "offset": -0.05,
+        "text": {
+          "en": "596 mm",
+          "cs": "596 mm"
+        }
+      },
+      {
+        "kind": "dim",
+        "a": [
+          30150.0,
+          6025.0,
+          0.0
+        ],
+        "b": [
+          32325.0,
+          6025.0,
+          0.0
+        ],
+        "offset": -0.12,
+        "text": {
+          "en": "2175 mm",
+          "cs": "2175 mm"
+        }
+      },
+      {
+        "kind": "dim",
+        "a": [
+          30150.0,
+          6025.0,
+          0.0
+        ],
+        "b": [
+          30150.0,
+          7950.0,
+          0.0
+        ],
+        "offset": -0.1,
+        "text": {
+          "en": "1925 mm",
+          "cs": "1925 mm"
+        }
+      },
+      {
+        "kind": "dim",
+        "a": [
+          31944.0,
+          7990.0,
+          0.0
+        ],
+        "b": [
+          32325.0,
+          7990.0,
+          0.0
+        ],
+        "offset": 0.06,
+        "text": {
+          "en": "381 mm cut",
+          "cs": "381 mm řez"
+        }
+      },
+      {
+        "kind": "dim",
+        "a": [
+          32365.0,
+          7819.0,
+          0.0
+        ],
+        "b": [
+          32365.0,
+          7950.0,
+          0.0
+        ],
+        "offset": 0.07,
+        "text": {
+          "en": "131 mm cut",
+          "cs": "131 mm řez"
+        }
+      },
+      {
+        "kind": "dim",
+        "a": [
+          31325.0,
+          7950.0,
+          0.0
+        ],
+        "b": [
+          32225.0,
+          7950.0,
+          0.0
+        ],
+        "offset": 0.05,
+        "text": {
+          "en": "900 mm door",
+          "cs": "900 mm dveře"
+        }
+      },
+      {
+        "kind": "dim",
+        "a": [
+          32225.0,
+          7950.0,
+          0.0
+        ],
+        "b": [
+          32225.0,
+          8050.0,
+          0.0
+        ],
+        "offset": 0.08,
+        "text": {
+          "en": "100 mm to leaf",
+          "cs": "100 mm k křídlu"
+        }
+      },
+      {
+        "kind": "line",
+        "points": [
+          [
+            32225.0,
+            8050.0,
+            30.0
+          ],
+          [
+            30150.0,
+            6025.0,
+            30.0
+          ]
+        ],
+        "arrow": true
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          31187.5,
+          7037.5,
+          40.0
+        ],
+        "text": {
+          "en": "1.500% fall to the drain\n1.0735% east–west · 1.0476% north–south",
+          "cs": "1.500% spád k vpusti\n1.0735% východ–západ · 1.0476% sever–jih"
+        },
+        "offset": [
+          0.02,
+          -0.16
+        ]
+      }
+    ],
+    "opacityDefault": 0,
+    "opacity": {
+      "tile": 1,
+      "grout": 1,
+      "drain": 1
+    }
+  },
+  {
+    "id": "bathroom-elev-e",
+    "projection": "ortho",
+    "title": {
+      "en": "Bathroom 1.20 — east wall",
+      "cs": "Koupelna 1.20 — východní stěna"
+    },
+    "project": "RD Šíma 1.NP",
+    "camera": {
+      "target": [
+        32.325,
+        1.0803150485000002,
+        -6.987500000000001
+      ],
+      "position": [
+        23.075000000000003,
+        1.0803150485000002,
+        -6.987500000000001
+      ],
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "orthoFit": [
+        1.386,
+        1.85
+      ]
+    },
+    "annotations": [
+      {
+        "kind": "callout",
+        "anchor": [
+          32325.0,
+          6987.5,
+          2388.5
+        ],
+        "text": {
+          "en": "level top 2348.511 mm\n2 × 1194 mm, joint 2.000 mm",
+          "cs": "rovný vrch 2348.511 mm\n2 × 1194 mm, spára 2.000 mm"
+        },
+        "offset": [
+          0.0,
+          0.1
+        ]
+      },
+      {
+        "kind": "dim",
+        "a": [
+          32325.0,
+          6737.5,
+          1154.5
+        ],
+        "b": [
+          32325.0,
+          6737.5,
+          2348.5
+        ],
+        "offset": 0.08,
+        "text": {
+          "en": "1194 mm",
+          "cs": "1194 mm"
+        }
+      },
+      {
+        "kind": "dim",
+        "a": [
+          32325.0,
+          7237.5,
+          1152.5
+        ],
+        "b": [
+          32325.0,
+          7237.5,
+          1154.5
+        ],
+        "offset": 0.08,
+        "text": {
+          "en": "2.000 mm",
+          "cs": "2.000 mm"
+        }
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          32325.0,
+          6025.0,
+          -20.1
+        ],
+        "text": {
+          "en": "floor -20.140 mm\nbottom cut",
+          "cs": "podlaha -20.140 mm\nšikmý řez"
+        },
+        "offset": [
+          -0.16,
+          -0.08
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          32325.0,
+          7950.0,
+          0.0
+        ],
+        "text": {
+          "en": "floor +0.026 mm\nbottom cut",
+          "cs": "podlaha +0.026 mm\nšikmý řez"
+        },
+        "offset": [
+          0.14,
+          -0.08
+        ]
+      },
+      {
+        "kind": "dim",
+        "a": [
+          32325.0,
+          6025.0,
+          -80.0
+        ],
+        "b": [
+          32325.0,
+          7950.0,
+          -80.0
+        ],
+        "offset": -0.08,
+        "text": {
+          "en": "1925 mm",
+          "cs": "1925 mm"
+        }
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          32325.0,
+          7950.0,
+          1291.7
+        ],
+        "text": {
+          "en": "131 mm cut",
+          "cs": "řez 131 mm"
+        },
+        "offset": [
+          0.12,
+          0.0
+        ]
+      }
+    ],
+    "opacityDefault": 0,
+    "opacity": {
+      "tile": 1,
+      "grout": 1,
+      "drain": 1
+    }
+  },
+  {
+    "id": "bathroom-elev-n",
+    "projection": "ortho",
+    "title": {
+      "en": "Bathroom 1.20 — north wall, door",
+      "cs": "Koupelna 1.20 — severní stěna, dveře"
+    },
+    "project": "RD Šíma 1.NP",
+    "camera": {
+      "target": [
+        31.2375,
+        1.0803150485000002,
+        -7.95
+      ],
+      "position": [
+        31.2375,
+        1.0803150485000002,
+        1.2999999999999998
+      ],
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "orthoFit": [
+        1.566000000000003,
+        1.85
+      ]
+    },
+    "annotations": [
+      {
+        "kind": "callout",
+        "anchor": [
+          31237.5,
+          7950.0,
+          2388.5
+        ],
+        "text": {
+          "en": "level top 2348.511 mm\n2 × 1194 mm, joint 2.000 mm",
+          "cs": "rovný vrch 2348.511 mm\n2 × 1194 mm, spára 2.000 mm"
+        },
+        "offset": [
+          0.0,
+          0.1
+        ]
+      },
+      {
+        "kind": "dim",
+        "a": [
+          30987.5,
+          7950.0,
+          1154.5
+        ],
+        "b": [
+          30987.5,
+          7950.0,
+          2348.5
+        ],
+        "offset": 0.08,
+        "text": {
+          "en": "1194 mm",
+          "cs": "1194 mm"
+        }
+      },
+      {
+        "kind": "dim",
+        "a": [
+          31487.5,
+          7950.0,
+          1152.5
+        ],
+        "b": [
+          31487.5,
+          7950.0,
+          1154.5
+        ],
+        "offset": 0.08,
+        "text": {
+          "en": "2.000 mm",
+          "cs": "2.000 mm"
+        }
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          30150.0,
+          7950.0,
+          -23.3
+        ],
+        "text": {
+          "en": "floor -23.323 mm\nbottom cut",
+          "cs": "podlaha -23.323 mm\nšikmý řez"
+        },
+        "offset": [
+          -0.16,
+          -0.08
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          32325.0,
+          7950.0,
+          0.0
+        ],
+        "text": {
+          "en": "floor +0.026 mm\nbottom cut",
+          "cs": "podlaha +0.026 mm\nšikmý řez"
+        },
+        "offset": [
+          0.14,
+          -0.08
+        ]
+      },
+      {
+        "kind": "dim",
+        "a": [
+          30150.0,
+          7950.0,
+          -80.0
+        ],
+        "b": [
+          32325.0,
+          7950.0,
+          -80.0
+        ],
+        "offset": -0.08,
+        "text": {
+          "en": "2175 mm",
+          "cs": "2175 mm"
+        }
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          32325.0,
+          7950.0,
+          1291.7
+        ],
+        "text": {
+          "en": "381 mm cut",
+          "cs": "řez 381 mm"
+        },
+        "offset": [
+          0.12,
+          0.0
+        ]
+      }
+    ],
+    "opacityDefault": 0,
+    "opacity": {
+      "tile": 1,
+      "grout": 1,
+      "drain": 1
+    }
+  },
+  {
+    "id": "bathroom-elev-s",
+    "projection": "ortho",
+    "title": {
+      "en": "Bathroom 1.20 — south wall",
+      "cs": "Koupelna 1.20 — jižní stěna"
+    },
+    "project": "RD Šíma 1.NP",
+    "camera": {
+      "target": [
+        31.2375,
+        1.0803150485000002,
+        -6.025
+      ],
+      "position": [
+        31.2375,
+        1.0803150485000002,
+        -15.275
+      ],
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "orthoFit": [
+        1.566000000000003,
+        1.85
+      ]
+    },
+    "annotations": [
+      {
+        "kind": "callout",
+        "anchor": [
+          31237.5,
+          6025.0,
+          2388.5
+        ],
+        "text": {
+          "en": "level top 2348.511 mm\n2 × 1194 mm, joint 2.000 mm",
+          "cs": "rovný vrch 2348.511 mm\n2 × 1194 mm, spára 2.000 mm"
+        },
+        "offset": [
+          0.0,
+          0.1
+        ]
+      },
+      {
+        "kind": "dim",
+        "a": [
+          30987.5,
+          6025.0,
+          1154.5
+        ],
+        "b": [
+          30987.5,
+          6025.0,
+          2348.5
+        ],
+        "offset": 0.08,
+        "text": {
+          "en": "1194 mm",
+          "cs": "1194 mm"
+        }
+      },
+      {
+        "kind": "dim",
+        "a": [
+          31487.5,
+          6025.0,
+          1152.5
+        ],
+        "b": [
+          31487.5,
+          6025.0,
+          1154.5
+        ],
+        "offset": 0.08,
+        "text": {
+          "en": "2.000 mm",
+          "cs": "2.000 mm"
+        }
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          30150.0,
+          6025.0,
+          -43.5
+        ],
+        "text": {
+          "en": "floor -43.489 mm\nbottom cut",
+          "cs": "podlaha -43.489 mm\nšikmý řez"
+        },
+        "offset": [
+          -0.16,
+          -0.08
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          32325.0,
+          6025.0,
+          -20.1
+        ],
+        "text": {
+          "en": "floor -20.140 mm\nbottom cut",
+          "cs": "podlaha -20.140 mm\nšikmý řez"
+        },
+        "offset": [
+          0.14,
+          -0.08
+        ]
+      },
+      {
+        "kind": "dim",
+        "a": [
+          30150.0,
+          6025.0,
+          -80.0
+        ],
+        "b": [
+          32325.0,
+          6025.0,
+          -80.0
+        ],
+        "offset": -0.08,
+        "text": {
+          "en": "2175 mm",
+          "cs": "2175 mm"
+        }
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          32325.0,
+          6025.0,
+          1291.7
+        ],
+        "text": {
+          "en": "381 mm cut",
+          "cs": "řez 381 mm"
+        },
+        "offset": [
+          0.12,
+          0.0
+        ]
+      }
+    ],
+    "opacityDefault": 0,
+    "opacity": {
+      "tile": 1,
+      "grout": 1,
+      "drain": 1
+    }
+  },
+  {
+    "id": "bathroom-elev-w",
+    "projection": "ortho",
+    "title": {
+      "en": "Bathroom 1.20 — west wall, window",
+      "cs": "Koupelna 1.20 — západní stěna, okno"
+    },
+    "project": "RD Šíma 1.NP",
+    "camera": {
+      "target": [
+        30.150000000000002,
+        1.0803150485000002,
+        -6.987500000000001
+      ],
+      "position": [
+        39.400000000000006,
+        1.0803150485000002,
+        -6.987500000000001
+      ],
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "orthoFit": [
+        1.386,
+        1.85
+      ]
+    },
+    "annotations": [
+      {
+        "kind": "callout",
+        "anchor": [
+          30150.0,
+          6987.5,
+          2388.5
+        ],
+        "text": {
+          "en": "level top 2348.511 mm\n2 × 1194 mm, joint 2.000 mm",
+          "cs": "rovný vrch 2348.511 mm\n2 × 1194 mm, spára 2.000 mm"
+        },
+        "offset": [
+          0.0,
+          0.1
+        ]
+      },
+      {
+        "kind": "dim",
+        "a": [
+          30150.0,
+          6737.5,
+          1154.5
+        ],
+        "b": [
+          30150.0,
+          6737.5,
+          2348.5
+        ],
+        "offset": 0.08,
+        "text": {
+          "en": "1194 mm",
+          "cs": "1194 mm"
+        }
+      },
+      {
+        "kind": "dim",
+        "a": [
+          30150.0,
+          7237.5,
+          1152.5
+        ],
+        "b": [
+          30150.0,
+          7237.5,
+          1154.5
+        ],
+        "offset": 0.08,
+        "text": {
+          "en": "2.000 mm",
+          "cs": "2.000 mm"
+        }
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          30150.0,
+          6025.0,
+          -43.5
+        ],
+        "text": {
+          "en": "floor -43.489 mm\nbottom cut",
+          "cs": "podlaha -43.489 mm\nšikmý řez"
+        },
+        "offset": [
+          -0.16,
+          -0.08
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          30150.0,
+          7950.0,
+          -23.3
+        ],
+        "text": {
+          "en": "floor -23.323 mm\nbottom cut",
+          "cs": "podlaha -23.323 mm\nšikmý řez"
+        },
+        "offset": [
+          0.14,
+          -0.08
+        ]
+      },
+      {
+        "kind": "dim",
+        "a": [
+          30150.0,
+          6025.0,
+          -80.0
+        ],
+        "b": [
+          30150.0,
+          7950.0,
+          -80.0
+        ],
+        "offset": -0.08,
+        "text": {
+          "en": "1925 mm",
+          "cs": "1925 mm"
+        }
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          30150.0,
+          7950.0,
+          1291.7
+        ],
+        "text": {
+          "en": "131 mm cut",
+          "cs": "řez 131 mm"
+        },
+        "offset": [
+          0.12,
+          0.0
+        ]
+      }
+    ],
+    "opacityDefault": 0,
+    "opacity": {
+      "tile": 1,
+      "grout": 1,
+      "drain": 1
+    }
+  },
+  {
+    "id": "bathroom-section-diagonal",
+    "projection": "ortho",
+    "verticalExaggeration": 10,
+    "title": {
+      "en": "Bathroom 1.20 — section on the fall\nvertical ×10, horizontal true",
+      "cs": "Koupelna 1.20 — řez po spádu\nsvisle ×10, vodorovně skutečně"
+    },
+    "project": "RD Šíma 1.NP",
+    "cuts": [
+      {
+        "normal": [
+          -0.6984315939659477,
+          0.0,
+          -0.7156768185083164
+        ],
+        "anchor": [
+          31187.5,
+          7037.5,
+          0.0
+        ]
+      }
+    ],
+    "camera": {
+      "target": [
+        31.1875,
+        -0.025,
+        -7.0375000000000005
+      ],
+      "position": [
+        38.275000000000006,
+        -0.025,
+        0.22499999999999876
+      ],
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "orthoFit": [
+        2.0295473633300607,
+        0.09
+      ]
+    },
+    "annotations": [
+      {
+        "kind": "line",
+        "points": [
+          [
+            32282.3,
+            8105.9,
+            0.0
+          ],
+          [
+            30092.7,
+            5969.1,
+            0.0
+          ]
+        ],
+        "dashed": true,
+        "color": "#c0392b"
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          31187.5,
+          7037.5,
+          8.0
+        ],
+        "text": {
+          "en": "elevation 0\nunsloped floor",
+          "cs": "výška 0\nnespádovaná podlaha"
+        },
+        "offset": [
+          0.0,
+          0.1
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          32225.0,
+          8050.0,
+          0.0
+        ],
+        "text": {
+          "en": "0 east jamb\n0.000 mm",
+          "cs": "0 východní ostění\n0.000 mm"
+        },
+        "offset": [
+          -0.02,
+          0.16
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          30150.0,
+          6025.0,
+          -43.5
+        ],
+        "text": {
+          "en": "drain\n-43.489 mm",
+          "cs": "vpusť\n-43.489 mm"
+        },
+        "offset": [
+          0.02,
+          -0.16
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          31187.5,
+          7037.5,
+          -21.7
+        ],
+        "text": {
+          "en": "1.500% along the diagonal\nfall -43.489 mm",
+          "cs": "1.500% po úhlopříčce\nspád -43.489 mm"
+        },
+        "offset": [
+          0.16,
+          -0.02
+        ]
+      }
+    ],
+    "opacityDefault": 0,
+    "opacity": {
+      "tile": 1,
+      "grout": 1,
+      "drain": 1
+    }
+  },
+  {
+    "id": "bathroom-section-door",
+    "projection": "ortho",
+    "verticalExaggeration": 10,
+    "title": {
+      "en": "Bathroom 1.20 — section along the door wall\nvertical ×10, horizontal true",
+      "cs": "Koupelna 1.20 — řez podél dveřní stěny\nsvisle ×10, vodorovně skutečně"
+    },
+    "project": "RD Šíma 1.NP",
+    "cuts": [
+      {
+        "normal": [
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "anchor": [
+          31237.5,
+          7900.0,
+          0.0
+        ]
+      }
+    ],
+    "camera": {
+      "target": [
+        31.2375,
+        -0.015,
+        -7.9
+      ],
+      "position": [
+        31.2375,
+        -0.015,
+        -0.15000000000000036
+      ],
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "orthoFit": [
+        1.55,
+        0.16
+      ]
+    },
+    "annotations": [
+      {
+        "kind": "line",
+        "points": [
+          [
+            30070.0,
+            7900.0,
+            0.0
+          ],
+          [
+            32405.0,
+            7900.0,
+            0.0
+          ]
+        ],
+        "dashed": true,
+        "color": "#c0392b"
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          31237.5,
+          7900.0,
+          8.0
+        ],
+        "text": {
+          "en": "elevation 0\nunsloped floor",
+          "cs": "výška 0\nnespádovaná podlaha"
+        },
+        "offset": [
+          0.0,
+          0.12
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          30150.0,
+          7900.0,
+          -23.8
+        ],
+        "text": {
+          "en": "west\n-23.847 mm",
+          "cs": "západ\n-23.847 mm"
+        },
+        "offset": [
+          -0.12,
+          -0.08
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          32325.0,
+          7900.0,
+          -0.5
+        ],
+        "text": {
+          "en": "east\n-0.498 mm",
+          "cs": "východ\n-0.498 mm"
+        },
+        "offset": [
+          0.12,
+          -0.08
+        ]
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          31237.5,
+          7900.0,
+          -12.2
+        ],
+        "text": {
+          "en": "1.0735% east–west\ndoor leaf fall 9.662 mm / 900 mm",
+          "cs": "1.0735% východ–západ\nspád na křídle 9.662 mm / 900 mm"
+        },
+        "offset": [
+          0.0,
+          -0.16
+        ]
+      }
+    ],
+    "opacityDefault": 0,
+    "opacity": {
+      "tile": 1,
+      "grout": 1,
+      "drain": 1
+    }
+  }
+]
