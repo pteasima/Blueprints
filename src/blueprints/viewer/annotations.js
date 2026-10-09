@@ -304,7 +304,7 @@ export function createAnnotations(opts) {
         const text = resolveText(ann.text, locale);
         if (!text) continue;
         const sprite = makeTextLabel(text.split("\n"), ink, px);
-        const tips = calloutTips(ann);
+        const tips = ann.leader === false ? [] : calloutTips(ann);
         const leaders = tips.map(() => makeFatLine(color));
         group.add(...leaders, sprite);
         items.push({

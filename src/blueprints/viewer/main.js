@@ -844,6 +844,11 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     }
 
     maybeSpawnDraftFromCamera();
+    const edge = spec.edges;
+    if (edge === "none" || edge === "transparent" || edge === "opaque") {
+      edgeMode = edge;
+      refreshEdges();
+    }
     annotations.setSpec(spec);
     syncDrawingButton();
     syncLabelButton();
