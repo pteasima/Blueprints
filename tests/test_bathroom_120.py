@@ -10,8 +10,9 @@ sys.path.insert(0, str(ROOT / "models"))
 
 from bathroom_120 import (  # noqa: E402
     LABEL_DRAIN,
+    LABEL_FLOOR,
     LABEL_GROUT,
-    LABEL_TILE,
+    LABEL_WALL,
     ROOM_DEPTH,
     ROOM_WIDTH,
     ROOM_X0,
@@ -380,7 +381,7 @@ def test_bottom_course_is_full_height_at_the_drain_and_level_on_top():
 def test_solids_sit_in_the_room_with_the_drain_in_the_southwest():
     solids = parts()
     labels = {solid.label for solid in solids}
-    assert labels == {LABEL_TILE, LABEL_GROUT, LABEL_DRAIN}
+    assert labels == {LABEL_FLOOR, LABEL_WALL, LABEL_GROUT, LABEL_DRAIN}
     drain = next(solid for solid in solids if solid.label == LABEL_DRAIN)
     box = drain.bounding_box()
     assert box.min.X == pytest.approx(30.15 * 1000, abs=0.2)
@@ -388,7 +389,11 @@ def test_solids_sit_in_the_room_with_the_drain_in_the_southwest():
     assert box.max.X - box.min.X == pytest.approx(300.0, abs=0.5)
     assert box.max.Y - box.min.Y == pytest.approx(300.0, abs=0.5)
     assert box.max.Z < -30.0
-    tiles = [solid.bounding_box() for solid in solids if solid.label == LABEL_TILE]
+    tiles = [
+        solid.bounding_box()
+        for solid in solids
+        if solid.label in {LABEL_FLOOR, LABEL_WALL}
+    ]
     assert min(box.min.Z for box in tiles) > drain.bounding_box().min.Z
     assert max(box.max.Z for box in tiles) == pytest.approx(HEAD_MM, abs=0.05)
     assert min(box.min.X for box in tiles) == pytest.approx(30.15 * 1000, abs=0.5)

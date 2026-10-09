@@ -75,8 +75,9 @@ from yaml_ifc.yamlio import load as load_yaml_ifc
 
 from bathroom_120 import (
     LABEL_DRAIN,
+    LABEL_FLOOR,
     LABEL_GROUT,
-    LABEL_TILE,
+    LABEL_WALL,
     head_mm as bathroom_head_mm,
     parts as bathroom_parts,
     scenes as bathroom_scenes,
@@ -564,7 +565,9 @@ def build(path: Path | None = None, furnishings_path: Path | None = None):
             "footprints": len(rings),
             "furnishings": len(furnishing_parts),
             "furnishings_commit": SOURCE_COMMIT,
-            "bathroom_tiles": sum(1 for part in bath_parts if part.label == LABEL_TILE),
+            "bathroom_tiles": sum(
+                1 for part in bath_parts if part.label in {LABEL_FLOOR, LABEL_WALL}
+            ),
             "bathroom_grout": sum(1 for part in bath_parts if part.label == LABEL_GROUT),
             "bathroom_head_mm": round(bathroom_head_mm(), 3),
         },
@@ -859,7 +862,7 @@ def part_groups() -> list[dict]:
         },
         {
             "id": "bathroom",
-            "children": [LABEL_TILE, LABEL_GROUT, LABEL_DRAIN],
+            "children": [LABEL_FLOOR, LABEL_WALL, LABEL_GROUT, LABEL_DRAIN],
         },
     ]
 

@@ -35,9 +35,12 @@ SOURCE_PATH = (
     Path(__file__).resolve().parents[1] / "inputs" / "ground_floor" / "bathroom-1.20.yaml"
 )
 
-LABEL_TILE = "tile"
+# Floor and wall stay separate so a plate can show one without the other.
+LABEL_FLOOR = "floor_tile"
+LABEL_WALL = "wall_tile"
 LABEL_GROUT = "grout"
 LABEL_DRAIN = "drain"
+TILE_THICKNESS_MM = 8.5
 
 MM = 1000.0
 # Behind the tile face, so a 2 mm joint is a dark line rather than a coplanar seam.
@@ -265,7 +268,8 @@ def layout(doc: dict | None = None) -> dict:
 
 
 def _color(label: str) -> Color:
-    rgb = SECTION_LAYERS[label]["fill"]
+    style = SECTION_LAYERS.get(label) or SECTION_LAYERS["tile"]
+    rgb = style["fill"]
     return Color(rgb[0] / 255.0, rgb[1] / 255.0, rgb[2] / 255.0)
 
 
@@ -350,8 +354,11 @@ def parts(doc: dict | None = None) -> list:
         return z_at(x, y) - GROUT_RECESS_M
 
     for ring in _merged_rings(info["floor_tiles"]):
-        solids.append(_paint(_floor_solid(ring, z_at, thickness, gradient), LABEL_TILE))
-    for ring in _merged_rings(info["floor_grout"]):
+        solids.append(_paint(_floor_solid(ring, z_at, thickness, gradient), LABEL_FLOOR))
+    # Each joint stays its own strip. Unioning them makes one polygon with a
+    # hole per enclosed tile; dropping the holes fills the middle of the room
+    # and draws that 2×2 block as a slab.
+    for ring in info["floor_grout"]:
         solids.append(
             _paint(_floor_solid(ring, z_grout, thickness, gradient), LABEL_GROUT)
         )
@@ -362,7 +369,7 @@ def parts(doc: dict | None = None) -> list:
         thick = float(tile["Thickness"])
         for piece in wall["result"]["tiles"]:
             solids.append(
-                _paint(_wall_solid(piece["polygon"], frame, thick), LABEL_TILE)
+                _paint(_wall_solid(piece["polygon"], frame, thick), LABEL_WALL)
             )
         for piece in wall["result"]["grout"]:
             solids.append(
@@ -686,13 +693,16 @@ def _tx(en: str, cs: str) -> dict[str, str]:
     return {"en": en, "cs": cs}
 
 
-def _callout(anchor, en: str, cs: str, offset: tuple[float, float]) -> dict:
-    return {
+def _callout(anchor, en: str, cs: str, offset: tuple[float, float], *, leader: bool = True) -> dict:
+    item = {
         "kind": "callout",
         "anchor": [round(float(v), 1) for v in anchor],
         "text": _tx(en, cs),
         "offset": [round(float(offset[0]), 3), round(float(offset[1]), 3)],
     }
+    if not leader:
+        item["leader"] = False
+    return item
 
 
 def _dim(a, b, offset: float, en: str | None = None, cs: str | None = None) -> dict:
@@ -781,11 +791,48 @@ def drawing_figures(info: dict | None = None) -> dict:
     }
 
 
-def _tile_only() -> dict:
-    return {
-        "opacityDefault": 0,
-        "opacity": {LABEL_TILE: 1, LABEL_GROUT: 1, LABEL_DRAIN: 1},
-    }
+def _plate(shown: dict) -> dict:
+    """Line plates: no mesh edges, and only the parts named in ``shown``."""
+    opacity = {LABEL_FLOOR: 0, LABEL_WALL: 0, LABEL_GROUT: 0, LABEL_DRAIN: 0}
+    opacity.update(shown)
+    return {"opacityDefault": 0, "opacity": opacity, "edges": "none"}
+
+
+def _segment(a, b) -> dict:
+    return _line((a, b))
+
+
+def _floor_grid(info: dict) -> list[dict]:
+    """One stroke per joint, plus the room outline and the drain."""
+    lines = [_line(info["footprint"] and [
+        (float(x) * MM, float(y) * MM, 2.0) for x, y in (*info["footprint"], info["footprint"][0])
+    ])]
+    for ring in info["floor_grout"]:
+        xs = [float(p[0]) for p in ring]
+        ys = [float(p[1]) for p in ring]
+        width = (max(xs) - min(xs)) * MM
+        depth = (max(ys) - min(ys)) * MM
+        if min(width, depth) > 10.0:
+            continue
+        if width < depth:
+            x = (min(xs) + max(xs)) / 2.0 * MM
+            lines.append(_segment((x, min(ys) * MM, 2.0), (x, max(ys) * MM, 2.0)))
+        else:
+            y = (min(ys) + max(ys)) / 2.0 * MM
+            lines.append(_segment((min(xs) * MM, y, 2.0), (max(xs) * MM, y, 2.0)))
+    x0, y0 = ROOM_X0 * MM, ROOM_Y0 * MM
+    lines.append(
+        _line(
+            [
+                (x0, y0, 4.0),
+                (x0 + 300.0, y0, 4.0),
+                (x0 + 300.0, y0 + 300.0, 4.0),
+                (x0, y0 + 300.0, 4.0),
+                (x0, y0, 4.0),
+            ]
+        )
+    )
+    return lines
 
 
 def _plan_drawing(info: dict) -> dict:
@@ -822,21 +869,36 @@ def _plan_drawing(info: dict) -> dict:
                 f"spára podlahy {fig['floor_joint_y_mm']} mm S–J\n"
                 f"modul {fig['plan_pitch_mm']} mm"
             ),
-            (0.38, 0.16),
+            (0.38, 0.18),
+            leader=False,
         ),
-        _spot(plane, ROOM_X0, ROOM_Y0, "Drain / SW", "Vpusť / JZ", (-0.16, -0.10)),
-        _spot(plane, ROOM_X1, ROOM_Y0, "SE", "JV", (0.12, -0.10)),
-        _spot(plane, ROOM_X1, ROOM_Y1, "NE", "SV", (0.12, 0.08)),
-        _spot(plane, ROOM_X0, ROOM_Y1, "NW", "SZ", (-0.14, 0.08)),
-        _spot(plane, ZERO_X, ZERO_Y, "0 east jamb", "0 východní ostění", (0.10, 0.12)),
-        _spot(plane, DOOR_WEST_X, ZERO_Y, "West jamb", "Západní ostění", (-0.16, 0.12)),
-        _dim((x0, y0 - 220.0, 0.0), (x0 + tile_x, y0 - 220.0, 0.0), -0.05, "596 mm", "596 mm"),
-        _dim((x0, y0, 0.0), (x1, y0, 0.0), -0.12, "2175 mm", "2175 mm"),
-        _dim((x0, y0, 0.0), (x0, y1, 0.0), -0.10, "1925 mm", "1925 mm"),
-        _dim((x1 - 381.0, y1 + 40.0, 0.0), (x1, y1 + 40.0, 0.0), 0.06, "381 mm cut", "381 mm řez"),
-        _dim((x1 + 40.0, y1 - 131.0, 0.0), (x1 + 40.0, y1, 0.0), 0.07, "131 mm cut", "131 mm řez"),
-        _dim((DOOR_WEST_X * MM, y1, 0.0), (ZERO_X * MM, y1, 0.0), 0.05, "900 mm door", "900 mm dveře"),
-        _dim((ZERO_X * MM, y1, 0.0), (ZERO_X * MM, y_leaf, 0.0), 0.08, "100 mm to leaf", "100 mm k křídlu"),
+        # Into the room, clear of the scale bar in the southwest corner.
+        _spot(plane, ROOM_X0, ROOM_Y0, "Drain / SW 300×300", "Vpusť / JZ 300×300", (0.16, 0.08)),
+        _spot(plane, ROOM_X1, ROOM_Y0, "SE", "JV", (0.14, -0.06)),
+        _spot(plane, ROOM_X1, ROOM_Y1, "NE", "SV", (0.14, 0.10)),
+        _spot(plane, ROOM_X0, ROOM_Y1, "NW", "SZ", (-0.16, 0.10)),
+        _spot(plane, ZERO_X, ZERO_Y, "0 east jamb", "0 východní ostění", (0.12, 0.14)),
+        _spot(plane, DOOR_WEST_X, ZERO_Y, "West jamb", "Západní ostění", (-0.18, 0.14)),
+        _dim((x0, y0 - 280.0, 0.0), (x0 + tile_x, y0 - 280.0, 0.0), -0.04, "596 mm", "596 mm"),
+        _dim((x0, y0, 0.0), (x1, y0, 0.0), -0.14, "2175 mm", "2175 mm"),
+        _dim((x0, y0, 0.0), (x0, y1, 0.0), -0.12, "1925 mm", "1925 mm"),
+        # On the cut strips themselves: east column 381 mm, north row 131 mm.
+        _dim(
+            (x1 - 381.0, y0 + 280.0, 8.0),
+            (x1, y0 + 280.0, 8.0),
+            0.035,
+            "381 mm",
+            "381 mm",
+        ),
+        _dim(
+            (x0 + 280.0, y1 - 131.0, 8.0),
+            (x0 + 280.0, y1, 8.0),
+            -0.04,
+            "131 mm",
+            "131 mm",
+        ),
+        _dim((DOOR_WEST_X * MM, y_leaf + 80.0, 0.0), (ZERO_X * MM, y_leaf + 80.0, 0.0), 0.05, "900 mm door", "900 mm dveře"),
+        _dim((ZERO_X * MM + 40.0, y1, 0.0), (ZERO_X * MM + 40.0, y_leaf, 0.0), 0.06, "100 mm to leaf", "100 mm k křídlu"),
         _line(
             [(ZERO_X * MM, y_leaf, 30.0), (x0, y0, 30.0)],
             arrow=True,
@@ -851,7 +913,8 @@ def _plan_drawing(info: dict) -> dict:
                 f"{fig['percent_diagonal']} spád k vpusti\n"
                 f"{fig['percent_x']} východ–západ · {fig['percent_y']} sever–jih"
             ),
-            (0.02, -0.16),
+            (0.32, -0.06),
+            leader=False,
         ),
     ]
     spec = {
@@ -859,12 +922,63 @@ def _plan_drawing(info: dict) -> dict:
         "projection": "ortho",
         "title": _tx("Bathroom 1.20 — floor tiles", "Koupelna 1.20 — dlažba"),
         "project": PROJECT,
-        "cuts": [{"normal": [0.0, -1.0, 0.0], "anchor": [cx, cy, 120.0]}],
         "camera": pose,
-        "annotations": notes,
+        "annotations": [*_floor_grid(info), *notes],
     }
-    spec.update(_tile_only())
+    spec.update(_plate({LABEL_FLOOR: 1, LABEL_DRAIN: 1}))
     return spec
+
+
+def _wall_edges(frame, tiles) -> list[dict]:
+    """Each tile edge once, so a joint is the same weight as the outline."""
+    seen = set()
+    lines = []
+    for tile in tiles:
+        polygon = tile["polygon"]
+        count = len(polygon)
+        for index in range(count):
+            a = polygon[index]
+            b = polygon[(index + 1) % count]
+            key = tuple(
+                sorted(
+                    (
+                        (round(float(a[0]), 4), round(float(a[1]), 4)),
+                        (round(float(b[0]), 4), round(float(b[1]), 4)),
+                    )
+                )
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+
+            def at(point, frame=frame):
+                return (
+                    (frame["start"][0] + frame["dx"] * float(point[0])) * MM,
+                    (frame["start"][1] + frame["dy"] * float(point[0])) * MM,
+                    float(point[1]) * MM,
+                )
+
+            lines.append(_segment(at(a), at(b)))
+    return lines
+
+
+def _wall_cuts(frame) -> list[dict]:
+    """Keep only the tile thickness, so the floor and the far wall stay out."""
+    nx, ny = (float(v) for v in frame["normal"])
+    length = float(frame["length"])
+    mx = (frame["start"][0] + frame["dx"] * length / 2.0) * MM
+    my = (frame["start"][1] + frame["dy"] * length / 2.0) * MM
+    room = TILE_THICKNESS_MM + 1.0
+    return [
+        {
+            "normal": [-nx, 0.0, ny],
+            "anchor": [mx + nx * room, my + ny * room, 1200.0],
+        },
+        {
+            "normal": [nx, 0.0, -ny],
+            "anchor": [mx - nx * 1.0, my - ny * 1.0, 1200.0],
+        },
+    ]
 
 
 def _elevation_drawing(info: dict, wall_id: str) -> dict:
@@ -874,7 +988,6 @@ def _elevation_drawing(info: dict, wall_id: str) -> dict:
     levels = info["levels"]
     head = levels["head"] * MM
     course_joint_z = (levels["bottom_top"] + WALL_JOINT_M) * MM
-    bottom_top = levels["bottom_top"] * MM
     by_id = {wall["id"]: wall for wall in info["walls"]}
     frame = by_id[wall_id]["result"]["frame"]
     length = frame["length"] * MM
@@ -902,45 +1015,43 @@ def _elevation_drawing(info: dict, wall_id: str) -> dict:
         frame["start"][1] + frame["dy"] * frame["length"],
     )
     z1 = _z_mm(plane, end[0], end[1])
+    cut_s = frame["length"] - cut_mm / MM
     notes = [
         _callout(
-            (mx, my, head + 40.0),
+            (mx, my, head + 80.0),
             f"level top {fig['head_mm']} mm\n2 × 1194 mm, joint {fig['wall_joint_mm']} mm",
             f"rovný vrch {fig['head_mm']} mm\n2 × 1194 mm, spára {fig['wall_joint_mm']} mm",
-            (0.0, 0.10),
+            (0.0, 0.12),
+            leader=False,
         ),
-        _dim(station(mid - 0.25, course_joint_z), station(mid - 0.25, head), 0.08, "1194 mm", "1194 mm"),
-        _dim(
-            station(mid + 0.25, bottom_top),
-            station(mid + 0.25, course_joint_z),
-            0.08,
-            f"{fig['wall_joint_mm']} mm",
-            f"{fig['wall_joint_mm']} mm",
-        ),
+        _dim(station(-0.06, course_joint_z), station(-0.06, head), -0.06, "1194 mm", "1194 mm"),
         _callout(
-            (frame["start"][0] * MM, frame["start"][1] * MM, z0),
+            station(0.0, z0 - 40.0),
             f"floor {_mm_text(z0 / MM, signed=True)} mm\nbottom cut",
             f"podlaha {_mm_text(z0 / MM, signed=True)} mm\nšikmý řez",
-            (-0.16, -0.08),
+            (-0.14, -0.10),
+            leader=False,
         ),
         _callout(
-            (end[0] * MM, end[1] * MM, z1),
+            station(frame["length"], z1 - 40.0),
             f"floor {_mm_text(z1 / MM, signed=True)} mm\nbottom cut",
             f"podlaha {_mm_text(z1 / MM, signed=True)} mm\nšikmý řez",
-            (0.14, -0.08),
+            (0.14, -0.10),
+            leader=False,
         ),
         _dim(
-            (frame["start"][0] * MM, frame["start"][1] * MM, -80.0),
-            (end[0] * MM, end[1] * MM, -80.0),
-            -0.08,
+            station(0.0, -120.0),
+            station(frame["length"], -120.0),
+            -0.06,
             f"{length:.0f} mm",
             f"{length:.0f} mm",
         ),
-        _callout(
-            (end[0] * MM, end[1] * MM, head * 0.55),
-            f"{cut_mm:.0f} mm cut",
-            f"řez {cut_mm:.0f} mm",
-            (0.12, 0.0),
+        _dim(
+            station(cut_s, -40.0),
+            station(frame["length"], -40.0),
+            -0.045,
+            f"{cut_mm:.0f} mm",
+            f"{cut_mm:.0f} mm",
         ),
     ]
     spec = {
@@ -948,10 +1059,11 @@ def _elevation_drawing(info: dict, wall_id: str) -> dict:
         "projection": "ortho",
         "title": _tx(f"Bathroom 1.20 — {name_en}", f"Koupelna 1.20 — {name_cs}"),
         "project": PROJECT,
+        "cuts": _wall_cuts(frame),
         "camera": pose,
-        "annotations": notes,
+        "annotations": [*_wall_edges(frame, by_id[wall_id]["result"]["tiles"]), *notes],
     }
-    spec.update(_tile_only())
+    spec.update(_plate({LABEL_WALL: 1}))
     return spec
 
 
@@ -964,46 +1076,78 @@ def _datum_line(a_xy, b_xy) -> dict:
     )
 
 
+def _slice(origin, normal_gltf, along_cad, gap_mm: float) -> list[dict]:
+    """Two planes `gap_mm` apart. `along_cad` is the CAD plan step of `normal_gltf`."""
+    ox, oy, oz = origin
+    ax, ay = along_cad
+    return [
+        {"normal": [float(v) for v in normal_gltf], "anchor": [ox, oy, oz]},
+        {
+            "normal": [-float(normal_gltf[0]), -float(normal_gltf[1]), -float(normal_gltf[2])],
+            "anchor": [ox + ax * gap_mm, oy + ay * gap_mm, oz],
+        },
+    ]
+
+
 def _section_diagonal(info: dict) -> dict:
-    plane = info["plane"]
+    """Orthographic slice on the fall. Walls stay out; the tile is the band."""
     fig = drawing_figures(info)
     x0, y0 = ZERO_X * MM, ZERO_Y * MM
     x1, y1 = ROOM_X0 * MM, ROOM_Y0 * MM
     dx, dy = x1 - x0, y1 - y0
     length = (dx * dx + dy * dy) ** 0.5
-    # Look horizontally, square to the diagonal, so the fall lies in the picture.
     ux, uy = dx / length, dy / length
-    # Perpendicular to the glTF diagonal (ux, 0, −uy).
+    # Perpendicular to the glTF diagonal (ux, 0, −uy). CAD step of that look is (uy, −ux).
     look = (uy, 0.0, ux)
     mid_x = (x0 + x1) / 2.0
     mid_y = (y0 + y1) / 2.0
-    pose = _ortho_pose((mid_x, mid_y, -25.0), look, (0.0, 1.0, 0.0), length / MM * 0.70, 0.09)
-    z_drain = _z_mm(plane, ROOM_X0, ROOM_Y0)
+    pose = _ortho_pose((mid_x, mid_y, -15.0), look, (0.0, 1.0, 0.0), length / MM * 0.62, 0.12)
+    z_drain = _z_mm(info["plane"], ROOM_X0, ROOM_Y0)
     notes = [
-        _datum_line((x0 - ux * 80.0, y0 - uy * 80.0), (x1 + ux * 80.0, y1 + uy * 80.0)),
+        _datum_line((x0 - ux * 120.0, y0 - uy * 120.0), (x1 + ux * 120.0, y1 + uy * 120.0)),
+        _segment((x0, y0, 0.0), (x1, y1, z_drain)),
+        _segment((x0, y0, -TILE_THICKNESS_MM), (x1, y1, z_drain - TILE_THICKNESS_MM)),
         _callout(
-            (mid_x, mid_y, 8.0),
-            "elevation 0\nunsloped floor",
-            "výška 0\nnespádovaná podlaha",
-            (0.0, 0.10),
+            (mid_x, mid_y, 18.0),
+            "elevation 0, unsloped floor",
+            "výška 0, nespádovaná podlaha",
+            (0.0, 0.05),
+            leader=False,
         ),
         _callout(
-            (x0, y0, 0.0),
-            f"0 east jamb\n{fig['zero_mm']} mm",
-            f"0 východní ostění\n{fig['zero_mm']} mm",
-            (-0.02, 0.16),
+            (x0, y0, 12.0),
+            f"0 east jamb {fig['zero_mm']} mm",
+            f"0 východní ostění {fig['zero_mm']} mm",
+            (-0.02, 0.08),
+            leader=False,
         ),
         _callout(
-            (x1, y1, z_drain),
-            f"drain\n{fig['drain_mm']} mm",
-            f"vpusť\n{fig['drain_mm']} mm",
-            (0.02, -0.16),
+            (x1, y1, z_drain - 22.0),
+            f"drain {fig['drain_mm']} mm",
+            f"vpusť {fig['drain_mm']} mm",
+            (0.02, -0.06),
+            leader=False,
         ),
         _callout(
-            (mid_x, mid_y, z_drain / 2.0),
-            f"{fig['percent_diagonal']} along the diagonal\nfall {fig['drain_mm']} mm",
-            f"{fig['percent_diagonal']} po úhlopříčce\nspád {fig['drain_mm']} mm",
-            (0.16, -0.02),
+            (mid_x, mid_y, 36.0),
+            f"{fig['percent_diagonal']} along the diagonal, fall {fig['drain_mm']} mm",
+            f"{fig['percent_diagonal']} po úhlopříčce, spád {fig['drain_mm']} mm",
+            (0.0, 0.05),
+            leader=False,
+        ),
+        _callout(
+            (mid_x + (x0 - mid_x) * 0.55, mid_y + (y0 - mid_y) * 0.55, 42.0),
+            f"NE corner {fig['ne_mm']} mm",
+            f"roh SV {fig['ne_mm']} mm",
+            (0.0, 0.04),
+            leader=False,
+        ),
+        _callout(
+            (mid_x, mid_y, z_drain / 2.0 - 18.0),
+            "tile 8.5 mm; screed thickness not measured",
+            "dlažba 8,5 mm; tloušťka potěru není změřená",
+            (0.0, -0.05),
+            leader=False,
         ),
     ]
     spec = {
@@ -1015,11 +1159,11 @@ def _section_diagonal(info: dict) -> dict:
             "Koupelna 1.20 — řez po spádu\nsvisle ×10, vodorovně skutečně",
         ),
         "project": PROJECT,
-        "cuts": [{"normal": list(look), "anchor": [mid_x, mid_y, 0.0]}],
+        "cuts": _slice((mid_x, mid_y, 0.0), look, (uy, -ux), 25.0),
         "camera": pose,
         "annotations": notes,
     }
-    spec.update(_tile_only())
+    spec.update(_plate({LABEL_FLOOR: 1}))
     return spec
 
 
@@ -1032,32 +1176,47 @@ def _section_door(info: dict) -> dict:
     x1 = ROOM_X1 * MM
     z0 = _z_mm(plane, ROOM_X0, y / MM)
     z1 = _z_mm(plane, ROOM_X1, y / MM)
-    pose = _ortho_pose(((x0 + x1) / 2.0, y, -15.0), (0.0, 0.0, -1.0), (0.0, 1.0, 0.0), 1.55, 0.16)
+    pose = _ortho_pose(((x0 + x1) / 2.0, y, -12.0), (0.0, 0.0, -1.0), (0.0, 1.0, 0.0), 1.45, 0.11)
+    west = _mm_text(z0 / MM, signed=True)
+    east = _mm_text(z1 / MM, signed=True)
     notes = [
         _datum_line((x0 - 80.0, y), (x1 + 80.0, y)),
+        _segment((x0, y, z0), (x1, y, z1)),
+        _segment((x0, y, z0 - TILE_THICKNESS_MM), (x1, y, z1 - TILE_THICKNESS_MM)),
         _callout(
-            ((x0 + x1) / 2.0, y, 8.0),
-            "elevation 0\nunsloped floor",
-            "výška 0\nnespádovaná podlaha",
-            (0.0, 0.12),
+            ((x0 + x1) / 2.0, y, 16.0),
+            "elevation 0, unsloped floor",
+            "výška 0, nespádovaná podlaha",
+            (0.0, 0.05),
+            leader=False,
         ),
         _callout(
-            (x0, y, z0),
-            f"west\n{_mm_text(z0 / MM, signed=True)} mm",
-            f"západ\n{_mm_text(z0 / MM, signed=True)} mm",
-            (-0.12, -0.08),
+            (x0, y, 14.0),
+            f"west {west} mm",
+            f"západ {west} mm",
+            (-0.06, 0.07),
+            leader=False,
         ),
         _callout(
-            (x1, y, z1),
-            f"east\n{_mm_text(z1 / MM, signed=True)} mm",
-            f"východ\n{_mm_text(z1 / MM, signed=True)} mm",
-            (0.12, -0.08),
+            (x1, y, 14.0),
+            f"east {east} mm",
+            f"východ {east} mm",
+            (0.06, 0.07),
+            leader=False,
         ),
         _callout(
-            ((x0 + x1) / 2.0, y, (z0 + z1) / 2.0),
-            f"{fig['percent_x']} east–west\ndoor leaf fall {fig['door_fall_mm']} mm / 900 mm",
-            f"{fig['percent_x']} východ–západ\nspád na křídle {fig['door_fall_mm']} mm / 900 mm",
-            (0.0, -0.16),
+            ((x0 + x1) / 2.0, y, 34.0),
+            f"{fig['percent_x']} east–west, door leaf fall {fig['door_fall_mm']} mm / 900 mm",
+            f"{fig['percent_x']} východ–západ, spád na křídle {fig['door_fall_mm']} mm / 900 mm",
+            (0.0, 0.04),
+            leader=False,
+        ),
+        _callout(
+            ((x0 + x1) / 2.0, y, (z0 + z1) / 2.0 - 16.0),
+            "tile 8.5 mm; screed thickness not measured",
+            "dlažba 8,5 mm; tloušťka potěru není změřená",
+            (0.0, -0.05),
+            leader=False,
         ),
     ]
     spec = {
@@ -1069,11 +1228,11 @@ def _section_door(info: dict) -> dict:
             "Koupelna 1.20 — řez podél dveřní stěny\nsvisle ×10, vodorovně skutečně",
         ),
         "project": PROJECT,
-        "cuts": [{"normal": [0.0, 0.0, -1.0], "anchor": [(x0 + x1) / 2.0, y, 0.0]}],
+        "cuts": _slice(((x0 + x1) / 2.0, y, 0.0), (0.0, 0.0, -1.0), (0.0, 1.0), 20.0),
         "camera": pose,
         "annotations": notes,
     }
-    spec.update(_tile_only())
+    spec.update(_plate({LABEL_FLOOR: 1}))
     return spec
 
 
@@ -1143,7 +1302,7 @@ def part_groups() -> list[dict]:
     return [
         {
             "id": "bathroom",
-            "children": [LABEL_TILE, LABEL_GROUT, LABEL_DRAIN],
+            "children": [LABEL_FLOOR, LABEL_WALL, LABEL_GROUT, LABEL_DRAIN],
         }
     ]
 
@@ -1158,7 +1317,9 @@ def build(doc: dict | None = None):
     meta = {
         "kind": "solid",
         "derived": {
-            "tiles": sum(1 for solid in solids if solid.label == LABEL_TILE),
+            "tiles": sum(
+                1 for solid in solids if solid.label in {LABEL_FLOOR, LABEL_WALL}
+            ),
             "head_mm": round(head_mm(info), 3),
             "z_min_mm": round(info["z_min"] * MM, 3),
             "z_max_mm": round(info["z_max"] * MM, 3),

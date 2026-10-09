@@ -21,7 +21,8 @@
   {
     "id": "bathroom",
     "children": [
-      "tile",
+      "floor_tile",
+      "wall_tile",
       "grout",
       "drain"
     ]
