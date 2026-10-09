@@ -453,7 +453,28 @@ def test_drawing_plates_quote_the_schedule():
         "bathroom-section-door",
     }
     assert plates <= set(specs)
-    plan = _annotation_text(specs["bathroom-plan"])
+    for plate_id in plates:
+        assert specs[plate_id]["annotationColor"] == "#1d4ed8"
+        assert specs[plate_id]["edges"] == "none"
+    plan_spec = specs["bathroom-plan"]
+    plan = _annotation_text(plan_spec)
+    # The north–south dimension sits outside the west wall. A negative
+    # offset draws it inside, as a second stroke beside the first joint.
+    north_south = next(
+        ann
+        for ann in plan_spec["annotations"]
+        if ann.get("kind") == "dim" and (ann.get("text") or {}).get("en") == "1925 mm"
+    )
+    assert north_south["offset"] > 0
+    # The east cut is a label on the strip, not a dimension line across it.
+    assert "381 mm" in plan
+    assert "131 mm" in plan
+    for ann in plan_spec["annotations"]:
+        if ann.get("kind") != "dim":
+            continue
+        xs = (ann["a"][0], ann["b"][0])
+        ys = (ann["a"][1], ann["b"][1])
+        assert not (min(xs) > 32.325 * 1000 - 381 and abs(ys[0] - ys[1]) < 1)
     assert "2.000 mm" in plan
     assert "2.034 mm" in plan
     assert "2.033 mm" in plan
@@ -469,8 +490,20 @@ def test_drawing_plates_quote_the_schedule():
         assert "bottom cut" in text
     for section_id in ("bathroom-section-diagonal", "bathroom-section-door"):
         spec = specs[section_id]
+        text = _annotation_text(spec)
         assert spec["verticalExaggeration"] == 10
-        assert "vertical ×10" in _annotation_text(spec)
+        assert "vertical ×10" in text
+        assert "10× vertical exaggeration" in text
+        assert "1:1" in text
+        band = [
+            ann
+            for ann in spec["annotations"]
+            if ann.get("kind") == "line"
+            and not ann.get("dashed")
+            and abs(abs(ann["points"][0][2] - ann["points"][1][2]) - 8.5 / 10) < 0.15
+        ]
+        # The true-scale strip's end caps are one tile thickness, unexaggerated.
+        assert band
         datum = [
             ann
             for ann in spec["annotations"]
@@ -479,3 +512,16 @@ def test_drawing_plates_quote_the_schedule():
         assert len(datum) == 1
         zs = [point[2] for point in datum[0]["points"]]
         assert zs == pytest.approx([0.0, 0.0], abs=1e-6)
+    diagonal = specs["bathroom-section-diagonal"]
+
+    def _anchor(fragment: str):
+        for ann in diagonal["annotations"]:
+            en = (ann.get("text") or {}).get("en") or ""
+            if fragment in en:
+                return ann["anchor"]
+        raise AssertionError(fragment)
+
+    fall = _anchor("fall ")
+    corner = _anchor("NE corner")
+    apart = ((fall[0] - corner[0]) ** 2 + (fall[1] - corner[1]) ** 2) ** 0.5
+    assert apart > 800

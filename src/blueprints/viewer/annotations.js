@@ -120,28 +120,32 @@ export function labelFontPx(canvas, ink) {
  * @param {"viewer" | "plate"} ink
  * @param {number} fontPx
  * @param {"center" | "topleft" | "bottomleft"} [anchor]
+ * @param {string | null} [fill] CSS colour for the glyphs. Null keeps the ink default.
+ * @param {number} [fontScale]
  */
-function makeTextLabel(lines, ink, fontPx, anchor = "center") {
+function makeTextLabel(lines, ink, fontPx, anchor = "center", fill = null, fontScale = 1) {
+  const scale = Number.isFinite(fontScale) && fontScale > 0 ? fontScale : 1;
+  const px = Math.max(8, Math.round(fontPx * scale));
   const clean = lines.map((l) => String(l)).filter((l) => l.length);
   const canvas = document.createElement("canvas");
   const measure = canvas.getContext("2d");
-  const font = `600 ${fontPx}px ${FONT_STACK}`;
-  const padX = Math.ceil(fontPx * 0.35);
-  const padY = Math.ceil(fontPx * 0.2);
-  const lineH = Math.ceil(fontPx * 1.25);
+  const font = `600 ${px}px ${FONT_STACK}`;
+  const padX = Math.ceil(px * 0.35);
+  const padY = Math.ceil(px * 0.2);
+  const lineH = Math.ceil(px * 1.25);
   if (measure) measure.font = font;
-  let maxW = fontPx;
+  let maxW = px;
   if (measure) {
     for (const line of clean) maxW = Math.max(maxW, measure.measureText(line).width);
   }
   const cssW = Math.ceil(maxW + padX * 2);
   const cssH = Math.ceil(Math.max(clean.length, 1) * lineH + padY * 2);
-  const scale = 2;
-  canvas.width = cssW * scale;
-  canvas.height = cssH * scale;
+  const raster = 2;
+  canvas.width = cssW * raster;
+  canvas.height = cssH * raster;
   const ctx = canvas.getContext("2d");
   if (ctx) {
-    ctx.scale(scale, scale);
+    ctx.scale(raster, raster);
     ctx.clearRect(0, 0, cssW, cssH);
     const plate = ink === "plate";
     ctx.font = font;
@@ -149,9 +153,9 @@ function makeTextLabel(lines, ink, fontPx, anchor = "center") {
     ctx.textBaseline = "middle";
     ctx.lineJoin = "round";
     ctx.miterLimit = 2;
-    ctx.lineWidth = Math.max(2, fontPx * 0.28);
+    ctx.lineWidth = Math.max(2, px * 0.28);
     ctx.strokeStyle = plate ? "#ffffff" : "rgba(0,0,0,0.92)";
-    ctx.fillStyle = plate ? "#141414" : "#f7f7f8";
+    ctx.fillStyle = fill || (plate ? "#141414" : "#f7f7f8");
     clean.forEach((line, i) => {
       const x = padX;
       const y = padY + lineH * i + lineH * 0.5;
@@ -177,7 +181,16 @@ function makeTextLabel(lines, ink, fontPx, anchor = "center") {
   mesh.userData.cssWidth = cssW;
   mesh.userData.cssHeight = cssH;
   mesh.userData.anchor = anchor;
+  mesh.userData.fill = fill;
+  mesh.userData.fontScale = scale;
   return mesh;
+}
+
+/**
+ * @param {number} color
+ */
+function hexColor(color) {
+  return `#${(color >>> 0).toString(16).padStart(6, "0")}`;
 }
 
 /**
@@ -258,6 +271,34 @@ export function createAnnotations(opts) {
     return ink === "plate" ? 0x141414 : 0xf2f2f4;
   }
 
+  /**
+   * Dimension and callout ink. Geometry lines stay on `inkColor` unless a
+   * line sets its own `color`. `annotationColor` is the plate's note colour.
+   * @param {object} ann
+   */
+  function noteColor(ann) {
+    if (ann && ann.color != null) return parseColor(ann.color, inkColor());
+    if (spec && spec.annotationColor != null) {
+      return parseColor(spec.annotationColor, inkColor());
+    }
+    return inkColor();
+  }
+
+  /**
+   * @param {object} ann
+   */
+  function noteFill(ann) {
+    return hexColor(noteColor(ann));
+  }
+
+  /**
+   * @param {object} ann
+   */
+  function noteScale(ann) {
+    const size = Number(ann && ann.size);
+    return Number.isFinite(size) && size > 0 ? size : 1;
+  }
+
   function disposeObject(obj) {
     obj.traverse((child) => {
       if (child.geometry) child.geometry.dispose();
@@ -303,9 +344,17 @@ export function createAnnotations(opts) {
       if (ann.kind === "callout" && Array.isArray(ann.anchor)) {
         const text = resolveText(ann.text, locale);
         if (!text) continue;
-        const sprite = makeTextLabel(text.split("\n"), ink, px);
-        const tips = ann.leader === false ? [] : calloutTips(ann);
-        const leaders = tips.map(() => makeFatLine(color));
+        const sprite = makeTextLabel(
+          text.split("\n"),
+          ink,
+          px,
+          "center",
+          noteFill(ann),
+          noteScale(ann),
+        );
+        const leaders = (ann.leader === false ? [] : calloutTips(ann)).map(() =>
+          makeFatLine(noteColor(ann)),
+        );
         group.add(...leaders, sprite);
         items.push({
           kind: "callout",
@@ -314,12 +363,20 @@ export function createAnnotations(opts) {
           data: ann,
         });
       } else if (ann.kind === "dim" && Array.isArray(ann.a) && Array.isArray(ann.b)) {
-        const sprite = makeTextLabel(["0"], ink, px);
-        const extA = makeFatLine(color);
-        const extB = makeFatLine(color);
-        const dim = makeFatLine(color);
-        const tickA = makeFatLine(color);
-        const tickB = makeFatLine(color);
+        const dimColor = noteColor(ann);
+        const sprite = makeTextLabel(
+          ["0"],
+          ink,
+          px,
+          "center",
+          hexColor(dimColor),
+          noteScale(ann),
+        );
+        const extA = makeFatLine(dimColor);
+        const extB = makeFatLine(dimColor);
+        const dim = makeFatLine(dimColor);
+        const tickA = makeFatLine(dimColor);
+        const tickB = makeFatLine(dimColor);
         group.add(extA, extB, dim, tickA, tickB, sprite);
         items.push({
           kind: "dim",
@@ -341,7 +398,16 @@ export function createAnnotations(opts) {
         }
         let sprite = null;
         const text = resolveText(ann.text, locale);
-        if (text) sprite = makeTextLabel(text.split("\n"), ink, px);
+        if (text) {
+          sprite = makeTextLabel(
+            text.split("\n"),
+            ink,
+            px,
+            "center",
+            hexColor(color),
+            noteScale(ann),
+          );
+        }
         group.add(...lines);
         if (sprite) group.add(sprite);
         items.push({ kind: "line", sprite, lines, data: ann });
@@ -449,7 +515,14 @@ export function createAnnotations(opts) {
    * @param {string[]} lines
    */
   function replaceSpriteText(sprite, lines) {
-    const next = makeTextLabel(lines, ink, bakedFont || fontPx(), sprite.userData.anchor);
+    const next = makeTextLabel(
+      lines,
+      ink,
+      bakedFont || fontPx(),
+      sprite.userData.anchor,
+      sprite.userData.fill,
+      sprite.userData.fontScale || 1,
+    );
     sprite.material.map?.dispose();
     sprite.material.dispose();
     sprite.material = next.material;

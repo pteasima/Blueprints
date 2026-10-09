@@ -1281,47 +1281,45 @@
           7950.0,
           0.0
         ],
-        "offset": -0.12,
+        "offset": 0.12,
         "text": {
           "en": "1925 mm",
           "cs": "1925 mm"
         }
       },
       {
-        "kind": "dim",
-        "a": [
-          31944.0,
+        "kind": "callout",
+        "anchor": [
+          32134.5,
           6305.0,
           8.0
         ],
-        "b": [
-          32325.0,
-          6305.0,
-          8.0
-        ],
-        "offset": 0.035,
         "text": {
           "en": "381 mm",
           "cs": "381 mm"
-        }
+        },
+        "offset": [
+          0.0,
+          0.0
+        ],
+        "leader": false
       },
       {
-        "kind": "dim",
-        "a": [
+        "kind": "callout",
+        "anchor": [
           30430.0,
-          7819.0,
+          7884.5,
           8.0
         ],
-        "b": [
-          30430.0,
-          7950.0,
-          8.0
-        ],
-        "offset": -0.04,
         "text": {
           "en": "131 mm",
           "cs": "131 mm"
-        }
+        },
+        "offset": [
+          0.0,
+          0.0
+        ],
+        "leader": false
       },
       {
         "kind": "dim",
@@ -1373,6 +1371,7 @@
             30.0
           ]
         ],
+        "color": "#1d4ed8",
         "arrow": true
       },
       {
@@ -1400,7 +1399,8 @@
       "grout": 0,
       "drain": 1
     },
-    "edges": "none"
+    "edges": "none",
+    "annotationColor": "#1d4ed8"
   },
   {
     "id": "bathroom-elev-e",
@@ -1951,7 +1951,7 @@
         },
         "offset": [
           0.0,
-          0.12
+          0.06
         ],
         "leader": false
       },
@@ -2051,7 +2051,8 @@
       "grout": 0,
       "drain": 0
     },
-    "edges": "none"
+    "edges": "none",
+    "annotationColor": "#1d4ed8"
   },
   {
     "id": "bathroom-elev-n",
@@ -2602,7 +2603,7 @@
         },
         "offset": [
           0.0,
-          0.12
+          0.06
         ],
         "leader": false
       },
@@ -2702,7 +2703,8 @@
       "grout": 0,
       "drain": 0
     },
-    "edges": "none"
+    "edges": "none",
+    "annotationColor": "#1d4ed8"
   },
   {
     "id": "bathroom-elev-s",
@@ -3253,7 +3255,7 @@
         },
         "offset": [
           0.0,
-          0.12
+          0.06
         ],
         "leader": false
       },
@@ -3353,7 +3355,8 @@
       "grout": 0,
       "drain": 0
     },
-    "edges": "none"
+    "edges": "none",
+    "annotationColor": "#1d4ed8"
   },
   {
     "id": "bathroom-elev-w",
@@ -3964,7 +3967,7 @@
         },
         "offset": [
           0.0,
-          0.12
+          0.06
         ],
         "leader": false
       },
@@ -4064,7 +4067,8 @@
       "grout": 0,
       "drain": 0
     },
-    "edges": "none"
+    "edges": "none",
+    "annotationColor": "#1d4ed8"
   },
   {
     "id": "bathroom-section-diagonal",
@@ -4119,7 +4123,7 @@
       ],
       "orthoFit": [
         1.7975990932351968,
-        0.12
+        0.14
       ]
     },
     "annotations": [
@@ -4171,11 +4175,106 @@
         ]
       },
       {
+        "kind": "line",
+        "points": [
+          [
+            31337.8,
+            7184.2,
+            -99.9
+          ],
+          [
+            31037.2,
+            6890.8,
+            -100.5
+          ]
+        ]
+      },
+      {
+        "kind": "line",
+        "points": [
+          [
+            31337.8,
+            7184.2,
+            -100.7
+          ],
+          [
+            31037.2,
+            6890.8,
+            -101.3
+          ]
+        ]
+      },
+      {
+        "kind": "line",
+        "points": [
+          [
+            31337.8,
+            7184.2,
+            -99.9
+          ],
+          [
+            31337.8,
+            7184.2,
+            -100.7
+          ]
+        ]
+      },
+      {
+        "kind": "line",
+        "points": [
+          [
+            31037.2,
+            6890.8,
+            -100.5
+          ],
+          [
+            31037.2,
+            6890.8,
+            -101.3
+          ]
+        ]
+      },
+      {
         "kind": "callout",
         "anchor": [
           31187.5,
           7037.5,
-          18.0
+          -99.5
+        ],
+        "text": {
+          "en": "1:1 true scale",
+          "cs": "1:1 skutečné měřítko"
+        },
+        "offset": [
+          0.0,
+          0.022
+        ],
+        "leader": false
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          31187.5,
+          7037.5,
+          -18.0
+        ],
+        "text": {
+          "en": "10× vertical exaggeration",
+          "cs": "10× svislé převýšení"
+        },
+        "offset": [
+          0.0,
+          -0.12
+        ],
+        "leader": false,
+        "size": 1.65
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          31187.5,
+          7037.5,
+          22.0
         ],
         "text": {
           "en": "elevation 0, unsloped floor",
@@ -4183,7 +4282,7 @@
         },
         "offset": [
           0.0,
-          0.05
+          0.07
         ],
         "leader": false
       },
@@ -4192,15 +4291,15 @@
         "anchor": [
           32225.0,
           8050.0,
-          12.0
+          14.0
         ],
         "text": {
           "en": "0 east jamb 0.000 mm",
           "cs": "0 východní ostění 0.000 mm"
         },
         "offset": [
-          -0.02,
-          0.08
+          -0.04,
+          0.09
         ],
         "leader": false
       },
@@ -4209,28 +4308,28 @@
         "anchor": [
           30150.0,
           6025.0,
-          -65.5
+          -61.5
         ],
         "text": {
           "en": "drain -43.489 mm",
           "cs": "vpusť -43.489 mm"
         },
         "offset": [
-          0.02,
-          -0.06
+          0.0,
+          -0.05
         ],
         "leader": false
       },
       {
         "kind": "callout",
         "anchor": [
-          31187.5,
-          7037.5,
-          36.0
+          30544.2,
+          6409.8,
+          -7.2
         ],
         "text": {
-          "en": "1.500% along the diagonal, fall -43.489 mm",
-          "cs": "1.500% po úhlopříčce, spád -43.489 mm"
+          "en": "1.500% along the diagonal\nfall -43.489 mm",
+          "cs": "1.500% po úhlopříčce\nspád -43.489 mm"
         },
         "offset": [
           0.0,
@@ -4241,17 +4340,17 @@
       {
         "kind": "callout",
         "anchor": [
-          31758.1,
-          7594.4,
-          42.0
+          31996.8,
+          7827.3,
+          36.0
         ],
         "text": {
           "en": "NE corner +0.026 mm",
           "cs": "roh SV +0.026 mm"
         },
         "offset": [
-          0.0,
-          0.04
+          0.06,
+          0.08
         ],
         "leader": false
       },
@@ -4260,7 +4359,7 @@
         "anchor": [
           31187.5,
           7037.5,
-          -39.7
+          -49.7
         ],
         "text": {
           "en": "tile 8.5 mm; screed thickness not measured",
@@ -4268,7 +4367,7 @@
         },
         "offset": [
           0.0,
-          -0.05
+          -0.07
         ],
         "leader": false
       }
@@ -4280,7 +4379,8 @@
       "grout": 0,
       "drain": 0
     },
-    "edges": "none"
+    "edges": "none",
+    "annotationColor": "#1d4ed8"
   },
   {
     "id": "bathroom-section-door",
@@ -4335,7 +4435,7 @@
       ],
       "orthoFit": [
         1.45,
-        0.11
+        0.13
       ]
     },
     "annotations": [
@@ -4387,15 +4487,161 @@
         ]
       },
       {
+        "kind": "line",
+        "points": [
+          [
+            31027.5,
+            7900.0,
+            -87.4
+          ],
+          [
+            31447.5,
+            7900.0,
+            -87.0
+          ]
+        ]
+      },
+      {
+        "kind": "line",
+        "points": [
+          [
+            31027.5,
+            7900.0,
+            -88.3
+          ],
+          [
+            31447.5,
+            7900.0,
+            -87.8
+          ]
+        ]
+      },
+      {
+        "kind": "line",
+        "points": [
+          [
+            31027.5,
+            7900.0,
+            -87.4
+          ],
+          [
+            31027.5,
+            7900.0,
+            -88.3
+          ]
+        ]
+      },
+      {
+        "kind": "line",
+        "points": [
+          [
+            31447.5,
+            7900.0,
+            -87.0
+          ],
+          [
+            31447.5,
+            7900.0,
+            -87.8
+          ]
+        ]
+      },
+      {
         "kind": "callout",
         "anchor": [
           31237.5,
           7900.0,
-          16.0
+          -86.6
+        ],
+        "text": {
+          "en": "1:1 true scale",
+          "cs": "1:1 skutečné měřítko"
+        },
+        "offset": [
+          0.0,
+          0.022
+        ],
+        "leader": false
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          31237.5,
+          7900.0,
+          -18.2
+        ],
+        "text": {
+          "en": "10× vertical exaggeration",
+          "cs": "10× svislé převýšení"
+        },
+        "offset": [
+          0.0,
+          -0.08
+        ],
+        "leader": false,
+        "size": 1.65
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          31237.5,
+          7900.0,
+          20.0
         ],
         "text": {
           "en": "elevation 0, unsloped floor",
           "cs": "výška 0, nespádovaná podlaha"
+        },
+        "offset": [
+          0.0,
+          0.07
+        ],
+        "leader": false
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          30150.0,
+          7900.0,
+          16.0
+        ],
+        "text": {
+          "en": "west -23.847 mm",
+          "cs": "západ -23.847 mm"
+        },
+        "offset": [
+          -0.08,
+          0.08
+        ],
+        "leader": false
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          32325.0,
+          7900.0,
+          16.0
+        ],
+        "text": {
+          "en": "east -0.498 mm",
+          "cs": "východ -0.498 mm"
+        },
+        "offset": [
+          0.08,
+          0.08
+        ],
+        "leader": false
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          31237.5,
+          7900.0,
+          40.0
+        ],
+        "text": {
+          "en": "1.0735% east–west\ndoor leaf fall 9.662 mm / 900 mm",
+          "cs": "1.0735% východ–západ\nspád na křídle 9.662 mm / 900 mm"
         },
         "offset": [
           0.0,
@@ -4406,60 +4652,9 @@
       {
         "kind": "callout",
         "anchor": [
-          30150.0,
-          7900.0,
-          14.0
-        ],
-        "text": {
-          "en": "west -23.847 mm",
-          "cs": "západ -23.847 mm"
-        },
-        "offset": [
-          -0.06,
-          0.07
-        ],
-        "leader": false
-      },
-      {
-        "kind": "callout",
-        "anchor": [
-          32325.0,
-          7900.0,
-          14.0
-        ],
-        "text": {
-          "en": "east -0.498 mm",
-          "cs": "východ -0.498 mm"
-        },
-        "offset": [
-          0.06,
-          0.07
-        ],
-        "leader": false
-      },
-      {
-        "kind": "callout",
-        "anchor": [
           31237.5,
           7900.0,
-          34.0
-        ],
-        "text": {
-          "en": "1.0735% east–west, door leaf fall 9.662 mm / 900 mm",
-          "cs": "1.0735% východ–západ, spád na křídle 9.662 mm / 900 mm"
-        },
-        "offset": [
-          0.0,
-          0.04
-        ],
-        "leader": false
-      },
-      {
-        "kind": "callout",
-        "anchor": [
-          31237.5,
-          7900.0,
-          -28.2
+          -36.2
         ],
         "text": {
           "en": "tile 8.5 mm; screed thickness not measured",
@@ -4467,7 +4662,7 @@
         },
         "offset": [
           0.0,
-          -0.05
+          -0.08
         ],
         "leader": false
       }
@@ -4479,6 +4674,7 @@
       "grout": 0,
       "drain": 0
     },
-    "edges": "none"
+    "edges": "none",
+    "annotationColor": "#1d4ed8"
   }
 ]

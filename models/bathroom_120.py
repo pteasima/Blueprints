@@ -679,6 +679,8 @@ MODEL_LABEL = "Koupelna 1.20"
 PROJECT = "RD Šíma 1.NP"
 # Sections crop to the floor. ×10 makes the 1.5% fall and the datum readable.
 SECTION_EXAGGERATION = 10
+# Notes, leaders, and dimension lines. Tile and joint strokes stay black.
+ANNOTATION_BLUE = "#1d4ed8"
 
 
 def _mm_text(metres: float, digits: int = 3, signed: bool = False) -> str:
@@ -693,7 +695,15 @@ def _tx(en: str, cs: str) -> dict[str, str]:
     return {"en": en, "cs": cs}
 
 
-def _callout(anchor, en: str, cs: str, offset: tuple[float, float], *, leader: bool = True) -> dict:
+def _callout(
+    anchor,
+    en: str,
+    cs: str,
+    offset: tuple[float, float],
+    *,
+    leader: bool = True,
+    size: float | None = None,
+) -> dict:
     item = {
         "kind": "callout",
         "anchor": [round(float(v), 1) for v in anchor],
@@ -702,6 +712,8 @@ def _callout(anchor, en: str, cs: str, offset: tuple[float, float], *, leader: b
     }
     if not leader:
         item["leader"] = False
+    if size is not None and abs(float(size) - 1.0) > 1e-6:
+        item["size"] = round(float(size), 2)
     return item
 
 
@@ -795,7 +807,12 @@ def _plate(shown: dict) -> dict:
     """Line plates: no mesh edges, and only the parts named in ``shown``."""
     opacity = {LABEL_FLOOR: 0, LABEL_WALL: 0, LABEL_GROUT: 0, LABEL_DRAIN: 0}
     opacity.update(shown)
-    return {"opacityDefault": 0, "opacity": opacity, "edges": "none"}
+    return {
+        "opacityDefault": 0,
+        "opacity": opacity,
+        "edges": "none",
+        "annotationColor": ANNOTATION_BLUE,
+    }
 
 
 def _segment(a, b) -> dict:
@@ -881,27 +898,30 @@ def _plan_drawing(info: dict) -> dict:
         _spot(plane, DOOR_WEST_X, ZERO_Y, "West jamb", "Západní ostění", (-0.18, 0.14)),
         _dim((x0, y0 - 280.0, 0.0), (x0 + tile_x, y0 - 280.0, 0.0), -0.04, "596 mm", "596 mm"),
         _dim((x0, y0, 0.0), (x1, y0, 0.0), -0.14, "2175 mm", "2175 mm"),
-        _dim((x0, y0, 0.0), (x0, y1, 0.0), -0.12, "1925 mm", "1925 mm"),
-        # On the cut strips themselves: east column 381 mm, north row 131 mm.
-        _dim(
-            (x1 - 381.0, y0 + 280.0, 8.0),
-            (x1, y0 + 280.0, 8.0),
-            0.035,
+        # Positive offset is west of the wall. A negative offset lands the
+        # dimension line inside the room, beside the first joint.
+        _dim((x0, y0, 0.0), (x0, y1, 0.0), 0.12, "1925 mm", "1925 mm"),
+        # Labels on the cut strips, with no dimension line across the tile.
+        _callout(
+            (x1 - 381.0 / 2.0, y0 + 280.0, 8.0),
             "381 mm",
             "381 mm",
+            (0.0, 0.0),
+            leader=False,
         ),
-        _dim(
-            (x0 + 280.0, y1 - 131.0, 8.0),
-            (x0 + 280.0, y1, 8.0),
-            -0.04,
+        _callout(
+            (x0 + 280.0, y1 - 131.0 / 2.0, 8.0),
             "131 mm",
             "131 mm",
+            (0.0, 0.0),
+            leader=False,
         ),
         _dim((DOOR_WEST_X * MM, y_leaf + 80.0, 0.0), (ZERO_X * MM, y_leaf + 80.0, 0.0), 0.05, "900 mm door", "900 mm dveře"),
         _dim((ZERO_X * MM + 40.0, y1, 0.0), (ZERO_X * MM + 40.0, y_leaf, 0.0), 0.06, "100 mm to leaf", "100 mm k křídlu"),
         _line(
             [(ZERO_X * MM, y_leaf, 30.0), (x0, y0, 30.0)],
             arrow=True,
+            color=ANNOTATION_BLUE,
         ),
         _callout(
             ((ZERO_X * MM + x0) / 2.0, (y_leaf + y0) / 2.0, 40.0),
@@ -1021,7 +1041,7 @@ def _elevation_drawing(info: dict, wall_id: str) -> dict:
             (mx, my, head + 80.0),
             f"level top {fig['head_mm']} mm\n2 × 1194 mm, joint {fig['wall_joint_mm']} mm",
             f"rovný vrch {fig['head_mm']} mm\n2 × 1194 mm, spára {fig['wall_joint_mm']} mm",
-            (0.0, 0.12),
+            (0.0, 0.06),
             leader=False,
         ),
         _dim(station(-0.06, course_joint_z), station(-0.06, head), -0.06, "1194 mm", "1194 mm"),
@@ -1076,6 +1096,53 @@ def _datum_line(a_xy, b_xy) -> dict:
     )
 
 
+def _mix(a: float, b: float, t: float) -> float:
+    return a + (b - a) * t
+
+
+def _true_scale_band(p0, p1, z0: float, z1: float, *, drop_mm: float) -> list[dict]:
+    """A short tile band at 1:1, under a section whose Z is exaggerated.
+
+    The viewer multiplies every CAD Z by ``SECTION_EXAGGERATION``. Dividing
+    the band's own heights by that factor puts a vertical millimetre on the
+    same screen scale as a horizontal one. ``drop_mm`` is how far below
+    elevation 0 the band sits on the sheet.
+    """
+    k = float(SECTION_EXAGGERATION)
+
+    def zz(true_mm: float) -> float:
+        return true_mm / k - drop_mm / k
+
+    top0 = (*p0, zz(z0))
+    top1 = (*p1, zz(z1))
+    bot1 = (*p1, zz(z1 - TILE_THICKNESS_MM))
+    bot0 = (*p0, zz(z0 - TILE_THICKNESS_MM))
+    mid = (
+        (p0[0] + p1[0]) / 2.0,
+        (p0[1] + p1[1]) / 2.0,
+        zz(max(z0, z1) + 4.0),
+    )
+    return [
+        _segment(top0, top1),
+        _segment(bot0, bot1),
+        _segment(top0, bot0),
+        _segment(top1, bot1),
+        _callout(mid, "1:1 true scale", "1:1 skutečné měřítko", (0.0, 0.022), leader=False),
+    ]
+
+
+def _exaggeration_label(anchor, offset: tuple[float, float] = (0.0, -0.055)) -> dict:
+    """Large note sitting just off the exaggerated slope, not on the tile."""
+    return _callout(
+        anchor,
+        "10× vertical exaggeration",
+        "10× svislé převýšení",
+        offset,
+        leader=False,
+        size=1.65,
+    )
+
+
 def _slice(origin, normal_gltf, along_cad, gap_mm: float) -> list[dict]:
     """Two planes `gap_mm` apart. `along_cad` is the CAD plan step of `normal_gltf`."""
     ox, oy, oz = origin
@@ -1101,52 +1168,67 @@ def _section_diagonal(info: dict) -> dict:
     look = (uy, 0.0, ux)
     mid_x = (x0 + x1) / 2.0
     mid_y = (y0 + y1) / 2.0
-    pose = _ortho_pose((mid_x, mid_y, -15.0), look, (0.0, 1.0, 0.0), length / MM * 0.62, 0.12)
+    pose = _ortho_pose((mid_x, mid_y, -15.0), look, (0.0, 1.0, 0.0), length / MM * 0.62, 0.14)
     z_drain = _z_mm(info["plane"], ROOM_X0, ROOM_Y0)
+    # Fall text stays on the drain half. NE corner stays on the zero half.
+    fall_x = _mix(mid_x, x1, 0.62)
+    fall_y = _mix(mid_y, y1, 0.62)
+    ne_x = _mix(mid_x, x0, 0.78)
+    ne_y = _mix(mid_y, y0, 0.78)
+    run = 420.0
+    strip = _true_scale_band(
+        (mid_x - ux * run / 2.0, mid_y - uy * run / 2.0),
+        (mid_x + ux * run / 2.0, mid_y + uy * run / 2.0),
+        z_drain * 0.5 - z_drain * (run / 2.0) / length,
+        z_drain * 0.5 + z_drain * (run / 2.0) / length,
+        drop_mm=980.0,
+    )
     notes = [
         _datum_line((x0 - ux * 120.0, y0 - uy * 120.0), (x1 + ux * 120.0, y1 + uy * 120.0)),
         _segment((x0, y0, 0.0), (x1, y1, z_drain)),
         _segment((x0, y0, -TILE_THICKNESS_MM), (x1, y1, z_drain - TILE_THICKNESS_MM)),
+        *strip,
+        _exaggeration_label((mid_x, mid_y, -18.0), (0.0, -0.12)),
         _callout(
-            (mid_x, mid_y, 18.0),
+            (mid_x, mid_y, 22.0),
             "elevation 0, unsloped floor",
             "výška 0, nespádovaná podlaha",
-            (0.0, 0.05),
+            (0.0, 0.07),
             leader=False,
         ),
         _callout(
-            (x0, y0, 12.0),
+            (x0, y0, 14.0),
             f"0 east jamb {fig['zero_mm']} mm",
             f"0 východní ostění {fig['zero_mm']} mm",
-            (-0.02, 0.08),
+            (-0.04, 0.09),
             leader=False,
         ),
         _callout(
-            (x1, y1, z_drain - 22.0),
+            (x1, y1, z_drain - 18.0),
             f"drain {fig['drain_mm']} mm",
             f"vpusť {fig['drain_mm']} mm",
-            (0.02, -0.06),
+            (0.0, -0.05),
             leader=False,
         ),
         _callout(
-            (mid_x, mid_y, 36.0),
-            f"{fig['percent_diagonal']} along the diagonal, fall {fig['drain_mm']} mm",
-            f"{fig['percent_diagonal']} po úhlopříčce, spád {fig['drain_mm']} mm",
+            (fall_x, fall_y, z_drain * 0.81 + 28.0),
+            f"{fig['percent_diagonal']} along the diagonal\nfall {fig['drain_mm']} mm",
+            f"{fig['percent_diagonal']} po úhlopříčce\nspád {fig['drain_mm']} mm",
             (0.0, 0.05),
             leader=False,
         ),
         _callout(
-            (mid_x + (x0 - mid_x) * 0.55, mid_y + (y0 - mid_y) * 0.55, 42.0),
+            (ne_x, ne_y, 36.0),
             f"NE corner {fig['ne_mm']} mm",
             f"roh SV {fig['ne_mm']} mm",
-            (0.0, 0.04),
+            (0.06, 0.08),
             leader=False,
         ),
         _callout(
-            (mid_x, mid_y, z_drain / 2.0 - 18.0),
+            (mid_x, mid_y, z_drain / 2.0 - 28.0),
             "tile 8.5 mm; screed thickness not measured",
             "dlažba 8,5 mm; tloušťka potěru není změřená",
-            (0.0, -0.05),
+            (0.0, -0.07),
             leader=False,
         ),
     ]
@@ -1176,46 +1258,59 @@ def _section_door(info: dict) -> dict:
     x1 = ROOM_X1 * MM
     z0 = _z_mm(plane, ROOM_X0, y / MM)
     z1 = _z_mm(plane, ROOM_X1, y / MM)
-    pose = _ortho_pose(((x0 + x1) / 2.0, y, -12.0), (0.0, 0.0, -1.0), (0.0, 1.0, 0.0), 1.45, 0.11)
+    pose = _ortho_pose(((x0 + x1) / 2.0, y, -12.0), (0.0, 0.0, -1.0), (0.0, 1.0, 0.0), 1.45, 0.13)
     west = _mm_text(z0 / MM, signed=True)
     east = _mm_text(z1 / MM, signed=True)
+    cx = (x0 + x1) / 2.0
+    run = 420.0
+    z_mid = (z0 + z1) / 2.0
+    dz = (z1 - z0) * (run / 2.0) / (x1 - x0)
+    strip = _true_scale_band(
+        (cx - run / 2.0, y),
+        (cx + run / 2.0, y),
+        z_mid - dz,
+        z_mid + dz,
+        drop_mm=860.0,
+    )
     notes = [
         _datum_line((x0 - 80.0, y), (x1 + 80.0, y)),
         _segment((x0, y, z0), (x1, y, z1)),
         _segment((x0, y, z0 - TILE_THICKNESS_MM), (x1, y, z1 - TILE_THICKNESS_MM)),
+        *strip,
+        _exaggeration_label((cx, y, z_mid - 6.0), (0.0, -0.08)),
         _callout(
-            ((x0 + x1) / 2.0, y, 16.0),
+            (cx, y, 20.0),
             "elevation 0, unsloped floor",
             "výška 0, nespádovaná podlaha",
+            (0.0, 0.07),
+            leader=False,
+        ),
+        _callout(
+            (x0, y, 16.0),
+            f"west {west} mm",
+            f"západ {west} mm",
+            (-0.08, 0.08),
+            leader=False,
+        ),
+        _callout(
+            (x1, y, 16.0),
+            f"east {east} mm",
+            f"východ {east} mm",
+            (0.08, 0.08),
+            leader=False,
+        ),
+        _callout(
+            (cx, y, 40.0),
+            f"{fig['percent_x']} east–west\ndoor leaf fall {fig['door_fall_mm']} mm / 900 mm",
+            f"{fig['percent_x']} východ–západ\nspád na křídle {fig['door_fall_mm']} mm / 900 mm",
             (0.0, 0.05),
             leader=False,
         ),
         _callout(
-            (x0, y, 14.0),
-            f"west {west} mm",
-            f"západ {west} mm",
-            (-0.06, 0.07),
-            leader=False,
-        ),
-        _callout(
-            (x1, y, 14.0),
-            f"east {east} mm",
-            f"východ {east} mm",
-            (0.06, 0.07),
-            leader=False,
-        ),
-        _callout(
-            ((x0 + x1) / 2.0, y, 34.0),
-            f"{fig['percent_x']} east–west, door leaf fall {fig['door_fall_mm']} mm / 900 mm",
-            f"{fig['percent_x']} východ–západ, spád na křídle {fig['door_fall_mm']} mm / 900 mm",
-            (0.0, 0.04),
-            leader=False,
-        ),
-        _callout(
-            ((x0 + x1) / 2.0, y, (z0 + z1) / 2.0 - 16.0),
+            (cx, y, z_mid - 24.0),
             "tile 8.5 mm; screed thickness not measured",
             "dlažba 8,5 mm; tloušťka potěru není změřená",
-            (0.0, -0.05),
+            (0.0, -0.08),
             leader=False,
         ),
     ]
