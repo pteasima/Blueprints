@@ -1,18 +1,11 @@
 # TODO (open, waiting on site data from Petr; noted 2026-10-08):
-# - Tile size: ABK's Poetry Stone catalogue gives rectified 8.5 mm work sizes
-#   of 596x596 (60x60) and 596x1194 (60x120), batch averages. Tile: [0.6, 1.2]
-#   below is nominal and 4 mm too big per tile. Decide the joint: 2 mm gives a
-#   598 mm grid, 4 mm keeps a 600 mm grid. Check the actual delivered batch.
-# - Slope origin: move the 0 point from the northeast room corner to the door
-#   corner, exactly where the door leaf sits in the opening. The northeast
-#   corner height then follows from the plane. Needs the door's mounting
-#   position in the opening (along the wall and depth in the reveal).
 # - Room dimensions: replace the drawing faces below with on-site measurements
-#   so the cuts are millimetre exact.
-# - Then update tests/test_bathroom_120.py and produce a blueprint for the tiler.
+#   so the cuts are millimetre exact. The tile size and the door-leaf zero
+#   are a working assumption (2026-10-09) to be redone with those measurements.
 # Room 1.20 (technical bathroom by the entrance hall), in storey coordinates.
 # Adapted from yaml-ifc samples/bathroom.yaml at 0f96c26. Lengths are metres.
-# Clear inner faces, checked against ground-floor.yaml:
+# Clear inner faces, checked against ground-floor.yaml (drawing faces, not
+# yet measured on site):
 #   west  x=30.15  (W-054 inner face)
 #   east  x=32.325 (W-057 inner face)
 #   south y=6.025  (W-009 inner face)
@@ -20,23 +13,41 @@
 # Clear size 2.175 m east-west by 1.925 m north-south.
 # +X east, +Y north. The door is in the north wall. The drain is the southwest
 # corner, diagonally opposite the door.
-# 0 is the finished floor of the entrance hall. The plane is 0 at the northeast
-# corner (the door corner) and falls toward the drain. Nowhere in the room is above 0.
-# Gradient is the 1.5% diagonal, stored to 6 decimals:
-#   diagonal 2.904522 m, fall 43.566 mm.
-#   along the walls, 1.1232% east-west and 0.9941% north-south.
-# Across any 800 mm east-west, including the door leaf, the fall is 8.986 mm.
-# No threshold. The joint at the leaf is silicone; it is not a grout module.
-# Wall joint 2.000 mm (rectified porcelain). Floor joints are derived, not stored.
+# The door leaf, where the bathroom floor meets the hall floor, sits 100 mm
+# north of the inner north face: y = 7.95 + 0.10 = 8.05. The opening keeps
+# its width (0.9) and its place on the wall (AlongAxis 1.175). The east jamb
+# is x = 30.15 + 1.175 + 0.9 = 32.225.
+# 0 is the finished floor of the entrance hall, at that east jamb on the leaf
+# line: (32.225, 8.05). The plane falls 1.5% along the diagonal from there to
+# the southwest drain (30.15, 6.025).
+#   diagonal 2.899353 m, design fall 43.490 mm.
+# Gradient stored to 6 decimals, rise over plan run. Its magnitude is 1.500%:
+#   Gradient: [0.010735, 0.010476]
+#   along the walls, 1.0735% east-west and 1.0476% north-south.
+#   drain corner −43.489 mm. Northeast room corner (32.325, 7.95) is +0.026 mm.
+# Across the 900 mm door leaf the east-west fall is 9.662 mm.
+# The floor plane continues into the door reveal, between the jambs, up to
+# y = 8.05. No threshold. The joint at the leaf is silicone; it is not a grout
+# module.
+# Tiles are ABK Poetry Stone, rectified, 8.5 mm, batch-average work sizes:
+#   floor 596×596, walls 596×1194 portrait, two courses.
+#   1194 = 2×596 + 2, so one wall tile's height spans two floor tiles and the
+#   joint between them.
+# Wall joint 2.000 mm, measured in plan. Plan pitch is 598 mm. Floor joints
+# are derived (slightly wider, on the slope) so the floor and the wall joints
+# keep the same plan lines.
 # Floor grid: full tiles at the drain (southwest). GridOrigin is that corner.
-# Cuts land on the door side: 369 mm along the east wall, 119 mm along the north wall.
-# Every wall uses that same origin. Vertical joints continue the floor's 602 mm
-# plan pitch. The window and the door cut whatever tiles they cross; the grid
-# does not restart on a jamb. The north wall keeps the piece above the door
-# where a joint falls just inside the opening (about 27 mm).
-# Bottom course follows the slope (BottomCut follow-slope) with a constant 2 mm
-# vertical gap. At the drain corner the bottom tile is a full 1200 mm tall.
-# Two courses, no top strip. The top edge is level. The soffit is 2.500 m.
+# Cuts land on the door side: 131 mm at the north end of the east wall,
+# 381 mm at the east end of the north wall. The reveal adds 100 mm to the
+# floor tiles that cross the opening.
+# Every wall uses that same origin. Vertical joints continue the floor's
+# 598 mm plan pitch. The window and the door cut whatever tiles they cross;
+# the grid does not restart on a jamb. The north wall keeps the piece above
+# the door where a joint falls just inside the opening (19 mm).
+# Bottom course follows the slope (BottomCut follow-slope) with a constant
+# 2 mm vertical gap. At the drain corner the bottom tile is a full 1194 mm
+# tall. Two courses, no top strip. The top edge is level, at 2348.511 mm.
+# The soffit is 2.500 m.
 # W-054's axis stops at the window and W-015's axis stops at the door's east jamb.
 # The tile still covers the clear faces, including the 250 mm west pier and the
 # 100 mm north pier. Those piers are the wall segments; they are not extra strips.
@@ -80,13 +91,17 @@ slabs:
     ObjectType: Screed
     ContainedInStructure: SP-1.20
     Plane:
-      Origin: [32.325, 7.95]
+      Origin: [32.225, 8.05]
       Elevation: 0
-      Gradient: [0.011232, 0.009941]
+      Gradient: [0.010735, 0.010476]
     Footprint:
       - [30.15, 6.025]
       - [32.325, 6.025]
       - [32.325, 7.95]
+      - [32.225, 7.95]
+      - [32.225, 8.05]
+      - [31.325, 8.05]
+      - [31.325, 7.95]
       - [30.15, 7.95]
     PropertySets:
       - Name: Pset_YamlIfc
@@ -112,7 +127,7 @@ coverings:
     TileLayout:
       Product: ABK Poetry Stone Trani Beige
       Thickness: 0.0085
-      Tile: [0.6, 1.2]
+      Tile: [0.596, 1.194]
       Joint: 0.002
       GridOrigin: [30.15, 6.025]
       BottomCut: follow-slope
@@ -124,7 +139,7 @@ coverings:
       Inside: [31.2, 7.0]
   - id: CLAD-N
     Name: North wall tiles
-    Description: Vertical joints continue the floor grid from the southwest corner. The door notches the tile it crosses. The 27 mm piece above the opening is a leg of the 600 mm tile, not a separate strip.
+    Description: Vertical joints continue the floor grid from the southwest corner. The door notches the tile it crosses. The 19 mm piece above the opening is a leg of the 596 mm tile, not a separate strip.
     PredefinedType: CLADDING
     ObjectType: PoetryStone
     ContainedInStructure: SP-1.20
@@ -132,7 +147,7 @@ coverings:
     TileLayout:
       Product: ABK Poetry Stone Trani Beige
       Thickness: 0.0085
-      Tile: [0.6, 1.2]
+      Tile: [0.596, 1.194]
       Joint: 0.002
       GridOrigin: [30.15, 6.025]
       BottomCut: follow-slope
@@ -156,7 +171,7 @@ coverings:
     TileLayout:
       Product: ABK Poetry Stone Trani Beige
       Thickness: 0.0085
-      Tile: [0.6, 1.2]
+      Tile: [0.596, 1.194]
       Joint: 0.002
       GridOrigin: [30.15, 6.025]
       BottomCut: follow-slope
@@ -176,7 +191,7 @@ coverings:
     TileLayout:
       Product: ABK Poetry Stone Trani Beige
       Thickness: 0.0085
-      Tile: [0.6, 1.2]
+      Tile: [0.596, 1.194]
       Joint: 0.002
       GridOrigin: [30.15, 6.025]
       BottomCut: follow-slope
@@ -193,6 +208,7 @@ coverings:
           Height: 0.75
   - id: FLR-1.20
     Name: Floor tiles
+    Description: The footprint steps into the door reveal up to the leaf line y=8.05. Tiles that cross a jamb stay one piece.
     PredefinedType: FLOORING
     ObjectType: PoetryStone
     ContainedInStructure: SP-1.20
@@ -200,7 +216,7 @@ coverings:
     TileLayout:
       Product: ABK Poetry Stone Trani Beige
       Thickness: 0.0085
-      Tile: [0.6, 0.6]
+      Tile: [0.596, 0.596]
       WallJoint: 0.002
       GridOrigin: [30.15, 6.025]
       JointInset: 0.002
@@ -208,6 +224,10 @@ coverings:
         - [30.15, 6.025]
         - [32.325, 6.025]
         - [32.325, 7.95]
+        - [32.225, 7.95]
+        - [32.225, 8.05]
+        - [31.325, 8.05]
+        - [31.325, 7.95]
         - [30.15, 7.95]
       Cutouts:
         - - [30.15, 6.025]

@@ -19,6 +19,9 @@ from bathroom_120 import (  # noqa: E402
     ROOM_Y0,
     ROOM_Y1,
     SOURCE_PATH,
+    ZERO_X,
+    ZERO_Y,
+    drawing_figures,
     floor_tiles_mm,
     head_mm,
     layout,
@@ -31,8 +34,10 @@ from bathroom_120 import (  # noqa: E402
 )
 
 
-PITCH_MM = 602.0
-HEAD_MM = 2360.434
+PITCH_MM = 598.0
+# Stored gradient over the diagonal: drain −43.489025 mm, then two 1194 mm
+# courses and two 2 mm joints (bottom gap and the course joint).
+HEAD_MM = 2348.510975
 
 
 def _widths(tiles, course=None):
@@ -64,20 +69,40 @@ def test_file_records_the_room_and_the_unmeasured_layers():
 
 def test_plane_joints_and_the_level_top():
     info = layout()
-    assert info["z_max"] == pytest.approx(0.0, abs=1e-9)
-    assert info["z_min"] * 1000 == pytest.approx(-43.566, abs=0.001)
-    assert info["z_min"] < 0
+    plane = info["plane"]
+    assert plane["Origin"] == [32.225, 8.05]
+    assert plane["Elevation"] == 0
+    assert plane["Gradient"][0] == pytest.approx(0.010735, abs=1e-9)
+    assert plane["Gradient"][1] == pytest.approx(0.010476, abs=1e-9)
+    # 0 is the east jamb on the leaf line. The northeast corner sits just above it.
+    from yaml_ifc import plane_elevation
+
+    assert plane_elevation(plane, ZERO_X, ZERO_Y) == pytest.approx(0.0, abs=1e-12)
+    assert info["z_min"] * 1000 == pytest.approx(-43.489025, abs=0.001)
+    assert info["z_max"] * 1000 == pytest.approx(0.0259, abs=0.001)
+    assert info["z_min"] < 0 < info["z_max"]
     joints = info["joints"]
     assert info["floor"]["WallJoint"] * 1000 == pytest.approx(2.0)
-    assert joints.x * 1000 == pytest.approx(2.03797, abs=1e-4)
-    assert joints.y * 1000 == pytest.approx(2.02975, abs=1e-4)
+    assert info["floor"]["Tile"] == [0.596, 0.596]
+    for wall in info["walls"]:
+        assert wall["layout"]["Tile"] == [0.596, 1.194]
+        assert wall["layout"]["Joint"] == pytest.approx(0.002)
+    # 1194 mm is two floor tiles and the 2 mm joint between them.
+    assert 2 * 0.596 + 0.002 == pytest.approx(1.194)
+    assert joints.x * 1000 == pytest.approx(2.034456, abs=1e-3)
+    assert joints.y * 1000 == pytest.approx(2.032813, abs=1e-3)
     assert joints.plan_pitch_x * 1000 == pytest.approx(PITCH_MM)
+    assert joints.plan_pitch_y * 1000 == pytest.approx(PITCH_MM)
     assert head_mm(info) == pytest.approx(HEAD_MM, abs=0.001)
-    # Two courses, no strip above the second. The door corner is the high point.
+    # Two courses, no strip above the second. The top is level.
     assert info["levels"]["course_tops"][-1] * 1000 == pytest.approx(HEAD_MM, abs=0.001)
     assert len(info["levels"]["course_tops"]) == 2
-    leaf = 0.011232 * 0.8 * 1000
-    assert leaf == pytest.approx(8.986, abs=0.001)
+    leaf = 0.010735 * 0.9 * 1000
+    assert leaf == pytest.approx(9.6615, abs=0.001)
+    # The floor reaches the leaf. The walls stay on the inner faces.
+    ys = [point[1] for ring in info["floor_tiles"] for point in ring]
+    assert max(ys) == pytest.approx(ZERO_Y, abs=1e-6)
+    assert max(point[1] for point in info["floor"]["Footprint"]) == pytest.approx(ZERO_Y)
 
 
 def test_floor_starts_with_full_tiles_at_the_drain():
@@ -86,31 +111,34 @@ def test_floor_starts_with_full_tiles_at_the_drain():
     full = [row for row in rows if row["full"]]
     notched = [row for row in rows if row["notched"]]
     assert len(full) == 8
-    assert len(notched) == 1
-    drain_tile = notched[0]
+    # The grate, plus the two modules the door jambs step through.
+    assert len(notched) == 3
+    drain_tile = min(notched, key=lambda row: (row["min_y_mm"], row["min_x_mm"]))
     assert drain_tile["min_x_mm"] == pytest.approx(30.15 * 1000, abs=0.05)
     assert drain_tile["min_y_mm"] == pytest.approx(6.025 * 1000, abs=0.05)
     assert drain_tile["width_mm"] == pytest.approx(info["joints"].plan_tile_x * 1000, abs=0.05)
+    plan_depth = info["joints"].plan_tile_y * 1000
     east = [
         row
         for row in rows
-        if abs(row["width_mm"] - 369.0) < 0.05 and row["depth_mm"] > 200
+        if abs(row["width_mm"] - 381.0) < 0.05 and abs(row["depth_mm"] - plan_depth) < 0.05
     ]
     north = [
         row
         for row in rows
-        if abs(row["depth_mm"] - 119.0) < 0.05 and row["width_mm"] > 500
+        if abs(row["depth_mm"] - 131.0) < 0.05 and row["width_mm"] > 500
     ]
-    corner = [
+    reveal = [
         row
         for row in rows
-        if abs(row["width_mm"] - 369.0) < 0.05 and abs(row["depth_mm"] - 119.0) < 0.05
+        if abs(row["depth_mm"] - 231.0) < 0.05 and row["width_mm"] > 500 and not row["notched"]
     ]
     assert len(east) == 3
-    assert len(north) == 3
-    assert len(corner) == 1
-    assert ROOM_WIDTH * 1000 - 3 * PITCH_MM == pytest.approx(369.0, abs=0.001)
-    assert ROOM_DEPTH * 1000 - 3 * PITCH_MM == pytest.approx(119.0, abs=0.001)
+    assert len(north) == 1
+    assert len(reveal) == 1
+    assert max(row["min_y_mm"] + row["depth_mm"] for row in rows) == pytest.approx(ZERO_Y * 1000, abs=0.05)
+    assert ROOM_WIDTH * 1000 - 3 * PITCH_MM == pytest.approx(381.0, abs=0.001)
+    assert ROOM_DEPTH * 1000 - 3 * PITCH_MM == pytest.approx(131.0, abs=0.001)
     # Nothing above the door corner, and the grate is the southwest 300 mm.
     assert info["floor"]["GridOrigin"] == [30.15, 6.025]
 
@@ -156,15 +184,15 @@ def test_walls_continue_the_floor_grid():
     walls = wall_tiles_mm(info)
     origin = info["floor"]["GridOrigin"]
     assert all(wall["layout"]["GridOrigin"] == origin for wall in info["walls"])
-    assert _widths(walls["CLAD-E"]) == pytest.approx([600, 600, 600, 119] * 2, abs=0.05)
-    assert _widths(walls["CLAD-S"]) == pytest.approx([600, 600, 600, 369] * 2, abs=0.05)
+    assert _widths(walls["CLAD-E"]) == pytest.approx([596, 596, 596, 131] * 2, abs=0.05)
+    assert _widths(walls["CLAD-S"]) == pytest.approx([596, 596, 596, 381] * 2, abs=0.05)
     # The door voids the lower course. What remains is a real width cut.
-    assert sorted(_widths(walls["CLAD-N"], 0)) == pytest.approx([100, 573, 600], abs=0.05)
-    # Upper course: one tile per module. The 27 mm and 269 mm pieces are legs.
-    assert sorted(_widths(walls["CLAD-N"], 1)) == pytest.approx([369, 600, 600, 600], abs=0.05)
+    assert sorted(_widths(walls["CLAD-N"], 0)) == pytest.approx([100, 577, 596], abs=0.05)
+    # Upper course: one tile per module. The 19 mm and 281 mm pieces are legs.
+    assert sorted(_widths(walls["CLAD-N"], 1)) == pytest.approx([381, 596, 596, 596], abs=0.05)
     # The sill is above this course, so the window does not cut it.
-    assert _widths(walls["CLAD-W"], 0) == pytest.approx([600, 600, 600, 119], abs=0.05)
-    assert _widths(walls["CLAD-W"], 1) == pytest.approx([600, 600, 600, 119], abs=0.05)
+    assert _widths(walls["CLAD-W"], 0) == pytest.approx([596, 596, 596, 131], abs=0.05)
+    assert _widths(walls["CLAD-W"], 1) == pytest.approx([596, 596, 596, 131], abs=0.05)
     assert small_pieces(info) == []
 
 
@@ -241,33 +269,33 @@ def test_openings_notch_a_tile_instead_of_splitting_it():
         (min(p[0] for p in piece["polygon"]), max(p[0] for p in piece["polygon"]))
         for piece in course_joint
     )
-    assert any(abs(start - 0.602) < 1e-4 and abs(end - 1.202) < 1e-4 for start, end in joint_spans)
-    assert any(abs(start - 1.204) < 1e-4 and abs(end - 1.804) < 1e-4 for start, end in joint_spans)
+    assert any(abs(start - 0.598) < 1e-3 and abs(end - 1.194) < 1e-3 for start, end in joint_spans)
+    assert any(abs(start - 1.196) < 1e-3 and abs(end - 1.792) < 1e-3 for start, end in joint_spans)
 
     west = walls["CLAD-W"]
-    south_of_window = _tile(west, 1, 602)
+    south_of_window = _tile(west, 1, 598)
     assert south_of_window["notched"] is True
-    assert south_of_window["width_mm"] == pytest.approx(600.0, abs=0.05)
+    assert south_of_window["width_mm"] == pytest.approx(596.0, abs=0.05)
     full, cut = south_of_window["rows"]
     assert full["along1_mm"] == pytest.approx(775.0, abs=0.05)
     assert full["top_mm"] == pytest.approx(HEAD_MM, abs=0.01)
     assert cut["along0_mm"] == pytest.approx(775.0, abs=0.05)
-    assert cut["along1_mm"] == pytest.approx(1202.0, abs=0.05)
+    assert cut["along1_mm"] == pytest.approx(1194.0, abs=0.05)
     assert cut["top_mm"] == pytest.approx(1750.0, abs=0.01)
-    assert cut["height_mm"] == pytest.approx(589.566, abs=0.01)
-    north_of_window = _tile(west, 1, 1204)
+    assert cut["height_mm"] == pytest.approx(595.489, abs=0.01)
+    north_of_window = _tile(west, 1, 1196)
     assert north_of_window["notched"] is True
-    assert north_of_window["width_mm"] == pytest.approx(600.0, abs=0.05)
+    assert north_of_window["width_mm"] == pytest.approx(596.0, abs=0.05)
     cut, full = north_of_window["rows"]
     assert cut["along1_mm"] == pytest.approx(1675.0, abs=0.05)
     assert cut["top_mm"] == pytest.approx(1750.0, abs=0.01)
     assert full["along0_mm"] == pytest.approx(1675.0, abs=0.05)
-    assert full["height_mm"] == pytest.approx(1200.0, abs=0.05)
+    assert full["height_mm"] == pytest.approx(1194.0, abs=0.05)
     # The jamb line exists only above the sill, on the upper course.
     upper = [
         piece["polygon"]
         for piece in by_id["CLAD-W"]["result"]["tiles"]
-        if piece["course"] == 1 and abs(min(p[0] for p in piece["polygon"]) - 0.602) < 1e-4
+        if piece["course"] == 1 and abs(min(p[0] for p in piece["polygon"]) - 0.598) < 1e-3
     ]
     jamb = _vertical_edges(upper[0], 0.775)
     assert len(jamb) == 1
@@ -275,37 +303,37 @@ def test_openings_notch_a_tile_instead_of_splitting_it():
     assert jamb[0][1] * 1000 == pytest.approx(HEAD_MM, abs=0.01)
 
     north = walls["CLAD-N"]
-    door_tile = _tile(north, 1, 602)
+    door_tile = _tile(north, 1, 598)
     assert door_tile["notched"] is True
-    assert door_tile["width_mm"] == pytest.approx(600.0, abs=0.05)
+    assert door_tile["width_mm"] == pytest.approx(596.0, abs=0.05)
     pier, leg = door_tile["rows"]
     assert pier["along1_mm"] == pytest.approx(1175.0, abs=0.05)
-    assert pier["height_mm"] == pytest.approx(1200.0, abs=0.05)
+    assert pier["height_mm"] == pytest.approx(1194.0, abs=0.05)
     assert leg["along0_mm"] == pytest.approx(1175.0, abs=0.05)
-    assert leg["along1_mm"] == pytest.approx(1202.0, abs=0.05)
-    assert leg["along1_mm"] - leg["along0_mm"] == pytest.approx(27.0, abs=0.05)
-    assert leg["height_mm"] == pytest.approx(260.434, abs=0.01)
+    assert leg["along1_mm"] == pytest.approx(1194.0, abs=0.05)
+    assert leg["along1_mm"] - leg["along0_mm"] == pytest.approx(19.0, abs=0.05)
+    assert leg["height_mm"] == pytest.approx(248.511, abs=0.01)
     assert leg["bottom_mm"] == pytest.approx(2100.0, abs=0.01)
     assert leg["top_mm"] == pytest.approx(HEAD_MM, abs=0.01)
-    above = _tile(north, 1, 1204)
+    above = _tile(north, 1, 1196)
     assert above["height_cut"] is True
-    assert above["width_mm"] == pytest.approx(600.0, abs=0.05)
-    assert above["height_mm"] == pytest.approx(260.434, abs=0.01)
+    assert above["width_mm"] == pytest.approx(596.0, abs=0.05)
+    assert above["height_mm"] == pytest.approx(248.511, abs=0.01)
     assert above["bottom_mm"] == pytest.approx(2100.0, abs=0.01)
-    east = _tile(north, 1, 1806)
+    east = _tile(north, 1, 1794)
     assert east["notched"] is True
-    assert east["width_mm"] == pytest.approx(369.0, abs=0.05)
+    assert east["width_mm"] == pytest.approx(381.0, abs=0.05)
     band, pier = east["rows"]
-    assert band["along1_mm"] - band["along0_mm"] == pytest.approx(269.0, abs=0.05)
-    assert band["height_mm"] == pytest.approx(260.434, abs=0.01)
+    assert band["along1_mm"] - band["along0_mm"] == pytest.approx(281.0, abs=0.05)
+    assert band["height_mm"] == pytest.approx(248.511, abs=0.01)
     assert band["bottom_mm"] == pytest.approx(2100.0, abs=0.01)
     assert pier["along1_mm"] - pier["along0_mm"] == pytest.approx(100.0, abs=0.05)
-    assert pier["height_mm"] == pytest.approx(1200.0, abs=0.05)
+    assert pier["height_mm"] == pytest.approx(1194.0, abs=0.05)
     # The leg shares the tile top. No joint continues up from the door head.
     door_poly = next(
         piece["polygon"]
         for piece in by_id["CLAD-N"]["result"]["tiles"]
-        if piece["course"] == 1 and abs(min(p[0] for p in piece["polygon"]) - 0.602) < 1e-4
+        if piece["course"] == 1 and abs(min(p[0] for p in piece["polygon"]) - 0.598) < 1e-3
     )
     head_edge = _vertical_edges(door_poly, 1.175)
     assert len(head_edge) == 1
@@ -320,14 +348,14 @@ def test_bottom_course_is_full_height_at_the_drain_and_level_on_top():
         for tile in walls["CLAD-S"]
         if tile["course"] == 0 and tile["along0_mm"] < 0.1
     )
-    assert south["width_mm"] == pytest.approx(600.0, abs=0.05)
-    assert south["height_mm"] == pytest.approx(1200.0, abs=0.05)
+    assert south["width_mm"] == pytest.approx(596.0, abs=0.05)
+    assert south["height_mm"] == pytest.approx(1194.0, abs=0.05)
     west = next(
         tile
         for tile in walls["CLAD-W"]
         if tile["course"] == 0 and tile["along0_mm"] < 0.1
     )
-    assert west["height_mm"] == pytest.approx(1200.0, abs=0.05)
+    assert west["height_mm"] == pytest.approx(1194.0, abs=0.05)
     tops = {round(tile["top_mm"], 3) for tiles in walls.values() for tile in tiles}
     cut_tops = {
         round(row["top_mm"], 3)
@@ -345,8 +373,8 @@ def test_bottom_course_is_full_height_at_the_drain_and_level_on_top():
         if tile["course"] == 1 and tile["height_mm"] < 300
     ]
     assert len(above_door) == 1
-    assert above_door[0]["height_mm"] == pytest.approx(260.434, abs=0.01)
-    assert above_door[0]["width_mm"] == pytest.approx(600.0, abs=0.05)
+    assert above_door[0]["height_mm"] == pytest.approx(248.511, abs=0.01)
+    assert above_door[0]["width_mm"] == pytest.approx(596.0, abs=0.05)
 
 
 def test_solids_sit_in_the_room_with_the_drain_in_the_southwest():
@@ -366,7 +394,7 @@ def test_solids_sit_in_the_room_with_the_drain_in_the_southwest():
     assert min(box.min.X for box in tiles) == pytest.approx(30.15 * 1000, abs=0.5)
     assert max(box.max.X for box in tiles) == pytest.approx(32.325 * 1000, abs=0.5)
     assert min(box.min.Y for box in tiles) == pytest.approx(6.025 * 1000, abs=0.5)
-    assert max(box.max.Y for box in tiles) == pytest.approx(7.95 * 1000, abs=0.5)
+    assert max(box.max.Y for box in tiles) == pytest.approx(ZERO_Y * 1000, abs=0.5)
 
 
 def test_viewer_scenes_frame_the_floor_the_room_and_the_door():
@@ -379,3 +407,70 @@ def test_viewer_scenes_frame_the_floor_the_room_and_the_door():
     assert plan["camera"]["up"] == [0.0, 0.0, -1.0]
     assert specs["bathroom"]["hFovDeg"] == 50
     assert specs["bathroom-door"]["hFovDeg"] == 40
+
+
+def _annotation_text(spec) -> str:
+    lines = []
+    title = spec.get("title") or {}
+    if isinstance(title, dict):
+        lines.append(title.get("en") or "")
+    for ann in spec.get("annotations") or []:
+        text = ann.get("text")
+        if isinstance(text, dict):
+            lines.append(text.get("en") or "")
+        elif isinstance(text, str):
+            lines.append(text)
+    return "\n".join(lines)
+
+
+def test_drawing_plates_quote_the_schedule():
+    info = layout()
+    fig = drawing_figures(info)
+    assert fig["wall_joint_mm"] == "2.000"
+    assert fig["floor_joint_x_mm"] == "2.034"
+    assert fig["floor_joint_y_mm"] == "2.033"
+    assert fig["plan_pitch_mm"] == "598"
+    assert fig["head_mm"] == "2348.511"
+    assert fig["drain_mm"] == "-43.489"
+    assert fig["ne_mm"] == "+0.026"
+    assert fig["zero_mm"] == "0.000"
+    assert fig["percent_diagonal"] == "1.500%"
+    assert fig["gradient"] == pytest.approx([0.010735, 0.010476], abs=1e-9)
+
+    specs = {item["id"]: item for item in scenes()}
+    plates = {
+        "bathroom-plan",
+        "bathroom-elev-e",
+        "bathroom-elev-n",
+        "bathroom-elev-s",
+        "bathroom-elev-w",
+        "bathroom-section-diagonal",
+        "bathroom-section-door",
+    }
+    assert plates <= set(specs)
+    plan = _annotation_text(specs["bathroom-plan"])
+    assert "2.000 mm" in plan
+    assert "2.034 mm" in plan
+    assert "2.033 mm" in plan
+    assert "1.500%" in plan
+    assert "+0.026 mm" in plan
+    assert "-43.489 mm" in plan
+    assert "0.000 mm" in plan
+    for wall_id in ("bathroom-elev-e", "bathroom-elev-n", "bathroom-elev-s", "bathroom-elev-w"):
+        text = _annotation_text(specs[wall_id])
+        assert "2348.511 mm" in text
+        assert "1194 mm" in text
+        assert "2.000 mm" in text
+        assert "bottom cut" in text
+    for section_id in ("bathroom-section-diagonal", "bathroom-section-door"):
+        spec = specs[section_id]
+        assert spec["verticalExaggeration"] == 10
+        assert "vertical ×10" in _annotation_text(spec)
+        datum = [
+            ann
+            for ann in spec["annotations"]
+            if ann.get("kind") == "line" and ann.get("dashed") and ann.get("color") == "#c0392b"
+        ]
+        assert len(datum) == 1
+        zs = [point[2] for point in datum[0]["points"]]
+        assert zs == pytest.approx([0.0, 0.0], abs=1e-6)
