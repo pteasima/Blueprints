@@ -12,21 +12,21 @@ Open every pull request as a draft. A draft means agents are still working. Read
 
 When a pull request branch is behind `main`, rebase that feature branch onto `main` and force-push the feature branch. Do not merge `main` into the feature branch. Pull requests merge to `main` only by squash, so a merge from `main` would fold upstream history into that squash; a rebase keeps the branch a linear stack of its own work. Force-push only the feature branch. The ruleset on `main` blocks force-pushes and deletion. The only exception is a branch that someone else is also committing to, because a rebase would rewrite commits they still have locally.
 
-## Architectural modelling (physical building first)
+## Measure first
 
-These are **building assemblies**, not decorative meshes. Before coding solids, reason as a house designer / structural engineer / contractor:
+Prefer building the model and measuring it over hand calculation. Use code and tests to get numbers, and use reasoning to decide what to try next. Do not derive millimetre values by hand when the model can report them. Example: start tiling from the reference corner at level zero, build, measure the far corner, then shift.
 
-- Every layer needs a real thickness, a load path or attachment, and a reason to exist (structure, weather, vapour, acoustics, finish, tolerance).
-- Do not invent geometry that cannot be built, hang, or drain. If a detail is load-bearing, say what carries it (rafters, hangers, masonry) and what must *not* carry it (e.g. furniture under a self-supporting soffit).
-- Acoustic faces (e.g. NaturHeld + StoSilent on šikminy) are continuous room-facing layers with stated thickness — not paint on a zero-thickness shell.
-- When transferring from a řez/detail sheet: if clearances, hangers, vapour order, or bearing are inconsistent, **push back** and say what must change in the structure before modelling. If the sheet is coherent, transfer the stack and tweak later.
-- Prefer labelled solids that match contractor language (`NaturHeld 140`,
-  `NaturHeld Flex 50`, `dreveny_rost`, `cd`, `zaves`, `paska`, `sdk`, `vata`, `krov`)
-  over anonymous blobs. On šikminy: latě // krokvím (⊥ CD); CD ⊥ krokvím; hangers
-  CD→krokve; pásky on rafter faces. Keep `krov` separate from `dreveny_rost`.
-  Soffit bay: GKF breaks to horizontal at X_FURN; horizontal CD + Nonius from
-  krokve; the kastlík CD/UD rost hangs from that CD and braces to the eave wall — not from
-  furniture or pozednice.
+## Sanity bounds
+
+When a task builds something and reports resulting values, compare them against the plausible range the prompt gives, or an obvious physical range. Flag anything outside that range as a question in the pull request. Do not accept it silently.
+
+## Plan first
+
+If the prompt asks for a plan first, post the plan on the draft pull request and stop. Otherwise build.
+
+## Over the estimate
+
+If the work clearly exceeds the estimate given in the prompt, push what you have and summarise where you are stuck instead of continuing.
 
 ## Environment
 
