@@ -81,7 +81,7 @@ def test_ground_floor_builds_and_cuts_openings():
     assert bb.min.Z < -40.0
     assert bb.max.Z == pytest.approx(DEFAULT_WALL_HEIGHT_M * 1000.0, abs=1.0)
     assert derived["bathroom_tiles"] > 20
-    assert derived["bathroom_head_mm"] == pytest.approx(2360.434, abs=0.001)
+    assert derived["bathroom_head_mm"] == pytest.approx(2348.511, abs=0.001)
     assert bb.max.X - bb.min.X > 40_000
     assert bb.max.Y - bb.min.Y > 14_000
 

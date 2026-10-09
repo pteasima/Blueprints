@@ -745,7 +745,7 @@ function visibleEdgePositions(mesh, label, groutLinesWorld) {
     // Centreline only. The recessed box's own edges are the ISO rectangles.
     return groutCenterlines(hard);
   }
-  if (label === "tile") {
+  if (label === "tile" || label === "floor_tile" || label === "wall_tile") {
     if (!isExposedTileCap(mesh.geometry)) return new Float32Array(0);
     return dropEdgesNearGrout(hard, mesh, groutLinesWorld);
   }

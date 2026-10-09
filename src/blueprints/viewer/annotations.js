@@ -38,6 +38,18 @@ export function cadMmToGltf(point) {
 }
 
 /**
+ * @param {string | number | null | undefined} value
+ * @param {number} fallback
+ */
+function parseColor(value, fallback) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string") return fallback;
+  const hex = value.trim().replace("#", "");
+  if (!/^[0-9a-fA-F]{6}$/.test(hex)) return fallback;
+  return Number.parseInt(hex, 16);
+}
+
+/**
  * Primary tip plus optional extras (`tips`). Label offset uses `anchor`.
  * @param {{ anchor?: number[], tips?: number[][] }} ann
  * @returns {number[][]}
@@ -108,28 +120,32 @@ export function labelFontPx(canvas, ink) {
  * @param {"viewer" | "plate"} ink
  * @param {number} fontPx
  * @param {"center" | "topleft" | "bottomleft"} [anchor]
+ * @param {string | null} [fill] CSS colour for the glyphs. Null keeps the ink default.
+ * @param {number} [fontScale]
  */
-function makeTextLabel(lines, ink, fontPx, anchor = "center") {
+function makeTextLabel(lines, ink, fontPx, anchor = "center", fill = null, fontScale = 1) {
+  const scale = Number.isFinite(fontScale) && fontScale > 0 ? fontScale : 1;
+  const px = Math.max(8, Math.round(fontPx * scale));
   const clean = lines.map((l) => String(l)).filter((l) => l.length);
   const canvas = document.createElement("canvas");
   const measure = canvas.getContext("2d");
-  const font = `600 ${fontPx}px ${FONT_STACK}`;
-  const padX = Math.ceil(fontPx * 0.35);
-  const padY = Math.ceil(fontPx * 0.2);
-  const lineH = Math.ceil(fontPx * 1.25);
+  const font = `600 ${px}px ${FONT_STACK}`;
+  const padX = Math.ceil(px * 0.35);
+  const padY = Math.ceil(px * 0.2);
+  const lineH = Math.ceil(px * 1.25);
   if (measure) measure.font = font;
-  let maxW = fontPx;
+  let maxW = px;
   if (measure) {
     for (const line of clean) maxW = Math.max(maxW, measure.measureText(line).width);
   }
   const cssW = Math.ceil(maxW + padX * 2);
   const cssH = Math.ceil(Math.max(clean.length, 1) * lineH + padY * 2);
-  const scale = 2;
-  canvas.width = cssW * scale;
-  canvas.height = cssH * scale;
+  const raster = 2;
+  canvas.width = cssW * raster;
+  canvas.height = cssH * raster;
   const ctx = canvas.getContext("2d");
   if (ctx) {
-    ctx.scale(scale, scale);
+    ctx.scale(raster, raster);
     ctx.clearRect(0, 0, cssW, cssH);
     const plate = ink === "plate";
     ctx.font = font;
@@ -137,9 +153,9 @@ function makeTextLabel(lines, ink, fontPx, anchor = "center") {
     ctx.textBaseline = "middle";
     ctx.lineJoin = "round";
     ctx.miterLimit = 2;
-    ctx.lineWidth = Math.max(2, fontPx * 0.28);
+    ctx.lineWidth = Math.max(2, px * 0.28);
     ctx.strokeStyle = plate ? "#ffffff" : "rgba(0,0,0,0.92)";
-    ctx.fillStyle = plate ? "#141414" : "#f7f7f8";
+    ctx.fillStyle = fill || (plate ? "#141414" : "#f7f7f8");
     clean.forEach((line, i) => {
       const x = padX;
       const y = padY + lineH * i + lineH * 0.5;
@@ -165,24 +181,38 @@ function makeTextLabel(lines, ink, fontPx, anchor = "center") {
   mesh.userData.cssWidth = cssW;
   mesh.userData.cssHeight = cssH;
   mesh.userData.anchor = anchor;
+  mesh.userData.fill = fill;
+  mesh.userData.fontScale = scale;
   return mesh;
 }
 
 /**
  * @param {number} color
  */
-function makeFatLine(color) {
+function hexColor(color) {
+  return `#${(color >>> 0).toString(16).padStart(6, "0")}`;
+}
+
+/**
+ * @param {number} color
+ */
+function makeFatLine(color, dashed = false) {
   const geom = new LineGeometry();
   geom.setPositions([0, 0, 0, 0, 0, 0]);
   const mat = new LineMaterial({
     color,
-    linewidth: 1.75,
+    linewidth: dashed ? 2.4 : 1.75,
     depthTest: false,
     depthWrite: false,
     transparent: true,
     toneMapped: false,
     worldUnits: false,
+    dashed: Boolean(dashed),
+    dashSize: 0.08,
+    gapSize: 0.06,
+    dashScale: 1,
   });
+  if (dashed) mat.dashed = true;
   const line = new Line2(geom, mat);
   line.renderOrder = 25;
   line.frustumCulled = false;
@@ -208,10 +238,12 @@ function setFatLine(line, a, b) {
  *   getLocale: () => string,
  *   getVisibleWidthM: () => number | null,
  *   getTarget: () => THREE.Vector3,
+ *   getExaggeration?: () => number,
  * }} opts
  */
 export function createAnnotations(opts) {
   const { scene, getCamera, getCanvas, getLocale, getVisibleWidthM, getTarget } = opts;
+  const getExaggeration = opts.getExaggeration || (() => 1);
   const group = new THREE.Group();
   group.name = "Annotations";
   group.userData.blueprintAnnotations = true;
@@ -237,6 +269,34 @@ export function createAnnotations(opts) {
 
   function inkColor() {
     return ink === "plate" ? 0x141414 : 0xf2f2f4;
+  }
+
+  /**
+   * Dimension and callout ink. Geometry lines stay on `inkColor` unless a
+   * line sets its own `color`. `annotationColor` is the plate's note colour.
+   * @param {object} ann
+   */
+  function noteColor(ann) {
+    if (ann && ann.color != null) return parseColor(ann.color, inkColor());
+    if (spec && spec.annotationColor != null) {
+      return parseColor(spec.annotationColor, inkColor());
+    }
+    return inkColor();
+  }
+
+  /**
+   * @param {object} ann
+   */
+  function noteFill(ann) {
+    return hexColor(noteColor(ann));
+  }
+
+  /**
+   * @param {object} ann
+   */
+  function noteScale(ann) {
+    const size = Number(ann && ann.size);
+    return Number.isFinite(size) && size > 0 ? size : 1;
   }
 
   function disposeObject(obj) {
@@ -284,9 +344,17 @@ export function createAnnotations(opts) {
       if (ann.kind === "callout" && Array.isArray(ann.anchor)) {
         const text = resolveText(ann.text, locale);
         if (!text) continue;
-        const sprite = makeTextLabel(text.split("\n"), ink, px);
-        const tips = calloutTips(ann);
-        const leaders = tips.map(() => makeFatLine(color));
+        const sprite = makeTextLabel(
+          text.split("\n"),
+          ink,
+          px,
+          "center",
+          noteFill(ann),
+          noteScale(ann),
+        );
+        const leaders = (ann.leader === false ? [] : calloutTips(ann)).map(() =>
+          makeFatLine(noteColor(ann)),
+        );
         group.add(...leaders, sprite);
         items.push({
           kind: "callout",
@@ -295,12 +363,20 @@ export function createAnnotations(opts) {
           data: ann,
         });
       } else if (ann.kind === "dim" && Array.isArray(ann.a) && Array.isArray(ann.b)) {
-        const sprite = makeTextLabel(["0"], ink, px);
-        const extA = makeFatLine(color);
-        const extB = makeFatLine(color);
-        const dim = makeFatLine(color);
-        const tickA = makeFatLine(color);
-        const tickB = makeFatLine(color);
+        const dimColor = noteColor(ann);
+        const sprite = makeTextLabel(
+          ["0"],
+          ink,
+          px,
+          "center",
+          hexColor(dimColor),
+          noteScale(ann),
+        );
+        const extA = makeFatLine(dimColor);
+        const extB = makeFatLine(dimColor);
+        const dim = makeFatLine(dimColor);
+        const tickA = makeFatLine(dimColor);
+        const tickB = makeFatLine(dimColor);
         group.add(extA, extB, dim, tickA, tickB, sprite);
         items.push({
           kind: "dim",
@@ -308,6 +384,33 @@ export function createAnnotations(opts) {
           lines: [extA, extB, dim, tickA, tickB],
           data: ann,
         });
+      } else if (
+        ann.kind === "line" &&
+        Array.isArray(ann.points) &&
+        ann.points.length >= 2
+      ) {
+        const color = parseColor(ann.color, inkColor());
+        const main = makeFatLine(color, Boolean(ann.dashed));
+        /** @type {Line2[]} */
+        const lines = [main];
+        if (ann.arrow) {
+          lines.push(makeFatLine(color, false), makeFatLine(color, false));
+        }
+        let sprite = null;
+        const text = resolveText(ann.text, locale);
+        if (text) {
+          sprite = makeTextLabel(
+            text.split("\n"),
+            ink,
+            px,
+            "center",
+            hexColor(color),
+            noteScale(ann),
+          );
+        }
+        group.add(...lines);
+        if (sprite) group.add(sprite);
+        items.push({ kind: "line", sprite, lines, data: ann });
       }
     }
 
@@ -328,6 +431,17 @@ export function createAnnotations(opts) {
    * @param {THREE.Vector3} world
    * @param {THREE.Vector3} [out]
    */
+  /**
+   * CAD mm → glTF metres, with the scene's vertical exaggeration on glTF Y.
+   * @param {number[]} point
+   */
+  function cadPoint(point) {
+    const v = cadMmToGltf(point);
+    const k = getExaggeration();
+    if (k !== 1) v.y *= k;
+    return v;
+  }
+
   function projectNdc(world, out = _ndc) {
     return out.copy(world).project(getCamera());
   }
@@ -401,7 +515,14 @@ export function createAnnotations(opts) {
    * @param {string[]} lines
    */
   function replaceSpriteText(sprite, lines) {
-    const next = makeTextLabel(lines, ink, bakedFont || fontPx(), sprite.userData.anchor);
+    const next = makeTextLabel(
+      lines,
+      ink,
+      bakedFont || fontPx(),
+      sprite.userData.anchor,
+      sprite.userData.fill,
+      sprite.userData.fontScale || 1,
+    );
     sprite.material.map?.dispose();
     sprite.material.dispose();
     sprite.material = next.material;
@@ -423,7 +544,7 @@ export function createAnnotations(opts) {
     for (const item of items) {
       if (item.kind === "callout") {
         // Label offset is relative to the primary tip; extra tips only get leaders.
-        const anchor = cadMmToGltf(item.data.anchor);
+        const anchor = cadPoint(item.data.anchor);
         const ndc = projectNdc(anchor, _a);
         const off = Array.isArray(item.data.offset) ? item.data.offset : [0.08, 0.06];
         const lx = ndc.x + Number(off[0] || 0) * 2;
@@ -434,7 +555,7 @@ export function createAnnotations(opts) {
         const half = wpp * item.sprite.userData.cssWidth * 0.5;
         const tips = calloutTips(item.data);
         for (let i = 0; i < item.lines.length; i += 1) {
-          const tip = cadMmToGltf(tips[i] || item.data.anchor);
+          const tip = cadPoint(tips[i] || item.data.anchor);
           _end.copy(label).sub(tip);
           const len = _end.length();
           if (len > half + wpp) {
@@ -446,8 +567,8 @@ export function createAnnotations(opts) {
           setFatLine(item.lines[i], tip, _end);
         }
       } else if (item.kind === "dim") {
-        const pa = cadMmToGltf(item.data.a);
-        const pb = cadMmToGltf(item.data.b);
+        const pa = cadPoint(item.data.a);
+        const pb = cadPoint(item.data.b);
         const na = projectNdc(pa, _a);
         const nb = projectNdc(pb, _b);
         let dx = nb.x - na.x;
@@ -504,6 +625,33 @@ export function createAnnotations(opts) {
           item.sprite.userData.labelText = label;
         }
         placeSprite(item.sprite, _mid);
+      } else if (item.kind === "line") {
+        const pts = item.data.points.map((point) => cadPoint(point));
+        const flat = [];
+        for (const p of pts) flat.push(p.x, p.y, p.z);
+        item.lines[0].geometry.setPositions(flat);
+        item.lines[0].computeLineDistances();
+        if (item.data.arrow && pts.length >= 2 && item.lines.length >= 3) {
+          const tail = pts[pts.length - 2];
+          const head = pts[pts.length - 1];
+          const dir = head.clone().sub(tail);
+          if (dir.lengthSq() > 1e-12) {
+            dir.normalize();
+            const wpp = worldPerPixel(head);
+            const back = dir.clone().multiplyScalar(-wpp * 16);
+            const side = new THREE.Vector3()
+              .crossVectors(dir, getCamera().up)
+              .normalize()
+              .multiplyScalar(wpp * 7);
+            if (side.lengthSq() < 1e-16) side.set(wpp * 7, 0, 0);
+            setFatLine(item.lines[1], head, head.clone().add(back).add(side));
+            setFatLine(item.lines[2], head, head.clone().add(back).sub(side));
+          }
+        }
+        if (item.sprite) {
+          const mid = pts[0].clone().lerp(pts[pts.length - 1], 0.5);
+          placeSprite(item.sprite, mid);
+        }
       }
     }
 
