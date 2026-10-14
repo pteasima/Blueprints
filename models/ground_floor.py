@@ -47,7 +47,7 @@ for that file. The screed, the membrane, and the ceiling have no measured
 thickness and are not extruded.
 
 Bathroom 1.07 is ``bathroom-1.07.yaml``. The shower falls 1.25% from the
-south toward a wall drain in the north pre-wall. EPS stays 60+60.
+south toward a wall drain in the north pre-wall. EPS under the shower is 60+40.
 
     python -m blueprints.export ground_floor
 """
@@ -889,6 +889,7 @@ def part_groups() -> list[dict]:
                 "prewall",
                 "screen",
                 "profile",
+                "vanity",
             ],
         },
     ]

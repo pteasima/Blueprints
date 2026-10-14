@@ -6,7 +6,7 @@ entry toward the wall drain in the north pre-wall. Wall tiles start at
 height 0; stainless profiles take the fall on both sides.
 
 The screed, the membrane, and the ceiling stay properties. EPS under the
-shower stays 60+60 mm. The screed at the drain is reported and not changed.
+shower is 60+40 mm, so the screed at finished-floor zero is 79 mm.
 
     python -m blueprints.export bathroom_107
 """
@@ -55,13 +55,15 @@ LABEL_FIXTURE = "fixture"
 LABEL_PREWALL = "prewall"
 LABEL_SCREEN = "screen"
 LABEL_PROFILE = "profile"
+LABEL_VANITY = "vanity"
 
 MM = 1000.0
 # Bottom to top, finished floor at 0. The 8 mm membrane closes the 250 mm sum.
 BUILDUP_MM = 250.0
 WATERPROOF_MM = 8.0
 EPS_TOP_MM = 60.0
-EPS_BOTTOM_MM = 60.0
+# Shower only. The level floor stays 60+60, screed 59, in the YAML.
+EPS_BOTTOM_MM = 40.0
 NOP_MM = 50.0
 FINISH_MM = 13.0
 SCREED_MIN_MM = 45.0
@@ -104,7 +106,7 @@ def _props(row: dict) -> dict:
 
 
 def screed_at_zero_mm() -> float:
-    """Screed thickness where the finished floor is 0, EPS left at 60+60."""
+    """Shower screed where the finished floor is 0. EPS under the shower is 60+40."""
     return BUILDUP_MM - WATERPROOF_MM - EPS_TOP_MM - EPS_BOTTOM_MM - NOP_MM - FINISH_MM
 
 
@@ -253,7 +255,13 @@ def _fixture_boxes(doc: dict) -> list:
         "BATH": LABEL_FIXTURE,
         "WASHHANDBASIN": LABEL_FIXTURE,
         "PreWall": LABEL_PREWALL,
+        "Shelf": LABEL_PREWALL,
         "GlassScreen": LABEL_SCREEN,
+        "Cabinet": LABEL_VANITY,
+        "Countertop": LABEL_FIXTURE,
+        "Mixer": LABEL_FIXTURE,
+        "Pipe": LABEL_FIXTURE,
+        "TiledFront": LABEL_WALL,
     }
     solids = []
     for key in ("sanitaryTerminals", "furniture"):
@@ -374,8 +382,8 @@ def figures(info: dict | None = None) -> dict:
         "z_north_mm": z_north * MM,
         "screed_zero_mm": screed0,
         "screed_drain_mm": screed_drain,
-        "screed_if_eps_omitted_mm": screed_drain + EPS_BOTTOM_MM,
         "below_minimum": screed_drain < SCREED_MIN_MM - 1e-6,
+        "east_cut_mm": _east_cut_mm(info, east),
         "head_mm": head_mm(info),
         "course_mm": float(info["levels"]["bottom_top"]) * MM,
         "sill_gap_mm": 1750.0 - float(info["levels"]["bottom_top"]) * MM,
@@ -388,6 +396,15 @@ def figures(info: dict | None = None) -> dict:
         "north_y_m": north,
         "east_x_m": east,
     }
+
+
+def _east_cut_mm(info: dict, east: float) -> float:
+    widths = []
+    for ring in info["shower_tiles"]:
+        xs = [point[0] for point in ring]
+        if abs(max(xs) - east) < 1e-6:
+            widths.append((max(xs) - min(xs)) * MM)
+    return max(widths) if widths else 0.0
 
 
 def _mm_text(mm: float, digits: int = 3, signed: bool = False) -> str:
@@ -477,8 +494,20 @@ def _plan_drawing(info: dict) -> dict:
         ),
         _dim((x0, y0, 0.0), (x1, y0, 0.0), -0.16, f"{x1 - x0:.0f} mm", f"{x1 - x0:.0f} mm"),
         _dim((x0, y0, 0.0), (x0, y1, 0.0), 0.16, f"{y1 - y0:.0f} mm", f"{y1 - y0:.0f} mm"),
-        _dim((x1 - 555.0, y0 + 220.0, 0.0), (x1, y0 + 220.0, 0.0), -0.06, "555 mm", "555 mm"),
-        _dim((glass, y1 + 80.0, 0.0), (x1, y1 + 80.0, 0.0), 0.08, "1153 mm shower", "1153 mm sprcha"),
+        _dim(
+            (x1 - fig["east_cut_mm"], y0 + 220.0, 0.0),
+            (x1, y0 + 220.0, 0.0),
+            -0.06,
+            f"{fig['east_cut_mm']:.0f} mm",
+            f"{fig['east_cut_mm']:.0f} mm",
+        ),
+        _dim(
+            (glass, y1 + 80.0, 0.0),
+            (x1, y1 + 80.0, 0.0),
+            0.08,
+            f"{fig['shower_width_mm']:.0f} mm shower",
+            f"{fig['shower_width_mm']:.0f} mm sprcha",
+        ),
         _line(
             [(glass, y1, 40.0), (glass, y0, 40.0)],
             dashed=True,
@@ -501,13 +530,13 @@ def _plan_drawing(info: dict) -> dict:
                 f"1.250% to the north drain\n"
                 f"{drop} mm / {round(fig['run_mm'])} mm\n"
                 f"screed at drain {screed} mm\n"
-                f"EPS stays 60+60"
+                f"EPS 60+40"
             ),
             (
                 f"1.250% k severní vpusti\n"
                 f"{drop} mm / {round(fig['run_mm'])} mm\n"
                 f"potěr u vpusti {screed} mm\n"
-                f"EPS zůstává 60+60"
+                f"EPS 60+40"
             ),
             (0.28, -0.02),
             leader=False,
@@ -623,29 +652,29 @@ def _elevation_drawing(info: dict, wall_ids: tuple[str, ...], scene_id: str, nam
     ]
     if "CLAD-N" in wall_ids:
         notes.append(
-            _dim(
-                _station(frame, 0.4, course),
-                _station(frame, 0.4, 1750.0),
-                0.1,
-                f"{_mm_text(fig['sill_gap_mm'])} mm to sill",
-                f"{_mm_text(fig['sill_gap_mm'])} mm k parapetu",
+            _callout(
+                _station(frame, frame["length"] * 0.35, 1500.0),
+                "tiles to sill 1750 mm\nplaster above\nshelf on the 1194 mm joint",
+                "obklad k parapetu 1750 mm\nnad ním omítka\npolice na spáře 1194 mm",
+                (0.16, 0.08),
+                leader=False,
             )
         )
         notes.append(
             _callout(
-                _station(frame, frame["length"] * 0.72, 1500.0),
-                "niche centred on the shower\nsill 800 mm",
-                "nika uprostřed sprchy\nparapet 800 mm",
-                (0.2, 0.12),
+                _station(frame, frame["length"] * 0.72, 1600.0),
+                "niche centred\nbottom on the 1194 mm joint",
+                "nika uprostřed\nspodek na spáře 1194 mm",
+                (0.2, 0.1),
                 leader=False,
             )
         )
     if "CLAD-E" in wall_ids:
         notes.append(
             _callout(
-                _station(frame, 1.196, course),
-                "shower mixer on the joint",
-                "sprchová baterie na spáře",
+                _station(frame, frame["length"] / 2.0, course),
+                "2×555 mm, joint centred\nPaffoni Tango, pipes 120 mm",
+                "2×555 mm, spára uprostřed\nPaffoni Tango, trubky 120 mm",
                 (0.18, 0.08),
             )
         )
@@ -679,7 +708,7 @@ def scenes(info: dict | None = None) -> list[dict]:
         _plan_drawing(info),
         _elevation_drawing(
             info,
-            ("CLAD-N", "CLAD-NS"),
+            ("CLAD-PW", "CLAD-N", "CLAD-NS"),
             "bath107-elev-n",
             "north wall, window",
             "severní stěna, okno",
@@ -715,6 +744,7 @@ def part_groups() -> list[dict]:
                 LABEL_PREWALL,
                 LABEL_SCREEN,
                 LABEL_PROFILE,
+                LABEL_VANITY,
             ],
         }
     ]
@@ -753,7 +783,7 @@ def write_plates(directory: Path, info: dict | None = None) -> list[Path]:
     directory.mkdir(parents=True, exist_ok=True)
     plates = [
         ("bath107-plan", _svg_plan(info)),
-        ("bath107-elev-n", _svg_wall(info, ("CLAD-N", "CLAD-NS"), "North wall — window", "Severní stěna — okno")),
+        ("bath107-elev-n", _svg_wall(info, ("CLAD-PW", "CLAD-N", "CLAD-NS"), "North wall — window", "Severní stěna — okno")),
         ("bath107-elev-e", _svg_wall(info, ("CLAD-E",), "East wall — shower", "Východní stěna — sprcha")),
         ("bath107-elev-s", _svg_wall(info, ("CLAD-S",), "South wall — door", "Jižní stěna — dveře")),
         ("bath107-elev-w", _svg_wall(info, ("CLAD-W",), "West wall", "Západní stěna")),
@@ -875,12 +905,13 @@ def _svg_plan(info: dict) -> str:
     _x, y_north = pt(min_x, 12.25)
     body.append(_svg_dim(x0, y_south + 36, x1, y_south + 36, f"{(fig['east_x_m'] - min_x) * MM:.0f} mm", True))
     body.append(_svg_dim(x0 - 36, y_south, x0 - 36, y_north, f"{(12.25 - min_y) * MM:.0f} mm", False))
-    ex0, ey = pt(fig["east_x_m"] - 0.555, min_y)
+    ex0, ey = pt(fig["east_x_m"] - fig["east_cut_mm"] / MM, min_y)
     ex1, _ey = pt(fig["east_x_m"], min_y)
-    body.append(_svg_dim(ex0, y_south - 28, ex1, y_south - 28, "555 mm", True))
+    body.append(_svg_dim(ex0, y_south - 28, ex1, y_south - 28, f"{fig['east_cut_mm']:.0f} mm", True))
     sx0, sy = pt(fig["glass_x_m"], 12.25)
     sx1, _sy = pt(fig["east_x_m"], 12.25)
-    body.append(_svg_dim(sx0, y_north - 28, sx1, y_north - 28, "1153 mm shower", True))
+    shower_mm = fig["shower_width_mm"]
+    body.append(_svg_dim(sx0, y_north - 28, sx1, y_north - 28, f"{shower_mm:.0f} mm shower", True))
     lx, ly = pt((min_x + fig["glass_x_m"]) / 2.0, (min_y + 12.055) / 2.0)
     body.append(_svg_text(lx, ly, "level floor\n0.000 mm", 18))
     dx, dy = pt(fig["glass_x_m"] + 0.28, fig["north_y_m"] - 0.55)
@@ -892,13 +923,22 @@ def _svg_plan(info: dict) -> str:
             f"1.250% from the south\n"
             f"{fig['drop_mm']:.3f} mm / {round(fig['run_mm'])} mm\n"
             f"screed {fig['screed_drain_mm']:.3f} mm\n"
-            f"EPS 60+60",
+            f"EPS 60+40",
             15,
             anchor="start",
         )
     )
     body.append(_svg_text(gx0 + 10, (gy0 + gy1) / 2.0, "glass", 15, anchor="start"))
-    body.append(_svg_text(pt(10.2, 11.1)[0], pt(10.2, 11.1)[1], "Zen 190\n1900×900", 15, anchor="start"))
+    body.append(_svg_text(pt(10.2, 11.1)[0], pt(10.2, 11.1)[1], "Zen 190\ntiled front", 15, anchor="start"))
+    body.append(_svg_text(pt(12.0, 10.35)[0], pt(12.0, 10.35)[1], "door centre\njoint", 15))
+    body.append(
+        _svg_text(
+            pt(11.45, 11.85)[0],
+            pt(11.45, 11.85)[1],
+            "vanity, one top\nmirrors at the window",
+            15,
+        )
+    )
     return _svg_document("".join(body), "Koupelna 1.07 — floor tiles and shower fall")
 
 
@@ -911,7 +951,9 @@ def _svg_wall(info: dict, wall_ids: tuple[str, ...], title_en: str, title_cs: st
         for tile in by_id[wall_id]["result"]["tiles"]:
             polygon = [(float(s) + shift, float(z)) for s, z in tile["polygon"]]
             tiles.append(polygon)
-        shift += by_id[wall_id]["result"]["frame"]["length"]
+        # The pre-wall face sits in front of the same stretch of north wall.
+        if wall_id != "CLAD-PW":
+            shift += by_id[wall_id]["result"]["frame"]["length"]
     length = shift
     head = fig["head_mm"] / MM
     scale = min(1700.0 / max(length, 0.2), 1000.0 / 2.6)
@@ -947,15 +989,21 @@ def _svg_wall(info: dict, wall_ids: tuple[str, ...], title_en: str, title_cs: st
             _svg_text(
                 origin_x + 80,
                 pt(0.2, 1.5)[1],
-                f"sill gap {fig['sill_gap_mm']:.3f} mm\n"
-                f"niche centred, sill 800 mm",
+                "tiles to sill 1750\nplaster above\nshelf on joint 1194\nmirrors, note only",
                 15,
                 anchor="start",
             )
         )
     if "CLAD-E" in wall_ids:
-        mx, my = pt(1.196, fig["course_mm"] / MM)
-        body.append(_svg_text(mx, my - 16, "mixer on the joint", 15))
+        mx, my = pt(0.975, fig["course_mm"] / MM)
+        body.append(
+            _svg_text(
+                mx,
+                my - 16,
+                "2×555, joint centred\nPaffoni Tango\ncentres 105, pipes 120",
+                15,
+            )
+        )
     if "CLAD-E" in wall_ids:
         body.append(_svg_text(origin_x + 40, pt(0.4, 0.15)[1], "tiles from 0, sloped profile", 15, anchor="start"))
     body.append(_svg_text(48, 1360, title_cs, 14, anchor="start"))

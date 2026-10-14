@@ -55,6 +55,7 @@ export const SOLID_COLORS = {
   prewall: [196, 184, 168],
   screen: [170, 210, 220],
   profile: [190, 196, 200],
+  vanity: [186, 140, 90],
 };
 
 /**
@@ -110,6 +111,7 @@ export const LAYER_DEPTH_BIAS = {
   prewall: 5,
   screen: 14,
   profile: 7,
+  vanity: 6,
 };
 
 /**
@@ -646,6 +648,12 @@ export const REALISTIC_PRESETS = {
     roughness: 0.25,
     metalness: 0.85,
     map: "metal",
+  },
+  vanity: {
+    color: [186, 140, 90],
+    roughness: 0.55,
+    metalness: 0.0,
+    map: "wood",
   },
 };
 

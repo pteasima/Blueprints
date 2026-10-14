@@ -195,6 +195,14 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "roughness": 0.25,
         "metallic": 0.85,
     },
+    "vanity": {
+        "fill": (186, 140, 90),
+        "line": (110, 78, 40),
+        "dxf": ColorIndex.YELLOW,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.55,
+        "metallic": 0.0,
+    },
     "door": {
         "fill": (210, 140, 70),
         "line": (120, 70, 30),

@@ -60,6 +60,7 @@ const PART_EN = {
   prewall: "Pre-wall",
   screen: "Shower screen",
   profile: "Sloped edge profile",
+  vanity: "Vanity cabinet",
 };
 
 const PART_CS = {
@@ -115,6 +116,7 @@ const PART_CS = {
   prewall: "Přízdívka",
   screen: "Sprchové sklo",
   profile: "Spádová lišta",
+  vanity: "Skříňka umyvadla",
 };
 
 const UI_EN = {
