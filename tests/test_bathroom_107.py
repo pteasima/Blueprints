@@ -206,7 +206,9 @@ def test_fixtures_shelf_glass_and_the_plates():
     basin_centres = sorted(row["Origin"][0] + row["Width"] / 2 for row in basins)
     assert basin_centres == pytest.approx([11.478, 12.523], abs=0.001)
     cabinet_centre = cabinet["Origin"][0] + cabinet["Width"] / 2
-    assert cabinet_centre == pytest.approx(sum(basin_centres) / 2, abs=0.001)
+    # The vanity is centred on the door joint, not on the mixer midpoint.
+    # The joints one tile either side are 597 mm and 598 mm from that joint.
+    assert cabinet_centre == pytest.approx(DOOR, abs=0.0001)
     shower_mixer = next(row for row in doc["furniture"] if row["id"] == "MIX-SH")
     mixer_centre = shower_mixer["Origin"][0] + shower_mixer["Width"] / 2
     joint = SHOWER + 0.555 + 0.001

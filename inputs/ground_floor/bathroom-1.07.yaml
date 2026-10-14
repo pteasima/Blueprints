@@ -52,12 +52,17 @@
 # Niche: on the north shower wall, from the glass end, 400×280 mm, bottom
 # on the 1194 mm joint, left of the mixer. The top and the right edge are
 # not on a course joint. The centre joint belongs to the mixer.
-# Paffoni Tango, rozteč 150 mm. The two basin-mixer centres are on the
-# joints at x=11.403 and x=12.598: outer holes 1195 mm apart, centres
-# 1045 mm apart. A 1200 mm pair of holes is not a multiple of the 598 mm
-# module (two modules are 1196 mm). The vanity is 1600 mm so the 400 mm
-# basins sit on those centres. No vanity product was named.
-# The shower mixer is one Tango, rozteč 150 mm, centred on the 555 joint.
+# The middle joint is the vertical joint on the door centre, x=12.000.
+# The vanity is centred on that joint. Paffoni Tango, rozteč 150 mm.
+# Seen from the room, the left pipe of the left mixer is on the joint one
+# tile to the left (x=11.403) and the right pipe of the right mixer is on
+# the joint one tile to the right (x=12.598). Those joints measure 1195 mm
+# apart, not 1200, because the module is 596+2 mm. Mixer centres are then
+# 1045 mm apart, not 1050. The vanity is 1600 mm so the 400 mm basins fit.
+# No vanity product was named.
+# The shower mixer stays where the spárořez draws it: one Tango, rozteč
+# 150 mm, on the central joint of the 555 | 555 shower wall. It is not
+# on the door-centre joint.
 # Mirrors are a note only, one above each basin.
 # Glass: 8 mm, 700 mm walk-in opening at the south.
 # Floor build-up at finished-floor zero, 250 mm:
@@ -355,7 +360,7 @@ sanitaryTerminals:
     Height: 0.45
   - id: BASIN-W
     Name: Washbasin west
-    Description: "Basin in the shared white top, centred on the west Tango at x=11.478. Assumed 400×340 mm bowl, rim at 850 mm. No product was named."
+    Description: "Basin under the west Tango. The mixer centre is x=11.478, 75 mm in from the joint one tile left of the door. Assumed 400×340 mm bowl, rim at 850 mm. No product was named."
     PredefinedType: WASHHANDBASIN
     ObjectType: Washbasin
     ContainedInStructure: SP-1.07
@@ -366,7 +371,7 @@ sanitaryTerminals:
     Height: 0.15
   - id: BASIN-E
     Name: Washbasin east
-    Description: "Second basin, centred on the east Tango at x=12.523. Centres are 1045 mm apart."
+    Description: "Second basin, under the east Tango at x=12.523. Mixer centres are 1045 mm apart."
     PredefinedType: WASHHANDBASIN
     ObjectType: Washbasin
     ContainedInStructure: SP-1.07
@@ -408,21 +413,21 @@ furniture:
     Height: 0.45
   - id: VANITY-CAB
     Name: Vanity cabinet
-    Description: "Assumed oak cabinet 1600×460×830 under one top, centred on the two Tango mixers. A 1200 mm top cannot hold 400 mm basins 1045 mm apart. Mirrors are not modelled."
+    Description: "Assumed oak cabinet 1600×460×830 under one top, centred on the door-centre joint at x=12.000. A 1200 mm top cannot hold the 400 mm basins. Mirrors are not modelled."
     PredefinedType: USERDEFINED
     ObjectType: Cabinet
     ContainedInStructure: SP-1.07
-    Origin: [11.2005, 11.595]
+    Origin: [11.2, 11.595]
     Width: 1.6
     Depth: 0.46
     Height: 0.83
   - id: VANITY-TOP
     Name: Vanity top
-    Description: "One white top, 20 mm, rim at 850 mm, shared by both basins. Same 1600 mm width as the cabinet."
+    Description: "One white top, 20 mm, rim at 850 mm, shared by both basins. Same 1600 mm width as the cabinet, centred on the door joint."
     PredefinedType: USERDEFINED
     ObjectType: Countertop
     ContainedInStructure: SP-1.07
-    Origin: [11.2005, 11.595]
+    Origin: [11.2, 11.595]
     Elevation: 0.83
     Width: 1.6
     Depth: 0.46
@@ -449,7 +454,7 @@ furniture:
     Height: 2.45
   - id: MIX-SH
     Name: Paffoni Tango shower
-    Description: "One wall mixer on the north shower wall, centred on the 555 joint, centre height 1194 mm. Rozteč 150 mm."
+    Description: "Where the spárořez draws it: one wall mixer on the central joint of the 555 shower wall, centre height 1194 mm. Rozteč 150 mm. Not on the door-centre joint."
     PredefinedType: USERDEFINED
     ObjectType: Mixer
     ContainedInStructure: SP-1.07
@@ -482,7 +487,7 @@ furniture:
     Height: 0.02
   - id: MIX-B-W
     Name: Paffoni Tango basin west
-    Description: "Wall mixer above the west basin. Centre x=11.478, 75 mm east of the joint at x=11.403. Rozteč 150 mm. Body 80×120×80 mm."
+    Description: "Wall mixer above the west basin. Left pipe on the joint one tile left of the door (x=11.403). Centre x=11.478. Rozteč 150 mm. Body 80×120×80 mm."
     PredefinedType: USERDEFINED
     ObjectType: Mixer
     ContainedInStructure: SP-1.07
@@ -493,7 +498,7 @@ furniture:
     Height: 0.08
   - id: PIPE-B-W-L
     Name: West basin outer hole
-    Description: "Outer hole of the west basin Tango, on the vertical joint at x=11.403."
+    Description: "Left pipe of the left mixer, on the vertical joint one tile left of the door centre."
     PredefinedType: USERDEFINED
     ObjectType: Pipe
     ContainedInStructure: SP-1.07
@@ -515,7 +520,7 @@ furniture:
     Height: 0.02
   - id: MIX-B-E
     Name: Paffoni Tango basin east
-    Description: "Wall mixer above the east basin. Centre x=12.523, 75 mm west of the joint at x=12.598. Centres of the two basin mixers are 1045 mm apart."
+    Description: "Wall mixer above the east basin. Right pipe on the joint one tile right of the door (x=12.598). Centre x=12.523. The two centres are 1045 mm apart."
     PredefinedType: USERDEFINED
     ObjectType: Mixer
     ContainedInStructure: SP-1.07
@@ -537,7 +542,7 @@ furniture:
     Height: 0.02
   - id: PIPE-B-E-R
     Name: East basin outer hole
-    Description: "Outer hole of the east basin Tango, on the vertical joint at x=12.598."
+    Description: "Right pipe of the right mixer, on the vertical joint one tile right of the door centre."
     PredefinedType: USERDEFINED
     ObjectType: Pipe
     ContainedInStructure: SP-1.07

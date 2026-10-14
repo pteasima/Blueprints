@@ -822,8 +822,8 @@ def _elevation_drawing(info: dict, wall_ids: tuple[str, ...], scene_id: str, nam
         notes.append(
             _callout(
                 _station(frame, frame["length"] * 0.55, 1000.0),
-                "Tango 150 mm rozteč\nouter holes on the joints",
-                "Tango rozteč 150 mm\nkrajní otvory na spáře",
+                "vanity on the door joint\nouter pipes one tile either side",
+                "skříňka na spáře dveří\nkrajní trubky o dlaždici vedle",
                 (0.12, 0.08),
                 leader=False,
             )
@@ -1105,7 +1105,7 @@ def _svg_plan(info: dict) -> str:
         _svg_text(
             pt(11.70, 11.85)[0],
             pt(11.70, 11.85)[1],
-            "vanity on the Tangos\none top, two basins\n150 mm rozteč",
+            "vanity on the door joint\none top, two basins\nouter pipes one tile out",
             15,
         )
     )
@@ -1157,7 +1157,7 @@ def _svg_wall(info: dict, wall_ids: tuple[str, ...], title_en: str, title_cs: st
             _svg_text(
                 origin_x + 80,
                 pt(0.2, 1.5)[1],
-                "plaster above the shelf\nshelf on joint 1194\nmirrors, note only\nTango 150 mm",
+                "plaster above the shelf\nshelf on joint 1194\nmirrors, note only\nvanity on the door joint",
                 15,
                 anchor="start",
             )
