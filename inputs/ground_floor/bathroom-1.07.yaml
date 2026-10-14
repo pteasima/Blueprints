@@ -1,0 +1,389 @@
+# Room 1.07 (Koupelna), the large bathroom: bathtub side to the west, double
+# washbasin under the north window, walk-in shower to the east.
+# Lengths are metres. Storey coordinates, the same frame as ground-floor.yaml.
+# Clear inner faces, from the wall footprints (drawing faces, not a site measure):
+#   west  x=9.725   (W-039 inner face) up to y=12.05
+#   west  x=9.9     (W-040 inner face) from y=12.05 to the north wall
+#   east  x=14.225  (W-045 / W-046 inner face)
+#   south y=10.15   (W-022 inner face)
+#   north y=12.25   (W-026 inner face)
+# Clear size 4.500 m east-west by 2.100 m north-south, less a 175×200 mm
+# northwest jog where the west wall thickens. Model area 9.415 m².
+# The ZTI room table (D.1.4.1.03) lists 8.91 m². These faces are the tiling
+# boundary; the difference is not closed here.
+# Clear height 2.500 m (legend s.v.).
+# +X east, +Y north.
+# Door OP17 is in the south wall, x=11.50–12.50, leaf height 2.100 m.
+# The partition is 125 mm, so the floor stops on the inner face. It does not
+# step into the reveal the way room 1.20 does (that leaf line needs 100 mm
+# inside a 250 mm wall).
+# Window OP15 is in the north wall, x=9.95–12.85, sill 1.750 m, head 2.500 m.
+# The wall file has no window on the west wall. The SketchUp view shows a
+# small light there; it is not an opening in this model.
+# Tiles are ABK Poetry Stone, rectified, 8.5 mm, the same batch sizes as 1.20:
+#   floor 596×596, walls 596×1194 portrait, two courses.
+#   1194 = 2×596 + 2, so one wall tile's height spans two floor tiles and the
+#   joint between them.
+# Wall joint 2 mm, measured in plan. Plan pitch is 598 mm.
+# The floor outside the shower is level at 0. Floor joints there are 2 mm.
+# Inside the shower the floor falls, so the north-south floor joint is the
+# slightly wider slope joint. Plan pitch stays 598 mm, so the lines meet.
+# Grid origin is the module boundary 555 mm west of the east wall, on the
+# south wall: (13.67, 10.15). Tiles hang from the east, so the east piece is
+# the 555 mm cut marked on the spárořez. The glass stands on the next joint
+# west of that, x=13.072. Shower clear width 1.153 m (555 + 598).
+# Shower is the full-depth east bay. One-way fall, 1.25%, from the north wall
+# (the wall opposite the drain) to the south. The whole north edge stays at 0.
+# Drop over 2.100 m is 26.250 mm. A linear drain, 80 mm, sits on the south
+# edge and takes that low line. A point drain would not, because the south
+# edge is level.
+# Course lines are struck from the drain, as in 1.20, so the bottom tile is a
+# full 1194 mm at the low point and shorter on the level floor. The shared
+# course joint is at 1169.750 mm. The window sill at 1750 mm is 580.250 mm
+# above that joint. The SketchUp "555 mm" vertical is the same gap struck
+# from floor zero (1750 − 1196 = 554, written 555). It is not the course used
+# here, because that course would make the bottom tile at the drain taller
+# than the 1194 mm blank.
+# Niche: the 596 mm tile on the north wall inside the shower, upper course,
+# 400 mm tall, bottom on the course joint. Not a measured niche.
+# Mixers sit on a joint (BATERIE NA SPÁRU): the vanity on the vertical joint
+# nearest the window centre, the shower valve on the east wall at the joint
+# 1196 mm from the south and on the course joint. Fixtures are notes, not solids.
+# Floor build-up, bottom to top, 250 mm at finished-floor zero:
+#   waterproofing 8, EPS 100S 80+50, nop board 50, screed 49, adhesive+tile 13.
+# The fall is taken in the screed. EPS under the shower stays 80+50.
+# Screed at the drain is 22.750 mm, below the 45 mm minimum above the nops.
+# That is reported, not changed. Omitting the bottom 50 mm EPS under the
+# shower only (as on 1.20) would leave 72.750 mm of screed at the drain.
+# Screed, membrane, and ceiling are properties. They are not extruded.
+# The tile solid is the 8.5 mm ceramic. The 13 mm finish is the build-up sum.
+schema: IFC4 ADD2 TC1
+units:
+  LengthUnit: METRE
+project:
+  id: PRJ
+  Name: "RD Šíma"
+  Aggregates: [SITE]
+site:
+  id: SITE
+  Name: "Bor u Tachova"
+  RefElevation: 472.1
+  Aggregates: [BLD]
+building:
+  id: BLD
+  Name: "RD Šíma"
+  Aggregates: [STOREY-1NP]
+storey:
+  id: STOREY-1NP
+  Name: "1.NP"
+  Elevation: 0
+spaces:
+  - id: SP-1.07
+    Name: Koupelna
+    LongName: "1.07"
+    PredefinedType: INTERNAL
+walls: []
+openings: []
+doors: []
+windows: []
+slabs:
+  - id: SLAB-LEVEL
+    Name: Screed
+    Description: Level screed at finished floor 0, outside the shower. Underfloor heating is in the screed.
+    PredefinedType: FLOOR
+    ObjectType: Screed
+    ContainedInStructure: SP-1.07
+    Plane:
+      Origin: [9.725, 10.15]
+      Elevation: 0
+      Gradient: [0, 0]
+    Footprint:
+      - [9.725, 10.15]
+      - [13.072, 10.15]
+      - [13.072, 12.25]
+      - [9.9, 12.25]
+      - [9.9, 12.05]
+      - [9.725, 12.05]
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          UnderfloorHeating: true
+          BuildUpMm: 250
+          WaterproofingMm: 8
+          EpsTopMm: 80
+          EpsBottomMm: 50
+          NopBoardMm: 50
+          FinishMm: 13
+          ScreedAtZeroMm: 49
+  - id: SLAB-SHOWER
+    Name: Shower screed
+    Description: One-way fall 1.25% from the north wall to the south drain. EPS stays 80+50. Screed at the drain is 22.75 mm, below 45 mm above the nops. Not thinned.
+    PredefinedType: FLOOR
+    ObjectType: Screed
+    ContainedInStructure: SP-1.07
+    Plane:
+      Origin: [13.072, 12.25]
+      Elevation: 0
+      Gradient: [0, 0.0125]
+    Footprint:
+      - [13.072, 10.15]
+      - [14.225, 10.15]
+      - [14.225, 12.25]
+      - [13.072, 12.25]
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          UnderfloorHeating: true
+          BuildUpMm: 250
+          WaterproofingMm: 8
+          EpsTopMm: 80
+          EpsBottomMm: 50
+          NopBoardMm: 50
+          FinishMm: 13
+          ScreedAtZeroMm: 49
+          ScreedAtDrainMm: 22.75
+          Fall: 0.0125
+          DrainDropMm: 26.25
+          MinimumScreedMm: 45
+          ScreedBelowMinimum: true
+          EpsProposal: "omit the bottom 50 mm EPS under the shower only; not applied"
+coverings:
+  - id: CEIL-1.07
+    Name: Soffit
+    Description: Clear height 2.5 m. Board thickness is not measured.
+    PredefinedType: CEILING
+    ObjectType: SuspendedCeiling
+    ContainedInStructure: SP-1.07
+    Origin: [9.725, 10.15]
+    Elevation: 2.5
+    Width: 4.5
+    Depth: 2.1
+  - id: CLAD-N
+    Name: North wall tiles
+    Description: Window OP15 and the shower niche. Vertical joints are the floor grid. The 555 mm east piece is the cut hung from the east wall.
+    PredefinedType: CLADDING
+    ObjectType: PoetryStone
+    ContainedInStructure: SP-1.07
+    Plane: SLAB-LEVEL
+    TileLayout:
+      Product: ABK Poetry Stone Trani Beige
+      Thickness: 0.0085
+      Tile: [0.596, 1.194]
+      Joint: 0.002
+      GridOrigin: [13.67, 10.15]
+      BottomCut: follow-slope
+      BottomJoint: 0.002
+      Courses: 2
+      CourseZMin: -0.02625
+      Axis:
+        Start: [9.9, 12.25]
+        End: [14.225, 12.25]
+      Inside: [12, 11.2]
+      Openings:
+        - AlongAxis: 0.05
+          Width: 2.9
+          SillHeight: 1.75
+          Height: 0.75
+        - AlongAxis: 3.174
+          Width: 0.596
+          SillHeight: 1.17175
+          Height: 0.4
+  - id: CLAD-E
+    Name: East wall tiles
+    Description: Shower side wall. Bottom edge follows the fall, 0 at the north to -26.250 mm at the south.
+    PredefinedType: CLADDING
+    ObjectType: PoetryStone
+    ContainedInStructure: SP-1.07
+    Plane: SLAB-SHOWER
+    TileLayout:
+      Product: ABK Poetry Stone Trani Beige
+      Thickness: 0.0085
+      Tile: [0.596, 1.194]
+      Joint: 0.002
+      GridOrigin: [13.67, 10.15]
+      BottomCut: follow-slope
+      BottomJoint: 0.002
+      Courses: 2
+      CourseZMin: -0.02625
+      Axis:
+        Start: [14.225, 10.15]
+        End: [14.225, 12.25]
+      Inside: [12, 11.2]
+  - id: CLAD-S
+    Name: South wall tiles
+    Description: Door OP17. Floor is level. The wall stops at the glass joint.
+    PredefinedType: CLADDING
+    ObjectType: PoetryStone
+    ContainedInStructure: SP-1.07
+    Plane: SLAB-LEVEL
+    TileLayout:
+      Product: ABK Poetry Stone Trani Beige
+      Thickness: 0.0085
+      Tile: [0.596, 1.194]
+      Joint: 0.002
+      GridOrigin: [13.67, 10.15]
+      BottomCut: follow-slope
+      BottomJoint: 0.002
+      Courses: 2
+      CourseZMin: -0.02625
+      Axis:
+        Start: [9.725, 10.15]
+        End: [13.072, 10.15]
+      Inside: [12, 11.2]
+      Openings:
+        - AlongAxis: 1.775
+          Width: 1
+          SillHeight: 0
+          Height: 2.1
+  - id: CLAD-SS
+    Name: South shower wall tiles
+    Description: Low edge of the shower, finished floor -26.250 mm.
+    PredefinedType: CLADDING
+    ObjectType: PoetryStone
+    ContainedInStructure: SP-1.07
+    Plane: SLAB-SHOWER
+    TileLayout:
+      Product: ABK Poetry Stone Trani Beige
+      Thickness: 0.0085
+      Tile: [0.596, 1.194]
+      Joint: 0.002
+      GridOrigin: [13.67, 10.15]
+      BottomCut: follow-slope
+      BottomJoint: 0.002
+      Courses: 2
+      CourseZMin: -0.02625
+      Axis:
+        Start: [13.072, 10.15]
+        End: [14.225, 10.15]
+      Inside: [13.6, 11.2]
+  - id: CLAD-W
+    Name: West wall tiles
+    PredefinedType: CLADDING
+    ObjectType: PoetryStone
+    ContainedInStructure: SP-1.07
+    Plane: SLAB-LEVEL
+    TileLayout:
+      Product: ABK Poetry Stone Trani Beige
+      Thickness: 0.0085
+      Tile: [0.596, 1.194]
+      Joint: 0.002
+      GridOrigin: [13.67, 10.15]
+      BottomCut: follow-slope
+      BottomJoint: 0.002
+      Courses: 2
+      CourseZMin: -0.02625
+      Axis:
+        Start: [9.725, 10.15]
+        End: [9.725, 12.05]
+      Inside: [12, 11.2]
+  - id: CLAD-WP
+    Name: West pier tiles
+    Description: 200 mm north return where W-040 steps the inner face to x=9.9. One cut tile.
+    PredefinedType: CLADDING
+    ObjectType: PoetryStone
+    ContainedInStructure: SP-1.07
+    Plane: SLAB-LEVEL
+    TileLayout:
+      Product: ABK Poetry Stone Trani Beige
+      Thickness: 0.0085
+      Tile: [0.596, 1.194]
+      Joint: 0.002
+      GridOrigin: [13.67, 10.15]
+      BottomCut: follow-slope
+      BottomJoint: 0.002
+      Courses: 2
+      CourseZMin: -0.02625
+      Axis:
+        Start: [9.9, 12.05]
+        End: [9.9, 12.25]
+      Inside: [12, 11.2]
+  - id: CLAD-CH
+    Name: Northwest cheek tiles
+    Description: 175 mm south-facing cheek of the jog. One cut tile.
+    PredefinedType: CLADDING
+    ObjectType: PoetryStone
+    ContainedInStructure: SP-1.07
+    Plane: SLAB-LEVEL
+    TileLayout:
+      Product: ABK Poetry Stone Trani Beige
+      Thickness: 0.0085
+      Tile: [0.596, 1.194]
+      Joint: 0.002
+      GridOrigin: [13.67, 10.15]
+      BottomCut: follow-slope
+      BottomJoint: 0.002
+      Courses: 2
+      CourseZMin: -0.02625
+      Axis:
+        Start: [9.725, 12.05]
+        End: [9.9, 12.05]
+      Inside: [9.8, 11.2]
+  - id: FLR-LEVEL
+    Name: Floor tiles
+    Description: Level finished floor, 0. Stops at the glass joint.
+    PredefinedType: FLOORING
+    ObjectType: PoetryStone
+    ContainedInStructure: SP-1.07
+    Plane: SLAB-LEVEL
+    TileLayout:
+      Product: ABK Poetry Stone Trani Beige
+      Thickness: 0.0085
+      Tile: [0.596, 0.596]
+      WallJoint: 0.002
+      GridOrigin: [13.67, 10.15]
+      Footprint:
+        - [9.725, 10.15]
+        - [13.072, 10.15]
+        - [13.072, 12.25]
+        - [9.9, 12.25]
+        - [9.9, 12.05]
+        - [9.725, 12.05]
+  - id: FLR-SHOWER
+    Name: Shower floor tiles
+    Description: Falls 1.25% to the south. The east piece is 555 mm.
+    PredefinedType: FLOORING
+    ObjectType: PoetryStone
+    ContainedInStructure: SP-1.07
+    Plane: SLAB-SHOWER
+    TileLayout:
+      Product: ABK Poetry Stone Trani Beige
+      Thickness: 0.0085
+      Tile: [0.596, 0.596]
+      WallJoint: 0.002
+      GridOrigin: [13.67, 10.15]
+      JointInset: 0.002
+      Footprint:
+        - [13.072, 10.15]
+        - [14.225, 10.15]
+        - [14.225, 12.25]
+        - [13.072, 12.25]
+      Cutouts:
+        - - [13.072, 10.15]
+          - [14.225, 10.15]
+          - [14.225, 10.23]
+          - [13.072, 10.23]
+  - id: MEM-1.07
+    Name: Waterproofing
+    Description: 8 mm in the floor build-up. Upstand 100–150 mm, and full height in the shower. No membrane solid.
+    PredefinedType: MEMBRANE
+    ObjectType: WaterproofingMembrane
+    ContainedInStructure: SP-1.07
+    Plane: SLAB-LEVEL
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          ThicknessMm: 8
+          UpstandMin: 0.1
+          UpstandMax: 0.15
+          ShowerUpstand: full-height
+wasteTerminals:
+  - id: DRAIN-1.07
+    Name: Linear drain
+    Description: 80 mm channel on the south edge of the shower, the low line of the one-way fall.
+    PredefinedType: FLOORTRAP
+    ObjectType: LinearDrain
+    ContainedInStructure: SP-1.07
+    Origin: [13.072, 10.15]
+    Width: 1.153
+    Depth: 0.08
+    Plane: SLAB-SHOWER
