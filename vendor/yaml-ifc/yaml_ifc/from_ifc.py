@@ -1047,6 +1047,8 @@ def _lift_tiles(entity, book):
         layout["BottomJoint"] = book["BottomJoint"]
     if "TileCourses" in book:
         layout["Courses"] = book["TileCourses"]
+    if "CourseZMin" in book:
+        layout["CourseZMin"] = book["CourseZMin"]
     if "JointInset" in book:
         layout["JointInset"] = book["JointInset"]
     if "FootprintText" in book:

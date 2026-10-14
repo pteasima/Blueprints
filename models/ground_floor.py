@@ -46,6 +46,9 @@ tiles, grout, and the ACO point drain are the solids ``yaml_ifc`` lays out
 for that file. The screed, the membrane, and the ceiling have no measured
 thickness and are not extruded.
 
+Bathroom 1.07 is ``bathroom-1.07.yaml``. The level floor and the shower are
+separate planes. The shower falls 1.25% from the north wall; EPS stays 80+50.
+
     python -m blueprints.export ground_floor
 """
 
@@ -73,6 +76,11 @@ from yaml_ifc.supported import FURNISHINGS, PSET_NAME
 from yaml_ifc.to_ifc import build_ifc
 from yaml_ifc.yamlio import load as load_yaml_ifc
 
+from bathroom_107 import (
+    figures as bathroom_107_figures,
+    parts as bathroom_107_parts,
+    scenes as bathroom_107_scenes,
+)
 from bathroom_120 import (
     LABEL_DRAIN,
     LABEL_FLOOR,
@@ -550,6 +558,9 @@ def build(path: Path | None = None, furnishings_path: Path | None = None):
     parts.extend(furnishing_parts)
     bath_parts = bathroom_parts()
     parts.extend(bath_parts)
+    bath107_parts = bathroom_107_parts()
+    parts.extend(bath107_parts)
+    bath107 = bathroom_107_figures()
 
     assembly = Compound(obj=parts, children=parts, label=MODEL_NAME)
     removed = (uncut_mm3 - cut_mm3) / 1e9
@@ -570,6 +581,12 @@ def build(path: Path | None = None, furnishings_path: Path | None = None):
             ),
             "bathroom_grout": sum(1 for part in bath_parts if part.label == LABEL_GROUT),
             "bathroom_head_mm": round(bathroom_head_mm(), 3),
+            "bathroom_107_tiles": sum(
+                1 for part in bath107_parts if part.label in {LABEL_FLOOR, LABEL_WALL}
+            ),
+            "bathroom_107_head_mm": round(bath107["head_mm"], 3),
+            "bathroom_107_drop_mm": round(bath107["drop_mm"], 3),
+            "bathroom_107_screed_drain_mm": round(bath107["screed_drain_mm"], 3),
         },
         "footprints_omitted": omitted,
         "openings_cut": cut_ids,
@@ -840,6 +857,7 @@ def scenes() -> list[dict]:
             for spec in FURNITURE_VIEWS
         ),
         *bathroom_scenes(),
+        *bathroom_107_scenes(),
     ]
 
 

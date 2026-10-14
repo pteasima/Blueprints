@@ -988,6 +988,10 @@ class Builder:
             if isinstance(courses, bool) or not isinstance(courses, int) or courses < 1:
                 raise ValueError(f"{element['id']} Courses must be a positive integer")
             book["TileCourses"] = courses
+        # Shared course datum when a room has more than one floor plane.
+        # Omitted, the courses are struck from this wall's own plane.
+        if layout.get("CourseZMin") is not None:
+            book["CourseZMin"] = float(layout["CourseZMin"])
         if layout.get("JointInset") is not None:
             book["JointInset"] = layout["JointInset"]
         if layout.get("Footprint"):
@@ -1077,6 +1081,7 @@ class Builder:
             layout["Axis"],
             layout["Inside"],
             layout.get("Openings") or (),
+            z_min=layout.get("CourseZMin"),
             footprint=footprint,
         )
         thickness = layout["Thickness"]
