@@ -17,7 +17,7 @@ import numpy as np
 from openpyxl import load_workbook
 from scipy.ndimage import label as cc_label
 from shapely import contains_xy, prepare
-from shapely.geometry import LineString, Point, Polygon, box
+from shapely.geometry import Point, Polygon, box
 from shapely.ops import unary_union
 
 from yaml_ifc.joints import footprints
@@ -684,71 +684,56 @@ def render_svg(plan: Plan) -> str:
     body.append(f'<line x1="{ax:.1f}" y1="{ay + 10:.1f}" x2="{ax:.1f}" y2="{ay:.1f}" stroke="#1c1916" stroke-width="0.35"/>')
     body.append(f'<text x="{ax + 2.2:.1f}" y="{ay + 3:.1f}" font-size="2.6" font-weight="700">S</text>')
 
-    band_top = PLAN_TOP + plan_h + 7.0
-    inside, leaders = _place_labels(plan, px, py, band_top)
-    for item in inside:
-        body.extend(_label_block(item, inline=True))
-    obstacles = [_callout_box(item) for item in leaders]
-    for item in leaders:
-        body.extend(_leader(item, obstacles))
-    legend_y = max((item["y"] - item["line_h"] + item["h"] for item in leaders), default=band_top) + 4.0
-    body.extend(_legend_and_notes(plan, legend_y))
+    labels, legend_stacks = _place_labels(plan, px, py)
+    for item in labels:
+        body.extend(_label_block(item))
+    legend_y = PLAN_TOP + plan_h + 5.0
+    body.extend(_legend_and_notes(plan, legend_y, legend_stacks))
     body.append("</svg>")
     return "\n".join(body)
 
 
-def _place_labels(plan: Plan, px, py, band_top: float):
-    """Full layer list inside the room when the polygon can hold it."""
-    font = 1.85
-    line_h = 2.35
-    inside = []
-    pending = []
-    for area in sorted(plan.areas, key=lambda item: item.room):
-        title = area.room if not area.subtitle else f"{area.room} {area.subtitle}"
-        if area.name and area.area_id == area.room:
-            title = f"{area.room} {area.name}"
-        lines = [title, *area.lines]
-        placed = _try_inside(area.polygon, lines, font, line_h, px, py)
-        if placed is not None:
-            inside.append(placed)
-        else:
-            pending.append((area, lines))
-    # Southern rooms sit next to the callout band, so their leaders stay short
-    # and do not cross the row below.
-    pending.sort(key=lambda item: -py(_pole(item[0].polygon).y))
-    leaders = _pack_leaders(pending, px, py, band_top, font=2.15, line_h=2.65)
-    # Room number stays on the plan when the full label sits in the margin.
-    for area, _lines in pending:
-        point = _pole(area.polygon)
-        inside.append(
-            {
-                "x": px(point.x),
-                "y": py(point.y),
-                "lines": [area.room if not area.subtitle else f"{area.room}"],
-                "size": 2.5,
-                "line_h": 3.0,
-                "weight": "700",
-                "anchor": "middle",
-                "fill": "#1c1916",
-                "box": False,
-            }
-        )
-        short = area.subtitle.split(",")[0] if area.subtitle else ""
-        if short and point.distance(area.polygon.boundary) > 0.42:
-            inside.append(
-                {
-                    "x": px(point.x),
-                    "y": py(point.y) + 2.8,
-                    "lines": [short],
-                    "size": 1.7,
-                    "line_h": 2.1,
-                    "weight": "400",
-                    "anchor": "middle",
-                    "fill": "#333",
-                    "box": False,
-                }
+def _room_name(area: Area) -> str:
+    """Name printed under the room number. A shower keeps the word sprcha."""
+    if area.subtitle.startswith("sprcha"):
+        return "sprcha"
+    return area.name
+
+
+def _place_labels(plan: Plan, px, py):
+    """Room number and name in every area. The layer list once per colour.
+
+    The list goes in the largest area of that colour when the polygon can
+    hold it. Otherwise it goes in the legend, still only once.
+    """
+    hosts = {}
+    for area in plan.areas:
+        current = hosts.get(area.kind)
+        if current is None or area.polygon.area > current.polygon.area:
+            hosts[area.kind] = area
+    labels = []
+    legend_stacks: dict[str, list[str]] = {}
+    for area in plan.areas:
+        caption = [area.room, _room_name(area)]
+        if area is hosts[area.kind]:
+            # Keep each layer on one line. A crushed wrap is harder to read
+            # than the same list once in the legend.
+            placed = _try_inside(
+                area.polygon,
+                [*caption, *area.lines],
+                2.15,
+                2.6,
+                px,
+                py,
+                box_fill=True,
+                widths=(48, 40, 34),
             )
-    return inside, leaders
+            if placed is not None:
+                labels.append(placed)
+                continue
+            legend_stacks[area.kind] = area.lines
+        labels.append(_place_caption(area, caption, px, py))
+    return labels, legend_stacks
 
 
 def _pole(polygon: Polygon) -> Point:
@@ -770,36 +755,80 @@ def _pole(polygon: Polygon) -> Point:
     return best
 
 
-def _try_inside(polygon, lines, font, line_h, px, py):
-    point = _pole(polygon)
-    # Wider lines first. A bathroom can take a narrow wrap; the living room
-    # should keep the lines intact.
-    for chars in (42, 34, 28, 22, 18):
-        wrapped = _wrap([lines[0], *lines[1:]], chars)
-        width_mm = max(len(line) for line in wrapped) * font * 0.56 + 1.6
-        height_mm = len(wrapped) * line_h + 1.4
-        rect = box(
-            point.x - (width_mm / SCALE) / 2.0,
-            point.y - (height_mm / SCALE) / 2.0,
-            point.x + (width_mm / SCALE) / 2.0,
-            point.y + (height_mm / SCALE) / 2.0,
-        )
-        if polygon.contains(rect):
-            return {
-                "x": px(point.x),
-                "y": py(point.y) - height_mm / 2.0 + line_h * 0.85,
-                "lines": wrapped,
-                "size": font,
-                "line_h": line_h,
-                "weight": "400",
-                "anchor": "middle",
-                "fill": "#1c1916",
-                "box": True,
-                "box_w": width_mm,
-                "box_h": height_mm,
-                "cx": px(point.x),
-                "cy": py(point.y),
-            }
+def _place_caption(area: Area, caption: list[str], px, py) -> dict:
+    """Number and name. A long room can take the name on the same line."""
+    room, name = caption
+    for size, line_h, lines in (
+        (2.35, 2.8, [room, name]),
+        (2.05, 2.45, [room, name]),
+        (1.85, 2.2, [room, name]),
+        (2.15, 2.55, [f"{room} {name}"]),
+        (1.9, 2.3, [f"{room} {name}"]),
+        (2.05, 2.45, [room]),
+    ):
+        placed = _try_inside(area.polygon, lines, size, line_h, px, py, box_fill=False, widths=(42, 28, 18))
+        if placed is not None:
+            return placed
+    point = _pole(area.polygon)
+    return {
+        "x": px(point.x),
+        "y": py(point.y),
+        "lines": [room],
+        "size": 2.0,
+        "line_h": 2.4,
+        "weight": "700",
+        "anchor": "middle",
+        "fill": "#1c1916",
+        "box": False,
+    }
+
+
+def _label_points(polygon: Polygon, pole: Point):
+    """Pole first, then a grid so a long thin room can hold a label off-centre."""
+    yield pole
+    minx, miny, maxx, maxy = polygon.bounds
+    step = max(0.25, min(maxx - minx, maxy - miny) / 5.0)
+    found = []
+    y = miny + step / 2.0
+    while y < maxy:
+        x = minx + step / 2.0
+        while x < maxx:
+            point = Point(x, y)
+            if polygon.contains(point):
+                found.append(point)
+            x += step
+        y += step
+    found.sort(key=lambda point: point.distance(pole))
+    yield from found[:24]
+
+
+def _try_inside(polygon, lines, font, line_h, px, py, box_fill: bool, widths=(46, 36, 28, 22, 16)):
+    pole = _pole(polygon)
+    points = list(_label_points(polygon, pole))
+    for chars in widths:
+        wrapped = _wrap(list(lines), chars)
+        width_mm = max(len(line) for line in wrapped) * font * 0.54 + 1.2
+        height_mm = len(wrapped) * line_h + 1.0
+        half_w = (width_mm / SCALE) / 2.0
+        half_h = (height_mm / SCALE) / 2.0
+        for point in points:
+            rect = box(point.x - half_w, point.y - half_h, point.x + half_w, point.y + half_h)
+            if polygon.contains(rect):
+                return {
+                    "x": px(point.x),
+                    "y": py(point.y) - height_mm / 2.0 + line_h * 0.85,
+                    "lines": wrapped,
+                    "size": font,
+                    "line_h": line_h,
+                    "weight": "400",
+                    "anchor": "middle",
+                    "fill": "#1c1916",
+                    "box": box_fill,
+                    "box_w": width_mm,
+                    "box_h": height_mm,
+                    "cx": px(point.x),
+                    "cy": py(point.y),
+                }
     return None
 
 
@@ -823,44 +852,7 @@ def _wrap(lines: list[str], chars: int) -> list[str]:
     return wrapped
 
 
-def _pack_leaders(pending, px, py, top, font, line_h):
-    """Callouts under the plan, left to right, in room order."""
-    if not pending:
-        return []
-    placed = []
-    cursor_x = 12.0
-    cursor_y = top
-    row_h = 0.0
-    for area, lines in pending:
-        wrapped = _wrap(lines, 36)
-        width = max(len(line) for line in wrapped) * font * 0.54 + 2.4
-        height = len(wrapped) * line_h + 1.6
-        if cursor_x + width > PAGE_W - 8:
-            cursor_x = 12.0
-            cursor_y += row_h + 1.6
-            row_h = 0.0
-        target = _pole(area.polygon)
-        placed.append(
-            {
-                "x": cursor_x + 1.2,
-                "y": cursor_y + line_h,
-                "w": width,
-                "h": height,
-                "lines": wrapped,
-                "size": font,
-                "line_h": line_h,
-                "tx": px(target.x),
-                "ty": py(target.y),
-                "colour": COLOURS[area.kind],
-                "assumption": area.assumption,
-            }
-        )
-        cursor_x += width + 2.0
-        row_h = max(row_h, height)
-    return placed
-
-
-def _label_block(item, inline: bool) -> list[str]:
+def _label_block(item) -> list[str]:
     parts = []
     if item.get("box"):
         parts.append(
@@ -887,63 +879,49 @@ def _markup(line: str) -> str:
     return escaped.replace("✓", '<tspan fill="#1a7a34" font-weight="700">✓</tspan>')
 
 
-def _callout_box(item):
-    top = item["y"] - item["line_h"]
-    return box(item["x"] - 1.0, top, item["x"] - 1.0 + item["w"], top + item["h"])
-
-
-def _leader(item, obstacles) -> list[str]:
-    """A straight leader when it misses the other callouts. Otherwise the room
-    number on the plan is the link; a line through another label is worse."""
-    stroke = "#6a3d91" if item["assumption"] else "#5c564e"
-    top = item["y"] - item["line_h"]
-    own = _callout_box(item)
-    start = (own.centroid.x, top)
-    end = (item["tx"], item["ty"])
-    line = LineString([start, end])
-    clear = True
-    for other in obstacles:
-        if other.equals(own):
-            continue
-        piece = other.intersection(line)
-        if not piece.is_empty and piece.length > 0.6:
-            clear = False
-            break
+def _legend_and_notes(plan: Plan, y: float, legend_stacks: dict[str, list[str]]) -> list[str]:
+    """Colour key, then any build-up that did not fit in its largest area."""
     parts = []
-    if clear:
-        parts.append(
-            f'<line x1="{start[0]:.2f}" y1="{start[1]:.2f}" x2="{end[0]:.2f}" y2="{end[1]:.2f}" '
-            f'stroke="{stroke}" stroke-width="0.22"/>'
-        )
-    parts.append(f'<circle cx="{end[0]:.2f}" cy="{end[1]:.2f}" r="0.55" fill="{stroke}"/>')
-    parts.append(
-        f'<rect x="{item["x"] - 1.0:.2f}" y="{top:.2f}" width="{item["w"]:.2f}" height="{item["h"]:.2f}" '
-        f'rx="0.5" fill="#ffffff" stroke="{item["colour"]}" stroke-width="0.8"/>'
-    )
-    parts.append(_text_lines(item["x"], item["y"], item["lines"], item["size"], item["line_h"], "start", "400"))
-    return parts
-
-
-def _legend_and_notes(plan: Plan, y: float) -> list[str]:
-    """Legend, then the notes. `y` is just below the callout band."""
-    parts = []
-    chip_y = y + 3.2
-    parts.append(f'<text x="12" y="{y + 1.2:.1f}" font-size="2.6" font-weight="700" fill="#1c1916">Legenda</text>')
+    parts.append(f'<text x="12" y="{y:.1f}" font-size="2.7" font-weight="700" fill="#1c1916">Legenda</text>')
+    chip_y = y + 1.6
     x = 32.0
     for kind in ("pu", "tile", "b120", "sh107", "sh121", "gar", "skl"):
         label = LEGEND[kind]
-        width = 4.2 + 1.4 + len(label) * 1.18
+        width = 4.2 + 1.4 + len(label) * 1.15
         if x + width > PAGE_W - 8:
             x = 12.0
-            chip_y += 5.0
+            chip_y += 5.2
         parts.append(
             f'<rect x="{x:.1f}" y="{chip_y:.1f}" width="4.2" height="3.2" fill="{COLOURS[kind]}" stroke="#444" stroke-width="0.2"/>'
         )
         parts.append(
-            f'<text x="{x + 5.4:.1f}" y="{chip_y + 2.55:.1f}" font-size="2.2" fill="#1c1916">{_escape(label)}</text>'
+            f'<text x="{x + 5.4:.1f}" y="{chip_y + 2.55:.1f}" font-size="2.15" fill="#1c1916">{_escape(label)}</text>'
         )
-        x += width + 2.4
-    note_y = chip_y + 7.0
+        x += width + 2.2
+    note_y = chip_y + 7.2
+    if legend_stacks:
+        columns = [kind for kind in ("pu", "tile", "b120", "sh107", "sh121", "gar", "skl") if kind in legend_stacks]
+        per_row = 3 if len(columns) > 3 else len(columns)
+        col_w = (PAGE_W - 20) / per_row
+        line_step = 2.5
+        rows = [columns[i : i + per_row] for i in range(0, len(columns), per_row)]
+        for row in rows:
+            wrapped_rows = [_wrap(legend_stacks[kind], 58) for kind in row]
+            for index, kind in enumerate(row):
+                col_x = 12.0 + index * col_w
+                parts.append(
+                    f'<rect x="{col_x:.1f}" y="{note_y - 2.6:.1f}" width="3.6" height="2.8" fill="{COLOURS[kind]}" stroke="#444" stroke-width="0.15"/>'
+                )
+                parts.append(
+                    f'<text x="{col_x + 4.6:.1f}" y="{note_y:.1f}" font-size="2.25" font-weight="700" fill="#1c1916">{_escape(LEGEND[kind])}</text>'
+                )
+                text_y = note_y + 3.4
+                for line in wrapped_rows[index]:
+                    parts.append(
+                        f'<text x="{col_x:.1f}" y="{text_y:.2f}" font-size="2.15" fill="#1c1916">{_markup(line)}</text>'
+                    )
+                    text_y += line_step
+            note_y += 3.4 + line_step * max(len(lines) for lines in wrapped_rows) + 4.0
     for note in plan.notes:
         for piece in _wrap_note(note, 175):
             parts.append(f'<text x="12" y="{note_y:.2f}" font-size="2.15" fill="#333">{_markup(piece)}</text>')

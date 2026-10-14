@@ -90,3 +90,12 @@ def test_drawing_names_every_trade():
         assert colour in svg
     assert "EPS EPS" not in svg
     assert svg.count("<svg") == 1
+    # One layer list per build-up. Every stack starts with the same line.
+    assert svg.count("hydroizolace 8 mm") == len(COLOURS)
+    assert svg.count("Litý beton 68 mm") == 1
+    assert svg.count("EPS 100 S 40+40 mm") == 1
+    plan = assemble()
+    for area in plan.areas:
+        assert area.room in svg
+        assert area.name.split()[0] in svg
+    assert svg.count("sprcha") >= 2
