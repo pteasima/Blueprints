@@ -56,6 +56,10 @@ const PART_EN = {
   tile: "Tiles",
   grout: "Grout",
   drain: "Floor drain",
+  fixture: "Sanitary fixture",
+  prewall: "Pre-wall",
+  screen: "Shower screen",
+  profile: "Sloped edge profile",
 };
 
 const PART_CS = {
@@ -107,6 +111,10 @@ const PART_CS = {
   tile: "Dlažba",
   grout: "Spáry",
   drain: "Podlahová vpusť",
+  fixture: "Zařizovací předmět",
+  prewall: "Přízdívka",
+  screen: "Sprchové sklo",
+  profile: "Spádová lišta",
 };
 
 const UI_EN = {

@@ -46,8 +46,8 @@ tiles, grout, and the ACO point drain are the solids ``yaml_ifc`` lays out
 for that file. The screed, the membrane, and the ceiling have no measured
 thickness and are not extruded.
 
-Bathroom 1.07 is ``bathroom-1.07.yaml``. The level floor and the shower are
-separate planes. The shower falls 1.25% from the north wall; EPS stays 80+50.
+Bathroom 1.07 is ``bathroom-1.07.yaml``. The shower falls 1.25% from the
+south toward a wall drain in the north pre-wall. EPS stays 60+60.
 
     python -m blueprints.export ground_floor
 """
@@ -880,7 +880,16 @@ def part_groups() -> list[dict]:
         },
         {
             "id": "bathroom",
-            "children": [LABEL_FLOOR, LABEL_WALL, LABEL_GROUT, LABEL_DRAIN],
+            "children": [
+                LABEL_FLOOR,
+                LABEL_WALL,
+                LABEL_GROUT,
+                LABEL_DRAIN,
+                "fixture",
+                "prewall",
+                "screen",
+                "profile",
+            ],
         },
     ]
 

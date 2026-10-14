@@ -246,9 +246,12 @@ walls:
       End: [9.6625, 12.05]
     Thickness: 0.125
   - id: W-040
+    # 300 mm chase. It used to project east into Koupelna 1.07 (the radon
+    # vent behind the bathtub). That chase is in the neighbouring room now:
+    # the bathroom face stays on W-039's inner face, x=9.725.
     Axis:
-      Start: [9.75, 12.05]
-      End: [9.75, 12.475]
+      Start: [9.575, 12.05]
+      End: [9.575, 12.475]
     Thickness: 0.3
   - id: W-041
     Axis:

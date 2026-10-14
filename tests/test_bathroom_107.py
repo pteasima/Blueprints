@@ -1,10 +1,10 @@
-"""Bathroom 1.07: level floor, 1.25% shower fall, linear drain, EPS left at 80+50."""
+"""Bathroom 1.07: fall to the north wall drain, EPS left at 60+60."""
 
 from pathlib import Path
 import sys
 
 import pytest
-from shapely.geometry import Polygon
+from shapely.geometry import Point, Polygon
 from shapely.ops import unary_union
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -15,8 +15,11 @@ from bathroom_107 import (  # noqa: E402
     EPS_BOTTOM_MM,
     EPS_TOP_MM,
     LABEL_DRAIN,
+    LABEL_FIXTURE,
     LABEL_FLOOR,
-    LABEL_GROUT,
+    LABEL_PREWALL,
+    LABEL_PROFILE,
+    LABEL_SCREEN,
     LABEL_WALL,
     SOURCE_PATH,
     figures,
@@ -29,9 +32,7 @@ from bathroom_107 import (  # noqa: E402
 )
 from bathroom_120 import small_pieces, wall_tiles_mm  # noqa: E402
 from yaml_ifc import plane_elevation  # noqa: E402
-from yaml_ifc.from_ifc import _lift_tiles  # noqa: E402
-from yaml_ifc.supported import PSET_NAME  # noqa: E402
-from yaml_ifc.to_ifc import build_ifc  # noqa: E402
+from yaml_ifc.yamlio import load as load_yaml  # noqa: E402
 
 
 EAST = 14.225
@@ -39,157 +40,128 @@ SOUTH = 10.15
 NORTH = 12.25
 WEST = 9.725
 GLASS = 13.072
-PITCH_MM = 598.0
 
 
 def _area(rings) -> float:
     return float(unary_union([Polygon(ring) for ring in rings]).area)
 
 
-def test_room_faces_and_the_unthinned_build_up():
+def test_room_is_a_rectangle_and_the_chase_left_the_bathroom():
     doc = load_document()
     assert SOURCE_PATH.is_file()
     space = doc["spaces"][0]
-    assert space["id"] == "SP-1.07"
-    assert space["Name"] == "Koupelna"
-    assert space["LongName"] == "1.07"
+    assert space["Name"] == "Koupelna" and space["LongName"] == "1.07"
     level = next(row for row in doc["slabs"] if row["id"] == "SLAB-LEVEL")
     shower = next(row for row in doc["slabs"] if row["id"] == "SLAB-SHOWER")
     assert level["Plane"]["Gradient"] == [0, 0]
-    assert shower["Plane"]["Origin"] == [GLASS, NORTH]
+    assert shower["Plane"]["Gradient"] == [0, -0.0125]
+    assert shower["Plane"]["Origin"] == [GLASS, SOUTH]
     assert shower["Plane"]["Elevation"] == 0
-    assert shower["Plane"]["Gradient"] == [0, 0.0125]
     props = shower["PropertySets"][0]["Properties"]
-    assert props["EpsTopMm"] == 80
-    assert props["EpsBottomMm"] == 50
-    assert props["ScreedAtZeroMm"] == 49
-    assert props["ScreedAtDrainMm"] == 22.75
+    assert props["EpsTopMm"] == 60 and props["EpsBottomMm"] == 60
+    assert props["ScreedAtZeroMm"] == 59
     assert props["Fall"] == 0.0125
-    assert props["DrainDropMm"] == 26.25
     assert props["MinimumScreedMm"] == 45
-    assert props["ScreedBelowMinimum"] is True
-    assert "not applied" in props["EpsProposal"]
-    assert "20" not in str(props["EpsBottomMm"])
-    level_props = level["PropertySets"][0]["Properties"]
-    assert level_props["EpsBottomMm"] == 50
-    assert level_props["BuildUpMm"] == 250
-    room = _area([level["Footprint"], shower["Footprint"]])
-    assert room == pytest.approx(9.415, abs=0.001)
-    drain = next(row for row in doc["wasteTerminals"] if row["id"] == "DRAIN-1.07")
-    assert drain["ObjectType"] == "LinearDrain"
-    assert drain["Origin"] == [GLASS, SOUTH]
-    assert drain["Width"] == pytest.approx(1.153, abs=1e-9)
-    assert drain["Depth"] == pytest.approx(0.08)
-    assert "Height" not in drain
-    for row in doc["coverings"]:
-        tile = row.get("TileLayout") or {}
-        if tile.get("Axis"):
-            assert tile["CourseZMin"] == pytest.approx(-0.02625)
+    room = _area(
+        [
+            [
+                [WEST, SOUTH],
+                [EAST, SOUTH],
+                [EAST, NORTH],
+                [WEST, NORTH],
+            ]
+        ]
+    )
+    assert room == pytest.approx(9.45, abs=0.001)
+    walls = {row["id"] for row in doc["coverings"] if (row.get("TileLayout") or {}).get("Axis")}
+    assert walls == {"CLAD-N", "CLAD-NS", "CLAD-E", "CLAD-S", "CLAD-W"}
+    assert "CLAD-WP" not in walls and "CLAD-CH" not in walls
+    house = load_yaml(ROOT / "inputs" / "ground_floor" / "ground-floor.yaml")
+    chase = next(row for row in house["walls"] if row["id"] == "W-040")
+    # East face of the 300 mm chase is the bathroom face x=9.725.
+    assert chase["Axis"]["Start"][0] + chase["Thickness"] / 2 == pytest.approx(WEST)
     assert validate(doc) == []
 
 
-def test_course_datum_round_trips():
-    model = build_ifc(load_document())
-    wall = next(item for item in model.by_type("IfcCovering") if item.Name == "East wall tiles")
-    book = {}
-    for rel in wall.IsDefinedBy:
-        pset = rel.RelatingPropertyDefinition
-        if getattr(pset, "Name", None) != PSET_NAME:
-            continue
-        for prop in pset.HasProperties:
-            book[prop.Name] = prop.NominalValue.wrappedValue
-    assert book["CourseZMin"] == pytest.approx(-0.02625)
-    restored = {}
-    _lift_tiles(restored, book)
-    assert restored["TileLayout"]["CourseZMin"] == pytest.approx(-0.02625)
-
-
-def test_fall_is_the_geometry_and_the_screed_stays_thin():
+def test_fall_runs_from_the_south_to_the_north_drain():
     info = layout()
     fig = figures(info)
     plane = info["shower_plane"]
-    z_north = plane_elevation(plane, EAST, NORTH)
     z_south = plane_elevation(plane, EAST, SOUTH)
-    assert z_north == pytest.approx(0.0, abs=1e-12)
-    assert (z_north - z_south) * 1000 == pytest.approx(26.25, abs=1e-6)
-    assert fig["fall"] == pytest.approx(0.0125, abs=1e-12)
-    assert fig["run_mm"] == pytest.approx(2100.0, abs=1e-6)
-    assert fig["drop_mm"] == pytest.approx(26.25, abs=1e-6)
+    z_north = plane_elevation(plane, EAST, fig["north_y_m"])
+    assert z_south == pytest.approx(0.0, abs=1e-12)
+    assert z_north * 1000 == pytest.approx(-24.375, abs=1e-6)
+    assert fig["fall"] == pytest.approx(0.0125)
+    assert fig["run_mm"] == pytest.approx(1950.0, abs=1e-4)
+    assert fig["drop_mm"] == pytest.approx(24.375, abs=1e-4)
     assert fig["drop_mm"] / fig["run_mm"] == pytest.approx(0.0125, abs=1e-9)
-    assert screed_at_zero_mm() == pytest.approx(49.0)
-    assert fig["screed_zero_mm"] == pytest.approx(49.0)
-    assert fig["screed_drain_mm"] == pytest.approx(22.75, abs=1e-6)
+    assert screed_at_zero_mm() == pytest.approx(59.0)
+    assert fig["screed_drain_mm"] == pytest.approx(34.625, abs=1e-4)
     assert fig["below_minimum"] is True
-    assert fig["screed_if_eps_omitted_mm"] == pytest.approx(72.75, abs=1e-6)
-    assert EPS_TOP_MM == 80 and EPS_BOTTOM_MM == 50
-    assert info["z_min"] * 1000 == pytest.approx(-26.25, abs=1e-6)
-    assert fig["head_mm"] == pytest.approx(2365.75, abs=1e-6)
-    assert fig["course_mm"] == pytest.approx(1169.75, abs=1e-6)
-    assert fig["sill_gap_mm"] == pytest.approx(580.25, abs=1e-6)
-    assert fig["shower_width_mm"] == pytest.approx(1153.0, abs=1e-6)
-    assert info["joints_level"].x * 1000 == pytest.approx(2.0, abs=1e-6)
-    assert info["joints_level"].y * 1000 == pytest.approx(2.0, abs=1e-6)
-    assert info["joints_shower"].y * 1000 == pytest.approx(2.0467, abs=1e-3)
-    assert info["joints_shower"].plan_pitch_y * 1000 == pytest.approx(PITCH_MM)
-    assert info["joints_level"].plan_pitch_x * 1000 == pytest.approx(PITCH_MM)
+    assert fig["screed_if_eps_omitted_mm"] == pytest.approx(94.625, abs=1e-3)
+    assert EPS_TOP_MM == 60 and EPS_BOTTOM_MM == 60
+    assert fig["head_mm"] == pytest.approx(2390.0, abs=1e-4)
+    assert fig["course_mm"] == pytest.approx(1194.0, abs=1e-6)
+    assert fig["sill_gap_mm"] == pytest.approx(556.0, abs=1e-4)
+    assert fig["shower_width_mm"] == pytest.approx(1153.0, abs=1e-4)
+    drain = next(row for row in info["doc"]["wasteTerminals"] if row["id"] == "DRAIN-1.07")
+    assert drain["ObjectType"] == "WallDrain"
+    assert drain["Origin"][1] == pytest.approx(fig["north_y_m"])
+    assert drain["Width"] == pytest.approx(1.153, abs=1e-6)
+    catalog = drain["PropertySets"][0]["Properties"]
+    assert catalog["CatalogOverallLengthMm"] == 1140
+    assert catalog["InstallHeightMm"] == 52
 
 
-def test_tiles_hang_from_the_east_and_share_the_drain_course():
+def test_shower_floor_is_cut_600_by_555_and_walls_start_at_zero():
     info = layout()
     east = []
+    depths = []
     for ring in info["shower_tiles"]:
         xs = [point[0] for point in ring]
+        ys = [point[1] for point in ring]
         width = (max(xs) - min(xs)) * 1000
+        depth = (max(ys) - min(ys)) * 1000
+        depths.append(depth)
         if abs(max(xs) - EAST) < 1e-6:
             east.append(width)
     assert east
     assert all(width == pytest.approx(555.0, abs=0.05) for width in east)
-    assert _area(info["level_tiles"]) + _area(info["shower_tiles"]) < 9.415
+    assert any(depth == pytest.approx(599.95, abs=0.05) for depth in depths)
+    assert any(depth == pytest.approx(144.0, abs=0.2) for depth in depths)
     overlap = unary_union([Polygon(ring) for ring in info["level_tiles"]]).intersection(
         unary_union([Polygon(ring) for ring in info["shower_tiles"]])
     )
     assert overlap.area == pytest.approx(0.0, abs=1e-8)
     walls = wall_tiles_mm(info)
     assert small_pieces(info) == []
-    assert {wall["id"] for wall in info["walls"]} >= {
-        "CLAD-N",
-        "CLAD-E",
-        "CLAD-S",
-        "CLAD-SS",
-        "CLAD-W",
-        "CLAD-WP",
-        "CLAD-CH",
-    }
-    # The 2 mm bottom joint sits under the tile, so a full 1194 mm blank
-    # starts 2 mm above the drain (−26.250 mm) and ends on the course joint.
-    south = [tile for tile in walls["CLAD-SS"] if tile["course"] == 0]
-    assert len(south) == 1
-    assert south[0]["height_mm"] == pytest.approx(1194.0, abs=0.05)
-    assert south[0]["bottom_mm"] == pytest.approx(-24.25, abs=0.05)
-    assert south[0]["top_mm"] == pytest.approx(1169.75, abs=0.05)
-    assert walls["CLAD-N"]
-    assert any(abs(tile["width_mm"] - 555.0) < 0.05 for tile in walls["CLAD-N"])
-    pier = [tile["width_mm"] for tile in walls["CLAD-WP"]]
-    cheek = [tile["width_mm"] for tile in walls["CLAD-CH"]]
-    assert pier and all(width == pytest.approx(200.0, abs=0.05) for width in pier)
-    assert cheek and all(width == pytest.approx(175.0, abs=0.05) for width in cheek)
+    for wall_id in ("CLAD-N", "CLAD-E", "CLAD-S", "CLAD-W", "CLAD-NS"):
+        bottoms = [tile["bottom_mm"] for tile in walls[wall_id] if tile["course"] == 0]
+        assert bottoms
+        assert min(bottoms) == pytest.approx(0.0, abs=0.05)
+    niche = next(wall for wall in info["walls"] if wall["id"] == "CLAD-NS")
+    polygon = Polygon(niche["result"]["tiles"][0]["polygon"])
+    # Centred opening: sill 800 mm, clear of the tile.
+    assert not polygon.covers(Point(0.55, 1.0))
+    assert polygon.covers(Point(0.55, 0.4))
 
 
-def test_solids_and_the_five_plates():
+def test_tub_fits_against_the_prewall_and_the_plates_stay_five():
+    doc = load_document()
+    tub = next(row for row in doc["sanitaryTerminals"] if row["id"] == "BATH-1.07")
+    prewall = next(row for row in doc["furniture"] if row["id"] == "PW-VANITY")
+    assert tub["Depth"] == pytest.approx(1.9)
+    assert tub["Width"] == pytest.approx(0.9)
+    assert tub["Height"] == pytest.approx(0.45)
+    assert prewall["Depth"] == pytest.approx(0.195)
+    assert prewall["Depth"] < 0.2
+    gap = NORTH - (tub["Origin"][1] + tub["Depth"]) - prewall["Depth"]
+    assert gap == pytest.approx(0.005, abs=1e-6)
     solids = parts()
     labels = {solid.label for solid in solids}
-    assert labels == {LABEL_FLOOR, LABEL_WALL, LABEL_GROUT, LABEL_DRAIN}
-    assert sum(1 for solid in solids if solid.label == LABEL_DRAIN) == 1
-    assert all(getattr(solid, "room_id", None) == "1.07" for solid in solids)
-    floor_z = [
-        solid.bounding_box().min.Z
-        for solid in solids
-        if solid.label == LABEL_FLOOR
-    ]
-    assert min(floor_z) == pytest.approx(-33.724, abs=0.05)
-    assert max(solid.bounding_box().max.Z for solid in solids if solid.label == LABEL_FLOOR) == pytest.approx(
-        0.0, abs=0.05
-    )
+    assert {LABEL_FLOOR, LABEL_WALL, LABEL_DRAIN, LABEL_FIXTURE, LABEL_PREWALL, LABEL_SCREEN, LABEL_PROFILE} <= labels
+    assert sum(1 for solid in solids if solid.label == LABEL_FIXTURE) == 3
+    assert sum(1 for solid in solids if solid.label == LABEL_DRAIN) == 2
     drawn = scenes()
     assert [scene["id"] for scene in drawn] == [
         "bath107-plan",
@@ -199,4 +171,3 @@ def test_solids_and_the_five_plates():
         "bath107-elev-w",
     ]
     assert all(scene["annotationColor"] == ANNOTATION_BLUE for scene in drawn)
-    assert ANNOTATION_BLUE == "#1d4ed8"

@@ -51,6 +51,10 @@ export const SOLID_COLORS = {
   tile: [222, 205, 176],
   grout: [48, 46, 44],
   drain: [176, 184, 190],
+  fixture: [236, 236, 232],
+  prewall: [196, 184, 168],
+  screen: [170, 210, 220],
+  profile: [190, 196, 200],
 };
 
 /**
@@ -102,6 +106,10 @@ export const LAYER_DEPTH_BIAS = {
   tile: 0,
   grout: 0,
   drain: 0,
+  fixture: 6,
+  prewall: 5,
+  screen: 14,
+  profile: 7,
 };
 
 /**
@@ -613,6 +621,30 @@ export const REALISTIC_PRESETS = {
     color: [176, 184, 190],
     roughness: 0.28,
     metalness: 0.7,
+    map: "metal",
+  },
+  fixture: {
+    color: [236, 236, 232],
+    roughness: 0.35,
+    metalness: 0.0,
+    map: "none",
+  },
+  prewall: {
+    color: [196, 184, 168],
+    roughness: 0.8,
+    metalness: 0.0,
+    map: "none",
+  },
+  screen: {
+    color: [170, 210, 220],
+    roughness: 0.08,
+    metalness: 0.05,
+    map: "none",
+  },
+  profile: {
+    color: [190, 196, 200],
+    roughness: 0.25,
+    metalness: 0.85,
     map: "metal",
   },
 };
