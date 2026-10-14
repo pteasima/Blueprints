@@ -33,7 +33,6 @@ from bathroom_120 import (
     _floor_solid,
     _line,
     _merge_wall_pieces,
-    _merged_rings,
     _ortho_pose,
     _tx,
     _wall_edges,
@@ -140,6 +139,11 @@ def layout(doc: dict | None = None) -> dict:
         shower.get("Cutouts") or (),
         shower.get("JointInset") or 0.0,
     )
+    # The origin butt is a shared edge with no grout. Open it before anything
+    # unions the two tiles into a double-width slab.
+    level_joint = float(level["WallJoint"])
+    level_tiles, level_extra = _open_butt_joints(level_laid["tiles"], level_joint)
+    shower_tiles, shower_extra = _open_butt_joints(shower_laid["tiles"], float(shower["WallJoint"]))
     walls = []
     for row in doc["coverings"]:
         tile = row.get("TileLayout") or {}
@@ -162,8 +166,11 @@ def layout(doc: dict | None = None) -> dict:
             z_min=0.0 if course_z is None else float(course_z),
             footprint=shower_fp,
         )
-        result["tiles"] = _merge_wall_pieces(result["tiles"], match_z=False)
-        result["grout"] = _merge_wall_pieces(result["grout"], match_z=True)
+        # Same origin butt as the floor: open it before pieces that share
+        # an edge are unioned into a double-width tile.
+        opened, extra_grout = _open_wall_butts(result["tiles"], float(tile["Joint"]))
+        result["tiles"] = _merge_wall_pieces(opened, match_z=False)
+        result["grout"] = _merge_wall_pieces([*result["grout"], *extra_grout], match_z=True)
         walls.append({"id": row["id"], "layout": tile, "plane": plane, "result": result})
     if not walls:
         raise ValueError("room 1.07 has no wall tiles")
@@ -173,10 +180,10 @@ def layout(doc: dict | None = None) -> dict:
         "shower_plane": shower_plane,
         "level": level,
         "shower": shower,
-        "level_tiles": level_laid["tiles"],
-        "level_grout": level_laid["grout"],
-        "shower_tiles": shower_laid["tiles"],
-        "shower_grout": shower_laid["grout"],
+        "level_tiles": level_tiles,
+        "level_grout": [*level_laid["grout"], *level_extra],
+        "shower_tiles": shower_tiles,
+        "shower_grout": [*shower_laid["grout"], *shower_extra],
         "joints_level": floor_joint_widths(
             level["Tile"], level["Tile"], level["WallJoint"], level_plane["Gradient"]
         ),
@@ -198,6 +205,132 @@ def _paint(shape, label: str):
     return shape
 
 
+def _open_wall_butts(pieces, joint: float = 0.002):
+    """Open a vertical joint where two wall tiles share an s-edge."""
+    from shapely.geometry import Polygon, box
+    from shapely.ops import unary_union
+
+    if not pieces:
+        return [], []
+    by_course: dict[int, list[int]] = {}
+    polys = []
+    for index, piece in enumerate(pieces):
+        by_course.setdefault(int(piece["course"]), []).append(index)
+        polys.append(Polygon(piece["polygon"]))
+    half = float(joint) / 2.0
+    blades: dict[int, list] = {index: [] for index in range(len(pieces))}
+    extra = []
+    for course, indexes in by_course.items():
+        for a in range(len(indexes)):
+            for b in range(a + 1, len(indexes)):
+                i, j = indexes[a], indexes[b]
+                bi, bj = polys[i].bounds, polys[j].bounds
+                if abs(bi[2] - bj[0]) <= 1e-6:
+                    shared = (bi[2] + bj[0]) / 2.0
+                elif abs(bj[2] - bi[0]) <= 1e-6:
+                    shared = (bj[2] + bi[0]) / 2.0
+                else:
+                    continue
+                z0, z1 = max(bi[1], bj[1]), min(bi[3], bj[3])
+                if z1 - z0 <= 1e-4:
+                    continue
+                blade = box(shared - half, z0, shared + half, z1)
+                blades[i].append(blade)
+                blades[j].append(blade)
+                extra.append(
+                    {
+                        "course": course,
+                        "polygon": [
+                            (shared - half, z0),
+                            (shared + half, z0),
+                            (shared + half, z1),
+                            (shared - half, z1),
+                        ],
+                    }
+                )
+    opened = []
+    for index, piece in enumerate(pieces):
+        poly = polys[index]
+        if blades[index]:
+            poly = poly.difference(unary_union(blades[index]))
+        geoms = list(poly.geoms) if poly.geom_type == "MultiPolygon" else [poly]
+        for geom in geoms:
+            if geom.is_empty or geom.area <= 1e-10:
+                continue
+            coords = [(float(s), float(z)) for s, z in geom.exterior.coords]
+            if len(coords) >= 2 and coords[0] == coords[-1]:
+                coords = coords[:-1]
+            opened.append({**piece, "polygon": coords})
+    return opened, extra
+
+
+def _open_butt_joints(rings, joint: float = 0.002):
+    """Open a real joint where two tiles share an edge.
+
+    A module boundary at the grid origin has no grout: the tiles on either
+    side meet, and unioning them draws one double-width slab. Shrink each
+    side by half the wall joint and return that strip as grout.
+    """
+    from shapely.geometry import Polygon, box
+    from shapely.ops import unary_union
+
+    polys = [Polygon(ring) for ring in rings]
+    half = float(joint) / 2.0
+    touches = []
+    for i in range(len(polys)):
+        a = polys[i].bounds
+        for j in range(i + 1, len(polys)):
+            b = polys[j].bounds
+            for left, right in ((a[2], b[0]), (b[2], a[0])):
+                if abs(left - right) <= 1e-6:
+                    y0, y1 = max(a[1], b[1]), min(a[3], b[3])
+                    if y1 - y0 > 1e-4:
+                        touches.append(("v", (left + right) / 2.0, y0, y1))
+            for bottom, top in ((a[3], b[1]), (b[3], a[1])):
+                if abs(bottom - top) <= 1e-6:
+                    x0, x1 = max(a[0], b[0]), min(a[2], b[2])
+                    if x1 - x0 > 1e-4:
+                        touches.append(("h", (bottom + top) / 2.0, x0, x1))
+    if not touches:
+        return list(rings), []
+    blades = []
+    grout = []
+    for kind, coord, u0, u1 in touches:
+        if kind == "v":
+            blades.append(box(coord - half, u0, coord + half, u1))
+            grout.append(
+                [
+                    (coord - half, u0),
+                    (coord + half, u0),
+                    (coord + half, u1),
+                    (coord - half, u1),
+                ]
+            )
+        else:
+            blades.append(box(u0, coord - half, u1, coord + half))
+            grout.append(
+                [
+                    (u0, coord - half),
+                    (u1, coord - half),
+                    (u1, coord + half),
+                    (u0, coord + half),
+                ]
+            )
+    blade = unary_union(blades)
+    opened = []
+    for poly in polys:
+        cut = poly.difference(blade)
+        if cut.is_empty:
+            continue
+        geoms = list(cut.geoms) if cut.geom_type == "MultiPolygon" else [cut]
+        for geom in geoms:
+            coords = [(float(x), float(y)) for x, y in geom.exterior.coords]
+            if len(coords) >= 2 and coords[0] == coords[-1]:
+                coords = coords[:-1]
+            opened.append(coords)
+    return opened, grout
+
+
 def parts(doc: dict | None = None) -> list:
     """Tile, grout, and the linear drain, in storey millimetres."""
     info = layout(doc)
@@ -213,8 +346,9 @@ def parts(doc: dict | None = None) -> list:
         for ring in rings:
             solids.append(_paint(_floor_solid(ring, z_at, thickness, gradient), label))
 
-    add_floor(_merged_rings(info["level_tiles"]), info["level_plane"], LABEL_FLOOR)
-    add_floor(_merged_rings(info["shower_tiles"]), info["shower_plane"], LABEL_FLOOR)
+    # Keep each tile. Merging fills the origin butt and draws ~1192 mm slabs.
+    add_floor(info["level_tiles"], info["level_plane"], LABEL_FLOOR)
+    add_floor(info["shower_tiles"], info["shower_plane"], LABEL_FLOOR)
     add_floor(info["level_grout"], info["level_plane"], LABEL_GROUT, GROUT_RECESS_M)
     add_floor(info["shower_grout"], info["shower_plane"], LABEL_GROUT, GROUT_RECESS_M)
 
@@ -374,6 +508,10 @@ def figures(info: dict | None = None) -> dict:
     screed0 = screed_at_zero_mm()
     screed_drain = screed0 - drop_mm
     joints = info["joints_shower"]
+    glass = _by_id(info["doc"]["furniture"])["GLASS-1.07"]
+    glass_west = float(glass["Origin"][0])
+    glass_east = glass_west + float(glass["Width"])
+    tile_face = east - TILE_THICKNESS_MM / MM
     return {
         "drop_mm": drop_mm,
         "run_mm": run_mm,
@@ -383,26 +521,31 @@ def figures(info: dict | None = None) -> dict:
         "screed_zero_mm": screed0,
         "screed_drain_mm": screed_drain,
         "below_minimum": screed_drain < SCREED_MIN_MM - 1e-6,
-        "east_cut_mm": _east_cut_mm(info, east),
+        "east_cut_mm": _edge_cut_mm(info["shower_tiles"], east, "east"),
+        "glass_cut_mm": _edge_cut_mm(info["shower_tiles"], west, "west"),
         "head_mm": head_mm(info),
         "course_mm": float(info["levels"]["bottom_top"]) * MM,
         "sill_gap_mm": 1750.0 - float(info["levels"]["bottom_top"]) * MM,
         "wall_joint_mm": float(info["shower"]["WallJoint"]) * MM,
         "floor_joint_y_mm": joints.y * MM,
         "plan_pitch_mm": joints.plan_pitch_y * MM,
-        "shower_width_mm": (east - west) * MM,
-        "glass_x_m": west,
+        # Clear opening the grate has to fill: glass east face to east tile face.
+        "shower_width_mm": (tile_face - glass_east) * MM,
+        "glass_x_m": glass_west,
+        "glass_east_m": glass_east,
+        "tile_face_m": tile_face,
         "south_y_m": south,
         "north_y_m": north,
         "east_x_m": east,
     }
 
 
-def _east_cut_mm(info: dict, east: float) -> float:
+def _edge_cut_mm(rings, x_edge: float, side: str) -> float:
     widths = []
-    for ring in info["shower_tiles"]:
+    for ring in rings:
         xs = [point[0] for point in ring]
-        if abs(max(xs) - east) < 1e-6:
+        edge = min(xs) if side == "west" else max(xs)
+        if abs(edge - x_edge) < 1e-6:
             widths.append((max(xs) - min(xs)) * MM)
     return max(widths) if widths else 0.0
 
@@ -502,11 +645,18 @@ def _plan_drawing(info: dict) -> dict:
             f"{fig['east_cut_mm']:.0f} mm",
         ),
         _dim(
-            (glass, y1 + 80.0, 0.0),
-            (x1, y1 + 80.0, 0.0),
+            (fig["glass_east_m"] * MM, y1 + 80.0, 0.0),
+            (fig["tile_face_m"] * MM, y1 + 80.0, 0.0),
             0.08,
-            f"{fig['shower_width_mm']:.0f} mm shower",
-            f"{fig['shower_width_mm']:.0f} mm sprcha",
+            f"{fig['shower_width_mm']:.0f} mm clear",
+            f"{fig['shower_width_mm']:.0f} mm čistá",
+        ),
+        _dim(
+            (glass, y0 + 420.0, 0.0),
+            (glass + fig["glass_cut_mm"], y0 + 420.0, 0.0),
+            0.06,
+            f"{fig['glass_cut_mm']:.1f} mm at glass",
+            f"{fig['glass_cut_mm']:.1f} mm u skla",
         ),
         _line(
             [(glass, y1, 40.0), (glass, y0, 40.0)],
@@ -515,8 +665,8 @@ def _plan_drawing(info: dict) -> dict:
         ),
         _callout(
             (glass, cy, 40.0),
-            "glass on the joint",
-            "sklo na spáře",
+            "glass, 1100 mm clear",
+            "sklo, 1100 mm čistá",
             (-0.22, 0.0),
         ),
         _line(
@@ -662,20 +812,30 @@ def _elevation_drawing(info: dict, wall_ids: tuple[str, ...], scene_id: str, nam
         )
         notes.append(
             _callout(
-                _station(frame, frame["length"] * 0.72, 1600.0),
-                "niche centred\nbottom on the 1194 mm joint",
-                "nika uprostřed\nspodek na spáře 1194 mm",
-                (0.2, 0.1),
+                _station(frame, frame["length"] * 0.55, 1000.0),
+                "basin mixers on the joints",
+                "baterie na spáře",
+                (0.12, 0.08),
                 leader=False,
             )
         )
-    if "CLAD-E" in wall_ids:
+    if "CLAD-NS" in wall_ids:
+        shower = by_id["CLAD-NS"]["result"]["frame"]
         notes.append(
             _callout(
-                _station(frame, frame["length"] / 2.0, course),
-                "2×555 mm, joint centred\nPaffoni Tango, pipes 120 mm",
-                "2×555 mm, spára uprostřed\nPaffoni Tango, trubky 120 mm",
-                (0.18, 0.08),
+                _station(shower, shower["length"] / 2.0, course),
+                "549 | 2 | 549 mm\nPaffoni on the joint\ncentres 105, pipes 120",
+                "549 | 2 | 549 mm\nPaffoni na spáře\nrozteč 105, trubky 120",
+                (0.16, 0.1),
+            )
+        )
+        notes.append(
+            _callout(
+                _station(shower, shower["length"] * 0.25, 1400.0),
+                "niche 360×280\nbottom on the 1194 joint",
+                "nika 360×280\nspodek na spáře 1194",
+                (-0.12, 0.08),
+                leader=False,
             )
         )
     if "CLAD-E" in wall_ids:
@@ -908,10 +1068,13 @@ def _svg_plan(info: dict) -> str:
     ex0, ey = pt(fig["east_x_m"] - fig["east_cut_mm"] / MM, min_y)
     ex1, _ey = pt(fig["east_x_m"], min_y)
     body.append(_svg_dim(ex0, y_south - 28, ex1, y_south - 28, f"{fig['east_cut_mm']:.0f} mm", True))
-    sx0, sy = pt(fig["glass_x_m"], 12.25)
-    sx1, _sy = pt(fig["east_x_m"], 12.25)
+    sx0, sy = pt(fig["glass_east_m"], 12.25)
+    sx1, _sy = pt(fig["tile_face_m"], 12.25)
     shower_mm = fig["shower_width_mm"]
-    body.append(_svg_dim(sx0, y_north - 28, sx1, y_north - 28, f"{shower_mm:.0f} mm shower", True))
+    body.append(_svg_dim(sx0, y_north - 28, sx1, y_north - 28, f"{shower_mm:.0f} mm clear", True))
+    gx_cut, gy_cut = pt(fig["glass_x_m"], 10.55)
+    gx_cut2, _gy = pt(fig["glass_x_m"] + fig["glass_cut_mm"] / MM, 10.55)
+    body.append(_svg_dim(gx_cut, gy_cut, gx_cut2, gy_cut, f"{fig['glass_cut_mm']:.1f} mm at glass", True))
     lx, ly = pt((min_x + fig["glass_x_m"]) / 2.0, (min_y + 12.055) / 2.0)
     body.append(_svg_text(lx, ly, "level floor\n0.000 mm", 18))
     dx, dy = pt(fig["glass_x_m"] + 0.28, fig["north_y_m"] - 0.55)
@@ -928,14 +1091,14 @@ def _svg_plan(info: dict) -> str:
             anchor="start",
         )
     )
-    body.append(_svg_text(gx0 + 10, (gy0 + gy1) / 2.0, "glass", 15, anchor="start"))
+    body.append(_svg_text(gx0 + 10, (gy0 + gy1) / 2.0, "glass\n1100 clear", 15, anchor="start"))
     body.append(_svg_text(pt(10.2, 11.1)[0], pt(10.2, 11.1)[1], "Zen 190\ntiled front", 15, anchor="start"))
     body.append(_svg_text(pt(12.0, 10.35)[0], pt(12.0, 10.35)[1], "door centre\njoint", 15))
     body.append(
         _svg_text(
-            pt(11.45, 11.85)[0],
-            pt(11.45, 11.85)[1],
-            "vanity, one top\nmirrors at the window",
+            pt(11.70, 11.85)[0],
+            pt(11.70, 11.85)[1],
+            "vanity on the joints\none top, two basins\nmixers on the joints",
             15,
         )
     )
@@ -994,13 +1157,15 @@ def _svg_wall(info: dict, wall_ids: tuple[str, ...], title_en: str, title_cs: st
                 anchor="start",
             )
         )
-    if "CLAD-E" in wall_ids:
-        mx, my = pt(0.975, fig["course_mm"] / MM)
+    if "CLAD-NS" in wall_ids:
+        # CLAD-PW is drawn on top of CLAD-N and does not advance the station.
+        shower_s = by_id["CLAD-N"]["result"]["frame"]["length"]
+        mx, my = pt(shower_s + by_id["CLAD-NS"]["result"]["frame"]["length"] / 2.0, fig["course_mm"] / MM)
         body.append(
             _svg_text(
                 mx,
                 my - 16,
-                "2×555, joint centred\nPaffoni Tango\ncentres 105, pipes 120",
+                "549 | 2 | 549\nPaffoni on the joint\ncentres 105, pipes 120\nniche 360×280 on 1194",
                 15,
             )
         )

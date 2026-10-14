@@ -40,8 +40,9 @@ EAST = 14.225
 SOUTH = 10.15
 NORTH = 12.25
 WEST = 9.725
-GLASS = 13.197
+GLASS = 13.1085
 DOOR = 12.0
+TILE = 0.0085
 
 
 def _area(rings) -> float:
@@ -57,7 +58,8 @@ def test_room_is_a_rectangle_and_the_chase_left_the_bathroom():
     shower = next(row for row in doc["slabs"] if row["id"] == "SLAB-SHOWER")
     assert level["Plane"]["Gradient"] == [0, 0]
     assert shower["Plane"]["Gradient"] == [0, -0.0125]
-    assert shower["Plane"]["Origin"] == [GLASS, SOUTH]
+    assert shower["Plane"]["Origin"][0] == pytest.approx(GLASS)
+    assert shower["Plane"]["Origin"][1] == pytest.approx(SOUTH)
     assert shower["Plane"]["Elevation"] == 0
     level_props = level["PropertySets"][0]["Properties"]
     props = shower["PropertySets"][0]["Properties"]
@@ -103,32 +105,44 @@ def test_fall_and_the_shower_screed():
     assert EPS_TOP_MM == 60 and EPS_BOTTOM_MM == 40
     assert fig["head_mm"] == pytest.approx(2390.0, abs=1e-4)
     assert fig["course_mm"] == pytest.approx(1194.0, abs=1e-6)
-    assert fig["shower_width_mm"] == pytest.approx(1028.0, abs=0.05)
-    assert fig["east_cut_mm"] == pytest.approx(430.0, abs=0.05)
+    assert fig["shower_width_mm"] == pytest.approx(1100.0, abs=0.05)
+    assert fig["east_cut_mm"] == pytest.approx(430.0, abs=0.5)
+    glass = next(row for row in info["doc"]["furniture"] if row["id"] == "GLASS-1.07")
+    tile_face = EAST - TILE
+    glass_east = glass["Origin"][0] + glass["Width"]
+    assert (tile_face - glass_east) * 1000 == pytest.approx(1100.0, abs=0.05)
     drain = next(row for row in info["doc"]["wasteTerminals"] if row["id"] == "DRAIN-1.07")
+    assert drain["Origin"][0] == pytest.approx(glass_east)
     assert drain["Origin"][1] == pytest.approx(fig["north_y_m"])
-    assert drain["Width"] == pytest.approx(1.028, abs=1e-6)
+    assert drain["Width"] == pytest.approx(1.1, abs=1e-6)
+    # The door-centred grid is not moved to suit the glass, so the piece
+    # beside the glass is a cut, not a full tile.
+    assert 50 < fig["glass_cut_mm"] < 200
 
 
 def test_door_joint_two_tiles_and_the_north_wall_stops_at_the_sill():
     info = layout()
     grout = unary_union([Polygon(ring) for ring in info["level_grout"]])
     assert grout.intersects(Polygon([(11.999, 10.2), (12.001, 10.2), (12.001, 10.4), (11.999, 10.4)]))
+    # The origin butt is opened into a 2 mm joint, so those two tiles lose 1 mm each.
     full = []
     for ring in info["level_tiles"]:
         xs = [point[0] for point in ring]
         ys = [point[1] for point in ring]
         width = (max(xs) - min(xs)) * 1000
-        if min(xs) >= 10.806 and max(xs) <= 12.0 and abs(width - 596.0) < 0.2:
-            if min(ys) < 11.0 < max(ys):
-                full.append(round(min(xs), 3))
-    assert sorted(full) == pytest.approx([10.807, 11.403], abs=0.001)
+        assert width < 597.0
+        if min(ys) < 11.0 < max(ys) and 10.80 < min(xs) < 12.0 and width > 590:
+            full.append(round(min(xs), 3))
+    assert sorted(full) == pytest.approx([10.807, 11.404], abs=0.002)
+    assert grout.intersects(Polygon([(11.402, 10.2), (11.404, 10.2), (11.404, 10.4), (11.402, 10.4)]))
     walls = wall_tiles_mm(info)
-    # The door edge at x=12.50 leaves a 97 mm piece before the next module.
-    # The joint stays on the door centre, so this piece is reported, not hidden.
+    # Door edges leave a piece under 100 mm on each jamb. The east one was
+    # already there. The west one was hidden inside the origin butt slab.
     small = small_pieces(info)
-    assert len(small) == 1
-    assert small[0].startswith("CLAD-S course 0: 97.0 mm")
+    assert len(small) == 4
+    assert all(line.startswith("CLAD-S") for line in small)
+    assert sum("96.0 mm" in line for line in small) == 2
+    assert sum("97.0 mm" in line for line in small) == 2
     north_tops = [tile["top_mm"] for tile in walls["CLAD-N"]]
     assert north_tops
     assert max(north_tops) == pytest.approx(1750.0, abs=0.05)
@@ -138,13 +152,20 @@ def test_door_joint_two_tiles_and_the_north_wall_stops_at_the_sill():
     assert max(pw_tops) == pytest.approx(1194.0, abs=0.05)
     for wall_id in ("CLAD-E", "CLAD-S", "CLAD-W", "CLAD-NS"):
         assert max(tile["top_mm"] for tile in walls[wall_id]) == pytest.approx(2390.0, abs=0.05)
+    for wall_id, tiles in walls.items():
+        assert max(tile["width_mm"] for tile in tiles) < 700.0
     east_widths = sorted({round(tile["width_mm"], 1) for tile in walls["CLAD-E"]})
-    assert 555.0 in east_widths
+    assert 555.0 not in east_widths
+    ns_widths = sorted({round(tile["width_mm"], 1) for tile in walls["CLAD-NS"]})
+    assert 549.0 in ns_widths
     niche = next(wall for wall in info["walls"] if wall["id"] == "CLAD-NS")
     polygon = unary_union([Polygon(tile["polygon"]) for tile in niche["result"]["tiles"]])
-    assert not polygon.covers(Point(0.5, 1.4))
-    assert polygon.covers(Point(0.5, 0.5))
-    assert polygon.covers(Point(0.5, 2.0))
+    # Low niche from the glass end: sill 1194, 280 high, along 0–360 mm.
+    assert not polygon.covers(Point(0.20, 1.30))
+    assert polygon.covers(Point(0.50, 1.30))
+    assert polygon.covers(Point(0.70, 1.30))
+    assert polygon.covers(Point(0.20, 0.50))
+    assert polygon.covers(Point(0.20, 1.70))
 
 
 def test_fixtures_shelf_glass_and_the_plates():
@@ -169,13 +190,30 @@ def test_fixtures_shelf_glass_and_the_plates():
     assert top["ObjectType"] == "Countertop"
     basins = [row for row in doc["sanitaryTerminals"] if row["PredefinedType"] == "WASHHANDBASIN"]
     assert len(basins) == 2
-    centres = sorted(row["Origin"][1] + row["Depth"] / 2 for row in (
-        next(row for row in doc["furniture"] if row["id"] == "MIX-S"),
-        next(row for row in doc["furniture"] if row["id"] == "MIX-N"),
-    ))
+    basin_centres = sorted(row["Origin"][0] + row["Width"] / 2 for row in basins)
+    assert basin_centres == pytest.approx([11.403, 12.0], abs=0.001)
+    tub_east = tub["Origin"][0] + tub["Width"]
+    gap_centre = (tub_east + glass["Origin"][0]) / 2
+    cabinet_centre = cabinet["Origin"][0] + cabinet["Width"] / 2
+    # On the joints, 255 mm west of the tub-to-glass middle.
+    assert cabinet_centre == pytest.approx(sum(basin_centres) / 2, abs=0.001)
+    assert (gap_centre - cabinet_centre) * 1000 == pytest.approx(255.25, abs=0.5)
+    shower_mixers = [
+        next(row for row in doc["furniture"] if row["id"] == "MIX-W"),
+        next(row for row in doc["furniture"] if row["id"] == "MIX-E"),
+    ]
+    centres = sorted(row["Origin"][0] + row["Width"] / 2 for row in shower_mixers)
     assert (centres[1] - centres[0]) * 1000 == pytest.approx(105.0, abs=0.05)
-    pipes = sorted(row["Origin"][1] + row["Depth"] / 2 for row in doc["furniture"] if row["ObjectType"] == "Pipe")
+    joint = (glass["Origin"][0] + glass["Width"] + EAST - TILE) / 2
+    assert sum(centres) / 2 == pytest.approx(joint, abs=0.001)
+    pipes = sorted(row["Origin"][0] + row["Width"] / 2 for row in doc["furniture"] if row["ObjectType"] == "Pipe")
     assert (pipes[1] - pipes[0]) * 1000 == pytest.approx(120.0, abs=0.05)
+    basin_mixers = [row for row in doc["furniture"] if row["id"].startswith("MIX-B")]
+    assert len(basin_mixers) == 2
+    mixer_centres = sorted(row["Origin"][0] + row["Width"] / 2 for row in basin_mixers)
+    assert mixer_centres == pytest.approx(basin_centres, abs=0.001)
+    for row in basin_mixers:
+        assert row["Elevation"] > 0.85
     solids = parts()
     labels = {solid.label for solid in solids}
     assert {LABEL_FLOOR, LABEL_WALL, LABEL_DRAIN, LABEL_FIXTURE, LABEL_PREWALL, LABEL_SCREEN, LABEL_PROFILE, LABEL_VANITY} <= labels
