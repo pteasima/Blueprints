@@ -1,7 +1,6 @@
 Pořadí;Typ EPS;Tloušťka desky mm;Plocha netto m²;Objem netto m³;Rezerva;Plocha s rezervou m²;Objem s rezervou m³;Balení m²;Počet balíků;Zdroj balení;Poznámka
-1;EPS 100 S;40;29.34;1.174;6 %;31.1;1.244;6.0;6;Isover EPS 150, TL CZ, desky 1000×500 · https://www.isover.cz/en/documents/technicke-listy/tl-isover-eps-150-cz.pdf;Balení EPS 100 S převzato z EPS 150 (stejný formát) — ověřit u dodavatele.
-2;EPS 100 S;50;237.71;11.885;6 %;251.97;12.599;5.0;51;Isover EPS 150, TL CZ, desky 1000×500 · https://www.isover.cz/en/documents/technicke-listy/tl-isover-eps-150-cz.pdf;Balení EPS 100 S převzato z EPS 150 (stejný formát) — ověřit u dodavatele.
-3;EPS 100 S;80;267.05;21.364;6 %;283.07;22.646;3.0;95;Isover EPS 150, TL CZ, desky 1000×500 · https://www.isover.cz/en/documents/technicke-listy/tl-isover-eps-150-cz.pdf;Balení EPS 100 S převzato z EPS 150 (stejný formát) — ověřit u dodavatele.
-4;EPS 150 S;40;76.3;3.052;6 %;80.88;3.235;6.0;14;Isover EPS 150, TL CZ, desky 1000×500 · https://www.isover.cz/en/documents/technicke-listy/tl-isover-eps-150-cz.pdf;
-5;EPS 150 S;50;65.4;3.27;6 %;69.32;3.466;5.0;14;Isover EPS 150, TL CZ, desky 1000×500 · https://www.isover.cz/en/documents/technicke-listy/tl-isover-eps-150-cz.pdf;
-6;EPS 150 S;100;10.9;1.09;6 %;11.55;1.155;2.5;5;Isover EPS 150, TL CZ, desky 1000×500 · https://www.isover.cz/en/documents/technicke-listy/tl-isover-eps-150-cz.pdf;
+1;EPS 100 S;50;262.86;13.143;6 %;278.63;13.932;5.0;56;Isover EPS 150, TL CZ, desky 1000×500 · https://www.isover.cz/en/documents/technicke-listy/tl-isover-eps-150-cz.pdf;Balení EPS 100 S převzato z EPS 150 (stejný formát) — ověřit u dodavatele.
+2;EPS 100 S;80;267.05;21.364;6 %;283.07;22.646;3.0;95;Isover EPS 150, TL CZ, desky 1000×500 · https://www.isover.cz/en/documents/technicke-listy/tl-isover-eps-150-cz.pdf;Balení EPS 100 S převzato z EPS 150 (stejný formát) — ověřit u dodavatele.
+3;EPS 150 S;40;76.3;3.052;6 %;80.88;3.235;6.0;14;Isover EPS 150, TL CZ, desky 1000×500 · https://www.isover.cz/en/documents/technicke-listy/tl-isover-eps-150-cz.pdf;
+4;EPS 150 S;50;65.4;3.27;6 %;69.32;3.466;5.0;14;Isover EPS 150, TL CZ, desky 1000×500 · https://www.isover.cz/en/documents/technicke-listy/tl-isover-eps-150-cz.pdf;
+5;EPS 150 S;100;10.9;1.09;6 %;11.55;1.155;2.5;5;Isover EPS 150, TL CZ, desky 1000×500 · https://www.isover.cz/en/documents/technicke-listy/tl-isover-eps-150-cz.pdf;

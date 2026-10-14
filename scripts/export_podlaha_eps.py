@@ -9,7 +9,7 @@ from collections import OrderedDict
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 
-TOTAL = 250  # mm, top of base slab -> finished floor (A: 251.2, C: 250.2 in project)
+TOTAL = 250  # finální skladba 250 mm; mm, top of base slab -> finished floor (A: 251.2, C: 250.2 in project)
 HI = 8       # AP Elastek 40 + AP Glastek 40 Special (hydroizolace, kept from project)
 BOARD = 50   # systémová deska podlahového topení vč. nopů
 WASTE = 0.06
@@ -18,8 +18,9 @@ PACK_SRC = "Isover EPS 150, TL CZ, desky 1000×500 · https://www.isover.cz/en/d
 
 # kind -> finish, concrete, board, layers, EPS type, note
 KINDS = {
-    "pu":   ("PU stěrka 4", 4, 60, BOARD, (80, 50), "EPS 100 S", "Potěr 60 mm dle skladby A."),
-    "tile": ("lepidlo+dlažba 13", 13, 60, BOARD, (80, 40), "EPS 100 S", "Potěr 60 mm dle skladby A."),
+    "pu":   ("PU stěrka 4", 4, 58, BOARD, (80, 50), "EPS 100 S", "Potěr 58 mm (250 − 8 − 130 − 50 − 4). Bílý EPS, 2 vrstvy na vazbu."),
+    "tile": ("lepidlo+dlažba 13", 13, 49, BOARD, (80, 50), "EPS 100 S", "Stejný EPS jako dům; potěr 49 mm (o 9 mm tenčí kvůli dlažbě), min. 45 mm nad nopy."),
+    "b120": ("lepidlo+dlažba 13", 13, 99, BOARD, (80,), "EPS 100 S", "Spád 1,5 % k vpusti, rozdíl ~43 mm: potěr 99 mm u dveří → ~56 mm u vpusti (min. 45 nad nopy, rezerva 11). Jedna vrstva 80 (spodní 50 vynechána); přechod ve dveřích = dilatační spára."),
     "gar":  ("PU stěrka 4", 4, 100, BOARD, (50, 40), "EPS 150 S", "Nově podlahové topení; beton 100 mm (Petr). Pojezd aut — EPS 150 S min., ověřit se statikem / výrobcem systémové desky (projekt: XPS 80)."),
     "skl":  ("— (beton)", 0, 100, 0, (100, 40), "EPS 150 S", "Venkovní sklad: jen EPS + beton. Beton 100 mm = PLACEHOLDER (doporučeno 100–120 mm + KARI)."),
 }
@@ -33,7 +34,7 @@ ROOMS = [  # no, name, area m² (D.1.4.1.03), kind
     ("1.13", "Pokoj", 13.67, "pu"), ("1.14", "Pokoj", 13.67, "pu"),
     ("1.15", "Pracovna", 20.22, "pu"), ("1.16", "Garáž", 59.40, "gar"),
     ("1.17", "Chodba do garáže", 6.00, "gar"), ("1.18", "Sklad (venkovní)", 10.90, "skl"),
-    ("1.19", "WC", 2.50, "tile"), ("1.20", "Koupelna", 4.19, "tile"),
+    ("1.19", "WC", 2.50, "tile"), ("1.20", "Koupelna", 4.19, "b120"),
     ("1.21", "Koupelna", 4.54, "tile"), ("1.22", "Chodba", 3.95, "pu"),
     ("1.23", "Pokoj+KK", 20.03, "pu"),
 ]
@@ -92,12 +93,16 @@ def main():
         ("Plochy", "D.1.4.1.03 (ZTI 1.NP) tabulka místností; součet 343,35 m² vs užitná plocha 363,73 m² v D.1.1.01 — rozdíl nevysvětlen, terasa 1.24 nezahrnuta"),
         ("Skladba A (projekt)", "dlažba 10 + tmel 3 + potěr 60 + PE 0,2 + EPS 100 Z 50+120 + AP Elastek 4 + AP Glastek 4 = 251,2 mm"),
         ("Skladba C garáž (projekt)", "epoxid 2 + potěr+KARI 160 + XPS 80 + 2× AP 4 = 250,2 mm"),
-        ("Nová skladba dům", "finál 4 (PU) / 13 (dlažba) + potěr 60 + syst. deska 50 + EPS + hydroizolace 8; PE fólie 0,2 zanedbána"),
+        ("Nová skladba dům (2026-10-14)", "hydroizolace 8 + EPS 100 S 80+50 (bílý, 2 vrstvy na vazbu) + syst. nopová deska 50 (30 EPS + 20 nopy) + potěr 58 + PU 4 = 250 mm"),
+        ("Koupelny 1.06/1.07/1.09/1.19/1.21", "stejný EPS 80+50 (jedna výška EPS v celém domě); potěr 49 + lepidlo+dlažba 13 = 250 mm; min. potěr nad nopy 45 mm"),
+        ("Koupelna 1.20 (spád)", "EPS jen 80 (1 vrstva); potěr 99 u dveří / ~56 u vpusti (spád 1,5 %, ~43 mm); dlažba 13. Výškový skok EPS jen ve spodní vrstvě, ve dveřích s dilatační spárou"),
+        ("Proč 80+50 a ne 1×130", "Petr: vazba spár (2 vrstvy); cena materiálu stejná, práce o pár tisíc dražší"),
+        ("Proč bílý EPS", "Šedý by dal U ~0,18 místo ~0,22 W/m²K, nevyplatí se u podlahy na terénu"),
         ("Nová skladba garáž+chodba 1.17", "PU 4 + beton 100 + syst. deska 50 + EPS 90 + hydroizolace 8 = 252"),
         ("Venkovní sklad 1.18", "beton 100 (placeholder) + EPS 140 + hydroizolace 8 = 248; předpoklad že 1.18 = venkovní sklad"),
-        ("Zaokrouhlení", "EPS 128→130 (+2 mm), 119→120 (+1), 88→90 (+2), 142→140 (−2) — vyrovná potěr/beton"),
+        ("Zaokrouhlení", "Dům: tloušťka potěru dopočtena přesně na 250. Garáž 88→90 (+2), sklad 142→140 (−2) — vyrovná beton"),
         ("Rezerva", f"{int(WASTE*100)} % prořez"),
-        ("Tepelná izolace", "Projekt měl v domě 170 mm EPS; nově 130/120 + syst. deska (nopová EPS ~20–30 mm). Ověřit vůči PENB."),
+        ("Tepelná izolace", "Projekt měl v domě 170 mm EPS; nově 130 (1.20: 80) + syst. deska (nopová EPS ~20–30 mm). Ověřit vůči PENB."),
     ]: meta.append(list(kv))
     meta.column_dimensions["A"].width = 30; meta.column_dimensions["B"].width = 110
     wb.save("docs/podlaha-eps.xlsx")
