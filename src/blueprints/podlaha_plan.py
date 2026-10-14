@@ -335,7 +335,13 @@ def wall_geometry(doc: dict | None = None) -> tuple[Polygon, list[Polygon]]:
             _wid, sx, sy, ex, ey, _length, thick, ux, uy = record
             by_id["W-017"] = _axis_rect(sx, sy, ex, ey, ux, uy, thick)
     walls = unary_union(list(by_id.values()))
+    passages, door_seals = _corridor_door_reveals(doc, records)
+    if passages:
+        walls = walls.difference(unary_union(passages))
+        if not walls.is_valid:
+            walls = walls.buffer(0)
     seals = _seals(records, by_id)
+    seals.extend(door_seals)
     return walls, seals
 
 
@@ -382,6 +388,91 @@ def _seals(records: list[tuple], by_id: dict[str, Polygon]) -> list[Polygon]:
     x0, x1, y0, y1 = GARAGE_PASSAGE
     seals.append(box((x0 + x1) / 2.0 - 0.02, y0, (x0 + x1) / 2.0 + 0.02, y1))
     return seals
+
+
+def _corridor_door_reveals(doc: dict, records: list[tuple]) -> tuple[list[Polygon], list[Polygon]]:
+    """Floor between a door's jamb returns belongs to the room, up to the leaf.
+
+    The bathroom (OP17) and laundry (OP11) doors are not in the middle of the
+    wall. Two short returns run from the partition into the corridor and stop
+    at the leaf, on the corridor side. The passage between those returns is
+    cut out of the wall and closed with a seal on the corridor side of the
+    leaf, so the room outline reaches the door.
+    """
+    by_id = {record[0]: record for record in records}
+    door_ids = {door["FillsOpening"] for door in doc.get("doors") or []}
+    passages = []
+    seals = []
+    for opening in doc.get("openings") or []:
+        if opening["id"] not in door_ids or float(opening.get("SillHeight") or 0) > 0.05:
+            continue
+        host = by_id.get(opening["VoidsElement"])
+        if host is None:
+            continue
+        found = _jamb_returns(records, host, float(opening["AlongAxis"]), float(opening["Width"]))
+        if found is None:
+            continue
+        along, width, door_offset = found
+        sx, sy, ux, uy, thick = host[1], host[2], host[7], host[8], host[6]
+        room_face = -math.copysign(thick / 2.0, door_offset)
+        room_side = -math.copysign(1.0, door_offset)
+        passages.append(
+            _oriented_rect(
+                (sx, sy), ux, uy,
+                along + 0.002, along + width - 0.002,
+                door_offset, room_face + 0.01 * room_side,
+            )
+        )
+        seals.append(
+            _oriented_rect(
+                (sx, sy), ux, uy,
+                along - 0.02, along + width + 0.02,
+                door_offset, door_offset + math.copysign(0.03, door_offset),
+            )
+        )
+    return passages, seals
+
+
+def _jamb_returns(records, host, along: float, width: float):
+    """Both jambs of one opening, when each has a short return on the same side."""
+    sx, sy, ux, uy, thick = host[1], host[2], host[7], host[8], host[6]
+    nx, ny = -uy, ux
+    jambs = (along, along + width)
+    chosen = []
+    for jamb_along in jambs:
+        jamb = (sx + ux * jamb_along, sy + uy * jamb_along)
+        best = None
+        for record in records:
+            if record[0] == host[0] or abs(record[7] * ux + record[8] * uy) > 0.25:
+                continue
+            ends = ((record[1], record[2]), (record[3], record[4]))
+            for index, end in enumerate(ends):
+                if math.hypot(end[0] - jamb[0], end[1] - jamb[1]) > max(thick, record[6]) * 0.7 + 0.03:
+                    continue
+                other = ends[1 - index]
+                side = (other[0] - sx) * nx + (other[1] - sy) * ny
+                if not 0.2 < abs(side) < 1.05:
+                    continue
+                if best is None or abs(side) < abs(best):
+                    best = side
+        if best is None:
+            return None
+        chosen.append(best)
+    if chosen[0] * chosen[1] <= 0 or abs(chosen[0] - chosen[1]) > 0.08:
+        return None
+    return along, width, (chosen[0] + chosen[1]) / 2.0
+
+
+def _oriented_rect(origin, ux, uy, along0, along1, off0, off1) -> Polygon:
+    nx, ny = -uy, ux
+
+    def point(along, offset):
+        return (
+            origin[0] + ux * along + nx * offset,
+            origin[1] + uy * along + ny * offset,
+        )
+
+    return Polygon([point(along0, off0), point(along1, off0), point(along1, off1), point(along0, off1)])
 
 
 def _raster(geometry, origin, shape):
@@ -591,7 +682,9 @@ def assemble(rows: list[dict] | None = None) -> Plan:
             continue
         row = by_room[room][0]
         name = "Pokoj+KK (garsonka)" if room == "1.23" else row["name"]
-        add(room, room, name, classify(row), polygon, "")
+        # The workbook lists the laundry as poured polyurethane. Petr: it is tiled.
+        kind = "tile" if room == "1.08" else classify(row)
+        add(room, room, name, kind, polygon, "")
     if not studio_corner:
         raise ValueError("bathroom 1.21 shower was not placed")
     notes = plan_notes(builds, studio_corner)
@@ -612,6 +705,7 @@ def plan_notes(builds: dict[str, BuildUp], corner: str) -> list[str]:
             f"{mm(shower.screed_mm)} u nuly / {mm(shower.screed_drain_mm)} u vpusti jsou předpoklad "
             "(výkaz má celou 1.21 jako EPS 60+60 a potěr 59 mm)."
         ),
+        "Prádelna 1.08 je dlažba jako koupelny. Výkaz má u ní PU stěrku a potěr 68 mm.",
         "Garáž a 1.17: EPS 150 S, beton 100 mm. Výkaz říká ověřit EPS 150 se statikem (projekt měl XPS 80).",
         "Sklad 1.18 je nevytápěný: bez systémové desky a bez nášlapu. Beton 100 mm je ve výkazu zástupná tloušťka.",
         "Terasa ve výkazu skladeb není. Průchod 1.17–1.16 je bez stěny, obě plochy mají tutéž skladbu.",
@@ -701,38 +795,9 @@ def _room_name(area: Area) -> str:
 
 
 def _place_labels(plan: Plan, px, py):
-    """Room number and name in every area. The layer list once per colour.
-
-    The list goes in the largest area of that colour when the polygon can
-    hold it. Otherwise it goes in the legend, still only once.
-    """
-    hosts = {}
-    for area in plan.areas:
-        current = hosts.get(area.kind)
-        if current is None or area.polygon.area > current.polygon.area:
-            hosts[area.kind] = area
-    labels = []
-    legend_stacks: dict[str, list[str]] = {}
-    for area in plan.areas:
-        caption = [area.room, _room_name(area)]
-        if area is hosts[area.kind]:
-            # Keep each layer on one line. A crushed wrap is harder to read
-            # than the same list once in the legend.
-            placed = _try_inside(
-                area.polygon,
-                [*caption, *area.lines],
-                2.15,
-                2.6,
-                px,
-                py,
-                box_fill=True,
-                widths=(48, 40, 34),
-            )
-            if placed is not None:
-                labels.append(placed)
-                continue
-            legend_stacks[area.kind] = area.lines
-        labels.append(_place_caption(area, caption, px, py))
+    """Room number and name in every area. Each layer list once, in the legend."""
+    labels = [_place_caption(area, [area.room, _room_name(area)], px, py) for area in plan.areas]
+    legend_stacks = {kind: plan.builds[kind].lines() for kind in LEGEND}
     return labels, legend_stacks
 
 
@@ -880,25 +945,10 @@ def _markup(line: str) -> str:
 
 
 def _legend_and_notes(plan: Plan, y: float, legend_stacks: dict[str, list[str]]) -> list[str]:
-    """Colour key, then any build-up that did not fit in its largest area."""
+    """One block per build-up. The colour on the plan is the key."""
     parts = []
     parts.append(f'<text x="12" y="{y:.1f}" font-size="2.7" font-weight="700" fill="#1c1916">Legenda</text>')
-    chip_y = y + 1.6
-    x = 32.0
-    for kind in ("pu", "tile", "b120", "sh107", "sh121", "gar", "skl"):
-        label = LEGEND[kind]
-        width = 4.2 + 1.4 + len(label) * 1.15
-        if x + width > PAGE_W - 8:
-            x = 12.0
-            chip_y += 5.2
-        parts.append(
-            f'<rect x="{x:.1f}" y="{chip_y:.1f}" width="4.2" height="3.2" fill="{COLOURS[kind]}" stroke="#444" stroke-width="0.2"/>'
-        )
-        parts.append(
-            f'<text x="{x + 5.4:.1f}" y="{chip_y + 2.55:.1f}" font-size="2.15" fill="#1c1916">{_escape(label)}</text>'
-        )
-        x += width + 2.2
-    note_y = chip_y + 7.2
+    note_y = y + 5.4
     if legend_stacks:
         columns = [kind for kind in ("pu", "tile", "b120", "sh107", "sh121", "gar", "skl") if kind in legend_stacks]
         per_row = 3 if len(columns) > 3 else len(columns)

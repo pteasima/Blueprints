@@ -7,8 +7,7 @@
 <path d="M 251.20 64.40 L 162.40 64.40 L 162.40 21.60 L 189.20 21.60 L 189.20 23.60 L 191.60 23.60 L 191.60 21.60 L 213.20 21.60 L 213.20 23.60 L 215.60 23.60 L 215.60 21.60 L 251.20 21.60 L 251.20 64.40 Z" fill="#F6E3B8"/>
 <path d="M 138.00 36.80 L 138.00 21.60 L 160.40 21.60 L 160.40 36.80 L 138.00 36.80 Z" fill="#F6E3B8"/>
 <path d="M 138.00 54.60 L 138.00 37.80 L 160.40 37.80 L 160.40 54.60 L 138.00 54.60 Z" fill="#F6E3B8"/>
-<path d="M 58.00 80.80 L 58.00 66.20 L 75.00 66.20 L 75.00 70.60 L 76.00 70.60 L 76.00 66.20 L 84.00 66.20 L 84.00 70.60 L 85.00 70.60 L 85.00 66.20 L 103.00 66.20 L 103.00 70.60 L 104.00 70.60 L 104.00 66.20 L 112.00 66.20 L 112.00 70.60 L 113.00 70.60 L 113.00 66.20 L 125.80 66.20 L 125.80 70.80 L 138.00 70.80 L 138.00 55.60 L 160.40 55.60 L 160.40 80.80 L 156.00 80.80 L 156.00 80.40 L 152.40 80.40 L 152.40 80.80 L 58.00 80.80 Z" fill="#F6E3B8"/>
-<path d="M 71.20 65.20 L 71.20 48.40 L 88.80 48.40 L 88.80 65.20 L 71.20 65.20 Z" fill="#F6E3B8"/>
+<path d="M 103.00 70.60 L 113.00 70.60 L 113.00 66.20 L 125.80 66.20 L 125.80 70.80 L 138.00 70.80 L 138.00 55.60 L 160.40 55.60 L 160.40 80.80 L 156.00 80.80 L 156.00 80.40 L 152.40 80.40 L 152.40 80.80 L 58.00 80.80 L 58.00 66.20 L 75.00 66.20 L 75.00 70.60 L 75.80 70.80 L 85.00 70.60 L 85.00 66.20 L 103.00 66.20 L 103.00 70.60 Z" fill="#F6E3B8"/>
 <path d="M 15.60 69.40 L 15.60 48.40 L 44.40 48.40 L 44.40 69.40 L 15.60 69.40 Z" fill="#F6E3B8"/>
 <path d="M 15.60 120.20 L 15.60 70.40 L 57.00 70.40 L 57.00 80.80 L 41.80 80.80 L 42.00 120.20 L 15.60 120.20 Z" fill="#F6E3B8"/>
 <path d="M 43.40 120.20 L 43.40 82.80 L 66.80 82.80 L 66.80 120.20 L 43.40 120.20 Z" fill="#F6E3B8"/>
@@ -18,7 +17,8 @@
 <path d="M 274.20 116.20 L 274.20 100.20 L 290.00 100.20 L 290.00 116.20 L 274.20 116.20 Z" fill="#F6E3B8"/>
 <path d="M 253.20 142.80 L 253.20 100.20 L 273.20 100.20 L 273.20 116.40 L 274.20 116.40 L 274.20 117.20 L 290.00 117.20 L 290.00 142.80 L 253.20 142.80 Z" fill="#F6E3B8"/>
 <path d="M 126.80 70.40 L 126.80 50.20 L 128.40 50.20 L 128.40 48.40 L 136.00 48.40 L 136.00 70.40 L 126.80 70.40 Z" fill="#C5D9F2"/>
-<path d="M 89.80 50.20 L 91.20 50.20 L 91.20 48.40 L 116.58 48.40 L 116.58 65.20 L 89.80 65.20 L 89.80 50.20 Z" fill="#C5D9F2"/>
+<path d="M 89.80 50.20 L 91.20 50.20 L 91.20 48.40 L 116.58 48.40 L 116.58 65.20 L 112.00 65.20 L 112.00 70.60 L 104.00 70.60 L 104.00 65.20 L 89.80 65.20 L 89.80 50.20 Z" fill="#C5D9F2"/>
+<path d="M 71.20 65.20 L 71.20 48.40 L 88.80 48.40 L 88.80 65.20 L 84.00 65.20 L 84.00 70.60 L 76.00 70.60 L 76.00 65.20 L 71.20 65.20 Z" fill="#C5D9F2"/>
 <path d="M 45.40 69.40 L 45.40 48.40 L 70.20 48.40 L 70.20 61.60 L 68.60 61.60 L 68.60 65.20 L 57.00 65.20 L 57.00 69.40 L 45.40 69.40 Z" fill="#C5D9F2"/>
 <path d="M 276.80 80.80 L 276.80 67.00 L 290.00 67.00 L 290.00 80.80 L 276.80 80.80 Z" fill="#C5D9F2"/>
 <path d="M 271.60 90.80 L 279.60 90.80 L 279.60 82.80 L 287.20 82.80 L 287.20 84.40 L 290.00 84.40 L 290.00 99.20 L 271.60 99.20 L 271.60 90.80 Z" fill="#C5D9F2"/>
@@ -28,18 +28,17 @@
 <path d="M 276.80 66.00 L 276.80 56.40 L 315.60 56.40 L 315.60 65.60 L 314.80 66.00 L 276.80 66.00 Z" fill="#D5D0C8"/>
 <path d="M 292.00 102.00 L 292.00 67.00 L 314.80 67.00 L 314.80 102.00 L 292.00 102.00 Z" fill="#E7E39A"/>
 <path d="M 271.60 82.80 L 279.60 82.80 L 279.60 90.80 L 271.60 90.80 L 271.60 82.80 Z" fill="#E0D0F0" stroke="#6a3d91" stroke-width="0.45" stroke-dasharray="1.1 0.7"/>
-<path d="M 156.00 80.80 L 160.40 80.80 L 160.40 69.20 L 164.00 69.20 L 164.00 83.60 L 160.40 83.60 L 156.00 83.60 L 156.00 119.72 L 164.00 119.72 L 164.00 123.20 L 156.00 123.20 L 152.40 123.20 L 152.40 82.80 L 117.80 82.80 L 117.80 120.20 L 152.00 120.20 L 152.00 123.20 L 15.60 123.20 L 12.00 123.20 L 12.00 48.40 L 12.00 44.80 L 134.40 44.80 L 134.40 21.60 L 134.40 18.00 L 278.40 18.00 L 278.40 21.60 L 278.40 53.60 L 314.00 53.60 L 314.00 44.80 L 314.00 42.00 L 369.60 42.00 L 372.40 42.00 L 372.40 91.20 L 372.40 94.80 L 372.40 119.60 L 369.60 119.60 L 314.00 119.60 L 314.00 116.80 L 314.00 104.00 L 293.60 104.00 L 293.60 146.40 L 290.00 146.40 L 253.20 146.40 L 249.60 146.40 L 249.60 84.80 L 253.20 84.80 L 253.20 98.20 L 270.60 98.20 L 270.60 82.80 L 271.60 82.80 L 271.60 98.20 L 271.60 99.20 L 289.20 99.20 L 289.20 100.20 L 274.20 100.20 L 274.20 115.40 L 273.20 115.40 L 273.20 100.20 L 271.60 100.20 L 253.20 100.20 L 253.20 142.80 L 290.00 142.80 L 290.00 117.20 L 274.20 117.20 L 274.20 116.20 L 290.00 116.20 L 290.00 102.00 L 290.00 84.40 L 292.00 84.40 L 292.00 102.00 L 293.60 102.00 L 314.00 102.00 L 314.80 102.00 L 314.80 67.00 L 292.00 67.00 L 292.00 80.80 L 290.00 80.80 L 290.00 67.00 L 276.80 67.00 L 276.80 80.00 L 274.80 80.00 L 274.80 56.40 L 274.80 21.60 L 253.20 21.60 L 253.20 64.40 L 251.20 64.40 L 251.20 21.60 L 215.60 21.60 L 215.60 23.60 L 213.20 23.60 L 213.20 21.60 L 191.60 21.60 L 191.60 23.60 L 189.20 23.60 L 189.20 21.60 L 162.40 21.60 L 162.40 64.40 L 160.40 64.40 L 160.40 37.80 L 138.00 37.80 L 138.00 44.80 L 138.00 48.40 L 138.00 54.60 L 159.60 54.60 L 159.60 55.60 L 138.00 55.60 L 138.00 70.40 L 138.00 70.60 L 138.00 70.80 L 125.80 70.80 L 125.80 70.60 L 125.80 70.40 L 125.80 66.20 L 113.00 66.20 L 113.00 70.60 L 112.00 70.60 L 112.00 66.20 L 104.00 66.20 L 104.00 70.60 L 103.00 70.60 L 103.00 66.20 L 85.00 66.20 L 85.00 70.60 L 84.00 70.60 L 84.00 66.20 L 76.00 66.20 L 76.00 70.60 L 75.00 70.60 L 75.00 66.20 L 58.00 66.20 L 58.00 79.60 L 57.00 79.60 L 57.00 66.20 L 57.00 65.20 L 68.60 65.20 L 68.60 62.00 L 70.20 62.00 L 70.20 48.40 L 45.40 48.40 L 45.40 69.40 L 56.20 69.40 L 56.20 70.40 L 15.60 70.40 L 15.60 120.20 L 42.00 120.20 L 42.00 82.80 L 42.00 80.80 L 152.40 80.80 L 156.00 80.80 Z M 128.40 48.40 L 128.40 50.00 L 126.80 50.00 L 126.80 70.40 L 136.00 70.40 L 136.00 48.40 L 128.40 48.40 Z M 44.40 69.40 L 44.40 48.40 L 15.60 48.40 L 15.60 69.40 L 44.40 69.40 Z M 43.40 82.80 L 43.40 120.20 L 66.80 120.20 L 66.80 82.80 L 43.40 82.80 Z M 68.20 82.80 L 68.20 120.20 L 91.60 120.20 L 91.60 82.80 L 68.20 82.80 Z M 93.00 120.20 L 116.40 120.20 L 116.40 82.80 L 93.00 82.80 L 93.00 120.20 Z M 88.80 65.20 L 88.80 50.00 L 88.80 48.40 L 71.20 48.40 L 71.20 62.00 L 71.20 65.20 L 88.80 65.20 Z M 125.80 50.00 L 125.80 48.40 L 91.20 48.40 L 91.20 50.00 L 89.80 50.00 L 89.80 65.20 L 125.80 65.20 L 125.80 50.00 Z M 138.00 36.80 L 160.40 36.80 L 160.40 21.60 L 138.00 21.60 L 138.00 36.80 Z M 369.60 94.80 L 369.60 91.20 L 369.60 44.80 L 316.80 44.80 L 316.80 53.60 L 316.80 56.40 L 278.40 56.40 L 276.80 56.40 L 276.80 66.00 L 314.80 66.00 L 316.80 66.00 L 316.80 102.00 L 316.80 116.80 L 369.60 116.80 L 369.60 94.80 Z M 207.28 120.24 L 207.28 121.20 L 206.32 121.20 L 206.32 120.24 L 207.28 120.24 Z M 269.80 80.80 L 269.80 82.80 L 253.20 82.80 L 249.60 82.80 L 249.60 69.20 L 253.20 69.20 L 253.20 80.80 L 269.80 80.80 Z M 207.28 82.28 L 206.32 82.28 L 206.32 81.32 L 207.28 81.32 L 207.28 82.28 Z M 249.60 64.40 L 249.60 68.00 L 244.00 68.00 L 244.00 65.40 L 168.00 65.40 L 168.00 68.00 L 164.00 68.00 L 164.00 64.40 L 168.00 64.40 L 168.00 64.60 L 244.00 64.60 L 244.00 64.40 L 249.60 64.40 Z M 275.80 82.80 L 275.80 80.80 L 287.20 80.80 L 290.00 80.80 L 290.00 84.40 L 287.20 84.40 L 287.20 82.80 L 275.80 82.80 Z" fill="#2e2a26"/>
+<path d="M 160.40 80.80 L 160.40 69.20 L 164.00 69.20 L 164.00 83.60 L 160.40 83.60 L 156.00 83.60 L 156.00 119.72 L 164.00 119.72 L 164.00 123.20 L 156.00 123.20 L 152.40 123.20 L 152.40 82.80 L 117.80 82.80 L 117.80 120.20 L 152.00 120.20 L 152.00 123.20 L 15.60 123.20 L 12.00 123.20 L 12.00 48.40 L 12.00 44.80 L 134.40 44.80 L 134.40 21.60 L 134.40 18.00 L 278.40 18.00 L 278.40 21.60 L 278.40 53.60 L 314.00 53.60 L 314.00 44.80 L 314.00 42.00 L 369.60 42.00 L 372.40 42.00 L 372.40 91.20 L 372.40 94.80 L 372.40 119.60 L 369.60 119.60 L 314.00 119.60 L 314.00 116.80 L 314.00 104.00 L 293.60 104.00 L 293.60 146.40 L 290.00 146.40 L 253.20 146.40 L 249.60 146.40 L 249.60 84.80 L 253.20 84.80 L 253.20 98.20 L 270.60 98.20 L 270.60 82.80 L 271.60 82.80 L 271.60 98.20 L 271.60 99.20 L 289.20 99.20 L 289.20 100.20 L 274.20 100.20 L 274.20 115.40 L 273.20 115.40 L 273.20 100.20 L 271.60 100.20 L 253.20 100.20 L 253.20 142.80 L 290.00 142.80 L 290.00 117.20 L 274.20 117.20 L 274.20 116.20 L 290.00 116.20 L 290.00 102.00 L 290.00 84.40 L 292.00 84.40 L 292.00 102.00 L 293.60 102.00 L 314.00 102.00 L 314.80 102.00 L 314.80 67.00 L 292.00 67.00 L 292.00 80.80 L 290.00 80.80 L 290.00 67.00 L 276.80 67.00 L 276.80 80.00 L 274.80 80.00 L 274.80 56.40 L 274.80 21.60 L 253.20 21.60 L 253.20 64.40 L 251.20 64.40 L 251.20 21.60 L 215.60 21.60 L 215.60 23.60 L 213.20 23.60 L 213.20 21.60 L 191.60 21.60 L 191.60 23.60 L 189.20 23.60 L 189.20 21.60 L 162.40 21.60 L 162.40 64.40 L 160.40 64.40 L 160.40 37.80 L 138.00 37.80 L 138.00 44.80 L 138.00 48.40 L 138.00 54.60 L 159.60 54.60 L 159.60 55.60 L 138.00 55.60 L 138.00 70.40 L 138.00 70.60 L 138.00 70.80 L 125.80 70.80 L 125.80 70.60 L 125.80 70.40 L 125.80 66.20 L 113.00 66.20 L 113.00 70.60 L 112.00 70.60 L 112.00 66.20 L 111.98 66.20 L 111.98 65.20 L 125.80 65.20 L 125.80 50.00 L 125.80 48.40 L 91.20 48.40 L 91.20 50.00 L 89.80 50.00 L 89.80 65.20 L 104.02 65.20 L 104.02 66.20 L 104.00 66.20 L 104.00 70.60 L 103.00 70.60 L 103.00 66.20 L 85.00 66.20 L 85.00 70.60 L 84.00 70.60 L 84.00 66.20 L 83.98 66.20 L 83.98 65.20 L 88.80 65.20 L 88.80 50.00 L 88.80 48.40 L 71.20 48.40 L 71.20 62.00 L 71.20 65.20 L 76.02 65.20 L 76.02 66.20 L 76.00 66.20 L 76.00 70.60 L 75.00 70.60 L 75.00 66.20 L 58.00 66.20 L 58.00 79.60 L 57.00 79.60 L 57.00 66.20 L 57.00 65.20 L 68.60 65.20 L 68.60 62.00 L 70.20 62.00 L 70.20 48.40 L 45.40 48.40 L 45.40 69.40 L 56.20 69.40 L 56.20 70.40 L 15.60 70.40 L 15.60 120.20 L 42.00 120.20 L 42.00 82.80 L 42.00 80.80 L 152.40 80.80 L 156.00 80.80 L 160.40 80.80 Z M 128.40 50.00 L 126.80 50.00 L 126.80 70.40 L 136.00 70.40 L 136.00 48.40 L 128.40 48.40 L 128.40 50.00 Z M 44.40 48.40 L 15.60 48.40 L 15.60 69.40 L 44.40 69.40 L 44.40 48.40 Z M 43.40 120.20 L 66.80 120.20 L 66.80 82.80 L 43.40 82.80 L 43.40 120.20 Z M 68.20 120.20 L 91.60 120.20 L 91.60 82.80 L 68.20 82.80 L 68.20 120.20 Z M 116.40 120.20 L 116.40 82.80 L 93.00 82.80 L 93.00 120.20 L 116.40 120.20 Z M 160.40 36.80 L 160.40 21.60 L 138.00 21.60 L 138.00 36.80 L 160.40 36.80 Z M 369.60 91.20 L 369.60 44.80 L 316.80 44.80 L 316.80 53.60 L 316.80 56.40 L 278.40 56.40 L 276.80 56.40 L 276.80 66.00 L 314.80 66.00 L 316.80 66.00 L 316.80 102.00 L 316.80 116.80 L 369.60 116.80 L 369.60 94.80 L 369.60 91.20 Z M 207.28 121.20 L 206.32 121.20 L 206.32 120.24 L 207.28 120.24 L 207.28 121.20 Z M 269.80 82.80 L 253.20 82.80 L 249.60 82.80 L 249.60 69.20 L 253.20 69.20 L 253.20 80.80 L 269.80 80.80 L 269.80 82.80 Z M 206.32 82.28 L 206.32 81.32 L 207.28 81.32 L 207.28 82.28 L 206.32 82.28 Z M 249.60 68.00 L 244.00 68.00 L 244.00 65.40 L 168.00 65.40 L 168.00 68.00 L 164.00 68.00 L 164.00 64.40 L 168.00 64.40 L 168.00 64.60 L 244.00 64.60 L 244.00 64.40 L 249.60 64.40 L 249.60 68.00 Z M 275.80 80.80 L 287.20 80.80 L 290.00 80.80 L 290.00 84.40 L 287.20 84.40 L 287.20 82.80 L 275.80 82.80 L 275.80 80.80 Z" fill="#2e2a26"/>
 <polygon points="406.0,13.2 404.5,7.2 407.5,7.2" fill="#1c1916"/>
 <line x1="406.0" y1="13.2" x2="406.0" y2="3.2" stroke="#1c1916" stroke-width="0.35"/>
 <text x="408.2" y="6.2" font-size="2.6" font-weight="700">S</text>
 <text x="264.00" y="50.28" font-size="2.35" font-weight="400" text-anchor="middle" fill="#1c1916"><tspan x="264.00" dy="0" font-weight="700">1.01</tspan><tspan x="264.00" dy="2.8">Zádveří</tspan></text>
-<rect x="182.56" y="32.57" width="38.35" height="19.20" rx="0.6" fill="#ffffff" fill-opacity="0.88"/>
-<text x="201.74" y="34.78" font-size="2.15" font-weight="400" text-anchor="middle" fill="#1c1916"><tspan x="201.74" dy="0" font-weight="700">1.02</tspan><tspan x="201.74" dy="2.6">Obývací pokoj+KK</tspan><tspan x="201.74" dy="2.6">hydroizolace 8 mm <tspan fill="#1a7a34" font-weight="700">✓</tspan></tspan><tspan x="201.74" dy="2.6">EPS 100 S 60+60 mm (Rigl)</tspan><tspan x="201.74" dy="2.6">Systémová deska 50 mm (Vyslyšel)</tspan><tspan x="201.74" dy="2.6">Litý beton 68 mm (Harvalík)</tspan><tspan x="201.74" dy="2.6">Litý polyuretan 4 mm (Hanzlík)</tspan></text>
+<text x="201.74" y="41.25" font-size="2.35" font-weight="400" text-anchor="middle" fill="#1c1916"><tspan x="201.74" dy="0" font-weight="700">1.02</tspan><tspan x="201.74" dy="2.8">Obývací pokoj+KK</tspan></text>
 <text x="149.20" y="28.28" font-size="2.35" font-weight="400" text-anchor="middle" fill="#1c1916"><tspan x="149.20" dy="0" font-weight="700">1.03</tspan><tspan x="149.20" dy="2.8">Spíž</tspan></text>
 <text x="149.20" y="45.33" font-size="2.05" font-weight="400" text-anchor="middle" fill="#1c1916"><tspan x="149.20" dy="0" font-weight="700">1.04</tspan><tspan x="149.20" dy="2.45">Technická místnost</tspan></text>
 <text x="149.20" y="67.48" font-size="2.35" font-weight="400" text-anchor="middle" fill="#1c1916"><tspan x="149.20" dy="0" font-weight="700">1.05</tspan><tspan x="149.20" dy="2.8">Chodba</tspan></text>
 <text x="131.40" y="59.38" font-size="2.35" font-weight="400" text-anchor="middle" fill="#1c1916"><tspan x="131.40" dy="0" font-weight="700">1.06</tspan><tspan x="131.40" dy="2.8">WC</tspan></text>
-<text x="98.61" y="55.47" font-size="2.35" font-weight="400" text-anchor="middle" fill="#1c1916"><tspan x="98.61" dy="0" font-weight="700">1.07</tspan><tspan x="98.61" dy="2.8">Koupelna</tspan></text>
+<text x="107.64" y="56.76" font-size="2.35" font-weight="400" text-anchor="middle" fill="#1c1916"><tspan x="107.64" dy="0" font-weight="700">1.07</tspan><tspan x="107.64" dy="2.8">Koupelna</tspan></text>
 <text x="121.19" y="55.88" font-size="2.35" font-weight="400" text-anchor="middle" fill="#1c1916"><tspan x="121.19" dy="0" font-weight="700">1.07</tspan><tspan x="121.19" dy="2.8">sprcha</tspan></text>
 <text x="80.00" y="55.88" font-size="2.35" font-weight="400" text-anchor="middle" fill="#1c1916"><tspan x="80.00" dy="0" font-weight="700">1.08</tspan><tspan x="80.00" dy="2.8">Prádelna</tspan></text>
 <text x="54.33" y="55.97" font-size="2.35" font-weight="400" text-anchor="middle" fill="#1c1916"><tspan x="54.33" dy="0" font-weight="700">1.09</tspan><tspan x="54.33" dy="2.8">Koupelna</tspan></text>
@@ -49,8 +48,7 @@
 <text x="79.90" y="100.58" font-size="2.35" font-weight="400" text-anchor="middle" fill="#1c1916"><tspan x="79.90" dy="0" font-weight="700">1.13</tspan><tspan x="79.90" dy="2.8">Pokoj</tspan></text>
 <text x="104.70" y="100.58" font-size="2.35" font-weight="400" text-anchor="middle" fill="#1c1916"><tspan x="104.70" dy="0" font-weight="700">1.14</tspan><tspan x="104.70" dy="2.8">Pokoj</tspan></text>
 <text x="135.10" y="100.58" font-size="2.35" font-weight="400" text-anchor="middle" fill="#1c1916"><tspan x="135.10" dy="0" font-weight="700">1.15</tspan><tspan x="135.10" dy="2.8">Pracovna</tspan></text>
-<rect x="324.02" y="81.60" width="38.35" height="19.20" rx="0.6" fill="#ffffff" fill-opacity="0.88"/>
-<text x="343.20" y="83.81" font-size="2.15" font-weight="400" text-anchor="middle" fill="#1c1916"><tspan x="343.20" dy="0" font-weight="700">1.16</tspan><tspan x="343.20" dy="2.6">Garáž</tspan><tspan x="343.20" dy="2.6">hydroizolace 8 mm <tspan fill="#1a7a34" font-weight="700">✓</tspan></tspan><tspan x="343.20" dy="2.6">EPS 150 S 50+40 mm (Rigl)</tspan><tspan x="343.20" dy="2.6">Systémová deska 50 mm (Vyslyšel)</tspan><tspan x="343.20" dy="2.6">Litý beton 100 mm (Harvalík)</tspan><tspan x="343.20" dy="2.6">Litý polyuretan 4 mm (Hanzlík)</tspan></text>
+<text x="343.20" y="90.28" font-size="2.35" font-weight="400" text-anchor="middle" fill="#1c1916"><tspan x="343.20" dy="0" font-weight="700">1.16</tspan><tspan x="343.20" dy="2.8">Garáž</tspan></text>
 <text x="285.80" y="60.17" font-size="1.85" font-weight="400" text-anchor="middle" fill="#1c1916"><tspan x="285.80" dy="0" font-weight="700">1.17</tspan><tspan x="285.80" dy="2.2">Chodba do garáže</tspan></text>
 <text x="283.40" y="72.98" font-size="2.35" font-weight="400" text-anchor="middle" fill="#1c1916"><tspan x="283.40" dy="0" font-weight="700">1.19</tspan><tspan x="283.40" dy="2.8">WC</tspan></text>
 <text x="261.90" y="89.58" font-size="2.35" font-weight="400" text-anchor="middle" fill="#1c1916"><tspan x="261.90" dy="0" font-weight="700">1.20</tspan><tspan x="261.90" dy="2.8">Koupelna</tspan></text>
@@ -60,60 +58,61 @@
 <text x="268.12" y="128.95" font-size="2.35" font-weight="400" text-anchor="middle" fill="#1c1916"><tspan x="268.12" dy="0" font-weight="700">1.23</tspan><tspan x="268.12" dy="2.8">Pokoj+KK (garsonka)</tspan></text>
 <text x="303.40" y="83.58" font-size="2.35" font-weight="400" text-anchor="middle" fill="#1c1916"><tspan x="303.40" dy="0" font-weight="700">1.18</tspan><tspan x="303.40" dy="2.8">Sklad (venkovní)</tspan></text>
 <text x="12" y="151.4" font-size="2.7" font-weight="700" fill="#1c1916">Legenda</text>
-<rect x="32.0" y="153.0" width="4.2" height="3.2" fill="#F6E3B8" stroke="#444" stroke-width="0.2"/>
-<text x="37.4" y="155.6" font-size="2.15" fill="#1c1916">Dům — litý polyuretan</text>
-<rect x="64.0" y="153.0" width="4.2" height="3.2" fill="#C5D9F2" stroke="#444" stroke-width="0.2"/>
-<text x="69.4" y="155.6" font-size="2.15" fill="#1c1916">Dlažba, potěr Harvalík</text>
-<rect x="97.1" y="153.0" width="4.2" height="3.2" fill="#F7C7A8" stroke="#444" stroke-width="0.2"/>
-<text x="102.5" y="155.6" font-size="2.15" fill="#1c1916">1.20 celá ve spádu, potěr Harvalík</text>
-<rect x="144.0" y="153.0" width="4.2" height="3.2" fill="#A9DCC4" stroke="#444" stroke-width="0.2"/>
-<text x="149.4" y="155.6" font-size="2.15" fill="#1c1916">Sprcha 1.07, potěr Doskočil</text>
-<rect x="182.8" y="153.0" width="4.2" height="3.2" fill="#E0D0F0" stroke="#444" stroke-width="0.2"/>
-<text x="188.2" y="155.6" font-size="2.15" fill="#1c1916">Sprcha 1.21, 1×1 m, předpoklad</text>
-<rect x="225.1" y="153.0" width="4.2" height="3.2" fill="#D5D0C8" stroke="#444" stroke-width="0.2"/>
-<text x="230.5" y="155.6" font-size="2.15" fill="#1c1916">Garáž a chodba 1.17 — EPS 150 S</text>
-<rect x="268.6" y="153.0" width="4.2" height="3.2" fill="#E7E39A" stroke="#444" stroke-width="0.2"/>
-<text x="273.9" y="155.6" font-size="2.15" fill="#1c1916">Sklad 1.18 — bez systémové desky</text>
-<rect x="12.0" y="157.6" width="3.6" height="2.8" fill="#C5D9F2" stroke="#444" stroke-width="0.15"/>
-<text x="16.6" y="160.2" font-size="2.25" font-weight="700" fill="#1c1916">Dlažba, potěr Harvalík</text>
-<text x="12.0" y="163.60" font-size="2.15" fill="#1c1916">hydroizolace 8 mm <tspan fill="#1a7a34" font-weight="700">✓</tspan></text>
-<text x="12.0" y="166.10" font-size="2.15" fill="#1c1916">EPS 100 S 60+60 mm (Rigl)</text>
-<text x="12.0" y="168.60" font-size="2.15" fill="#1c1916">Systémová deska 50 mm (Vyslyšel)</text>
-<text x="12.0" y="171.10" font-size="2.15" fill="#1c1916">Litý beton 59 mm (Harvalík)</text>
-<text x="12.0" y="173.60" font-size="2.15" fill="#1c1916">hydroizolace + lepidlo + dlažba 13 mm (Doskočil)</text>
-<rect x="145.3" y="157.6" width="3.6" height="2.8" fill="#F7C7A8" stroke="#444" stroke-width="0.15"/>
-<text x="149.9" y="160.2" font-size="2.25" font-weight="700" fill="#1c1916">1.20 celá ve spádu, potěr Harvalík</text>
-<text x="145.3" y="163.60" font-size="2.15" fill="#1c1916">hydroizolace 8 mm <tspan fill="#1a7a34" font-weight="700">✓</tspan></text>
-<text x="145.3" y="166.10" font-size="2.15" fill="#1c1916">EPS 100 S 40+40 mm (Rigl)</text>
-<text x="145.3" y="168.60" font-size="2.15" fill="#1c1916">Systémová deska 50 mm (Vyslyšel)</text>
-<text x="145.3" y="171.10" font-size="2.15" fill="#1c1916">Litý beton 99 mm u nuly / 56 mm u vpusti (Harvalík)</text>
-<text x="145.3" y="173.60" font-size="2.15" fill="#1c1916">hydroizolace + lepidlo + dlažba 13 mm (Doskočil)</text>
-<rect x="278.7" y="157.6" width="3.6" height="2.8" fill="#A9DCC4" stroke="#444" stroke-width="0.15"/>
-<text x="283.3" y="160.2" font-size="2.25" font-weight="700" fill="#1c1916">Sprcha 1.07, potěr Doskočil</text>
-<text x="278.7" y="163.60" font-size="2.15" fill="#1c1916">hydroizolace 8 mm <tspan fill="#1a7a34" font-weight="700">✓</tspan></text>
-<text x="278.7" y="166.10" font-size="2.15" fill="#1c1916">EPS 100 S 60+40 mm (Rigl)</text>
-<text x="278.7" y="168.60" font-size="2.15" fill="#1c1916">Systémová deska 50 mm (Vyslyšel)</text>
-<text x="278.7" y="171.10" font-size="2.15" fill="#1c1916">Beton 79 mm u nuly / 53 mm u vpusti (Doskočil),</text>
-<text x="278.7" y="173.60" font-size="2.15" fill="#1c1916">hydroizolace + lepidlo + dlažba 13 mm (Doskočil)</text>
-<rect x="12.0" y="177.5" width="3.6" height="2.8" fill="#E0D0F0" stroke="#444" stroke-width="0.15"/>
-<text x="16.6" y="180.1" font-size="2.25" font-weight="700" fill="#1c1916">Sprcha 1.21, 1×1 m, předpoklad</text>
-<text x="12.0" y="183.50" font-size="2.15" fill="#1c1916">hydroizolace 8 mm <tspan fill="#1a7a34" font-weight="700">✓</tspan></text>
-<text x="12.0" y="186.00" font-size="2.15" fill="#1c1916">EPS 100 S 60+40 mm (Rigl)</text>
-<text x="12.0" y="188.50" font-size="2.15" fill="#1c1916">Systémová deska 50 mm (Vyslyšel)</text>
-<text x="12.0" y="191.00" font-size="2.15" fill="#1c1916">Beton 79 mm u nuly / 66,5 mm u vpusti (Doskočil),</text>
-<text x="12.0" y="193.50" font-size="2.15" fill="#1c1916">hydroizolace + lepidlo + dlažba 13 mm (Doskočil)</text>
-<text x="12.0" y="196.00" font-size="2.15" fill="#1c1916">předpoklad, není ve výkazu</text>
-<rect x="145.3" y="177.5" width="3.6" height="2.8" fill="#E7E39A" stroke="#444" stroke-width="0.15"/>
-<text x="149.9" y="180.1" font-size="2.25" font-weight="700" fill="#1c1916">Sklad 1.18 — bez systémové desky</text>
-<text x="145.3" y="183.50" font-size="2.15" fill="#1c1916">hydroizolace 8 mm <tspan fill="#1a7a34" font-weight="700">✓</tspan></text>
-<text x="145.3" y="186.00" font-size="2.15" fill="#1c1916">EPS 150 S 100+40 mm (Rigl)</text>
-<text x="145.3" y="188.50" font-size="2.15" fill="#1c1916">Litý beton 100 mm (Harvalík)</text>
-<text x="145.3" y="191.00" font-size="2.15" fill="#1c1916">bez systémové desky a bez nášlapu</text>
-<text x="12" y="202.50" font-size="2.15" fill="#333">Hydroizolace 8 mm je hotová (<tspan fill="#1a7a34" font-weight="700">✓</tspan>). Tloušťky EPS a potěru jsou z podlaha-eps.xlsx.</text>
-<text x="12" y="205.05" font-size="2.15" fill="#333">Potěr lije Harvalík v celém domě, v koupelnách mimo sprchy a v celé spádované 1.20. Doskočil lije potěr jen ve sprše 1.07 a ve sprše 1×1 m v koupelně 1.21.</text>
-<text x="12" y="207.60" font-size="2.15" fill="#333">Předpoklad: sprcha garsonky je čtverec 1000×1000 mm v severozápadním rohu koupelny 1.21 (nejdál od dveří OP40 v jižní stěně). Ve výkazu ani v modelu sprcha není. Spád 1,25 %</text>
-<text x="12" y="210.15" font-size="2.15" fill="#333">jako u sprchy 1.07, na 1,0 m tedy 12,5 mm. EPS 100 S 60+40 mm a potěr 79 mm u nuly / 66,5 mm u vpusti jsou předpoklad (výkaz má celou 1.21 jako EPS 60+60 a potěr 59 mm).</text>
-<text x="12" y="212.70" font-size="2.15" fill="#333">Garáž a 1.17: EPS 150 S, beton 100 mm. Výkaz říká ověřit EPS 150 se statikem (projekt měl XPS 80).</text>
-<text x="12" y="215.25" font-size="2.15" fill="#333">Sklad 1.18 je nevytápěný: bez systémové desky a bez nášlapu. Beton 100 mm je ve výkazu zástupná tloušťka.</text>
-<text x="12" y="217.80" font-size="2.15" fill="#333">Terasa ve výkazu skladeb není. Průchod 1.17–1.16 je bez stěny, obě plochy mají tutéž skladbu.</text>
+<rect x="12.0" y="154.2" width="3.6" height="2.8" fill="#F6E3B8" stroke="#444" stroke-width="0.15"/>
+<text x="16.6" y="156.8" font-size="2.25" font-weight="700" fill="#1c1916">Dům — litý polyuretan</text>
+<text x="12.0" y="160.20" font-size="2.15" fill="#1c1916">hydroizolace 8 mm <tspan fill="#1a7a34" font-weight="700">✓</tspan></text>
+<text x="12.0" y="162.70" font-size="2.15" fill="#1c1916">EPS 100 S 60+60 mm (Rigl)</text>
+<text x="12.0" y="165.20" font-size="2.15" fill="#1c1916">Systémová deska 50 mm (Vyslyšel)</text>
+<text x="12.0" y="167.70" font-size="2.15" fill="#1c1916">Litý beton 68 mm (Harvalík)</text>
+<text x="12.0" y="170.20" font-size="2.15" fill="#1c1916">Litý polyuretan 4 mm (Hanzlík)</text>
+<rect x="145.3" y="154.2" width="3.6" height="2.8" fill="#C5D9F2" stroke="#444" stroke-width="0.15"/>
+<text x="149.9" y="156.8" font-size="2.25" font-weight="700" fill="#1c1916">Dlažba, potěr Harvalík</text>
+<text x="145.3" y="160.20" font-size="2.15" fill="#1c1916">hydroizolace 8 mm <tspan fill="#1a7a34" font-weight="700">✓</tspan></text>
+<text x="145.3" y="162.70" font-size="2.15" fill="#1c1916">EPS 100 S 60+60 mm (Rigl)</text>
+<text x="145.3" y="165.20" font-size="2.15" fill="#1c1916">Systémová deska 50 mm (Vyslyšel)</text>
+<text x="145.3" y="167.70" font-size="2.15" fill="#1c1916">Litý beton 59 mm (Harvalík)</text>
+<text x="145.3" y="170.20" font-size="2.15" fill="#1c1916">hydroizolace + lepidlo + dlažba 13 mm (Doskočil)</text>
+<rect x="278.7" y="154.2" width="3.6" height="2.8" fill="#F7C7A8" stroke="#444" stroke-width="0.15"/>
+<text x="283.3" y="156.8" font-size="2.25" font-weight="700" fill="#1c1916">1.20 celá ve spádu, potěr Harvalík</text>
+<text x="278.7" y="160.20" font-size="2.15" fill="#1c1916">hydroizolace 8 mm <tspan fill="#1a7a34" font-weight="700">✓</tspan></text>
+<text x="278.7" y="162.70" font-size="2.15" fill="#1c1916">EPS 100 S 40+40 mm (Rigl)</text>
+<text x="278.7" y="165.20" font-size="2.15" fill="#1c1916">Systémová deska 50 mm (Vyslyšel)</text>
+<text x="278.7" y="167.70" font-size="2.15" fill="#1c1916">Litý beton 99 mm u nuly / 56 mm u vpusti (Harvalík)</text>
+<text x="278.7" y="170.20" font-size="2.15" fill="#1c1916">hydroizolace + lepidlo + dlažba 13 mm (Doskočil)</text>
+<rect x="12.0" y="174.1" width="3.6" height="2.8" fill="#A9DCC4" stroke="#444" stroke-width="0.15"/>
+<text x="16.6" y="176.7" font-size="2.25" font-weight="700" fill="#1c1916">Sprcha 1.07, potěr Doskočil</text>
+<text x="12.0" y="180.10" font-size="2.15" fill="#1c1916">hydroizolace 8 mm <tspan fill="#1a7a34" font-weight="700">✓</tspan></text>
+<text x="12.0" y="182.60" font-size="2.15" fill="#1c1916">EPS 100 S 60+40 mm (Rigl)</text>
+<text x="12.0" y="185.10" font-size="2.15" fill="#1c1916">Systémová deska 50 mm (Vyslyšel)</text>
+<text x="12.0" y="187.60" font-size="2.15" fill="#1c1916">Beton 79 mm u nuly / 53 mm u vpusti (Doskočil),</text>
+<text x="12.0" y="190.10" font-size="2.15" fill="#1c1916">hydroizolace + lepidlo + dlažba 13 mm (Doskočil)</text>
+<rect x="145.3" y="174.1" width="3.6" height="2.8" fill="#E0D0F0" stroke="#444" stroke-width="0.15"/>
+<text x="149.9" y="176.7" font-size="2.25" font-weight="700" fill="#1c1916">Sprcha 1.21, 1×1 m, předpoklad</text>
+<text x="145.3" y="180.10" font-size="2.15" fill="#1c1916">hydroizolace 8 mm <tspan fill="#1a7a34" font-weight="700">✓</tspan></text>
+<text x="145.3" y="182.60" font-size="2.15" fill="#1c1916">EPS 100 S 60+40 mm (Rigl)</text>
+<text x="145.3" y="185.10" font-size="2.15" fill="#1c1916">Systémová deska 50 mm (Vyslyšel)</text>
+<text x="145.3" y="187.60" font-size="2.15" fill="#1c1916">Beton 79 mm u nuly / 66,5 mm u vpusti (Doskočil),</text>
+<text x="145.3" y="190.10" font-size="2.15" fill="#1c1916">hydroizolace + lepidlo + dlažba 13 mm (Doskočil)</text>
+<text x="145.3" y="192.60" font-size="2.15" fill="#1c1916">předpoklad, není ve výkazu</text>
+<rect x="278.7" y="174.1" width="3.6" height="2.8" fill="#D5D0C8" stroke="#444" stroke-width="0.15"/>
+<text x="283.3" y="176.7" font-size="2.25" font-weight="700" fill="#1c1916">Garáž a chodba 1.17 — EPS 150 S</text>
+<text x="278.7" y="180.10" font-size="2.15" fill="#1c1916">hydroizolace 8 mm <tspan fill="#1a7a34" font-weight="700">✓</tspan></text>
+<text x="278.7" y="182.60" font-size="2.15" fill="#1c1916">EPS 150 S 50+40 mm (Rigl)</text>
+<text x="278.7" y="185.10" font-size="2.15" fill="#1c1916">Systémová deska 50 mm (Vyslyšel)</text>
+<text x="278.7" y="187.60" font-size="2.15" fill="#1c1916">Litý beton 100 mm (Harvalík)</text>
+<text x="278.7" y="190.10" font-size="2.15" fill="#1c1916">Litý polyuretan 4 mm (Hanzlík)</text>
+<rect x="12.0" y="196.5" width="3.6" height="2.8" fill="#E7E39A" stroke="#444" stroke-width="0.15"/>
+<text x="16.6" y="199.1" font-size="2.25" font-weight="700" fill="#1c1916">Sklad 1.18 — bez systémové desky</text>
+<text x="12.0" y="202.50" font-size="2.15" fill="#1c1916">hydroizolace 8 mm <tspan fill="#1a7a34" font-weight="700">✓</tspan></text>
+<text x="12.0" y="205.00" font-size="2.15" fill="#1c1916">EPS 150 S 100+40 mm (Rigl)</text>
+<text x="12.0" y="207.50" font-size="2.15" fill="#1c1916">Litý beton 100 mm (Harvalík)</text>
+<text x="12.0" y="210.00" font-size="2.15" fill="#1c1916">bez systémové desky a bez nášlapu</text>
+<text x="12" y="216.50" font-size="2.15" fill="#333">Hydroizolace 8 mm je hotová (<tspan fill="#1a7a34" font-weight="700">✓</tspan>). Tloušťky EPS a potěru jsou z podlaha-eps.xlsx.</text>
+<text x="12" y="219.05" font-size="2.15" fill="#333">Potěr lije Harvalík v celém domě, v koupelnách mimo sprchy a v celé spádované 1.20. Doskočil lije potěr jen ve sprše 1.07 a ve sprše 1×1 m v koupelně 1.21.</text>
+<text x="12" y="221.60" font-size="2.15" fill="#333">Předpoklad: sprcha garsonky je čtverec 1000×1000 mm v severozápadním rohu koupelny 1.21 (nejdál od dveří OP40 v jižní stěně). Ve výkazu ani v modelu sprcha není. Spád 1,25 %</text>
+<text x="12" y="224.15" font-size="2.15" fill="#333">jako u sprchy 1.07, na 1,0 m tedy 12,5 mm. EPS 100 S 60+40 mm a potěr 79 mm u nuly / 66,5 mm u vpusti jsou předpoklad (výkaz má celou 1.21 jako EPS 60+60 a potěr 59 mm).</text>
+<text x="12" y="226.70" font-size="2.15" fill="#333">Prádelna 1.08 je dlažba jako koupelny. Výkaz má u ní PU stěrku a potěr 68 mm.</text>
+<text x="12" y="229.25" font-size="2.15" fill="#333">Garáž a 1.17: EPS 150 S, beton 100 mm. Výkaz říká ověřit EPS 150 se statikem (projekt měl XPS 80).</text>
+<text x="12" y="231.80" font-size="2.15" fill="#333">Sklad 1.18 je nevytápěný: bez systémové desky a bez nášlapu. Beton 100 mm je ve výkazu zástupná tloušťka.</text>
+<text x="12" y="234.35" font-size="2.15" fill="#333">Terasa ve výkazu skladeb není. Průchod 1.17–1.16 je bez stěny, obě plochy mají tutéž skladbu.</text>
 </svg>

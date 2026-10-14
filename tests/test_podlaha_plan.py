@@ -1,5 +1,7 @@
 """Floor-build-up plan uses the workbook thicknesses and the model rooms."""
 
+from shapely.geometry import Point
+
 from blueprints.podlaha_plan import (
     COLOURS,
     DRAIN_MM,
@@ -74,7 +76,14 @@ def test_rooms_and_showers_come_from_the_model():
     assert by_id["1.21"].polygon.intersection(by_id["1.21s"].polygon).area < 0.02
     assert by_id["1.16"].kind == "gar" and by_id["1.17"].kind == "gar"
     assert by_id["1.18"].kind == "skl"
+    assert by_id["1.08"].kind == "tile"
     assert by_id["1.23"].kind == "pu"
+    # The door leaf is the corridor end of the jamb returns. The reveal is the room.
+    for point in (Point(8.5, 9.55), Point(12.0, 9.55)):
+        assert by_id["1.08" if point.x < 10 else "1.07"].polygon.covers(point)
+        assert not by_id["1.05"].polygon.covers(point)
+    assert by_id["1.05"].polygon.covers(Point(8.5, 9.2))
+    assert by_id["1.05"].polygon.covers(Point(12.0, 9.2))
     # Clear floor from the wall model, not a second copy of the ZTI table.
     assert abs(by_id["1.01"].polygon.area - 19.98) < 0.2
     assert abs(by_id["1.12"].polygon.area - 13.67) < 0.15
@@ -94,6 +103,8 @@ def test_drawing_names_every_trade():
     assert svg.count("hydroizolace 8 mm") == len(COLOURS)
     assert svg.count("Litý beton 68 mm") == 1
     assert svg.count("EPS 100 S 40+40 mm") == 1
+    assert svg.count("Dům — litý polyuretan") == 1
+    assert "Prádelna 1.08 je dlažba" in svg
     plan = assemble()
     for area in plan.areas:
         assert area.room in svg
