@@ -40,9 +40,11 @@ EAST = 14.225
 SOUTH = 10.15
 NORTH = 12.25
 WEST = 9.725
-GLASS = 13.0965
-SHOWER = 13.1045
+GLASS = 13.1085
+SHOWER = 13.1165
+CHEEK = 13.0585
 FACE = 12.055
+DOOR_LEAF = 9.475
 DOOR = 12.0
 TILE = 0.0085
 
@@ -83,7 +85,17 @@ def test_room_is_a_rectangle_and_the_chase_left_the_bathroom():
     )
     assert room == pytest.approx(9.45, abs=0.001)
     walls = {row["id"] for row in doc["coverings"] if (row.get("TileLayout") or {}).get("Axis")}
-    assert walls == {"CLAD-PW", "CLAD-NS", "CLAD-E", "CLAD-S", "CLAD-W"}
+    assert walls == {
+        "CLAD-PW",
+        "CLAD-NS",
+        "CLAD-E",
+        "CLAD-S",
+        "CLAD-SS",
+        "CLAD-W",
+        "CLAD-PASS-W",
+        "CLAD-PASS-E",
+        "CLAD-DOOR",
+    }
     house = load_yaml(ROOT / "inputs" / "ground_floor" / "ground-floor.yaml")
     chase = next(row for row in house["walls"] if row["id"] == "W-040")
     assert chase["Axis"]["Start"][0] + chase["Thickness"] / 2 == pytest.approx(WEST)
@@ -105,25 +117,26 @@ def test_fall_and_the_shower_screed():
     assert fig["screed_drain_mm"] == pytest.approx(55.1875, abs=1e-4)
     assert fig["below_minimum"] is False
     assert EPS_TOP_MM == 60 and EPS_BOTTOM_MM == 40
-    assert fig["head_mm"] == pytest.approx(2390.0, abs=1e-4)
+    assert fig["head_mm"] == pytest.approx(2230.0, abs=1e-4)
     assert fig["course_mm"] == pytest.approx(1194.0, abs=1e-6)
-    assert fig["shower_width_mm"] == pytest.approx(1112.0, abs=0.05)
+    assert fig["cheek_mm"] == pytest.approx(50.0, abs=0.05)
+    assert fig["shower_width_mm"] == pytest.approx(1100.0, abs=0.05)
     assert fig["north_y_m"] == pytest.approx(FACE)
     glass = next(row for row in info["doc"]["furniture"] if row["id"] == "GLASS-1.07")
     tile_face = EAST - TILE
     glass_east = glass["Origin"][0] + glass["Width"]
     assert glass_east == pytest.approx(SHOWER)
-    assert (tile_face - glass_east) * 1000 == pytest.approx(1112.0, abs=0.05)
+    assert (tile_face - glass_east) * 1000 == pytest.approx(1100.0, abs=0.05)
     drain = next(row for row in info["doc"]["wasteTerminals"] if row["id"] == "DRAIN-1.07")
     assert drain["Origin"][0] == pytest.approx(glass_east)
     assert drain["Origin"][1] == pytest.approx(FACE + TILE)
-    assert drain["Width"] == pytest.approx(1.112, abs=1e-6)
-    # Shower floor is two full 555 mm modules. The old 86.5 and 430 mm cuts are gone.
+    assert drain["Width"] == pytest.approx(1.1, abs=1e-6)
+    # Shower floor is two full 549 mm modules. 550 | 550 counts the grout.
     shower_widths = sorted(
         round((max(p[0] for p in ring) - min(p[0] for p in ring)) * 1000, 1) for ring in info["shower_tiles"]
     )
     assert shower_widths
-    assert set(shower_widths) == {555.0}
+    assert set(shower_widths) == {549.0}
 
 
 def test_door_joint_two_tiles_and_plaster_above_the_shelf():
@@ -145,32 +158,52 @@ def test_door_joint_two_tiles_and_plaster_above_the_shelf():
     # Door edges leave a piece under 100 mm on each jamb. The east one was
     # already there. The west one was hidden inside the origin butt slab.
     small = small_pieces(info)
-    assert len(small) == 4
-    assert all(line.startswith("CLAD-S") for line in small)
-    assert sum("96.0 mm" in line for line in small) == 2
-    assert sum("97.0 mm" in line for line in small) == 2
+    assert sum(line.startswith("CLAD-S") and "96.0 mm" in line for line in small) == 2
+    assert sum(line.startswith("CLAD-S") and "97.0 mm" in line for line in small) == 2
+    assert any(line.startswith("CLAD-NS") and "57.0 mm" in line for line in small)
     assert "CLAD-N" not in walls
     pw_tops = [tile["top_mm"] for tile in walls["CLAD-PW"]]
     assert pw_tops
     assert max(pw_tops) == pytest.approx(1194.0, abs=0.05)
-    for wall_id in ("CLAD-E", "CLAD-S", "CLAD-W", "CLAD-NS"):
-        assert max(tile["top_mm"] for tile in walls[wall_id]) == pytest.approx(2390.0, abs=0.05)
+    for wall_id in (
+        "CLAD-E",
+        "CLAD-S",
+        "CLAD-SS",
+        "CLAD-W",
+        "CLAD-NS",
+        "CLAD-PASS-W",
+        "CLAD-PASS-E",
+        "CLAD-DOOR",
+    ):
+        assert max(tile["top_mm"] for tile in walls[wall_id]) == pytest.approx(2230.0, abs=0.05)
     for wall_id, tiles in walls.items():
         assert max(tile["width_mm"] for tile in tiles) < 700.0
     east_widths = sorted({round(tile["width_mm"], 1) for tile in walls["CLAD-E"]})
+    assert 600.0 in east_widths
     assert 555.0 not in east_widths
     ns_widths = sorted({round(tile["width_mm"], 1) for tile in walls["CLAD-NS"]})
-    assert 555.0 in ns_widths
-    assert 549.0 not in ns_widths
+    assert 549.0 in ns_widths
+    assert 555.0 not in ns_widths
+    south = {round(tile["width_mm"], 1) for tile in walls["CLAD-S"]}
+    assert {96.0, 97.0, 509.5} <= south
+    assert 430.0 not in south
+    assert {round(tile["width_mm"], 1) for tile in walls["CLAD-SS"]} == {549.0}
+    door = walls["CLAD-DOOR"]
+    assert {round(tile["bottom_mm"], 1) for tile in door} == {2100.0}
+    assert {round(tile["height_mm"], 1) for tile in door} == {130.0}
     niche = next(wall for wall in info["walls"] if wall["id"] == "CLAD-NS")
     polygon = unary_union([Polygon(tile["polygon"]) for tile in niche["result"]["tiles"]])
-    # Low niche from the glass end: sill 1194, 280 high, along 0–400 mm.
-    assert not polygon.covers(Point(0.20, 1.30))
-    assert not polygon.covers(Point(0.38, 1.30))
-    assert polygon.covers(Point(0.50, 1.30))
-    assert polygon.covers(Point(0.70, 1.30))
-    assert polygon.covers(Point(0.20, 0.50))
-    assert polygon.covers(Point(0.20, 1.70))
+    # Centred in the left 549 mm tile: tile on both sides, void only above the shelf.
+    assert not polygon.covers(Point(0.30, 1.30))
+    assert polygon.covers(Point(0.10, 1.30))
+    assert polygon.covers(Point(0.55, 1.30))
+    assert polygon.covers(Point(0.30, 0.50))
+    assert polygon.covers(Point(0.30, 1.70))
+    assert not polygon.covers(Point(0.30, 2.24))
+    floor = unary_union([Polygon(ring) for ring in info["level_tiles"]])
+    assert floor.covers(Point(12.2, 9.8))
+    assert not floor.covers(Point(12.2, 9.46))
+    assert not floor.covers(Point(11.45, 9.8))
 
 
 def test_fixtures_shelf_glass_and_the_plates():
@@ -189,15 +222,21 @@ def test_fixtures_shelf_glass_and_the_plates():
     assert shelf["Height"] == pytest.approx(tub["Height"])
     assert prewall["Height"] == pytest.approx(1.194)
     assert prewall["Depth"] + 0.0085 == pytest.approx(0.195)
-    assert glass["Height"] == pytest.approx(2.45)
-    assert glass["Depth"] == pytest.approx(1.155)
-    assert shower["Height"] - glass["Height"] == pytest.approx(0.05)
+    assert glass["Height"] == pytest.approx(2.230)
+    assert glass["Depth"] == pytest.approx(1.205)
+    assert shower["Height"] == pytest.approx(glass["Height"])
     assert shower["Depth"] == pytest.approx(prewall["Depth"])
     assert shower["Origin"][1] == pytest.approx(prewall["Origin"][1])
+    assert shower["Origin"][0] == pytest.approx(CHEEK)
+    assert prewall["Origin"][0] + prewall["Width"] == pytest.approx(CHEEK)
     face = prewall["Origin"][1] - TILE
     assert face == pytest.approx(FACE)
     glass_north = glass["Origin"][1] + glass["Depth"]
-    assert (face - glass_north) * 1000 == pytest.approx(50.0, abs=0.05)
+    assert glass_north == pytest.approx(FACE)
+    assert (glass["Origin"][0] - shower["Origin"][0]) * 1000 == pytest.approx(50.0, abs=0.05)
+    soffit = next(row for row in doc["furniture"] if row["id"] == "SOFFIT-SH")
+    assert soffit["Elevation"] == pytest.approx(2.230)
+    assert soffit["Height"] == pytest.approx(0.270)
     assert cabinet["ObjectType"] == "Cabinet"
     assert cabinet["Width"] == pytest.approx(1.6)
     assert top["ObjectType"] == "Countertop"
@@ -211,7 +250,7 @@ def test_fixtures_shelf_glass_and_the_plates():
     assert cabinet_centre == pytest.approx(DOOR, abs=0.0001)
     shower_mixer = next(row for row in doc["furniture"] if row["id"] == "MIX-SH")
     mixer_centre = shower_mixer["Origin"][0] + shower_mixer["Width"] / 2
-    joint = SHOWER + 0.555 + 0.001
+    joint = SHOWER + 0.549 + 0.001
     assert mixer_centre == pytest.approx(joint, abs=0.001)
     shower_pipes = sorted(
         row["Origin"][0] + row["Width"] / 2
