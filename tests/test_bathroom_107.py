@@ -160,7 +160,7 @@ def test_door_joint_two_tiles_and_plaster_above_the_shelf():
     small = small_pieces(info)
     assert sum(line.startswith("CLAD-S") and "96.0 mm" in line for line in small) == 2
     assert sum(line.startswith("CLAD-S") and "97.0 mm" in line for line in small) == 2
-    assert any(line.startswith("CLAD-NS") and "57.0 mm" in line for line in small)
+    assert not any(line.startswith("CLAD-NS") for line in small)
     assert "CLAD-N" not in walls
     pw_tops = [tile["top_mm"] for tile in walls["CLAD-PW"]]
     assert pw_tops
@@ -182,8 +182,7 @@ def test_door_joint_two_tiles_and_plaster_above_the_shelf():
     assert 600.0 in east_widths
     assert 555.0 not in east_widths
     ns_widths = sorted({round(tile["width_mm"], 1) for tile in walls["CLAD-NS"]})
-    assert 549.0 in ns_widths
-    assert 555.0 not in ns_widths
+    assert ns_widths == [549.0]
     south = {round(tile["width_mm"], 1) for tile in walls["CLAD-S"]}
     assert {96.0, 97.0, 509.5} <= south
     assert 430.0 not in south
@@ -193,13 +192,14 @@ def test_door_joint_two_tiles_and_plaster_above_the_shelf():
     assert {round(tile["height_mm"], 1) for tile in door} == {130.0}
     niche = next(wall for wall in info["walls"] if wall["id"] == "CLAD-NS")
     polygon = unary_union([Polygon(tile["polygon"]) for tile in niche["result"]["tiles"]])
-    # Centred in the left 549 mm tile: tile on both sides, void only above the shelf.
-    assert not polygon.covers(Point(0.30, 1.30))
-    assert polygon.covers(Point(0.10, 1.30))
-    assert polygon.covers(Point(0.55, 1.30))
-    assert polygon.covers(Point(0.30, 0.50))
-    assert polygon.covers(Point(0.30, 1.70))
-    assert not polygon.covers(Point(0.30, 2.24))
+    # One niche centred on the 1100 mm joint, tile on all four sides.
+    assert not polygon.covers(Point(0.50, 1.30))
+    assert not polygon.covers(Point(0.60, 1.30))
+    assert polygon.covers(Point(0.20, 1.30))
+    assert polygon.covers(Point(0.90, 1.30))
+    assert polygon.covers(Point(0.50, 0.50))
+    assert polygon.covers(Point(0.50, 1.60))
+    assert not polygon.covers(Point(0.50, 2.24))
     floor = unary_union([Polygon(ring) for ring in info["level_tiles"]])
     assert floor.covers(Point(12.2, 9.8))
     assert not floor.covers(Point(12.2, 9.46))

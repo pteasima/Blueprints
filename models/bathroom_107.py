@@ -174,8 +174,13 @@ def layout(doc: dict | None = None) -> dict:
             footprint=shower_fp,
         )
         # Same origin butt as the floor: open it before pieces that share
-        # an edge are unioned into a double-width tile.
-        opened, extra_grout = _open_wall_butts(result["tiles"], float(tile["Joint"]))
+        # an edge are unioned into a double-width tile. The shower niche is
+        # the exception: its edges are not joints. Join that wall first so
+        # the module stays 549 | 2 | 549 and the shelf is a notch.
+        tiles_in = result["tiles"]
+        if row["id"] == "CLAD-NS":
+            tiles_in = _merge_wall_pieces(tiles_in, match_z=False)
+        opened, extra_grout = _open_wall_butts(tiles_in, float(tile["Joint"]))
         result["tiles"] = _merge_wall_pieces(opened, match_z=False)
         result["grout"] = _merge_wall_pieces([*result["grout"], *extra_grout], match_z=True)
         walls.append({"id": row["id"], "layout": tile, "plane": plane, "result": result})
@@ -878,8 +883,8 @@ def _elevation_drawing(info: dict, wall_ids: tuple[str, ...], scene_id: str, nam
         notes.append(
             _callout(
                 _station(shower, shower["length"] * 0.25, 1400.0),
-                "niche 340×280, centred\nbottom on the 1194 joint",
-                "nika 340×280, ve středu\nspodek na spáře 1194",
+                "niche 340×280\ncentred on the joint",
+                "nika 340×280\nve středu spáry",
                 (-0.12, 0.08),
                 leader=False,
             )
@@ -1221,7 +1226,7 @@ def _svg_wall(info: dict, wall_ids: tuple[str, ...], title_en: str, title_cs: st
             _svg_text(
                 mx,
                 my - 16,
-                "549 | 2 | 549\nTango 150 mm on the joint\nniche 340×280 centred on 1194",
+                "549 | 2 | 549\nniche centred on the joint",
                 15,
             )
         )

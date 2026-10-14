@@ -54,8 +54,8 @@
 # 2230 mm. The door leaf is at the corridor end of the jamb returns,
 # y=9.475, between x=11.50 and x=12.50. The passage from that leaf to the
 # room is tiled, to 2230 mm. The door itself is 2100 mm high.
-# Niche: centred in the left 549 mm shower tile, 340×280 mm, bottom on the
-# 1194 mm joint. Tile remains on both sides. The drawing gives no niche size.
+# Niche: one shelf, 340×280 mm, centred on the shower's centre joint
+# (the middle of the 1100 mm). Tile on all four sides. Bottom on the 1194 mm joint.
 # The middle joint is the vertical joint on the door centre, x=12.000.
 # The vanity is centred on that joint. Paffoni Tango, rozteč 150 mm.
 # Seen from the room, the left pipe of the left mixer is on the joint one
@@ -196,7 +196,7 @@ coverings:
       Inside: [11.5, 11.5]
   - id: CLAD-NS
     Name: Shower pre-wall tiles
-    Description: South face of the shower pre-wall. 549 | 2 | 549 mm from the glass line, the same face as the vanity pre-wall. The wall starts 50 mm west of the glass. Niche is centred in the left 549 mm tile, bottom on the 1194 mm joint. Tiles stop at 2230 mm.
+    Description: North wall inside the shower. Vertical joints follow the floor, 549 | 2 | 549, one joint on the centre. One niche centred on that joint, tiled all around. Tiles stop at 2230 mm.
     PredefinedType: CLADDING
     ObjectType: PoetryStone
     ContainedInStructure: SP-1.07
@@ -211,11 +211,11 @@ coverings:
       BottomJoint: 0
       Courses: 2
       Axis:
-        Start: [13.0585, 12.0635]
+        Start: [13.1165, 12.0635]
         End: [14.2165, 12.0635]
       Inside: [13.6, 11.5]
       Openings:
-        - AlongAxis: 0.1625
+        - AlongAxis: 0.380
           Width: 0.340
           SillHeight: 1.194
           Height: 0.280
