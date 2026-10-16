@@ -24,7 +24,12 @@
       "floor_tile",
       "wall_tile",
       "grout",
-      "drain"
+      "drain",
+      "fixture",
+      "prewall",
+      "screen",
+      "profile",
+      "vanity"
     ]
   }
 ]
