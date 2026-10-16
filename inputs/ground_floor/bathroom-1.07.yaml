@@ -25,6 +25,9 @@
 # Grid origin x=11.403 puts the 2 mm floor joint on the door centre, x=12.000
 # (the passage mouth is x=11.50–12.50). The same origin is a module boundary,
 # so the two tiles that meet there have no grout until the model opens a 2 mm joint.
+# The Y origin is the door sill, y=9.475. The first grout then sits in the
+# passage, not on the line where the passage meets the room. The west and
+# east walls use that same Y origin. The shower floor does not.
 # Shower floor is 550 | 550, which is 549 | 549 plus the 2 mm grout:
 # 549+2+549 = 1100 mm. The glass east face is on that line (x=13.1165).
 # Wall tiles use the same cuts. The KOV grate is 1100 mm and fills the opening.
@@ -54,8 +57,9 @@
 # 2230 mm. The door leaf is at the corridor end of the jamb returns,
 # y=9.475, between x=11.50 and x=12.50. The passage from that leaf to the
 # room is tiled, to 2230 mm. The door itself is 2100 mm high.
-# Niche: one shelf, 340×280 mm, centred on the shower's centre joint
-# (the middle of the 1100 mm). Tile on all four sides. Bottom on the 1194 mm joint.
+# Niche: one cavity, 680×280 mm, centred on the shower's centre joint
+# (the middle of the 1100 mm). The pre-wall is cut out. The back, both
+# reveals, the top, and the bottom are tiled. Bottom on the 1194 mm joint.
 # The middle joint is the vertical joint on the door centre, x=12.000.
 # The vanity is centred on that joint. Paffoni Tango, rozteč 150 mm.
 # Seen from the room, the left pipe of the left mixer is on the joint one
@@ -196,7 +200,7 @@ coverings:
       Inside: [11.5, 11.5]
   - id: CLAD-NS
     Name: Shower pre-wall tiles
-    Description: North wall inside the shower. Vertical joints follow the floor, 549 | 2 | 549, one joint on the centre. One niche centred on that joint, tiled all around. Tiles stop at 2230 mm.
+    Description: North wall inside the shower. Vertical joints follow the floor, 549 | 2 | 549, one joint on the centre. One niche, 680 mm, centred on that joint. The cavity behind it is tiled. Tiles stop at 2230 mm.
     PredefinedType: CLADDING
     ObjectType: PoetryStone
     ContainedInStructure: SP-1.07
@@ -215,8 +219,8 @@ coverings:
         End: [14.2165, 12.0635]
       Inside: [13.6, 11.5]
       Openings:
-        - AlongAxis: 0.380
-          Width: 0.340
+        - AlongAxis: 0.210
+          Width: 0.680
           SillHeight: 1.194
           Height: 0.280
         - AlongAxis: 0
@@ -225,7 +229,7 @@ coverings:
           Height: 0.3
   - id: CLAD-E
     Name: East wall tiles
-    Description: Shower east wall. 600 mm module, the same as the shower floor in the fall direction, from height 0. Cut at 2230 mm.
+    Description: Shower east wall. 600 mm module, the same as the shower floor in the fall direction, from height 0. Cut at 2230 mm. Along-wall joints use the door-sill Y origin.
     PredefinedType: CLADDING
     ObjectType: PoetryStone
     ContainedInStructure: SP-1.07
@@ -235,7 +239,7 @@ coverings:
       Thickness: 0.0085
       Tile: [0.6, 1.194]
       Joint: 0.002
-      GridOrigin: [11.403, 10.15]
+      GridOrigin: [11.403, 9.475]
       BottomCut: follow-slope
       BottomJoint: 0
       Courses: 2
@@ -304,7 +308,7 @@ coverings:
           Height: 0.3
   - id: CLAD-W
     Name: West wall tiles
-    Description: Straight west wall. The radon chase is no longer in this corner.
+    Description: Straight west wall. The radon chase is no longer in this corner. Along-wall joints use the door-sill Y origin, with the level floor.
     PredefinedType: CLADDING
     ObjectType: PoetryStone
     ContainedInStructure: SP-1.07
@@ -314,7 +318,7 @@ coverings:
       Thickness: 0.0085
       Tile: [0.596, 1.194]
       Joint: 0.002
-      GridOrigin: [11.403, 10.15]
+      GridOrigin: [11.403, 9.475]
       BottomCut: follow-slope
       BottomJoint: 0
       Courses: 2
@@ -408,7 +412,7 @@ coverings:
           Height: 0.3
   - id: FLR-LEVEL
     Name: Floor tiles
-    Description: Level finished floor, 0. Stops at the glass west face and at the washbasin pre-wall. Includes the passage back to the door leaf.
+    Description: Level finished floor, 0. Stops at the glass west face and at the washbasin pre-wall. The grid starts at the door sill and includes the passage back to that leaf.
     PredefinedType: FLOORING
     ObjectType: PoetryStone
     ContainedInStructure: SP-1.07
@@ -418,7 +422,7 @@ coverings:
       Thickness: 0.0085
       Tile: [0.596, 0.596]
       WallJoint: 0.002
-      GridOrigin: [11.403, 10.15]
+      GridOrigin: [11.403, 9.475]
       Footprint:
         - [9.725, 10.15]
         - [11.5, 10.15]
@@ -568,7 +572,7 @@ furniture:
     Height: 0.02
   - id: PW-SHOWER
     Name: Shower pre-wall
-    Description: "Same 186.5 mm depth as the vanity pre-wall, one continuous face at y=12.055. Soffit underside at 2230 mm. Starts 50 mm west of the glass so the glass is mounted on the wall. The last 8.5 mm sits behind the east wall tile."
+    Description: "Same 186.5 mm depth as the vanity pre-wall, one continuous face at y=12.055. Soffit underside at 2230 mm. Starts 50 mm west of the glass so the glass is mounted on the wall. The last 8.5 mm sits behind the east wall tile. The niche is a cavity through this wall, lined with tile."
     PredefinedType: USERDEFINED
     ObjectType: PreWall
     ContainedInStructure: SP-1.07

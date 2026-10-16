@@ -11,6 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "models"))
 
 from bathroom_107 import (  # noqa: E402
+    _box,
+    _niche_frame,
     ANNOTATION_BLUE,
     EPS_BOTTOM_MM,
     EPS_TOP_MM,
@@ -193,14 +195,33 @@ def test_door_joint_two_tiles_and_plaster_above_the_shelf():
     niche = next(wall for wall in info["walls"] if wall["id"] == "CLAD-NS")
     polygon = unary_union([Polygon(tile["polygon"]) for tile in niche["result"]["tiles"]])
     # One niche centred on the 1100 mm joint, tile on all four sides.
+    # 680 mm opening, s=0.210 to 0.890, still centred on s=0.550.
+    assert not polygon.covers(Point(0.25, 1.30))
     assert not polygon.covers(Point(0.50, 1.30))
     assert not polygon.covers(Point(0.60, 1.30))
+    assert not polygon.covers(Point(0.85, 1.30))
+    assert polygon.covers(Point(0.15, 1.30))
     assert polygon.covers(Point(0.20, 1.30))
     assert polygon.covers(Point(0.90, 1.30))
+    assert polygon.covers(Point(0.95, 1.30))
     assert polygon.covers(Point(0.50, 0.50))
     assert polygon.covers(Point(0.50, 1.60))
     assert not polygon.covers(Point(0.50, 2.24))
     floor = unary_union([Polygon(ring) for ring in info["level_tiles"]])
+    # Door-sill grid: first grout inside the passage, room line is tile,
+    # north sliver of the level floor is 188 mm.
+    assert grout.intersects(Polygon([(12.1, 10.071), (12.3, 10.071), (12.3, 10.073), (12.1, 10.073)]))
+    assert floor.covers(Point(12.2, 10.15))
+    assert floor.covers(Point(12.2, 9.48))
+    north_sliver = [
+        (max(p[1] for p in ring) - min(p[1] for p in ring)) * 1000
+        for ring in info["level_tiles"]
+        if max(p[1] for p in ring) > 12.05 and min(p[0] for p in ring) < 12.2 < max(p[0] for p in ring)
+    ]
+    assert north_sliver
+    assert max(north_sliver) == pytest.approx(188.0, abs=0.2)
+    assert {round(tile["width_mm"], 1) for tile in walls["CLAD-W"]} >= {519.0, 596.0, 383.0}
+    assert {round(tile["width_mm"], 1) for tile in walls["CLAD-E"]} >= {527.0, 600.0, 180.5}
     assert floor.covers(Point(12.2, 9.8))
     assert not floor.covers(Point(12.2, 9.46))
     assert not floor.covers(Point(11.45, 9.8))
@@ -278,6 +299,34 @@ def test_fixtures_shelf_glass_and_the_plates():
     assert {LABEL_FLOOR, LABEL_WALL, LABEL_DRAIN, LABEL_FIXTURE, LABEL_PREWALL, LABEL_SCREEN, LABEL_PROFILE, LABEL_VANITY} <= labels
     assert sum(1 for solid in solids if solid.label == LABEL_VANITY) == 1
     assert sum(1 for solid in solids if solid.label == LABEL_DRAIN) == 2
+    frame = _niche_frame(doc)
+    row = next(item for item in doc["furniture"] if item["id"] == "PW-SHOWER")
+    full = _box(row["Origin"], (row["Width"], row["Depth"], row["Height"]), LABEL_PREWALL)
+    cut = next(
+        solid
+        for solid in solids
+        if solid.label == LABEL_PREWALL and abs(solid.bounding_box().min.X - row["Origin"][0] * 1000) < 2
+    )
+    t = frame["t"]
+    cavity = (
+        (frame["x1"] - frame["x0"] + 2.0 * t)
+        * (frame["y1"] - frame["y0"])
+        * (frame["z1"] - frame["z0"] + 2.0 * t)
+        * 1.0e9
+    )
+    assert full.volume - cut.volume == pytest.approx(cavity, rel=1e-9)
+    linings = [
+        solid
+        for solid in solids
+        if solid.label == LABEL_WALL
+        and 12060 < solid.bounding_box().min.Y < 12250
+        and 1180 < solid.bounding_box().min.Z < 1500
+        and 13300 < solid.bounding_box().min.X < 14100
+    ]
+    assert len(linings) == 5
+    shelf = next(solid for solid in linings if abs(solid.bounding_box().max.Z - 1194.0) < 0.2)
+    assert shelf.bounding_box().max.X - shelf.bounding_box().min.X == pytest.approx(680.0, abs=0.2)
+    assert shelf.bounding_box().max.Z - shelf.bounding_box().min.Z == pytest.approx(8.5, abs=0.05)
     drawn = scenes()
     assert [scene["id"] for scene in drawn] == [
         "bath107-plan",

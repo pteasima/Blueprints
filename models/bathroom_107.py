@@ -398,6 +398,76 @@ def _box(origin, size, label: str, elevation: float = 0.0):
     return _paint(solid, label)
 
 
+def _niche_frame(doc: dict) -> dict:
+    """The shower niche opening, and the pre-wall it is cut into.
+
+    The face hole stays the clear opening. Lining tiles sit in the masonry
+    around it, so the back, the reveals, and the shelf meet that hole.
+    """
+    wall = _covering(doc, "CLAD-NS")["TileLayout"]
+    opening = next(
+        row
+        for row in wall["Openings"]
+        if 0.0 < float(row["SillHeight"]) < TILE_HEAD_M and float(row["Width"]) < 2.0
+    )
+    x0 = float(wall["Axis"]["Start"][0]) + float(opening["AlongAxis"])
+    z0 = float(opening["SillHeight"])
+    pre = next(row for row in doc["furniture"] if row["id"] == "PW-SHOWER")
+    y0 = float(pre["Origin"][1])
+    return {
+        "x0": x0,
+        "x1": x0 + float(opening["Width"]),
+        "y0": y0,
+        "y1": y0 + float(pre["Depth"]),
+        "z0": z0,
+        "z1": z0 + float(opening["Height"]),
+        "t": TILE_THICKNESS_MM / MM,
+    }
+
+
+def _cut_prewall(row: dict, frame: dict):
+    """Pre-wall box with the niche cavity removed."""
+    solid = _box(
+        row["Origin"],
+        (row["Width"], row["Depth"], row["Height"]),
+        LABEL_PREWALL,
+        float(row.get("Elevation") or 0.0),
+    )
+    t = frame["t"]
+    # Past the coplanar front and back faces. The extra is outside the solid.
+    pad = 0.001
+    cutter = _box(
+        (frame["x0"] - t, frame["y0"] - pad),
+        (
+            (frame["x1"] - frame["x0"]) + 2.0 * t,
+            (frame["y1"] - frame["y0"]) + 2.0 * pad,
+            (frame["z1"] - frame["z0"]) + 2.0 * t,
+        ),
+        LABEL_PREWALL,
+        elevation=frame["z0"] - t,
+    )
+    return _paint(solid - cutter, LABEL_PREWALL)
+
+
+def _niche_linings(frame: dict) -> list:
+    """Back, both reveals, top, and bottom of the niche cavity."""
+    t = frame["t"]
+    x0, x1 = frame["x0"], frame["x1"]
+    y0, y_back = frame["y0"], frame["y1"] - t
+    z0, z1 = frame["z0"], frame["z1"]
+    depth = y_back - y0
+    width = x1 - x0
+    height = z1 - z0
+    boxes = (
+        ((x0 - t, y_back), (width + 2.0 * t, t, height + 2.0 * t), z0 - t),
+        ((x0 - t, y0), (t, depth, height + 2.0 * t), z0 - t),
+        ((x1, y0), (t, depth, height + 2.0 * t), z0 - t),
+        ((x0, y0), (width, depth, t), z0 - t),
+        ((x0, y0), (width, depth, t), z1),
+    )
+    return [_box(origin, size, LABEL_WALL, elevation) for origin, size, elevation in boxes]
+
+
 def _fixture_boxes(doc: dict) -> list:
     """Tub, basins, pre-walls, and the glass, from the YAML boxes."""
     labels = {
@@ -424,6 +494,11 @@ def _fixture_boxes(doc: dict) -> list:
                     label = labels[kind]
                     break
             if label is None:
+                continue
+            if row["id"] == "PW-SHOWER":
+                frame = _niche_frame(doc)
+                solids.append(_cut_prewall(row, frame))
+                solids.extend(_niche_linings(frame))
                 continue
             solids.append(
                 _box(
@@ -883,8 +958,8 @@ def _elevation_drawing(info: dict, wall_ids: tuple[str, ...], scene_id: str, nam
         notes.append(
             _callout(
                 _station(shower, shower["length"] * 0.25, 1400.0),
-                "niche 340×280\ncentred on the joint",
-                "nika 340×280\nve středu spáry",
+                "niche 680×280\ncavity tiled, on the joint",
+                "nika 680×280\nvyložená, ve středu spáry",
                 (-0.12, 0.08),
                 leader=False,
             )
@@ -1226,7 +1301,7 @@ def _svg_wall(info: dict, wall_ids: tuple[str, ...], title_en: str, title_cs: st
             _svg_text(
                 mx,
                 my - 16,
-                "549 | 2 | 549\nniche centred on the joint",
+                "549 | 2 | 549\nniche 680 mm, cavity tiled",
                 15,
             )
         )
