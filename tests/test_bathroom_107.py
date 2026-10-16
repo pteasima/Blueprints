@@ -181,7 +181,8 @@ def test_door_joint_two_tiles_and_plaster_above_the_shelf():
     for wall_id, tiles in walls.items():
         assert max(tile["width_mm"] for tile in tiles) < 700.0
     east_widths = sorted({round(tile["width_mm"], 1) for tile in walls["CLAD-E"]})
-    assert 600.0 in east_widths
+    assert 596.0 in east_widths
+    assert 600.0 not in east_widths
     assert 555.0 not in east_widths
     ns_widths = sorted({round(tile["width_mm"], 1) for tile in walls["CLAD-NS"]})
     assert ns_widths == [549.0]
@@ -221,7 +222,11 @@ def test_door_joint_two_tiles_and_plaster_above_the_shelf():
     assert north_sliver
     assert max(north_sliver) == pytest.approx(188.0, abs=0.2)
     assert {round(tile["width_mm"], 1) for tile in walls["CLAD-W"]} >= {519.0, 596.0, 383.0}
-    assert {round(tile["width_mm"], 1) for tile in walls["CLAD-E"]} >= {527.0, 600.0, 180.5}
+    assert {round(tile["width_mm"], 1) for tile in walls["CLAD-E"]} >= {519.0, 596.0, 196.5}
+    shower_grout = unary_union([Polygon(ring) for ring in info["shower_grout"]])
+    for y0, y1 in ((10.669, 10.671), (11.267, 11.269), (11.865, 11.867)):
+        assert shower_grout.intersects(Polygon([(13.4, y0), (13.8, y0), (13.8, y1), (13.4, y1)]))
+        assert grout.intersects(Polygon([(12.2, y0), (12.5, y0), (12.5, y1), (12.2, y1)]))
     assert floor.covers(Point(12.2, 9.8))
     assert not floor.covers(Point(12.2, 9.46))
     assert not floor.covers(Point(11.45, 9.8))

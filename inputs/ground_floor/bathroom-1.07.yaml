@@ -17,17 +17,18 @@
 # The wall file has no window on the west wall.
 # Tiles are ABK Poetry Stone, rectified, 8.5 mm:
 #   floor outside the shower 596×596
-#   shower floor 549 mm across the opening (550 | 550 with the grout), 600 mm
-#   in the fall direction
+#   shower floor 549 mm across the opening (550 | 550 with the grout), and the
+#   same 596 mm door-sill grid in the fall direction
 #   walls 596×1194 portrait, cut to match the floor. The shower walls use the
-#   549 mm module across the opening and the 600 mm module in the fall direction.
+#   549 mm module across the opening. In the fall direction they use the same
+#   596 mm door-sill grid as the level floor.
 # Wall joint 2 mm. Plan pitch on the level floor is 598 mm.
 # Grid origin x=11.403 puts the 2 mm floor joint on the door centre, x=12.000
 # (the passage mouth is x=11.50–12.50). The same origin is a module boundary,
 # so the two tiles that meet there have no grout until the model opens a 2 mm joint.
 # The Y origin is the door sill, y=9.475. The first grout then sits in the
-# passage, not on the line where the passage meets the room. The west and
-# east walls use that same Y origin. The shower floor does not.
+# passage, not on the line where the passage meets the room. The shower floor
+# uses that same Y origin in the fall direction, and so do the west and east walls.
 # Shower floor is 550 | 550, which is 549 | 549 plus the 2 mm grout:
 # 549+2+549 = 1100 mm. The glass east face is on that line (x=13.1165).
 # Wall tiles use the same cuts. The KOV grate is 1100 mm and fills the opening.
@@ -229,7 +230,7 @@ coverings:
           Height: 0.3
   - id: CLAD-E
     Name: East wall tiles
-    Description: Shower east wall. 600 mm module, the same as the shower floor in the fall direction, from height 0. Cut at 2230 mm. Along-wall joints use the door-sill Y origin.
+    Description: Shower east wall. 596 mm module, the same door-sill grid as the level floor, from height 0. Cut at 2230 mm.
     PredefinedType: CLADDING
     ObjectType: PoetryStone
     ContainedInStructure: SP-1.07
@@ -237,7 +238,7 @@ coverings:
     TileLayout:
       Product: ABK Poetry Stone Trani Beige
       Thickness: 0.0085
-      Tile: [0.6, 1.194]
+      Tile: [0.596, 1.194]
       Joint: 0.002
       GridOrigin: [11.403, 9.475]
       BottomCut: follow-slope
@@ -434,7 +435,7 @@ coverings:
         - [9.725, 12.055]
   - id: FLR-SHOWER
     Name: Shower floor tiles
-    Description: 549 mm modules across the opening, 550 | 550 with the grout. 600 mm in the fall direction. Same line as the north shower wall.
+    Description: 549 mm modules across the opening, 550 | 550 with the grout. In the fall direction, the same 596 mm door-sill grid as the level floor.
     PredefinedType: FLOORING
     ObjectType: PoetryStone
     ContainedInStructure: SP-1.07
@@ -442,9 +443,9 @@ coverings:
     TileLayout:
       Product: ABK Poetry Stone Trani Beige
       Thickness: 0.0085
-      Tile: [0.549, 0.6]
+      Tile: [0.549, 0.596]
       WallJoint: 0.002
-      GridOrigin: [13.1165, 10.15]
+      GridOrigin: [13.1165, 9.475]
       Footprint:
         - [13.1165, 10.15]
         - [14.2165, 10.15]
