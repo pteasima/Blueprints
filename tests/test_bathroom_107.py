@@ -247,6 +247,27 @@ def test_fixtures_shelf_glass_and_the_plates():
     assert shelf["Width"] == pytest.approx(0.18)
     assert shelf["Height"] == pytest.approx(tub["Height"])
     assert prewall["Height"] == pytest.approx(1.194)
+    solids_now = parts()
+    vanity = next(
+        solid
+        for solid in solids_now
+        if solid.label == LABEL_PREWALL
+        and solid.bounding_box().min.Y > 12000
+        and solid.bounding_box().min.X < 10000
+    )
+    assert vanity.bounding_box().max.Z == pytest.approx(1185.5, abs=0.05)
+    shelf = [
+        solid
+        for solid in solids_now
+        if solid.label == LABEL_WALL
+        and abs(solid.bounding_box().max.Z - 1194.0) < 0.2
+        and solid.bounding_box().min.Y > 12060
+        and solid.bounding_box().max.X < 13100
+    ]
+    assert shelf
+    assert min(solid.bounding_box().min.X for solid in shelf) == pytest.approx(9725.0, abs=0.5)
+    assert max(solid.bounding_box().max.X for solid in shelf) == pytest.approx(13058.5, abs=0.5)
+    assert max(solid.bounding_box().max.Y for solid in shelf) == pytest.approx(12250.0, abs=0.5)
     assert prewall["Depth"] + 0.0085 == pytest.approx(0.195)
     assert glass["Height"] == pytest.approx(2.230)
     assert glass["Depth"] == pytest.approx(1.205)
@@ -299,7 +320,7 @@ def test_fixtures_shelf_glass_and_the_plates():
     assert (outer[1] - outer[0]) * 1000 == pytest.approx(1195.0, abs=0.05)
     for row in basin_mixers:
         assert row["Elevation"] > 0.85
-    solids = parts()
+    solids = solids_now
     labels = {solid.label for solid in solids}
     assert {LABEL_FLOOR, LABEL_WALL, LABEL_DRAIN, LABEL_FIXTURE, LABEL_PREWALL, LABEL_SCREEN, LABEL_PROFILE, LABEL_VANITY} <= labels
     assert sum(1 for solid in solids if solid.label == LABEL_VANITY) == 1

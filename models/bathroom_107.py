@@ -382,7 +382,45 @@ def parts(doc: dict | None = None) -> list:
 
     solids.extend(_drain_solids(info))
     solids.extend(_fixture_boxes(info["doc"]))
+    solids.extend(_vanity_shelf(info))
     solids.extend(_edge_profiles(info))
+    return solids
+
+
+def _vanity_shelf(info: dict) -> list:
+    """Horizontal tiles on the washbasin pre-wall, top on the 1194 mm joint.
+
+    One row. The shelf is shallower than a module, so the only joints are
+    the vertical joints of the face below it. The wall above stays plaster.
+    """
+    wall = next(item for item in info["walls"] if item["id"] == "CLAD-PW")
+    frame = wall["result"]["frame"]
+    pre = next(row for row in info["doc"]["furniture"] if row["id"] == "PW-VANITY")
+    y0 = float(pre["Origin"][1])
+    depth = float(pre["Depth"])
+    top = float(pre["Height"]) + float(pre.get("Elevation") or 0.0)
+    t = TILE_THICKNESS_MM / MM
+    solids = []
+
+    def span(piece):
+        stations = [point[0] for point in piece["polygon"]]
+        s0, s1 = min(stations), max(stations)
+        x0 = frame["start"][0] + frame["dx"] * s0
+        x1 = frame["start"][0] + frame["dx"] * s1
+        return min(x0, x1), abs(x1 - x0)
+
+    for piece in wall["result"]["tiles"]:
+        x, width = span(piece)
+        solids.append(_box((x, y0), (width, depth, t), LABEL_WALL, elevation=top - t))
+    for piece in wall["result"]["grout"]:
+        stations = [point[0] for point in piece["polygon"]]
+        heights = [point[1] for point in piece["polygon"]]
+        if max(stations) - min(stations) > 0.01 or max(heights) < top - 0.01:
+            continue
+        x, width = span(piece)
+        solids.append(
+            _box((x, y0), (width, depth, t - GROUT_RECESS_M), LABEL_GROUT, elevation=top - t)
+        )
     return solids
 
 
@@ -499,6 +537,18 @@ def _fixture_boxes(doc: dict) -> list:
                 frame = _niche_frame(doc)
                 solids.append(_cut_prewall(row, frame))
                 solids.extend(_niche_linings(frame))
+                continue
+            if row["id"] == "PW-VANITY":
+                # The YAML height is the finished shelf. The top 8.5 mm is tile.
+                t = TILE_THICKNESS_MM / MM
+                solids.append(
+                    _box(
+                        row["Origin"],
+                        (row["Width"], row["Depth"], float(row["Height"]) - t),
+                        label,
+                        float(row.get("Elevation") or 0.0),
+                    )
+                )
                 continue
             solids.append(
                 _box(
@@ -930,8 +980,8 @@ def _elevation_drawing(info: dict, wall_ids: tuple[str, ...], scene_id: str, nam
         notes.append(
             _callout(
                 _station(frame, frame["length"] * 0.35, 1500.0),
-                "plaster above the shelf\nshelf on the 1194 mm joint",
-                "nad policí omítka\npolice na spáře 1194 mm",
+                "plaster above the shelf\nshelf top tiled, on 1194",
+                "nad policí omítka\nvrch police obložen, spára 1194",
                 (0.16, 0.08),
                 leader=False,
             )
@@ -1289,7 +1339,7 @@ def _svg_wall(info: dict, wall_ids: tuple[str, ...], title_en: str, title_cs: st
             _svg_text(
                 origin_x + 80,
                 pt(0.2, 1.5)[1],
-                "plaster above the shelf\nshelf on joint 1194\nmirrors, note only\nvanity on the door joint",
+                "plaster above the shelf\nshelf top tiled, on 1194\nmirrors, note only\nvanity on the door joint",
                 15,
                 anchor="start",
             )

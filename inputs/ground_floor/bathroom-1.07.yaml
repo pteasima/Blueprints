@@ -522,7 +522,7 @@ sanitaryTerminals:
 furniture:
   - id: PW-VANITY
     Name: Washbasin pre-wall
-    Description: "Masonry behind the 8.5 mm face tile. Finished thickness 195 mm, face at y=12.055. Same depth as the shower pre-wall. Top is the shelf at 1194 mm."
+    Description: "Masonry behind the 8.5 mm face tile. Finished thickness 195 mm, face at y=12.055. Same depth as the shower pre-wall. The horizontal top is tile, finished at 1194 mm. The wall above is plaster."
     PredefinedType: USERDEFINED
     ObjectType: PreWall
     ContainedInStructure: SP-1.07
