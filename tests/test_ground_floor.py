@@ -76,16 +76,17 @@ def test_ground_floor_builds_and_cuts_openings():
     assert meta["removed_volume_m3"] == pytest.approx(expected, rel=1e-6)
 
     bb = shape.bounding_box()
-    # Bathroom 1.20 falls below the entrance-hall datum. The grate is the lowest solid.
-    assert bb.min.Z == pytest.approx(drain_bottom_z_mm(), abs=0.5)
+    # The 1.07 wall-drain body hangs 52 mm below height 0. The 1.20 grate is
+    # the other low solid. The house takes whichever is lower.
+    assert bb.min.Z == pytest.approx(min(drain_bottom_z_mm(), -52.0), abs=0.5)
     assert bb.min.Z < -40.0
     assert bb.max.Z == pytest.approx(DEFAULT_WALL_HEIGHT_M * 1000.0, abs=1.0)
     assert derived["bathroom_tiles"] > 20
     assert derived["bathroom_head_mm"] == pytest.approx(2348.511, abs=0.001)
     assert derived["bathroom_107_tiles"] > 40
-    assert derived["bathroom_107_head_mm"] == pytest.approx(2365.75, abs=0.001)
-    assert derived["bathroom_107_drop_mm"] == pytest.approx(26.25, abs=0.001)
-    assert derived["bathroom_107_screed_drain_mm"] == pytest.approx(22.75, abs=0.001)
+    assert derived["bathroom_107_head_mm"] == pytest.approx(2230.0, abs=0.001)
+    assert derived["bathroom_107_drop_mm"] == pytest.approx(23.8125, abs=0.001)
+    assert derived["bathroom_107_screed_drain_mm"] == pytest.approx(55.1875, abs=0.001)
     assert bb.max.X - bb.min.X > 40_000
     assert bb.max.Y - bb.min.Y > 14_000
 

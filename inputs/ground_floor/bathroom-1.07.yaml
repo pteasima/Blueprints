@@ -1,60 +1,83 @@
-# Room 1.07 (Koupelna), the large bathroom: bathtub side to the west, double
+# Room 1.07 (Koupelna), the large bathroom: bathtub to the west, double
 # washbasin under the north window, walk-in shower to the east.
 # Lengths are metres. Storey coordinates, the same frame as ground-floor.yaml.
-# Clear inner faces, from the wall footprints (drawing faces, not a site measure):
-#   west  x=9.725   (W-039 inner face) up to y=12.05
-#   west  x=9.9     (W-040 inner face) from y=12.05 to the north wall
+# Clear inner faces, after the radon chase moved into the neighbouring room:
+#   west  x=9.725   (W-039 / W-040 inner face, the full depth)
 #   east  x=14.225  (W-045 / W-046 inner face)
 #   south y=10.15   (W-022 inner face)
 #   north y=12.25   (W-026 inner face)
-# Clear size 4.500 m east-west by 2.100 m north-south, less a 175×200 mm
-# northwest jog where the west wall thickens. Model area 9.415 m².
+# Clear size 4.500 × 2.100 m. Model area 9.450 m².
 # The ZTI room table (D.1.4.1.03) lists 8.91 m². These faces are the tiling
 # boundary; the difference is not closed here.
 # Clear height 2.500 m (legend s.v.).
 # +X east, +Y north.
 # Door OP17 is in the south wall, x=11.50–12.50, leaf height 2.100 m.
-# The partition is 125 mm, so the floor stops on the inner face. It does not
-# step into the reveal the way room 1.20 does (that leaf line needs 100 mm
-# inside a 250 mm wall).
+# The partition is 125 mm, so the floor stops on the inner face.
 # Window OP15 is in the north wall, x=9.95–12.85, sill 1.750 m, head 2.500 m.
-# The wall file has no window on the west wall. The SketchUp view shows a
-# small light there; it is not an opening in this model.
-# Tiles are ABK Poetry Stone, rectified, 8.5 mm, the same batch sizes as 1.20:
-#   floor 596×596, walls 596×1194 portrait, two courses.
-#   1194 = 2×596 + 2, so one wall tile's height spans two floor tiles and the
-#   joint between them.
-# Wall joint 2 mm, measured in plan. Plan pitch is 598 mm.
-# The floor outside the shower is level at 0. Floor joints there are 2 mm.
-# Inside the shower the floor falls, so the north-south floor joint is the
-# slightly wider slope joint. Plan pitch stays 598 mm, so the lines meet.
-# Grid origin is the module boundary 555 mm west of the east wall, on the
-# south wall: (13.67, 10.15). Tiles hang from the east, so the east piece is
-# the 555 mm cut marked on the spárořez. The glass stands on the next joint
-# west of that, x=13.072. Shower clear width 1.153 m (555 + 598).
-# Shower is the full-depth east bay. One-way fall, 1.25%, from the north wall
-# (the wall opposite the drain) to the south. The whole north edge stays at 0.
-# Drop over 2.100 m is 26.250 mm. A linear drain, 80 mm, sits on the south
-# edge and takes that low line. A point drain would not, because the south
-# edge is level.
-# Course lines are struck from the drain, as in 1.20, so the bottom tile is a
-# full 1194 mm at the low point and shorter on the level floor. The shared
-# course joint is at 1169.750 mm. The window sill at 1750 mm is 580.250 mm
-# above that joint. The SketchUp "555 mm" vertical is the same gap struck
-# from floor zero (1750 − 1196 = 554, written 555). It is not the course used
-# here, because that course would make the bottom tile at the drain taller
-# than the 1194 mm blank.
-# Niche: the 596 mm tile on the north wall inside the shower, upper course,
-# 400 mm tall, bottom on the course joint. Not a measured niche.
-# Mixers sit on a joint (BATERIE NA SPÁRU): the vanity on the vertical joint
-# nearest the window centre, the shower valve on the east wall at the joint
-# 1196 mm from the south and on the course joint. Fixtures are notes, not solids.
-# Floor build-up, bottom to top, 250 mm at finished-floor zero:
-#   waterproofing 8, EPS 100S 80+50, nop board 50, screed 49, adhesive+tile 13.
-# The fall is taken in the screed. EPS under the shower stays 80+50.
-# Screed at the drain is 22.750 mm, below the 45 mm minimum above the nops.
-# That is reported, not changed. Omitting the bottom 50 mm EPS under the
-# shower only (as on 1.20) would leave 72.750 mm of screed at the drain.
+# The wall file has no window on the west wall.
+# Tiles are ABK Poetry Stone, rectified, 8.5 mm:
+#   floor outside the shower 596×596
+#   shower floor 549 mm across the opening (550 | 550 with the grout), and the
+#   same 596 mm door-sill grid in the fall direction
+#   walls 596×1194 portrait, cut to match the floor. The shower walls use the
+#   549 mm module across the opening. In the fall direction they use the same
+#   596 mm door-sill grid as the level floor.
+# Wall joint 2 mm. Plan pitch on the level floor is 598 mm.
+# Grid origin x=11.403 puts the 2 mm floor joint on the door centre, x=12.000
+# (the passage mouth is x=11.50–12.50). The same origin is a module boundary,
+# so the two tiles that meet there have no grout until the model opens a 2 mm joint.
+# The Y origin is the door sill, y=9.475. The first grout then sits in the
+# passage, not on the line where the passage meets the room. The shower floor
+# uses that same Y origin in the fall direction, and so do the west and east walls.
+# Shower floor is 550 | 550, which is 549 | 549 plus the 2 mm grout:
+# 549+2+549 = 1100 mm. The glass east face is on that line (x=13.1165).
+# Wall tiles use the same cuts. The KOV grate is 1100 mm and fills the opening.
+# The catalog body is 1140 mm. Its ears are cut or recessed into the wall.
+# The shower falls 1.25% from the south (the side opposite the drain, at the
+# same 0 as the level floor) toward the north. The drain is a wall drain in
+# the shower pre-wall, across the 1100 mm opening.
+# KOV 3G110CM (kovshop): overall 1140×127 mm, grate length 1100 mm, grate
+# width 35 mm, installation height 52 mm, depth 47 mm, outlet Ø40 mm.
+# The catalog body is 40 mm longer than the 1100 mm opening. Its ears are
+# cut or recessed into the wall. That recess is a note only.
+# Stainless edge profiles, 10 mm wide, follow the 1.25% fall on both sides
+# of the shower floor (glass and east wall). Wall tiles start at height 0.
+# They do not follow the fall.
+# Both pre-walls are 186.5 mm masonry. With the 8.5 mm face tile the finished
+# face is one plane at y=12.055. There is no step between them.
+# The washbasin pre-wall top is a tiled shelf at the 1194 mm course joint.
+# Above that shelf the north wall is plaster, including the band up to the
+# window sill. Every other wall is cut at 2230 mm. Above that is plaster.
+# A 180 mm shelf stands west of the tub, at the tub height of 450 mm.
+# 180 mm, not the estimated 150 mm, is what puts the tub's east face on the
+# joint after exactly two uncut 596 mm floor tiles from the door-centre joint.
+# The glass is mounted on the tall shower wall and runs to that face.
+# The tall wall extends 50 mm west of the glass, so the glass sits on the
+# wall and not on its corner. Wall tiles are cut at 2230 mm. Above that is
+# plaster (270 mm up to the 2500 mm ceiling). The shower has a soffit at
+# 2230 mm. The door leaf is at the corridor end of the jamb returns,
+# y=9.475, between x=11.50 and x=12.50. The passage from that leaf to the
+# room is tiled, to 2230 mm. The door itself is 2100 mm high.
+# Niche: one cavity, 680×280 mm, centred on the shower's centre joint
+# (the middle of the 1100 mm). The pre-wall is cut out. The back, both
+# reveals, the top, and the bottom are tiled. Bottom on the 1194 mm joint.
+# The middle joint is the vertical joint on the door centre, x=12.000.
+# The vanity is centred on that joint. Paffoni Tango, rozteč 150 mm.
+# Seen from the room, the left pipe of the left mixer is on the joint one
+# tile to the left (x=11.403) and the right pipe of the right mixer is on
+# the joint one tile to the right (x=12.598). Those joints measure 1195 mm
+# apart, not 1200, because the module is 596+2 mm. Mixer centres are then
+# 1045 mm apart, not 1050. The vanity is 1600 mm so the 400 mm basins fit.
+# No vanity product was named.
+# The shower mixer stays where the spárořez draws it: one Tango, rozteč
+# 150 mm, on the central joint of the 549 | 549 shower wall. It is not
+# on the door-centre joint.
+# Mirrors are a note only, one above each basin.
+# Glass: 8 mm, 700 mm walk-in opening at the south.
+# Floor build-up at finished-floor zero, 250 mm:
+#   level floor: waterproofing 8, EPS 100S 60+60, nop 50, screed 59, finish 13.
+#   shower: waterproofing 8, EPS 100S 60+40, nop 50, screed 79, finish 13.
+# The 8 mm membrane is what makes those layers add to 250.
 # Screed, membrane, and ceiling are properties. They are not extruded.
 # The tile solid is the 8.5 mm ceramic. The 13 mm finish is the build-up sum.
 schema: IFC4 ADD2 TC1
@@ -89,7 +112,7 @@ windows: []
 slabs:
   - id: SLAB-LEVEL
     Name: Screed
-    Description: Level screed at finished floor 0, outside the shower. Underfloor heating is in the screed.
+    Description: Level screed at finished floor 0, outside the shower.
     PredefinedType: FLOOR
     ObjectType: Screed
     ContainedInStructure: SP-1.07
@@ -99,54 +122,52 @@ slabs:
       Gradient: [0, 0]
     Footprint:
       - [9.725, 10.15]
-      - [13.072, 10.15]
-      - [13.072, 12.25]
-      - [9.9, 12.25]
-      - [9.9, 12.05]
-      - [9.725, 12.05]
+      - [11.5, 10.15]
+      - [11.5, 9.475]
+      - [12.5, 9.475]
+      - [12.5, 10.15]
+      - [13.1085, 10.15]
+      - [13.1085, 12.055]
+      - [9.725, 12.055]
     PropertySets:
       - Name: Pset_YamlIfc
         Properties:
           UnderfloorHeating: true
           BuildUpMm: 250
           WaterproofingMm: 8
-          EpsTopMm: 80
-          EpsBottomMm: 50
+          EpsTopMm: 60
+          EpsBottomMm: 60
           NopBoardMm: 50
           FinishMm: 13
-          ScreedAtZeroMm: 49
+          ScreedAtZeroMm: 59
   - id: SLAB-SHOWER
     Name: Shower screed
-    Description: One-way fall 1.25% from the north wall to the south drain. EPS stays 80+50. Screed at the drain is 22.75 mm, below 45 mm above the nops. Not thinned.
+    Description: One-way fall 1.25% from the south entry to the north wall drain. EPS 60+40. Stops on the glass east face and the east tile face.
     PredefinedType: FLOOR
     ObjectType: Screed
     ContainedInStructure: SP-1.07
     Plane:
-      Origin: [13.072, 12.25]
+      Origin: [13.1165, 10.15]
       Elevation: 0
-      Gradient: [0, 0.0125]
+      Gradient: [0, -0.0125]
     Footprint:
-      - [13.072, 10.15]
-      - [14.225, 10.15]
-      - [14.225, 12.25]
-      - [13.072, 12.25]
+      - [13.1165, 10.15]
+      - [14.2165, 10.15]
+      - [14.2165, 12.055]
+      - [13.1165, 12.055]
     PropertySets:
       - Name: Pset_YamlIfc
         Properties:
           UnderfloorHeating: true
           BuildUpMm: 250
           WaterproofingMm: 8
-          EpsTopMm: 80
-          EpsBottomMm: 50
+          EpsTopMm: 60
+          EpsBottomMm: 40
           NopBoardMm: 50
           FinishMm: 13
-          ScreedAtZeroMm: 49
-          ScreedAtDrainMm: 22.75
+          ScreedAtZeroMm: 79
           Fall: 0.0125
-          DrainDropMm: 26.25
           MinimumScreedMm: 45
-          ScreedBelowMinimum: true
-          EpsProposal: "omit the bottom 50 mm EPS under the shower only; not applied"
 coverings:
   - id: CEIL-1.07
     Name: Soffit
@@ -158,9 +179,9 @@ coverings:
     Elevation: 2.5
     Width: 4.5
     Depth: 2.1
-  - id: CLAD-N
-    Name: North wall tiles
-    Description: Window OP15 and the shower niche. Vertical joints are the floor grid. The 555 mm east piece is the cut hung from the east wall.
+  - id: CLAD-PW
+    Name: Washbasin pre-wall tiles
+    Description: South face of the vanity pre-wall. One course, top on the 1194 mm joint, which is the shelf. Above this is plaster.
     PredefinedType: CLADDING
     ObjectType: PoetryStone
     ContainedInStructure: SP-1.07
@@ -170,48 +191,46 @@ coverings:
       Thickness: 0.0085
       Tile: [0.596, 1.194]
       Joint: 0.002
-      GridOrigin: [13.67, 10.15]
+      GridOrigin: [11.403, 10.15]
       BottomCut: follow-slope
-      BottomJoint: 0.002
-      Courses: 2
-      CourseZMin: -0.02625
+      BottomJoint: 0
+      Courses: 1
       Axis:
-        Start: [9.9, 12.25]
-        End: [14.225, 12.25]
-      Inside: [12, 11.2]
+        Start: [9.725, 12.0635]
+        End: [13.0585, 12.0635]
+      Inside: [11.5, 11.5]
+  - id: CLAD-NS
+    Name: Shower pre-wall tiles
+    Description: North wall inside the shower. Vertical joints follow the floor, 549 | 2 | 549, one joint on the centre. One niche, 680 mm, centred on that joint. The cavity behind it is tiled. Tiles stop at 2230 mm.
+    PredefinedType: CLADDING
+    ObjectType: PoetryStone
+    ContainedInStructure: SP-1.07
+    Plane: SLAB-LEVEL
+    TileLayout:
+      Product: ABK Poetry Stone Trani Beige
+      Thickness: 0.0085
+      Tile: [0.549, 1.194]
+      Joint: 0.002
+      GridOrigin: [13.1165, 10.15]
+      BottomCut: follow-slope
+      BottomJoint: 0
+      Courses: 2
+      Axis:
+        Start: [13.1165, 12.0635]
+        End: [14.2165, 12.0635]
+      Inside: [13.6, 11.5]
       Openings:
-        - AlongAxis: 0.05
-          Width: 2.9
-          SillHeight: 1.75
-          Height: 0.75
-        - AlongAxis: 3.174
-          Width: 0.596
-          SillHeight: 1.17175
-          Height: 0.4
+        - AlongAxis: 0.210
+          Width: 0.680
+          SillHeight: 1.194
+          Height: 0.280
+        - AlongAxis: 0
+          Width: 5
+          SillHeight: 2.230
+          Height: 0.3
   - id: CLAD-E
     Name: East wall tiles
-    Description: Shower side wall. Bottom edge follows the fall, 0 at the north to -26.250 mm at the south.
-    PredefinedType: CLADDING
-    ObjectType: PoetryStone
-    ContainedInStructure: SP-1.07
-    Plane: SLAB-SHOWER
-    TileLayout:
-      Product: ABK Poetry Stone Trani Beige
-      Thickness: 0.0085
-      Tile: [0.596, 1.194]
-      Joint: 0.002
-      GridOrigin: [13.67, 10.15]
-      BottomCut: follow-slope
-      BottomJoint: 0.002
-      Courses: 2
-      CourseZMin: -0.02625
-      Axis:
-        Start: [14.225, 10.15]
-        End: [14.225, 12.25]
-      Inside: [12, 11.2]
-  - id: CLAD-S
-    Name: South wall tiles
-    Description: Door OP17. Floor is level. The wall stops at the glass joint.
+    Description: Shower east wall. 596 mm module, the same door-sill grid as the level floor, from height 0. Cut at 2230 mm.
     PredefinedType: CLADDING
     ObjectType: PoetryStone
     ContainedInStructure: SP-1.07
@@ -221,43 +240,76 @@ coverings:
       Thickness: 0.0085
       Tile: [0.596, 1.194]
       Joint: 0.002
-      GridOrigin: [13.67, 10.15]
+      GridOrigin: [11.403, 9.475]
       BottomCut: follow-slope
-      BottomJoint: 0.002
+      BottomJoint: 0
       Courses: 2
-      CourseZMin: -0.02625
+      Axis:
+        Start: [14.225, 10.15]
+        End: [14.225, 12.0635]
+      Inside: [13.6, 11.2]
+      Openings:
+        - AlongAxis: 0
+          Width: 5
+          SillHeight: 2.230
+          Height: 0.3
+  - id: CLAD-S
+    Name: South wall tiles
+    Description: Level-floor portion, to the glass. Passage mouth x=11.50–12.50 is open to 2230 mm. The door leaf is at the corridor end of the passage. The narrow pieces at the mouth stay.
+    PredefinedType: CLADDING
+    ObjectType: PoetryStone
+    ContainedInStructure: SP-1.07
+    Plane: SLAB-LEVEL
+    TileLayout:
+      Product: ABK Poetry Stone Trani Beige
+      Thickness: 0.0085
+      Tile: [0.596, 1.194]
+      Joint: 0.002
+      GridOrigin: [11.403, 10.15]
+      BottomCut: follow-slope
+      BottomJoint: 0
+      Courses: 2
       Axis:
         Start: [9.725, 10.15]
-        End: [13.072, 10.15]
+        End: [13.1085, 10.15]
       Inside: [12, 11.2]
       Openings:
         - AlongAxis: 1.775
           Width: 1
           SillHeight: 0
-          Height: 2.1
+          Height: 2.230
+        - AlongAxis: 0
+          Width: 5
+          SillHeight: 2.230
+          Height: 0.3
   - id: CLAD-SS
     Name: South shower wall tiles
-    Description: Low edge of the shower, finished floor -26.250 mm.
+    Description: Shower portion of the south wall, from the glass east face. Same 549 mm module as the shower floor. Cut at 2230 mm.
     PredefinedType: CLADDING
     ObjectType: PoetryStone
     ContainedInStructure: SP-1.07
-    Plane: SLAB-SHOWER
+    Plane: SLAB-LEVEL
     TileLayout:
       Product: ABK Poetry Stone Trani Beige
       Thickness: 0.0085
-      Tile: [0.596, 1.194]
+      Tile: [0.549, 1.194]
       Joint: 0.002
-      GridOrigin: [13.67, 10.15]
+      GridOrigin: [13.1165, 10.15]
       BottomCut: follow-slope
-      BottomJoint: 0.002
+      BottomJoint: 0
       Courses: 2
-      CourseZMin: -0.02625
       Axis:
-        Start: [13.072, 10.15]
-        End: [14.225, 10.15]
+        Start: [13.1165, 10.15]
+        End: [14.2165, 10.15]
       Inside: [13.6, 11.2]
+      Openings:
+        - AlongAxis: 0
+          Width: 5
+          SillHeight: 2.230
+          Height: 0.3
   - id: CLAD-W
     Name: West wall tiles
+    Description: Straight west wall. The radon chase is no longer in this corner. Along-wall joints use the door-sill Y origin, with the level floor.
     PredefinedType: CLADDING
     ObjectType: PoetryStone
     ContainedInStructure: SP-1.07
@@ -267,18 +319,22 @@ coverings:
       Thickness: 0.0085
       Tile: [0.596, 1.194]
       Joint: 0.002
-      GridOrigin: [13.67, 10.15]
+      GridOrigin: [11.403, 9.475]
       BottomCut: follow-slope
-      BottomJoint: 0.002
+      BottomJoint: 0
       Courses: 2
-      CourseZMin: -0.02625
       Axis:
         Start: [9.725, 10.15]
-        End: [9.725, 12.05]
+        End: [9.725, 12.25]
       Inside: [12, 11.2]
-  - id: CLAD-WP
-    Name: West pier tiles
-    Description: 200 mm north return where W-040 steps the inner face to x=9.9. One cut tile.
+      Openings:
+        - AlongAxis: 0
+          Width: 5
+          SillHeight: 2.230
+          Height: 0.3
+  - id: CLAD-PASS-W
+    Name: Passage west tiles
+    Description: West jamb of the passage, from the door leaf to the room. Same 596 mm grid. Cut at 2230 mm.
     PredefinedType: CLADDING
     ObjectType: PoetryStone
     ContainedInStructure: SP-1.07
@@ -288,18 +344,22 @@ coverings:
       Thickness: 0.0085
       Tile: [0.596, 1.194]
       Joint: 0.002
-      GridOrigin: [13.67, 10.15]
+      GridOrigin: [11.403, 10.15]
       BottomCut: follow-slope
-      BottomJoint: 0.002
+      BottomJoint: 0
       Courses: 2
-      CourseZMin: -0.02625
       Axis:
-        Start: [9.9, 12.05]
-        End: [9.9, 12.25]
-      Inside: [12, 11.2]
-  - id: CLAD-CH
-    Name: Northwest cheek tiles
-    Description: 175 mm south-facing cheek of the jog. One cut tile.
+        Start: [11.5, 9.475]
+        End: [11.5, 10.15]
+      Inside: [11.7, 9.8]
+      Openings:
+        - AlongAxis: 0
+          Width: 5
+          SillHeight: 2.230
+          Height: 0.3
+  - id: CLAD-PASS-E
+    Name: Passage east tiles
+    Description: East jamb of the passage, from the room to the door leaf. Same 596 mm grid. Cut at 2230 mm.
     PredefinedType: CLADDING
     ObjectType: PoetryStone
     ContainedInStructure: SP-1.07
@@ -309,18 +369,51 @@ coverings:
       Thickness: 0.0085
       Tile: [0.596, 1.194]
       Joint: 0.002
-      GridOrigin: [13.67, 10.15]
+      GridOrigin: [11.403, 10.15]
       BottomCut: follow-slope
-      BottomJoint: 0.002
+      BottomJoint: 0
       Courses: 2
-      CourseZMin: -0.02625
       Axis:
-        Start: [9.725, 12.05]
-        End: [9.9, 12.05]
-      Inside: [9.8, 11.2]
+        Start: [12.5, 10.15]
+        End: [12.5, 9.475]
+      Inside: [12.3, 9.8]
+      Openings:
+        - AlongAxis: 0
+          Width: 5
+          SillHeight: 2.230
+          Height: 0.3
+  - id: CLAD-DOOR
+    Name: Door wall tiles
+    Description: Corridor end of the passage. The leaf is 2100 mm. The header from 2100 to 2230 mm stays tiled, on the door-centre joint.
+    PredefinedType: CLADDING
+    ObjectType: PoetryStone
+    ContainedInStructure: SP-1.07
+    Plane: SLAB-LEVEL
+    TileLayout:
+      Product: ABK Poetry Stone Trani Beige
+      Thickness: 0.0085
+      Tile: [0.596, 1.194]
+      Joint: 0.002
+      GridOrigin: [11.403, 10.15]
+      BottomCut: follow-slope
+      BottomJoint: 0
+      Courses: 2
+      Axis:
+        Start: [11.5, 9.475]
+        End: [12.5, 9.475]
+      Inside: [12.0, 9.8]
+      Openings:
+        - AlongAxis: 0
+          Width: 1
+          SillHeight: 0
+          Height: 2.1
+        - AlongAxis: 0
+          Width: 5
+          SillHeight: 2.230
+          Height: 0.3
   - id: FLR-LEVEL
     Name: Floor tiles
-    Description: Level finished floor, 0. Stops at the glass joint.
+    Description: Level finished floor, 0. Stops at the glass west face and at the washbasin pre-wall. The grid starts at the door sill and includes the passage back to that leaf.
     PredefinedType: FLOORING
     ObjectType: PoetryStone
     ContainedInStructure: SP-1.07
@@ -330,17 +423,19 @@ coverings:
       Thickness: 0.0085
       Tile: [0.596, 0.596]
       WallJoint: 0.002
-      GridOrigin: [13.67, 10.15]
+      GridOrigin: [11.403, 9.475]
       Footprint:
         - [9.725, 10.15]
-        - [13.072, 10.15]
-        - [13.072, 12.25]
-        - [9.9, 12.25]
-        - [9.9, 12.05]
-        - [9.725, 12.05]
+        - [11.5, 10.15]
+        - [11.5, 9.475]
+        - [12.5, 9.475]
+        - [12.5, 10.15]
+        - [13.1085, 10.15]
+        - [13.1085, 12.055]
+        - [9.725, 12.055]
   - id: FLR-SHOWER
     Name: Shower floor tiles
-    Description: Falls 1.25% to the south. The east piece is 555 mm.
+    Description: 549 mm modules across the opening, 550 | 550 with the grout. In the fall direction, the same 596 mm door-sill grid as the level floor.
     PredefinedType: FLOORING
     ObjectType: PoetryStone
     ContainedInStructure: SP-1.07
@@ -348,23 +443,17 @@ coverings:
     TileLayout:
       Product: ABK Poetry Stone Trani Beige
       Thickness: 0.0085
-      Tile: [0.596, 0.596]
+      Tile: [0.549, 0.596]
       WallJoint: 0.002
-      GridOrigin: [13.67, 10.15]
-      JointInset: 0.002
+      GridOrigin: [13.1165, 9.475]
       Footprint:
-        - [13.072, 10.15]
-        - [14.225, 10.15]
-        - [14.225, 12.25]
-        - [13.072, 12.25]
-      Cutouts:
-        - - [13.072, 10.15]
-          - [14.225, 10.15]
-          - [14.225, 10.23]
-          - [13.072, 10.23]
+        - [13.1165, 10.15]
+        - [14.2165, 10.15]
+        - [14.2165, 12.055]
+        - [13.1165, 12.055]
   - id: MEM-1.07
     Name: Waterproofing
-    Description: 8 mm in the floor build-up. Upstand 100–150 mm, and full height in the shower. No membrane solid.
+    Description: 8 mm in the floor build-up. Upstand 100–150 mm, and full height in the shower.
     PredefinedType: MEMBRANE
     ObjectType: WaterproofingMembrane
     ContainedInStructure: SP-1.07
@@ -378,12 +467,237 @@ coverings:
           ShowerUpstand: full-height
 wasteTerminals:
   - id: DRAIN-1.07
-    Name: Linear drain
-    Description: 80 mm channel on the south edge of the shower, the low line of the one-way fall.
+    Name: "KOV 3G110CM"
+    Description: Wall drain across the 1100 mm opening, from the glass east face to the east tile face. The grate fills the opening. Catalog body is 1140 mm; the ears are recessed into the wall, note only.
     PredefinedType: FLOORTRAP
-    ObjectType: LinearDrain
+    ObjectType: WallDrain
     ContainedInStructure: SP-1.07
-    Origin: [13.072, 10.15]
-    Width: 1.153
-    Depth: 0.08
+    Origin: [13.1165, 12.0635]
+    Width: 1.1
+    Depth: 0.035
     Plane: SLAB-SHOWER
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CatalogOverallLengthMm: 1140
+          CatalogOverallWidthMm: 127
+          CatalogGrateLengthMm: 1100
+          CatalogGrateWidthMm: 35
+          InstallHeightMm: 52
+          CatalogDepthMm: 47
+          OutletDiameterMm: 40
+sanitaryTerminals:
+  - id: BATH-1.07
+    Name: "Cersanit Zen 190"
+    Description: "S301-223, 1900×900×450 mm. East face on the floor joint after two uncut tiles. 5 mm clear of the washbasin pre-wall."
+    PredefinedType: BATH
+    ObjectType: Bathtub
+    ContainedInStructure: SP-1.07
+    Origin: [9.905, 10.15]
+    Width: 0.9
+    Depth: 1.9
+    Height: 0.45
+  - id: BASIN-W
+    Name: Washbasin west
+    Description: "Basin under the west Tango. The mixer centre is x=11.478, 75 mm in from the joint one tile left of the door. Assumed 400×340 mm bowl, rim at 850 mm. No product was named."
+    PredefinedType: WASHHANDBASIN
+    ObjectType: Washbasin
+    ContainedInStructure: SP-1.07
+    Origin: [11.278, 11.655]
+    Elevation: 0.7
+    Width: 0.4
+    Depth: 0.34
+    Height: 0.15
+  - id: BASIN-E
+    Name: Washbasin east
+    Description: "Second basin, under the east Tango at x=12.523. Mixer centres are 1045 mm apart."
+    PredefinedType: WASHHANDBASIN
+    ObjectType: Washbasin
+    ContainedInStructure: SP-1.07
+    Origin: [12.323, 11.655]
+    Elevation: 0.7
+    Width: 0.4
+    Depth: 0.34
+    Height: 0.15
+furniture:
+  - id: PW-VANITY
+    Name: Washbasin pre-wall
+    Description: "Masonry behind the 8.5 mm face tile. Finished thickness 195 mm, face at y=12.055. Same depth as the shower pre-wall. The horizontal top is tile, finished at 1194 mm. The wall above is plaster."
+    PredefinedType: USERDEFINED
+    ObjectType: PreWall
+    ContainedInStructure: SP-1.07
+    Origin: [9.725, 12.0635]
+    Width: 3.3335
+    Depth: 0.1865
+    Height: 1.194
+  - id: SHELF-W
+    Name: Shelf west of the tub
+    Description: "180 mm, the thickness that lands the tub on the joint after two uncut floor tiles. Height matches the tub, 450 mm."
+    PredefinedType: USERDEFINED
+    ObjectType: Shelf
+    ContainedInStructure: SP-1.07
+    Origin: [9.725, 10.15]
+    Width: 0.18
+    Depth: 1.9
+    Height: 0.45
+  - id: TUB-FRONT
+    Name: Tiled bathtub front
+    Description: "8.5 mm tile on the east face of the tub, full height of the rim."
+    PredefinedType: USERDEFINED
+    ObjectType: TiledFront
+    ContainedInStructure: SP-1.07
+    Origin: [10.805, 10.15]
+    Width: 0.0085
+    Depth: 1.9
+    Height: 0.45
+  - id: VANITY-CAB
+    Name: Vanity cabinet
+    Description: "Assumed oak cabinet 1600×460×830 under one top, centred on the door-centre joint at x=12.000. A 1200 mm top cannot hold the 400 mm basins. Mirrors are not modelled."
+    PredefinedType: USERDEFINED
+    ObjectType: Cabinet
+    ContainedInStructure: SP-1.07
+    Origin: [11.2, 11.595]
+    Width: 1.6
+    Depth: 0.46
+    Height: 0.83
+  - id: VANITY-TOP
+    Name: Vanity top
+    Description: "One white top, 20 mm, rim at 850 mm, shared by both basins. Same 1600 mm width as the cabinet, centred on the door joint."
+    PredefinedType: USERDEFINED
+    ObjectType: Countertop
+    ContainedInStructure: SP-1.07
+    Origin: [11.2, 11.595]
+    Elevation: 0.83
+    Width: 1.6
+    Depth: 0.46
+    Height: 0.02
+  - id: PW-SHOWER
+    Name: Shower pre-wall
+    Description: "Same 186.5 mm depth as the vanity pre-wall, one continuous face at y=12.055. Soffit underside at 2230 mm. Starts 50 mm west of the glass so the glass is mounted on the wall. The last 8.5 mm sits behind the east wall tile. The niche is a cavity through this wall, lined with tile."
+    PredefinedType: USERDEFINED
+    ObjectType: PreWall
+    ContainedInStructure: SP-1.07
+    Origin: [13.0585, 12.0635]
+    Width: 1.1665
+    Depth: 0.1865
+    Height: 2.230
+  - id: GLASS-1.07
+    Name: Shower screen
+    Description: "8 mm glass, mounted on the tall wall, up to the 2230 mm soffit. East face on the 549 module line, 1100 mm clear to the east tile face. North end on the pre-wall face. The wall extends 50 mm west of the glass. 700 mm walk-in opening at the south."
+    PredefinedType: USERDEFINED
+    ObjectType: GlassScreen
+    ContainedInStructure: SP-1.07
+    Origin: [13.1085, 10.85]
+    Width: 0.008
+    Depth: 1.205
+    Height: 2.230
+  - id: SOFFIT-SH
+    Name: Shower soffit
+    Description: "Underside at 2230 mm, the height the wall tiles stop. 270 mm up to the 2500 mm ceiling, over the shower opening."
+    PredefinedType: USERDEFINED
+    ObjectType: Soffit
+    ContainedInStructure: SP-1.07
+    Origin: [13.1165, 10.15]
+    Elevation: 2.230
+    Width: 1.1
+    Depth: 1.905
+    Height: 0.270
+  - id: MIX-SH
+    Name: Paffoni Tango shower
+    Description: "Where the spárořez draws it: one wall mixer on the central joint of the 549 shower wall, centre height 1194 mm. Rozteč 150 mm. Not on the door-centre joint."
+    PredefinedType: USERDEFINED
+    ObjectType: Mixer
+    ContainedInStructure: SP-1.07
+    Origin: [13.6345, 11.992]
+    Elevation: 1.162
+    Width: 0.064
+    Depth: 0.063
+    Height: 0.064
+  - id: PIPE-SH-W
+    Name: Shower supply west
+    Description: "West hole of the shower Tango. The pair is 150 mm apart and centred on the vertical joint."
+    PredefinedType: USERDEFINED
+    ObjectType: Pipe
+    ContainedInStructure: SP-1.07
+    Origin: [13.5815, 12.055]
+    Elevation: 1.184
+    Width: 0.02
+    Depth: 0.04
+    Height: 0.02
+  - id: PIPE-SH-E
+    Name: Shower supply east
+    Description: "East hole of the shower Tango, 150 mm from the west hole."
+    PredefinedType: USERDEFINED
+    ObjectType: Pipe
+    ContainedInStructure: SP-1.07
+    Origin: [13.7315, 12.055]
+    Elevation: 1.184
+    Width: 0.02
+    Depth: 0.04
+    Height: 0.02
+  - id: MIX-B-W
+    Name: Paffoni Tango basin west
+    Description: "Wall mixer above the west basin. Left pipe on the joint one tile left of the door (x=11.403). Centre x=11.478. Rozteč 150 mm. Body 80×120×80 mm."
+    PredefinedType: USERDEFINED
+    ObjectType: Mixer
+    ContainedInStructure: SP-1.07
+    Origin: [11.438, 11.935]
+    Elevation: 0.98
+    Width: 0.08
+    Depth: 0.12
+    Height: 0.08
+  - id: PIPE-B-W-L
+    Name: West basin outer hole
+    Description: "Left pipe of the left mixer, on the vertical joint one tile left of the door centre."
+    PredefinedType: USERDEFINED
+    ObjectType: Pipe
+    ContainedInStructure: SP-1.07
+    Origin: [11.393, 12.055]
+    Elevation: 1.01
+    Width: 0.02
+    Depth: 0.04
+    Height: 0.02
+  - id: PIPE-B-W-R
+    Name: West basin inner hole
+    Description: "Inner hole of the west basin Tango, 150 mm east of the outer hole."
+    PredefinedType: USERDEFINED
+    ObjectType: Pipe
+    ContainedInStructure: SP-1.07
+    Origin: [11.543, 12.055]
+    Elevation: 1.01
+    Width: 0.02
+    Depth: 0.04
+    Height: 0.02
+  - id: MIX-B-E
+    Name: Paffoni Tango basin east
+    Description: "Wall mixer above the east basin. Right pipe on the joint one tile right of the door (x=12.598). Centre x=12.523. The two centres are 1045 mm apart."
+    PredefinedType: USERDEFINED
+    ObjectType: Mixer
+    ContainedInStructure: SP-1.07
+    Origin: [12.483, 11.935]
+    Elevation: 0.98
+    Width: 0.08
+    Depth: 0.12
+    Height: 0.08
+  - id: PIPE-B-E-L
+    Name: East basin inner hole
+    Description: "Inner hole of the east basin Tango, 150 mm west of the outer hole."
+    PredefinedType: USERDEFINED
+    ObjectType: Pipe
+    ContainedInStructure: SP-1.07
+    Origin: [12.438, 12.055]
+    Elevation: 1.01
+    Width: 0.02
+    Depth: 0.04
+    Height: 0.02
+  - id: PIPE-B-E-R
+    Name: East basin outer hole
+    Description: "Right pipe of the right mixer, on the vertical joint one tile right of the door centre."
+    PredefinedType: USERDEFINED
+    ObjectType: Pipe
+    ContainedInStructure: SP-1.07
+    Origin: [12.588, 12.055]
+    Elevation: 1.01
+    Width: 0.02
+    Depth: 0.04
+    Height: 0.02

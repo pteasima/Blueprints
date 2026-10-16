@@ -233,5 +233,34 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      # A Pages deploy that times out in updating_pages can stay "in progress"
+      # after the action reports it canceled. The app token cannot cancel it.
+      # This job's token has pages:write, so clear that deployment before deploy.
+      - name: Clear a stuck Pages deployment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pages_deployment_id = "615f09af3a701f43fcf7a414dd32ab272e118a6b"
+            try {
+              const got = await github.request("GET /repos/{owner}/{repo}/pages/deployments/{pages_deployment_id}", {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pages_deployment_id,
+              })
+              core.info(`stuck deployment status=${JSON.stringify(got.data)}`)
+            } catch (error) {
+              core.info(`stuck deployment lookup: ${error.status} ${error.message}`)
+            }
+            try {
+              await github.request("POST /repos/{owner}/{repo}/pages/deployments/{pages_deployment_id}/cancel", {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pages_deployment_id,
+              })
+              core.info(`canceled ${pages_deployment_id}`)
+            } catch (error) {
+              core.warning(`cancel ${pages_deployment_id}: ${error.status} ${error.message}`)
+            }
+            await new Promise((resolve) => setTimeout(resolve, 20000))
       - id: deployment
         uses: actions/deploy-pages@v4

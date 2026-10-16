@@ -213,18 +213,27 @@ def _axis_aligned(polygon):
 def _explode(polygon):
     """Simple polygons covering ``polygon``, holes included as gaps.
 
-    An orthogonal polygon (a rectangle, an L, a rectangle with a rectangular
-    drain) becomes rectangles. Anything else is the exterior ring, and a
-    hole in a non-orthogonal outline is rejected rather than filled in.
+    A hole in an orthogonal outline is cut into rectangles so the gap stays
+    open. A notch with no hole stays one outline, so a later pass does not
+    read the notch edges as missing joints. Anything else is the exterior
+    ring. A hole in a non-orthogonal outline is rejected rather than filled in.
     """
     if polygon.is_empty or polygon.area <= _EPS:
         return []
+    # A rectangle on a notch can meet the outline along an edge and overlap
+    # it as a polygon. Shapely returns both, and the edge has no area.
+    if polygon.geom_type == "GeometryCollection":
+        parts = []
+        for geom in polygon.geoms:
+            parts.extend(_explode(geom))
+        parts.sort(key=lambda ring: (ring[0][0], ring[0][1], ring[1][0], ring[1][1]))
+        return parts
     parts = []
     geoms = list(polygon.geoms) if polygon.geom_type == "MultiPolygon" else [polygon]
     for geom in geoms:
         if geom.area <= _EPS:
             continue
-        if _axis_aligned(geom):
+        if _axis_aligned(geom) and geom.interiors:
             coords = list(geom.exterior.coords)
             for ring in geom.interiors:
                 coords.extend(ring.coords)
@@ -237,7 +246,7 @@ def _explode(polygon):
                     if geom.contains(Point((x0 + x1) / 2.0, (y0 + y1) / 2.0)):
                         parts.append([(x0, y0), (x1, y0), (x1, y1), (x0, y1)])
             continue
-        if geom.interiors:
+        if not _axis_aligned(geom) and geom.interiors:
             raise ValueError("a tile cutout leaves a hole that is not a rectangular notch")
         parts.append(_ring(geom.exterior.coords))
     parts.sort(key=lambda ring: (ring[0][0], ring[0][1], ring[1][0], ring[1][1]))
