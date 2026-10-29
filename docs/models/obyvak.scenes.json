@@ -89,12 +89,12 @@
     "camera": {
       "target": [
         0.6860000000000002,
-        3.791406998718873,
+        3.8779494375921097,
         -5.101
       ],
       "position": [
         8.652202123489301,
-        -5.702343001281125,
+        -5.615800562407889,
         -5.101
       ],
       "up": [
@@ -118,7 +118,7 @@
         "anchor": [
           2675.0,
           4269.8,
-          3072.2
+          3184.8
         ]
       },
       {
@@ -130,7 +130,7 @@
         "anchor": [
           2675.0,
           5932.2,
-          3072.2
+          3184.8
         ]
       },
       {
@@ -142,7 +142,7 @@
         "anchor": [
           2675.0,
           5101.0,
-          3072.2
+          3184.8
         ]
       }
     ],
@@ -178,7 +178,7 @@
         "anchor": [
           1102.5,
           5101.0,
-          4259.0
+          4298.0
         ],
         "text": {
           "en": "Direct hanger 200 mm\nDK Mont 3631100170\nCD → side of rafter",
@@ -194,7 +194,7 @@
         "anchor": [
           686.0,
           5101.0,
-          3791.4
+          3877.9
         ],
         "text": {
           "en": "CD 60×27 mm @ 625\n⊥ rafters",
@@ -210,12 +210,12 @@
         "a": [
           547.7,
           4821.0,
-          3675.4
+          3761.9
         ],
         "b": [
           1026.5,
           4821.0,
-          4077.1
+          4163.7
         ],
         "offset": -0.045
       },
@@ -274,7 +274,7 @@
         "anchor": [
           1225.0,
           4666.0,
-          3072.2
+          3184.8
         ]
       },
       {
@@ -286,7 +286,7 @@
         "anchor": [
           1225.0,
           5581.0,
-          3072.2
+          3184.8
         ]
       }
     ],
@@ -323,8 +323,8 @@
           5289.9
         ],
         "text": {
-          "en": "Unifit 035\n160 mm between + 140 mm below rafters\nright slope full gap",
-          "cs": "Unifit 035\n160 mm mezi + 140 mm pod krokvemi\npravá šikmina plná mezera"
+          "en": "Wool TBD\n160 mm between rafters\n74 mm below left, 323 mm right",
+          "cs": "Vlna zatím neurčena\n160 mm mezi krokvemi\n74 mm pod levou, 323 mm pravou"
         },
         "offset": [
           -0.337,
@@ -336,7 +336,7 @@
         "anchor": [
           1666.0,
           4696.0,
-          4731.9
+          4770.8
         ],
         "text": {
           "en": "Direct hanger 200 mm (window)\nDK Mont 3631100170\nNonius 440 mm (cabinet)",
@@ -352,7 +352,7 @@
         "anchor": [
           1225.0,
           4696.0,
-          4262.0
+          4348.5
         ],
         "text": {
           "en": "Jutafol N AL 170 Speciál",
@@ -368,7 +368,7 @@
         "anchor": [
           833.0,
           4696.0,
-          3914.8
+          4001.3
         ],
         "text": {
           "en": "CD 60×27 mm @ 625\n⊥ rafters",
@@ -384,7 +384,7 @@
         "anchor": [
           490.0,
           4696.0,
-          3601.2
+          3687.7
         ],
         "text": {
           "en": "GKF 12.5 mm",
@@ -400,11 +400,11 @@
         "anchor": [
           196.0,
           4696.0,
-          3291.5
+          3391.1
         ],
         "text": {
-          "en": "NaturHeld 140 80 mm\nthrough GKF → CD\nStoSilent Finish + Basic 2+2 mm",
-          "cs": "NaturHeld 140 80 mm\npřes GKF → CD\nStoSilent Finish + Basic 2+2 mm"
+          "en": "NaturHeld 140 60 mm left, 100 mm right\nthrough GKF → CD\nStoSilent Finish + Basic 2+2 mm",
+          "cs": "NaturHeld 140 60 mm levá, 100 mm pravá\npřes GKF → CD\nStoSilent Finish + Basic 2+2 mm"
         },
         "offset": [
           -0.117,

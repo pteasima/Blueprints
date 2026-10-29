@@ -228,6 +228,14 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "roughness": 0.7,
         "metallic": 0.0,
     },
+    "joint_acrylic": {
+        "fill": (40, 40, 40),
+        "line": (20, 20, 20),
+        "dxf": ColorIndex.BLACK,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.9,
+        "metallic": 0.0,
+    },
     "wall_gkf": {
         "fill": (230, 230, 235),
         "line": (120, 120, 130),

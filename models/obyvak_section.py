@@ -108,7 +108,8 @@ def build(params: ObyvakParams | None = None):
     # Šikminy stack. The board ends at the furniture line; the wedge under the
     # lid is soffit mineral wool, not a slope quilt.
     parts.append(xz_face(g.sikmina_nh_pts(), LABEL_SLOPE_NH))
-    parts.append(xz_face(g.soffit_wool_wedge_pts(), LABEL_SOFFIT_WOOL))
+    if g.soffit_wool_wedge_pts():
+        parts.append(xz_face(g.soffit_wool_wedge_pts(), LABEL_SOFFIT_WOOL))
     parts.append(xz_face(g.sikmina_sdk_pts(), LABEL_SLOPE_GKF))
     for quad in g.sikmina_cd_quads():
         parts.append(xz_face(quad, LABEL_SLOPE_CD))
@@ -118,10 +119,14 @@ def build(params: ObyvakParams | None = None):
         xs = [pt[0] for pt in g.sikmina_cd_quad(*st)]
         if min(xs) < 1.0 or max(xs) > g.x_furn - 1.0:
             continue
+        if st[0] > g.x_false and max(xs) > g.gkf_end_attic[0] - 40.0:
+            continue
         parts.append(xz_face(g.hanger_quad(*st), LABEL_SLOPE_NONIUS))
     for st in g.sikmina_cd_stations()[1::3]:
         xs = [pt[0] for pt in g.sikmina_cd_quad(*st)]
         if min(xs) < 1.0 or max(xs) > g.x_furn - 1.0:
+            continue
+        if st[0] > g.x_false and max(xs) > g.gkf_end_attic[0] - 40.0:
             continue
         parts.append(xz_face(g.paska_quad(*st), LABEL_RACKING_STRAP))
 
@@ -168,8 +173,11 @@ def build(params: ObyvakParams | None = None):
             parts.append(
                 xz_rect(xc - p.hanger_w * 0.5, z0, p.hanger_w, z1 - z0, LABEL_SOFFIT_NONIUS)
             )
-    for quad in g.soffit_joint_angle_quads():
-        parts.append(xz_face(quad, LABEL_SOFFIT_NONIUS))
+    ud = g.soffit_ud_track_quads()
+    for quad in ud[:-1]:
+        parts.append(xz_face(quad, LABEL_SOFFIT_UD))
+    parts.append(xz_face(ud[-1], LABEL_SLOPE_CD))
+    parts.append(xz_face(g.soffit_acrylic_joint_pts(), "joint_acrylic"))
     for quad in g.soffit_plate_cleat_quads():
         parts.append(xz_face(quad, LABEL_SOFFIT_NONIUS))
     # Screw through the lid into the vertical CD (schematic) + wall angle.

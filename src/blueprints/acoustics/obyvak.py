@@ -280,7 +280,9 @@ def soffit_stack(
 
 def _face_thicknesses(params) -> tuple[float, float]:
     mm = 1.0 / 1000.0
-    return (params.finish_t + params.basic_t) * mm, params.naturheld_t * mm
+    # Equal slope areas, so the 1D stack uses the mean of 60 mm and 100 mm.
+    board = 0.5 * (params.naturheld_left + params.naturheld_right)
+    return (params.finish_t + params.basic_t) * mm, board * mm
 
 
 def eyring_t(
@@ -843,7 +845,8 @@ def _robustness(
 
 def _slope_paragraph(params, as_built_t: dict[float, float]) -> str:
     return (
-        f"Slopes: NaturHeld 140, {params.naturheld_t:.0f} mm, with StoSilent "
+        f"Slopes: NaturHeld 140, {params.naturheld_left:.0f} mm on the window side and "
+        f"{params.naturheld_right:.0f} mm on the cabinet side, with StoSilent "
         f"{params.finish_t:.0f}+{params.basic_t:.0f} mm, screwed through the GKF into the CD. "
         "No slope latě and no NaturHeld Flex. "
         f"Soffit side and bottom are NaturHeld 140, {params.soffit_naturheld_t:.0f} mm; "

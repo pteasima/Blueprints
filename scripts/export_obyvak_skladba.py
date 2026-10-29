@@ -386,7 +386,9 @@ def build_lines(q) -> dict[str, list[Line]]:
     if g.horiz_cd_x_stations():
         xc = g.horiz_cd_x_stations()[0]
         soffit_drop = g.horiz_hanger_top_z(xc) - g.horiz_hanger_bot_z()
-    wool_tl = f"TL Unifit 035 · {URL_UNIFIT_TL}"
+    wool_tl = "Výrobek zatím neurčen — Petr vybere podle zbylé hloubky."
+    half_s = face_s * 0.5
+    joint_m = (g.y_furn1 - g.y_furn0) / 1000.0
 
     basic_kg_s = face_s * STOSILENT_BASIC_KG_M2
     finish_kg_s = face_s * STOSILENT_FINISH_KG_M2
@@ -432,14 +434,16 @@ def build_lines(q) -> dict[str, list[Line]]:
             3,
             "Akustická deska",
             "Dřevovláknitá deska ρ 140",
-            _product("NaturHeld 140, tl. 80 mm (P+D 1880×615)", URL_NATURHELD_140),
-            "80 mm",
+            _product("NaturHeld 140, 60 mm levá / 100 mm pravá", URL_NATURHELD_140),
+            f"{p.naturheld_left:.0f} / {p.naturheld_right:.0f} mm",
             face_s,
             "m²",
             12,
-            PRICE["nh80_m2"][0],
-            PRICE["nh80_m2"][1],
-            f"Šroubováno přes GKF do CD @ {p.cd_spacing:.0f} mm. Bez Flex / bez latí na šikmině.",
+            None,
+            "—",
+            f"Levá {half_s:.2f} m² × {p.naturheld_left:.0f} mm, pravá {half_s:.2f} m² × {p.naturheld_right:.0f} mm. "
+            f"Šroubováno přes GKF do CD @ {p.cd_spacing:.0f} mm. Cenu 60 a 100 mm ověřit (80 mm už neplatí).",
+            True,
         ),
         Line(
             4,
@@ -513,14 +517,14 @@ def build_lines(q) -> dict[str, list[Line]]:
         Line(
             9,
             "Minerální vlna mezi krokve",
-            "Knauf Unifit 035 160 mm",
-            _product("Knauf Insulation Unifit 035, 160 mm", URL_UNIFIT_160),
+            "zatím neurčeno",
+            "zatím neurčeno",
             "160 mm · řez ~790 mm",
             between_m2,
             "m²",
             10,
-            PRICE["unifit_160_m2"][0],
-            f"{PRICE['unifit_160_m2'][1]} · {wool_tl}",
+            None,
+            wool_tl,
             f"Plocha sklonu nad místností {roof_slope_m2:.2f} m² × "
             f"({bay_clear:.0f}/{p.rafter_spacing:.0f}). "
             f"Šikmina po nábytek by byla {face_s * bay_clear / p.rafter_spacing:.2f} m²; "
@@ -530,19 +534,17 @@ def build_lines(q) -> dict[str, list[Line]]:
         Line(
             "9b",
             "Minerální vlna plénum",
-            "Knauf Unifit 035 140 mm (L) / plná mezera (P)",
-            _product("Knauf Insulation Unifit 035", URL_UNIFIT_140),
-            f"L {p.plenum_t:.0f} mm / P {g.l_hanger_right:.0f} mm",
+            "zatím neurčeno",
+            "zatím neurčeno",
+            f"L {g.wool_left:.0f} mm / P {g.wool_right:.0f} mm",
             plenum_void_m3,
             "m³",
             10,
-            PRICE["unifit_m3"][0],
-            f"{PRICE['unifit_m3'][1]} · {wool_tl}",
-            f"Levá {p.plenum_t:.0f} mm. Pravá plná mezera {g.l_hanger_right:.0f} mm "
-            "(140+140+150 nebo 200+220), bez vzduchu. "
+            None,
+            wool_tl,
+            f"Levá {g.wool_left:.1f} mm, pravá {g.wool_right:.1f} mm nad GKF, pod krokvemi. "
             f"Objem z modelu {plenum_void_m3:.2f} m³ "
-            f"(celá vlna šikmin {q['plenum_wool_m3']:.2f} − pole {q['bay_wool_m3']:.2f}). "
-            "Specifikace uvádí roli 140 mm 1200×4500; DEK aktuálně 1200×3700 (4,44 m²).",
+            f"(celá vlna šikmin {q['plenum_wool_m3']:.2f} − pole {q['bay_wool_m3']:.2f}).",
         ),
         Line(
             10,
@@ -881,16 +883,31 @@ def build_lines(q) -> dict[str, list[Line]]:
         ),
         Line(
             3,
-            "NaturHeld 140 — 80 mm",
+            "NaturHeld 140 — 60 mm levá",
             "Dřevovláknitá deska",
-            _product("NaturHeld 140 / 80 mm", URL_NATURHELD_140),
-            "80 mm",
-            face_s,
+            _product("NaturHeld 140 / 60 mm", URL_NATURHELD_140),
+            "60 mm",
+            half_s,
             "m²",
             12,
-            PRICE["nh80_m2"][0],
-            PRICE["nh80_m2"][1],
-            "Šikminy.",
+            None,
+            "—",
+            "Okenní šikmina. Cenu ověřit.",
+            True,
+        ),
+        Line(
+            "3b",
+            "NaturHeld 140 — 100 mm pravá",
+            "Dřevovláknitá deska",
+            _product("NaturHeld 140 / 100 mm", URL_NATURHELD_140),
+            "100 mm",
+            half_s,
+            "m²",
+            12,
+            None,
+            "—",
+            "Šikmina u skříní. Cenu ověřit.",
+            True,
         ),
         Line(
             4,
@@ -999,37 +1016,53 @@ def build_lines(q) -> dict[str, list[Line]]:
         ),
         Line(
             12,
-            "Minerální vlna mezi krokve – Knauf Unifit 035 160 mm",
-            "Knauf Unifit 035 160 mm",
-            _product("Knauf Insulation Unifit 035 160 mm", URL_UNIFIT_160),
+            "Minerální vlna mezi krokve",
+            "zatím neurčeno",
+            "zatím neurčeno",
             "160 mm",
             between_m2,
             "m²",
             10,
-            PRICE["unifit_160_m2"][0],
-            f"{PRICE['unifit_160_m2'][1]} · {wool_tl}",
-            f"m² = sklon {roof_slope_m2:.2f} × ({bay_clear:.0f}/{p.rafter_spacing:.0f}). "
-            "Řez ~790 mm. Specifikace 1200×4000; DEK 1200×3200.",
+            None,
+            wool_tl,
+            f"m² = sklon {roof_slope_m2:.2f} × ({bay_clear:.0f}/{p.rafter_spacing:.0f}). Řez ~790 mm.",
+            True,
         ),
         Line(
             13,
-            "Minerální vlna plénum – Knauf Unifit 035 140 mm (L) / full gap (R)",
-            "Knauf Unifit 035",
-            _product("Knauf Insulation Unifit 035 140 mm", URL_UNIFIT_140),
-            f"L {p.plenum_t:.0f} / P {g.l_hanger_right:.0f} mm",
+            "Minerální vlna pod krokvemi",
+            "zatím neurčeno",
+            "zatím neurčeno",
+            f"L {g.wool_left:.0f} / P {g.wool_right:.0f} mm",
             plenum_void_m3,
             "m³",
             10,
-            PRICE["unifit_m3"][0],
-            f"{PRICE['unifit_m3'][1]} · {wool_tl}",
-            f"Levá ×140/80 vůči původním 80 mm, pravá plná mezera {g.l_hanger_right:.0f} mm. "
+            None,
+            wool_tl,
+            f"Nad GKF. Levá {g.wool_left:.1f} mm, pravá {g.wool_right:.1f} mm. "
             f"Objem modelu {plenum_void_m3:.2f} m³.",
+            True,
+        ),
+        Line(
+            "13b",
+            "UD 40° na spoji šikminy",
+            "UD profil",
+            "UD 28×27 naříznutý a ohnutý na 40°",
+            "40°",
+            joint_m,
+            "bm",
+            10,
+            None,
+            "—",
+            "Přišroubovaný z boku CD kastlíku. Šikmé CD se do něj zasunou. "
+            f"Spára akryl + páska {joint_m:.2f} bm.",
+            True,
         ),
         Line(
             14,
             "Minerální vlna kastlík + štíty",
-            "Knauf Unifit 035",
-            _product("Knauf Insulation Unifit 035", URL_UNIFIT_140),
+            "zatím neurčeno",
+            "zatím neurčeno",
             f"kastlík dle modelu · štíty {p.bass_k_wool:g}/{p.bass_l_wool:g} mm",
             other_wool,
             "m³",

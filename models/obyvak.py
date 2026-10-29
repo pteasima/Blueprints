@@ -838,7 +838,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     krov_pts = _shrink_band(g.krov_pts(), top_n=3, gap=gap)
     krytina_pts = [(x, z + gap if i < 3 else z) for i, (x, z) in enumerate(g.krytina_pts())]
     vata_pts = [
-        (min(max(x, gap), p.room_width - gap), z + gap if i < 5 else z - gap)
+        (min(max(x, gap), p.room_width - gap), z + gap if i < g.vata_bottom_n else z - gap)
         for i, (x, z) in enumerate(g.vata_pts())
     ]
 
@@ -912,15 +912,17 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     # Triangle under the lid, above the slope board, out to the vertical lať.
     # Only the soffit bay has that lid. Same mineral wool as the soffit cavity.
     wedge_pts = g.soffit_wool_wedge_pts()
-    x_w0 = wedge_pts[0][0] + gap
-    z_w_top = g.z_soffit_lid - gap
-    wedge = [
-        (x_w0, wedge_pts[0][1]),
-        (wedge_pts[1][0], wedge_pts[1][1]),
-        (wedge_pts[1][0], z_w_top),
-        (x_w0, z_w_top),
-    ]
-    wedge_solid = _extrude_y(xz_face(wedge, LABEL_SOFFIT_WOOL), y_soff0, y_soff1, LABEL_SOFFIT_WOOL)
+    wedge_solid = None
+    if len(wedge_pts) >= 4:
+        x_w0 = wedge_pts[0][0] + gap
+        z_w_top = g.z_soffit_lid - gap
+        wedge = [
+            (x_w0, wedge_pts[0][1]),
+            (wedge_pts[1][0], wedge_pts[1][1]),
+            (wedge_pts[1][0], z_w_top),
+            (x_w0, z_w_top),
+        ]
+        wedge_solid = _extrude_y(xz_face(wedge, LABEL_SOFFIT_WOOL), y_soff0, y_soff1, LABEL_SOFFIT_WOOL)
 
     # 2) SDK
     parts.append(_add_band(g.sikmina_sdk_pts(), LABEL_SLOPE_GKF))
@@ -938,6 +940,8 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     for st in g.sikmina_cd_stations():
         xs = [pt[0] for pt in g.sikmina_cd_quad(*st)]
         if min(xs) < 1.0 or max(xs) > g.x_furn - 1.0:
+            continue
+        if st[0] > g.x_false and max(xs) > g.gkf_end_attic[0] - 40.0:
             continue
         hang_quad = g.hanger_quad(*st)
         # Window slope stays parallel to the rafters (140 mm plenum). Direct hanger 200.
@@ -1127,19 +1131,26 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         horiz_zaves = [_cut_away(z, krov_parts, LABEL_SOFFIT_NONIUS) for z in horiz_zaves]
     parts.extend(horiz_zaves)
 
-    # Light-gauge angle along the hidden butt: seat on the slope board, leg
-    # across the lid, lip up the rost CD. One strip, no second hanger row.
-    angle_parts: list = []
-    for quad in g.soffit_joint_angle_quads():
-        angle_parts.append(
-            _extrude_y(
-                xz_face(quad, LABEL_SOFFIT_NONIUS),
-                y_soff0,
-                y_soff1,
-                LABEL_SOFFIT_NONIUS,
-            )
+    # UD track bent to 40° on the room side of the soffit CD. Slope CDs seat in it.
+    ud_quads = g.soffit_ud_track_quads()
+    ud_parts: list = []
+    for quad in ud_quads[:-1]:
+        ud_parts.append(
+            _extrude_y(xz_face(quad, LABEL_SOFFIT_UD), y_soff0, y_soff1, LABEL_SOFFIT_UD)
         )
-    parts.extend(angle_parts)
+    # Seated CD end, same track, labelled as a slope CD.
+    # The seated CD is a section marker. In 3D the slope grid already runs along Y.
+    gkf_cutters = [part for part in parts if part.label == LABEL_SLOPE_GKF]
+    if horiz_cd_parts or gkf_cutters:
+        ud_parts = [
+            _cut_away(part, horiz_cd_parts + gkf_cutters, part.label) for part in ud_parts
+        ]
+    parts.extend(ud_parts)
+    if ud_parts:
+        for i, part in enumerate(parts):
+            if part.label == LABEL_SLOPE_FOIL:
+                parts[i] = _cut_away(part, ud_parts, LABEL_SLOPE_FOIL)
+                break
 
     # CD/UD rost: vertical CD behind the NH, bottom CD into a wall UD.
     # The lid CD is the only hang. The ducts are not. No timber packers —
@@ -1265,9 +1276,10 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         parts.extend(frame_parts)
     else:
         parts.append(wool_solid)
-    if angle_parts:
-        wedge_solid = _cut_away(wedge_solid, angle_parts, LABEL_SOFFIT_WOOL)
-    parts.append(wedge_solid)
+    if wedge_solid is not None:
+        if ud_parts:
+            wedge_solid = _cut_away(wedge_solid, ud_parts, LABEL_SOFFIT_WOOL)
+        parts.append(wedge_solid)
     parts.extend(drop_parts)
     parts.extend(bracket_parts)
     parts.extend(cleat_parts)
@@ -1281,7 +1293,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         parts.append(lid_solid)
 
     # MW over the soffit bay must clear horizontal CD + Nonius.
-    steel_over_soffit = horiz_cd_parts + horiz_zaves + angle_parts
+    steel_over_soffit = horiz_cd_parts + horiz_zaves + ud_parts
     if steel_over_soffit:
         for i, part in enumerate(parts):
             if part.label == LABEL_PLENUM_WOOL:
@@ -1593,15 +1605,14 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     y1 = raf_b + p.rafter_spacing * 0.55
     y_mid = 0.5 * (y0 + y1)
 
-    # Left-slope face depths (room face → rafter).
-    t_nh = g.t_nh_face
+    # Left-slope face depths (room face → rafter). The callouts sit on that slope.
+    t_nh = g.t_nh_left
     t_gkf = t_nh + g.t_flex_pack + p.sdk_t * 0.5
     t_cd = t_nh + g.t_flex_pack + p.sdk_t + p.cd_t * 0.5
-    t_cd_outer = g.t_cd_outer
-    t_foil = g.t_foil_inner + p.foil_t * 0.5
-    # Hanger tip sits in the plenum above the foil — keep it clear of the
-    # foil tip so those two leaders do not share a point.
-    t_hanger = t_cd_outer + max(0.55 * p.plenum_t, 48.0)
+    t_cd_outer = g.t_cd_outer_left
+    t_foil = g.t_cd_outer_left + p.foil_t * 0.5
+    # Hanger tip sits in the wool above the foil — keep it clear of the foil tip.
+    t_hanger = t_cd_outer + max(0.55 * g.wool_left, 30.0)
     t_wool = g.t_left + p.rafter_t * 0.5
 
     def on_face(x: float, y: float, t_perp: float) -> tuple[float, float, float]:
@@ -1612,7 +1623,8 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     cd_a = cd[1] if len(cd) > 2 else cd[0]
     cd_b = cd[2] if len(cd) > 2 else cd[min(1, len(cd) - 1)]
 
-    nh_mm = f"{p.naturheld_t:g}"
+    nh_l = f"{p.naturheld_left:g}"
+    nh_r = f"{p.naturheld_right:g}"
     sdk_mm = f"{p.sdk_t:g}".replace(".", ",")
     sdk_mm_en = f"{p.sdk_t:g}"
     finish_mm = f"{p.finish_t:g}"
@@ -1622,7 +1634,8 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     cd_sp = f"{p.cd_spacing:g}"
     strap_w = f"{p.strap_w:g}"
     strap_t = f"{p.strap_t:g}"
-    plenum_mm = f"{p.plenum_t:g}"
+    wool_l = f"{g.wool_left:.0f}"
+    wool_r = f"{g.wool_right:.0f}"
     raf_w = f"{p.rafter_w:g}"
     raf_t = f"{p.rafter_t:g}"
 
@@ -1763,8 +1776,8 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     sec_notes = [
         (
             on_face(x_wool, y_note, t_wool),
-            f"Unifit 035\n{raf_t} mm between + {plenum_mm} mm below rafters\nright slope full gap",
-            f"Unifit 035\n{raf_t} mm mezi + {plenum_mm} mm pod krokvemi\npravá šikmina plná mezera",
+            f"Wool TBD\n{raf_t} mm between rafters\n{wool_l} mm below left, {wool_r} mm right",
+            f"Vlna zatím neurčena\n{raf_t} mm mezi krokvemi\n{wool_l} mm pod levou, {wool_r} mm pravou",
         ),
         (
             on_face(x_hang, y_note, t_hanger),
@@ -1788,9 +1801,9 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
         ),
         (
             on_face(x_nh, y_note, t_nh * 0.5),
-            f"NaturHeld 140 {nh_mm} mm\nthrough GKF → CD\n"
+            f"NaturHeld 140 {nh_l} mm left, {nh_r} mm right\nthrough GKF → CD\n"
             f"StoSilent Finish + Basic {finish_mm}+{basic_mm} mm",
-            f"NaturHeld 140 {nh_mm} mm\npřes GKF → CD\n"
+            f"NaturHeld 140 {nh_l} mm levá, {nh_r} mm pravá\npřes GKF → CD\n"
             f"StoSilent Finish + Basic {finish_mm}+{basic_mm} mm",
         ),
     ]
