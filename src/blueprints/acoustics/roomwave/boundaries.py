@@ -38,7 +38,7 @@ BOOK_SIGMA = 40_000.0
 BOOK_DEPTH = 0.12
 LAMELLA_GAP = 0.020
 
-_HARD = ("kitchen", "island", "table", "chair", "lid")
+_HARD = ("kitchen", "tall", "fridge", "hood", "island", "table", "chair", "lid")
 _FIXED_ALPHA = {"floor": FLOOR_ALPHA, "plaster": PLASTER_ALPHA, "glass": GLASS_ALPHA}
 
 

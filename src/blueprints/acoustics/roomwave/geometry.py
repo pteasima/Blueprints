@@ -158,60 +158,63 @@ def load_shape() -> Shape:
     y_kitchen = length - params.predstena_kitchen * mm
     windows = tuple((y0 * mm, (y0 + width) * mm) for y0, width in params.eave_windows)
 
-    # Order along the cabinet wall, kitchen gable → TV gable, matching Petr's
-    # elevation (kitchen on the left of that drawing, TV on the right):
-    # kitchen run, book wall, sofa, then a gap at the TV wall for the sub.
-    # The written brief's 4.0 × 4.0 m sofa and the shelf "above the sofa" do
-    # not match that drawing; see docs/acoustics/LAYOUT.md.
-    sofa_y0, sofa_y1 = 0.75, 4.15
-    shelf_y0, shelf_y1 = 4.25, 8.15
-    kitchen_y0 = 8.15
+    # Cabinet wall, TV gable (Y = 0) toward kitchen. Petr's elevation has the
+    # kitchen on the left and the TV on the right. The sofa is his 4.0 × 4.0 m
+    # figure: long run on the back wall, TV end at the gable, chaise on the
+    # dining side toward the windows. The lamella wall is behind that run.
+    sofa_y0, sofa_y1 = 0.55, 4.55
     sofa = (
-        Box("sofa", x_wall - 0.40, sofa_y0, 0.0, 0.40, sofa_y1 - sofa_y0, 0.85),
-        Box("sofa", x_wall - 1.10, sofa_y0, 0.0, 0.70, sofa_y1 - sofa_y0, 0.45),
-        # Return toward the dining table (kitchen side of the sofa), 1.9 m
-        # into the room. The brief's 4 m return would cross the table.
-        Box("sofa", x_wall - 1.90, sofa_y1 - 0.40, 0.0, 0.80, 0.40, 0.85),
-        Box("sofa", x_wall - 1.90, sofa_y1 - 1.10, 0.0, 0.80, 0.70, 0.45),
+        Box("sofa", x_wall - 0.40, sofa_y0, 0.0, 0.40, 4.00, 0.85),
+        Box("sofa", x_wall - 1.10, sofa_y0, 0.0, 0.70, 4.00, 0.45),
+        Box("sofa", x_wall - 4.00, sofa_y1 - 0.40, 0.0, 2.90, 0.40, 0.85),
+        Box("sofa", x_wall - 4.00, sofa_y1 - 1.10, 0.0, 2.90, 0.70, 0.45),
     )
+    # Lamellas on the back wall, same run as the sofa, just above the back.
+    shelf_z0, shelf_z1 = 0.95, 2.40
+    shelf_box = (
+        Box("shelf", x_wall - 0.18, sofa_y0, shelf_z0, 0.18, 4.00, shelf_z1 - shelf_z0),
+    )
+    # Wood-panelled tall units behind the dining table, between kitchen and shelf.
+    tall = (
+        Box("tall", x_wall - 0.60, sofa_y1, 0.0, 0.60, 3.15, 2.20),
+    )
+    kitchen_y0 = sofa_y1 + 3.15
     kitchen = (
         Box("kitchen", x_wall - 0.60, kitchen_y0, 0.0, 0.60, length - kitchen_y0, 0.90),
         Box("kitchen", x_wall - 0.35, kitchen_y0, 1.45, 0.35, length - kitchen_y0, 0.75),
-        Box("kitchen", 0.45, length - 0.60, 0.0, x_wall - 0.60 - 0.45, 0.60, 0.90),
-        Box("kitchen", 0.45, length - 0.35, 1.45, x_wall - 0.60 - 0.45, 0.35, 0.75),
+        Box("fridge", x_wall - 0.70, 9.85, 0.0, 0.70, 0.90, 2.10),
+        Box("hood", x_wall - 1.05, 8.40, 1.70, 0.70, 0.65, 0.70),
+        Box("kitchen", 0.40, length - 0.60, 0.0, x_wall - 0.60 - 0.40, 0.60, 0.90),
+        Box("kitchen", 0.40, length - 0.35, 1.45, x_wall - 0.60 - 0.40, 0.35, 0.75),
     )
-    island = (Box("island", 1.85, 8.40, 0.0, 1.40, 1.95, 0.90),)
-    table = (Box("table", 2.20, 5.70, 0.74, 1.70, 0.90, 0.05),)
+    island = (Box("island", 1.55, 8.40, 0.0, 1.60, 1.90, 0.90),)
+    table = (Box("table", 2.05, 5.50, 0.74, 1.80, 0.95, 0.05),)
     chairs = tuple(
         Box("chair", x, y, 0.0, 0.42, 0.42, 0.78)
-        for x in (2.35, 3.30)
-        for y in (5.20, 6.68)
+        for x in (2.20, 3.25)
+        for y in (5.00, 6.55)
     )
-    # Book wall between the kitchen run and the sofa. 0.28 m deep so the
-    # elevation shows the books; the acoustic face is still the lamella/book mix.
-    shelf_box = (Box("shelf", x_wall - 0.28, shelf_y0, 1.05, 0.28, shelf_y1 - shelf_y0, 1.35),)
-    boxes = sofa + kitchen + island + table + chairs + shelf_box
+    boxes = sofa + shelf_box + tall + kitchen + island + table + chairs
 
-    # TV on the living gable, in front of the sofa, 1.60 m wide.
-    # Sub on the floor at the sofa's TV end, 0.40 m off that gable,
-    # under the screen edge nearer the sofa (not the window edge).
-    tv_x0, tv_x1 = 3.35, 4.95
+    # TV on the living gable. The low bench in the rendering is not in the model.
+    # Sub is the purple circle: floor, back-wall / TV-gable corner, 0.30 m from both.
+    tv_x0, tv_x1 = 2.55, 4.15
     sources = (
-        Marker("sub", 4.55, 0.40, 0.25, "sub"),
-        Marker("tv_l", tv_x0 + 0.15, 0.08, 1.15, "tv"),
-        Marker("tv_r", tv_x1 - 0.15, 0.08, 1.15, "tv"),
-        Marker("talker", 3.05, 5.35, 1.20, "talk"),
+        Marker("sub", x_wall - 0.30, 0.30, 0.25, "sub"),
+        Marker("tv_l", tv_x0 + 0.12, 0.08, 1.15, "tv"),
+        Marker("tv_r", tv_x1 - 0.12, 0.08, 1.15, "tv"),
+        Marker("talker", 2.95, 5.15, 1.20, "talk"),
     )
     seat_x = x_wall - 0.75
     receivers = (
-        Marker("sofa_1", seat_x, 1.35, 1.15, "sofa"),
-        Marker("sofa_2", seat_x, 2.35, 1.15, "sofa"),
-        Marker("sofa_3", seat_x, 3.20, 1.15, "sofa"),
-        Marker("dining", 3.05, 6.45, 1.15, "dining"),
-        Marker("island", 1.45, 9.60, 1.15, "island"),
+        Marker("sofa_1", seat_x, 1.30, 1.15, "sofa"),
+        Marker("sofa_2", seat_x, 2.50, 1.15, "sofa"),
+        Marker("sofa_3", seat_x, 3.60, 1.15, "sofa"),
+        Marker("dining", 2.95, 6.75, 1.15, "dining"),
+        Marker("island", 1.15, 9.30, 1.15, "island"),
     )
-    rug = (2.50, 5.35, 0.65, 4.25)
-    shelf = (shelf_y0, shelf_y1, 1.05, 2.40)
+    rug = (1.80, 5.20, 0.50, 4.60)
+    shelf = (sofa_y0, sofa_y1, shelf_z0, shelf_z1)
     return Shape(
         x_wall=x_wall,
         length=length,
