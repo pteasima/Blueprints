@@ -102,6 +102,14 @@ URL_UNIFIT_140 = (
 UNIFIT_160_KC_M2 = 242.24
 UNIFIT_140_KC_M2 = 212.00
 UNIFIT_KC_M3 = UNIFIT_140_KC_M2 / 0.140
+URL_UNIFIT033_160 = "https://www.nonstopstavebniny.cz/vata-knauf-unifit-033-tl--160-mm-tepelna-izolace-baleni-3-36-m2/"
+URL_UNIFIT033_80 = "https://eshop.stavinvest.cz/tepelna-izolace-knauf-unifit-033-80-mm/"
+URL_NATUROLL039_160 = "https://www.nonstopstavebniny.cz/mineralni-vata-knauf-naturoll-pro-039-tepelna-izolace-160-mm-2/"
+# Retail prices incl. VAT, checked 30 Oct 2026.
+UNIFIT033_160_KC_M2 = 278.27  # 935 Kč / 3.36 m² roll
+UNIFIT033_80_KC_M2 = 215.25  # 1,420.65 Kč / 6.6 m² roll
+NATUROLL039_160_KC_M2 = 141.49  # 815 Kč / 5.76 m² roll
+WOOL_WASTE_PCT = 5
 URL_NONIUS_TOP = "https://www.rigips.cz/produkty/nonius-horni-dil/"
 URL_NONIUS_TOP_SHOP = "https://www.izomat.cz/zaves-rigips-nonius-horni-340-mm-100-ks-baleni.html"
 URL_NONIUS_BOT = "https://www.rigips.cz/produkty/nonius-spodni-dil-pro-cd/"
@@ -386,8 +394,10 @@ def build_lines(q) -> dict[str, list[Line]]:
     if g.horiz_cd_x_stations():
         xc = g.horiz_cd_x_stations()[0]
         soffit_drop = g.horiz_hanger_top_z(xc) - g.horiz_hanger_bot_z()
-    wool_tl = "Výrobek zatím neurčen — Petr vybere podle zbylé hloubky."
+    wool_tl = "Soffit and gable wool product still to confirm (slope wool is decided)."
     half_s = face_s * 0.5
+    roof_half = roof_slope_m2 * 0.5
+    between_half = between_m2 * 0.5
     joint_m = (g.y_furn1 - g.y_furn0) / 1000.0
 
     basic_kg_s = face_s * STOSILENT_BASIC_KG_M2
@@ -516,35 +526,59 @@ def build_lines(q) -> dict[str, list[Line]]:
         ),
         Line(
             9,
-            "Minerální vlna mezi krokve",
-            "zatím neurčeno",
-            "zatím neurčeno",
-            "160 mm · řez ~790 mm",
-            between_m2,
+            "Wool between rafters, left",
+            "Glass wool, λ 0.033",
+            _product("Knauf Unifit 033 160 mm", URL_UNIFIT033_160),
+            "160 mm · roll 1200×2800 (3.36 m²)",
+            between_half,
             "m²",
-            10,
-            None,
-            wool_tl,
-            f"Plocha sklonu nad místností {roof_slope_m2:.2f} m² × "
-            f"({bay_clear:.0f}/{p.rafter_spacing:.0f}). "
-            f"Šikmina po nábytek by byla {face_s * bay_clear / p.rafter_spacing:.2f} m²; "
-            "model vyplňuje pole i nad kastlíkem. "
-            "Specifikace uvádí roli 1200×4000; DEK aktuálně 1200×3200 (3,84 m²).",
+            WOOL_WASTE_PCT,
+            UNIFIT033_160_KC_M2,
+            f"NonstopStavebniny, 935 Kč / 3.36 m² roll incl. VAT · {URL_UNIFIT033_160}",
+            f"Left slope {roof_half:.2f} m² × ({bay_clear:.0f}/{p.rafter_spacing:.0f}) net of rafters "
+            f"= {between_half:.2f} m² → {_ceil_pack(between_half * 1.05, 3.36)} rolls.",
         ),
         Line(
-            "9b",
-            "Minerální vlna plénum",
-            "zatím neurčeno",
-            "zatím neurčeno",
-            f"L {g.wool_left:.0f} mm / P {g.wool_right:.0f} mm",
-            plenum_void_m3,
-            "m³",
-            10,
-            None,
-            wool_tl,
-            f"Levá {g.wool_left:.1f} mm, pravá {g.wool_right:.1f} mm nad GKF, pod krokvemi. "
-            f"Objem z modelu {plenum_void_m3:.2f} m³ "
-            f"(celá vlna šikmin {q['plenum_wool_m3']:.2f} − pole {q['bay_wool_m3']:.2f}).",
+            '9b',
+            "Wool below rafters, left",
+            "Glass wool, λ 0.033",
+            _product("Knauf Unifit 033 80 mm", URL_UNIFIT033_80),
+            "80 mm · roll 6.6 m²",
+            half_s,
+            "m²",
+            WOOL_WASTE_PCT,
+            UNIFIT033_80_KC_M2,
+            f"Stav-Invest, 1,420.65 Kč / 6.6 m² roll incl. VAT · {URL_UNIFIT033_80}",
+            f"Left slope face {half_s:.2f} m², 1 layer → {_ceil_pack(half_s * 1.05, 6.6)} rolls. "
+            f"Model cavity {g.wool_left:.1f} mm; 80 mm fills it with light compression. U ≈ 0.121, foil 13.2 °C at −15 °C.",
+        ),
+        Line(
+            '9c',
+            "Wool between rafters, right",
+            "Glass wool, λ 0.039",
+            _product("Knauf NatuRoll Pro 039 160 mm", URL_NATUROLL039_160),
+            "160 mm · roll 1200×4800 (5.76 m²)",
+            between_half,
+            "m²",
+            WOOL_WASTE_PCT,
+            NATUROLL039_160_KC_M2,
+            f"NonstopStavebniny, 815 Kč / 5.76 m² roll incl. VAT · {URL_NATUROLL039_160}",
+            f"Right slope {roof_half:.2f} m² × ({bay_clear:.0f}/{p.rafter_spacing:.0f}) net of rafters "
+            f"= {between_half:.2f} m² → {_ceil_pack(between_half * 1.05, 5.76)} rolls.",
+        ),
+        Line(
+            '9d',
+            "Wool below rafters, right",
+            "Glass wool, λ 0.039",
+            _product("Knauf NatuRoll Pro 039 160 mm", URL_NATUROLL039_160),
+            "2 × 160 = 320 mm",
+            2 * half_s,
+            "m²",
+            WOOL_WASTE_PCT,
+            NATUROLL039_160_KC_M2,
+            f"NonstopStavebniny, 815 Kč / 5.76 m² roll incl. VAT · {URL_NATUROLL039_160}",
+            f"Right slope face {half_s:.2f} m² × 2 layers = {2 * half_s:.2f} m² → {_ceil_pack(2 * half_s * 1.05, 5.76)} rolls. "
+            f"Model cavity {g.wool_right:.1f} mm. U ≈ 0.068, foil ≈ 14.2 °C at −15 °C; whole roof U ≈ 0.095.",
         ),
         Line(
             10,
@@ -1016,32 +1050,59 @@ def build_lines(q) -> dict[str, list[Line]]:
         ),
         Line(
             12,
-            "Minerální vlna mezi krokve",
-            "zatím neurčeno",
-            "zatím neurčeno",
-            "160 mm",
-            between_m2,
+            "Wool between rafters, left",
+            "Glass wool, λ 0.033",
+            _product("Knauf Unifit 033 160 mm", URL_UNIFIT033_160),
+            "160 mm · roll 1200×2800 (3.36 m²)",
+            between_half,
             "m²",
-            10,
-            None,
-            wool_tl,
-            f"m² = sklon {roof_slope_m2:.2f} × ({bay_clear:.0f}/{p.rafter_spacing:.0f}). Řez ~790 mm.",
-            True,
+            WOOL_WASTE_PCT,
+            UNIFIT033_160_KC_M2,
+            f"NonstopStavebniny, 935 Kč / 3.36 m² roll incl. VAT · {URL_UNIFIT033_160}",
+            f"Left slope {roof_half:.2f} m² × ({bay_clear:.0f}/{p.rafter_spacing:.0f}) net of rafters "
+            f"= {between_half:.2f} m² → {_ceil_pack(between_half * 1.05, 3.36)} rolls.",
         ),
         Line(
-            13,
-            "Minerální vlna pod krokvemi",
-            "zatím neurčeno",
-            "zatím neurčeno",
-            f"L {g.wool_left:.0f} / P {g.wool_right:.0f} mm",
-            plenum_void_m3,
-            "m³",
-            10,
-            None,
-            wool_tl,
-            f"Nad GKF. Levá {g.wool_left:.1f} mm, pravá {g.wool_right:.1f} mm. "
-            f"Objem modelu {plenum_void_m3:.2f} m³.",
-            True,
+            '12b',
+            "Wool below rafters, left",
+            "Glass wool, λ 0.033",
+            _product("Knauf Unifit 033 80 mm", URL_UNIFIT033_80),
+            "80 mm · roll 6.6 m²",
+            half_s,
+            "m²",
+            WOOL_WASTE_PCT,
+            UNIFIT033_80_KC_M2,
+            f"Stav-Invest, 1,420.65 Kč / 6.6 m² roll incl. VAT · {URL_UNIFIT033_80}",
+            f"Left slope face {half_s:.2f} m², 1 layer → {_ceil_pack(half_s * 1.05, 6.6)} rolls. "
+            f"Model cavity {g.wool_left:.1f} mm; 80 mm fills it with light compression. U ≈ 0.121, foil 13.2 °C at −15 °C.",
+        ),
+        Line(
+            '12c',
+            "Wool between rafters, right",
+            "Glass wool, λ 0.039",
+            _product("Knauf NatuRoll Pro 039 160 mm", URL_NATUROLL039_160),
+            "160 mm · roll 1200×4800 (5.76 m²)",
+            between_half,
+            "m²",
+            WOOL_WASTE_PCT,
+            NATUROLL039_160_KC_M2,
+            f"NonstopStavebniny, 815 Kč / 5.76 m² roll incl. VAT · {URL_NATUROLL039_160}",
+            f"Right slope {roof_half:.2f} m² × ({bay_clear:.0f}/{p.rafter_spacing:.0f}) net of rafters "
+            f"= {between_half:.2f} m² → {_ceil_pack(between_half * 1.05, 5.76)} rolls.",
+        ),
+        Line(
+            '12d',
+            "Wool below rafters, right",
+            "Glass wool, λ 0.039",
+            _product("Knauf NatuRoll Pro 039 160 mm", URL_NATUROLL039_160),
+            "2 × 160 = 320 mm",
+            2 * half_s,
+            "m²",
+            WOOL_WASTE_PCT,
+            NATUROLL039_160_KC_M2,
+            f"NonstopStavebniny, 815 Kč / 5.76 m² roll incl. VAT · {URL_NATUROLL039_160}",
+            f"Right slope face {half_s:.2f} m² × 2 layers = {2 * half_s:.2f} m² → {_ceil_pack(2 * half_s * 1.05, 5.76)} rolls. "
+            f"Model cavity {g.wool_right:.1f} mm. U ≈ 0.068, foil ≈ 14.2 °C at −15 °C; whole roof U ≈ 0.095.",
         ),
         Line(
             "13b",

@@ -1778,8 +1778,8 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     sec_notes = [
         (
             on_face(x_wool, y_note, t_wool),
-            f"Wool TBD\n{raf_t} mm between rafters\n{wool_l} mm below left, {wool_r} mm right",
-            f"Vlna zatím neurčena\n{raf_t} mm mezi krokvemi\n{wool_l} mm pod levou, {wool_r} mm pravou",
+            f"Wool: Unifit 033 left, NatuRoll 039 right\n{raf_t} mm between rafters\n80 mm below left, 2×160 mm below right",
+            f"Vlna: Unifit 033 levá, NatuRoll 039 pravá\n{raf_t} mm mezi krokvemi\n80 mm pod levou, 2×160 mm pod pravou",
         ),
         (
             on_face(x_hang, y_note, t_hanger),

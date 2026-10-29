@@ -743,13 +743,13 @@ def test_sikmina_drawing_scenes():
     assert "GKF 12,5 mm" in joined
     assert "Vario" not in joined
     assert "Flex" not in joined
-    assert "zatím neurčena" in joined
+    assert "Unifit 033" in joined and "NatuRoll 039" in joined
     assert "160 mm mezi" in joined
     assert "plénum" not in joined.lower()
     joined_en = " ".join(
         ann["text"]["en"] for ann in section["annotations"] if "text" in ann
     )
-    assert "Wool TBD" in joined_en
+    assert "Unifit 033" in joined_en
     assert "160 mm between" in joined_en
     assert "60 mm left, 100 mm right" in joined_en
     assert "Jutafol N AL 170 Speciál" in joined_en
@@ -800,7 +800,7 @@ def test_sikmina_drawing_scenes():
     # Top of column is outside (wool near ridge); bottom is room face (NaturHeld).
     order = [t.split("\n")[0] for t in (a["text"]["en"] for a in callouts)]
     by_y = [t for _, t in sorted(zip(label_ys, order), reverse=True)]
-    assert by_y[0].startswith("Wool TBD")
+    assert by_y[0].startswith("Wool: Unifit 033")
     assert by_y[1].startswith("Direct hanger")
     assert by_y[2].startswith("Jutafol")
     assert by_y[-1].startswith("NaturHeld 140")

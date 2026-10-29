@@ -952,7 +952,7 @@ class ObyvakLayout:
         ]
 
     def vata_pts(self) -> list[tuple[float, float]]:
-        """Wool below the rafters, product still open. Depths stay as solved.
+        """Wool below the rafters (Unifit 033 left, NatuRoll 039 right). Depths stay as solved.
 
         The bottom follows the foil. Left and right foil planes meet at
         ``x_stack_joint``, so the wool has no step there either. Between the
