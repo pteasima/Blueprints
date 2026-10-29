@@ -265,6 +265,7 @@ def soffit_stack(
     wool_m: float,
     air_m: float,
     res: Resistivity,
+    wool_sigma: float | None = None,
 ) -> tuple[Layer, ...]:
     """Soffit face, then mineral wool up to the duct void, then that air, then the lid."""
     layers: list[Layer] = [
@@ -272,7 +273,7 @@ def soffit_stack(
         ("porous", board_m, res.wood_fibre_board),
     ]
     if wool_m > 1e-6:
-        layers.append(("porous", wool_m, res.mineral_wool))
+        layers.append(("porous", wool_m, wool_sigma if wool_sigma is not None else res.mineral_wool))
     if air_m > 1e-6:
         layers.append(("air", air_m, 0.0))
     return tuple(layers)

@@ -93,4 +93,4 @@ The purple ring is centered just past the TV corner, at about the height of the 
 - `layout-compare.png` — the same pair as the side-by-side
 - `reference.jpg`
 
-The wave study on this furniture is `obyvak-wave.md`.
+The wave study on the old sofa model is `obyvak-wave.md`. The corrected sofa and the fill search are `obyvak-tune.md`.
