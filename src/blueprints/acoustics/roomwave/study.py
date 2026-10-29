@@ -32,6 +32,8 @@ from blueprints.acoustics.roomwave.boundaries import (
 )
 from blueprints.acoustics.roomwave.geometry import (
     JND,
+    PLEASANT_HI,
+    PLEASANT_LO,
     Variant,
     all_variants,
     elements_per_wavelength,
@@ -885,11 +887,11 @@ def _report(data, choice, code, choice_rows, figures) -> str:
             delta = right["t_bass"] - left["t_bass"]
             base = max(left["t_bass"], right["t_bass"], 0.05)
             flag = "past 5%" if audible(left["t_bass"], right["t_bass"]) else "inside 5%"
-        lines.append(
-            f"{left['thickness_mm']} → {right['thickness_mm']} mm: "
-            f"bass T60 {delta:+.3f} s ({100 * delta / base:+.1f}%, {flag}), "
-            f"smoothness {right['smooth'] - left['smooth']:+.2f} dB."
-        )
+            lines.append(
+                f"{left['thickness_mm']} → {right['thickness_mm']} mm: "
+                f"bass T60 {delta:+.3f} s ({100 * delta / base:+.1f}%, {flag}), "
+                f"smoothness {right['smooth'] - left['smooth']:+.2f} dB."
+            )
     if len(choice_rows) >= 2:
         lines.append(
             "The seat spectra for these four thicknesses lie on top of each other. "
@@ -960,7 +962,7 @@ def _report(data, choice, code, choice_rows, figures) -> str:
             + ", ".join(
                 f"{hz} Hz {_fmt(value.get('sofa', math.nan))} s" for hz, value in ray.items()
             )
-            + "."
+            + ". The rise at 1000 Hz is the short histogram, not a longer decay."
         )
     lines += ["", "## Recommendation", ""]
     lines.append(_recommendation(choice, code, choice_rows, by if soffit_rows else {}, data))
@@ -1035,8 +1037,11 @@ def _recommendation(choice: int, code: str, rows: list[dict], soffit: dict, data
             "All four thicknesses land inside 0.40–0.90 s once the sofa is in the room. "
             "Thicker board does not flatten the seat spectrum (the change is under 0.4 dB). "
             f"Keep **{choice} mm**, the thickness on the drawing. "
-            "60 mm is a little livelier; 100 mm and 120 mm keep drying a bass that is already pleasant, "
-            "and 120 mm pushes 100–125 Hz toward a quarter of a second."
+            f"{rows[0]['thickness_mm']} mm is bass T60 {_fmt(rows[0]['t_bass'])} s "
+            f"and 100–125 Hz {_fmt(rows[0]['t_125'])} s; "
+            f"{rows[-1]['thickness_mm']} mm is {_fmt(rows[-1]['t_bass'])} s "
+            f"and {_fmt(rows[-1]['t_125'])} s. "
+            "Thicker board keeps drying a bass that is already pleasant."
         )
     elif code == "pleasant":
         decision = (
@@ -1044,12 +1049,27 @@ def _recommendation(choice: int, code: str, rows: list[dict], soffit: dict, data
             f"the difference is a tie, is **{choice} mm**."
         )
     else:
-        decision = (
-            f"None of the four thicknesses lands in 0.40–0.90 s. "
-            f"**{choice} mm** is the one closest to 0.60 s. The slopes are not enough "
-            "on their own to put the bass in that window; the traps, the soffit, and the "
-            "sofa are doing the rest."
-        )
+        too_dry = all(row["t_bass"] < PLEASANT_LO for row in rows)
+        too_live = all(row["t_bass"] > PLEASANT_HI for row in rows)
+        if too_dry:
+            decision = (
+                f"None of the four thicknesses lands in 0.40–0.90 s. "
+                f"With the sofa in the room every one is under 0.40 s, and thicker board is shorter. "
+                f"**{choice} mm** is the least dry and the closest to 0.60 s. "
+                "The sofa, not the slope thickness, is what puts the bass under that window."
+            )
+        elif too_live:
+            decision = (
+                f"None of the four thicknesses lands in 0.40–0.90 s. "
+                f"**{choice} mm** is the one closest to 0.60 s. The slopes are not enough "
+                "on their own to put the bass in that window; the traps, the soffit, and the "
+                "sofa are doing the rest."
+            )
+        else:
+            decision = (
+                f"None of the four thicknesses lands in 0.40–0.90 s. "
+                f"**{choice} mm** is the one closest to 0.60 s."
+            )
     extra = []
     if "as_built" in soffit and "rigid" in soffit and rows:
         material = soffit["rigid"]["t_bass"] - soffit["as_built"]["t_bass"]
