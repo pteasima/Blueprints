@@ -1,8 +1,8 @@
 # Obývák layout for the wave model
 
-Review sheet before any acoustic solve. Kitchen gable is on the left of the plan and the long section, TV gable on the right, matching Petr's elevation.
+Review sheet. No acoustic solve on this furniture. Kitchen gable is on the left of the plan and the long view, TV gable on the right, as in Petr's elevation. The purple circle is the subwoofer: on the floor, in the cabinet-wall / TV-gable corner, at the TV end of the sofa.
 
-The shell (slopes, soffit, traps, windows) comes from `ObyvakParams`. The furniture is placed to match that elevation. Where the written brief and the elevation disagree, the elevation wins and the brief number is listed under Open points.
+The shell is `ObyvakParams`. The sofa size is Petr's 4.0 × 4.0 m, which overrides the scale of the sketch.
 
 ## Shell
 
@@ -16,52 +16,54 @@ The shell (slopes, soffit, traps, windows) comes from `ObyvakParams`. The furnit
 | Soffit underside | 2470 |
 | Living trap, from Y = 0, above Z = 2450 | 450 |
 | Kitchen trap, from Y = 11100, above Z = 2450 | 190 |
-| Windows on the window wall, sill at the floor, head | 2500 |
+| Windows on the window wall, head | 2500 |
 
-Pitch is across the width, not along the room. A cut along the length at one X is a level ceiling. The long section draws that level at X = 2200 mm (near the false ridge, about 5020 mm high) and, separately, the soffit underside at 2470 mm on the cabinet wall.
+The pitch runs across the width. Along the cabinet wall the ceiling of the room is the soffit underside, 2470 mm.
 
-Traps replace the air above 2450 mm at each end. Below that the gable wall is at Y = 0 and Y = 11100.
+## Furniture
 
-## Furniture, sources, ears
-
-Along the cabinet wall, from the kitchen gable toward the TV:
+Order on the cabinet wall, from the TV gable toward the kitchen.
 
 | Piece | X (mm) | Y (mm) | Z (mm) |
 | --- | --- | --- | --- |
-| Kitchen on the gable, base | 450–4750 | 10500–11100 | 0–900 |
-| Kitchen on the gable, uppers | 450–4750 | 10750–11100 | 1450–2200 |
-| Kitchen on the cabinet wall, base | 4750–5350 | 8150–11100 | 0–900 |
-| Kitchen on the cabinet wall, uppers | 5000–5350 | 8150–11100 | 1450–2200 |
-| Island | 1850–3250 | 8400–10350 | 0–900 |
-| Book wall, 280 mm deep | 5070–5350 | 4250–8150 | 1050–2400 |
-| Dining table top | 2200–3900 | 5700–6600 | 740–790 |
-| Sofa along the wall, back / seat | 4250–5350 | 750–4150 | seat 450, back 850 |
-| Sofa return, toward the table | 3450–5350 | 3050–4150 | seat 450, back 850 |
-| Rug | 2500–5350 | 650–4250 | floor |
-| TV screen, on the TV gable, no cabinet | 3350–4950 | on the wall | 700–1600 |
-| Subwoofer | 4550 | 400 | 250 |
-| TV speakers | 3500 and 4800 | 80 | 1150 |
-| Talker | 3050 | 5350 | 1200 |
-| Ears, three sofa seats | 4600 | 1350, 2350, 3200 | 1150 |
-| Ear, dining | 3050 | 6450 | 1150 |
-| Ear, island | 1450 | 9600 | 1150 |
+| Subwoofer, corner | 5050 | 300 | 250 |
+| Sofa long run, back and seat, 4000 mm | 4250–5350 | 550–4550 | seat 450, back 850 |
+| Sofa chaise, dining end, toward the windows | 1350–5350 | 3450–4550 | seat 450, back 850 |
+| Lamella wall, behind that run | 5170–5350 | 550–4550 | 950–2400 |
+| Tall wood units, behind the dining table | 4750–5350 | 4550–7700 | 0–2200 |
+| Kitchen base, cabinet wall | 4750–5350 | 7700–11100 | 0–900 |
+| Kitchen uppers, cabinet wall | 5000–5350 | 7700–11100 | 1450–2200 |
+| Fridge | 4650–5350 | 9850–10750 | 0–2100 |
+| Hood, in front of the uppers | 4300–5000 | 8400–9050 | 1700–2400 |
+| Kitchen base, kitchen gable | 400–4750 | 10500–11100 | 0–900 |
+| Kitchen uppers, kitchen gable | 400–4750 | 10750–11100 | 1450–2200 |
+| Island | 1550–3150 | 8400–10300 | 0–900 |
+| Dining table | 2050–3850 | 5500–6450 | 740–790 |
+| Rug, under the sofa | 1800–5200 | 500–4600 | floor |
+| TV, on the TV gable, no bench, no cabinet | 2550–4150 | on the wall | 800–1650 |
 
-The sub is 400 mm off the TV gable, at the sofa's TV end, under the screen edge nearer the sofa (X = 4550, screen runs 3350–4950). It is not in the cabinet-wall corner.
+The sofa bounding box is 4000 × 4000 mm. The long run ends at the TV side (Y = 550 mm, leaving the corner for the sub). The chaise is the dining end and reaches toward the windows.
 
-Chairs are 420 × 420 × 780 mm at the four sides of the table.
+The lamella wall is the same 4000 mm run as the sofa, starting just above the 850 mm back and stopping 70 mm short of the soffit. Drawn depth is 180 mm so the books show. Acoustically it is still wooden lamellas 20 mm off the wall, no wool, about half the shelves filled with books.
 
-## Open points
+The tall wood units between the kitchen and that shelf are hard cabinets. The low bench under the TV in the rendering is not in the model.
 
-1. The brief said an L-sofa of 4.0 × 4.0 m, arms about 1.1 m deep. The elevation shows a shorter run and a shallower return. The model uses 3400 mm along the wall, 1100 mm seat depth, and a 1900 mm return toward the table. A 4000 mm return would cross the table.
-2. The brief put a 3.9 × 1.5 m shelf on the back wall above the sofa, starting 1300 mm up. The elevation puts the book wall between the kitchen and the sofa. The model follows the elevation: 3900 mm long, from 1050 mm to 2400 mm (the soffit underside is 2470 mm, so 2800 mm is not available on this wall), 280 mm deep. The 20 mm lamella gap and the lack of wool behind it stay as the acoustic description of that face, for when the solve is allowed.
-3. The brief put the sub 300 mm from both the TV wall and the cabinet wall. The note on the elevation puts it at the sofa's TV end, under the left edge of the TV. This model uses the sofa-side edge of the screen. If the window-side edge was meant, the sub moves to X = 3350 mm, Y unchanged.
-4. TV size is assumed: 1600 mm wide, bottom at 700 mm, top at 1600 mm. The elevation shows a screen and no cabinet.
+Ears: sofa at X = 4600, Y = 1300 / 2500 / 3600, Z = 1150. Dining at (2950, 6750, 1150). Island at (1150, 9300, 1150). Talker at (2950, 5150, 1200). TV speakers at the screen edges, Y = 80, Z = 1150.
+
+## Residual differences
+
+- Hood, fridge, and the tall-unit run are sized from the elevation, not from a dimensioned drawing. Hood 700 × 650 mm. Fridge 900 × 700 × 2100 mm. Tall units 3150 mm along the wall.
+- TV width and height are assumed (1600 mm wide, 800–1650 mm). The rendering shows a screen on that gable and nothing under it.
+- No plants, no downlights, no rug pattern, no people except a 1750 mm scale figure in the perspective.
+- The lamella gap is 20 mm in the acoustic description. The solid in the view is 180 mm deep so the shelf is visible above the sofa back.
+- Ceiling in the perspective is the real slopes and the soffit. The rendering also shows the roof structure and lights, which are not furniture.
 
 ## Sheets
 
-- `layout-plan.png` — plan, kitchen left, TV right
-- `layout-section-xz.png` — slopes, false ridge, soffit step
-- `layout-section-long.png` — same handedness as the elevation
-- `layout-mesh-3d.png` — the surfaces the wave model will use
+- `layout-plan.png`
+- `layout-section-xz.png`
+- `layout-section-long.png`
+- `layout-compare.png` — view toward the cabinet wall, kitchen left, TV right
+- `layout-mesh-3d.png`
 
 No frequency sweep has been run on this layout.

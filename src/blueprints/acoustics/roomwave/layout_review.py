@@ -20,6 +20,9 @@ OUT = ROOT / "docs" / "acoustics"
 _FILL = {
     "sofa": "#d7c4a3",
     "kitchen": "#f4f1ea",
+    "tall": "#e4d2b0",
+    "fridge": "#2c2c2c",
+    "hood": "#d0d0d0",
     "island": "#f7f7f5",
     "table": "#c4a574",
     "chair": "#e6e2dc",
@@ -41,6 +44,7 @@ def write_sheets(dest: Path | None = None) -> list[Path]:
         _section_xz(shape, out / "layout-section-xz.png"),
         _section_long(shape, out / "layout-section-long.png"),
         _mesh_3d(shape, out / "layout-mesh-3d.png"),
+        _compare(shape, out / "layout-compare.png"),
     ]
     return paths
 
@@ -300,6 +304,154 @@ def _mesh_3d(shape: Shape, path: Path) -> Path:
     ax.view_init(elev=22, azim=-58)
     fig.tight_layout()
     fig.savefig(path, dpi=130)
+    plt.close(fig)
+    return path
+
+
+def _box_faces(box: Box) -> list[tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
+    x0, y0, z0, x1, y1, z1 = box.x, box.y, box.z, box.x1, box.y1, box.z1
+    p = lambda x, y, z: np.array([x, y, z], dtype=float)
+    return [
+        (p(x0, y0, z0), p(x1, y0, z0), p(x1, y1, z0), p(x0, y1, z0)),
+        (p(x0, y0, z1), p(x0, y1, z1), p(x1, y1, z1), p(x1, y0, z1)),
+        (p(x0, y0, z0), p(x0, y0, z1), p(x1, y0, z1), p(x1, y0, z0)),
+        (p(x0, y1, z0), p(x1, y1, z0), p(x1, y1, z1), p(x0, y1, z1)),
+        (p(x0, y0, z0), p(x0, y1, z0), p(x0, y1, z1), p(x0, y0, z1)),
+        (p(x1, y0, z0), p(x1, y0, z1), p(x1, y1, z1), p(x1, y1, z0)),
+    ]
+
+
+def _ceiling_quads(shape: Shape, x_near: float) -> list[tuple[np.ndarray, ...]]:
+    """Slope and soffit in front of the camera, split so the pitch reads."""
+    y0, y1 = shape.y_living, shape.y_kitchen
+    cuts = np.linspace(y0, y1, 8)
+    x0 = min(x_near, shape.x_false - 0.2)
+    quads = []
+    for a, b in zip(cuts, cuts[1:]):
+        z_near = shape.z_eave + (x0 / shape.x_false) * (shape.z_ridge - shape.z_eave)
+        quads.append((
+            np.array([x0, a, z_near]),
+            np.array([shape.x_false, a, shape.z_ridge]),
+            np.array([shape.x_false, b, shape.z_ridge]),
+            np.array([x0, b, z_near]),
+        ))
+        quads.append((
+            np.array([shape.x_false, a, shape.z_ridge]),
+            np.array([shape.x_soffit, a, shape.z_eave]),
+            np.array([shape.x_soffit, b, shape.z_eave]),
+            np.array([shape.x_false, b, shape.z_ridge]),
+        ))
+        quads.append((
+            np.array([shape.x_soffit, a, shape.z_eave]),
+            np.array([shape.x_soffit, a, shape.z_soffit]),
+            np.array([shape.x_soffit, b, shape.z_soffit]),
+            np.array([shape.x_soffit, b, shape.z_eave]),
+        ))
+        quads.append((
+            np.array([shape.x_soffit, a, shape.z_soffit]),
+            np.array([shape.x_wall, a, shape.z_soffit]),
+            np.array([shape.x_wall, b, shape.z_soffit]),
+            np.array([shape.x_soffit, b, shape.z_soffit]),
+        ))
+    return quads
+
+
+def _compare(shape: Shape, path: Path) -> Path:
+    """Wide view toward the cabinet wall, kitchen gable on the left, beside Petr's image."""
+    cam = np.array([0.35, 5.55, 1.35])
+    forward = np.array([1.0, 0.0, 0.12])
+    forward = forward / np.linalg.norm(forward)
+    up = np.array([0.0, 0.0, 1.0])
+    right = np.cross(forward, up)
+    right = right / np.linalg.norm(right)
+    up_cam = np.cross(right, forward)
+    fov = np.deg2rad(118.0)
+
+    def project(points: np.ndarray) -> tuple[np.ndarray, np.ndarray, float]:
+        rel = points - cam
+        depth = rel @ forward
+        horizontal = rel @ right
+        vertical = rel @ up_cam
+        scale = 1.0 / np.tan(fov / 2.0)
+        safe = np.maximum(depth, 1e-3)
+        u = horizontal / safe * scale
+        v = vertical / safe * scale
+        return u, v, depth
+
+    faces: list[tuple[float, np.ndarray, np.ndarray, str]] = []
+    for quad in _ceiling_quads(shape, 1.15):
+        pts = np.vstack(quad)
+        u, v, depth = project(pts)
+        if float(np.min(depth)) < 0.35:
+            continue
+        faces.append((float(np.mean(depth)), u, v, "#f3efe6"))
+    floor = (
+        np.array([1.15, 0.0, 0.0]),
+        np.array([shape.x_wall, 0.0, 0.0]),
+        np.array([shape.x_wall, shape.length, 0.0]),
+        np.array([1.15, shape.length, 0.0]),
+    )
+    u, v, depth = project(np.vstack(floor))
+    faces.append((float(np.mean(depth)), u, v, "#f7f5f2"))
+    for box in shape.boxes:
+        color = _FILL.get(box.name, "#dddddd")
+        for quad in _box_faces(box):
+            pts = np.vstack(quad)
+            u, v, depth = project(pts)
+            if float(np.min(depth)) < 0.25:
+                continue
+            faces.append((float(np.mean(depth)), u, v, color))
+    tv_x0, tv_x1, tz0, tz1 = shape.tv
+    tv = np.array([
+        [tv_x0, 0.04, tz0],
+        [tv_x1, 0.04, tz0],
+        [tv_x1, 0.04, tz1],
+        [tv_x0, 0.04, tz1],
+    ])
+    u, v, depth = project(tv)
+    faces.append((float(np.mean(depth)), u, v, "#1a1a1a"))
+    back = np.array([
+        [shape.x_wall, 0.0, 0.0],
+        [shape.x_wall, shape.length, 0.0],
+        [shape.x_wall, shape.length, shape.z_soffit],
+        [shape.x_wall, 0.0, shape.z_soffit],
+    ])
+    u, v, depth = project(back)
+    faces.append((float(np.mean(depth)) + 0.4, u, v, "#fbfbfb"))
+    sub = next(marker for marker in shape.sources if marker.name == "sub")
+    sub_box = Box("sub", sub.x - 0.18, sub.y - 0.18, 0.0, 0.36, 0.36, 0.40)
+    for quad in _box_faces(sub_box):
+        u, v, depth = project(np.vstack(quad))
+        if float(np.min(depth)) > 0.25:
+            faces.append((float(np.mean(depth)), u, v, "#a33b32"))
+    faces.sort(key=lambda item: item[0], reverse=True)
+
+    ref = Path("/workspace/obyvak-circled.jpg")
+    if ref.is_file():
+        fig, axes = plt.subplots(1, 2, figsize=(14.5, 5.6))
+        axes[0].imshow(plt.imread(ref))
+        axes[0].set_title("Petr's view, sub circled")
+        axes[0].axis("off")
+        ax = axes[1]
+    else:
+        fig, ax = plt.subplots(figsize=(12.4, 5.4))
+    for _depth, u, v, color in faces:
+        ax.fill(u, v, facecolor=color, edgecolor="#555555", lw=0.3)
+    su, sv, _sd = project(np.array([[sub.x, sub.y, 0.45]]))
+    ax.scatter(su, sv, s=80, c="#a33b32", zorder=6)
+    ax.annotate("sub", (su[0], sv[0]), textcoords="offset points", xytext=(-14, 8), color="#a33b32", fontsize=8)
+    # Person at the island, 1.75 m, for scale.
+    person = np.array([[2.35, 9.15, 0.0], [2.35, 9.15, 1.75]])
+    pu, pv, _pd = project(person)
+    ax.plot(pu, pv, color="#444", lw=3, solid_capstyle="round")
+    ax.scatter([pu[1]], [pv[1]], s=28, c="#444", zorder=5)
+    ax.set_aspect("equal")
+    ax.set_xlim(-1.05, 1.05)
+    ax.set_ylim(-0.48, 0.58)
+    ax.axis("off")
+    ax.set_title("Model, same viewpoint: cabinet wall, kitchen left, TV right")
+    fig.tight_layout()
+    fig.savefig(path, dpi=140)
     plt.close(fig)
     return path
 
