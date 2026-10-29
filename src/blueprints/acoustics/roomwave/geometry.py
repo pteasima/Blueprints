@@ -159,59 +159,71 @@ def load_shape() -> Shape:
     windows = tuple((y0 * mm, (y0 + width) * mm) for y0, width in params.eave_windows)
 
     # Cabinet wall, TV gable (Y = 0) toward kitchen. Petr's elevation has the
-    # kitchen on the left and the TV on the right. The sofa is his 4.0 × 4.0 m
-    # figure: long run on the back wall, TV end at the gable, chaise on the
-    # dining side toward the windows. The lamella wall is behind that run.
-    sofa_y0, sofa_y1 = 0.55, 4.55
+    # kitchen on the left and the TV on the right.
+    #
+    # Kept as solids: sofa, lamella wall, tall wood cabinets, kitchen counters,
+    # island, fridge, the wall oven in that run, TV, sub. The dining table is a 40 mm top.
+    # Omitted, because a solid box would invent a closed surface: hood, the open
+    # hanging shelf above the island, dining chairs, plants, pendants, the person,
+    # the low bench under the TV. The oven is a flush face in the counter run.
+    # Cabinet-wall uppers in the white kitchen are omitted for the same reason.
+    #
+    # The sofa is Petr's 4.0 × 4.0 m. It starts 0.40 m off the TV gable so the
+    # sub at 0.30 m from both walls stays outside the sofa. The lamella is the
+    # same run, just above the back. The island is his 2.5 × 1.2 × 0.9 m, long
+    # side along the room. The kitchen end sits on the drawn island; the extra
+    # length runs toward the dining table.
+    sofa_y0, run = 0.40, 4.00
+    sofa_y1 = sofa_y0 + run
+    back_h, seat_h = 0.95, 0.60
     sofa = (
-        Box("sofa", x_wall - 0.40, sofa_y0, 0.0, 0.40, 4.00, 0.85),
-        Box("sofa", x_wall - 1.10, sofa_y0, 0.0, 0.70, 4.00, 0.45),
-        Box("sofa", x_wall - 4.00, sofa_y1 - 0.40, 0.0, 2.90, 0.40, 0.85),
-        Box("sofa", x_wall - 4.00, sofa_y1 - 1.10, 0.0, 2.90, 0.70, 0.45),
+        Box("sofa", x_wall - 0.40, sofa_y0, 0.0, 0.40, run, back_h),
+        Box("sofa", x_wall - 1.10, sofa_y0, 0.0, 0.70, run, seat_h),
+        Box("sofa", x_wall - 4.00, sofa_y1 - 0.40, 0.0, 2.90, 0.40, back_h),
+        Box("sofa", x_wall - 4.00, sofa_y1 - 1.10, 0.0, 2.90, 0.70, seat_h),
     )
-    # Lamellas on the back wall, same run as the sofa, just above the back.
-    shelf_z0, shelf_z1 = 0.95, 2.40
+    shelf_z0, shelf_z1 = 1.02, 2.45
     shelf_box = (
-        Box("shelf", x_wall - 0.18, sofa_y0, shelf_z0, 0.18, 4.00, shelf_z1 - shelf_z0),
+        Box("shelf", x_wall - 0.18, sofa_y0, shelf_z0, 0.18, run, shelf_z1 - shelf_z0),
     )
-    # Wood-panelled tall units behind the dining table, between kitchen and shelf.
-    tall = (
-        Box("tall", x_wall - 0.60, sofa_y1, 0.0, 0.60, 3.15, 2.20),
-    )
-    kitchen_y0 = sofa_y1 + 3.15
+    # Wood-panelled tall units behind the dining table, between the shelf and
+    # the kitchen. The kitchen end matches the elevation; the TV end follows
+    # the 4.0 m shelf, so this run is shorter than the drawing.
+    tall_y1 = 6.90
+    tall = (Box("tall", x_wall - 0.60, sofa_y1, 0.0, 0.60, tall_y1 - sofa_y1, shelf_z1),)
+    # Fridge in the cabinet-wall run. Oven is not a separate solid.
+    fridge_y0, fridge_y1 = 8.70, 9.50
     kitchen = (
-        Box("kitchen", x_wall - 0.60, kitchen_y0, 0.0, 0.60, length - kitchen_y0, 0.90),
-        Box("kitchen", x_wall - 0.35, kitchen_y0, 1.45, 0.35, length - kitchen_y0, 0.75),
-        Box("fridge", x_wall - 0.70, 9.85, 0.0, 0.70, 0.90, 2.10),
-        Box("hood", x_wall - 1.05, 8.40, 1.70, 0.70, 0.65, 0.70),
+        Box("kitchen", x_wall - 0.60, tall_y1, 0.0, 0.60, fridge_y0 - tall_y1, 0.90),
+        Box("kitchen", x_wall - 0.60, fridge_y1, 0.0, 0.60, length - fridge_y1, 0.90),
+        Box("fridge", x_wall - 0.65, fridge_y0, 0.0, 0.65, fridge_y1 - fridge_y0, 1.85),
+        # Wall oven in that run, flush with the counters. Not a separate tall box.
+        Box("oven", x_wall - 0.60, 7.52, 1.05, 0.60, 0.53, 0.45),
         Box("kitchen", 0.40, length - 0.60, 0.0, x_wall - 0.60 - 0.40, 0.60, 0.90),
         Box("kitchen", 0.40, length - 0.35, 1.45, x_wall - 0.60 - 0.40, 0.35, 0.75),
     )
-    island = (Box("island", 1.55, 8.40, 0.0, 1.60, 1.90, 0.90),)
-    table = (Box("table", 2.05, 5.50, 0.74, 1.80, 0.95, 0.05),)
-    chairs = tuple(
-        Box("chair", x, y, 0.0, 0.42, 0.42, 0.78)
-        for x in (2.20, 3.25)
-        for y in (5.00, 6.55)
-    )
-    boxes = sofa + shelf_box + tall + kitchen + island + table + chairs
+    # 1.2 m into the room, 2.5 m along it, 0.90 m aisle in front of the counters.
+    island = (Box("island", x_wall - 0.60 - 0.90 - 1.20, 7.30, 0.0, 1.20, 2.50, 0.90),)
+    table = (Box("table", 2.30, 4.80, 0.74, 1.40, 1.25, 0.04),)
+    boxes = sofa + shelf_box + tall + kitchen + island + table
 
-    # TV on the living gable. The low bench in the rendering is not in the model.
-    # Sub is the purple circle: floor, back-wall / TV-gable corner, 0.30 m from both.
-    tv_x0, tv_x1 = 2.55, 4.15
+    # TV on the living gable, edge-on in the cabinet-wall elevation. No bench.
+    # Sub is on the floor in the cabinet-wall / TV-gable corner.
+    tv_x0, tv_x1 = 2.70, 4.30
     sources = (
         Marker("sub", x_wall - 0.30, 0.30, 0.25, "sub"),
         Marker("tv_l", tv_x0 + 0.12, 0.08, 1.15, "tv"),
         Marker("tv_r", tv_x1 - 0.12, 0.08, 1.15, "tv"),
-        Marker("talker", 2.95, 5.15, 1.20, "talk"),
+        Marker("talker", 3.00, 6.50, 1.20, "talk"),
     )
     seat_x = x_wall - 0.75
+    island_box = island[0]
     receivers = (
         Marker("sofa_1", seat_x, 1.30, 1.15, "sofa"),
         Marker("sofa_2", seat_x, 2.50, 1.15, "sofa"),
         Marker("sofa_3", seat_x, 3.60, 1.15, "sofa"),
-        Marker("dining", 2.95, 6.75, 1.15, "dining"),
-        Marker("island", 1.15, 9.30, 1.15, "island"),
+        Marker("dining", 3.00, 5.40, 1.15, "dining"),
+        Marker("island", island_box.x - 0.25, island_box.y + 0.5 * island_box.dy, 1.15, "island"),
     )
     rug = (1.80, 5.20, 0.50, 4.60)
     shelf = (sofa_y0, sofa_y1, shelf_z0, shelf_z1)
@@ -231,7 +243,7 @@ def load_shape() -> Shape:
         windows=windows,
         rug=rug,
         shelf=shelf,
-        tv=(tv_x0, tv_x1, 0.70, 1.60),
+        tv=(tv_x0, tv_x1, 0.75, 1.70),
         boxes=boxes,
         sources=sources,
         receivers=receivers,
