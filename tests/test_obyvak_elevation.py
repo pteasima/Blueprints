@@ -43,7 +43,7 @@ def test_soffit_and_predsteny_match_source_sheet():
     g = build_layout(p)
     z_soffit = _source_z_soffit(p)
     assert abs(g.z_soffit - z_soffit) < 1e-9
-    assert abs(g.z_soffit - 5395.1) < 1.0
+    assert abs(g.z_soffit - 5316.8) < 1.0
     assert p.predstena_kitchen == 190.0
     assert p.predstena_living == 450.0
     assert g.x_pred_l == p.predstena_living

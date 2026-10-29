@@ -15,17 +15,17 @@ World:
   StoSilent Top Finish + Top Basic + NaturHeld 140 (80)     → `slope_naturheld_140`
   GKF/RF 12.5                                               → `slope_gkf`
   CD Rigips 60×27 @ ~625 ⊥ krokvím                          → `slope_cd`
-  Jutafol 145 Al vapour barrier (~1)                        → `slope_foil`
-  přímý závěs 125 on the window slope (void ~80)            → `slope_direct_hanger`
-  Nonius on the cabinet slope (gap opens to ~370)           → `slope_nonius`
-  minerální vlna: void below krokve + bays between them    → `plenum_wool`
+  Jutafol N AL 170 Speciál vapour barrier (~1)               → `slope_foil`
+  přímý závěs 200 on the window slope (void 140)            → `slope_direct_hanger`
+  Nonius horní 440 on the cabinet slope (gap ~429)          → `slope_nonius`
+  Knauf Unifit 035: void below krokve + bays between them  → `plenum_wool`
   krokve 100/160 @ ~875                                     → `rafters`
   zavětrovací pásky 40×2 @ 45° X across krokve (racking)    → `racking_strap`
   (střešní latě / kontralatě above rafters stay in roofing)
 
 The 80 mm board is screwed through the GKF into the CD. Foil sits on the
 attic side of the CD (below the mineral wool), matching the rest of the
-house (Jutafol 145 Al — not a variable membrane). There is no slope lať
+house (Jutafol N AL 170 Speciál — not a variable membrane). There is no slope lať
 and no NaturHeld Flex. CD spacing stays 625 mm, which is the published
 NaturHeld 140 stud spacing.
 
@@ -176,7 +176,7 @@ class ObyvakParams:
     # Concrete columns stand in front of the cabinet eave (room side), 300×300.
     furn_column_size: float = 300.0
     rafter_t: float = 160.0
-    plenum_t: float = 80.0
+    plenum_t: float = 140.0
     cd_t: float = 27.0
     finish_t: float = 2.0
     basic_t: float = 2.0
@@ -329,7 +329,7 @@ class ObyvakLayout:
         # ~80 mm below the lid, so a riser at this line has nothing to screw to.
         self.x_sdk_break = self.x_nh_inner
         # Where the slope-GKF underside meets the lid. Room-ward of the furniture
-        # line by a few centimetres — the boards butt, they do not step.
+        # line — the lid stays on the pozednice, so a thicker plenum moves the butt.
         t0 = self.t_nh_face + self.t_flex_pack
         z_under_furn = self.z_gkf_horiz + t0 / self.cos
         self.x_gkf_kink = self.x_furn - (self.z_soffit_lid - z_under_furn) / self.tan
@@ -482,9 +482,25 @@ class ObyvakLayout:
         t0 = self.t_nh_face + self.t_flex_pack
         return self._slope_sdk_band_pts(t0, t0 + self.p.sdk_t)
 
+    def x_right_pack_stop(self, t_perp: float) -> float:
+        """X where a right-slope offset meets the kastlík lid hardware.
+
+        The lid Z is fixed on the pozednice. A thicker plenum drops the slope,
+        so the foil and the wool end here instead of running through the lid.
+        """
+        p = self.p
+        # Joint angle on the lid: 1 mm seat + 2 mm strip + 1 mm clearance.
+        z_clear = self.z_soffit_lid + p.sdk_t + 4.0
+        if self.z_slope_offset(self.x_furn, t_perp) >= z_clear:
+            return self.x_furn
+        rise = z_clear - self.h_start - t_perp / self.cos
+        x = self.x_furn - rise / self.tan
+        return min(self.x_furn, max(self.x_false + 1.0, x))
+
     def sikmina_foil_pts(self) -> list[tuple[float, float]]:
-        """Jutafol 145 Al on the attic side of the CD (below mineral wool)."""
-        return self._slope_band_pts(self.t_foil_inner, self.t_foil_outer)
+        """Jutafol N AL 170 Speciál on the attic side of the CD (below mineral wool)."""
+        x_stop = self.x_right_pack_stop(self.t_foil_inner)
+        return self._slope_band_pts(self.t_foil_inner, self.t_foil_outer, x_stop)
 
     def _sikmina_segments(self) -> list[tuple[tuple[float, float], tuple[float, float]]]:
         """Ceiling polyline segments on the šikminy (room face), left then right."""
@@ -800,25 +816,27 @@ class ObyvakLayout:
         ]
 
     def vata_pts(self) -> list[tuple[float, float]]:
-        """Mineral wool below the rafters: above the CD / GKF lid, up to the underside.
+        """Unifit 035 below the rafters: above the CD / GKF lid, up to the underside.
 
-        The bays *between* rafters are ``vata_rafter_bay_pts`` (same material).
-        This polygon is also the 2D cut through a krokev, where the timber is solid
-        and the bay fill is not in the plane.
+        Both slopes are filled to the rafter. The right (cabinet) gap opens to
+        ``l_hanger_right`` and is wool, not air. The bays *between* rafters are
+        ``vata_rafter_bay_pts`` (same product, 160 mm). This polygon is also the
+        2D cut through a krokev, where the timber is solid and the bay fill is
+        not in the plane.
         """
         p = self.p
         # Wool sits above the foil (attic side of CD).
         t_below = self.t_foil_outer
-        z_slope_furn = self.z_slope_offset(self.x_furn, t_below)
+        # Stop with the foil, where the slope meets the lid. Past that the
+        # wool sits on the horizontal CD. The right-hand gap stays full.
+        x_end = self.x_right_pack_stop(self.t_foil_inner)
+        z_end = self.z_slope_offset(x_end, t_below)
         z_horiz_cd_top = self.z_soffit_lid + p.sdk_t + p.cd_t
-        # The lid over the ducts is above the slope pack, so the wool steps up
-        # at the furniture line. Following the slope plane into the bay would
-        # cut through the NH face and the pipes.
         return [
             (0.0, self.z_slope_offset(0.0, t_below)),
             (self.x_false, self.z_slope_offset(self.x_false, t_below)),
-            (self.x_furn, z_slope_furn),
-            (self.x_furn, z_horiz_cd_top),
+            (x_end, z_end),
+            (x_end, z_horiz_cd_top),
             (p.room_width, z_horiz_cd_top),
             (p.room_width, self.z_raf(p.room_width)),
             (self.x_ridge, self.z_raf(self.x_ridge)),

@@ -26,7 +26,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-from obyvak import build
+from obyvak import FACE_GAP, build
 from obyvak_geom import (
     LABEL_BASS_CD,
     LABEL_BASS_GKB,
@@ -79,17 +79,29 @@ URL_RF = "https://www.rigips.cz/produkty/protipozarni-deska-rf-df/"
 URL_RF_DEK = (
     "https://www.dek.cz/produkty/detail/3630042500-sadrokarton-po-deska-rf-12-5mm-1250-2000mm"
 )
-URL_JUTAFOL = "https://www.juta.cz/cs/produkty/parozabrany"
+URL_JUTAFOL = "https://www.jutadachshop.cz/122-jutafol-n-al-170-special.html"
+URL_JUTAFOL_TL = "https://www.ebau.cz/user/related_files/tl-jutafol-n-170-al-cz.pdf"
 URL_JUTAFOL_SHOP = (
     "https://www.izomat.cz/parozabrana-juta-jutafol-n-al-170-special.html"
 )
 URL_GKB = "https://www.rigips.cz/produkty/stavebni-deska-rb-a/"
 URL_CD = "https://www.rigips.cz/produkty/r-cd-profil/"
 URL_CD_DEK = "https://www.dek.cz/produkty/vypis/4167-cd-profily-na-strop/28565-rigips"
-URL_DIRECT = "https://www.rigips.cz/produkty/primy-zaves/"
-URL_DIRECT_DEK = (
-    "https://www.dek.cz/produkty/detail/3630551425-primy-zaves-60-125-mm-1-00mm-100-ks-bal"
+URL_DIRECT = (
+    "https://www.dek.cz/produkty/detail/3631100170-primy-zaves-cd-i-drevo-200mm-dkm"
 )
+URL_DIRECT_DEK = URL_DIRECT
+URL_UNIFIT_TL = "https://www.e-sadrokartony.cz/storage/TL-Knauf-Insulation-Unifit-035.pdf"
+URL_UNIFIT_160 = (
+    "https://www.dek.cz/produkty/detail/1460107750-knauf-unifit-035-160mm-3-84m2-role"
+)
+URL_UNIFIT_140 = (
+    "https://www.dek.cz/produkty/detail/1460107749-knauf-unifit-035-140mm-4-44m2-role"
+)
+# DEK sale prices, Kč s DPH, October 2026. 140/160 mm rolls are "na poptávku".
+UNIFIT_160_KC_M2 = 242.24
+UNIFIT_140_KC_M2 = 212.00
+UNIFIT_KC_M3 = UNIFIT_140_KC_M2 / 0.140
 URL_NONIUS_TOP = "https://www.rigips.cz/produkty/nonius-horni-dil/"
 URL_NONIUS_TOP_SHOP = "https://www.izomat.cz/zaves-rigips-nonius-horni-340-mm-100-ks-baleni.html"
 URL_NONIUS_BOT = "https://www.rigips.cz/produkty/nonius-spodni-dil-pro-cd/"
@@ -186,6 +198,48 @@ def _product(name: str, url: str = "") -> str:
     return f"{name}\n{url}" if url else name
 
 
+def _polygon_area_mm2(pts: list[tuple[float, float]]) -> float:
+    area = 0.0
+    for (x0, z0), (x1, z1) in zip(pts, pts[1:] + pts[:1]):
+        area += x0 * z1 - x1 * z0
+    return abs(area) * 0.5
+
+
+def _bay_wool_m3(p: ObyvakParams, g: ObyvakLayout) -> float:
+    """Volume of the 160 mm bays, with the same 1 mm cheek clearance as the solid."""
+    gap = FACE_GAP
+    bay_raw = g.vata_rafter_bay_pts()
+    bay_pts = [(min(max(x, gap), p.room_width - gap), z - gap) for x, z in bay_raw]
+    area = _polygon_area_mm2(bay_pts)
+    half = p.rafter_w * 0.5
+    cursor = gap
+    y1 = p.room_length - gap
+    length = 0.0
+    for yc in g.rafter_y_stations(gap, y1):
+        ya = yc - half - gap
+        yb = yc + half + gap
+        if ya - cursor > gap:
+            length += ya - cursor
+        cursor = max(cursor, yb)
+    if y1 - cursor > gap:
+        length += y1 - cursor
+    return area * length / 1e9
+
+
+def _slope_hanger_lengths(g: ObyvakLayout) -> list[tuple[str, float]]:
+    """(side, mm) for hangers that the 3D build actually places."""
+    out: list[tuple[str, float]] = []
+    for st in g.sikmina_cd_stations():
+        xs = [pt[0] for pt in g.sikmina_cd_quad(*st)]
+        if min(xs) < 1.0 or max(xs) > g.x_furn - 1.0:
+            continue
+        quad = g.hanger_quad(*st)
+        (x0, z0), (x1, z1) = quad[1], quad[2]
+        side = "L" if st[0] < g.x_false else "R"
+        out.append((side, math.hypot(x1 - x0, z1 - z0)))
+    return out
+
+
 def collect_quantities():
     p = ObyvakParams()
     g = ObyvakLayout(p)
@@ -262,8 +316,10 @@ def collect_quantities():
         "n_soffit_ud": len(by[LABEL_SOFFIT_UD]),
         "n_ducts": len(by[LABEL_SOFFIT_DUCT]),
         "plenum_wool_m3": _volume_m3(by[LABEL_PLENUM_WOOL]),
+        "bay_wool_m3": _bay_wool_m3(p, g),
         "soffit_wool_m3": _volume_m3(by[LABEL_SOFFIT_WOOL]),
         "bass_wool_m3": _volume_m3(by[LABEL_BASS_WOOL]),
+        "hanger_lengths": _slope_hanger_lengths(g),
         "bass_gkb_m2": _volume_m3(by[LABEL_BASS_GKB]) / (p.bass_k_gkb / 1000.0),
     }
 
@@ -276,8 +332,22 @@ PRICE = {
     "jutafol_m2": (35.73, f"IZOMAT JUTAFOL N AL 170 Speciál · {URL_JUTAFOL_SHOP}"),
     "gkb_m2": (96.0, "NonstopStavebniny / DEK RB~GKB orientačně"),
     "cd_bm": (29.21, f"DEK R-CD · {URL_CD_DEK}"),
-    "direct_ks": (6.27, f"DEK KB510154 · {URL_DIRECT_DEK}"),
-    "nonius_top_ks": (12.71, f"IZOMAT horní 340 · {URL_NONIUS_TOP_SHOP}"),
+    "direct_ks": (
+        12.52,
+        f"DEK DK Mont 200 mm, balení 100 ks / 1 252,30 Kč s DPH · {URL_DIRECT_DEK}",
+    ),
+    "nonius_top_ks": (
+        15.68,
+        f"IZOMAT Rigips Nonius horní 440 mm, 1 568,16 Kč/100 ks s DPH · {URL_NONIUS_TOP_SHOP}",
+    ),
+    "unifit_160_m2": (
+        UNIFIT_160_KC_M2,
+        f"DEK Unifit 035 160 mm, {UNIFIT_160_KC_M2:.2f} Kč/m² s DPH, na poptávku · {URL_UNIFIT_160}",
+    ),
+    "unifit_m3": (
+        round(UNIFIT_KC_M3, 2),
+        f"DEK Unifit 035 140 mm, {UNIFIT_140_KC_M2:.2f} Kč/m² → {UNIFIT_KC_M3:.2f} Kč/m³ · {URL_UNIFIT_140}",
+    ),
     "nonius_bot_ks": (10.43, f"DEK spodní CD · {URL_NONIUS_BOT_DEK}"),
     "nonius_pin_ks": (2.98, f"IZOMAT závlačka · {URL_NONIUS_PIN_SHOP}"),
     "trmen_ks": (477.0, "ceník Rigips KB517112 (sci-data / distributor) — ověřit nabídkou"),
@@ -299,10 +369,24 @@ def _nonius_set_price() -> tuple[float, str]:
 
 def build_lines(q) -> dict[str, list[Line]]:
     p = q["p"]
+    g = q["g"]
     face_s = q["slope_face"]
     face_k = q["soffit_face"]
     face_t = q["trap_face"]
     nonius_unit, nonius_src = _nonius_set_price()
+    bay_clear = p.rafter_spacing - p.rafter_w
+    roof_slope_m2 = (p.room_width / g.cos) * p.room_length / 1e6
+    between_m2 = roof_slope_m2 * (bay_clear / p.rafter_spacing)
+    # Solid is plenum void + bays. The bay piece is the analytical 160 mm fill.
+    plenum_void_m3 = max(0.0, q["plenum_wool_m3"] - q["bay_wool_m3"])
+    hangs = q["hanger_lengths"]
+    left_hang = max((length for side, length in hangs if side == "L"), default=0.0)
+    right_hang = max((length for side, length in hangs if side == "R"), default=0.0)
+    soffit_drop = 0.0
+    if g.horiz_cd_x_stations():
+        xc = g.horiz_cd_x_stations()[0]
+        soffit_drop = g.horiz_hanger_top_z(xc) - g.horiz_hanger_bot_z()
+    wool_tl = f"TL Unifit 035 · {URL_UNIFIT_TL}"
 
     basic_kg_s = face_s * STOSILENT_BASIC_KG_M2
     finish_kg_s = face_s * STOSILENT_FINISH_KG_M2
@@ -361,18 +445,18 @@ def build_lines(q) -> dict[str, list[Line]]:
             4,
             "Parozábrana",
             "Reflexní parozábrana Al",
-            _product("Jutafol 145 Al (JUTA; retail N AL 170 Speciál 75 m²)", URL_JUTAFOL),
-            "Al reflex · Sd vysoké · role 1,5×50 m",
+            _product("Jutafol N AL 170 Speciál", URL_JUTAFOL),
+            "sd > 300 m · role 1,5×50 m = 75 m²",
             face_s,
             "m²",
             10,
             PRICE["jutafol_m2"][0],
-            PRICE["jutafol_m2"][1],
+            f"{PRICE['jutafol_m2'][1]} · TL {URL_JUTAFOL_TL}",
             f"Na attic straně CD, pod minerální vlnou (stejně jako zbytek domu — "
             f"ne proměnlivá fólie). Plocha šikmin {face_s:.2f} m². "
             f"S rezervou 10 % ≈ {_fmt(face_s * 1.1, 1)} m² "
             f"≈ {_ceil_pack(face_s * 1.1, 75.0)}× role 75 m². "
-            "Přesahy: JUTAFOL SP AL / SP 1.",
+            "Spoje JUTAFOL SP AL / SP 1, napojení JUTAFOL MASTIC.",
         ),
         Line(
             5,
@@ -403,42 +487,62 @@ def build_lines(q) -> dict[str, list[Line]]:
         Line(
             7,
             "Závěs — okenní šikmina",
-            "Přímý závěs 125 mm",
-            _product("Rigips přímý závěs 125 mm, KB510154", URL_DIRECT),
-            "125 mm",
+            "Přímý závěs 200 mm DK Mont",
+            _product("Přímý závěs 200 mm DK Mont 3631100170", URL_DIRECT),
+            "200 mm",
             q["n_direct"],
             "ks",
             8,
             PRICE["direct_ks"][0],
             PRICE["direct_ks"][1],
-            "Kotvení z boku krokve.",
+            f"Kotvení z boku krokve. Modelové svěšení {left_hang:.0f} mm, noha 200 mm.",
         ),
         Line(
             8,
             "Závěs — šikmina u skříní",
             "Nonius sada (horní+spodní+2× závlačka)",
-            _product("Rigips Nonius horní 340/440 + spodní CD + 2× závlačka", URL_NONIUS_TOP),
-            "horní 340/440 dle svěšení",
+            _product("Rigips Nonius horní 440 + spodní CD + 2× závlačka", URL_NONIUS_TOP),
+            "horní 440 mm",
             q["n_slope_nonius"],
             "ks",
             8,
             nonius_unit,
             nonius_src,
-            "Svěšení otevírá se k nábytku.",
+            f"Pravá šikmina. Nejdelší svěšení v modelu {right_hang:.0f} mm (u okapu).",
         ),
         Line(
             9,
-            "Výplň dutiny / mezi krokvemi",
-            "Minerální vlna",
-            "Výrobek dosud nezvolen",
-            "void ~80 mm + mezi krokvemi 160 mm",
-            q["plenum_wool_m3"],
+            "Minerální vlna mezi krokve",
+            "Knauf Unifit 035 160 mm",
+            _product("Knauf Insulation Unifit 035, 160 mm", URL_UNIFIT_160),
+            "160 mm · řez ~790 mm",
+            between_m2,
+            "m²",
+            10,
+            PRICE["unifit_160_m2"][0],
+            f"{PRICE['unifit_160_m2'][1]} · {wool_tl}",
+            f"Plocha sklonu nad místností {roof_slope_m2:.2f} m² × "
+            f"({bay_clear:.0f}/{p.rafter_spacing:.0f}). "
+            f"Šikmina po nábytek by byla {face_s * bay_clear / p.rafter_spacing:.2f} m²; "
+            "model vyplňuje pole i nad kastlíkem. "
+            "Specifikace uvádí roli 1200×4000; DEK aktuálně 1200×3200 (3,84 m²).",
+        ),
+        Line(
+            "9b",
+            "Minerální vlna plénum",
+            "Knauf Unifit 035 140 mm (L) / plná mezera (P)",
+            _product("Knauf Insulation Unifit 035", URL_UNIFIT_140),
+            f"L {p.plenum_t:.0f} mm / P {g.l_hanger_right:.0f} mm",
+            plenum_void_m3,
             "m³",
             10,
-            None,
-            "—",
-            "Nedořešeno: typ vlny (akustika σ≈12000). Ne NaturHeld Flex.",
-            True,
+            PRICE["unifit_m3"][0],
+            f"{PRICE['unifit_m3'][1]} · {wool_tl}",
+            f"Levá {p.plenum_t:.0f} mm. Pravá plná mezera {g.l_hanger_right:.0f} mm "
+            "(140+140+150 nebo 200+220), bez vzduchu. "
+            f"Objem z modelu {plenum_void_m3:.2f} m³ "
+            f"(celá vlna šikmin {q['plenum_wool_m3']:.2f} − pole {q['bay_wool_m3']:.2f}). "
+            "Specifikace uvádí roli 140 mm 1200×4500; DEK aktuálně 1200×3700 (4,44 m²).",
         ),
         Line(
             10,
@@ -516,15 +620,15 @@ def build_lines(q) -> dict[str, list[Line]]:
         Line(
             4,
             "Výplň akustické dutiny",
-            "Minerální vlna",
-            "Výrobek dosud nezvolen",
-            "za NH, zastaveno před potrubím",
+            "Knauf Unifit 035",
+            _product("Knauf Insulation Unifit 035", URL_UNIFIT_140),
+            "tloušťka dle modelu, před potrubím",
             q["soffit_wool_m3"],
             "m³",
             10,
             None,
-            "—",
-            "Nedořešeno: typ vlny.",
+            wool_tl,
+            "Stejný výrobek jako šikminy. Tloušťka zůstává dle modelu (zastaveno před potrubím).",
             True,
         ),
         Line(
@@ -572,14 +676,14 @@ def build_lines(q) -> dict[str, list[Line]]:
             8,
             "Závěs CD → krokve",
             "Nonius sada",
-            _product("Rigips Nonius sada", URL_NONIUS_TOP),
-            "≈400 mm svěšení",
+            _product("Rigips Nonius horní 440 + spodní CD + 2× závlačka", URL_NONIUS_TOP),
+            "horní 440 mm",
             q["n_soffit_nonius"],
             "ks",
             8,
             nonius_unit,
             nonius_src,
-            "1 závěs na krokev na rostovém CD.",
+            f"1 závěs na krokev na rostovém CD. Svěšení {soffit_drop:.0f} mm.",
         ),
         Line(
             9,
@@ -710,29 +814,29 @@ def build_lines(q) -> dict[str, list[Line]]:
         Line(
             "B1",
             "MW kuchyně u zdi",
-            "Minerální vlna",
-            "Výrobek dosud nezvolen",
+            "Knauf Unifit 035",
+            _product("Knauf Insulation Unifit 035", URL_UNIFIT_140),
             f"{p.bass_k_wool} mm",
             face_t * p.bass_k_wool / 1000.0,
             "m³",
             10,
             None,
-            "—",
-            f"Split {p.bass_k_wool}+{p.bass_k_air}+{p.bass_k_gkb} = {p.predstena_kitchen:.0f} mm. Štít se dvěma posuvnými dveřmi.",
+            wool_tl,
+            f"Split {p.bass_k_wool}+{p.bass_k_air}+{p.bass_k_gkb} = {p.predstena_kitchen:.0f} mm. Štít se dvěma posuvnými dveřmi. Tloušťka dle modelu.",
             True,
         ),
         Line(
             "C2",
             "MW obývák u zdi",
-            "Minerální vlna",
-            "Výrobek dosud nezvolen",
+            "Knauf Unifit 035",
+            _product("Knauf Insulation Unifit 035", URL_UNIFIT_140),
             f"{p.bass_l_wool} mm",
             face_t * p.bass_l_wool / 1000.0,
             "m³",
             10,
             None,
-            "—",
-            f"Split {p.bass_l_gkb}+{p.bass_l_air}+{p.bass_l_wool} = {p.predstena_living:.0f} mm. Štít s jedněmi posuvnými dveřmi, subwoofer v rohu u TV.",
+            wool_tl,
+            f"Split {p.bass_l_gkb}+{p.bass_l_air}+{p.bass_l_wool} = {p.predstena_living:.0f} mm. Štít s jedněmi posuvnými dveřmi, subwoofer v rohu u TV. Tloušťka dle modelu.",
             True,
         ),
     ]
@@ -741,7 +845,7 @@ def build_lines(q) -> dict[str, list[Line]]:
     basic_kg = basic_kg_s + basic_kg_k
     finish_kg = finish_kg_s + finish_kg_k
     nonius_ks = q["n_slope_nonius"] + q["n_soffit_nonius"]
-    wool = q["plenum_wool_m3"] + q["soffit_wool_m3"] + q["bass_wool_m3"]
+    other_wool = q["soffit_wool_m3"] + q["bass_wool_m3"]
     gkf = face_s + q["lid_area"]
     cd = q["slope_cd_lm"] + q["soffit_cd_lm"] + q["soffit_rost_cd_lm"] + q["bass_cd_lm"]
 
@@ -804,15 +908,16 @@ def build_lines(q) -> dict[str, list[Line]]:
         Line(
             5,
             "Parozábrana",
-            "Jutafol 145 Al",
-            _product("Jutafol 145 Al", URL_JUTAFOL),
+            "Jutafol N AL 170 Speciál",
+            _product("Jutafol N AL 170 Speciál", URL_JUTAFOL),
             "role 75 m²",
             face_s,
             "m²",
             10,
             PRICE["jutafol_m2"][0],
-            PRICE["jutafol_m2"][1],
-            f"Šikminy {face_s:.2f} m² (+10 % ≈ {_fmt(face_s * 1.1, 1)} m²). Nad CD, pod vlnou.",
+            f"{PRICE['jutafol_m2'][1]} · TL {URL_JUTAFOL_TL}",
+            f"Šikminy {face_s:.2f} m² (+10 % ≈ {_fmt(face_s * 1.1, 1)} m²). Nad CD, pod vlnou. "
+            "Spoje JUTAFOL SP AL / SP 1, napojení JUTAFOL MASTIC.",
         ),
         Line(
             6,
@@ -855,29 +960,29 @@ def build_lines(q) -> dict[str, list[Line]]:
         ),
         Line(
             9,
-            "Přímý závěs KB510154",
-            "Přímý závěs 125",
-            _product("Rigips KB510154", URL_DIRECT),
-            "125 mm",
+            "Přímý závěs 200 mm DK Mont",
+            "Přímý závěs 200 mm",
+            _product("DK Mont 3631100170", URL_DIRECT),
+            "200 mm",
             q["n_direct"],
             "ks",
             8,
             PRICE["direct_ks"][0],
             PRICE["direct_ks"][1],
-            "Okenní šikmina.",
+            f"Okenní šikmina. Svěšení {left_hang:.0f} mm. Balení 100 ks.",
         ),
         Line(
             10,
             "Nonius sada",
             "H+S+2× závlačka",
-            _product("Rigips Nonius sada", URL_NONIUS_TOP),
-            "340/440",
+            _product("Rigips Nonius horní 440 + spodní + 2× závlačka", URL_NONIUS_TOP),
+            "440",
             nonius_ks,
             "ks",
             8,
             nonius_unit,
             nonius_src,
-            "Šikminy u skříní + kastlík.",
+            f"Pravá šikmina + kastlík. Svěšení šikminy {right_hang:.0f} mm, kastlík {soffit_drop:.0f} mm.",
         ),
         Line(
             11,
@@ -894,21 +999,49 @@ def build_lines(q) -> dict[str, list[Line]]:
         ),
         Line(
             12,
-            "Minerální vlna (souhrn)",
-            "Minerální vlna",
-            "Výrobek dosud nezvolen",
-            "—",
-            wool,
-            "m³",
+            "Minerální vlna mezi krokve – Knauf Unifit 035 160 mm",
+            "Knauf Unifit 035 160 mm",
+            _product("Knauf Insulation Unifit 035 160 mm", URL_UNIFIT_160),
+            "160 mm",
+            between_m2,
+            "m²",
             10,
-            None,
-            "—",
-            f"Plenum {q['plenum_wool_m3']:.2f} + kastlík {q['soffit_wool_m3']:.2f} "
-            f"+ štíty {q['bass_wool_m3']:.2f} m³.",
-            True,
+            PRICE["unifit_160_m2"][0],
+            f"{PRICE['unifit_160_m2'][1]} · {wool_tl}",
+            f"m² = sklon {roof_slope_m2:.2f} × ({bay_clear:.0f}/{p.rafter_spacing:.0f}). "
+            "Řez ~790 mm. Specifikace 1200×4000; DEK 1200×3200.",
         ),
         Line(
             13,
+            "Minerální vlna plénum – Knauf Unifit 035 140 mm (L) / full gap (R)",
+            "Knauf Unifit 035",
+            _product("Knauf Insulation Unifit 035 140 mm", URL_UNIFIT_140),
+            f"L {p.plenum_t:.0f} / P {g.l_hanger_right:.0f} mm",
+            plenum_void_m3,
+            "m³",
+            10,
+            PRICE["unifit_m3"][0],
+            f"{PRICE['unifit_m3'][1]} · {wool_tl}",
+            f"Levá ×140/80 vůči původním 80 mm, pravá plná mezera {g.l_hanger_right:.0f} mm. "
+            f"Objem modelu {plenum_void_m3:.2f} m³.",
+        ),
+        Line(
+            14,
+            "Minerální vlna kastlík + štíty",
+            "Knauf Unifit 035",
+            _product("Knauf Insulation Unifit 035", URL_UNIFIT_140),
+            f"kastlík dle modelu · štíty {p.bass_k_wool:g}/{p.bass_l_wool:g} mm",
+            other_wool,
+            "m³",
+            10,
+            None,
+            wool_tl,
+            f"Kastlík {q['soffit_wool_m3']:.2f} + štíty {q['bass_wool_m3']:.2f} m³. "
+            "Tloušťky beze změny, stejný výrobek.",
+            True,
+        ),
+        Line(
+            15,
             "UD 28×27",
             "UD profil",
             "Rigips UD (obvod kastlíku)",
@@ -922,7 +1055,7 @@ def build_lines(q) -> dict[str, list[Line]]:
             True,
         ),
         Line(
-            14,
+            16,
             "Zavětrovací pásky 40×2",
             "Ocelová páska",
             "Výrobek dosud nezvolen",
@@ -936,7 +1069,7 @@ def build_lines(q) -> dict[str, list[Line]]:
             True,
         ),
         Line(
-            15,
+            17,
             "Spirála Ø160",
             "VZT potrubí",
             "Výrobce VZT dosud nezvolen",
@@ -950,7 +1083,7 @@ def build_lines(q) -> dict[str, list[Line]]:
             True,
         ),
         Line(
-            16,
+            18,
             "Dropy kastlíku",
             "Krátký závěs",
             "Dosud nezvolen",
@@ -964,7 +1097,7 @@ def build_lines(q) -> dict[str, list[Line]]:
             True,
         ),
         Line(
-            17,
+            19,
             "Úhelníky kastlíku (spoj + cleat)",
             "L-profil",
             "Dosud nezvolen",
@@ -978,7 +1111,7 @@ def build_lines(q) -> dict[str, list[Line]]:
             True,
         ),
         Line(
-            18,
+            20,
             "Nástěnné úhelníky kastlíku",
             "Úhelník",
             "Dosud nezvolen",

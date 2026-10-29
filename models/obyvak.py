@@ -16,9 +16,9 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
   (opposite cabinets).
 - Floor slab is the clear room only; perimeter walls own the strip below z=0.
 - Šikminy: NaturHeld 140 (80) screwed through GKF into CD ⊥ krokvím
-  → Jutafol 145 Al on the attic face of the CD → přímý závěs 125 on the
-  window slope, Nonius on the cabinet slope → mineral wool (80 mm below +
-  160 mm between rafters) → krokve 100/160 @ 875 + straps.
+  → Jutafol N AL 170 Speciál on the attic face of the CD → přímý závěs 200 on the
+  window slope, Nonius on the cabinet slope → Knauf Unifit 035 (140 mm below +
+  160 mm between rafters; right slope: full gap ≈429 mm) → krokve 100/160 @ 875 + straps.
   No slope latě and no Flex. `rafters` = roof timber. The kastlík frame is
   CD 60×27 plus a UD channel on the eave wall — no timber battens.
 - Soffit box: 40 mm NH L over cabinets (20 mm gap); mineral wool + CD/UD rost
@@ -838,7 +838,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     krov_pts = _shrink_band(g.krov_pts(), top_n=3, gap=gap)
     krytina_pts = [(x, z + gap if i < 3 else z) for i, (x, z) in enumerate(g.krytina_pts())]
     vata_pts = [
-        (min(max(x, gap), p.room_width - gap), z + gap if i < 4 else z - gap)
+        (min(max(x, gap), p.room_width - gap), z + gap if i < 5 else z - gap)
         for i, (x, z) in enumerate(g.vata_pts())
     ]
 
@@ -869,8 +869,9 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         roofing_cutters,
         LABEL_ROOFING,
     )
-    # Mineral wool: the void above the CD pack, plus the bays between krokve.
-    # Same part. The vent channel above the rafter top stays empty.
+    # Unifit 035: the void above the CD pack (full right-slope gap, no air),
+    # plus the 160 mm bays between krokve. Same part. The vent channel above
+    # the rafter top stays empty.
     vata = _extrude_y(xz_face(vata_pts, LABEL_PLENUM_WOOL), gap, p.room_length - gap, LABEL_PLENUM_WOOL)
     bay_raw = g.vata_rafter_bay_pts()
     bay_pts = [
@@ -939,7 +940,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         if min(xs) < 1.0 or max(xs) > g.x_furn - 1.0:
             continue
         hang_quad = g.hanger_quad(*st)
-        # Window slope stays parallel to the rafters (~80 mm). Direct hanger 125.
+        # Window slope stays parallel to the rafters (140 mm plenum). Direct hanger 200.
         # Cabinet slope opens toward the furniture line — Nonius from the false
         # ridge onward (pack peak at x_false, left of the roof ridge).
         hang_label = LABEL_SLOPE_DIRECT if st[0] < g.x_false else LABEL_SLOPE_NONIUS
@@ -954,7 +955,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
             )
     parts.extend(zaves_parts)
 
-    # 5b) Jutafol 145 Al — attic face of CD, below mineral wool. Hangers pierce it.
+    # 5b) Jutafol N AL 170 Speciál — attic face of CD, below mineral wool. Hangers pierce it.
     foil_part = _add_band(g.sikmina_foil_pts(), LABEL_SLOPE_FOIL)
     if zaves_parts:
         foil_part = _cut_away(foil_part, zaves_parts, LABEL_SLOPE_FOIL)
@@ -1653,8 +1654,8 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
         ),
         (
             on_face(x_mid, y_lat, t_hanger),
-            "Direct hanger 125 mm\nCD → side of rafter",
-            "Přímý závěs 125 mm\nCD → bok krokve",
+            "Direct hanger 200 mm\nDK Mont 3631100170\nCD → side of rafter",
+            "Přímý závěs 200 mm\nDK Mont 3631100170\nCD → bok krokve",
         ),
         (
             on_face(x_in, y_lat, t_cd),
@@ -1762,18 +1763,18 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     sec_notes = [
         (
             on_face(x_wool, y_note, t_wool),
-            f"Mineral wool\n{raf_t} mm between + {plenum_mm} mm below rafters",
-            f"Minerální vlna\n{raf_t} mm mezi + {plenum_mm} mm pod krokvemi",
+            f"Unifit 035\n{raf_t} mm between + {plenum_mm} mm below rafters\nright slope full gap",
+            f"Unifit 035\n{raf_t} mm mezi + {plenum_mm} mm pod krokvemi\npravá šikmina plná mezera",
         ),
         (
             on_face(x_hang, y_note, t_hanger),
-            "Direct hanger 125 mm (window)\nNonius 340/440 mm (cabinet)",
-            "Přímý závěs 125 mm (okna)\nNonius 340/440 mm (skříně)",
+            "Direct hanger 200 mm (window)\nDK Mont 3631100170\nNonius 440 mm (cabinet)",
+            "Přímý závěs 200 mm (okna)\nDK Mont 3631100170\nNonius horní 440 mm (skříně)",
         ),
         (
             on_face(x_foil, y_note, t_foil),
-            "Jutafol 145 Al",
-            "Jutafol 145 Al",
+            "Jutafol N AL 170 Speciál",
+            "Jutafol N AL 170 Speciál",
         ),
         (
             on_face(x_cd, y_note, t_cd),

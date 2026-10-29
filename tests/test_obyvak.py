@@ -103,7 +103,7 @@ def test_layout_ceiling_and_gable():
     assert abs(g.t_foil_outer - g.t_foil_inner - p.foil_t) < 1e-9
     assert abs(g.t_foil_inner - g.t_cd_outer) < 1e-9
     assert abs(g.t_soft_below_sdk - (g.t_nh_face + p.sdk_t)) < 1e-9
-    assert abs(g.t_left - 204.5) < 1e-9
+    assert abs(g.t_left - 264.5) < 1e-9
     # Kitchen wool stops 20 mm short of the back of the front CD.
     assert abs(p.bass_k_wool - 130.5) < 1e-9
     assert abs(p.bass_k_air - (p.cd_t + 20.0)) < 1e-9
@@ -138,7 +138,8 @@ def test_layout_ceiling_and_gable():
     assert g.x_sdk_break == g.x_nh_inner
     assert g.x_sdk_break > g.x_furn
     assert g.x_gkf_kink < g.x_furn
-    assert g.x_furn - g.x_gkf_kink < 80.0
+    # 140 mm plenum drops the slope; the lid Z does not, so the butt moves room-ward.
+    assert 110.0 < g.x_furn - g.x_gkf_kink < 140.0
     assert g.x_sdk_break - g.x_gkf_kink > p.cd_w
     t0 = g.t_nh_face + g.t_flex_pack
     assert abs(g.z_slope_plane_offset(g.x_gkf_kink, t0) - g.z_soffit_lid) < 1e-6
@@ -219,6 +220,66 @@ def test_mineral_wool_fills_rafter_bays():
     assert _hit_volume(wool, (x, y_bay, z_mid)) > 100.0
     # The krokev itself stays timber.
     assert _hit_volume(wool, (x, stations[4], z_mid)) < 1.0
+
+
+def test_plenum_fill_hangers_and_vent():
+    """140 mm plenum: full right gap is wool, vent stays empty, hangers fit the stock."""
+    import math
+
+    from build123d import Box, Location
+
+    p = ObyvakParams()
+    g = build_layout(p)
+    assert p.plenum_t == 140.0
+    assert g.z_soffit_lid == p.eave_wall_z + p.plate_h - p.sdk_t
+    assert abs(g.l_hanger_right - 429.3) < 1.0
+
+    def _lengths():
+        found = []
+        for st in g.sikmina_cd_stations():
+            xs = [pt[0] for pt in g.sikmina_cd_quad(*st)]
+            if min(xs) < 1.0 or max(xs) > g.x_furn - 1.0:
+                continue
+            quad = g.hanger_quad(*st)
+            (x0, z0), (x1, z1) = quad[1], quad[2]
+            side = "L" if st[0] < g.x_false else "R"
+            found.append((side, math.hypot(x1 - x0, z1 - z0)))
+        return found
+
+    hangs = _lengths()
+    left = [n for side, n in hangs if side == "L"]
+    right = [n for side, n in hangs if side == "R"]
+    assert left and right
+    assert all(120.0 < n < 160.0 for n in left)
+    # 200 mm leg reaches the underside; the spare folds up the cheek and stays
+    # inside the 160 mm rafter, clear of the 40 mm vent.
+    assert all(0.0 < 200.0 - n < p.rafter_t - p.vent_t for n in left)
+    assert all(400.0 < n < 440.0 for n in right)
+    xc = g.horiz_cd_x_stations()[0]
+    soffit_drop = g.horiz_hanger_top_z(xc) - g.horiz_hanger_bot_z()
+    assert soffit_drop < 440.0
+
+    shape, _ = build(p)
+    wool = _labeled(shape, LABEL_PLENUM_WOOL)[0]
+
+    def _hit_volume(xyz) -> float:
+        hit = wool.intersect(Location(xyz) * Box(8, 8, 8))
+        if hit is None:
+            return 0.0
+        solids = list(hit.solids()) if hasattr(hit, "solids") else [hit]
+        return sum(float(s.volume) for s in solids if s is not None)
+
+    stations = g.rafter_y_stations(FACE_GAP, p.room_length - FACE_GAP)
+    y_bay = 0.5 * (stations[4] + stations[5])
+    x_right = 0.5 * (g.x_ridge + g.x_furn)
+    z_foil = g.z_slope_offset(x_right, g.t_foil_outer)
+    mid = 0.5 * g.l_hanger_right
+    gap_pt = (x_right + g.sin * mid, y_bay, z_foil + g.cos * mid)
+    assert _hit_volume(gap_pt) > 100.0
+    # 15 mm above the rafter top is inside the 40 mm vent on both slopes.
+    for x in (0.45 * g.x_false, x_right):
+        vent_pt = (x, y_bay, g.z_raf_outer(x) + 15.0)
+        assert _hit_volume(vent_pt) < 1.0
 
 
 def test_sikminy_and_soffit_stack_in_3d():
@@ -606,7 +667,8 @@ def test_sikmina_drawing_scenes():
     assert any("625" in t for t in texts)
     assert any("krokv" in t.lower() for t in texts)
     assert any("60×27 mm" in t for t in texts)
-    assert any("125 mm" in t for t in texts)
+    assert any("200 mm" in t for t in texts)
+    assert any("3631100170" in t for t in texts)
     assert any("40×2 mm" in t for t in texts)
     assert not any("pozednic" in t.lower() or "věnc" in t.lower() for t in texts)
 
@@ -688,27 +750,29 @@ def test_sikmina_drawing_scenes():
     )
     assert "NaturHeld 140 80 mm" in joined
     assert "přes GKF → CD" in joined or "přes GKF" in joined
-    assert "Jutafol 145 Al" in joined
+    assert "Jutafol N AL 170 Speciál" in joined
     assert "GKF 12,5 mm" in joined
     assert "Vario" not in joined
     assert "Flex" not in joined
-    assert "Minerální vlna" in joined
+    assert "Unifit 035" in joined
     assert "160 mm mezi" in joined
-    assert "80 mm pod" in joined
+    assert "140 mm pod" in joined
+    assert "plná mezera" in joined
     assert "plénum" not in joined.lower()
     joined_en = " ".join(
         ann["text"]["en"] for ann in section["annotations"] if "text" in ann
     )
-    assert "Mineral wool" in joined_en
+    assert "Unifit 035" in joined_en
     assert "160 mm between" in joined_en
-    assert "80 mm below" in joined_en
-    assert "Jutafol 145 Al" in joined_en
+    assert "140 mm below" in joined_en
+    assert "Jutafol N AL 170 Speciál" in joined_en
     assert "GKF 12.5 mm" in joined_en
     assert "through GKF" in joined_en
     assert "plenum" not in joined_en.lower()
     assert "Nonius" in joined
-    assert "125 mm" in joined
-    assert "340/440 mm" in joined
+    assert "200 mm" in joined
+    assert "3631100170" in joined
+    assert "440 mm" in joined
     # StoSilent must not own the through-GKF note.
     for ann in section["annotations"]:
         if ann.get("kind") != "callout":
@@ -749,7 +813,7 @@ def test_sikmina_drawing_scenes():
     # Top of column is outside (wool near ridge); bottom is room face (NaturHeld).
     order = [t.split("\n")[0] for t in (a["text"]["en"] for a in callouts)]
     by_y = [t for _, t in sorted(zip(label_ys, order), reverse=True)]
-    assert by_y[0].startswith("Mineral wool")
+    assert by_y[0].startswith("Unifit 035")
     assert by_y[1].startswith("Direct hanger")
     assert by_y[2].startswith("Jutafol")
     assert by_y[-1].startswith("NaturHeld 140")
@@ -1061,7 +1125,7 @@ def test_soffit_acoustics_ignore_the_steel_section():
 
     geom = room_geometry()
     assert geom.soffit_board == 0.04
-    assert abs(geom.soffit - 11.82517944478819) < 1e-6
+    assert abs(geom.soffit - 11.00590583000325) < 1e-6
     assert abs(geom.soffit_wool_depth - 0.44760580837556746) < 1e-9
     assert abs(geom.soffit_air_depth - 0.32589419162443256) < 1e-9
 
