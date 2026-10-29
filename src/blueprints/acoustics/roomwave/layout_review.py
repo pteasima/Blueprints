@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
-from blueprints.acoustics.roomwave.geometry import Box, Shape, load_shape
+from blueprints.acoustics.roomwave.geometry import Shape, load_shape
 from blueprints.acoustics.roomwave.rays import room_facets
 
 ROOT = Path(__file__).resolve().parents[4]
@@ -22,6 +22,7 @@ _FILL = {
     "kitchen": "#f4f1ea",
     "tall": "#e4d2b0",
     "fridge": "#2c2c2c",
+    "oven": "#2a2a2a",
     "hood": "#d0d0d0",
     "island": "#f7f7f5",
     "table": "#c4a574",
@@ -44,7 +45,7 @@ def write_sheets(dest: Path | None = None) -> list[Path]:
         _section_xz(shape, out / "layout-section-xz.png"),
         _section_long(shape, out / "layout-section-long.png"),
         _mesh_3d(shape, out / "layout-mesh-3d.png"),
-        _compare(shape, out / "layout-compare.png"),
+        *_orthographic(shape, out),
     ]
     return paths
 
@@ -251,11 +252,19 @@ def _section_long(shape: Shape, path: Path) -> Path:
         ha="right",
         color="#222",
     )
+    ax.plot(
+        [sx(shape.y_kitchen), sx(shape.y_living)],
+        [shape.z_ridge, shape.z_ridge],
+        color="#6b4e2e",
+        lw=1.2,
+        ls="--",
+        label=f"false ridge {_mm(shape.z_ridge)} mm",
+    )
     ax.set_xlim(-0.2, shape.length + 0.2)
-    ax.set_ylim(-0.1, max(z_main) + 0.4)
+    ax.set_ylim(-0.15, shape.z_ridge + 0.35)
     ax.set_xlabel("kitchen gable on the left, TV gable on the right")
     ax.set_ylabel("Z (m)")
-    ax.set_title("Longitudinal view, same handedness as Petr's elevation")
+    ax.set_title("Longitudinal view. Pitch is across the width, so ridge and eave are level lines.")
     ax.legend(fontsize=8, loc="upper right")
     fig.tight_layout()
     fig.savefig(path, dpi=140)
@@ -276,9 +285,11 @@ def _mesh_3d(shape: Shape, path: Path) -> Path:
         "glass": "#d5e4f2",
         "sofa": "#c8b08a",
         "kitchen": "#dedad2",
+        "tall": "#e4d2b0",
+        "fridge": "#3a3a3a",
+        "oven": "#2a2a2a",
         "island": "#eeeae4",
         "table": "#b8956a",
-        "chair": "#e6e2dc",
         "shelf": "#e7d3a1",
         "living_trap": "#c5d4ea",
         "kitchen_trap": "#c5d4ea",
@@ -308,152 +319,288 @@ def _mesh_3d(shape: Shape, path: Path) -> Path:
     return path
 
 
-def _box_faces(box: Box) -> list[tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
-    x0, y0, z0, x1, y1, z1 = box.x, box.y, box.z, box.x1, box.y1, box.z1
-    p = lambda x, y, z: np.array([x, y, z], dtype=float)
-    return [
-        (p(x0, y0, z0), p(x1, y0, z0), p(x1, y1, z0), p(x0, y1, z0)),
-        (p(x0, y0, z1), p(x0, y1, z1), p(x1, y1, z1), p(x1, y0, z1)),
-        (p(x0, y0, z0), p(x0, y0, z1), p(x1, y0, z1), p(x1, y0, z0)),
-        (p(x0, y1, z0), p(x1, y1, z0), p(x1, y1, z1), p(x0, y1, z1)),
-        (p(x0, y0, z0), p(x0, y1, z0), p(x0, y1, z1), p(x0, y0, z1)),
-        (p(x1, y0, z0), p(x1, y0, z1), p(x1, y1, z1), p(x1, y1, z0)),
-    ]
+# Measured on docs/acoustics/reference.jpg. Interior corner where the kitchen
+# gable meets the cabinet wall, the corner where the TV gable meets it, and the
+# floor line. The eave (3151 mm) then lands on the drawing's ceiling line.
+_X_LEFT = 262
+_X_RIGHT = 2206
+_Y_FLOOR = 1077
+# Room pixels only, including the ridge above the reference's black bar and the
+# TV on the gable face to the right of the corner.
+_CROP = (180, 140, 2560, 1165)
+
+_RGBA = {
+    "sofa": (215, 196, 163, 255),
+    "kitchen": (244, 241, 234, 255),
+    "tall": (228, 210, 176, 255),
+    "fridge": (44, 44, 44, 255),
+    "oven": (28, 28, 28, 255),
+    "island": (247, 247, 245, 255),
+    "table": (196, 165, 116, 255),
+    "shelf": (196, 160, 106, 255),
+    "room": (247, 244, 238, 255),
+    "roof": (236, 228, 214, 255),
+    "trap": (197, 212, 230, 255),
+    "line": (34, 34, 34, 255),
+    "soffit": (138, 106, 50, 255),
+    "ridge": (107, 78, 46, 255),
+    "sub": (163, 59, 50, 255),
+    "tv": (20, 20, 20, 255),
+}
 
 
-def _ceiling_quads(shape: Shape, x_near: float) -> list[tuple[np.ndarray, ...]]:
-    """Slope and soffit in front of the camera, split so the pitch reads."""
-    y0, y1 = shape.y_living, shape.y_kitchen
-    cuts = np.linspace(y0, y1, 8)
-    x0 = min(x_near, shape.x_false - 0.2)
-    quads = []
-    for a, b in zip(cuts, cuts[1:]):
-        z_near = shape.z_eave + (x0 / shape.x_false) * (shape.z_ridge - shape.z_eave)
-        quads.append((
-            np.array([x0, a, z_near]),
-            np.array([shape.x_false, a, shape.z_ridge]),
-            np.array([shape.x_false, b, shape.z_ridge]),
-            np.array([x0, b, z_near]),
-        ))
-        quads.append((
-            np.array([shape.x_false, a, shape.z_ridge]),
-            np.array([shape.x_soffit, a, shape.z_eave]),
-            np.array([shape.x_soffit, b, shape.z_eave]),
-            np.array([shape.x_false, b, shape.z_ridge]),
-        ))
-        quads.append((
-            np.array([shape.x_soffit, a, shape.z_eave]),
-            np.array([shape.x_soffit, a, shape.z_soffit]),
-            np.array([shape.x_soffit, b, shape.z_soffit]),
-            np.array([shape.x_soffit, b, shape.z_eave]),
-        ))
-        quads.append((
-            np.array([shape.x_soffit, a, shape.z_soffit]),
-            np.array([shape.x_wall, a, shape.z_soffit]),
-            np.array([shape.x_wall, b, shape.z_soffit]),
-            np.array([shape.x_soffit, b, shape.z_soffit]),
-        ))
-    return quads
+def _ppm(length: float) -> float:
+    return (_X_RIGHT - _X_LEFT) / length
 
 
-def _compare(shape: Shape, path: Path) -> Path:
-    """Wide view toward the cabinet wall, kitchen gable on the left, beside Petr's image."""
-    cam = np.array([0.35, 5.55, 1.35])
-    forward = np.array([1.0, 0.0, 0.12])
-    forward = forward / np.linalg.norm(forward)
-    up = np.array([0.0, 0.0, 1.0])
-    right = np.cross(forward, up)
-    right = right / np.linalg.norm(right)
-    up_cam = np.cross(right, forward)
-    fov = np.deg2rad(118.0)
+def _px(y: float, z: float, length: float) -> tuple[float, float]:
+    scale = _ppm(length)
+    return _X_RIGHT - y * scale, _Y_FLOOR - z * scale
 
-    def project(points: np.ndarray) -> tuple[np.ndarray, np.ndarray, float]:
-        rel = points - cam
-        depth = rel @ forward
-        horizontal = rel @ right
-        vertical = rel @ up_cam
-        scale = 1.0 / np.tan(fov / 2.0)
-        safe = np.maximum(depth, 1e-3)
-        u = horizontal / safe * scale
-        v = vertical / safe * scale
-        return u, v, depth
 
-    faces: list[tuple[float, np.ndarray, np.ndarray, str]] = []
-    for quad in _ceiling_quads(shape, 1.15):
-        pts = np.vstack(quad)
-        u, v, depth = project(pts)
-        if float(np.min(depth)) < 0.35:
+def _font(size: int):
+    from PIL import ImageFont
+
+    return ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", size)
+
+
+def _dashed(draw, p0, p1, fill, width=2, dash=14, gap=8) -> None:
+    x0, y0 = p0
+    x1, y1 = p1
+    dist = float(np.hypot(x1 - x0, y1 - y0))
+    if dist < 1.0:
+        return
+    ux, uy = (x1 - x0) / dist, (y1 - y0) / dist
+    travelled = 0.0
+    while travelled < dist:
+        end = min(travelled + dash, dist)
+        draw.line(
+            [(x0 + ux * travelled, y0 + uy * travelled), (x0 + ux * end, y0 + uy * end)],
+            fill=fill,
+            width=width,
+        )
+        travelled += dash + gap
+
+
+def _rect(draw, length: float, y0: float, y1: float, z0: float, z1: float, **kwargs) -> None:
+    ax, ay = _px(y1, z1, length)
+    bx, by = _px(y0, z0, length)
+    draw.rectangle([ax, ay, bx, by], **kwargs)
+
+
+def _draw_elevation(shape: Shape, canvas, labels: bool, shell_fill: bool = True) -> None:
+    """Orthographic elevation in the reference pixel frame. Kitchen left, TV right."""
+    from PIL import ImageDraw
+
+    draw = ImageDraw.Draw(canvas)
+    length = shape.length
+    line = _RGBA["line"]
+
+    def poly(points, **kwargs):
+        draw.polygon([_px(y, z, length) for y, z in points], **kwargs)
+
+    # Roof above the window-wall cut, then the cut itself, then traps at the gables.
+    # The overlay skips these fills so the photograph stays visible.
+    if shell_fill:
+        poly(
+            [
+                (shape.y_living, shape.z_eave),
+                (shape.y_kitchen, shape.z_eave),
+                (shape.y_kitchen, shape.z_ridge),
+                (shape.y_living, shape.z_ridge),
+            ],
+            fill=_RGBA["roof"],
+        )
+        for y0, y1 in ((0.0, shape.y_living), (shape.y_kitchen, length)):
+            poly(
+                [(y0, shape.z_cut), (y1, shape.z_cut), (y1, shape.z_ridge), (y0, shape.z_ridge)],
+                fill=_RGBA["trap"],
+            )
+        poly(
+            [
+                (0.0, 0.0),
+                (0.0, shape.z_cut),
+                (shape.y_living, shape.z_cut),
+                (shape.y_living, shape.z_eave),
+                (shape.y_kitchen, shape.z_eave),
+                (shape.y_kitchen, shape.z_cut),
+                (length, shape.z_cut),
+                (length, 0.0),
+            ],
+            fill=_RGBA["room"],
+            outline=line,
+        )
+    # Far pieces first (cabinet wall), then pieces closer to the window wall.
+    # The sofa is two silhouettes. The chaise is the same Y span, toward the
+    # windows, so this elevation does not give it a separate outline.
+    outline = (40, 40, 40, 255)
+    sofa = [box for box in shape.boxes if box.name == "sofa"]
+    others = [box for box in shape.boxes if box.name != "sofa"]
+    for box in sorted(others, key=lambda item: item.x, reverse=True):
+        colour = _RGBA.get(box.name, (220, 220, 220, 255))
+        _rect(draw, length, box.y, box.y1, box.z, box.z1, fill=colour, outline=outline, width=2)
+    for group in (
+        [box for box in sofa if box.z1 > 0.75],
+        [box for box in sofa if box.z1 <= 0.75],
+    ):
+        if not group:
             continue
-        faces.append((float(np.mean(depth)), u, v, "#f3efe6"))
-    floor = (
-        np.array([1.15, 0.0, 0.0]),
-        np.array([shape.x_wall, 0.0, 0.0]),
-        np.array([shape.x_wall, shape.length, 0.0]),
-        np.array([1.15, shape.length, 0.0]),
-    )
-    u, v, depth = project(np.vstack(floor))
-    faces.append((float(np.mean(depth)), u, v, "#f7f5f2"))
-    for box in shape.boxes:
-        color = _FILL.get(box.name, "#dddddd")
-        for quad in _box_faces(box):
-            pts = np.vstack(quad)
-            u, v, depth = project(pts)
-            if float(np.min(depth)) < 0.25:
-                continue
-            faces.append((float(np.mean(depth)), u, v, color))
-    tv_x0, tv_x1, tz0, tz1 = shape.tv
-    tv = np.array([
-        [tv_x0, 0.04, tz0],
-        [tv_x1, 0.04, tz0],
-        [tv_x1, 0.04, tz1],
-        [tv_x0, 0.04, tz1],
-    ])
-    u, v, depth = project(tv)
-    faces.append((float(np.mean(depth)), u, v, "#1a1a1a"))
-    back = np.array([
-        [shape.x_wall, 0.0, 0.0],
-        [shape.x_wall, shape.length, 0.0],
-        [shape.x_wall, shape.length, shape.z_soffit],
-        [shape.x_wall, 0.0, shape.z_soffit],
-    ])
-    u, v, depth = project(back)
-    faces.append((float(np.mean(depth)) + 0.4, u, v, "#fbfbfb"))
+        _rect(
+            draw,
+            length,
+            min(box.y for box in group),
+            max(box.y1 for box in group),
+            min(box.z for box in group),
+            max(box.z1 for box in group),
+            fill=_RGBA["sofa"],
+            outline=outline,
+            width=2,
+        )
+    _tv_x0, _tv_x1, tz0, tz1 = shape.tv
+    _rect(draw, length, -0.02, 0.07, tz0, tz1, fill=_RGBA["tv"], outline=_RGBA["tv"])
     sub = next(marker for marker in shape.sources if marker.name == "sub")
-    sub_box = Box("sub", sub.x - 0.18, sub.y - 0.18, 0.0, 0.36, 0.36, 0.40)
-    for quad in _box_faces(sub_box):
-        u, v, depth = project(np.vstack(quad))
-        if float(np.min(depth)) > 0.25:
-            faces.append((float(np.mean(depth)), u, v, "#a33b32"))
-    faces.sort(key=lambda item: item[0], reverse=True)
+    sx, sy = _px(sub.y, 0.18, length)
+    draw.ellipse([sx - 8, sy - 8, sx + 8, sy + 8], fill=_RGBA["sub"], outline=(255, 255, 255, 255))
 
-    ref = Path("/workspace/obyvak-circled.jpg")
-    if ref.is_file():
-        fig, axes = plt.subplots(1, 2, figsize=(14.5, 5.6))
-        axes[0].imshow(plt.imread(ref))
-        axes[0].set_title("Petr's view, sub circled")
-        axes[0].axis("off")
-        ax = axes[1]
-    else:
-        fig, ax = plt.subplots(figsize=(12.4, 5.4))
-    for _depth, u, v, color in faces:
-        ax.fill(u, v, facecolor=color, edgecolor="#555555", lw=0.3)
-    su, sv, _sd = project(np.array([[sub.x, sub.y, 0.45]]))
-    ax.scatter(su, sv, s=80, c="#a33b32", zorder=6)
-    ax.annotate("sub", (su[0], sv[0]), textcoords="offset points", xytext=(-14, 8), color="#a33b32", fontsize=8)
-    # Person at the island, 1.75 m, for scale.
-    person = np.array([[2.35, 9.15, 0.0], [2.35, 9.15, 1.75]])
-    pu, pv, _pd = project(person)
-    ax.plot(pu, pv, color="#444", lw=3, solid_capstyle="round")
-    ax.scatter([pu[1]], [pv[1]], s=28, c="#444", zorder=5)
-    ax.set_aspect("equal")
-    ax.set_xlim(-1.05, 1.05)
-    ax.set_ylim(-0.48, 0.58)
-    ax.axis("off")
-    ax.set_title("Model, same viewpoint: cabinet wall, kitchen left, TV right")
-    fig.tight_layout()
-    fig.savefig(path, dpi=140)
-    plt.close(fig)
-    return path
+    # Shell lines on top of the fills. The cut is at the window wall, so the
+    # ceiling of the section is the eave. Ridge and soffit are the other end
+    # of the pitch, drawn so they stay visible.
+    _dashed(
+        draw,
+        _px(shape.y_living, shape.z_ridge, length),
+        _px(shape.y_kitchen, shape.z_ridge, length),
+        _RGBA["ridge"],
+        width=2,
+    )
+    _dashed(
+        draw,
+        _px(shape.y_living, shape.z_soffit, length),
+        _px(shape.y_kitchen, shape.z_soffit, length),
+        _RGBA["soffit"],
+        width=3,
+    )
+    draw.line([_px(0.0, 0.0, length), _px(length, 0.0, length)], fill=line, width=3)
+    draw.line([_px(0.0, 0.0, length), _px(0.0, shape.z_ridge, length)], fill=line, width=3)
+    draw.line([_px(length, 0.0, length), _px(length, shape.z_ridge, length)], fill=line, width=3)
+    draw.line(
+        [_px(shape.y_living, shape.z_eave, length), _px(shape.y_kitchen, shape.z_eave, length)],
+        fill=line,
+        width=2,
+    )
+    if not labels:
+        return
+    font = _font(22)
+    small = _font(18)
+    draw.text(_px(length - 0.15, shape.z_ridge - 0.05, length), "kitchen gable", fill=line, font=small)
+    rx, ry = _px(0.15, shape.z_ridge - 0.05, length)
+    draw.text((rx - 150, ry), "TV gable", fill=line, font=small)
+    draw.text(_px(shape.length * 0.55, shape.z_ridge + 0.02, length), "false ridge", fill=_RGBA["ridge"], font=small)
+    draw.text(
+        _px(shape.length * 0.62, shape.z_eave + 0.08, length),
+        "eave, cut at the window wall",
+        fill=line,
+        font=small,
+    )
+    draw.text(
+        _px(8.6, shape.z_soffit + 0.22, length),
+        "soffit underside",
+        fill=_RGBA["soffit"],
+        font=small,
+    )
+    draw.text(_px(0.55, shape.z_cut + 0.15, length), "trap", fill=(31, 78, 121, 255), font=small)
+    draw.text(_px(length - 0.15, shape.z_cut + 0.15, length), "trap", fill=(31, 78, 121, 255), font=small)
+    named = (
+        ("sofa", 2.15, 0.22),
+        ("lamella", 2.20, 1.55),
+        ("tall cabinets", 5.15, 1.70),
+        ("counters", 10.40, 0.28),
+        ("fridge", 9.02, 1.35),
+        ("oven", 7.72, 1.15),
+        ("island", 8.15, 0.32),
+        ("table", 5.15, 0.86),
+    )
+    for text, y, z in named:
+        draw.text(_px(y, z, length), text, fill=(30, 30, 30, 255), font=font)
+    draw.text((sx + 12, sy - 28), "sub", fill=_RGBA["sub"], font=small)
+    tvx, tvy = _px(-0.02, tz1, length)
+    draw.text((tvx - 36, tvy - 26), "TV", fill=line, font=small)
+    # 1 m scale, just under the floor line.
+    x0, y0 = _px(2.0, -0.22, length)
+    x1, _y1 = _px(1.0, -0.22, length)
+    draw.line([(x0, y0), (x1, y0)], fill=line, width=3)
+    draw.text(((x0 + x1) / 2 - 18, y0 + 4), "1 m", fill=line, font=small)
+
+
+def _orthographic(shape: Shape, out: Path) -> list[Path]:
+    """Side-by-side and a 50% overlay, both in the reference's pixel frame."""
+    from PIL import Image, ImageDraw
+
+    ref_path = ROOT / "docs" / "acoustics" / "reference.jpg"
+    ref = Image.open(ref_path).convert("RGBA")
+    model = Image.new("RGBA", ref.size, (255, 255, 255, 255))
+    _draw_elevation(shape, model, labels=True, shell_fill=True)
+
+    overlay_layer = Image.new("RGBA", ref.size, (0, 0, 0, 0))
+    _draw_elevation(shape, overlay_layer, labels=False, shell_fill=False)
+    # Half the render on the photograph. Pixels with nothing drawn stay the reference.
+    faded = overlay_layer.copy()
+    alpha = faded.getchannel("A").point(lambda value: int(value * 0.5))
+    faded.putalpha(alpha)
+    overlay = Image.alpha_composite(ref, faded)
+
+    left, top, right, bottom = _CROP
+    ref_c = ref.crop((left, top, right, bottom)).convert("RGB")
+    mod_c = model.crop((left, top, right, bottom)).convert("RGB")
+    gap = 28
+    side = Image.new("RGB", (ref_c.width * 2 + gap, ref_c.height + 46), (255, 255, 255))
+    side.paste(ref_c, (0, 46))
+    side.paste(mod_c, (ref_c.width + gap, 46))
+    caption = ImageDraw.Draw(side)
+    font = _font(28)
+    caption.text((24, 8), "Petr's elevation", fill=(20, 20, 20), font=font)
+    caption.text((ref_c.width + gap + 24, 8), "Model, same scale — orthographic, kitchen left, TV right", fill=(20, 20, 20), font=font)
+
+    paths = {
+        out / "layout-elevation.png": mod_c,
+        out / "layout-side-by-side.png": side,
+        out / "layout-overlay.png": overlay.crop((left, top, right, bottom)).convert("RGB"),
+    }
+    # layout-compare.png is the pair Petr reviews. The old wide-angle render is gone.
+    paths[out / "layout-compare.png"] = paths[out / "layout-side-by-side.png"]
+    written = []
+    for path, image in paths.items():
+        image.save(path, quality=92)
+        written.append(path)
+    _print_element_table(shape)
+    return written
+
+
+def _print_element_table(shape: Shape) -> None:
+    """Model edges against the lines measured on the reference, in millimetres."""
+    length = shape.length
+    scale = _ppm(length)
+
+    def z_of(py: float) -> float:
+        return (_Y_FLOOR - py) / scale
+
+    print(f"frame px/m {scale:.3f}  eave py { _px(0, shape.z_eave, length)[1]:.1f}  ridge py {_px(0, shape.z_ridge, length)[1]:.1f}")
+    print(f"soffit py {_px(0, shape.z_soffit, length)[1]:.1f}  floor py {_Y_FLOOR}")
+    groups: dict[str, list[Box]] = {}
+    for box in shape.boxes:
+        groups.setdefault(box.name, []).append(box)
+    for name, boxes in groups.items():
+        y0 = min(box.y for box in boxes)
+        y1 = max(box.y1 for box in boxes)
+        z0 = min(box.z for box in boxes)
+        z1 = max(box.z1 for box in boxes)
+        print(
+            f"{name:8} Y {y0*1000:7.0f}–{y1*1000:7.0f}  Z {z0*1000:6.0f}–{z1*1000:6.0f}"
+            f"  px x {_px(y1, 0, length)[0]:.0f}–{_px(y0, 0, length)[0]:.0f}"
+            f"  py {_px(0, z1, length)[1]:.0f}–{_px(0, z0, length)[1]:.0f}"
+        )
+    sub = next(marker for marker in shape.sources if marker.name == "sub")
+    print(f"sub      X {sub.x*1000:.0f} Y {sub.y*1000:.0f} Z {sub.z*1000:.0f}  px {_px(sub.y, 0.18, length)}")
+    print(f"reference ceiling line is py 524, which is Z {z_of(524)*1000:.0f} mm")
 
 
 def main() -> None:

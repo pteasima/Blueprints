@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import math
 
+import pytest
+
 from blueprints.acoustics.layers import surface_impedance
 from blueprints.acoustics.obyvak import Resistivity, slope_stack
 from blueprints.acoustics.roomwave.boundaries import impedance, membrane_impedance, passive
@@ -99,6 +101,31 @@ def test_thickness_choice_leaves_a_boomy_room_toward_the_window():
     ]
     # 100 and 120 are inside 0.40–0.90 s. 0.58 is closer to 0.60 than 0.72.
     assert choose_thickness(rows) == (120, "pleasant")
+
+
+def test_layout_keeps_the_solid_pieces_and_drops_the_open_ones():
+    shape = load_shape()
+    names = {box.name for box in shape.boxes}
+    assert names <= {"sofa", "shelf", "tall", "kitchen", "fridge", "oven", "island", "table"}
+    assert "hood" not in names
+    assert "chair" not in names
+    island = next(box for box in shape.boxes if box.name == "island")
+    assert island.dx == pytest.approx(1.20)
+    assert island.dy == pytest.approx(2.50)
+    assert island.dz == pytest.approx(0.90)
+    sofa = [box for box in shape.boxes if box.name == "sofa"]
+    assert max(box.x1 for box in sofa) - min(box.x for box in sofa) == pytest.approx(4.0)
+    assert max(box.y1 for box in sofa) - min(box.y for box in sofa) == pytest.approx(4.0)
+    table = next(box for box in shape.boxes if box.name == "table")
+    assert table.dz == pytest.approx(0.04)
+    for marker in (*shape.sources, *shape.receivers):
+        for box in shape.boxes:
+            inside = (
+                box.x < marker.x < box.x1
+                and box.y < marker.y < box.y1
+                and box.z < marker.z < box.z1
+            )
+            assert not inside, marker.name
 
 
 def test_shoebox_rays_land_near_sabine():
