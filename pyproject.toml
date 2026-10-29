@@ -14,6 +14,9 @@ dependencies = [
     # that commit tests against. shapely 2.2.0 is what its tiling code imports.
     "ifcopenshell==0.8.5",
     "shapely==2.2.0",
+    # Room-wave acoustics. Gmsh's wheel still needs libglu1-mesa on the system.
+    "gmsh>=4.12",
+    "matplotlib>=3.8",
 ]
 
 [project.optional-dependencies]
