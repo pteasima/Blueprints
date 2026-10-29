@@ -106,18 +106,19 @@ def test_thickness_choice_leaves_a_boomy_room_toward_the_window():
 def test_layout_keeps_the_solid_pieces_and_drops_the_open_ones():
     shape = load_shape()
     names = {box.name for box in shape.boxes}
-    assert names <= {"sofa", "shelf", "tall", "kitchen", "fridge", "oven", "island", "table"}
-    assert "hood" not in names
-    assert "chair" not in names
-    island = next(box for box in shape.boxes if box.name == "island")
-    assert island.dx == pytest.approx(1.20)
-    assert island.dy == pytest.approx(2.50)
-    assert island.dz == pytest.approx(0.90)
+    assert names <= {"sofa", "shelf", "tall", "kitchen"}
+    assert names.isdisjoint({"hood", "chair", "island", "table", "fridge", "oven"})
     sofa = [box for box in shape.boxes if box.name == "sofa"]
     assert max(box.x1 for box in sofa) - min(box.x for box in sofa) == pytest.approx(4.0)
     assert max(box.y1 for box in sofa) - min(box.y for box in sofa) == pytest.approx(4.0)
-    table = next(box for box in shape.boxes if box.name == "table")
-    assert table.dz == pytest.approx(0.04)
+    talker = next(marker for marker in shape.sources if marker.name == "talker")
+    assert talker.x == pytest.approx(3.00)
+    assert talker.y == pytest.approx(5.425)
+    assert talker.z == pytest.approx(1.50)
+    dining = next(marker for marker in shape.receivers if marker.name == "dining")
+    island = next(marker for marker in shape.receivers if marker.name == "island")
+    assert dining.z == pytest.approx(1.15)
+    assert island.z == pytest.approx(1.15)
     for marker in (*shape.sources, *shape.receivers):
         for box in shape.boxes:
             inside = (

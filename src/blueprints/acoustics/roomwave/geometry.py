@@ -161,18 +161,17 @@ def load_shape() -> Shape:
     # Cabinet wall, TV gable (Y = 0) toward kitchen. Petr's elevation has the
     # kitchen on the left and the TV on the right.
     #
-    # Kept as solids: sofa, lamella wall, tall wood cabinets, kitchen counters,
-    # island, fridge, the wall oven in that run, TV, sub. The dining table is a 40 mm top.
-    # Omitted, because a solid box would invent a closed surface: hood, the open
-    # hanging shelf above the island, dining chairs, plants, pendants, the person,
-    # the low bench under the TV. The oven is a flush face in the counter run.
-    # Cabinet-wall uppers in the white kitchen are omitted for the same reason.
+    # Kept as solids: sofa, lamella wall, tall wood cabinets, kitchen counters
+    # along both walls, rug (floor patch), TV, sub. Petr removed the island, the
+    # dining table, the fridge, and the oven. Also omitted, because a solid box
+    # would invent a closed surface: hood, the open hanging shelf, dining chairs,
+    # plants, pendants, the person, the low bench under the TV. Cabinet-wall
+    # uppers over the white kitchen stay out for the same reason.
     #
     # The sofa is Petr's 4.0 × 4.0 m. It starts 0.40 m off the TV gable so the
     # sub at 0.30 m from both walls stays outside the sofa. The lamella is the
-    # same run, just above the back. The island is his 2.5 × 1.2 × 0.9 m, long
-    # side along the room. The kitchen end sits on the drawn island; the extra
-    # length runs toward the dining table.
+    # same run, just above the back. The counter run is continuous; the fridge
+    # bay is the same 900 mm counter as the rest of the wall.
     sofa_y0, run = 0.40, 4.00
     sofa_y1 = sofa_y0 + run
     back_h, seat_h = 0.95, 0.60
@@ -191,39 +190,32 @@ def load_shape() -> Shape:
     # the 4.0 m shelf, so this run is shorter than the drawing.
     tall_y1 = 6.90
     tall = (Box("tall", x_wall - 0.60, sofa_y1, 0.0, 0.60, tall_y1 - sofa_y1, shelf_z1),)
-    # Fridge in the cabinet-wall run. Oven is not a separate solid.
-    fridge_y0, fridge_y1 = 8.70, 9.50
+    # Continuous counter. The fridge and oven are not boxes.
     kitchen = (
-        Box("kitchen", x_wall - 0.60, tall_y1, 0.0, 0.60, fridge_y0 - tall_y1, 0.90),
-        Box("kitchen", x_wall - 0.60, fridge_y1, 0.0, 0.60, length - fridge_y1, 0.90),
-        Box("fridge", x_wall - 0.65, fridge_y0, 0.0, 0.65, fridge_y1 - fridge_y0, 1.85),
-        # Wall oven in that run, flush with the counters. Not a separate tall box.
-        Box("oven", x_wall - 0.60, 7.52, 1.05, 0.60, 0.53, 0.45),
+        Box("kitchen", x_wall - 0.60, tall_y1, 0.0, 0.60, length - tall_y1, 0.90),
         Box("kitchen", 0.40, length - 0.60, 0.0, x_wall - 0.60 - 0.40, 0.60, 0.90),
         Box("kitchen", 0.40, length - 0.35, 1.45, x_wall - 0.60 - 0.40, 0.35, 0.75),
     )
-    # 1.2 m into the room, 2.5 m along it, 0.90 m aisle in front of the counters.
-    island = (Box("island", x_wall - 0.60 - 0.90 - 1.20, 7.30, 0.0, 1.20, 2.50, 0.90),)
-    table = (Box("table", 2.30, 4.80, 0.74, 1.40, 1.25, 0.04),)
-    boxes = sofa + shelf_box + tall + kitchen + island + table
+    boxes = sofa + shelf_box + tall + kitchen
 
     # TV on the living gable, edge-on in the cabinet-wall elevation. No bench.
     # Sub is on the floor in the cabinet-wall / TV-gable corner.
+    # The talker stands at the old dining table (X 2.30–3.70, Y 4.80–6.05), mouth at 1.50 m.
+    # Dining and island ears stay at those old positions, at 1.15 m, with the furniture gone.
     tv_x0, tv_x1 = 2.70, 4.30
     sources = (
         Marker("sub", x_wall - 0.30, 0.30, 0.25, "sub"),
         Marker("tv_l", tv_x0 + 0.12, 0.08, 1.15, "tv"),
         Marker("tv_r", tv_x1 - 0.12, 0.08, 1.15, "tv"),
-        Marker("talker", 3.00, 6.50, 1.20, "talk"),
+        Marker("talker", 3.00, 5.425, 1.50, "talk"),
     )
     seat_x = x_wall - 0.75
-    island_box = island[0]
     receivers = (
         Marker("sofa_1", seat_x, 1.30, 1.15, "sofa"),
         Marker("sofa_2", seat_x, 2.50, 1.15, "sofa"),
         Marker("sofa_3", seat_x, 3.60, 1.15, "sofa"),
         Marker("dining", 3.00, 5.40, 1.15, "dining"),
-        Marker("island", island_box.x - 0.25, island_box.y + 0.5 * island_box.dy, 1.15, "island"),
+        Marker("island", 2.40, 8.55, 1.15, "island"),
     )
     rug = (1.80, 5.20, 0.50, 4.60)
     shelf = (sofa_y0, sofa_y1, shelf_z0, shelf_z1)

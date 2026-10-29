@@ -513,11 +513,7 @@ def _draw_elevation(shape: Shape, canvas, labels: bool, shell_fill: bool = True)
         ("sofa", 2.15, 0.22),
         ("lamella", 2.20, 1.55),
         ("tall cabinets", 5.15, 1.70),
-        ("counters", 10.40, 0.28),
-        ("fridge", 9.02, 1.35),
-        ("oven", 7.72, 1.15),
-        ("island", 8.15, 0.32),
-        ("table", 5.15, 0.86),
+        ("counters", 8.80, 0.32),
     )
     for text, y, z in named:
         draw.text(_px(y, z, length), text, fill=(30, 30, 30, 255), font=font)

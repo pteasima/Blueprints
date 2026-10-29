@@ -1,6 +1,6 @@
 # Obývák layout for the wave model
 
-Review sheet. No acoustic solve on this furniture.
+Furniture Petr approved for the wave study.
 
 The comparison is an orthographic elevation of the cabinet wall, cut at the window wall. Kitchen gable is on the left, TV gable on the right, same handedness as Petr's drawing. The pitch runs across the width, so the ridge, the eave, and the soffit are level lines. The drawing's ceiling line is the eave.
 
@@ -17,9 +17,12 @@ An opaque box where the room is open would be worse than a gap. These are not in
 - The person.
 - The low bench under the TV.
 - Cabinet-wall uppers over the white kitchen. Above those counters the drawing is open wall. The shelf that used to be drawn there is the hanging shelf above.
-- Rug pattern. A plain rug patch stays on the floor for a later acoustic run. It is not a box in this elevation.
+- Rug pattern. A plain rug patch stays on the floor. It is not a box in this elevation.
+- The island.
+- The dining table.
+- The fridge, the oven, and every other dark-grey or black box. The TV mark and the sub dot stay.
 
-The dining table is a 40 mm top. The wall oven is a flush face in the counter run, not a box standing in the room. The chaise is the sofa's return toward the windows. In this elevation it sits inside the long run's length, because X is collapsed. The plan shows the L.
+The chaise is the sofa's return toward the windows. In this elevation it sits inside the long run's length, because X is collapsed. The plan shows the L. The fridge bay is the same 900 mm counter as the rest of the cabinet wall.
 
 ## Shell
 
@@ -45,25 +48,19 @@ Order on the cabinet wall, from the TV gable toward the kitchen. X is metres fro
 | Sofa chaise, dining end, toward the windows | 1350–5350 | 3300–4400 | seat 600, back 950 |
 | Lamella wall, behind that run | 5170–5350 | 400–4400 | 1020–2450 |
 | Tall wood units | 4750–5350 | 4400–6900 | 0–2450 |
-| Kitchen base, cabinet wall, dining side of the fridge | 4750–5350 | 6900–8700 | 0–900 |
-| Wall oven, flush with that base | 4750–5350 | 7520–8050 | 1050–1500 |
-| Fridge | 4700–5350 | 8700–9500 | 0–1850 |
-| Kitchen base, cabinet wall, kitchen side of the fridge | 4750–5350 | 9500–11100 | 0–900 |
+| Kitchen base, cabinet wall, including the old fridge bay | 4750–5350 | 6900–11100 | 0–900 |
 | Kitchen base, kitchen gable | 400–4750 | 10500–11100 | 0–900 |
 | Kitchen uppers, kitchen gable, 350 mm deep | 400–4750 | 10750–11100 | 1450–2200 |
-| Island, 2500 × 1200 × 900 | 2650–3850 | 7300–9800 | 0–900 |
-| Dining table, 40 mm top | 2300–3700 | 4800–6050 | 740–780 |
 | TV, on the TV gable, edge-on in the elevation | 2700–4300 | on the wall | 750–1700 |
+| Rug, floor patch, not a box | 1800–5200 | 500–4600 | floor |
 
 The sofa bounding box is 4000 × 4000 mm. It starts at Y = 400 mm so the sub, 300 mm from both walls, stays outside the sofa. The lamella is that same run, from just above the back to 20 mm under the soffit. Drawn depth is 180 mm. Acoustically it is still wooden lamellas 20 mm off the wall, no wool, about half the shelves filled with books.
 
-The island is Petr's 2.5 × 1.2 m, long side along the room, 900 mm high. It sits 900 mm in front of the counter face. The kitchen end is on the island in the drawing. The extra length runs toward the dining table.
-
-Ears: sofa at X = 4600, Y = 1300 / 2500 / 3600, Z = 1150. Dining at (3000, 5400, 1150). Island at (2400, 8550, 1150), just on the window side of the island. Talker at (3000, 6500, 1200). TV speakers at the screen edges, Y = 80, Z = 1150.
+Ears stay at 1150 mm: sofa at X = 4600, Y = 1300 / 2500 / 3600; the former dining spot at (3000, 5400); the former island spot at (2400, 8550), which was just on the window side of the deleted island. The talker stands on the old table footprint, (3000, 5425), mouth at 1500 mm. TV speakers at the screen edges, Y = 80, Z = 1150.
 
 ## Model against the drawing
 
-Positions are read on the scale above. A minus delta means the model is toward the TV gable, or lower. Petr's 4.0 m sofa and 2.5 m island override the drawing where they disagree. Those two rows are the conflicts.
+Positions are read on the scale above. A minus delta means the model is toward the TV gable, or lower. Petr's 4.0 m sofa overrides the drawing. The island, the table, the fridge, and the oven are out of the model, so they are not in this table.
 
 | Piece | Model | Drawing | Delta |
 | --- | --- | --- | --- |
@@ -75,11 +72,7 @@ Positions are read on the scale above. A minus delta means the model is toward t
 | Tall units, kitchen end | Y 6900 | wood ends about Y 6870 | +30 mm |
 | Tall units, TV end | Y 4400 | wood/shelf joint about Y 3750 | +650 mm, follows the 4.0 m shelf |
 | Tall units, top | Z 2450 | about Z 2500 | −50 mm |
-| Counter | Z 900 | worktop line about Z 990 | −90 mm |
-| Fridge | Y 8700–9500, Z 0–1850 | the dark column, same span | within 50 mm |
-| Oven | Y 7520–8050, Z 1050–1500 | the black door | within 50 mm |
-| Island | Y 7300–9800, Z 900 | about Y 7620–9800, top Z 770–900 | dining end −320 mm |
-| Dining top | Y 4800–6050, Z 740–780 | about Y 4760–6010, top Z 780 | within 50 mm |
+| Counter | Z 900, Y 6900–11100 | worktop line about Z 990; a fridge stood in part of this run | height −90 mm; the bay is now counter |
 | Sub | Y 300, on the floor | purple ring on the gable face, beside the arm | see below |
 | TV | edge-on at the corner, Z 750–1700 | screen is on the gable face, right of the corner | width is not along Y |
 
@@ -88,7 +81,6 @@ The purple ring is centered just past the TV corner, at about the height of the 
 ## Conflicts
 
 - Sofa and lamella are 4.00 m, from Y = 400 mm. The drawing's shelf is about 3.75 m and reaches the TV gable. The model starts 350 mm later, so the sub is not inside the sofa, and it ends 600 mm further toward the kitchen. The tall units start at that end, so their TV end is 650 mm further toward the kitchen than the wood/shelf joint. Their kitchen end matches the drawing.
-- Island is 2.50 m along the room. The drawing shows about 2.2 m. The kitchen end is on the drawn end. The dining end is 320 mm closer to the table.
 
 ## Sheets
 
@@ -101,4 +93,4 @@ The purple ring is centered just past the TV corner, at about the height of the 
 - `layout-compare.png` — the same pair as the side-by-side
 - `reference.jpg`
 
-No frequency sweep has been run on this layout.
+The wave study on this furniture is `obyvak-wave.md`.
