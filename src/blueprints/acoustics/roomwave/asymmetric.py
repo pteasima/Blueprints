@@ -1,12 +1,9 @@
-"""Asymmetric NaturHeld on the two slopes, pack depth matched left and right.
+"""Asymmetric NaturHeld on the two slopes. Rigid backing. No wool in the pack.
 
 Left is the window slope (X from the eave to the false ridge). Right is the
-cabinet slope (ridge to the soffit), the one beside the subwoofer. The
-ceiling drop is the same on both sides: mineral wool makes up the difference
-so NaturHeld plus mineral wool equals the thicker board. 120 mm is the whole
-pack and has no mineral wool behind it.
-
-References 80/80 and 100/100 are pure NaturHeld, as in the last run.
+cabinet slope (ridge to the soffit), the one beside the subwoofer. Each side
+is StoSilent on NaturHeld of the stated thickness, on rigid GKF. Mineral wool
+behind that gypsum is not in the impedance.
 """
 
 from __future__ import annotations
@@ -18,7 +15,7 @@ from pathlib import Path
 import numpy as np
 
 from blueprints.acoustics.layers import field_absorption, surface_impedance
-from blueprints.acoustics.obyvak import Resistivity, eyring_t
+from blueprints.acoustics.obyvak import Resistivity, eyring_t, slope_stack
 from blueprints.acoustics.roomwave.boundaries import betas
 from blueprints.acoustics.roomwave.geometry import Q_SUB, Variant, load_shape
 from blueprints.acoustics.roomwave.helmholtz import Field, beta_from_impedance
@@ -36,44 +33,27 @@ class Pair:
     name: str
     left_mm: int
     right_mm: int
-    padded: bool
-
-    @property
-    def total_mm(self) -> int:
-        return max(self.left_mm, self.right_mm) if self.padded else self.left_mm
-
-    def mineral_mm(self, side_mm: int) -> int:
-        if not self.padded:
-            return 0
-        return self.total_mm - side_mm
 
 
 PAIRS: tuple[Pair, ...] = (
-    Pair("60/100", 60, 100, True),
-    Pair("60/120", 60, 120, True),
-    Pair("80/120", 80, 120, True),
-    Pair("80/80", 80, 80, False),
-    Pair("100/100", 100, 100, False),
+    Pair("60/100", 60, 100),
+    Pair("60/120", 60, 120),
+    Pair("80/120", 80, 120),
+    Pair("60/60", 60, 60),
+    Pair("80/80", 80, 80),
+    Pair("100/100", 100, 100),
+    Pair("120/120", 120, 120),
 )
 
 
-def pack(naturheld_mm: int, total_mm: int) -> tuple:
-    """Room → StoSilent → NaturHeld → mineral wool → rigid GKF."""
-    res = Resistivity()
-    plaster = _plaster_m()
-    mineral = max(0.0, (total_mm - naturheld_mm) / 1000.0)
-    layers = [
-        ("porous", plaster, res.stosilent),
-        ("porous", naturheld_mm / 1000.0, res.wood_fibre_board),
-    ]
-    if mineral > 1e-6:
-        layers.append(("porous", mineral, res.mineral_wool))
-    return tuple(layers)
+def pack(naturheld_mm: int) -> tuple:
+    """StoSilent + NaturHeld on a rigid wall. Same stack as ``slope_stack``."""
+    return slope_stack(naturheld_mm / 1000.0, _plaster_m(), Resistivity())
 
 
 @lru_cache(maxsize=256)
-def pack_alpha(naturheld_mm: int, total_mm: int, freq: float) -> float:
-    return field_absorption(pack(naturheld_mm, total_mm), freq)
+def pack_alpha(naturheld_mm: int, freq: float) -> float:
+    return field_absorption(pack(naturheld_mm), freq)
 
 
 def split_slopes(mesh: Mesh, x_ridge: float) -> Mesh:
@@ -107,11 +87,11 @@ def _curve(pair: Pair, areas: dict[str, float], volume: float) -> dict[float, fl
             if area <= 0.0:
                 continue
             if label == "slope_left":
-                alpha = pack_alpha(pair.left_mm, pair.total_mm, freq)
+                alpha = pack_alpha(pair.left_mm, freq)
             elif label == "slope_right":
-                alpha = pack_alpha(pair.right_mm, pair.total_mm, freq)
+                alpha = pack_alpha(pair.right_mm, freq)
             elif label == "slope":
-                alpha = pack_alpha(pair.left_mm, pair.total_mm, freq)
+                alpha = pack_alpha(pair.left_mm, freq)
             else:
                 alpha = base.get(label, 0.02)
             parts.append((area, alpha))
@@ -138,9 +118,9 @@ def _betas(mesh: Mesh, pair: Pair, freq: float) -> dict[str, complex]:
     out = {}
     for label in labels:
         if label == "slope_left":
-            zeta = surface_impedance(pack(pair.left_mm, pair.total_mm), freq)
+            zeta = surface_impedance(pack(pair.left_mm), freq)
         elif label == "slope_right":
-            zeta = surface_impedance(pack(pair.right_mm, pair.total_mm), freq)
+            zeta = surface_impedance(pack(pair.right_mm), freq)
         else:
             zeta = None
         if zeta is None:
@@ -176,7 +156,7 @@ def _plot_t60(furnished, empty, path: Path) -> None:
         ax.grid(True, which="both", alpha=0.3)
     axes[0].set_ylabel("T60 (s)")
     axes[0].legend(fontsize=8)
-    fig.suptitle("Left = window slope, right = cabinet slope. Pack depth matched on each pair.")
+    fig.suptitle("NaturHeld only, rigid backing. Left = window slope, right = cabinet slope.")
     fig.tight_layout()
     fig.savefig(path, dpi=130)
     plt.close(fig)
@@ -255,7 +235,7 @@ def main() -> None:
         levels[i] = 10.0 * np.log10(np.maximum(power[pair.name], 1e-30) / ref)
 
     # Swap of 60/100: more NaturHeld on the window side, away from the sub.
-    swapped = Pair("100/60 swap", 100, 60, True)
+    swapped = Pair("100/60 swap", 100, 60)
     swap_power = np.zeros((3, len(PEAKS)))
     for j, freq in enumerate(PEAKS):
         swap_power[:, j] = _seat_power(field, swapped, freq, sub_hit, seat_hits)
@@ -277,16 +257,23 @@ def main() -> None:
         "The subwoofer sits against that cabinet wall, at the TV gable. "
         "In the cross-section the window slope is on the left and the cabinet slope on the right.",
         "",
-        "120 mm is possible. The room-side pack is StoSilent, then NaturHeld, then mineral wool, "
-        "stopped on the GKF. On a 120 mm side the mineral wool is zero: the pack is 120 mm of "
-        "NaturHeld. The other side uses mineral wool (12 000 Pa·s/m²) so NaturHeld plus mineral "
-        "wool is also 120 mm. Both ceilings drop together, 40 mm lower than the 80 mm drawing. "
-        "The wool behind the GKF, in the hanger void, is not this layer and is unchanged. "
-        "A pack capped at the drawn 80 mm could not hold 120 mm of NaturHeld.",
+        "Every slope face is StoSilent on NaturHeld, rigid-backed. "
+        "`pack()` is `slope_stack`: no mineral wool in the room-facing layers. "
+        "60/60, 80/80, 100/100 and 120/120 use that same stack on both sides. "
+        "The asymmetric runs differ only in the NaturHeld thickness. "
+        "Nothing is added behind the thinner board.",
         "",
-        "For 60/100 the common pack is 100 mm (60 + 40 mm mineral wool, and 100 + 0). "
-        "For 60/120 and 80/120 it is 120 mm. "
-        "80/80 and 100/100 are the last run: NaturHeld only, no mineral wool, both sides the same.",
+        "Mineral wool behind the slope gypsum is not in the model. "
+        "On the window slope that wool is 160 + 140 mm; on the cabinet slope it is 160 mm "
+        "plus whatever is left. It sits behind the GKF, so the room does not hear it, "
+        "and the ceiling stays symmetric. `plenum_wool` is a CAD volume for the material "
+        "list only. No impedance function reads it. The older note about an 80 mm gap "
+        "under the rafters is the same invisible layer, also excluded.",
+        "",
+        "Wool that is counted, on purpose, is not behind rigid gypsum. "
+        "The soffit wool is behind the 40 mm NaturHeld face. "
+        "The trap wool is behind the GKB membrane, which is the bass-trap leaf, not a rigid wall. "
+        "Both stay at the drawing thicknesses from the previous run.",
         "",
         f"Window slope {furn.area_of('slope_left'):.1f} m², cabinet slope {furn.area_of('slope_right'):.1f} m², "
         "between the traps. Sofa, soffit wool and both traps stay as in the last run.",
@@ -301,12 +288,12 @@ def main() -> None:
         "",
         "## Bass average, 50–80 Hz",
         "",
-        "| Pair | Pack mm | Furnished s | Empty s |",
-        "| --- | ---: | ---: | ---: |",
+        "| Pair | Window mm | Cabinet mm | Furnished s | Empty s |",
+        "| --- | ---: | ---: | ---: | ---: |",
     ]
     for pair, (_name, furn_c), (_n2, empty_c) in zip(PAIRS, furn_curves, empty_curves):
         lines.append(
-            f"| {pair.name} | {pair.total_mm} | {_bass(furn_c):.2f} | {_bass(empty_c):.2f} |"
+            f"| {pair.name} | {pair.left_mm} | {pair.right_mm} | {_bass(furn_c):.2f} | {_bass(empty_c):.2f} |"
         )
     lines += [
         "",
@@ -332,6 +319,24 @@ def main() -> None:
     )
     # Imbalance summary from the numbers.
     spread = float(np.max(np.abs(direct - swap_db)))
+    cabinet_thicker = float(np.mean(direct))
+    window_thicker = float(np.mean(swap_db))
+    if spread < 1.0:
+        side_sentence = (
+            "One-sided absorption does not matter at these notes. "
+            "The sub is in the cabinet-wall corner, but the two slopes cover the whole length, "
+            "and the seats do not notice which side is thicker."
+        )
+    elif cabinet_thicker < window_thicker:
+        side_sentence = (
+            "The side nearer the sub does move these notes. "
+            "Thicker NaturHeld on the cabinet slope is the quieter of the two arrangements."
+        )
+    else:
+        side_sentence = (
+            "The side nearer the sub does move these notes. "
+            "Thicker NaturHeld on the window slope, away from the sub, is the quieter of the two arrangements."
+        )
     lines += [
         "",
         "## What each one does",
@@ -354,11 +359,15 @@ def main() -> None:
                 f"({bass - base_bass:+.2f} s against 80/80), mids {mid:.2f} s. "
                 "The mids do not move."
             )
+        elif pair.left_mm == pair.right_mm:
+            text = (
+                f"{pair.name} is NaturHeld only, rigid backing, both slopes {pair.left_mm} mm. "
+                f"Furnished bass {bass:.2f} s ({bass - base_bass:+.2f} s against 80/80), mids {mid:.2f} s."
+            )
         else:
             text = (
-                f"{pair.name}: pack {pair.total_mm} mm, "
-                f"window slope {pair.left_mm} mm NaturHeld plus {pair.mineral_mm(pair.left_mm)} mm mineral wool, "
-                f"cabinet slope {pair.right_mm} mm NaturHeld plus {pair.mineral_mm(pair.right_mm)} mm mineral wool. "
+                f"{pair.name}: window slope {pair.left_mm} mm NaturHeld, "
+                f"cabinet slope {pair.right_mm} mm, both rigid-backed, no wool in the pack. "
                 f"Furnished bass {bass:.2f} s, against 80/80 {bass - base_bass:+.2f} s "
                 f"and against 100/100 {bass - ref100:+.2f} s. Mids {mid:.2f} s."
             )
@@ -367,25 +376,12 @@ def main() -> None:
     lines += [
         f"Swapping 60 and 100, so the thicker NaturHeld is on the window and away from the sub, "
         f"moves the seat levels by at most {spread:.1f} dB at 38, 58 and 140 Hz. "
-        + (
-            "One-sided absorption does not matter at these notes. The sub is in the corner, "
-            "but the two slopes are large faces over the whole length, and 60 against 100 is "
-            "not a big enough contrast for the seats to notice which side is which."
-            if spread < 1.5
-            else "The side nearer the sub does move these notes. Putting the thicker NaturHeld "
-            "on the cabinet slope, beside the sub, is the quieter of the two arrangements "
-            "where the levels differ."
-        ),
+        + side_sentence,
         "",
-        "The two slopes are the same area, so Eyring cannot see which side is thicker, "
-        "and the seat levels confirm it cannot hear it either. "
-        "What it can see is the pack depth. 60 mm of NaturHeld plus 40 mm of mineral wool "
-        "matches 100 mm of NaturHeld at every third octave, so 60/100 is the same room as 100/100. "
-        "A 120 mm pack matches itself whichever way the board and the wool are split, "
-        "so 60/120 and 80/120 are the same room, with a furnished bass of 0.78 s, "
-        "0.11 s shorter than 100/100. The mids stay at 0.30 s. "
-        "The 120 mm pack is the shortest bass in the set. It still leaves the bass "
-        "more than twice the mids, and it drops both ceilings 40 mm below the 80 mm drawing.",
+        "Eyring does see the mix, because 60 mm of NaturHeld is not the same absorber as "
+        "100 mm. It does not see which side carries which thickness: the areas are equal, "
+        "so 60/100 and 100/60 have the same decay. The seat levels say whether the sub, "
+        "sitting on the cabinet side, notices the swap.",
         "",
         "![T60](obyvak-asymmetric-t60.png)",
         "",
