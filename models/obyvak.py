@@ -947,7 +947,9 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         # Window slope stays parallel to the rafters (140 mm plenum). Direct hanger 200.
         # Cabinet slope opens toward the furniture line — Nonius from the false
         # ridge onward (pack peak at x_false, left of the roof ridge).
-        hang_label = LABEL_SLOPE_DIRECT if st[0] < g.x_false else LABEL_SLOPE_NONIUS
+        # Direct hanger on the left plane, including the short run past the
+        # false ridge. Nonius starts where the right GKF plane takes over.
+        hang_label = LABEL_SLOPE_DIRECT if st[0] <= g.x_stack_joint else LABEL_SLOPE_NONIUS
         for yc in ceil_rafter_ys:
             zaves_parts.append(
                 _extrude_y(
@@ -1131,20 +1133,20 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         horiz_zaves = [_cut_away(z, krov_parts, LABEL_SOFFIT_NONIUS) for z in horiz_zaves]
     parts.extend(horiz_zaves)
 
-    # UD track bent to 40° on the room side of the soffit CD. Slope CDs seat in it.
+    # One bent UD: flat leg on the soffit CD, then the 40° channel.
+    # Fused so the notched web is a single piece, not overlapping offcuts.
     ud_quads = g.soffit_ud_track_quads()
-    ud_parts: list = []
+    ud_track = None
     for quad in ud_quads[:-1]:
-        ud_parts.append(
-            _extrude_y(xz_face(quad, LABEL_SOFFIT_UD), y_soff0, y_soff1, LABEL_SOFFIT_UD)
-        )
-    # Seated CD end, same track, labelled as a slope CD.
-    # The seated CD is a section marker. In 3D the slope grid already runs along Y.
-    gkf_cutters = [part for part in parts if part.label == LABEL_SLOPE_GKF]
-    if horiz_cd_parts or gkf_cutters:
-        ud_parts = [
-            _cut_away(part, horiz_cd_parts + gkf_cutters, part.label) for part in ud_parts
-        ]
+        piece = _extrude_y(xz_face(quad, LABEL_SOFFIT_UD), y_soff0, y_soff1, LABEL_SOFFIT_UD)
+        ud_track = piece if ud_track is None else ud_track.fuse(piece)
+    ud_parts: list = []
+    if ud_track is not None:
+        ud_track = _paint(ud_track, LABEL_SOFFIT_UD)
+        gkf_cutters = [part for part in parts if part.label == LABEL_SLOPE_GKF]
+        if horiz_cd_parts or gkf_cutters:
+            ud_track = _cut_away(ud_track, horiz_cd_parts + gkf_cutters, LABEL_SOFFIT_UD)
+        ud_parts = [ud_track]
     parts.extend(ud_parts)
     if ud_parts:
         for i, part in enumerate(parts):

@@ -66,6 +66,8 @@ def build(params: ObyvakParams | None = None):
     for quad in ud[:-1]:
         parts.append(xz_face(quad, LABEL_SOFFIT_UD))
     parts.append(xz_face(ud[-1], LABEL_SLOPE_CD))
+    for quad in g.soffit_ud_screw_quads():
+        parts.append(xz_face(quad, "joint_screw"))
     # Short run of the 100 mm board on the room side of the GKF, so the stack reads.
     t_nh = g.t_nh_right
     parts.append(
@@ -94,32 +96,68 @@ def build(params: ObyvakParams | None = None):
     return shape, meta
 
 
-def annotate(svg_path) -> None:
-    """Right-side-up notes. Export maps CAD (x, z) to SVG (x, -z)."""
+def annotate(svg_path, dxf_path=None, png_path=None) -> None:
+    """English notes. Paths sit inside scale(1,-1); labels stay outside it.
+
+    CAD (x, z) is SVG (x, -z). A re-export wipes the text, so this runs again
+    and rebuilds the PNG from the labeled SVG.
+    """
     from pathlib import Path
 
     path = Path(svg_path)
     text = path.read_text(encoding="utf-8")
-    if "UD bent to 40" in text:
-        return
     start = text.find("<svg")
-    end = text.find(">", start)
+    tag_end = text.find(">", start)
+    vb = text[text.find('viewBox="') + 9 :]
+    vb = vb[: vb.find('"')].split()
+    minx, miny, width, height = (float(v) for v in vb)
+    maxx, maxy = minx + width, miny + height
     rect = (
-        '\n  <rect x="4668.570888" y="-3482.918628" width="456.429112" '
-        'height="361.234443" fill="#ffffff"/>'
+        f'\n  <rect x="{minx}" y="{miny}" width="{width}" height="{height}" '
+        'fill="#ffffff"/>'
     )
-    # viewBox is stable for this detail; the rect matches the exported frame.
-    text = text[: end + 1] + rect + text[end + 1 :]
-    labels = """
-  <g font-family="sans-serif" font-size="16" fill="#1a2433">
-    <text x="4788" y="-3408">UD bent to 40°</text>
-    <text x="4788" y="-3372">slope CD</text>
-    <text x="4768" y="-3336">GKF stops here</text>
-    <text x="4708" y="-3188">NaturHeld 100 + StoSilent</text>
-    <text x="5010" y="-3336">soffit CD</text>
-    <text x="5042" y="-3272">soffit GKF</text>
-    <text x="4868" y="-3264">acrylic + tape</text>
+    text = text[: tag_end + 1] + rect + text[tag_end + 1 :]
+    # Keep every note inside the viewBox. Long lines sit on the left.
+    labels = f"""
+  <g font-family="sans-serif" font-size="13" fill="#1a2433">
+    <text x="{minx + 14:.0f}" y="{miny + 28:.0f}">40° leg — slope CDs slide in</text>
+    <text x="{minx + 70:.0f}" y="{miny + 78:.0f}">slope CD</text>
+    <text x="{minx + 14:.0f}" y="{miny + 118:.0f}">GKF stops at the soffit face</text>
+    <text x="{minx + 14:.0f}" y="{maxy - 22:.0f}">NaturHeld 100 + StoSilent</text>
+    <text x="{maxx - 118:.0f}" y="{miny + 150:.0f}">soffit CD</text>
+    <text x="{minx + 14:.0f}" y="{maxy - 58:.0f}">flat leg, screwed to the CD</text>
+    <text x="{minx + 14:.0f}" y="{maxy - 40:.0f}">LB 3.5×9.5 @ 300 mm</text>
+    <text x="{maxx - 108:.0f}" y="{maxy - 36:.0f}">soffit GKF</text>
+    <text x="{minx + 175:.0f}" y="{maxy - 78:.0f}">acrylic + tape</text>
   </g>
 """
     text = text.replace("</svg>", labels + "</svg>")
     path.write_text(text, encoding="utf-8")
+    if png_path is not None:
+        from blueprints.export_utils import _write_png
+
+        _write_png(path, Path(png_path), width=1600)
+    if dxf_path is not None:
+        _annotate_dxf(Path(dxf_path))
+
+
+def _annotate_dxf(path) -> None:
+    import ezdxf
+
+    doc = ezdxf.readfile(path)
+    if "NOTES" not in doc.layers:
+        doc.layers.add("NOTES")
+    msp = doc.modelspace()
+    # Export rotates XZ onto XY with (x, z) -> (x, z).
+    notes = [
+        (4788, 3410, "40 deg leg, slope CDs slide in"),
+        (5004, 3348, "soffit CD"),
+        (5004, 3310, "flat leg, screwed to CD"),
+        (5004, 3274, "LB 3.5x9.5 at 300 mm"),
+        (4860, 3248, "acrylic + tape"),
+        (4760, 3324, "GKF stops at the soffit face"),
+        (4704, 3168, "NaturHeld 100 + StoSilent"),
+    ]
+    for x, y, note in notes:
+        msp.add_text(note, dxfattribs={"layer": "NOTES", "height": 8}).set_placement((x, y))
+    doc.saveas(path)

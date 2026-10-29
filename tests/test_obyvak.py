@@ -136,10 +136,24 @@ def test_layout_ceiling_and_gable():
     cds = g.horiz_cd_x_stations()
     assert cds == [g.x_nh_inner + p.cd_w * 0.5]
     ud = g.soffit_ud_track_quads()
-    assert len(ud) == 5
-    tab = ud[0]
-    assert abs(max(x for x, _z in tab) - g.x_soffit_cd_room) < 0.5
-    assert abs(min(z for _x, z in tab) - g.z_soffit_cd_bot) < 1e-6
+    assert ud[-1]  # seated slope CD is the last quad
+    leg = ud[0]
+    # Flat leg lies on the room-side face of the soffit CD, tall enough to screw.
+    assert abs(max(x for x, _z in leg) - g.x_soffit_cd_room) < 0.2
+    assert max(z for _x, z in leg) - min(z for _x, z in leg) > 15.0
+    screws = g.soffit_ud_screw_quads()
+    assert len(screws) == 2
+    shank = screws[1]
+    assert max(x for x, _z in shank) > g.x_soffit_cd_room + 5.0
+    # GKF planes meet past the false ridge. NaturHeld still butts at x_false.
+    assert g.x_stack_joint > g.x_false + 20.0
+    assert abs(
+        g.plane_z(g.x_stack_joint, g.t_gkf_room_left, right=False)
+        - g.plane_z(g.x_stack_joint, g.t_gkf_room_right, right=True)
+    ) < 1e-6
+    sdk = g.sikmina_sdk_pts()
+    for a, b in zip(sdk, sdk[1:]):
+        assert not (abs(a[0] - g.x_false) < 1e-6 and abs(b[0] - g.x_false) < 1e-6)
     acry = g.soffit_acrylic_joint_pts()
     assert len(acry) == 4
     sdk = g.sikmina_sdk_pts()
@@ -200,7 +214,7 @@ def test_mineral_wool_fills_rafter_bays():
 
 
 def test_plenum_fill_hangers_and_vent():
-    """140 mm plenum: full right gap is wool, vent stays empty, hangers fit the stock."""
+    """Wool depths stay as solved, the vent stays empty, and hangers fit the stock."""
     import math
 
     from build123d import Box, Location
@@ -223,7 +237,7 @@ def test_plenum_fill_hangers_and_vent():
                 continue
             quad = g.hanger_quad(*st)
             (x0, z0), (x1, z1) = quad[1], quad[2]
-            side = "L" if st[0] < g.x_false else "R"
+            side = "L" if st[0] <= g.x_stack_joint else "R"
             found.append((side, math.hypot(x1 - x0, z1 - z0)))
         return found
 
@@ -279,7 +293,7 @@ def test_sikminy_and_soffit_stack_in_3d():
     zaves = _labeled(shape, LABEL_SLOPE_NONIUS) + _labeled(shape, LABEL_SOFFIT_NONIUS)
     direct = _labeled(shape, LABEL_SLOPE_DIRECT)
     assert direct
-    assert all(c.bounding_box().center().X < g.x_false for c in direct)
+    assert all(c.bounding_box().center().X <= g.x_stack_joint + 5.0 for c in direct)
     slope_nonius = _labeled(shape, LABEL_SLOPE_NONIUS)
     assert slope_nonius
     assert all(c.bounding_box().center().X >= g.x_false - 1.0 for c in slope_nonius)
@@ -347,9 +361,12 @@ def test_sikminy_and_soffit_stack_in_3d():
     ud_track = [
         c
         for c in _labeled(shape, LABEL_SOFFIT_UD)
-        if c.bounding_box().size.Y > 1000.0 and c.bounding_box().min.X > g.x_furn
+        if c.bounding_box().size.Y > 1000.0
+        and c.bounding_box().min.X < g.x_soffit_cd_room
+        and c.bounding_box().max.X > g.x_soffit_cd_room - 30.0
     ]
-    assert len(ud_track) >= 3
+    assert len(ud_track) == 1
+    assert ud_track[0].bounding_box().max.X >= g.x_soffit_cd_room - 1.0
     from build123d import Box, Location
 
     ex, ez = g.gkf_end_room

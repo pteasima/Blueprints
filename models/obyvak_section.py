@@ -177,7 +177,11 @@ def build(params: ObyvakParams | None = None):
     for quad in ud[:-1]:
         parts.append(xz_face(quad, LABEL_SOFFIT_UD))
     parts.append(xz_face(ud[-1], LABEL_SLOPE_CD))
+    for quad in g.soffit_ud_screw_quads():
+        parts.append(xz_face(quad, "joint_screw"))
     parts.append(xz_face(g.soffit_acrylic_joint_pts(), "joint_acrylic"))
+    for quad in g.board_joint_quads():
+        parts.append(xz_face(quad, "board_joint"))
     for quad in g.soffit_plate_cleat_quads():
         parts.append(xz_face(quad, LABEL_SOFFIT_NONIUS))
     # Screw through the lid into the vertical CD (schematic) + wall angle.
@@ -257,6 +261,47 @@ def build(params: ObyvakParams | None = None):
         },
     }
     return shape, meta
+
+
+def annotate(svg_path, dxf_path=None, png_path=None) -> None:
+    """Crop the false-ridge butt joints out of the section and label them in English."""
+    from pathlib import Path
+
+    from obyvak_geom import ObyvakParams, build_layout
+
+    g = build_layout(ObyvakParams())
+    src = Path(svg_path).read_text(encoding="utf-8")
+    xf, xj = g.x_false, g.x_stack_joint
+    z0 = g.z_false - 50.0
+    z1 = g.plane_z(xj, g.t_gkf_attic_left, right=False) + 55.0
+    minx = xf - 90.0
+    width = (xj + 130.0) - minx
+    height = z1 - z0
+    miny = -z1
+    import re
+
+    svg_open_end = src.find(">", src.find("<svg"))
+    svg_open = src[: svg_open_end + 1]
+    rest = src[svg_open_end + 1 :]
+    svg_open = re.sub(r'width="[^"]*"', f'width="{width:.2f}mm"', svg_open, count=1)
+    svg_open = re.sub(r'height="[^"]*"', f'height="{height:.2f}mm"', svg_open, count=1)
+    svg_open = re.sub(
+        r'viewBox="[^"]*"',
+        f'viewBox="{minx:.2f} {miny:.2f} {width:.2f} {height:.2f}"',
+        svg_open,
+        count=1,
+    )
+    labels = f"""
+  <g font-family="sans-serif" font-size="8" fill="#1a2433">
+    <text x="{xf - 78:.1f}" y="{-g.z_false + 22:.1f}">NaturHeld joint</text>
+    <text x="{xj - 16:.1f}" y="{-(z1 - 16):.1f}">GKF joint, no step</text>
+  </g>
+"""
+    out = Path(svg_path).with_name("ridge.svg")
+    out.write_text(svg_open + rest.replace("</svg>", labels + "</svg>"), encoding="utf-8")
+    from blueprints.export_utils import _write_png
+
+    _write_png(out, out.with_suffix(".png"), width=1400)
 
 
 if __name__ == "__main__":
