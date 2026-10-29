@@ -252,10 +252,26 @@ def shoe_box_axials(length: float, width: float, c: float = C0) -> dict[str, flo
 
 
 @dataclass(frozen=True)
+class Fill:
+    """Internal wool of the soffit and the two traps. Faces and cavities stay fixed.
+
+    Lengths are metres. ``soffit_sigma`` and ``trap_sigma`` are flow resistivities
+    in Pa·s/m². The air gap is whatever the fixed cavity does not give to wool.
+    """
+
+    soffit_wool_m: float
+    soffit_sigma: float
+    kitchen_wool_m: float
+    living_wool_m: float
+    trap_sigma: float
+
+
+@dataclass(frozen=True)
 class Variant:
     thickness_mm: int
     soffit: str
     furniture: bool
+    fill: Fill | None = None
 
     @property
     def key(self) -> str:

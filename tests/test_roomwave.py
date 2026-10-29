@@ -103,6 +103,28 @@ def test_thickness_choice_leaves_a_boomy_room_toward_the_window():
     assert choose_thickness(rows) == (120, "pleasant")
 
 
+def test_sofa_and_shelf_stay_quiet_at_bass():
+    from blueprints.acoustics.roomwave.boundaries import (
+        impedance,
+        normal_alpha,
+        shelf_alpha,
+        sofa_alpha,
+    )
+    from blueprints.acoustics.roomwave.helmholtz import beta_from_impedance
+
+    variant = Variant(80, "as_built", True)
+    assert 0.10 <= sofa_alpha(63.0) <= 0.20
+    assert 0.60 <= sofa_alpha(500.0) <= 0.80
+    assert sofa_alpha(4000.0) >= 0.55
+    # β = α/4, so the energy decay sees this Sabine α rather than a wool block.
+    assert 4.0 * beta_from_impedance(impedance("sofa", 63.0, variant)).real == pytest.approx(
+        sofa_alpha(63.0)
+    )
+    assert normal_alpha(impedance("rug", 63.0, variant)) < 0.05
+    assert 0.08 <= shelf_alpha(63.0) <= 0.20
+    assert shelf_alpha(4000.0) > 0.40
+
+
 def test_layout_keeps_the_solid_pieces_and_drops_the_open_ones():
     shape = load_shape()
     names = {box.name for box in shape.boxes}
