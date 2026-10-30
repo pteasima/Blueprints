@@ -187,6 +187,9 @@ class ObyvakParams:
     soffit_naturheld_t: float = 40.0
     foil_t: float = 1.0
     sdk_t: float = 12.5
+    # Road side (right, cabinet) slope: 2× GKF for road noise. Left stays 1×.
+    # The room face does not move; the right CD plane moves 12.5 mm up.
+    sdk_layers_right: int = 2
     vent_t: float = 40.0
     dhv_t: float = 1.0
     counter_batten_t: float = 40.0
@@ -301,7 +304,10 @@ class ObyvakLayout:
         self.t_gkf_room_left = self.t_nh_left + self.t_flex_pack
         self.t_gkf_room_right = self.t_nh_right + self.t_flex_pack
         self.t_gkf_attic_left = self.t_gkf_room_left + p.sdk_t
-        self.t_gkf_attic_right = self.t_gkf_room_right + p.sdk_t
+        self.t_gkf_right = p.sdk_t * p.sdk_layers_right
+        self.t_gkf_attic_right = self.t_gkf_room_right + self.t_gkf_right
+        # Attic face of the first (room-side) right layer.
+        self.t_gkf_mid_right = self.t_gkf_room_right + p.sdk_t
         self.t_cd_outer_left = self.t_gkf_attic_left + p.cd_t
         self.t_cd_outer_right = self.t_gkf_attic_right + p.cd_t
         self.t_foil_outer_left = self.t_cd_outer_left + p.foil_t
@@ -322,6 +328,11 @@ class ObyvakLayout:
         # Thicker right NaturHeld: the attic-side planes meet this far past the
         # false ridge. Room faces still meet at x_false. Same shift for GKF, CD, foil.
         self.x_stack_joint = self.x_false + (self.t_nh_right - self.t_nh_left) / (2.0 * self.sin)
+        # The CD, foil and wool planes meet further right: the right side also
+        # carries the second GKF layer. The outer layer is bevelled to this line.
+        self.x_cd_joint = self.x_false + (
+            self.t_gkf_attic_right - self.t_gkf_attic_left
+        ) / (2.0 * self.sin)
         self.z_raf_inner_ridge = p.ridge_z - (self.t_above_raf + p.rafter_t) / self.cos
         self.z_nabeh_bot = p.furniture_height + p.furniture_gap
         # Soffit lid is fixed on the pozednice, not on the šikmina datum.
@@ -339,14 +350,25 @@ class ObyvakLayout:
         # lower corner. 3 mm up-slope is the acrylic joint, so the board does
         # not fuse into the CD.
         self.joint_gap = 3.0
-        ax = self.x_soffit_cd_room - self.cos * self.joint_gap
-        az = self.z_soffit_cd_bot + self.sin * self.joint_gap
+        # The first GKF layer's attic plane goes through the CD's lower corner
+        # (as with 1× GKF), so the room face is unchanged. The second layer
+        # lifts the slope CD plane: it meets the CD room-side face this high.
+        extra = self.t_gkf_right - p.sdk_t
+        self.joint_anchor = (
+            self.x_soffit_cd_room,
+            self.z_soffit_cd_bot + extra / self.cos,
+        )
+        jx, jz = self.joint_anchor
+        ax = jx - self.cos * self.joint_gap
+        az = jz + self.sin * self.joint_gap
         self.gkf_end_attic = (ax, az)
-        self.gkf_end_room = (ax - self.sin * p.sdk_t, az - self.cos * p.sdk_t)
+        self.gkf_end_mid = (ax - self.sin * (self.t_gkf_right - p.sdk_t),
+                            az - self.cos * (self.t_gkf_right - p.sdk_t))
+        self.gkf_end_room = (ax - self.sin * self.t_gkf_right, az - self.cos * self.t_gkf_right)
         # Room face = GKF attic plane plus the GKF, 100 mm NaturHeld and StoSilent.
         d_room = self.t_gkf_attic_right
-        rx = self.x_soffit_cd_room - self.sin * d_room
-        rz = self.z_soffit_cd_bot - self.cos * d_room
+        rx = jx - self.sin * d_room
+        rz = jz - self.cos * d_room
         # Symmetric ceiling: both eaves share this room-face height.
         self.h_start = rz + (rx - self.x_furn) * self.tan
         self.z_false = self.h_start + self.x_false * self.tan
@@ -550,7 +572,7 @@ class ObyvakLayout:
         """
         xj = self.x_stack_joint
         erx, erz = self.gkf_end_room
-        eax, eaz = self.gkf_end_attic
+        eax, eaz = self.gkf_end_mid
         t0l, t1l = self.t_gkf_room_left, self.t_gkf_attic_left
         return [
             (0.0, self.plane_z(0.0, t0l, right=False)),
@@ -559,6 +581,25 @@ class ObyvakLayout:
             (eax, eaz),
             (xj, self.plane_z(xj, t1l, right=False)),
             (0.0, self.plane_z(0.0, t1l, right=False)),
+        ]
+
+    def sikmina_sdk2_pts(self) -> list[tuple[float, float]] | None:
+        """Second (outer) GKF layer, right slope only.
+
+        It lies on the first layer. At the ridge it is bevelled from
+        ``x_stack_joint`` (its room face meets the left board's attic face) to
+        ``x_cd_joint`` (its attic face meets the left CD plane), so the CD
+        planes still meet with no step. Bottom end: same 3 mm acrylic joint.
+        """
+        if self.p.sdk_layers_right < 2:
+            return None
+        xj, xc = self.x_stack_joint, self.x_cd_joint
+        tl = self.t_gkf_attic_left
+        return [
+            (xj, self.plane_z(xj, tl, right=False)),
+            self.gkf_end_mid,
+            self.gkf_end_attic,
+            (xc, self.plane_z(xc, tl, right=False)),
         ]
 
     def x_right_pack_stop(self, t_perp: float) -> float:
@@ -582,7 +623,7 @@ class ObyvakLayout:
         Same meeting line as the GKF: the left plane runs to ``x_stack_joint``.
         """
         p = self.p
-        xj = self.x_stack_joint
+        xj = self.x_cd_joint
         t0l, t1l = self.t_cd_outer_left, self.t_foil_outer_left
         # Stop up-slope of the soffit CD. The UD occupies the corner.
         eax, eaz = self._joint_station(80.0)
@@ -606,7 +647,7 @@ class ObyvakLayout:
 
     def sikmina_cd_band_pts(self) -> list[tuple[float, float]]:
         """CD grid zone thickness behind SDK."""
-        t0 = self.t_nh_face + self.t_flex_pack + self.p.sdk_t
+        t0 = self.t_gkf_attic_right
         return self._slope_band_pts(t0, t0 + self.p.cd_t)
 
     def _path_stations(
@@ -651,7 +692,7 @@ class ObyvakLayout:
         including the short run past the false ridge where that plane has not
         yet met the right one.
         """
-        if x <= self.x_stack_joint:
+        if x <= self.x_cd_joint:
             return (
                 self.h_start + max(x, 0.0) * self.tan,
                 self.cos,
@@ -959,7 +1000,7 @@ class ObyvakLayout:
         rafters the fill is ``vata_rafter_bay_pts`` (160 mm).
         """
         p = self.p
-        xj = self.x_stack_joint
+        xj = self.x_cd_joint
         t_out = self.t_foil_outer_left
         # Wool is what's left between the foil and the rafter. It stops at the UD.
         eax, eaz = self._joint_station(80.0)
@@ -1011,8 +1052,9 @@ class ObyvakLayout:
 
     def _joint_station(self, along: float) -> tuple[float, float]:
         """Point on the GKF attic plane, `along` mm up-slope of the soffit CD corner."""
-        x0 = self.x_soffit_cd_room - self.cos * along
-        z0 = self.z_soffit_cd_bot + self.sin * along
+        jx, jz = self.joint_anchor
+        x0 = jx - self.cos * along
+        z0 = jz + self.sin * along
         return x0, z0
 
     def soffit_ud_track_quads(self) -> list[list[tuple[float, float]]]:
@@ -1034,9 +1076,14 @@ class ObyvakLayout:
         chan = 52.0
         ux, uz = -self.cos, self.sin
         nx, nz = self.sin, self.cos
-        x0 = self.x_soffit_cd_room
-        z0 = self.z_soffit_cd_bot
+        # Bend sits where the slope CD plane meets the CD cheek. With 2× GKF
+        # that is 16 mm up the cheek, so the flat leg hangs down from the bend.
+        x0, z0 = self.joint_anchor
         z_leg0 = z0 + 4.0
+        if z0 > self.z_soffit_cd_bot + 1e-6:
+            leg_lo, leg_hi = self.z_soffit_cd_bot + 1.0, z_leg0
+        else:
+            leg_lo, leg_hi = z_leg0, z_leg0 + leg_h
 
         def along(s: float, t: float) -> tuple[float, float]:
             return (
@@ -1049,10 +1096,10 @@ class ObyvakLayout:
 
         # Short flat leg, full contact with the CD cheek.
         leg = quad_pts(
-            (x0 - tm, z_leg0),
-            (x0, z_leg0),
-            (x0, z_leg0 + leg_h),
-            (x0 - tm, z_leg0 + leg_h),
+            (x0 - tm, leg_lo),
+            (x0, leg_lo),
+            (x0, leg_hi),
+            (x0 - tm, leg_hi),
         )
         # Bend: bottom of the leg to the start of the 40° web.
         a0, a1 = along(s0, 0.0), along(s0, tm)

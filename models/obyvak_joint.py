@@ -36,6 +36,7 @@ def build(params: ObyvakParams | None = None):
     stub = 140.0
     erx, erz = g.gkf_end_room
     eax, eaz = g.gkf_end_attic
+    emx, emz = g.gkf_end_mid
 
     def along(x, z, dist):
         return (x + ux * dist, z + uz * dist)
@@ -45,10 +46,15 @@ def build(params: ObyvakParams | None = None):
             [
                 (erx, erz),
                 along(erx, erz, stub),
-                along(eax, eaz, stub),
-                (eax, eaz),
+                along(emx, emz, stub),
+                (emx, emz),
             ],
             LABEL_SLOPE_GKF,
+        ),
+        *(
+            [xz_face([(emx, emz), along(emx, emz, stub), along(eax, eaz, stub), (eax, eaz)], LABEL_SLOPE_GKF)]
+            if p.sdk_layers_right > 1
+            else []
         ),
         xz_face(g.soffit_acrylic_joint_pts(), "joint_acrylic"),
         xz_face(g.horiz_cd_quad(g.x_soffit_cd), LABEL_SOFFIT_CD),
@@ -122,10 +128,10 @@ def annotate(svg_path, dxf_path=None, png_path=None) -> None:
   <g font-family="sans-serif" font-size="13" fill="#1a2433">
     <text x="{minx + 14:.0f}" y="{miny + 28:.0f}">40° leg — slope CDs slide in</text>
     <text x="{minx + 70:.0f}" y="{miny + 78:.0f}">slope CD</text>
-    <text x="{minx + 14:.0f}" y="{miny + 118:.0f}">GKF stops at the soffit face</text>
+    <text x="{minx + 14:.0f}" y="{miny + 118:.0f}">2× GKF 12.5 stops at the soffit face</text>
     <text x="{minx + 14:.0f}" y="{maxy - 22:.0f}">NaturHeld 100 + StoSilent</text>
     <text x="{maxx - 118:.0f}" y="{miny + 150:.0f}">soffit CD</text>
-    <text x="{minx + 14:.0f}" y="{maxy - 58:.0f}">flat leg, screwed to the CD</text>
+    <text x="{minx + 14:.0f}" y="{maxy - 58:.0f}">flat leg, screwed to the CD (bend 16 mm up the cheek)</text>
     <text x="{minx + 14:.0f}" y="{maxy - 40:.0f}">LB 3.5×9.5 @ 300 mm</text>
     <text x="{maxx - 108:.0f}" y="{maxy - 36:.0f}">soffit GKF</text>
     <text x="{minx + 175:.0f}" y="{maxy - 78:.0f}">acrylic + tape</text>
@@ -155,7 +161,7 @@ def _annotate_dxf(path) -> None:
         (5004, 3310, "flat leg, screwed to CD"),
         (5004, 3274, "LB 3.5x9.5 at 300 mm"),
         (4860, 3248, "acrylic + tape"),
-        (4760, 3324, "GKF stops at the soffit face"),
+        (4760, 3324, "2x GKF 12.5 stops at the soffit face"),
         (4704, 3168, "NaturHeld 100 + StoSilent"),
     ]
     for x, y, note in notes:

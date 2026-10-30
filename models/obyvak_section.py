@@ -111,6 +111,8 @@ def build(params: ObyvakParams | None = None):
     if g.soffit_wool_wedge_pts():
         parts.append(xz_face(g.soffit_wool_wedge_pts(), LABEL_SOFFIT_WOOL))
     parts.append(xz_face(g.sikmina_sdk_pts(), LABEL_SLOPE_GKF))
+    if (_sdk2 := g.sikmina_sdk2_pts()) is not None:
+        parts.append(xz_face(_sdk2, LABEL_SLOPE_GKF))
     for quad in g.sikmina_cd_quads():
         parts.append(xz_face(quad, LABEL_SLOPE_CD))
     parts.append(xz_face(g.sikmina_foil_pts(), LABEL_SLOPE_FOIL))
@@ -275,7 +277,7 @@ def annotate(svg_path, dxf_path=None, png_path=None) -> None:
     z0 = g.z_false - 50.0
     z1 = g.plane_z(xj, g.t_gkf_attic_left, right=False) + 55.0
     minx = xf - 90.0
-    width = (xj + 130.0) - minx
+    width = (g.x_cd_joint + 150.0) - minx
     height = z1 - z0
     miny = -z1
     import re
@@ -295,6 +297,7 @@ def annotate(svg_path, dxf_path=None, png_path=None) -> None:
   <g font-family="sans-serif" font-size="8" fill="#1a2433">
     <text x="{xf - 78:.1f}" y="{-g.z_false + 22:.1f}">NaturHeld joint</text>
     <text x="{xj - 16:.1f}" y="{-(z1 - 16):.1f}">GKF joint, no step</text>
+    <text x="{g.x_cd_joint + 6:.1f}" y="{-(z1 - 30):.1f}">2nd GKF bevelled to CD line</text>
   </g>
 """
     out = Path(svg_path).with_name("ridge.svg")
