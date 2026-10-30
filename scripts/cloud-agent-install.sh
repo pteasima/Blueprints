@@ -8,9 +8,9 @@ cd "$(dirname "$0")/.."
 
 export DEBIAN_FRONTEND=noninteractive
 
-if ! dpkg -s python3.12-venv >/dev/null 2>&1 || ! dpkg -s libcairo2 >/dev/null 2>&1 || ! dpkg -s git-lfs >/dev/null 2>&1; then
+if ! dpkg -s python3.12-venv >/dev/null 2>&1 || ! dpkg -s libcairo2 >/dev/null 2>&1 || ! dpkg -s git-lfs >/dev/null 2>&1 || ! dpkg -s libglu1-mesa >/dev/null 2>&1; then
   sudo apt-get update -qq
-  sudo apt-get install -y --no-install-recommends python3.12-venv libcairo2 git-lfs
+  sudo apt-get install -y --no-install-recommends python3.12-venv libcairo2 git-lfs libglu1-mesa
 fi
 
 git lfs install --local
@@ -24,4 +24,4 @@ fi
 source .venv/bin/activate
 python -m pip install -U pip
 python -m pip install -e ".[dev]"
-python -c "import build123d, cairosvg, ifcopenshell, shapely, yaml_ifc; from pxr import Usd"
+python -c "import build123d, cairosvg, gmsh, matplotlib, ifcopenshell, shapely, yaml_ifc; from pxr import Usd"

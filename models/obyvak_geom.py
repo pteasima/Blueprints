@@ -81,6 +81,7 @@ LABEL_SLOPE_NONIUS = "slope_nonius"
 LABEL_SOFFIT_NH = "soffit_naturheld_140"
 LABEL_SOFFIT_WOOL = "soffit_mineral_wool"
 LABEL_SOFFIT_GKF = "soffit_gkf"
+LABEL_SOFFIT_GKB = "soffit_gkb"
 LABEL_SOFFIT_CD = "soffit_cd"
 LABEL_SOFFIT_UD = "soffit_ud"
 LABEL_SOFFIT_NONIUS = "soffit_nonius"
@@ -129,6 +130,7 @@ PART_GROUPS = [
             LABEL_SOFFIT_NH,
             LABEL_SOFFIT_WOOL,
             LABEL_SOFFIT_GKF,
+            LABEL_SOFFIT_GKB,
             LABEL_SOFFIT_CD,
             LABEL_SOFFIT_UD,
             LABEL_SOFFIT_NONIUS,
@@ -183,8 +185,10 @@ class ObyvakParams:
     # Left (window) is the tight side; right (cabinet) is the hung side.
     naturheld_left: float = 60.0
     naturheld_right: float = 100.0
-    # Soffit side and bottom only. Thinner than the slope board; they butt at X_FURN.
+    # Soffit side face only (NH + StoSilent). It butts the slope board at X_FURN.
     soffit_naturheld_t: float = 40.0
+    # Soffit underside over the cabinets: plain GKB (furniture covers it anyway).
+    soffit_bottom_t: float = 12.5
     foil_t: float = 1.0
     sdk_t: float = 12.5
     # Road side (right, cabinet) slope: 2× GKF for road noise. Left stays 1×.
@@ -298,6 +302,8 @@ class ObyvakLayout:
         self.t_nh_right = ss + p.naturheld_right
         self.t_nh_face = self.t_nh_right
         self.t_soffit_face = ss + p.soffit_naturheld_t
+        # Underside is GKB only; the soffit cavity starts above it.
+        self.t_soffit_bottom = p.soffit_bottom_t
         # Foil is attic-side of the CD (below mineral wool), not between NH and GKF.
         # t_flex_pack stays 0 — NH screws through GKF straight into CD.
         self.t_flex_pack = 0.0
@@ -914,28 +920,33 @@ class ObyvakLayout:
         return min(xs) - r, max(xs) + r
 
     def soffit_nh_pts(self) -> list[tuple[float, float]]:
-        """L-shaped NH+StoSilent on the soffit box: vertical face + underside.
+        """Vertical NH+StoSilent face of the soffit box (side only).
 
-        Both legs are the 40 mm soffit board. The vertical leg butts the
-        thicker slope board at X_FURN. Its top follows that slope board's
-        attic face down to the vertical lať, so the joint is not a level cut
-        through the slope pack. It does not climb to the GKF.
+        Runs from the soffit underside up. The vertical leg butts the thicker
+        slope board at X_FURN; its top follows that board's attic face down to
+        the vertical CD. The underside is GKB (``soffit_gkb_pts``).
         """
-        p = self.p
-        t = self.t_soffit_face
         t_slope = self.t_nh_face
         z0 = self.z_nabeh_bot
-        # Stay under the lid. A higher ceiling puts the slope attic face above it.
         z_cap = self.z_soffit_lid
         z_out = min(self.z_slope_offset(self.x_nh_outer, t_slope), z_cap)
         z_in = min(self.z_slope_plane_offset(self.x_nh_inner, t_slope), z_cap)
         return [
             (self.x_nh_outer, z0),
-            (p.room_width, z0),
-            (p.room_width, z0 + t),
-            (self.x_nh_inner, z0 + t),
+            (self.x_nh_inner, z0),
             (self.x_nh_inner, z_in),
             (self.x_nh_outer, z_out),
+        ]
+
+    def soffit_gkb_pts(self) -> list[tuple[float, float]]:
+        """12.5 GKB underside, from the NH side face to the right wall plaster."""
+        p = self.p
+        z0 = self.z_nabeh_bot
+        return [
+            (self.x_nh_inner, z0),
+            (p.room_width, z0),
+            (p.room_width, z0 + self.t_soffit_bottom),
+            (self.x_nh_inner, z0 + self.t_soffit_bottom),
         ]
 
     def soffit_wool_pts(self) -> list[tuple[float, float]]:
@@ -945,7 +956,7 @@ class ObyvakLayout:
         anchored to the wall and are not hung from this box.
         """
         p = self.p
-        t = self.t_soffit_face
+        t = self.t_soffit_bottom
         z_top = self.z_soffit_rail()
         return [
             (self.x_nh_inner, self.z_nabeh_bot + t),

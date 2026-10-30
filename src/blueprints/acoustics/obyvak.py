@@ -8,7 +8,7 @@ kept as the limit check: a very large bay returns to that curve.
 The soffit outline, roof pitch, and both predstěna depths stay fixed. The
 slopes stay on the one-dimensional stack: 80 mm NaturHeld 140 on the GKF, no
 Flex, no slope latě. The soffit cavity is mineral wool behind a 40 mm
-NaturHeld 140 face.
+NaturHeld 140 side face and a plain 12.5 mm GKB underside.
 
 On the kitchen gable the air gap includes the front CD: 27 mm of profile plus
 20 mm clear of that CD, so the leaf can move. Wool never eats that clearance.
@@ -131,6 +131,8 @@ class Geometry:
     soffit_board: float
     length: float
     width: float
+    # Share of the soffit area that is the plain GKB underside (rest: NH side face).
+    soffit_under_fraction: float = 0.0
 
 
 def _models():
@@ -172,8 +174,8 @@ def room_geometry(params=None) -> Geometry:
     volume -= trap * p.predstena_living * mm
 
     soffit_y = (g.y_furn1 - g.y_furn0) * mm
-    soffit = (p.room_width - g.x_furn) * mm * soffit_y
-    soffit += max(0.0, (g.h_start - g.z_nabeh_bot) * mm) * soffit_y
+    soffit_under = (p.room_width - g.x_furn) * mm * soffit_y
+    soffit = soffit_under + max(0.0, (g.h_start - g.z_nabeh_bot) * mm) * soffit_y
 
     glass = sum(width * min(p.window_h, g.h_start) for _, width in p.eave_windows) * mm * mm
     window_wall = g.h_start * p.room_length * mm * mm
@@ -202,9 +204,10 @@ def room_geometry(params=None) -> Geometry:
         kitchen_wool_fraction=p.bass_k_wool * mm / kitchen_cavity,
         living_wool_fraction=p.bass_l_wool * mm / living_cavity,
         gkb_mass=GKB_DENSITY * p.bass_k_gkb * mm,
-        soffit_wool_depth=max(0.0, (g.z_soffit_rail() - (g.z_nabeh_bot + g.t_soffit_face)) * mm),
+        soffit_wool_depth=max(0.0, (g.z_soffit_rail() - (g.z_nabeh_bot + g.t_soffit_bottom)) * mm),
         soffit_air_depth=max(0.0, (g.z_soffit_lid - g.z_soffit_rail()) * mm),
         soffit_board=p.soffit_naturheld_t * mm,
+        soffit_under_fraction=soffit_under / soffit if soffit > 0 else 0.0,
         length=p.room_length * mm,
         width=p.room_width * mm,
     )
@@ -265,6 +268,7 @@ def soffit_stack(
     wool_m: float,
     air_m: float,
     res: Resistivity,
+    wool_sigma: float | None = None,
 ) -> tuple[Layer, ...]:
     """Soffit face, then mineral wool up to the duct void, then that air, then the lid."""
     layers: list[Layer] = [
@@ -272,10 +276,28 @@ def soffit_stack(
         ("porous", board_m, res.wood_fibre_board),
     ]
     if wool_m > 1e-6:
+        layers.append(("porous", wool_m, wool_sigma if wool_sigma is not None else res.mineral_wool))
+    if air_m > 1e-6:
+        layers.append(("air", air_m, 0.0))
+    return tuple(layers)
+
+
+def soffit_under_stack(
+    wool_m: float, air_m: float, res: Resistivity, gkb_m: float = 0.0125
+) -> tuple[Layer, ...]:
+    """Plain GKB underside, then the soffit wool, then the duct air, then the lid."""
+    layers: list[Layer] = [("mass", GKB_DENSITY * gkb_m, 0.0)]
+    if wool_m > 1e-6:
         layers.append(("porous", wool_m, res.mineral_wool))
     if air_m > 1e-6:
         layers.append(("air", air_m, 0.0))
     return tuple(layers)
+
+
+def _soffit_mix(geom: "Geometry", side: float, under: float) -> float:
+    """Area-weighted soffit alpha: NH side face plus GKB underside."""
+    k = geom.soffit_under_fraction
+    return (1.0 - k) * side + k * under
 
 
 def _face_thicknesses(params) -> tuple[float, float]:
@@ -316,6 +338,7 @@ def _band_alphas(
     )
     k_wool, k_air = _split(geom.kitchen_cavity, kitchen_fraction)
     l_wool, l_air = _split(geom.living_cavity, living_fraction)
+    soffit_under = soffit_under_stack(geom.soffit_wool_depth, geom.soffit_air_depth, res)
     kitchen = trap_stack(k_wool, k_air, geom.gkb_mass, res.mineral_wool)
     living = trap_stack(l_wool, l_air, geom.gkb_mass, res.mineral_wool)
     out: dict[float, dict[str, float]] = {}
@@ -324,7 +347,9 @@ def _band_alphas(
             "kitchen": field_absorption(kitchen, freq),
             "living": field_absorption(living, freq),
             "slope": field_absorption(slopes, freq),
-            "soffit": field_absorption(soffit, freq),
+            "soffit": _soffit_mix(
+                geom, field_absorption(soffit, freq), field_absorption(soffit_under, freq)
+            ),
         }
     return out
 
@@ -849,7 +874,7 @@ def _slope_paragraph(params, as_built_t: dict[float, float]) -> str:
         f"{params.naturheld_right:.0f} mm on the cabinet side, with StoSilent "
         f"{params.finish_t:.0f}+{params.basic_t:.0f} mm, screwed through the GKF into the CD. "
         "No slope latě and no NaturHeld Flex. "
-        f"Soffit side and bottom are NaturHeld 140, {params.soffit_naturheld_t:.0f} mm; "
+        f"Soffit side face is NaturHeld 140, {params.soffit_naturheld_t:.0f} mm, underside plain GKB 12.5; "
         "the cavity behind that face is mineral wool, stopped short of the ducts. "
         f"Loose-sheet room decay at the band centre: 125 Hz {as_built_t[125.0]:.2f} s, "
         f"500 Hz {as_built_t[500.0]:.2f} s."
@@ -1967,6 +1992,7 @@ def _reference_alphas(
 ) -> dict[float, dict[str, float]]:
     k_wool, k_air = _split(geom.kitchen_cavity, geom.kitchen_wool_fraction)
     l_wool, l_air = _split(geom.living_cavity, geom.living_wool_fraction)
+    soffit_under = soffit_under_stack(geom.soffit_wool_depth, geom.soffit_air_depth, res)
     stacks = {
         "kitchen": trap_stack(k_wool, k_air, geom.gkb_mass, res.mineral_wool),
         "living": trap_stack(l_wool, l_air, geom.gkb_mass, res.mineral_wool),
@@ -1980,6 +2006,8 @@ def _reference_alphas(
         out[freq] = {
             name: _stack_band_alpha(stack, freq, n_angles, n_in_band) for name, stack in stacks.items()
         }
+        under = _stack_band_alpha(soffit_under, freq, n_angles, n_in_band)
+        out[freq]["soffit"] = _soffit_mix(geom, out[freq]["soffit"], under)
     return out
 
 
