@@ -22,6 +22,7 @@ from blueprints.acoustics.obyvak import (
     Resistivity,
     room_geometry,
     soffit_stack,
+    soffit_under_stack,
     slope_stack,
     trap_stack,
 )
@@ -231,7 +232,7 @@ def _stack_z(kind: str, freq: float, thickness_mm: float, fill: Fill) -> complex
         geom = room_geometry()
         cavity = geom.soffit_wool_depth + geom.soffit_air_depth
         wool = min(max(fill.soffit_wool_m, 0.0), cavity)
-        stack = soffit_stack(
+        side = soffit_stack(
             geom.soffit_board,
             plaster,
             wool,
@@ -239,6 +240,12 @@ def _stack_z(kind: str, freq: float, thickness_mm: float, fill: Fill) -> complex
             res,
             wool_sigma=fill.soffit_sigma,
         )
+        under = soffit_under_stack(wool, cavity - wool, res, wool_sigma=fill.soffit_sigma)
+        # One "soffit" label on the mesh: mix the normalised admittance by area
+        # (side NH face vs GKB underside), the same split as the main RT60 model.
+        k = geom.soffit_under_fraction
+        beta = (1.0 - k) * Z0 / surface_impedance(side, freq) + k * Z0 / surface_impedance(under, freq)
+        return Z0 / beta
     elif kind == "rug":
         stack = (("porous", RUG_DEPTH, RUG_SIGMA),)
     else:

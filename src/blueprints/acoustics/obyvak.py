@@ -283,12 +283,16 @@ def soffit_stack(
 
 
 def soffit_under_stack(
-    wool_m: float, air_m: float, res: Resistivity, gkb_m: float = 0.0125
+    wool_m: float,
+    air_m: float,
+    res: Resistivity,
+    gkb_m: float = 0.0125,
+    wool_sigma: float | None = None,
 ) -> tuple[Layer, ...]:
     """Plain GKB underside, then the soffit wool, then the duct air, then the lid."""
     layers: list[Layer] = [("mass", GKB_DENSITY * gkb_m, 0.0)]
     if wool_m > 1e-6:
-        layers.append(("porous", wool_m, res.mineral_wool))
+        layers.append(("porous", wool_m, wool_sigma if wool_sigma is not None else res.mineral_wool))
     if air_m > 1e-6:
         layers.append(("air", air_m, 0.0))
     return tuple(layers)

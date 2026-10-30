@@ -252,6 +252,14 @@ def main() -> None:
     lines = [
         "# Asymmetric slopes",
         "",
+        "> **Status (Oct 30, 2026):** re-run on the current `main` build-up. 60/100 is the "
+        "chosen pair: NaturHeld 60 mm on the window slope, 100 mm on the cabinet slope, "
+        "2× GKF on the cabinet (road) slope. The second GKF layer is behind the rigid-backed "
+        "slope stack, so this model does not hear it. The soffit is split by area as in the "
+        "main RT60 model: the side face is StoSilent on NaturHeld 140 40 mm over the soffit "
+        "wool, and the underside is plain GKB 12.5 over the same wool and duct air. The other "
+        "pairs are kept for comparison.",
+        "",
         "Left is the window slope, from the eave up to the false ridge. "
         "Right is the cabinet slope, from the ridge down to the soffit. "
         "The subwoofer sits against that cabinet wall, at the TV gable. "
@@ -264,19 +272,20 @@ def main() -> None:
         "Nothing is added behind the thinner board.",
         "",
         "Mineral wool behind the slope gypsum is not in the model. "
-        "On the window slope that wool is 160 + 140 mm; on the cabinet slope it is 160 mm "
-        "plus whatever is left. It sits behind the GKF, so the room does not hear it, "
+        "On the window slope that wool is 160 + 80 mm Unifit 033; on the cabinet slope it is "
+        "160 + 320 mm NatuRoll 039. It sits behind the GKF, so the room does not hear it, "
         "and the ceiling stays symmetric. `plenum_wool` is a CAD volume for the material "
         "list only. No impedance function reads it. The older note about an 80 mm gap "
         "under the rafters is the same invisible layer, also excluded.",
         "",
         "Wool that is counted, on purpose, is not behind rigid gypsum. "
-        "The soffit wool is behind the 40 mm NaturHeld face. "
+        "The soffit wool is behind the 40 mm NaturHeld side face and the GKB underside "
+        "(admittance mixed by area on the wave mesh, α mixed by area in Eyring). "
         "The trap wool is behind the GKB membrane, which is the bass-trap leaf, not a rigid wall. "
-        "Both stay at the drawing thicknesses from the previous run.",
+        "Both stay at the drawing thicknesses.",
         "",
         f"Window slope {furn.area_of('slope_left'):.1f} m², cabinet slope {furn.area_of('slope_right'):.1f} m², "
-        "between the traps. Sofa, soffit wool and both traps stay as in the last run.",
+        "between the traps. Domestic sofa, soffit wool and both traps as in the model.",
         "",
         "## Furnished T60",
         "",
@@ -350,12 +359,11 @@ def main() -> None:
         mid = float(np.mean([curve[500.0], curve[1000.0]]))
         if pair.name == "80/80":
             text = (
-                f"80/80 is the drawing. Furnished bass {bass:.2f} s, mids {mid:.2f} s. "
-                "Same dry mids as the last run, bass still about three times longer."
+                f"80/80 is the reference for the seat levels. Furnished bass {bass:.2f} s, mids {mid:.2f} s."
             )
         elif pair.name == "100/100":
             text = (
-                f"100/100 is the previous recommendation. Furnished bass {bass:.2f} s "
+                f"100/100 is the earlier recommendation. Furnished bass {bass:.2f} s "
                 f"({bass - base_bass:+.2f} s against 80/80), mids {mid:.2f} s. "
                 "The mids do not move."
             )
