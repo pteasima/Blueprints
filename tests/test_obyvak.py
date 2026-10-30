@@ -158,7 +158,18 @@ def test_layout_ceiling_and_gable():
     assert len(acry) == 4
     sdk = g.sikmina_sdk_pts()
     assert any(abs(x - g.gkf_end_room[0]) < 1e-6 and abs(z - g.gkf_end_room[1]) < 1e-6 for x, z in sdk)
-    assert any(abs(x - g.gkf_end_attic[0]) < 1e-6 and abs(z - g.gkf_end_attic[1]) < 1e-6 for x, z in sdk)
+    assert any(abs(x - g.gkf_end_mid[0]) < 1e-6 and abs(z - g.gkf_end_mid[1]) < 1e-6 for x, z in sdk)
+    # Road side carries 2x GKF; the outer layer ends at the same square end.
+    sdk2 = g.sikmina_sdk2_pts()
+    assert any(abs(x - g.gkf_end_attic[0]) < 1e-6 and abs(z - g.gkf_end_attic[1]) < 1e-6 for x, z in sdk2)
+    assert abs(g.t_gkf_attic_right - g.t_gkf_room_right - 25.0) < 1e-6
+    # CD planes meet at x_cd_joint with no step.
+    assert abs(
+        g.plane_z(g.x_cd_joint, g.t_gkf_attic_left, right=False)
+        - g.plane_z(g.x_cd_joint, g.t_gkf_attic_right, right=True)
+    ) < 1e-6
+    # About 2 x 160 mm wool still fits below the right rafters.
+    assert 300.0 < g.wool_right < 330.0
 
 
 def test_krov_is_discrete_rafters():
@@ -370,10 +381,12 @@ def test_sikminy_and_soffit_stack_in_3d():
     from build123d import Box, Location
 
     ex, ez = g.gkf_end_room
-    ax, az = g.gkf_end_attic
+    ax, az = g.gkf_end_mid
     probe = Location((0.5 * (ex + ax), p.room_length * 0.5, 0.5 * (ez + az))) * Box(6.0, 30.0, 6.0)
-    hit = slope_board.intersect(probe)
-    pieces = list(hit.solids()) if hit is not None and hasattr(hit, "solids") else []
+    pieces = []
+    for board in slope_boards:
+        hit = board.intersect(probe)
+        pieces += list(hit.solids()) if hit is not None and hasattr(hit, "solids") else []
     assert pieces, "slope board has no thickness at the square end"
     # Mates pull 1 mm off each face, so the solid reads a little under 12.5.
     thick = max(s.bounding_box().size.Z for s in pieces) * g.cos

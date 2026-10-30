@@ -86,6 +86,8 @@ URL_JUTAFOL_SHOP = (
 )
 URL_GKB = "https://www.rigips.cz/produkty/stavebni-deska-rb-a/"
 URL_CD = "https://www.rigips.cz/produkty/r-cd-profil/"
+URL_TN35_DEK = "https://www.dek.cz/produkty/detail/3631100059-rychlosroub-tn-35-profi-1000ks-bal-dkm"
+URL_VARIO = "https://izosystems.cz/stavebni-chemie/1000-sadrovy-tmel-rigips-vario-25-kg.html"
 URL_CD_DEK = "https://www.dek.cz/produkty/vypis/4167-cd-profily-na-strop/28565-rigips"
 URL_DIRECT = (
     "https://www.dek.cz/produkty/detail/3631100170-primy-zaves-cd-i-drevo-200mm-dkm"
@@ -339,6 +341,8 @@ PRICE = {
     "rf_m2": (115.88, f"DEK · {URL_RF_DEK}"),
     "jutafol_m2": (35.73, f"IZOMAT JUTAFOL N AL 170 Speciál · {URL_JUTAFOL_SHOP}"),
     "gkb_m2": (96.0, "NonstopStavebniny / DEK RB~GKB orientačně"),
+    "tn35_ks": (0.22, f"DEK DK Mont TN 35, 220.78 Kč / 1000 pcs incl. VAT · {URL_TN35_DEK}"),
+    "vario_kg": (39.32, f"izosystems.cz Rigips Vario, 983 Kč / 25 kg incl. VAT · {URL_VARIO}"),
     "cd_bm": (29.21, f"DEK R-CD · {URL_CD_DEK}"),
     "direct_ks": (
         12.52,
@@ -486,6 +490,20 @@ def build_lines(q) -> dict[str, list[Line]]:
             "Končí u zlomu na víko kastlíku.",
         ),
         Line(
+            "5b",
+            "Podkladní deska, 2. vrstva (pravá šikmina)",
+            "Sádrokarton GKF / RF",
+            _product("Rigips RF (DF) 12,5 mm", URL_RF),
+            f"{p.sdk_t} mm",
+            half_s * (p.sdk_layers_right - 1),
+            "m²",
+            12,
+            PRICE["rf_m2"][0],
+            PRICE["rf_m2"][1],
+            "Second layer on the road-side slope for road noise. Joints staggered "
+            "against the first layer. Same 3 mm acrylic joint at the soffit.",
+        ),
+        Line(
             6,
             "Rošt CD",
             "Profil CD 60×27",
@@ -578,7 +596,7 @@ def build_lines(q) -> dict[str, list[Line]]:
             NATUROLL039_160_KC_M2,
             f"NonstopStavebniny, 815 Kč / 5.76 m² roll incl. VAT · {URL_NATUROLL039_160}",
             f"Right slope face {half_s:.2f} m² × 2 layers = {2 * half_s:.2f} m² → {_ceil_pack(2 * half_s * 1.05, 5.76)} rolls. "
-            f"Model cavity {g.wool_right:.1f} mm. U ≈ 0.068, foil ≈ 14.2 °C at −15 °C; whole roof U ≈ 0.095.",
+            f"Model cavity {g.wool_right:.1f} mm (2× GKF on this side), so 2 × 160 is compressed ~3 %. U ≈ 0.070, foil ≈ 13.9 °C at −15 °C; whole roof U ≈ 0.096.",
         ),
         Line(
             10,
@@ -984,6 +1002,48 @@ def build_lines(q) -> dict[str, list[Line]]:
             "Šikminy + víko kastlíku.",
         ),
         Line(
+            "6b",
+            "GKF RF 12.5, 2nd layer, right slope",
+            "GKF/RF",
+            _product("Rigips RF 12,5", URL_RF),
+            "12,5 mm",
+            half_s * (p.sdk_layers_right - 1),
+            "m²",
+            12,
+            PRICE["rf_m2"][0],
+            PRICE["rf_m2"][1],
+            f"Road-side slope only (2× GKF for road noise). {half_s * (p.sdk_layers_right - 1):.2f} m² "
+            f"→ {_ceil_pack(half_s * (p.sdk_layers_right - 1) * 1.12, 2.5)} boards 1250×2000.",
+        ),
+        Line(
+            "6c",
+            "Screws TN 35, 2nd GKF layer",
+            "Drywall screw",
+            _product("DK Mont TN 35", URL_TN35_DEK),
+            "3.5×35",
+            half_s * (p.sdk_layers_right - 1) * 10.0,
+            "ks",
+            10,
+            PRICE["tn35_ks"][0],
+            PRICE["tn35_ks"][1],
+            f"Outer layer @ ≤170 mm on CD @ {p.cd_spacing:.0f} mm ≈ 10 pcs/m². "
+            "First layer keeps TN 25 at wider spacing (not priced, as before).",
+        ),
+        Line(
+            "6d",
+            "Joint compound, 1st-layer joints",
+            "Gypsum filler",
+            _product("Rigips Vario 25 kg", URL_VARIO),
+            "25 kg",
+            half_s * (p.sdk_layers_right - 1) * 0.3,
+            "kg",
+            10,
+            PRICE["vario_kg"][0],
+            PRICE["vario_kg"][1],
+            "Inner-layer joints filled (no tape) at 0.3 kg/m². Outer-layer joints and tape "
+            "as for the single board (not priced, as before).",
+        ),
+        Line(
             7,
             "Sádrokarton GKB/RF 12,5 (basstrapy)",
             "GKB plná",
@@ -1033,7 +1093,8 @@ def build_lines(q) -> dict[str, list[Line]]:
             8,
             nonius_unit,
             nonius_src,
-            f"Pravá šikmina + kastlík. Svěšení šikminy {right_hang:.0f} mm, kastlík {soffit_drop:.0f} mm.",
+            f"Pravá šikmina + kastlík. Svěšení šikminy {right_hang:.0f} mm, kastlík {soffit_drop:.0f} mm. "
+            "Load with 2× GKF ≈ 22 kg per hanger point (was ≈ 17 kg); Nonius load class 0.40 kN, so OK.",
         ),
         Line(
             11,
@@ -1102,7 +1163,7 @@ def build_lines(q) -> dict[str, list[Line]]:
             NATUROLL039_160_KC_M2,
             f"NonstopStavebniny, 815 Kč / 5.76 m² roll incl. VAT · {URL_NATUROLL039_160}",
             f"Right slope face {half_s:.2f} m² × 2 layers = {2 * half_s:.2f} m² → {_ceil_pack(2 * half_s * 1.05, 5.76)} rolls. "
-            f"Model cavity {g.wool_right:.1f} mm. U ≈ 0.068, foil ≈ 14.2 °C at −15 °C; whole roof U ≈ 0.095.",
+            f"Model cavity {g.wool_right:.1f} mm (2× GKF on this side), so 2 × 160 is compressed ~3 %. U ≈ 0.070, foil ≈ 13.9 °C at −15 °C; whole roof U ≈ 0.096.",
         ),
         Line(
             "13b",

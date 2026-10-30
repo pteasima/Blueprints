@@ -926,6 +926,8 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
 
     # 2) SDK
     parts.append(_add_band(g.sikmina_sdk_pts(), LABEL_SLOPE_GKF))
+    if (_sdk2 := g.sikmina_sdk2_pts()) is not None:
+        parts.append(_add_band(_sdk2, LABEL_SLOPE_GKF))
 
     # 4) CD ⊥ krokvím (spaced along slope, run along Y)
     cd_parts: list = []
@@ -949,7 +951,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         # ridge onward (pack peak at x_false, left of the roof ridge).
         # Direct hanger on the left plane, including the short run past the
         # false ridge. Nonius starts where the right GKF plane takes over.
-        hang_label = LABEL_SLOPE_DIRECT if st[0] <= g.x_stack_joint else LABEL_SLOPE_NONIUS
+        hang_label = LABEL_SLOPE_DIRECT if st[0] <= g.x_cd_joint else LABEL_SLOPE_NONIUS
         for yc in ceil_rafter_ys:
             zaves_parts.append(
                 _extrude_y(
