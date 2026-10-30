@@ -1,0 +1,11 @@
+[
+  {
+    "id": "bathroom",
+    "children": [
+      "floor_tile",
+      "wall_tile",
+      "grout",
+      "drain"
+    ]
+  }
+]
