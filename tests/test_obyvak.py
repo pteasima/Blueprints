@@ -1120,13 +1120,14 @@ def test_obyvak_3d_exports(tmp_path, monkeypatch):
 
 
 def test_soffit_acoustics_ignore_the_steel_section():
-    """CD/UD replaces the timber latě. The acoustic stack stays the 40 mm board."""
+    """CD/UD replaces the timber latě. Side face 40 mm board; underside is GKB 12.5."""
     from blueprints.acoustics.obyvak import room_geometry
 
     geom = room_geometry()
     assert geom.soffit_board == 0.04
     assert abs(geom.soffit - 12.18423095) < 1e-6
-    assert abs(geom.soffit_wool_depth - 0.44760580837556746) < 1e-9
+    assert abs(geom.soffit_wool_depth - 0.47910580837556743) < 1e-9
+    assert abs(geom.soffit_under_fraction - 0.38631900700477245) < 1e-9
     assert abs(geom.soffit_air_depth - 0.32589419162443256) < 1e-9
 
 
