@@ -91,6 +91,7 @@ from obyvak_geom import (
     LABEL_SOFFIT_WOOL,
     LABEL_SOFFIT_DUCT,
     LABEL_SOFFIT_GKF,
+    LABEL_SOFFIT_GKB,
     LABEL_SOFFIT_NH,
     LABEL_SOFFIT_NONIUS,
     LABEL_WALL_GKF,
@@ -1071,19 +1072,26 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     z_nh_in = g.z_slope_plane_offset(g.x_nh_inner, t_slope) - gap
     soffit_nh = [
         (g.x_nh_outer + gap, g.z_nabeh_bot + gap),
-        (p.room_width - gap, g.z_nabeh_bot + gap),
-        (p.room_width - gap, g.z_nabeh_bot + t - gap),
-        (g.x_nh_inner - gap, g.z_nabeh_bot + t - gap),
+        (g.x_nh_inner - gap, g.z_nabeh_bot + gap),
         (g.x_nh_inner - gap, z_nh_in),
         (g.x_nh_outer + gap, z_nh_out),
     ]
     parts.append(_extrude_y(xz_face(soffit_nh, LABEL_SOFFIT_NH), y_soff0, y_soff1, LABEL_SOFFIT_NH))
+    # GKB underside over the cabinets, butting the NH side face.
+    tb = g.t_soffit_bottom
+    soffit_gkb = [
+        (g.x_nh_inner + gap, g.z_nabeh_bot + gap),
+        (p.room_width - gap, g.z_nabeh_bot + gap),
+        (p.room_width - gap, g.z_nabeh_bot + tb - gap),
+        (g.x_nh_inner + gap, g.z_nabeh_bot + tb - gap),
+    ]
+    parts.append(_extrude_y(xz_face(soffit_gkb, LABEL_SOFFIT_GKB), y_soff0, y_soff1, LABEL_SOFFIT_GKB))
 
     # Mineral wool in the acoustic cavity, stopped short of the pipes.
     z_rail_top = g.z_soffit_rail()
     wool_box = [
-        (g.x_nh_inner + gap, g.z_nabeh_bot + t + gap),
-        (p.room_width - gap, g.z_nabeh_bot + t + gap),
+        (g.x_nh_inner + gap, g.z_nabeh_bot + tb + gap),
+        (p.room_width - gap, g.z_nabeh_bot + tb + gap),
         (p.room_width - gap, z_rail_top - gap),
         (g.x_nh_inner + gap, z_rail_top - gap),
     ]
@@ -1162,7 +1170,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     fd = p.cd_t
     half_w = p.cd_w * 0.5
     bt = p.wall_bracket_t
-    z_wood0 = g.z_nabeh_bot + t + gap + bt
+    z_wood0 = g.z_nabeh_bot + tb + gap + bt
     # Land on the lid. The rost CD is on the attic side of that board; a short
     # drop through the GKF is the screw, not a riser.
     z_lat_top = g.z_soffit_lid - gap
@@ -1316,6 +1324,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
             LABEL_SOFFIT_WOOL,
             LABEL_SOFFIT_UD,
             LABEL_SOFFIT_GKF,
+            LABEL_SOFFIT_GKB,
             LABEL_SOFFIT_CD,
             LABEL_SOFFIT_NONIUS,
             LABEL_SOFFIT_DUCT,

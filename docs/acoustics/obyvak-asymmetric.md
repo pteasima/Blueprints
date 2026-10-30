@@ -1,12 +1,14 @@
 # Asymmetric slopes
 
+> **Status (Oct 30, 2026):** archived study from draft PR #69. The 60/100 column is the chosen build-up and is now on `main` (#68, #70): NaturHeld 60 mm on the window slope, 100 mm on the cabinet slope, 2× GKF on the cabinet (road) slope. Since then the soffit underside is plain GKB 12.5 and only the side face is NaturHeld 40 mm. The wave tables below were not re-run for that soffit change or the second GKF layer, which sits behind the rigid-backed slope stack and is not heard in this model. The behind-gypsum wool is now 160 + 80 mm Unifit 033 (left) and 160 + 320 mm NatuRoll 039 (right). The room does not hear it here either.
+
 Left is the window slope, from the eave up to the false ridge. Right is the cabinet slope, from the ridge down to the soffit. The subwoofer sits against that cabinet wall, at the TV gable. In the cross-section the window slope is on the left and the cabinet slope on the right.
 
 Every slope face is StoSilent on NaturHeld, rigid-backed. `pack()` is `slope_stack`: no mineral wool in the room-facing layers. 60/60, 80/80, 100/100 and 120/120 use that same stack on both sides. The asymmetric runs differ only in the NaturHeld thickness. Nothing is added behind the thinner board.
 
-Mineral wool behind the slope gypsum is not in the model. On the window slope that wool is 160 + 140 mm; on the cabinet slope it is 160 mm plus whatever is left. It sits behind the GKF, so the room does not hear it, and the ceiling stays symmetric. `plenum_wool` is a CAD volume for the material list only. No impedance function reads it. The older note about an 80 mm gap under the rafters is the same invisible layer, also excluded.
+Mineral wool behind the slope gypsum is not in the model. At the time of this run that wool was 160 + 140 mm (window) and 160 mm plus the rest (cabinet); see the status note for the confirmed build-up. It sits behind the GKF, so the room does not hear it, and the ceiling stays symmetric. `plenum_wool` is a CAD volume for the material list only. No impedance function reads it. The older note about an 80 mm gap under the rafters is the same invisible layer, also excluded.
 
-Wool that is counted, on purpose, is not behind rigid gypsum. The soffit wool is behind the 40 mm NaturHeld face. The trap wool is behind the GKB membrane, which is the bass-trap leaf, not a rigid wall. Both stay at the drawing thicknesses from the previous run.
+Wool that is counted, on purpose, is not behind rigid gypsum. In this run the soffit wool was behind a 40 mm NaturHeld face on the side and underside (the underside is now GKB). The trap wool is behind the GKB membrane, which is the bass-trap leaf, not a rigid wall. Both stay at the drawing thicknesses from the previous run.
 
 Window slope 33.5 m², cabinet slope 33.5 m², between the traps. Sofa, soffit wool and both traps stay as in the last run.
 

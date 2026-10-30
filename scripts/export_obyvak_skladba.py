@@ -264,9 +264,11 @@ def collect_quantities():
     trap_face = trap_h * p.room_width / 1e6
     soffit_y = g.y_furn1 - g.y_furn0
     nh_pts = g.soffit_nh_pts()
-    bottom = abs(nh_pts[1][0] - nh_pts[0][0])
-    vert = abs(nh_pts[4][1] - nh_pts[3][1])
-    soffit_face = (bottom + vert) * soffit_y / 1e6
+    # NH + StoSilent on the side face only; the underside is plain GKB.
+    vert = max(z for _x, z in nh_pts) - min(z for _x, z in nh_pts)
+    soffit_face = vert * soffit_y / 1e6
+    gkb_pts = g.soffit_gkb_pts()
+    soffit_gkb = abs(gkb_pts[1][0] - gkb_pts[0][0]) * soffit_y / 1e6
     lid_area = max(g.poz_r0 - g.x_gkf_kink, 0.0) * soffit_y / 1e6
 
     nonius_hang = []
@@ -300,6 +302,7 @@ def collect_quantities():
         "by": by,
         "slope_face": slope_face,
         "soffit_face": soffit_face,
+        "soffit_gkb_m2": soffit_gkb,
         "trap_face": trap_face,
         "lid_area": lid_area,
         "slope_cd_lm": _length_m(by[LABEL_SLOPE_CD]),
@@ -972,7 +975,7 @@ def build_lines(q) -> dict[str, list[Line]]:
             12,
             PRICE["nh40_m2"][0],
             PRICE["nh40_m2"][1],
-            "Kastlík.",
+            "Kastlík, svislý líc (podhled je GKB).",
         ),
         Line(
             5,
@@ -1045,16 +1048,17 @@ def build_lines(q) -> dict[str, list[Line]]:
         ),
         Line(
             7,
-            "Sádrokarton GKB/RF 12,5 (basstrapy)",
+            "Sádrokarton GKB/RF 12,5 (basstrapy + podhled kastlíku)",
             "GKB plná",
             _product("Rigips RB/RF 12,5", URL_GKB),
             "12,5 mm",
-            q["bass_gkb_m2"],
+            q["bass_gkb_m2"] + q["soffit_gkb_m2"],
             "m²",
             12,
             PRICE["gkb_m2"][0],
             PRICE["gkb_m2"][1],
-            "Štíty.",
+            f"Štíty {q['bass_gkb_m2']:.2f} m² + podhled kastlíku nad skříněmi "
+            f"{q['soffit_gkb_m2']:.2f} m².",
         ),
         Line(
             8,

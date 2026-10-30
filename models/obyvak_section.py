@@ -36,6 +36,7 @@ from obyvak_geom import (  # noqa: F401
     LABEL_SOFFIT_DUCT,
     LABEL_SOFFIT_WOOL,
     LABEL_SOFFIT_GKF,
+    LABEL_SOFFIT_GKB,
     LABEL_SOFFIT_NH,
     LABEL_SOFFIT_NONIUS,
     LABEL_WALL_PLATE,
@@ -135,10 +136,11 @@ def build(params: ObyvakParams | None = None):
     # Soffit bay: NH L, mineral wool under the rail, ducts, GKF lid on the plate,
     # horizontal CD + Nonius, plate cleat, CD/UD rost hung from the front CD.
     parts.append(xz_face(g.soffit_nh_pts(), LABEL_SOFFIT_NH))
+    parts.append(xz_face(g.soffit_gkb_pts(), LABEL_SOFFIT_GKB))
     parts.append(xz_face(g.soffit_wool_pts(), LABEL_SOFFIT_WOOL))
     fd = p.cd_t
     ud = p.ud_w
-    z_wood0 = g.z_nabeh_bot + g.t_soffit_face + p.wall_bracket_t
+    z_wood0 = g.z_nabeh_bot + g.t_soffit_bottom + p.wall_bracket_t
     x_wall = p.room_width - p.wall_plaster
     x_ud1 = x_wall - p.wall_bracket_t
     x_ud0 = x_ud1 - ud
