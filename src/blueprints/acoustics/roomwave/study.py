@@ -22,6 +22,7 @@ from blueprints.acoustics.obyvak import (
     eyring_t,
     room_geometry,
     soffit_stack,
+    soffit_under_stack,
     slope_stack,
 )
 from blueprints.acoustics.roomwave.boundaries import (
@@ -211,10 +212,10 @@ def _legacy_t60(thickness_mm: int, soffit: str, freq: float, trap_alpha: dict[st
     plaster = 0.004
     slope = field_absorption(slope_stack(thickness_mm / 1000.0, plaster, res), freq)
     if soffit == "as_built":
-        soffit_a = field_absorption(
-            soffit_stack(geom.soffit_board, plaster, geom.soffit_wool_depth, geom.soffit_air_depth, res),
-            freq,
-        )
+        k = geom.soffit_under_fraction
+        side = soffit_stack(geom.soffit_board, plaster, geom.soffit_wool_depth, geom.soffit_air_depth, res)
+        under = soffit_under_stack(geom.soffit_wool_depth, geom.soffit_air_depth, res)
+        soffit_a = (1.0 - k) * field_absorption(side, freq) + k * field_absorption(under, freq)
         soffit_area = geom.soffit
     else:
         soffit_a = 0.0

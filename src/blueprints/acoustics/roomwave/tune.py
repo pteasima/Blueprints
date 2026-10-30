@@ -24,6 +24,7 @@ from blueprints.acoustics.obyvak import (
     eyring_t,
     room_geometry,
     soffit_stack,
+    soffit_under_stack,
     slope_stack,
 )
 from blueprints.acoustics.panel import weighted_band_alpha
@@ -135,7 +136,10 @@ def _field_alpha(kind: str, freq: float, slope_mm: int, wool_m: float, air_m: fl
         stack = slope_stack(slope_mm / 1000.0, plaster, res)
     elif kind == "soffit":
         geom = room_geometry()
-        stack = soffit_stack(geom.soffit_board, plaster, wool_m, air_m, res, wool_sigma=sigma)
+        side = soffit_stack(geom.soffit_board, plaster, wool_m, air_m, res, wool_sigma=sigma)
+        under = soffit_under_stack(wool_m, air_m, res, wool_sigma=sigma)
+        k = geom.soffit_under_fraction
+        return (1.0 - k) * field_absorption(side, freq) + k * field_absorption(under, freq)
     elif kind == "rug":
         stack = (("porous", 0.012, 20_000.0),)
     elif kind == "trap":
