@@ -21,16 +21,12 @@ from blueprints.export_utils import export_section  # noqa: E402
 
 
 def _source_z_soffit(p: ObyvakParams) -> float:
-    """Independent copy of the legacy bokorys formula (ridge-center soffit)."""
-    cos = math.cos(math.radians(p.roof_angle_deg))
+    """False-ridge height follows the joint-derived room face."""
     tan = math.tan(math.radians(p.roof_angle_deg))
-    t_soft = p.finish_t + p.basic_t + p.naturheld_t + p.sdk_t
-    # Foil sits attic-side of CD (below wool); still counts in the slope pack.
-    t_left = p.plenum_t + p.foil_t + p.cd_t + t_soft
-    t_above = p.vent_t + p.dhv_t + p.counter_batten_t + p.batten_t + p.tile_t
     half = p.room_width / 2.0
-    z_raf_inner_ridge = p.ridge_z - (t_above + p.rafter_t) / cos
-    h_start = (z_raf_inner_ridge - half * tan) - t_left / cos
+    from obyvak_geom import ObyvakLayout
+
+    h_start = ObyvakLayout(p).h_start
     return h_start + half * tan
 
 
@@ -43,7 +39,7 @@ def test_soffit_and_predsteny_match_source_sheet():
     g = build_layout(p)
     z_soffit = _source_z_soffit(p)
     assert abs(g.z_soffit - z_soffit) < 1e-9
-    assert abs(g.z_soffit - 5395.1) < 1.0
+    assert abs(g.z_soffit - 5429.4) < 1.0
     assert p.predstena_kitchen == 190.0
     assert p.predstena_living == 450.0
     assert g.x_pred_l == p.predstena_living

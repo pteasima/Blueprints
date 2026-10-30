@@ -49,6 +49,9 @@ def main(argv: list[str] | None = None) -> int:
     part_groups = parts_fn() if callable(parts_fn) else None
     if kind == "section":
         paths = export_section(shape, model_name)
+        annot = getattr(mod, "annotate", None)
+        if callable(annot):
+            annot(paths["svg"], paths.get("dxf"), paths.get("png"))
     else:
         paths = export_shape(
             shape,

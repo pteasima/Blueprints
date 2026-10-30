@@ -28,17 +28,18 @@ from blueprints.export_utils import export_section  # noqa: E402
 
 
 def _source_h_start(p: ObyvakParams) -> float:
-    """Independent copy of the legacy-sheet formula."""
+    """Room face from the soffit CD plus the 40° UD, then 100 mm NaturHeld."""
+    sin = math.sin(math.radians(p.roof_angle_deg))
     cos = math.cos(math.radians(p.roof_angle_deg))
     tan = math.tan(math.radians(p.roof_angle_deg))
-    t_soft = p.finish_t + p.basic_t + p.naturheld_t + p.sdk_t
-    # Foil sits attic-side of CD (below wool); still counts in the slope pack.
-    t_left = p.plenum_t + p.foil_t + p.cd_t + t_soft
-    t_above = p.vent_t + p.dhv_t + p.counter_batten_t + p.batten_t + p.tile_t
-    x_ridge = p.room_width / 2.0
-    z_raf_inner_ridge = p.ridge_z - (t_above + p.rafter_t) / cos
-    z_raf_0 = z_raf_inner_ridge - abs(0.0 - x_ridge) * tan
-    return z_raf_0 - t_left / cos
+    x_furn = p.room_width - p.furniture_width
+    x_nh_inner = x_furn + p.finish_t + p.basic_t + p.soffit_naturheld_t
+    x_cd_room = x_nh_inner
+    z_cd_bot = p.eave_wall_z + p.plate_h
+    d_room = p.finish_t + p.basic_t + p.naturheld_right + p.sdk_t
+    rx = x_cd_room - sin * d_room
+    rz = z_cd_bot - cos * d_room
+    return rz + (rx - x_furn) * tan
 
 
 def test_derived_matches_source_sheet():
@@ -48,7 +49,7 @@ def test_derived_matches_source_sheet():
     assert g.x_false == (p.room_width - p.furniture_width) / 2.0
     assert g.z_nabeh_bot == p.furniture_height + p.furniture_gap
     assert abs(g.h_start - _source_h_start(p)) < 1e-9
-    assert abs(g.h_start - 3150.5) < 2.0
+    assert abs(g.h_start - 3184.8) < 1.0
     assert g.z_gkf_horiz == g.h_start
     assert g.z_false == g.h_start + g.x_false * g.tan
     soffit_h = g.z_gkf_horiz - g.z_nabeh_bot

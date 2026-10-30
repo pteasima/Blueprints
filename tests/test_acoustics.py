@@ -163,7 +163,7 @@ def test_study_ranks_splits_and_states_the_fem_decision():
     assert "Living gable" in text
     assert "bass FEM" in text
     assert "5%" in text
-    assert "80 mm" in text and "300 mm" in text and "130.5 mm" in text
+    assert "60 mm" in text and "100 mm" in text and "300 mm" in text and "130.5 mm" in text
     assert "20 mm" in text
     assert "No slope latě" in text
     assert "cut" in text
