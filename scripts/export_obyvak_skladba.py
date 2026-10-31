@@ -406,6 +406,18 @@ def build_lines(q) -> dict[str, list[Line]]:
     roof_half = roof_slope_m2 * 0.5
     between_half = between_m2 * 0.5
     joint_m = (g.y_furn1 - g.y_furn0) / 1000.0
+    # Vapour brake eave runs past the slopes: left down the plate to the wall
+    # plaster (with the slack loop), right over the lid and down to the cabinet plaster.
+    vb_eave_mm = 0.0
+    vb_path = g.vapour_brake_path()
+    for (xa, za), (xb, zb) in zip(vb_path, vb_path[1:]):
+        xm = 0.5 * (xa + xb)
+        if xm < g.x_nh_end_l or xm > g.x_furn:
+            vb_eave_mm += math.hypot(xb - xa, zb - za)
+    eave_m = p.room_length / 1000.0
+    vb_eave_m2 = vb_eave_mm / 1000.0 * eave_m
+    vb_m2 = face_s + vb_eave_m2
+    vb_tape_m = 2.0 * eave_m
 
     basic_kg_s = face_s * STOSILENT_BASIC_KG_M2
     finish_kg_s = face_s * STOSILENT_FINISH_KG_M2
@@ -468,15 +480,17 @@ def build_lines(q) -> dict[str, list[Line]]:
             "Reflexní parozábrana Al",
             _product("Jutafol N AL 170 Speciál", URL_JUTAFOL),
             "sd > 300 m · role 1,5×50 m = 75 m²",
-            face_s,
+            vb_m2,
             "m²",
             10,
             PRICE["jutafol_m2"][0],
             f"{PRICE['jutafol_m2'][1]} · TL {URL_JUTAFOL_TL}",
             f"Na attic straně CD, pod minerální vlnou (stejně jako zbytek domu — "
-            f"ne proměnlivá fólie). Plocha šikmin {face_s:.2f} m². "
-            f"S rezervou 10 % ≈ {_fmt(face_s * 1.1, 1)} m² "
-            f"≈ {_ceil_pack(face_s * 1.1, 75.0)}× role 75 m². "
+            f"ne proměnlivá fólie). Plocha šikmin {face_s:.2f} m² + přesahy u okapů "
+            f"{vb_eave_m2:.2f} m² ({vb_eave_mm:.0f} mm × {eave_m:.1f} m: vlevo dolů přes pozednici "
+            "se smyčkou na omítku, vpravo přes víko kastlíku na omítku skříní). "
+            f"S rezervou 10 % ≈ {_fmt(vb_m2 * 1.1, 1)} m² "
+            f"≈ {_ceil_pack(vb_m2 * 1.1, 75.0)}× role 75 m². "
             "Spoje JUTAFOL SP AL / SP 1, napojení JUTAFOL MASTIC.",
         ),
         Line(
@@ -504,7 +518,7 @@ def build_lines(q) -> dict[str, list[Line]]:
             PRICE["rf_m2"][0],
             PRICE["rf_m2"][1],
             "Second layer on the road-side slope for road noise. Joints staggered "
-            "against the first layer. Same 3 mm acrylic joint at the soffit.",
+            "against the first layer. Both layers cut level and bear on the soffit lid (no gap).",
         ),
         Line(
             6,
@@ -983,12 +997,13 @@ def build_lines(q) -> dict[str, list[Line]]:
             "Jutafol N AL 170 Speciál",
             _product("Jutafol N AL 170 Speciál", URL_JUTAFOL),
             "role 75 m²",
-            face_s,
+            vb_m2,
             "m²",
             10,
             PRICE["jutafol_m2"][0],
             f"{PRICE['jutafol_m2'][1]} · TL {URL_JUTAFOL_TL}",
-            f"Šikminy {face_s:.2f} m² (+10 % ≈ {_fmt(face_s * 1.1, 1)} m²). Nad CD, pod vlnou. "
+            f"Šikminy {face_s:.2f} m² + okapy {vb_eave_m2:.2f} m² (+10 % ≈ {_fmt(vb_m2 * 1.1, 1)} m²). "
+            "Nad CD, pod vlnou; na obou okapech dolů na omítku se smyčkou. "
             "Spoje JUTAFOL SP AL / SP 1, napojení JUTAFOL MASTIC.",
         ),
         Line(
@@ -1181,7 +1196,7 @@ def build_lines(q) -> dict[str, list[Line]]:
             None,
             "—",
             "Přišroubovaný z boku CD kastlíku. Šikmé CD se do něj zasunou. "
-            f"Spára akryl + páska {joint_m:.2f} bm.",
+            "GKF šikminy dosedá na víko kastlíku bez spáry.",
             True,
         ),
         Line(
@@ -1211,6 +1226,51 @@ def build_lines(q) -> dict[str, list[Line]]:
             PRICE["cd_bm"][0],
             PRICE["cd_bm"][1],
             "U obvodové zdi kastlíku. Cena orientačně jako R-CD — UD ověřit nabídkou.",
+            True,
+        ),
+        Line(
+            "15b",
+            "UD 28×27 na pozednici (levý okap)",
+            "UD profil",
+            "Rigips UD 28/27, ohnutá pásnice",
+            f"{p.ud_w:.0f}×{p.cd_t:.0f} · vrut do dřeva 3,5×35 @ 300 mm",
+            eave_m,
+            "bm",
+            10,
+            PRICE["cd_bm"][0],
+            PRICE["cd_bm"][1],
+            "Konec GKF levé šikminy. Ohnutá pásnice přišroubovaná na čelo pozednice. "
+            "Cena orientačně jako R-CD — UD ověřit nabídkou.",
+            True,
+        ),
+        Line(
+            "15c",
+            "Napojení parozábrany na omítku",
+            "Lepicí páska / tmel",
+            "JUTAFOL MASTIC + páska (typ Contega / Orcon)",
+            "oba okapy",
+            vb_tape_m,
+            "bm",
+            10,
+            None,
+            "—",
+            "Vlevo: fólie dolů přes pozednici, volná smyčka, nalepit a přelepit na omítku zdi. "
+            "Vpravo: přes víko kastlíku dolů, smyčka, na omítku skříní. "
+            "Lepená plocha vlevo je krátká (~27 mm) — použít lepidlo pro omítky.",
+            True,
+        ),
+        Line(
+            "15d",
+            "Akryl v koutě (plánovaná spára)",
+            "Akrylový tmel",
+            "Akryl přetíratelný",
+            "levý kout stěna/šikmina",
+            eave_m,
+            "bm",
+            10,
+            None,
+            "—",
+            "Kout zeď / GKF levé šikminy je plánovaný řez, uzavřený akrylem.",
             True,
         ),
         Line(

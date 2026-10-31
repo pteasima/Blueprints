@@ -122,19 +122,24 @@ def test_layout_ceiling_and_gable():
     # The slope attic face is up at the lid, so there is no wool wedge under it.
     assert g.soffit_wool_wedge_pts() == []
     nh_pts = g.soffit_nh_pts()
-    z_in = min(g.z_slope_plane_offset(g.x_nh_inner, g.t_nh_face), g.z_soffit_lid)
-    assert any(abs(x - g.x_nh_inner) < 1e-6 and abs(z - z_in) < 1e-6 for x, z in nh_pts)
+    # Riser board is flat-topped under the lid now; the slope GKF bears on the lid.
+    assert any(abs(x - g.x_nh_inner) < 1e-6 and abs(z - g.z_soffit_lid) < 1e-6 for x, z in nh_pts)
     assert any(abs(x - g.x_furn) < 1e-6 and abs(z - g.z_soffit_lid) < 1e-6 for x, z in nh_pts)
     assert max(z for _x, z in nh_pts) <= g.z_soffit_lid + 1e-6
     # Lattice still hangs at the rost. The gypsum joint is room-ward of that,
     # where the slope underside meets the lid — one CD cannot cover both lines.
     assert g.x_sdk_break == g.x_nh_inner
     assert g.x_sdk_break > g.x_furn
-    # Slope GKF stops at the soffit CD. The UD is screwed to that CD's room side.
-    assert abs(g.x_gkf_kink - g.x_soffit_cd_room) < 1e-6
-    assert g.x_gkf_kink > g.x_furn
+    # Slope GKF is cut level and bears on the lid top: no gap, no acrylic joint.
+    lid_top = g.z_soffit_lid + p.sdk_t
+    assert abs(g.gkf_end_room[1] - lid_top) < 1e-6
+    assert abs(g.gkf_end_attic[1] - lid_top) < 1e-6
+    assert abs(g.x_gkf_kink - g.x_furn) < 1e-6
+    # The lid CD sits where the outer GKF plane meets the lid; the UD is on its room side.
+    assert abs(g.gkf_end_attic[0] - g.x_soffit_cd_room) < 1e-6
     cds = g.horiz_cd_x_stations()
-    assert cds == [g.x_nh_inner + p.cd_w * 0.5]
+    assert cds == [g.x_soffit_cd]
+    assert abs(g.x_soffit_cd - (g.x_soffit_cd_room + p.cd_w * 0.5)) < 1e-6
     ud = g.soffit_ud_track_quads()
     assert ud[-1]  # seated slope CD is the last quad
     leg = ud[0]
@@ -154,8 +159,7 @@ def test_layout_ceiling_and_gable():
     sdk = g.sikmina_sdk_pts()
     for a, b in zip(sdk, sdk[1:]):
         assert not (abs(a[0] - g.x_false) < 1e-6 and abs(b[0] - g.x_false) < 1e-6)
-    acry = g.soffit_acrylic_joint_pts()
-    assert len(acry) == 4
+    assert g.soffit_acrylic_joint_pts() == []
     sdk = g.sikmina_sdk_pts()
     assert any(abs(x - g.gkf_end_room[0]) < 1e-6 and abs(z - g.gkf_end_room[1]) < 1e-6 for x, z in sdk)
     assert any(abs(x - g.gkf_end_mid[0]) < 1e-6 and abs(z - g.gkf_end_mid[1]) < 1e-6 for x, z in sdk)
@@ -337,12 +341,13 @@ def test_sikminy_and_soffit_stack_in_3d():
     assert box_nh.bounding_box().min.Z >= p.furniture_height + p.furniture_gap - 1.0
     furn = _labeled(shape, LABEL_FURNITURE)[0].bounding_box()
     assert box_nh.bounding_box().min.Z >= furn.max.Z + p.furniture_gap - 2.0
-    # Slope GKF stops at the UD, a few millimetres short of the soffit CD.
+    # Slope GKF bears on the lid: its lowest point is the lid top, up to the CD.
     slope_boards = _labeled(shape, LABEL_SLOPE_GKF)
     assert slope_boards
     slope_board = max(slope_boards, key=lambda s: s.bounding_box().max.X)
-    assert slope_board.bounding_box().max.X < g.x_soffit_cd_room
-    assert g.x_soffit_cd_room - slope_board.bounding_box().max.X < 12.0
+    assert slope_board.bounding_box().max.X <= g.x_soffit_cd_room + 1.0
+    assert g.x_soffit_cd_room - slope_board.bounding_box().max.X < 3.0
+    assert abs(slope_board.bounding_box().min.Z - (g.z_soffit_lid + p.sdk_t)) < 2.0
     horiz_lids = [
         c
         for c in _labeled(shape, LABEL_SOFFIT_GKF)
@@ -382,20 +387,21 @@ def test_sikminy_and_soffit_stack_in_3d():
 
     ex, ez = g.gkf_end_room
     ax, az = g.gkf_end_mid
-    probe = Location((0.5 * (ex + ax), p.room_length * 0.5, 0.5 * (ez + az))) * Box(6.0, 30.0, 6.0)
+    # Level cut: probe just above the bearing line on the lid.
+    probe = Location((0.5 * (ex + ax), p.room_length * 0.5, 0.5 * (ez + az) + 4.0)) * Box(6.0, 30.0, 4.0)
     pieces = []
     for board in slope_boards:
         hit = board.intersect(probe)
         pieces += list(hit.solids()) if hit is not None and hasattr(hit, "solids") else []
     assert pieces, "slope board has no thickness at the square end"
     # Mates pull 1 mm off each face, so the solid reads a little under 12.5.
-    thick = max(s.bounding_box().size.Z for s in pieces) * g.cos
+    thick = max(s.bounding_box().size.Z for s in pieces)
     assert thick > 3.0, thick
-    # Front soffit CD flush with rost edge, sitting on the raised lid.
+    # Front soffit CD where the outer slope GKF plane meets the lid top.
     front_cds = [
         c
         for c in cds
-        if abs(c.bounding_box().min.X - g.x_nh_inner) < 2.0
+        if abs(c.bounding_box().min.X - g.x_soffit_cd_room) < 2.0
         and c.bounding_box().min.Z >= g.z_soffit_lid + p.sdk_t - 2.0
     ]
     assert len(front_cds) >= 1
@@ -403,7 +409,7 @@ def test_sikminy_and_soffit_stack_in_3d():
     front_drops = [
         c
         for c in zaves
-        if abs(c.bounding_box().center().X - (g.x_nh_inner + p.cd_w * 0.5)) < p.cd_w
+        if abs(c.bounding_box().center().X - g.x_soffit_cd) < p.cd_w
         and c.bounding_box().min.Z < g.z_soffit_lid + p.sdk_t
         and c.bounding_box().max.Z > g.z_soffit_lid
     ]
@@ -448,7 +454,7 @@ def test_sikminy_and_soffit_stack_in_3d():
     assert slope_cds
     assert all(c.bounding_box().size.X < p.cd_spacing for c in slope_cds)
     # One horizontal CD + Nonius over the soffit bay (GKF lid → rost CD → rafters).
-    rost_x = g.x_sdk_break + p.cd_w * 0.5
+    rost_x = g.x_soffit_cd
     horiz_cds = [c for c in slope_cds if c.bounding_box().min.X >= g.x_furn - 1.0]
     assert len(horiz_cds) == 1
     assert abs(horiz_cds[0].bounding_box().center().X - rost_x) < 2.0
@@ -1082,9 +1088,12 @@ def test_3d_parts_do_not_interpenetrate():
                     vol += float(s.volume)
                 except Exception:
                     pass
+            # Soffit Nonius rods pierce the vapour brake on purpose (taped grommet).
+            if {a.label, b.label} == {"slope_foil", "soffit_nonius"}:
+                continue
             if vol > 1.0:  # mm³
                 violations.append((a.label, b.label, round(vol, 1)))
-    assert violations == []
+    assert violations == [], sorted({(a, b) for a, b, _v in violations})
 
 
 def test_obyvak_3d_exports(tmp_path, monkeypatch):

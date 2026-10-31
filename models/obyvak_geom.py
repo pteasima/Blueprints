@@ -75,6 +75,9 @@ LABEL_SLOPE_NH = "slope_naturheld_140"
 LABEL_SLOPE_GKF = "slope_gkf"
 LABEL_SLOPE_CD = "slope_cd"
 LABEL_SLOPE_FOIL = "slope_foil"
+LABEL_EAVE_UD = "eave_ud"
+LABEL_VB_TAPE = "vapour_brake_tape"
+LABEL_EAVE_ACRYLIC = "eave_acrylic"
 LABEL_SLOPE_DIRECT = "slope_direct_hanger"
 LABEL_SLOPE_NONIUS = "slope_nonius"
 # --- Soffit (podhled) ---
@@ -120,6 +123,9 @@ PART_GROUPS = [
             LABEL_SLOPE_GKF,
             LABEL_SLOPE_CD,
             LABEL_SLOPE_FOIL,
+            LABEL_EAVE_UD,
+            LABEL_VB_TAPE,
+            LABEL_EAVE_ACRYLIC,
             LABEL_SLOPE_DIRECT,
             LABEL_SLOPE_NONIUS,
         ],
@@ -355,22 +361,18 @@ class ObyvakLayout:
         # UD bend: GKF attic face is the 40° plane through the CD's room-side
         # lower corner. 3 mm up-slope is the acrylic joint, so the board does
         # not fuse into the CD.
-        self.joint_gap = 3.0
+        self.joint_gap = 0.0
         # The first GKF layer's attic plane goes through the CD's lower corner
         # (as with 1× GKF), so the room face is unchanged. The second layer
         # lifts the slope CD plane: it meets the CD room-side face this high.
         extra = self.t_gkf_right - p.sdk_t
-        self.joint_anchor = (
+        # Height datum (unchanged since #68): the slope CD plane passes through
+        # this point. It fixes h_start; nothing is drawn at it any more.
+        datum = (
             self.x_soffit_cd_room,
             self.z_soffit_cd_bot + extra / self.cos,
         )
-        jx, jz = self.joint_anchor
-        ax = jx - self.cos * self.joint_gap
-        az = jz + self.sin * self.joint_gap
-        self.gkf_end_attic = (ax, az)
-        self.gkf_end_mid = (ax - self.sin * (self.t_gkf_right - p.sdk_t),
-                            az - self.cos * (self.t_gkf_right - p.sdk_t))
-        self.gkf_end_room = (ax - self.sin * self.t_gkf_right, az - self.cos * self.t_gkf_right)
+        jx, jz = datum
         # Room face = GKF attic plane plus the GKF, 100 mm NaturHeld and StoSilent.
         d_room = self.t_gkf_attic_right
         rx = jx - self.sin * d_room
@@ -388,8 +390,23 @@ class ObyvakLayout:
         self.l_hanger_left = self.wool_left
         self.l_hanger_right = self.wool_right
         self.z_raf_top = self.z_raf_inner_ridge + p.rafter_t / self.cos
-        # Lid starts under the soffit CD. The slope GKF stops 3 mm short of it.
-        self.x_gkf_kink = self.x_soffit_cd_room
+        # Right eave, no gap: the slope GKF is cut level and bears on the lid
+        # top. The lid runs on to the NaturHeld side face (x_nh_outer). The lid
+        # CD moves down-slope to where the slope CD plane meets the lid top,
+        # so the outer GKF corner sits tight in the CD's lower room corner.
+        z_lid_top = self.z_soffit_cd_bot
+        self.x_soffit_cd_room = jx + (jz - z_lid_top) / self.tan
+        self.x_soffit_cd = self.x_soffit_cd_room + p.cd_w * 0.5
+        self.joint_anchor = (self.x_soffit_cd_room, z_lid_top)
+
+        def _hit(t: float) -> tuple[float, float]:
+            return (self.x_false + (self.z_false + t / self.cos - z_lid_top) / self.tan, z_lid_top)
+
+        self.gkf_end_room = _hit(self.t_gkf_room_right)
+        self.gkf_end_mid = _hit(self.t_gkf_mid_right)
+        self.gkf_end_attic = _hit(self.t_gkf_attic_right)
+        # Lid start: the NaturHeld side face.
+        self.x_gkf_kink = self.x_nh_outer
 
         self.xl_eps = -p.wall_plaster - p.wall_mason - p.wall_eps
         self.xl_mas = -p.wall_plaster - p.wall_mason
@@ -401,6 +418,15 @@ class ObyvakLayout:
         # Pozednice centred on the věnec / masonry thickness (not flush to the room face).
         self.poz_l0 = self.xl_mas + p.wall_mason * 0.5 - p.plate_w * 0.5
         self.poz_r0 = self.xr_int + p.wall_plaster + p.wall_mason * 0.5 - p.plate_w * 0.5
+        # Left eave. The vapour brake runs down the plate cheek, so the UD leg
+        # sits one foil thickness off the timber. The slope GKF ends tight on
+        # that leg plane. NaturHeld ends one foil + one tape off the plaster
+        # (it bears softly on the taped plaster edge).
+        self.x_plate_cheek_l = self.poz_l0 + p.plate_w
+        self.x_eave_ud_l = self.x_plate_cheek_l + p.foil_t
+        self.x_gkf_end_l = self.x_eave_ud_l + 1.0
+        self.x_nh_end_l = p.foil_t + p.foil_t
+        self.z_eave_ud_l = self.plane_z(self.x_eave_ud_l, self.t_gkf_attic_left, right=False)
 
         # Elevation X is world Y. Y=0 is the deep living trap; Y=L is the shallow kitchen trap.
         self.x_pred_l = p.predstena_living
@@ -558,15 +584,20 @@ class ObyvakLayout:
         xj = self.x_stack_joint
         xn = self.x_furn
         tl, tr = self.t_nh_left, self.t_nh_right
+        x0 = self.x_nh_end_l
+        z_lid_top = self.z_soffit_lid + self.p.sdk_t
+        # Right end: plumb at the furniture line down to the soffit, then a
+        # level toe on the lid top up to where the GKF bears. No void.
         return [
-            (0.0, self.plane_z(0.0, 0.0, right=False)),
+            (x0, self.plane_z(x0, 0.0, right=False)),
             (xf, self.z_false),
             (xj, self.plane_z(xj, 0.0, right=True)),
             (xn, self.plane_z(xn, 0.0, right=True)),
-            (xn, self.plane_z(xn, tr, right=True)),
+            (xn, z_lid_top),
+            self.gkf_end_room,
             (xj, self.plane_z(xj, tr, right=True)),
             (xf, self.plane_z(xf, tl, right=False)),
-            (0.0, self.plane_z(0.0, tl, right=False)),
+            (x0, self.plane_z(x0, tl, right=False)),
         ]
 
     def sikmina_sdk_pts(self) -> list[tuple[float, float]]:
@@ -580,13 +611,14 @@ class ObyvakLayout:
         erx, erz = self.gkf_end_room
         eax, eaz = self.gkf_end_mid
         t0l, t1l = self.t_gkf_room_left, self.t_gkf_attic_left
+        x0 = self.x_gkf_end_l
         return [
-            (0.0, self.plane_z(0.0, t0l, right=False)),
+            (x0, self.plane_z(x0, t0l, right=False)),
             (xj, self.plane_z(xj, t0l, right=False)),
             (erx, erz),
             (eax, eaz),
             (xj, self.plane_z(xj, t1l, right=False)),
-            (0.0, self.plane_z(0.0, t1l, right=False)),
+            (x0, self.plane_z(x0, t1l, right=False)),
         ]
 
     def sikmina_sdk2_pts(self) -> list[tuple[float, float]] | None:
@@ -623,26 +655,124 @@ class ObyvakLayout:
         x = self.x_furn - rise / self.tan
         return min(self.x_furn, max(self.x_false + 1.0, x))
 
-    def sikmina_foil_pts(self) -> list[tuple[float, float]]:
-        """Jutafol N AL 170 on the attic side of the CD, stopped at the UD.
+    def vapour_brake_path(self) -> list[tuple[float, float]]:
+        """Centre line of the vapour brake (Jutafol N AL 170), one run eave to eave.
 
-        Same meeting line as the GKF: the left plane runs to ``x_stack_joint``.
+        Left: bonded on the wall plaster (hidden behind the NaturHeld end),
+        over the plaster and masonry crown with a slack loop, up the plate
+        cheek behind the UD leg, then on the attic face of the slope CDs.
+        Right: down the slope CD plane, over the lid CD, along the lid top,
+        down the plate cheek behind the lid end and the cleat, over the crown
+        with a slack loop and bonded on the cabinet wall plaster inside the
+        soffit void. The plaster is the masonry's airtight layer.
         """
         p = self.p
+        h = p.foil_t * 0.5
+        zc = p.eave_wall_z + h
+        xl = self.x_plate_cheek_l + h
+        tl = self.t_cd_outer_left + h
+        tr = self.t_cd_outer_right + h
         xj = self.x_cd_joint
-        t0l, t1l = self.t_cd_outer_left, self.t_foil_outer_left
-        # Stop up-slope of the soffit CD. The UD occupies the corner.
-        eax, eaz = self._joint_station(80.0)
-        end_in = (eax + self.sin * p.cd_t, eaz + self.cos * p.cd_t)
-        end_out = (eax + self.sin * (p.cd_t + p.foil_t), eaz + self.cos * (p.cd_t + p.foil_t))
+        z_hcd = self.z_soffit_cd_top + h
+        x_hit = self.x_false + (self.z_false + tr / self.cos - z_hcd) / self.tan
+        x_hcd1 = self.x_soffit_cd_room + p.cd_w + h
+        z_lid = self.z_soffit_cd_bot + h
+        xr = self.poz_r0 - h
+        xw = p.room_width - h
+        lp = self.vb_loop_h
         return [
-            (0.0, self.plane_z(0.0, t0l, right=False)),
-            (xj, self.plane_z(xj, t0l, right=False)),
-            end_in,
-            end_out,
-            (xj, self.plane_z(xj, t1l, right=False)),
-            (0.0, self.plane_z(0.0, t1l, right=False)),
+            (h, self.z_vb_bond_l),
+            (h, zc),
+            (-25.0, zc),
+            (-30.0, zc + lp),
+            (-40.0, zc + lp),
+            (-45.0, zc),
+            (xl, zc),
+            (xl, self.plane_z(xl, tl, right=False)),
+            (xj, self.plane_z(xj, tl, right=False)),
+            (x_hit, z_hcd),
+            (x_hcd1, z_hcd),
+            (x_hcd1, z_lid),
+            (xr, z_lid),
+            (xr, zc),
+            (xw + 45.0, zc),
+            (xw + 40.0, zc + lp),
+            (xw + 30.0, zc + lp),
+            (xw + 25.0, zc),
+            (xw, zc),
+            (xw, self.z_vb_bond_r),
         ]
+
+    vb_loop_h = 14.0
+    z_vb_bond_l = 3188.0
+    z_vb_bond_r = 3150.0
+
+    def sikmina_foil_pts(self) -> list[tuple[float, float]]:
+        """Vapour brake as a closed 1 mm band along ``vapour_brake_path``."""
+        return thicken_polyline(self.vapour_brake_path(), self.p.foil_t)
+
+    def vapour_brake_length_mm(self) -> float:
+        pts = self.vapour_brake_path()
+        return sum(math.dist(a, b) for a, b in zip(pts, pts[1:]))
+
+    def vb_tape_pts(self) -> list[list[tuple[float, float]]]:
+        """Airtight bond tape over the brake onto the wall plaster, both eaves."""
+        p = self.p
+        t = p.foil_t
+        h = t * 0.5
+        zc = p.eave_wall_z + t + h
+        left = [(t + h, self.z_vb_bond_l - 1.0), (t + h, zc), (-p.wall_plaster, zc)]
+        xw = p.room_width - t - h
+        right = [(xw, self.z_vb_bond_r - 1.0), (xw, zc), (p.room_width + p.wall_plaster, zc)]
+        return [thicken_polyline(left, t), thicken_polyline(right, t)]
+
+    def eave_acrylic_pts(self) -> list[tuple[float, float]]:
+        """Planned cut at the left wall: acrylic bead in the inside corner.
+
+        StoSilent stops at the cut; wall paint and the bead come from the wall
+        side only. No plaster bridges the NaturHeld and the wall plaster.
+        """
+        x1 = self.x_nh_end_l
+        z = lambda x: self.h_start + x * self.tan  # noqa: E731
+        return [(0.0, z(0.0) - 3.5), (x1 + 4.0, z(x1 + 4.0)), (x1, z(x1)), (0.0, z(x1))]
+
+    def eave_ud_left_quads(self) -> list[list[tuple[float, float]]]:
+        """Left eave UD 28/27, notched and bent: flat leg screwed to the plate
+        cheek (through the brake), 40° channel up the slope CD plane. The
+        slope GKF is screwed into its room flange, so the board is fixed to
+        the timber, not bearing on it. Mirror of ``soffit_ud_track_quads``.
+        """
+        p = self.p
+        tm = 1.0
+        s0, s1, chan = 6.0, 34.0, 52.0
+        x0, z0 = self.x_eave_ud_l, self.z_eave_ud_l
+        nx, nz = -self.sin, self.cos
+
+        def along(s: float, t: float) -> tuple[float, float]:
+            return (x0 + self.cos * s + nx * t, z0 + self.sin * s + nz * t)
+
+        z_leg0 = z0 + 4.0
+        leg = [(x0, z_leg0), (x0 + tm, z_leg0), (x0 + tm, z_leg0 + 22.0), (x0, z_leg0 + 22.0)]
+        a0, a1 = along(s0, 0.0), along(s0, tm)
+        bend = [(x0, z_leg0), (x0 + tm, z_leg0), a1, a0]
+        strap = [a0, a1, along(s1, tm), along(s1, 0.0)]
+        web = [along(s1, 0.0), along(s1 + tm, 0.0), along(s1 + tm, p.cd_t), along(s1, p.cd_t)]
+        room_fl = [along(s1 + tm, 0.0), along(s1 + tm + chan, 0.0), along(s1 + tm + chan, tm), along(s1 + tm, tm)]
+        attic_fl = [
+            along(s1 + tm, p.cd_t - tm),
+            along(s1 + tm + chan, p.cd_t - tm),
+            along(s1 + tm + chan, p.cd_t),
+            along(s1 + tm, p.cd_t),
+        ]
+        return [leg, bend, strap, web, room_fl, attic_fl]
+
+    def eave_ud_left_screw_quads(self) -> list[list[tuple[float, float]]]:
+        """Wood screw 3.5×35 through the leg and the brake into the plate."""
+        x0 = self.x_eave_ud_l + 1.0
+        zs = self.z_eave_ud_l + 4.0 + 11.0
+        head = [(x0, zs - 4.0), (x0 + 1.6, zs - 4.0), (x0 + 1.6, zs + 4.0), (x0, zs + 4.0)]
+        shank = [(x0 - 35.0, zs - 1.75), (x0, zs - 1.75), (x0, zs + 1.75), (x0 - 35.0, zs + 1.75)]
+        return [head, shank]
 
     def _sikmina_segments(self) -> list[tuple[tuple[float, float], tuple[float, float]]]:
         """Ceiling polyline segments on the šikminy (room face), left then right."""
@@ -929,8 +1059,9 @@ class ObyvakLayout:
         t_slope = self.t_nh_face
         z0 = self.z_nabeh_bot
         z_cap = self.z_soffit_lid
-        z_out = min(self.z_slope_offset(self.x_nh_outer, t_slope), z_cap)
-        z_in = min(self.z_slope_plane_offset(self.x_nh_inner, t_slope), z_cap)
+        # The lid now runs over this face, so the top is level under it.
+        z_out = z_in = z_cap
+        del t_slope
         return [
             (self.x_nh_outer, z0),
             (self.x_nh_inner, z0),
@@ -975,10 +1106,11 @@ class ObyvakLayout:
         p = self.p
         t = p.sdk_t
         x0 = self.x_gkf_kink
+        x1 = self.poz_r0 - p.foil_t
         return [
             (x0, self.z_soffit_lid),
-            (self.poz_r0, self.z_soffit_lid),
-            (self.poz_r0, self.z_soffit_lid + t),
+            (x1, self.z_soffit_lid),
+            (x1, self.z_soffit_lid + t),
             (x0, self.z_soffit_lid + t),
         ]
 
@@ -1006,29 +1138,38 @@ class ObyvakLayout:
     def vata_pts(self) -> list[tuple[float, float]]:
         """Wool below the rafters (Unifit 033 left, NatuRoll 039 right). Depths stay as solved.
 
-        The bottom follows the foil. Left and right foil planes meet at
-        ``x_stack_joint``, so the wool has no step there either. Between the
+        The bottom is the attic face of the vapour brake, end to end: left
+        from the plate cheek, the slope, over the lid CD and on the lid top
+        to the right plate. The ends fill up to the plate tops and the rafter
+        seats, so there is no void and no wedge at an odd angle. Between the
         rafters the fill is ``vata_rafter_bay_pts`` (160 mm).
         """
         p = self.p
+        t = p.foil_t
         xj = self.x_cd_joint
-        t_out = self.t_foil_outer_left
-        # Wool is what's left between the foil and the rafter. It stops at the UD.
-        eax, eaz = self._joint_station(80.0)
-        x_end = eax + self.sin * (p.cd_t + p.foil_t)
-        z_end = eaz + self.cos * (p.cd_t + p.foil_t)
-        z_cd = self.z_soffit_cd_top
+        tl, tr = self.t_foil_outer_left, self.t_foil_outer_right
+        z_hcd = self.z_soffit_cd_top + t
+        x_hit = self.x_false + (self.z_false + tr / self.cos - z_hcd) / self.tan
+        x_hcd1 = self.x_soffit_cd_room + p.cd_w + t
+        z_lid = self.z_soffit_cd_bot + t
+        xl, xr = self.x_plate_cheek_l, self.poz_r0
+        zp = self.z_plate_top
+        # Rafter underside meets the plate top here (each side).
+        dx = (self.z_raf(0.0) - zp) / self.tan
         pts = [
-            (0.0, self.plane_z(0.0, t_out, right=False)),
-            (xj, self.plane_z(xj, t_out, right=False)),
-            (x_end, z_end),
-            (x_end, max(z_end, z_cd)),
-            (p.room_width, z_cd),
-            (p.room_width, self.z_raf(p.room_width)),
+            (xl, self.plane_z(xl, tl, right=False)),
+            (xj, self.plane_z(xj, tl, right=False)),
+            (x_hit, z_hcd),
+            (x_hcd1, z_hcd),
+            (x_hcd1, z_lid),
+            (xr, z_lid),
+            (xr, zp),
+            (p.room_width + dx, zp),
             (self.x_ridge, self.z_raf(self.x_ridge)),
-            (0.0, self.z_raf(0.0)),
+            (-dx, zp),
+            (xl, zp),
         ]
-        self.vata_bottom_n = 5
+        self.vata_bottom_n = 7
         return pts
 
     def vata_rafter_bay_pts(self) -> list[tuple[float, float]]:
@@ -1056,7 +1197,7 @@ class ObyvakLayout:
         so there is no second rail and no trapeze.
         """
         p = self.p
-        front = self.x_sdk_break + p.cd_w * 0.5
+        front = self.x_soffit_cd
         if front + p.cd_w * 0.5 > p.room_width - 1.0:
             return []
         return [front]
@@ -1195,18 +1336,8 @@ class ObyvakLayout:
         return [vline(xf, z_room, z_nh), vline(xj, z_a, z_b)]
 
     def soffit_acrylic_joint_pts(self) -> list[tuple[float, float]]:
-        """Flexible acrylic + tape in the 3 mm gap between slope GKF and the CD."""
-        p = self.p
-        x0, z0 = self.gkf_end_attic
-        x1, z1 = self.gkf_end_room
-        # The gap runs from the board end back to the CD corner, same 12.5 mm.
-        ux, uz = self.cos, -self.sin  # down-slope, toward the CD
-        return [
-            (x0, z0),
-            (x1, z1),
-            (x1 + ux * self.joint_gap, z1 + uz * self.joint_gap),
-            (x0 + ux * self.joint_gap, z0 + uz * self.joint_gap),
-        ]
+        """No joint any more: the slope GKF bears on the lid with no gap."""
+        return []
 
     def horiz_cd_quad(self, x: float) -> list[tuple[float, float]]:
         """XZ section of one horizontal CD sitting on the GKF lid."""
@@ -1231,7 +1362,7 @@ class ObyvakLayout:
         t = p.wall_bracket_t
         setback = self.poz_r0 - p.room_width
         leg = min(p.wall_bracket_leg, max(setback - 15.0, t + 10.0))
-        x1 = self.poz_r0
+        x1 = self.poz_r0 - p.foil_t
         z1 = self.z_soffit_lid
         horiz = [
             (x1 - leg, z1 - t),
@@ -1260,7 +1391,7 @@ class ObyvakLayout:
         Kept for callers that still ask for a break profile; returns that rost CD.
         """
         xs = self.horiz_cd_x_stations()
-        rost = self.x_sdk_break + self.p.cd_w * 0.5
+        rost = self.x_soffit_cd
         hit = min(xs, key=lambda x: abs(x - rost)) if xs else None
         return self.horiz_cd_quad(hit) if hit is not None else []
 
@@ -1306,6 +1437,31 @@ class ObyvakLayout:
         top_xs.append(x0)
         pts.extend((x, self.z_gable_top(x)) for x in top_xs)
         return pts
+
+def thicken_polyline(path: list[tuple[float, float]], t: float) -> list[tuple[float, float]]:
+    """Closed band of width ``t`` centred on an open polyline (mitred joins)."""
+
+    def normals(a, b):
+        dx, dz = b[0] - a[0], b[1] - a[1]
+        n = math.hypot(dx, dz)
+        return (-dz / n, dx / n)
+
+    h = t * 0.5
+    segs = list(zip(path, path[1:]))
+    ns = [normals(a, b) for a, b in segs]
+
+    def side(sign: float) -> list[tuple[float, float]]:
+        out = [(path[0][0] + sign * h * ns[0][0], path[0][1] + sign * h * ns[0][1])]
+        for k in range(1, len(path) - 1):
+            n0, n1 = ns[k - 1], ns[k]
+            mx, mz = n0[0] + n1[0], n0[1] + n1[1]
+            dot = mx * n0[0] + mz * n0[1]
+            out.append((path[k][0] + sign * h * mx / dot, path[k][1] + sign * h * mz / dot))
+        out.append((path[-1][0] + sign * h * ns[-1][0], path[-1][1] + sign * h * ns[-1][1]))
+        return out
+
+    return side(1.0) + list(reversed(side(-1.0)))
+
 
 def build_layout(params: ObyvakParams | None = None) -> ObyvakLayout:
     return ObyvakLayout(params or ObyvakParams())

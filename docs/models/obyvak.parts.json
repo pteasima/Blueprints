@@ -23,6 +23,9 @@
       "slope_gkf",
       "slope_cd",
       "slope_foil",
+      "eave_ud",
+      "vapour_brake_tape",
+      "eave_acrylic",
       "slope_direct_hanger",
       "slope_nonius"
     ]
