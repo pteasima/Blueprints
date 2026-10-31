@@ -100,6 +100,10 @@ from obyvak_geom import (
     ObyvakLayout,
     ObyvakParams,
     xz_face,
+    xz_rect,
+    LABEL_EAVE_UD,
+    LABEL_VB_TAPE,
+    LABEL_EAVE_ACRYLIC,
 )
 
 
@@ -224,6 +228,23 @@ def _shrink_closed_band(pts: list[tuple[float, float]], gap: float) -> list[tupl
             out.append((x, z + gap))
         else:
             out.append((x, z - gap))
+    return out
+
+
+def _inset_face(pts, gap: float, label: str, x_range: tuple[float, float] | None = None):
+    """Closed XZ outline, optionally clipped to an X range, inset by ``gap``."""
+    from build123d import Face as _Face
+
+    face = xz_face(pts, label)
+    if x_range is not None:
+        bb = face.bounding_box()
+        clip = xz_rect(x_range[0], bb.min.Z - 10.0, x_range[1] - x_range[0], bb.size.Z + 20.0, label)
+        face = face.intersect(clip)
+        face = face.faces()[0] if hasattr(face, "faces") else face
+        if isinstance(face, list):
+            face = face[0]
+    out = _Face(face.outer_wire().offset_2d(-gap))
+    out.label = label
     return out
 
 
@@ -838,10 +859,9 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     # Krov = discrete rafters 100/160 @ 875 (sheet E_KROK), not a solid timber slab.
     krov_pts = _shrink_band(g.krov_pts(), top_n=3, gap=gap)
     krytina_pts = [(x, z + gap if i < 3 else z) for i, (x, z) in enumerate(g.krytina_pts())]
-    vata_pts = [
-        (min(max(x, gap), p.room_width - gap), z + gap if i < g.vata_bottom_n else z - gap)
-        for i, (x, z) in enumerate(g.vata_pts())
-    ]
+    # Plenum wool: the 2D outline runs over the plates; the 3D part stays in
+    # the room width, inset by the face gap all round.
+    vata_face = _inset_face(g.vata_pts(), gap, LABEL_PLENUM_WOOL, x_range=(gap, p.room_width - gap))
 
     y_raf0, y_raf1 = gap, p.room_length - gap
     rafter_ys = g.rafter_y_stations(y_raf0, y_raf1)
@@ -873,7 +893,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     # Unifit 035: the void above the CD pack (full right-slope gap, no air),
     # plus the 160 mm bays between krokve. Same part. The vent channel above
     # the rafter top stays empty.
-    vata = _extrude_y(xz_face(vata_pts, LABEL_PLENUM_WOOL), gap, p.room_length - gap, LABEL_PLENUM_WOOL)
+    vata = _extrude_y(vata_face, gap, p.room_length - gap, LABEL_PLENUM_WOOL)
     bay_raw = g.vata_rafter_bay_pts()
     bay_pts = [
         (min(max(x, gap), p.room_width - gap), z - gap) for x, z in bay_raw
@@ -908,7 +928,9 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         return _extrude_y(xz_face(band, label), y_ceil0, y_ceil1, label)
 
     # 1) NaturHeld 140, 80 mm, screwed through the GKF into the CD. No latě, no Flex.
-    parts.append(_add_band(g.sikmina_nh_pts(), LABEL_SLOPE_NH))
+    parts.append(
+        _extrude_y(_inset_face(g.sikmina_nh_pts(), gap, LABEL_SLOPE_NH), y_ceil0, y_ceil1, LABEL_SLOPE_NH)
+    )
 
     # Triangle under the lid, above the slope board, out to the vertical lať.
     # Only the soffit bay has that lid. Same mineral wool as the soffit cavity.
@@ -965,10 +987,25 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     parts.extend(zaves_parts)
 
     # 5b) Jutafol N AL 170 Speciál — attic face of CD, below mineral wool. Hangers pierce it.
-    foil_part = _add_band(g.sikmina_foil_pts(), LABEL_SLOPE_FOIL)
+    # Vapour brake, eave to eave (1 mm: no inset, it is thinner than two gaps).
+    foil_part = _extrude_y(xz_face(g.sikmina_foil_pts(), LABEL_SLOPE_FOIL), y_ceil0, y_ceil1, LABEL_SLOPE_FOIL)
     if zaves_parts:
         foil_part = _cut_away(foil_part, zaves_parts, LABEL_SLOPE_FOIL)
     parts.append(foil_part)
+
+    # Left eave: bent UD screwed to the plate (the GKF is fixed to it) and the
+    # brake's bond tape on both wall plasters; acrylic bead at the planned cut.
+    eave_ud = None
+    for quad in g.eave_ud_left_quads():
+        piece = _extrude_y(xz_face(quad, LABEL_EAVE_UD), y_ceil0, y_ceil1, LABEL_EAVE_UD)
+        eave_ud = piece if eave_ud is None else eave_ud.fuse(piece)
+    if eave_ud is not None:
+        parts.append(_paint(eave_ud, LABEL_EAVE_UD))
+    for band in g.vb_tape_pts():
+        parts.append(_extrude_y(xz_face(band, LABEL_VB_TAPE), y_ceil0, y_ceil1, LABEL_VB_TAPE))
+    parts.append(
+        _extrude_y(xz_face(g.eave_acrylic_pts(), LABEL_EAVE_ACRYLIC), y_ceil0, y_ceil1, LABEL_EAVE_ACRYLIC)
+    )
 
     # 6) Zavětrovací pásky: long thin 40×2 straps at 45°, crossing into X on each slope.
     # ~6 per side (3 X pairs) along the 11 m room length — racking restraint along Y.
@@ -1051,7 +1088,6 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     # Lid edge: continuous steel cleat on the plate cheek. Not a hang point.
     # Ducts are already anchored to the wall. This box only keeps them clear.
     t = g.t_soffit_face
-    t_slope = g.t_nh_face
     x_duct0, x_duct1 = g.soffit_duct_x_extent()
     lat_end = g.x_nh_inner + p.cd_t
     if x_duct0 < lat_end + 8.0:
@@ -1067,9 +1103,8 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     if g.z_soffit_duct_crown() > g.z_soffit_lid - 5.0:
         raise ValueError("soffit ducts do not fit under the lid on the pozednice")
 
-    # Top follows the slope-board attic face down to the vertical lať. 1 mm off each mate.
-    z_nh_out = g.z_slope_offset(g.x_nh_outer, t_slope) - gap
-    z_nh_in = g.z_slope_plane_offset(g.x_nh_inner, t_slope) - gap
+    # Flat top under the lid (the slope GKF bears on the lid). 1 mm off each mate.
+    z_nh_out = z_nh_in = g.z_soffit_lid - gap
     soffit_nh = [
         (g.x_nh_outer + gap, g.z_nabeh_bot + gap),
         (g.x_nh_inner - gap, g.z_nabeh_bot + gap),
@@ -1222,9 +1257,10 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
             # Drop on the vertical CD, still under the lid CD (60 mm covers it).
             z_drop1 = g.z_soffit_lid + p.sdk_t
             drop_h = z_drop1 - z_lat_top
-            rost_x = g.x_sdk_break + p.cd_w * 0.5
+            rost_x = g.x_soffit_cd
             if drop_h > gap and any(abs(x - rost_x) < 1.0 for x in cd_xs):
-                xc = x_front + fd * 0.5
+                # Where the vertical CD and the shifted lid CD overlap.
+                xc = max(x_front + fd * 0.5, g.x_soffit_cd_room + p.soffit_drop_w * 0.5)
                 drop_parts.append(
                     _box(
                         xc - p.soffit_drop_w * 0.5,
@@ -1340,6 +1376,15 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     parts.extend(_bass_trap_parts(p, g, gap))
 
     parts.extend(_gable_sdk_and_pouzdra(p, g, gap))
+
+    # Where a bass trap stands against the left wall, the brake's tape and the
+    # acrylic bead stop at the trap (sealed to its board instead).
+    bass = [x for x in parts if x.label in {LABEL_BASS_CD, LABEL_BASS_GKB, LABEL_BASS_WOOL}]
+    eave_seal = {LABEL_VB_TAPE, LABEL_EAVE_ACRYLIC}
+    parts = [
+        _cut_away(x, [b for b in bass if _aabb_hit(x, b)], x.label) if x.label in eave_seal else x
+        for x in parts
+    ]
     return parts
 
 

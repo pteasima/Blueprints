@@ -17,6 +17,8 @@ from dataclasses import asdict
 from build123d import Compound
 
 from obyvak_geom import (  # noqa: F401
+    LABEL_EAVE_ACRYLIC,
+    LABEL_EAVE_UD,
     LABEL_EPS,
     LABEL_FLOOR,
     LABEL_FURNITURE,
@@ -39,6 +41,7 @@ from obyvak_geom import (  # noqa: F401
     LABEL_SOFFIT_GKB,
     LABEL_SOFFIT_NH,
     LABEL_SOFFIT_NONIUS,
+    LABEL_VB_TAPE,
     LABEL_WALL_PLATE,
     ObyvakLayout,
     ObyvakParams,
@@ -117,6 +120,14 @@ def build(params: ObyvakParams | None = None):
     for quad in g.sikmina_cd_quads():
         parts.append(xz_face(quad, LABEL_SLOPE_CD))
     parts.append(xz_face(g.sikmina_foil_pts(), LABEL_SLOPE_FOIL))
+    for band in g.vb_tape_pts():
+        parts.append(xz_face(band, LABEL_VB_TAPE))
+    # Left eave: GKF screwed into a bent UD fixed to the plate; planned cut at the wall.
+    for quad in g.eave_ud_left_quads():
+        parts.append(xz_face(quad, LABEL_EAVE_UD))
+    for quad in g.eave_ud_left_screw_quads():
+        parts.append(xz_face(quad, "joint_screw"))
+    parts.append(xz_face(g.eave_acrylic_pts(), LABEL_EAVE_ACRYLIC))
     # Schematic hangers at a few CD stations; pásky = thin sections of 45° X straps.
     for st in g.sikmina_cd_stations()[::2]:
         xs = [pt[0] for pt in g.sikmina_cd_quad(*st)]
@@ -183,15 +194,17 @@ def build(params: ObyvakParams | None = None):
     parts.append(xz_face(ud[-1], LABEL_SLOPE_CD))
     for quad in g.soffit_ud_screw_quads():
         parts.append(xz_face(quad, "joint_screw"))
-    parts.append(xz_face(g.soffit_acrylic_joint_pts(), "joint_acrylic"))
+    if g.soffit_acrylic_joint_pts():
+        parts.append(xz_face(g.soffit_acrylic_joint_pts(), "joint_acrylic"))
     for quad in g.board_joint_quads():
         parts.append(xz_face(quad, "board_joint"))
     for quad in g.soffit_plate_cleat_quads():
         parts.append(xz_face(quad, LABEL_SOFFIT_NONIUS))
     # Screw through the lid into the vertical CD (schematic) + wall angle.
-    rost_x = g.x_sdk_break + p.cd_w * 0.5
+    rost_x = g.x_soffit_cd
     if any(abs(x - rost_x) < 1.0 for x in g.horiz_cd_x_stations()):
-        xc = g.x_nh_inner + fd * 0.5
+        # Screw drop where the vertical CD and the (shifted) lid CD overlap.
+        xc = max(g.x_nh_inner + fd * 0.5, g.x_soffit_cd_room + p.soffit_drop_w * 0.5)
         z_drop0 = z_lat_top
         z_drop1 = g.z_soffit_lid + p.sdk_t
         parts.append(
