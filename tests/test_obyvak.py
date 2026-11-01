@@ -348,15 +348,16 @@ def test_sikminy_and_soffit_stack_in_3d():
     slope_board = max(slope_boards, key=lambda s: s.bounding_box().max.X)
     assert slope_board.bounding_box().max.X <= g.x_soffit_cd_room + 1.0
     assert g.x_soffit_cd_room - slope_board.bounding_box().max.X < 3.0
-    assert abs(slope_board.bounding_box().min.Z - (g.z_soffit_lid + p.sdk_t)) < 2.0
+    assert abs(slope_board.bounding_box().min.Z - g.z_soffit_cd_bot) < 2.0
     horiz_lids = [
         c
         for c in _labeled(shape, LABEL_SOFFIT_GKF)
         if c.bounding_box().size.Z < p.sdk_t + 1.0 and c.bounding_box().size.X > 100.0
     ]
-    assert len(horiz_lids) == 1
-    assert abs(horiz_lids[0].bounding_box().size.Z - (p.sdk_t - 2 * FACE_GAP)) < 1e-3
-    assert abs(horiz_lids[0].bounding_box().min.X - (g.x_gkf_kink + FACE_GAP)) < 2.0
+    assert len(horiz_lids) == p.soffit_lid_layers
+    for lid in horiz_lids:
+        assert abs(lid.bounding_box().size.Z - (p.sdk_t - 2 * FACE_GAP)) < 1e-3
+        assert abs(lid.bounding_box().min.X - (g.x_gkf_kink + FACE_GAP)) < 2.0
     risers = [
         c
         for c in _labeled(shape, LABEL_SOFFIT_GKF)
