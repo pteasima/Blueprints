@@ -40,7 +40,7 @@ def notes(p: ObyvakParams | None = None):
     return [
         (-195, 3405, "Left eave: GKF fixed to the wall plate, brake taped to plaster"),
         (-195, 3392, "UD 28/27 bent leg screwed to the plate, wood screw 3.5x35 @ 300 mm"),
-        (60, 3330, "2x GKF 12.5 ends in the UD"),
+        (60, 3330, "1x GKF 12.5 ends in the UD"),
         (60, 3316, "NaturHeld 140 bears softly on the wall"),
         (60, 3302, "Jutafol N AL 170, continuous"),
         (-195, 3175, "brake: slack loop below the plate,"),

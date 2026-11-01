@@ -204,9 +204,9 @@ def test_mineral_wool_fills_rafter_bays():
     p = ObyvakParams()
     g = build_layout(p)
     shape, _ = build(p)
-    wool_parts = _labeled(shape, LABEL_PLENUM_WOOL)
-    # The main plenum wool plus the stuffed fill pieces (eaves, CD layer, joints).
-    wool = max(wool_parts, key=lambda w: w.bounding_box().size.Z * w.volume)
+    wool_parts = [w for w in _labeled(shape, LABEL_PLENUM_WOOL) if not getattr(w, "wool_fill", False)]
+    assert len(wool_parts) == 1
+    wool = wool_parts[0]
     bb = wool.bounding_box()
     # Into the rafter depth at the ridge, still below the ventilation / tiles.
     assert bb.max.Z > g.z_raf(g.x_ridge) + p.rafter_t * 0.5
@@ -270,7 +270,7 @@ def test_plenum_fill_hangers_and_vent():
     assert soffit_drop < 440.0
 
     shape, _ = build(p)
-    wool = _labeled(shape, LABEL_PLENUM_WOOL)[0]
+    wool = next(w for w in _labeled(shape, LABEL_PLENUM_WOOL) if not getattr(w, "wool_fill", False))
 
     def _hit_volume(xyz) -> float:
         hit = wool.intersect(Location(xyz) * Box(8, 8, 8))
@@ -1141,9 +1141,9 @@ def test_soffit_acoustics_ignore_the_steel_section():
 
     geom = room_geometry()
     assert geom.soffit_board == 0.04
-    assert abs(geom.soffit - 12.144298942465415) < 1e-6
+    assert abs(geom.soffit - 11.99947873712053) < 1e-6
     assert abs(geom.soffit_wool_depth - 0.47910580837556743) < 1e-9
-    assert abs(geom.soffit_under_fraction - 0.38758927314781927) < 1e-9
+    assert abs(geom.soffit_under_fraction - 0.3922670395205452) < 1e-9
     assert abs(geom.soffit_air_depth - 0.32589419162443256) < 1e-9
 
 
@@ -1326,37 +1326,109 @@ def test_drawings_are_cut_from_the_3d_model():
         assert inside_any(face.label, Vector(x_cut, q.X, q.Z)), (face.label, q)
 
 
-def test_wool_stuffs_the_eaves_cd_layer_and_soffit():
-    """Petr, 1 Nov 2026: no empty cavities in the roof build-up (thermal bridges)."""
-    from build123d import Box, Compound, Location
+def _boxes_hit(a, b) -> bool:
+    ba, bb = a.bounding_box(), b.bounding_box()
+    return (
+        min(ba.max.X, bb.max.X) > max(ba.min.X, bb.min.X)
+        and min(ba.max.Y, bb.max.Y) > max(ba.min.Y, bb.min.Y)
+        and min(ba.max.Z, bb.max.Z) > max(ba.min.Z, bb.min.Z)
+    )
+
+
+def _overlap_mm3(a, b) -> float:
+    if not _boxes_hit(a, b):
+        return 0.0
+    hit = a.intersect(b)
+    if not hit:
+        return 0.0
+    solids = list(hit.solids()) if hasattr(hit, "solids") else []
+    return sum(float(s.volume) for s in solids if s is not None)
+
+
+def test_eave_wool_fills_plate_hollows_without_intersecting():
+    """Wall-plate hollows on both eaves are wool; the CD layer and soffit void are not.
+
+    The pieces butt existing solids (1 mm clearance). A few mm³ is numeric noise;
+    a real intersection is orders of magnitude larger.
+    """
+    from build123d import Box, Location
+
+    import obyvak_eave_left
 
     p = ObyvakParams()
     g = build_layout(p)
     shape, _ = build(p)
-    y = 0.5 * (g.y_furn0 + g.y_furn1) + 7.0
-    plenum = Compound(children=_labeled(shape, LABEL_PLENUM_WOOL))
-    soffit = Compound(children=_labeled(shape, LABEL_SOFFIT_WOOL))
+    fills = [c for c in shape.children if getattr(c, "wool_fill", False)]
+    assert [c.wool_name for c in fills] == [
+        "Left, rafter depth over the inner plate",
+        "Left, above the outer plate",
+        "Left, wall crown outside the plate",
+        "Right, rafter depth over the inner plate",
+        "Right, above the outer plate",
+        "Right, wall crown outside the plate",
+    ]
+    total_m3 = sum(float(c.volume) for c in fills) / 1e9
+    # The retired blanket fill was 3.88 m³. These six pieces are about 1.03 m³.
+    assert 0.9 < total_m3 < 1.2, total_m3
 
-    def vol(wool, xyz) -> float:
-        hit = wool.intersect(Location(xyz) * Box(4, 4, 4))
-        if not hit:
-            return 0.0
-        return sum(float(s.volume) for s in hit.solids())
+    others = [c for c in shape.children if not getattr(c, "wool_fill", False)]
+    for wool in fills:
+        for other in others:
+            overlap = _overlap_mm3(wool, other)
+            assert overlap < 10.0, (wool.wool_name, other.label, overlap)
+    for i, a in enumerate(fills):
+        for b in fills[i + 1 :]:
+            assert _overlap_mm3(a, b) < 10.0, (a.wool_name, b.wool_name)
+
+    plenum_fill = fills
+
+    def vol(xyz) -> float:
+        total = 0.0
+        for wool in plenum_fill:
+            hit = wool.intersect(Location(xyz) * Box(4, 4, 4))
+            if hit:
+                total += sum(float(s.volume) for s in hit.solids())
+        return total
 
     stations = sorted(g.rafter_y_stations(FACE_GAP, p.room_length - FACE_GAP))
     y_bay = 0.5 * (stations[4] + stations[5])
-    # Left eave, over the masonry crown outside the plate, below the rafters.
-    assert vol(plenum, (-240.0, y_bay, p.eave_wall_z + 20.0)) > 50.0
-    # Right eave, mirror.
-    assert vol(plenum, (g.xr_mas - 20.0, y_bay, p.eave_wall_z + 20.0)) > 50.0
-    # 27 mm CD layer between the GKF and the brake, left slope, between CDs.
+    # Wall crown outside each plate, and the void above the outer plate.
+    assert vol((-240.0, y_bay, p.eave_wall_z + 20.0)) > 50.0
+    assert vol((-180.0, y_bay, g.z_plate_top + 60.0)) > 50.0
+    assert vol((g.xr_mas - 20.0, y_bay, p.eave_wall_z + 20.0)) > 50.0
+    assert vol((g.poz_r0 + p.plate_w - 40.0, y_bay, g.z_plate_top + 60.0)) > 50.0
+    # Rafter depth over the inner plate, just above the under-rafter wool.
+    for x in (-70.0, p.room_width + 50.0):
+        assert vol((x, y_bay, g.z_raf(x) + 80.0)) > 50.0
+    # Gutter overhang outside the masonry stays empty.
+    assert vol((-350.0, y_bay, 3300.0)) < 1.0
+    assert vol((g.xr_eps - 80.0, y_bay, 3300.0)) < 1.0
+    # 27 mm CD layer between the GKF and the brake stays an empty service gap.
     x = 1000.0
     t = g.t_gkf_attic_left + 13.5
     zs = [g.plane_z(x + dx, t, right=False) for dx in range(-300, 301, 50)]
-    xs = list(range(-300, 301, 50))
-    assert max(vol(plenum, (x + dx, y_bay, z)) for dx, z in zip(xs, zs)) > 50.0
-    # Soffit void above the ducts is wool; the ducts keep a clear ring.
-    cx, cz = g.soffit_duct_centers()[0]
-    r = p.duct_od * 0.5
-    assert vol(soffit, (cx, y, cz + r + 5.0)) < 1.0
-    assert vol(soffit, (g.x_nh_inner + 20.0, y, g.z_soffit_lid - 20.0)) > 50.0
+    assert max(vol((x + dx, y_bay, z)) for dx, z in zip(range(-300, 301, 50), zs)) < 1.0
+    # Inside the left UD channel (between the two flanges), not in the steel.
+    room_fl, attic_fl = g.eave_ud_left_quads()[4], g.eave_ud_left_quads()[5]
+
+    def _cen(quad):
+        return sum(px for px, _pz in quad) / 4.0, sum(pz for _px, pz in quad) / 4.0
+
+    rx, rz = _cen(room_fl)
+    ax, az = _cen(attic_fl)
+    assert vol((0.5 * (rx + ax), y_bay, 0.5 * (rz + az))) < 1.0
+    # Soffit duct void was empty before the blanket fill and stays empty.
+    # The acoustic wool below the ducts is unchanged.
+    y = 0.5 * (g.y_furn0 + g.y_furn1)
+    soffit = [c for c in _labeled(shape, LABEL_SOFFIT_WOOL) if not getattr(c, "wool_fill", False)]
+    assert len(soffit) == 1
+    void = (g.x_nh_inner + 30.0, y, g.z_soffit_lid - 30.0)
+    assert vol(void) < 1.0
+    hit = soffit[0].intersect(Location(void) * Box(4, 4, 4))
+    assert not hit or sum(float(s.volume) for s in hit.solids()) < 1.0
+    cavity = (g.x_nh_inner + 40.0, y, g.z_nabeh_bot + 80.0)
+    hit = soffit[0].intersect(Location(cavity) * Box(4, 4, 4))
+    assert hit and sum(float(s.volume) for s in hit.solids()) > 50.0
+    notes = [text for *_skip, text in obyvak_eave_left.notes()]
+    assert any(text == "1x GKF 12.5 ends in the UD" for text in notes)
+    assert not any("2x GKF" in text for text in notes)

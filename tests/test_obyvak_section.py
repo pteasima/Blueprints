@@ -28,13 +28,18 @@ from blueprints.export_utils import export_section  # noqa: E402
 
 
 def _source_h_start(p: ObyvakParams) -> float:
-    """Room face from the soffit CD plus the 40° UD, then 100 mm NaturHeld."""
+    """Room face from the lid CD's lower room corner, then the right-hand stack.
+
+    The lid CD is centred on the vertical soffit CD (27 deep behind the
+    NaturHeld), so that corner is 16.5 mm toward the room from the old datum
+    on the NaturHeld face.
+    """
     sin = math.sin(math.radians(p.roof_angle_deg))
     cos = math.cos(math.radians(p.roof_angle_deg))
     tan = math.tan(math.radians(p.roof_angle_deg))
     x_furn = p.room_width - p.furniture_width
     x_nh_inner = x_furn + p.finish_t + p.basic_t + p.soffit_naturheld_t
-    x_cd_room = x_nh_inner
+    x_cd_room = x_nh_inner + p.cd_t * 0.5 - p.cd_w * 0.5
     # The CD sits on the lid pack; its top layers stand above the plate.
     z_cd_bot = p.eave_wall_z + p.plate_h + (p.soffit_lid_layers - 1) * p.sdk_t
     d_room = p.finish_t + p.basic_t + p.naturheld_right + p.sdk_layers_right * p.sdk_t
@@ -50,7 +55,7 @@ def test_derived_matches_source_sheet():
     assert g.x_false == (p.room_width - p.furniture_width) / 2.0
     assert g.z_nabeh_bot == p.furniture_height + p.furniture_gap
     assert abs(g.h_start - _source_h_start(p)) < 1e-9
-    assert abs(g.h_start - 3181.0) < 1.0
+    assert abs(g.h_start - 3167.18) < 0.05
     assert g.z_gkf_horiz == g.h_start
     assert g.z_false == g.h_start + g.x_false * g.tan
     soffit_h = g.z_gkf_horiz - g.z_nabeh_bot

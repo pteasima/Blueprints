@@ -332,6 +332,15 @@ def collect_quantities():
         "n_ducts": len(by[LABEL_SOFFIT_DUCT]),
         "plenum_wool_m3": _volume_m3([w for w in by[LABEL_PLENUM_WOOL] if not getattr(w, "wool_fill", False)]),
         "fill_wool_m3": _volume_m3([w for w in by[LABEL_PLENUM_WOOL] if getattr(w, "wool_fill", False)]),
+        "eave_wool": [
+            {
+                "name": w.wool_name,
+                "dims": w.wool_dims,
+                "m3": float(w.volume) / 1e9,
+            }
+            for w in by[LABEL_PLENUM_WOOL]
+            if getattr(w, "wool_fill", False)
+        ],
         "bay_wool_m3": _bay_wool_m3(p, g),
         "soffit_wool_m3": _volume_m3(by[LABEL_SOFFIT_WOOL]),
         "bass_wool_m3": _volume_m3(by[LABEL_BASS_WOOL]),
@@ -383,6 +392,22 @@ def _nonius_set_price() -> tuple[float, str]:
     bot, sb = PRICE["nonius_bot_ks"]
     pin, sp = PRICE["nonius_pin_ks"]
     return top + bot + 2 * pin, f"sada: {st}; {sb}; 2× {sp}"
+
+
+def _eave_wool_note(q) -> str:
+    """Per-piece volume for the wall-plate wool, plus what was left empty."""
+    bits = [
+        f"{piece['name']}: {piece['m3']:.3f} m³ ({piece['m3'] / 0.1:.2f} m² of 100 mm), {piece['dims']}"
+        for piece in q["eave_wool"]
+    ]
+    total = q["fill_wool_m3"]
+    return (
+        f"Cold side of the vapour brake, around both wall plates, between the rafters, "
+        f"up to the under-rafter wool. {total:.3f} m³ = {total / 0.1:.2f} m² of 100 mm. "
+        + " ".join(bits)
+        + " Empty on purpose: the 27 mm CD layer, insides of CD/UD, the brake's slack loops, "
+        "the soffit duct void, and the gutter overhang outside the masonry."
+    )
 
 
 def build_lines(q) -> dict[str, list[Line]]:
@@ -621,19 +646,17 @@ def build_lines(q) -> dict[str, list[Line]]:
             f"taken up by the rolls' loft (no air layer). U ≈ 0.070; whole roof U ≈ 0.096.",
         ),
         Line(
-            '9e',
-            "Fill wool: eaves, CD layer, joints",
+            "9e",
+            "Eave wool around wall plates",
             "Glass wool, λ 0.033",
             _product("Knauf Unifit 033 100 mm (cut to fit)", URL_UNIFIT033_100),
-            "cut strips, stuffed",
+            "100 mm, cut around both plates",
             q["fill_wool_m3"] / 0.1,
             "m²",
-            15,
+            WOOL_WASTE_PCT,
             UNIFIT033_100_KC_M2,
             f"Stav-Invest, 1,420.65 Kč / 5.28 m² roll incl. VAT · {URL_UNIFIT033_100}",
-            f"Every cavity left in the model, cut from the 3D solids: {q['fill_wool_m3']:.3f} m³ "
-            f"(27 mm CD layer on both slopes, both eaves over the plate and wall crown out to the EPS, "
-            f"slope/lid joint, gaps at hangers). As 100 mm board-equivalent m².",
+            _eave_wool_note(q),
         ),
         Line(
             10,
@@ -1209,19 +1232,17 @@ def build_lines(q) -> dict[str, list[Line]]:
             f"taken up by the rolls' loft (no air layer). U ≈ 0.070; whole roof U ≈ 0.096.",
         ),
         Line(
-            '12e',
-            "Fill wool: eaves, CD layer, joints",
+            "12e",
+            "Eave wool around wall plates",
             "Glass wool, λ 0.033",
             _product("Knauf Unifit 033 100 mm (cut to fit)", URL_UNIFIT033_100),
-            "cut strips, stuffed",
+            "100 mm, cut around both plates",
             q["fill_wool_m3"] / 0.1,
             "m²",
-            15,
+            WOOL_WASTE_PCT,
             UNIFIT033_100_KC_M2,
             f"Stav-Invest, 1,420.65 Kč / 5.28 m² roll incl. VAT · {URL_UNIFIT033_100}",
-            f"Every cavity left in the model, cut from the 3D solids: {q['fill_wool_m3']:.3f} m³ "
-            f"(27 mm CD layer on both slopes, both eaves over the plate and wall crown out to the EPS, "
-            f"slope/lid joint, gaps at hangers). As 100 mm board-equivalent m².",
+            _eave_wool_note(q),
         ),
         Line(
             "13b",
