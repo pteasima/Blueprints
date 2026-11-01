@@ -878,9 +878,9 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     # Krov = discrete rafters 100/160 @ 875 (sheet E_KROK), not a solid timber slab.
     krov_pts = _shrink_band(g.krov_pts(), top_n=3, gap=gap)
     krytina_pts = [(x, z + gap if i < 3 else z) for i, (x, z) in enumerate(g.krytina_pts())]
-    # Plenum wool: the 2D outline runs over the plates; the 3D part stays in
-    # the room width, inset by the face gap all round.
-    vata_face = _inset_face(g.vata_pts(), gap, LABEL_PLENUM_WOOL, x_range=(gap, p.room_width - gap))
+    # Plenum wool follows the 2D outline out to the rafter seats on both
+    # plates (about x -140 and x 5490), inset by the face gap.
+    vata_face = _inset_face(g.vata_pts(), gap, LABEL_PLENUM_WOOL)
 
     y_raf0, y_raf1 = gap, p.room_length - gap
     rafter_ys = g.rafter_y_stations(y_raf0, y_raf1)
@@ -913,11 +913,9 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     # plus the 160 mm bays between krokve. Same part. The vent channel above
     # the rafter top stays empty.
     vata = _extrude_y(vata_face, gap, p.room_length - gap, LABEL_PLENUM_WOOL)
-    bay_raw = g.vata_rafter_bay_pts()
-    bay_pts = [
-        (min(max(x, gap), p.room_width - gap), z - gap) for x, z in bay_raw
-    ]
-    bay_face = xz_face(bay_pts, LABEL_PLENUM_WOOL)
+    # Same wool, between the rafters: rafter depth from plate face to plate face.
+    # Where the rafter is seated in the plate the bay starts on the plate top.
+    bay_face = xz_face(g.vata_rafter_bay_pts(gap), LABEL_PLENUM_WOOL)
     # Cheeks stop FACE_GAP short of each krokev so the timber and the wool do not share a face.
     cursor = gap
     y_wool1 = p.room_length - gap

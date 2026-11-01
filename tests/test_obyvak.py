@@ -226,6 +226,16 @@ def test_mineral_wool_fills_rafter_bays():
     assert _hit_volume(wool, (x, y_bay, z_mid)) > 100.0
     # The krokev itself stays timber.
     assert _hit_volume(wool, (x, stations[4], z_mid)) < 1.0
+    # The same bay runs out over both wall plates, from the plate top through
+    # the rafter depth. One solid; the plate and the rafter stay clear.
+    assert bb.min.X < g.poz_l0 + 20.0
+    assert bb.max.X > g.poz_r0 + p.plate_w - 20.0
+    for x_plate in (0.5 * (g.poz_l0 + g.poz_l0 + p.plate_w), 0.5 * (g.poz_r0 + g.poz_r0 + p.plate_w)):
+        z_in = max(g.z_raf(x_plate), g.z_plate_top) + 40.0
+        assert z_in < g.z_raf_outer(x_plate) - 10.0
+        assert _hit_volume(wool, (x_plate, y_bay, z_in)) > 100.0
+        assert _hit_volume(wool, (x_plate, y_bay, g.z_plate_top - 20.0)) < 1.0
+        assert _hit_volume(wool, (x_plate, stations[4], z_in)) < 1.0
 
 
 def test_plenum_fill_hangers_and_vent():

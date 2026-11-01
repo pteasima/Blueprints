@@ -1149,7 +1149,8 @@ class ObyvakLayout:
         from the plate cheek, the slope, over the lid CD and on the lid top
         to the right plate. The ends fill up to the plate tops and the rafter
         seats, so there is no void and no wedge at an odd angle. Between the
-        rafters the fill is ``vata_rafter_bay_pts`` (160 mm).
+        rafters the same wool continues as ``vata_rafter_bay_pts`` (the rafter
+        depth), out over both wall plates.
         """
         p = self.p
         t = p.foil_t
@@ -1179,21 +1180,42 @@ class ObyvakLayout:
         self.vata_bottom_n = 7
         return pts
 
-    def vata_rafter_bay_pts(self) -> list[tuple[float, float]]:
-        """Mineral wool in the rafter depth, over the warm room only.
+    def vata_rafter_bay_pts(self, gap: float = 0.0) -> list[tuple[float, float]]:
+        """Mineral wool in the rafter depth, between the krokve.
 
-        Bottom is the rafter underside; top is the rafter top. The ventilation
-        gap, DHV, and tiles stay above this. The 3D build keeps a FACE_GAP off
-        each krokev cheek so the timber is not the insulation.
+        Runs from the outer face of the left wall plate to the outer face of
+        the right one. Bottom is the rafter underside, or the plate top where
+        the rafter is notched into the plate. Top is the rafter top. The
+        ventilation gap stays above this. ``gap`` lifts the plate edge and
+        drops the rafter top so the solid does not share a face with them.
         """
         p = self.p
+        zp = self.z_plate_top
+        seat = (self.z_raf(0.0) - zp) / self.tan
+        x_out_l = self.poz_l0 + gap
+        x_out_r = self.poz_r0 + p.plate_w - gap
+        # Rafter underside is `gap` above the plate top this far in from the seat.
+        kink = (2.0 * gap) / self.tan if gap else 0.0
+        x_kink_l = -seat + kink
+        x_kink_r = p.room_width + seat - kink
+        depth = p.rafter_t / self.cos
+        z_plate = zp + gap
+
+        def z_top(x: float) -> float:
+            return self.z_raf(x) + depth - gap
+
+        def z_under(x: float) -> float:
+            return self.z_raf(x) - gap
+
         return [
-            (0.0, self.z_raf(0.0)),
-            (self.x_ridge, self.z_raf(self.x_ridge)),
-            (p.room_width, self.z_raf(p.room_width)),
-            (p.room_width, self.z_raf_outer(p.room_width)),
-            (self.x_ridge, self.z_raf_outer(self.x_ridge)),
-            (0.0, self.z_raf_outer(0.0)),
+            (x_out_l, z_plate),
+            (x_kink_l, z_plate),
+            (self.x_ridge, z_under(self.x_ridge)),
+            (x_kink_r, z_plate),
+            (x_out_r, z_plate),
+            (x_out_r, z_top(x_out_r)),
+            (self.x_ridge, z_top(self.x_ridge)),
+            (x_out_l, z_top(x_out_l)),
         ]
 
     def horiz_cd_x_stations(self) -> list[float]:

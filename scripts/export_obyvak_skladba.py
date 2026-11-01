@@ -220,9 +220,7 @@ def _polygon_area_mm2(pts: list[tuple[float, float]]) -> float:
 def _bay_wool_m3(p: ObyvakParams, g: ObyvakLayout) -> float:
     """Volume of the 160 mm bays, with the same 1 mm cheek clearance as the solid."""
     gap = FACE_GAP
-    bay_raw = g.vata_rafter_bay_pts()
-    bay_pts = [(min(max(x, gap), p.room_width - gap), z - gap) for x, z in bay_raw]
-    area = _polygon_area_mm2(bay_pts)
+    area = _polygon_area_mm2(g.vata_rafter_bay_pts(gap))
     half = p.rafter_w * 0.5
     cursor = gap
     y1 = p.room_length - gap
