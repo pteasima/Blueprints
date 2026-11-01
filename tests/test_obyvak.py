@@ -131,7 +131,8 @@ def test_layout_ceiling_and_gable():
     assert g.x_sdk_break == g.x_nh_inner
     assert g.x_sdk_break > g.x_furn
     # Slope GKF is cut level and bears on the lid top: no gap, no acrylic joint.
-    lid_top = g.z_soffit_lid + p.sdk_t
+    lid_top = g.z_soffit_cd_bot
+    assert abs(lid_top - (g.z_soffit_lid + p.soffit_lid_layers * p.sdk_t)) < 1e-6
     assert abs(g.gkf_end_room[1] - lid_top) < 1e-6
     assert abs(g.gkf_end_attic[1] - lid_top) < 1e-6
     assert abs(g.x_gkf_kink - g.x_furn) < 1e-6
@@ -141,7 +142,7 @@ def test_layout_ceiling_and_gable():
     assert cds == [g.x_soffit_cd]
     assert abs(g.x_soffit_cd - (g.x_soffit_cd_room + p.cd_w * 0.5)) < 1e-6
     ud = g.soffit_ud_track_quads()
-    assert ud[-1]  # seated slope CD is the last quad
+    assert len(ud) == 6  # leg, bend, strap, web, two flanges; all real 3D parts
     leg = ud[0]
     # Flat leg lies on the room-side face of the soffit CD, tall enough to screw.
     assert abs(max(x for x, _z in leg) - g.x_soffit_cd_room) < 0.2
@@ -159,7 +160,6 @@ def test_layout_ceiling_and_gable():
     sdk = g.sikmina_sdk_pts()
     for a, b in zip(sdk, sdk[1:]):
         assert not (abs(a[0] - g.x_false) < 1e-6 and abs(b[0] - g.x_false) < 1e-6)
-    assert g.soffit_acrylic_joint_pts() == []
     sdk = g.sikmina_sdk_pts()
     assert any(abs(x - g.gkf_end_room[0]) < 1e-6 and abs(z - g.gkf_end_room[1]) < 1e-6 for x, z in sdk)
     assert any(abs(x - g.gkf_end_mid[0]) < 1e-6 and abs(z - g.gkf_end_mid[1]) < 1e-6 for x, z in sdk)
@@ -334,7 +334,8 @@ def test_sikminy_and_soffit_stack_in_3d():
         assert bb.size.X > 400.0
     # Room-facing NH on slopes sits at H_START.
     slope_nh = min(nh, key=lambda s: s.bounding_box().min.X)
-    assert abs(slope_nh.bounding_box().min.Z - (g.h_start + FACE_GAP)) < 2.0
+    # The NH toe starts ~3 mm off the wall, so its lowest corner is 3·tan higher.
+    assert abs(slope_nh.bounding_box().min.Z - (g.h_start + FACE_GAP)) < 3.5
     # Soffit box underside clears the cabinets by furniture_gap.
     box_nh = max(nh, key=lambda s: s.bounding_box().min.X)
     assert abs(box_nh.bounding_box().min.Z - (g.z_nabeh_bot + FACE_GAP)) < 2.0
@@ -539,10 +540,12 @@ def test_soffit_ducts_sit_under_lid_on_wall_plate():
         for c in _labeled(shape, LABEL_SOFFIT_GKF)
         if c.bounding_box().size.Z < p.sdk_t + 1.0 and c.bounding_box().size.X > 100.0
     ]
-    assert len(lids) == 1
+    assert len(lids) == p.soffit_lid_layers
+    lids = sorted(lids, key=lambda c: c.bounding_box().min.Z)
+    # Bottom layer top flush with the plate; the next layers stack on the attic side.
+    assert abs(lids[0].bounding_box().max.Z - (g.z_plate_top - FACE_GAP)) < 1.0
+    assert abs(lids[-1].bounding_box().max.Z - (g.z_soffit_cd_bot - FACE_GAP)) < 1.0
     lid = lids[0].bounding_box()
-    # Top flush with the plate; cut end on the plate cheek, above the wall head.
-    assert abs(lid.max.Z - (g.z_plate_top - FACE_GAP)) < 1.0
     assert lid.min.Z > p.eave_wall_z + 50.0
     assert abs(lid.max.X - (g.poz_r0 - FACE_GAP)) < 1.0
     assert lid.max.X > p.room_width
@@ -1088,8 +1091,9 @@ def test_3d_parts_do_not_interpenetrate():
                     vol += float(s.volume)
                 except Exception:
                     pass
-            # Soffit Nonius rods pierce the vapour brake on purpose (taped grommet).
-            if {a.label, b.label} == {"slope_foil", "soffit_nonius"}:
+            # Soffit Nonius rods pierce the vapour brake on purpose (taped grommet),
+            # and screws are driven into what they fix.
+            if {a.label, b.label} == {"slope_foil", "soffit_nonius"} or "joint_screw" in (a.label, b.label):
                 continue
             if vol > 1.0:  # mm³
                 violations.append((a.label, b.label, round(vol, 1)))
@@ -1134,9 +1138,9 @@ def test_soffit_acoustics_ignore_the_steel_section():
 
     geom = room_geometry()
     assert geom.soffit_board == 0.04
-    assert abs(geom.soffit - 12.18423095) < 1e-6
+    assert abs(geom.soffit - 12.144298942465415) < 1e-6
     assert abs(geom.soffit_wool_depth - 0.47910580837556743) < 1e-9
-    assert abs(geom.soffit_under_fraction - 0.38631900700477245) < 1e-9
+    assert abs(geom.soffit_under_fraction - 0.38758927314781927) < 1e-9
     assert abs(geom.soffit_air_depth - 0.32589419162443256) < 1e-9
 
 
@@ -1249,3 +1253,71 @@ def test_part_groups_tree():
     shape, _ = build()
     for label in {c.label for c in shape.children}:
         assert label in leaf_ids, label
+
+
+def test_drawings_are_cut_from_the_3d_model():
+    """Every drawn face in every obyvák drawing is a section of a 3D solid.
+
+    No drawing module may build its own geometry: the faces carry the label of
+    a GLB solid, and a point inside each face lies inside a solid of that label.
+    """
+    import ast
+    from pathlib import Path
+
+    from build123d import Vector
+
+    import obyvak
+    import obyvak_elevation
+    import obyvak_eave_left
+    import obyvak_joint
+    import obyvak_section
+
+    models = Path(__file__).resolve().parents[1] / "models"
+    banned = {"xz_face", "xz_rect", "xz_line", "xz_polyline", "xz_ngon"}
+    for name in ("obyvak_section", "obyvak_elevation", "obyvak_joint", "obyvak_eave_left", "obyvak_detail"):
+        tree = ast.parse((models / f"{name}.py").read_text(encoding="utf-8"))
+        used = {n.id for n in ast.walk(tree) if isinstance(n, ast.Name)} | {
+            n.attr for n in ast.walk(tree) if isinstance(n, ast.Attribute)
+        }
+        assert not (used & banned), (name, used & banned)
+        calls = {
+            n.func.attr
+            for n in ast.walk(tree)
+            if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+        }
+        assert not any(c.endswith("_pts") or c.endswith("_quads") for c in calls), (name, calls)
+
+    p = ObyvakParams()
+    solids = obyvak.model_parts(p)
+    by_label: dict = {}
+    for s in solids:
+        by_label.setdefault(s.label, []).append(s)
+    y_cut = obyvak.section_y(p)
+
+    def inside_any(label, pt) -> bool:
+        return any(s.is_inside(pt, tolerance=0.5) for s in by_label.get(label, []))
+
+    def interior_point(face):
+        verts, tris = face.tessellate(0.5)
+        a, b, c = (verts[k] for k in max(tris, key=lambda t: (verts[t[1]] - verts[t[0]]).cross(verts[t[2]] - verts[t[0]]).length))
+        return (a + b + c) / 3.0
+
+    sec, _ = obyvak_section.build(p)
+    for mod in (obyvak_joint, obyvak_eave_left):
+        det, _ = mod.build(p)
+        assert {c.label for c in det.children} <= {c.label for c in sec.children}
+    for face in sec.children:
+        assert face.label in by_label, face.label
+        q = interior_point(face)
+        at_cut = inside_any(face.label, Vector(q.X, y_cut, q.Z))
+        seen = any(
+            s.is_inside(Vector(q.X, 0.5 * (s.bounding_box().min.Y + s.bounding_box().max.Y), q.Z), tolerance=0.5)
+            for s in by_label[face.label]
+        )
+        assert at_cut or seen, (face.label, q)
+    elev, meta = obyvak_elevation.build(p)
+    x_cut = meta["derived"]["x_cut"]
+    for face in elev.children:
+        assert face.label in by_label, face.label
+        q = interior_point(face)
+        assert inside_any(face.label, Vector(x_cut, q.X, q.Z)), (face.label, q)

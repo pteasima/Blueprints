@@ -35,8 +35,9 @@ def _source_h_start(p: ObyvakParams) -> float:
     x_furn = p.room_width - p.furniture_width
     x_nh_inner = x_furn + p.finish_t + p.basic_t + p.soffit_naturheld_t
     x_cd_room = x_nh_inner
-    z_cd_bot = p.eave_wall_z + p.plate_h
-    d_room = p.finish_t + p.basic_t + p.naturheld_right + p.sdk_t
+    # The CD sits on the lid pack; its top layers stand above the plate.
+    z_cd_bot = p.eave_wall_z + p.plate_h + (p.soffit_lid_layers - 1) * p.sdk_t
+    d_room = p.finish_t + p.basic_t + p.naturheld_right + p.sdk_layers_right * p.sdk_t
     rx = x_cd_room - sin * d_room
     rz = z_cd_bot - cos * d_room
     return rz + (rx - x_furn) * tan
@@ -49,7 +50,7 @@ def test_derived_matches_source_sheet():
     assert g.x_false == (p.room_width - p.furniture_width) / 2.0
     assert g.z_nabeh_bot == p.furniture_height + p.furniture_gap
     assert abs(g.h_start - _source_h_start(p)) < 1e-9
-    assert abs(g.h_start - 3184.8) < 1.0
+    assert abs(g.h_start - 3181.0) < 1.0
     assert g.z_gkf_horiz == g.h_start
     assert g.z_false == g.h_start + g.x_false * g.tan
     soffit_h = g.z_gkf_horiz - g.z_nabeh_bot

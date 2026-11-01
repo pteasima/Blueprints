@@ -9,9 +9,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from build123d import Compound, Face
+from build123d import Box, Compound, Face, Location
 
-from obyvak_geom import ObyvakParams, xz_rect
+from obyvak_geom import ObyvakParams
 
 
 def clip_section(window, params: ObyvakParams | None = None, name: str = "detail"):
@@ -20,7 +20,8 @@ def clip_section(window, params: ObyvakParams | None = None, name: str = "detail
 
     x0, z0, x1, z1 = window
     shape, _meta = obyvak_section.build(params)
-    box = xz_rect(x0, z0, x1 - x0, z1 - z0, "window")
+    # Clip window only (not drawn): a thin box straddling the drawing plane.
+    box = Location((0.5 * (x0 + x1), 0.0, 0.5 * (z0 + z1))) * Box(x1 - x0, 10.0, z1 - z0)
     parts = []
     for face in shape.children:
         bb = face.bounding_box()

@@ -722,13 +722,15 @@ def build_lines(q) -> dict[str, list[Line]]:
             "Víko kastlíku",
             "Sádrokarton GKF / RF",
             _product("Rigips RF (DF) 12,5 mm", URL_RF),
-            f"{p.sdk_t} mm",
-            q["lid_area"],
+            f"{p.soffit_lid_layers}× {p.sdk_t} mm",
+            q["lid_area"] * p.soffit_lid_layers,
             "m²",
             12,
             PRICE["rf_m2"][0],
             PRICE["rf_m2"][1],
-            "Horní líce v úrovni pozednice.",
+            f"{p.soffit_lid_layers} vrstvy: spodní pod horní hranou pozednice, další nad ní "
+            f"(na půdní straně). Plocha {q['lid_area']:.2f} m² × {p.soffit_lid_layers}. "
+            "Šikmý GKF na ní dosedá, CD kastlíku na ní leží nad svislým profilem.",
         ),
         Line(
             7,
@@ -917,7 +919,7 @@ def build_lines(q) -> dict[str, list[Line]]:
     finish_kg = finish_kg_s + finish_kg_k
     nonius_ks = q["n_slope_nonius"] + q["n_soffit_nonius"]
     other_wool = q["soffit_wool_m3"] + q["bass_wool_m3"]
-    gkf = face_s + q["lid_area"]
+    gkf = face_s + q["lid_area"] * p.soffit_lid_layers
     cd = q["slope_cd_lm"] + q["soffit_cd_lm"] + q["soffit_rost_cd_lm"] + q["bass_cd_lm"]
 
     souhrn = [
@@ -1017,7 +1019,7 @@ def build_lines(q) -> dict[str, list[Line]]:
             12,
             PRICE["rf_m2"][0],
             PRICE["rf_m2"][1],
-            "Šikminy + víko kastlíku.",
+            f"Šikminy + víko kastlíku ({p.soffit_lid_layers} vrstvy).",
         ),
         Line(
             "6b",

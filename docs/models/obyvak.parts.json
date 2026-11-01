@@ -39,6 +39,7 @@
       "soffit_gkb",
       "soffit_cd",
       "soffit_ud",
+      "joint_screw",
       "soffit_nonius",
       "soffit_duct"
     ]

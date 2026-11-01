@@ -1,7 +1,9 @@
 """Right eave detail: the slope GKF bears on the soffit lid, with no gap.
 
 The 2× GKF of the right slope is cut level and sits on the top of the soffit
-lid. The lid CD sits where the outer GKF plane meets the lid top, and the 40°
+lid. The lid is two GKF layers: the lower one flush with the wall-plate top,
+the upper one on the attic side of it. The lid CD sits over the soffit's
+vertical CD, where the outer GKF plane meets the lid top, and the 40°
 UD track on it takes the slope CDs. The NaturHeld board gets a level toe on the
 lid, so the wool runs right up to the boards. The vapour brake runs over the
 lid CD, along the lid and down the plate cheek, then is bonded to the cabinet
@@ -48,12 +50,12 @@ def notes(p: ObyvakParams | None = None):
     zl = g.z_soffit_lid
     return [
         (4790, 3462, "Right eave: slope GKF bears on the soffit lid, no gap"),
-        (4790, 3448, "2x GKF 12.5 cut level, sits on the lid top"),
+        (4790, 3448, "2x GKF 12.5 cut level, sits on the upper lid layer"),
         (4790, 3434, "NaturHeld 100 with a level toe on the lid; wool fills to the boards"),
         (g.x_soffit_cd + 25, zl + 60, "soffit CD + 40 deg UD (slope CDs slide in)"),
         (g.x_soffit_cd + 25, zl + 46, "LB 3.5x9.5 @ 300 mm"),
         (5130, zl + 28, "Jutafol N AL 170 over the CD and lid"),
-        (5130, zl - 30, "soffit GKF lid"),
+        (5130, zl - 30, "soffit lid: 2x GKF, upper layer above the plate"),
         (5220, 3150, "brake: slack loop, then"),
         (5220, 3137, "bonded + taped to cabinet plaster"),
         (5220, 3124, "(inside the soffit void)"),

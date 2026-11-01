@@ -1,4 +1,5 @@
-"""Obývák 1.02 — bokorys od oken (štít–štít), 2D profily v Plane.XZ.
+"""Obývák 1.02 — bokorys od oken (štít–štít), cut from the 3D model solids
+through the pocket doors (drawing X = world Y).
 
 X v tomto výkrese = světlá délka obývák↔kuchyň (v 3D to bude Y).
 Z up. Podhled je vodorovný pod hřebenem — žádný A-rám vlevo/vpravo.
@@ -16,23 +17,7 @@ from __future__ import annotations
 
 from dataclasses import asdict
 
-from build123d import Compound
-
-from obyvak_geom import (
-    LABEL_BASS_WOOL,
-    LABEL_FLOOR,
-    LABEL_MASONRY,
-    LABEL_PLASTER,
-    LABEL_POCKET_FRAME,
-    LABEL_RAFTERS,
-    LABEL_ROOFING,
-    LABEL_SLOPE_NH,
-    LABEL_WALL_GKF,
-    ObyvakLayout,
-    ObyvakParams,
-    xz_line,
-    xz_rect,
-)
+from obyvak_geom import ObyvakLayout, ObyvakParams
 
 
 MODEL_NAME = "obyvak_elevation"
@@ -41,74 +26,27 @@ PARAMS = asdict(ObyvakParams())
 
 
 def build(params: ObyvakParams | None = None):
+    """Longitudinal section through the pocket doors, cut from the 3D model solids."""
+    import obyvak
+
     p = params or ObyvakParams()
     g = ObyvakLayout(p)
-    span = p.room_length
-    h_gable = g.z_soffit
-
-    xl_eps = -p.wall_plaster - p.wall_mason - p.wall_eps
-    xl_mas = -p.wall_plaster - p.wall_mason
-    xr_mas = span + p.wall_plaster + p.wall_mason
-    xr_eps = xr_mas + p.wall_eps
-    x0 = xl_eps - p.ridge_runout
-    x1 = xr_eps + p.ridge_runout
-
-    parts: list = []
-
-    parts.append(xz_rect(xl_eps, -p.floor_t, xr_eps - xl_eps, p.floor_t, LABEL_FLOOR))
-    # No gable EPS / koruna — obyvák-only interior shells.
-    parts.append(xz_rect(xl_mas, -p.floor_t, p.wall_mason, h_gable + p.floor_t, LABEL_MASONRY))
-    parts.append(xz_rect(-p.wall_plaster, 0.0, p.wall_plaster, h_gable, LABEL_PLASTER))
-    parts.append(xz_rect(span, 0.0, p.wall_plaster, h_gable, LABEL_PLASTER))
-    parts.append(
-        xz_rect(span + p.wall_plaster, -p.floor_t, p.wall_mason, h_gable + p.floor_t, LABEL_MASONRY)
-    )
-
-    # Low SDK in front of pouzdro (covers pocket); předstěny above stay 450 / 190.
-    face_t = max(p.sdk_t, 12.5)
-    parts.append(xz_rect(p.pouzdro_d, 0.0, face_t, p.pocket_door_h, LABEL_WALL_GKF))
-    parts.append(xz_rect(span - p.pouzdro_d - face_t, 0.0, face_t, p.pocket_door_h, LABEL_WALL_GKF))
-    parts.append(xz_rect(0.0, 0.0, p.pouzdro_d, p.pocket_door_h, LABEL_POCKET_FRAME))
-    parts.append(xz_rect(span - p.pouzdro_d, 0.0, p.pouzdro_d, p.pocket_door_h, LABEL_POCKET_FRAME))
-
-    # Předstěny — depths stay 450 living at X=0, 190 kitchen at the far end.
-    parts.append(
-        xz_rect(
-            0.0,
-            p.predstena_bottom_z,
-            p.predstena_living,
-            h_gable - p.predstena_bottom_z,
-            LABEL_BASS_WOOL,
-        )
-    )
-    parts.append(
-        xz_rect(
-            g.x_pred_r,
-            p.predstena_bottom_z,
-            p.predstena_kitchen,
-            h_gable - p.predstena_bottom_z,
-            LABEL_BASS_WOOL,
-        )
-    )
-
-    parts.append(
-        xz_rect(0.0, g.z_soffit, span, g.t_nh_face, LABEL_SLOPE_NH)
-    )
-    parts.append(
-        xz_rect(x0, g.z_raf_inner_ridge, x1 - x0, g.z_raf_top - g.z_raf_inner_ridge, LABEL_RAFTERS)
-    )
-    parts.append(xz_line(x0, p.ridge_z, x1, p.ridge_z, LABEL_ROOFING))
-
-    shape = Compound(obj=parts, children=parts, label=MODEL_NAME)
+    # Cut through a pocket door at each gable (where both overlap in X).
+    frames = [c.bounding_box() for c in obyvak.model_parts(p) if c.label == "pocket_frame"]
+    lo = max(min(b.min.X for b in frames if b.min.Y < 1.0e3), min(b.min.X for b in frames if b.min.Y > 1.0e3))
+    hi = min(max(b.max.X for b in frames if b.min.Y < 1.0e3), max(b.max.X for b in frames if b.min.Y > 1.0e3))
+    x_cut = 0.5 * (lo + hi) if hi > lo else g.x_ridge
+    shape = obyvak.model_elevation(p, x_cut=x_cut, label=MODEL_NAME)
     meta = {
         "params": asdict(p),
         "kind": EXPORT_KIND,
         "derived": {
+            "x_cut": x_cut,
             "h_start": g.h_start,
             "z_soffit": g.z_soffit,
             "predstena_kitchen": p.predstena_kitchen,
             "predstena_living": p.predstena_living,
-            "room_length": span,
+            "room_length": p.room_length,
         },
     }
     return shape, meta
