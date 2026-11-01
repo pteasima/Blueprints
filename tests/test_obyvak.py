@@ -375,7 +375,9 @@ def test_sikminy_and_soffit_stack_in_3d():
     assert (g.x_gkf_kink - last_cd.bounding_box().max.X) / g.cos < p.cd_spacing
     soffit_cd_parts = _labeled(shape, LABEL_SOFFIT_CD)
     assert soffit_cd_parts
-    assert min(c.bounding_box().min.X for c in soffit_cd_parts) >= g.x_nh_inner - 1.0
+    # The lid CD is centred over the vertical CD, so it may reach past the NH face.
+    assert min(c.bounding_box().min.X for c in soffit_cd_parts) >= g.x_soffit_cd_room - 1.0
+    assert abs(g.x_soffit_cd - (g.x_nh_inner + p.cd_t * 0.5)) < 1e-6
     ud_track = [
         c
         for c in _labeled(shape, LABEL_SOFFIT_UD)
