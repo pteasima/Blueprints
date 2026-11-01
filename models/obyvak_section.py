@@ -1,4 +1,7 @@
-"""Obývák 1.02 — příčný řez (panel A), parametrické 2D profily v Plane.XZ.
+"""Obývák 1.02 — příčný řez (panel A), cut from the 3D model solids.
+
+Every drawn face is a section (or a seen-beyond section) of a solid in
+`models/obyvak.py` — the same solids as the GLB. Only notes are overlaid.
 
 Šikminy: NaturHeld 140 (80) screwed through GKF into CD ⊥ krokvím, závěsy,
 pásky (3D: 45° X; zde jen průřez). No slope latě and no Flex. Soffit: 40 mm
@@ -14,40 +17,11 @@ from __future__ import annotations
 
 from dataclasses import asdict
 
-from build123d import Compound
-
 from obyvak_geom import (  # noqa: F401
-    LABEL_EPS,
-    LABEL_FLOOR,
-    LABEL_FURNITURE,
-    LABEL_MASONRY,
-    LABEL_PLASTER,
-    LABEL_PLENUM_WOOL,
-    LABEL_RACKING_STRAP,
-    LABEL_RAFTERS,
-    LABEL_ROOFING,
     LABEL_SLOPE_CD,
-    LABEL_SLOPE_FOIL,
-    LABEL_SLOPE_GKF,
-    LABEL_SLOPE_NH,
-    LABEL_SLOPE_NONIUS,
-    LABEL_SOFFIT_CD,
-    LABEL_SOFFIT_UD,
-    LABEL_SOFFIT_DUCT,
-    LABEL_SOFFIT_WOOL,
-    LABEL_SOFFIT_GKF,
-    LABEL_SOFFIT_GKB,
-    LABEL_SOFFIT_NH,
-    LABEL_SOFFIT_NONIUS,
-    LABEL_WALL_PLATE,
     ObyvakLayout,
     ObyvakParams,
     build_layout,
-    xz_face,
-    xz_line,
-    xz_ngon,
-    xz_polyline,
-    xz_rect,
 )
 
 MODEL_NAME = "obyvak_section"
@@ -56,212 +30,24 @@ PARAMS = asdict(ObyvakParams())
 
 
 def build(params: ObyvakParams | None = None):
+    """Transverse section cut from the 3D model solids (no 2D-only geometry)."""
+    import obyvak
+
     p = params or ObyvakParams()
-    g = ObyvakLayout(p)
-
-    parts: list = []
-
-    parts.append(xz_rect(g.xl_eps, -p.floor_t, g.xr_eps - g.xl_eps, p.floor_t, LABEL_FLOOR))
-    parts.append(xz_rect(g.xl_eps, -p.floor_t, p.wall_eps, p.eave_wall_z + p.floor_t, LABEL_EPS))
-    # Eave masonry includes the ring-beam course under pozednice (same material).
-    parts.append(xz_rect(g.xl_mas, -p.floor_t, p.wall_mason, p.eave_wall_z + p.floor_t, LABEL_MASONRY))
-    parts.append(xz_rect(-p.wall_plaster, 0.0, p.wall_plaster, p.eave_wall_z, LABEL_PLASTER))
-    parts.append(xz_rect(p.room_width, 0.0, p.wall_plaster, p.eave_wall_z, LABEL_PLASTER))
-    parts.append(
-        xz_rect(
-            p.room_width + p.wall_plaster,
-            -p.floor_t,
-            p.wall_mason,
-            p.eave_wall_z + p.floor_t,
-            LABEL_MASONRY,
-        )
-    )
-    parts.append(xz_rect(g.xr_mas, -p.floor_t, p.wall_eps, p.eave_wall_z + p.floor_t, LABEL_EPS))
-
-    parts.append(xz_rect(g.x_furn, 0.0, p.furniture_width, p.furniture_height, LABEL_FURNITURE))
-    parts.append(xz_rect(g.poz_l0, p.eave_wall_z, p.plate_w, p.plate_h, LABEL_WALL_PLATE))
-    parts.append(xz_rect(g.poz_r0, p.eave_wall_z, p.plate_w, p.plate_h, LABEL_WALL_PLATE))
-
-    zle = g.z_tile(0.0) - (0.0 - g.left_eave) * g.tan
-    zre = g.z_tile(p.room_width) - (g.right_eave - p.room_width) * g.tan
-    parts.append(
-        xz_face(
-            [
-                (g.left_eave, zle - g.t_above_raf / g.cos),
-                (g.x_ridge, g.z_raf_outer(g.x_ridge)),
-                (g.right_eave, zre - g.t_above_raf / g.cos),
-                (g.right_eave, zre - (g.t_above_raf + p.rafter_t) / g.cos),
-                (g.x_ridge, g.z_raf(g.x_ridge)),
-                (g.left_eave, zle - (g.t_above_raf + p.rafter_t) / g.cos),
-            ],
-            LABEL_RAFTERS,
-        )
-    )
-    parts.append(
-        xz_polyline(
-            [(g.left_eave, zle), (g.x_ridge, p.ridge_z), (g.right_eave, zre)],
-            LABEL_ROOFING,
-        )
-    )
-
-    parts.append(xz_face(g.vata_pts(), LABEL_PLENUM_WOOL))
-
-    # Šikminy stack. The board ends at the furniture line; the wedge under the
-    # lid is soffit mineral wool, not a slope quilt.
-    parts.append(xz_face(g.sikmina_nh_pts(), LABEL_SLOPE_NH))
-    if g.soffit_wool_wedge_pts():
-        parts.append(xz_face(g.soffit_wool_wedge_pts(), LABEL_SOFFIT_WOOL))
-    parts.append(xz_face(g.sikmina_sdk_pts(), LABEL_SLOPE_GKF))
-    if (_sdk2 := g.sikmina_sdk2_pts()) is not None:
-        parts.append(xz_face(_sdk2, LABEL_SLOPE_GKF))
-    for quad in g.sikmina_cd_quads():
-        parts.append(xz_face(quad, LABEL_SLOPE_CD))
-    parts.append(xz_face(g.sikmina_foil_pts(), LABEL_SLOPE_FOIL))
-    # Schematic hangers at a few CD stations; pásky = thin sections of 45° X straps.
-    for st in g.sikmina_cd_stations()[::2]:
-        xs = [pt[0] for pt in g.sikmina_cd_quad(*st)]
-        if min(xs) < 1.0 or max(xs) > g.x_furn - 1.0:
-            continue
-        if st[0] > g.x_false and max(xs) > g.gkf_end_attic[0] - 40.0:
-            continue
-        parts.append(xz_face(g.hanger_quad(*st), LABEL_SLOPE_NONIUS))
-    for st in g.sikmina_cd_stations()[1::3]:
-        xs = [pt[0] for pt in g.sikmina_cd_quad(*st)]
-        if min(xs) < 1.0 or max(xs) > g.x_furn - 1.0:
-            continue
-        if st[0] > g.x_false and max(xs) > g.gkf_end_attic[0] - 40.0:
-            continue
-        parts.append(xz_face(g.paska_quad(*st), LABEL_RACKING_STRAP))
-
-    # Soffit bay: NH L, mineral wool under the rail, ducts, GKF lid on the plate,
-    # horizontal CD + Nonius, plate cleat, CD/UD rost hung from the front CD.
-    parts.append(xz_face(g.soffit_nh_pts(), LABEL_SOFFIT_NH))
-    parts.append(xz_face(g.soffit_gkb_pts(), LABEL_SOFFIT_GKB))
-    parts.append(xz_face(g.soffit_wool_pts(), LABEL_SOFFIT_WOOL))
-    fd = p.cd_t
-    ud = p.ud_w
-    z_wood0 = g.z_nabeh_bot + g.t_soffit_bottom + p.wall_bracket_t
-    x_wall = p.room_width - p.wall_plaster
-    x_ud1 = x_wall - p.wall_bracket_t
-    x_ud0 = x_ud1 - ud
-    # Vertical CD beside the ducts, up to the lid, plus the bottom CD into the UD.
-    z_lat_top = g.z_soffit_lid
-    parts.append(
-        xz_rect(
-            g.x_nh_inner,
-            z_wood0,
-            fd,
-            max(8.0, z_lat_top - z_wood0),
-            LABEL_SOFFIT_CD,
-        )
-    )
-    parts.append(
-        xz_rect(
-            g.x_nh_inner + fd,
-            z_wood0,
-            max(8.0, x_ud0 - (g.x_nh_inner + fd)),
-            fd,
-            LABEL_SOFFIT_CD,
-        )
-    )
-    parts.append(xz_rect(x_ud0, z_wood0, ud, fd, LABEL_SOFFIT_UD))
-    parts.append(xz_face(g.soffit_sdk_lid_pts(), LABEL_SOFFIT_GKF))
-    r_duct = p.duct_od * 0.5
-    for cx, cz in g.soffit_duct_centers():
-        parts.append(xz_ngon(cx, cz, r_duct, LABEL_SOFFIT_DUCT))
-    for xc in g.horiz_cd_x_stations():
-        parts.append(xz_face(g.horiz_cd_quad(xc), LABEL_SOFFIT_CD))
-        z0 = g.horiz_hanger_bot_z()
-        z1 = g.horiz_hanger_top_z(xc)
-        if z1 - z0 > 20.0:
-            parts.append(
-                xz_rect(xc - p.hanger_w * 0.5, z0, p.hanger_w, z1 - z0, LABEL_SOFFIT_NONIUS)
-            )
-    ud = g.soffit_ud_track_quads()
-    for quad in ud[:-1]:
-        parts.append(xz_face(quad, LABEL_SOFFIT_UD))
-    parts.append(xz_face(ud[-1], LABEL_SLOPE_CD))
-    for quad in g.soffit_ud_screw_quads():
-        parts.append(xz_face(quad, "joint_screw"))
-    parts.append(xz_face(g.soffit_acrylic_joint_pts(), "joint_acrylic"))
-    for quad in g.board_joint_quads():
-        parts.append(xz_face(quad, "board_joint"))
-    for quad in g.soffit_plate_cleat_quads():
-        parts.append(xz_face(quad, LABEL_SOFFIT_NONIUS))
-    # Screw through the lid into the vertical CD (schematic) + wall angle.
-    rost_x = g.x_sdk_break + p.cd_w * 0.5
-    if any(abs(x - rost_x) < 1.0 for x in g.horiz_cd_x_stations()):
-        xc = g.x_nh_inner + fd * 0.5
-        z_drop0 = z_lat_top
-        z_drop1 = g.z_soffit_lid + p.sdk_t
-        parts.append(
-            xz_rect(
-                xc - p.soffit_drop_w * 0.5,
-                z_drop0,
-                p.soffit_drop_w,
-                z_drop1 - z_drop0,
-                LABEL_SOFFIT_NONIUS,
-            )
-        )
-    z_br = z_wood0 - p.wall_bracket_t
-    parts.append(
-        xz_rect(
-            x_wall - p.wall_bracket_leg,
-            z_br,
-            p.wall_bracket_leg - p.wall_bracket_t,
-            p.wall_bracket_t,
-            LABEL_SOFFIT_NONIUS,
-        )
-    )
-    parts.append(
-        xz_rect(
-            x_wall - p.wall_bracket_t,
-            z_br + p.wall_bracket_t,
-            p.wall_bracket_t,
-            p.wall_bracket_leg - p.wall_bracket_t,
-            LABEL_SOFFIT_NONIUS,
-        )
-    )
-    parts.append(
-        xz_polyline(
-            [
-                (g.x_furn, p.furniture_height),
-                (p.room_width, p.furniture_height),
-                (p.room_width, g.z_nabeh_bot),
-                (g.x_furn, g.z_nabeh_bot),
-            ],
-            LABEL_SOFFIT_NH,
-        )
-    )
-
-    parts.append(
-        xz_polyline(
-            [
-                (0.0, g.h_start),
-                (g.x_false, g.z_false),
-                (g.x_furn, g.z_gkf_horiz),
-            ],
-            LABEL_SLOPE_NH,
-        )
-    )
-    parts.append(xz_line(g.x_nh_outer, g.z_gkf_horiz, g.x_nh_outer, g.z_nabeh_bot, LABEL_SOFFIT_NH))
-    parts.append(xz_line(g.x_nh_outer, g.z_nabeh_bot, p.room_width, g.z_nabeh_bot, LABEL_SOFFIT_NH))
-
-    shape = Compound(obj=parts, children=parts, label=MODEL_NAME)
+    g = build_layout(p)
+    shape = obyvak.model_section(p, label=MODEL_NAME)
     meta = {
         "params": asdict(p),
         "kind": EXPORT_KIND,
         "derived": {
+            "y_cut": obyvak.section_y(p),
             "h_start": g.h_start,
-            "x_furn": g.x_furn,
-            "x_false": g.x_false,
             "z_false": g.z_false,
-            "z_nabeh_bot": g.z_nabeh_bot,
-            "z_gkf_horiz": g.z_gkf_horiz,
-            "x_sdk_break": g.x_sdk_break,
-            "t_nh_face": g.t_nh_face,
-            "l_hanger_right": g.l_hanger_right,
-            "cd_count": len(g.sikmina_cd_quads()),
+            "wool_left": g.wool_left,
+            "wool_right": g.wool_right,
+            "t_left": g.t_left,
+            "t_right": g.t_right,
+            "cd_count": sum(1 for c in shape.children if c.label == LABEL_SLOPE_CD),
         },
     }
     return shape, meta

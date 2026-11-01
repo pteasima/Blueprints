@@ -100,6 +100,10 @@ from obyvak_geom import (
     ObyvakLayout,
     ObyvakParams,
     xz_face,
+    xz_rect,
+    LABEL_EAVE_UD,
+    LABEL_VB_TAPE,
+    LABEL_EAVE_ACRYLIC,
 )
 
 
@@ -224,6 +228,42 @@ def _shrink_closed_band(pts: list[tuple[float, float]], gap: float) -> list[tupl
             out.append((x, z + gap))
         else:
             out.append((x, z - gap))
+    return out
+
+
+def _inset_face(pts, gap: float, label: str, x_range: tuple[float, float] | None = None):
+    """Closed XZ outline, optionally clipped to an X range, inset by ``gap``."""
+    from build123d import Face as _Face
+
+    face = xz_face(pts, label)
+    if x_range is not None:
+        bb = face.bounding_box()
+        clip = xz_rect(x_range[0], bb.min.Z - 10.0, x_range[1] - x_range[0], bb.size.Z + 20.0, label)
+        face = face.intersect(clip)
+        face = face.faces()[0] if hasattr(face, "faces") else face
+        if isinstance(face, list):
+            face = face[0]
+    out = _Face(face.outer_wire().offset_2d(-gap))
+    out.label = label
+    return out
+
+
+def _split_x(solid, x: float, label: str) -> list:
+    """Split a solid at the vertical plane X = x (a board butt joint)."""
+    from build123d import Keep
+
+    halves = solid.split(Plane.YZ.offset(x), keep=Keep.BOTH)
+    pieces = list(halves.solids()) if hasattr(halves, "solids") else list(halves)
+    return [_paint(piece, label) for piece in pieces if piece.volume > 1.0]
+
+
+def _screw_solids(g, quads, y0: float, y1: float, spacing: float = 300.0) -> list:
+    """Screws: head (8 mm) and shank (3.5 mm) quads extruded across Y at each station."""
+    out = []
+    head, shank = quads
+    for yc in g.y_stations(y0, y1, spacing, spacing * 0.5):
+        out.append(_extrude_y(xz_face(head, "joint_screw"), yc - 4.0, yc + 4.0, "joint_screw"))
+        out.append(_extrude_y(xz_face(shank, "joint_screw"), yc - 1.75, yc + 1.75, "joint_screw"))
     return out
 
 
@@ -838,10 +878,9 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     # Krov = discrete rafters 100/160 @ 875 (sheet E_KROK), not a solid timber slab.
     krov_pts = _shrink_band(g.krov_pts(), top_n=3, gap=gap)
     krytina_pts = [(x, z + gap if i < 3 else z) for i, (x, z) in enumerate(g.krytina_pts())]
-    vata_pts = [
-        (min(max(x, gap), p.room_width - gap), z + gap if i < g.vata_bottom_n else z - gap)
-        for i, (x, z) in enumerate(g.vata_pts())
-    ]
+    # Plenum wool follows the 2D outline out to the rafter seats on both
+    # plates (about x -140 and x 5490), inset by the face gap.
+    vata_face = _inset_face(g.vata_pts(), gap, LABEL_PLENUM_WOOL)
 
     y_raf0, y_raf1 = gap, p.room_length - gap
     rafter_ys = g.rafter_y_stations(y_raf0, y_raf1)
@@ -873,12 +912,10 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     # Unifit 035: the void above the CD pack (full right-slope gap, no air),
     # plus the 160 mm bays between krokve. Same part. The vent channel above
     # the rafter top stays empty.
-    vata = _extrude_y(xz_face(vata_pts, LABEL_PLENUM_WOOL), gap, p.room_length - gap, LABEL_PLENUM_WOOL)
-    bay_raw = g.vata_rafter_bay_pts()
-    bay_pts = [
-        (min(max(x, gap), p.room_width - gap), z - gap) for x, z in bay_raw
-    ]
-    bay_face = xz_face(bay_pts, LABEL_PLENUM_WOOL)
+    vata = _extrude_y(vata_face, gap, p.room_length - gap, LABEL_PLENUM_WOOL)
+    # Same wool, between the rafters: rafter depth from plate face to plate face.
+    # Where the rafter is seated in the plate the bay starts on the plate top.
+    bay_face = xz_face(g.vata_rafter_bay_pts(gap), LABEL_PLENUM_WOOL)
     # Cheeks stop FACE_GAP short of each krokev so the timber and the wool do not share a face.
     cursor = gap
     y_wool1 = p.room_length - gap
@@ -908,7 +945,14 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         return _extrude_y(xz_face(band, label), y_ceil0, y_ceil1, label)
 
     # 1) NaturHeld 140, 80 mm, screwed through the GKF into the CD. No latě, no Flex.
-    parts.append(_add_band(g.sikmina_nh_pts(), LABEL_SLOPE_NH))
+    # Two boards per slope run: they butt at the false ridge (vertical cut).
+    parts.extend(
+        _split_x(
+            _extrude_y(_inset_face(g.sikmina_nh_pts(), gap, LABEL_SLOPE_NH), y_ceil0, y_ceil1, LABEL_SLOPE_NH),
+            g.x_false,
+            LABEL_SLOPE_NH,
+        )
+    )
 
     # Triangle under the lid, above the slope board, out to the vertical lať.
     # Only the soffit bay has that lid. Same mineral wool as the soffit cavity.
@@ -926,7 +970,8 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         wedge_solid = _extrude_y(xz_face(wedge, LABEL_SOFFIT_WOOL), y_soff0, y_soff1, LABEL_SOFFIT_WOOL)
 
     # 2) SDK
-    parts.append(_add_band(g.sikmina_sdk_pts(), LABEL_SLOPE_GKF))
+    # Room-side GKF butts where the left and right planes meet (no step).
+    parts.extend(_split_x(_add_band(g.sikmina_sdk_pts(), LABEL_SLOPE_GKF), g.x_stack_joint, LABEL_SLOPE_GKF))
     if (_sdk2 := g.sikmina_sdk2_pts()) is not None:
         parts.append(_add_band(_sdk2, LABEL_SLOPE_GKF))
 
@@ -965,10 +1010,26 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     parts.extend(zaves_parts)
 
     # 5b) Jutafol N AL 170 Speciál — attic face of CD, below mineral wool. Hangers pierce it.
-    foil_part = _add_band(g.sikmina_foil_pts(), LABEL_SLOPE_FOIL)
+    # Vapour brake, eave to eave (1 mm: no inset, it is thinner than two gaps).
+    foil_part = _extrude_y(xz_face(g.sikmina_foil_pts(), LABEL_SLOPE_FOIL), y_ceil0, y_ceil1, LABEL_SLOPE_FOIL)
     if zaves_parts:
         foil_part = _cut_away(foil_part, zaves_parts, LABEL_SLOPE_FOIL)
     parts.append(foil_part)
+
+    # Left eave: bent UD screwed to the plate (the GKF is fixed to it) and the
+    # brake's bond tape on both wall plasters; acrylic bead at the planned cut.
+    eave_ud = None
+    for quad in g.eave_ud_left_quads():
+        piece = _extrude_y(xz_face(quad, LABEL_EAVE_UD), y_ceil0, y_ceil1, LABEL_EAVE_UD)
+        eave_ud = piece if eave_ud is None else eave_ud.fuse(piece)
+    if eave_ud is not None:
+        parts.append(_paint(eave_ud, LABEL_EAVE_UD))
+        parts.extend(_screw_solids(g, g.eave_ud_left_screw_quads(), y_ceil0 + 10.0, y_ceil1 - 10.0))
+    for band in g.vb_tape_pts():
+        parts.append(_extrude_y(xz_face(band, LABEL_VB_TAPE), y_ceil0, y_ceil1, LABEL_VB_TAPE))
+    parts.append(
+        _extrude_y(xz_face(g.eave_acrylic_pts(), LABEL_EAVE_ACRYLIC), y_ceil0, y_ceil1, LABEL_EAVE_ACRYLIC)
+    )
 
     # 6) Zavětrovací pásky: long thin 40×2 straps at 45°, crossing into X on each slope.
     # ~6 per side (3 X pairs) along the 11 m room length — racking restraint along Y.
@@ -1051,7 +1112,6 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     # Lid edge: continuous steel cleat on the plate cheek. Not a hang point.
     # Ducts are already anchored to the wall. This box only keeps them clear.
     t = g.t_soffit_face
-    t_slope = g.t_nh_face
     x_duct0, x_duct1 = g.soffit_duct_x_extent()
     lat_end = g.x_nh_inner + p.cd_t
     if x_duct0 < lat_end + 8.0:
@@ -1067,9 +1127,8 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     if g.z_soffit_duct_crown() > g.z_soffit_lid - 5.0:
         raise ValueError("soffit ducts do not fit under the lid on the pozednice")
 
-    # Top follows the slope-board attic face down to the vertical lať. 1 mm off each mate.
-    z_nh_out = g.z_slope_offset(g.x_nh_outer, t_slope) - gap
-    z_nh_in = g.z_slope_plane_offset(g.x_nh_inner, t_slope) - gap
+    # Flat top under the lid (the slope GKF bears on the lid). 1 mm off each mate.
+    z_nh_out = z_nh_in = g.z_soffit_lid - gap
     soffit_nh = [
         (g.x_nh_outer + gap, g.z_nabeh_bot + gap),
         (g.x_nh_inner - gap, g.z_nabeh_bot + gap),
@@ -1099,16 +1158,19 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
 
     # Lid from the plane intersection onto the plate. No vertical riser.
     # The joint angle on the rost CD holds the board edge.
-    lid_solid = None
+    # Lid pack: one GKF under the plate top, the next layers stacked above it.
+    lid_solids: list = []
     xb = g.x_gkf_kink
     if p.sdk_t > 2 * gap:
-        lid = [
-            (xb + gap, g.z_soffit_lid + gap),
-            (g.poz_r0 - gap, g.z_soffit_lid + gap),
-            (g.poz_r0 - gap, g.z_soffit_lid + p.sdk_t - gap),
-            (xb + gap, g.z_soffit_lid + p.sdk_t - gap),
-        ]
-        lid_solid = _extrude_y(xz_face(lid, LABEL_SOFFIT_GKF), y_soff0, y_soff1, LABEL_SOFFIT_GKF)
+        for k in range(p.soffit_lid_layers):
+            z_a = g.z_soffit_lid + k * p.sdk_t
+            lid = [
+                (xb + gap, z_a + gap),
+                (g.poz_r0 - gap, z_a + gap),
+                (g.poz_r0 - gap, z_a + p.sdk_t - gap),
+                (xb + gap, z_a + p.sdk_t - gap),
+            ]
+            lid_solids.append(_extrude_y(xz_face(lid, LABEL_SOFFIT_GKF), y_soff0, y_soff1, LABEL_SOFFIT_GKF))
 
     # Horizontal CD on the lid. No UD on the plaster — the board ends on the plate.
     horiz_cd_parts: list = []
@@ -1158,6 +1220,8 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
             ud_track = _cut_away(ud_track, horiz_cd_parts + gkf_cutters, LABEL_SOFFIT_UD)
         ud_parts = [ud_track]
     parts.extend(ud_parts)
+    if ud_parts:
+        parts.extend(_screw_solids(g, g.soffit_ud_screw_quads(), y_soff0 + 10.0, y_soff1 - 10.0))
     if ud_parts:
         for i, part in enumerate(parts):
             if part.label == LABEL_SLOPE_FOIL:
@@ -1220,10 +1284,11 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
                 )
             )
             # Drop on the vertical CD, still under the lid CD (60 mm covers it).
-            z_drop1 = g.z_soffit_lid + p.sdk_t
+            z_drop1 = g.z_soffit_cd_bot
             drop_h = z_drop1 - z_lat_top
-            rost_x = g.x_sdk_break + p.cd_w * 0.5
+            rost_x = g.x_soffit_cd
             if drop_h > gap and any(abs(x - rost_x) < 1.0 for x in cd_xs):
+                # Lid CD sits right over the vertical CD.
                 xc = x_front + fd * 0.5
                 drop_parts.append(
                     _box(
@@ -1299,7 +1364,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
 
     # GKF last so the rost drop can pierce the lid.
     pierce = drop_parts
-    if lid_solid is not None:
+    for lid_solid in lid_solids:
         if pierce:
             lid_solid = _cut_away(lid_solid, pierce, LABEL_SOFFIT_GKF)
         parts.append(lid_solid)
@@ -1340,6 +1405,15 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     parts.extend(_bass_trap_parts(p, g, gap))
 
     parts.extend(_gable_sdk_and_pouzdra(p, g, gap))
+
+    # Where a bass trap stands against the left wall, the brake's tape and the
+    # acrylic bead stop at the trap (sealed to its board instead).
+    bass = [x for x in parts if x.label in {LABEL_BASS_CD, LABEL_BASS_GKB, LABEL_BASS_WOOL}]
+    eave_seal = {LABEL_VB_TAPE, LABEL_EAVE_ACRYLIC}
+    parts = [
+        _cut_away(x, [b for b in bass if _aabb_hit(x, b)], x.label) if x.label in eave_seal else x
+        for x in parts
+    ]
     return parts
 
 
@@ -1417,6 +1491,93 @@ def build_elevation_slice(params: ObyvakParams | None = None):
     meta = _meta(p, g)
     meta["kind"] = "section"
     return _compound(mapped, label=f"{MODEL_NAME}_slice_elevation"), meta
+
+
+_PARTS_CACHE: dict = {}
+
+
+def model_parts(params: ObyvakParams | None = None) -> list:
+    """The 3D solids (same list as the GLB), cached per parameter set."""
+    p = params or ObyvakParams()
+    key = tuple(sorted(asdict(p).items()))
+    if key not in _PARTS_CACHE:
+        _PARTS_CACHE.clear()
+        _PARTS_CACHE[key] = _parts(p, ObyvakLayout(p))
+    return _PARTS_CACHE[key]
+
+
+def section_y(params: ObyvakParams | None = None) -> float:
+    """Drawing cut plane: mid-bay between two rafters near the middle of the soffit."""
+    p = params or ObyvakParams()
+    g = ObyvakLayout(p)
+    stations = g.rafter_y_stations(FACE_GAP, p.room_length - FACE_GAP)
+    y_target = 0.5 * (g.y_furn0 + g.y_furn1)
+    ys = sorted(stations)
+    mids = [0.5 * (a + b) for a, b in zip(ys, ys[1:])] or [y_target]
+    return min(mids, key=lambda y: abs(y - y_target))
+
+
+def _xz_at(face, y: float, label: str):
+    placed = face.moved(Location((0.0, -y, 0.0)))
+    placed.label = label
+    return placed
+
+
+def model_section(params: ObyvakParams | None = None, y_cut: float | None = None,
+                  beyond: float | None = None, label: str = "obyvak_section"):
+    """Transverse drawing made only from the 3D solids.
+
+    Every solid crossing the plane y = y_cut is cut there. Solids lying wholly
+    behind it (within `beyond` mm, default one rafter bay) are drawn as seen:
+    each is cut at its own mid-Y and placed under the cut faces (rafters,
+    hangers, straps, screws). Nothing here is drawn from 2D geometry.
+    """
+    p = params or ObyvakParams()
+    y = section_y(p) if y_cut is None else y_cut
+    depth = p.rafter_spacing if beyond is None else beyond
+    cut, seen = [], []
+    for part in model_parts(p):
+        bb = part.bounding_box()
+        if bb.min.Y <= y <= bb.max.Y:
+            yy, bucket = y, cut
+        elif y < bb.min.Y and bb.max.Y <= y + depth:
+            yy, bucket = 0.5 * (bb.min.Y + bb.max.Y), seen
+        else:
+            continue
+        hits = part.intersect(Plane.XZ.offset(-yy))
+        if not hits:
+            continue
+        for face in hits.faces() if hasattr(hits, "faces") else hits:
+            if face.area < 1e-3:
+                continue
+            bucket.append(_xz_at(face, yy, part.label))
+    faces = seen + cut
+    return Compound(obj=faces, children=faces, label=label)
+
+
+def model_elevation(params: ObyvakParams | None = None, x_cut: float | None = None,
+                    label: str = "obyvak_elevation"):
+    """Longitudinal drawing (gable to gable) cut from the 3D solids at x = x_cut.
+
+    Drawing X is world Y. Default cut is the ridge line.
+    """
+    p = params or ObyvakParams()
+    x = ObyvakLayout(p).x_ridge if x_cut is None else x_cut
+    faces = []
+    for part in model_parts(p):
+        bb = part.bounding_box()
+        if not (bb.min.X <= x <= bb.max.X):
+            continue
+        hits = part.intersect(Plane.YZ.offset(x))
+        if not hits:
+            continue
+        for face in hits.faces() if hasattr(hits, "faces") else hits:
+            if face.area < 1e-3:
+                continue
+            placed = face.moved(Location((-x, 0.0, 0.0))).rotate(Axis.Z, -90)
+            placed.label = part.label
+            faces.append(placed)
+    return Compound(obj=faces, children=faces, label=label)
 
 
 def _tx(en: str, cs: str) -> dict[str, str]:
@@ -1890,7 +2051,7 @@ def scenes(params: ObyvakParams | None = None) -> list[dict]:
     sx0, sx1 = g.x_furn, g.x_furn + p.furniture_width
     sy0, sy1 = g.y_furn0 + gap, g.y_furn1 - gap
     sz0 = g.z_nabeh_bot + gap
-    sz1 = g.z_soffit_lid + p.sdk_t
+    sz1 = g.z_soffit_cd_bot
     scx = 0.5 * (sx0 + sx1)
     scy = 0.5 * (sy0 + sy1)
     scz = 0.5 * (sz0 + sz1)

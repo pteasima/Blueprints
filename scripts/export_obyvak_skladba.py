@@ -110,6 +110,8 @@ URL_NATUROLL039_160 = "https://www.nonstopstavebniny.cz/mineralni-vata-knauf-nat
 # Retail prices incl. VAT, checked 30 Oct 2026.
 UNIFIT033_160_KC_M2 = 278.27  # 935 Kč / 3.36 m² roll
 UNIFIT033_80_KC_M2 = 215.25  # 1,420.65 Kč / 6.6 m² roll
+URL_UNIFIT033_100 = "https://eshop.stavinvest.cz/tepelna-izolace-knauf-unifit-033-100-mm/"
+UNIFIT033_100_KC_M2 = 269.06  # 1,420.65 Kč / 5.28 m² roll, checked 1 Nov 2026
 NATUROLL039_160_KC_M2 = 141.49  # 815 Kč / 5.76 m² roll
 WOOL_WASTE_PCT = 5
 URL_NONIUS_TOP = "https://www.rigips.cz/produkty/nonius-horni-dil/"
@@ -218,9 +220,7 @@ def _polygon_area_mm2(pts: list[tuple[float, float]]) -> float:
 def _bay_wool_m3(p: ObyvakParams, g: ObyvakLayout) -> float:
     """Volume of the 160 mm bays, with the same 1 mm cheek clearance as the solid."""
     gap = FACE_GAP
-    bay_raw = g.vata_rafter_bay_pts()
-    bay_pts = [(min(max(x, gap), p.room_width - gap), z - gap) for x, z in bay_raw]
-    area = _polygon_area_mm2(bay_pts)
+    area = _polygon_area_mm2(g.vata_rafter_bay_pts(gap))
     half = p.rafter_w * 0.5
     cursor = gap
     y1 = p.room_length - gap
@@ -406,6 +406,18 @@ def build_lines(q) -> dict[str, list[Line]]:
     roof_half = roof_slope_m2 * 0.5
     between_half = between_m2 * 0.5
     joint_m = (g.y_furn1 - g.y_furn0) / 1000.0
+    # Vapour brake eave runs past the slopes: left down the plate to the wall
+    # plaster (with the slack loop), right over the lid and down to the cabinet plaster.
+    vb_eave_mm = 0.0
+    vb_path = g.vapour_brake_path()
+    for (xa, za), (xb, zb) in zip(vb_path, vb_path[1:]):
+        xm = 0.5 * (xa + xb)
+        if xm < g.x_nh_end_l or xm > g.x_furn:
+            vb_eave_mm += math.hypot(xb - xa, zb - za)
+    eave_m = p.room_length / 1000.0
+    vb_eave_m2 = vb_eave_mm / 1000.0 * eave_m
+    vb_m2 = face_s + vb_eave_m2
+    vb_tape_m = 2.0 * eave_m
 
     basic_kg_s = face_s * STOSILENT_BASIC_KG_M2
     finish_kg_s = face_s * STOSILENT_FINISH_KG_M2
@@ -468,15 +480,17 @@ def build_lines(q) -> dict[str, list[Line]]:
             "Reflexní parozábrana Al",
             _product("Jutafol N AL 170 Speciál", URL_JUTAFOL),
             "sd > 300 m · role 1,5×50 m = 75 m²",
-            face_s,
+            vb_m2,
             "m²",
             10,
             PRICE["jutafol_m2"][0],
             f"{PRICE['jutafol_m2'][1]} · TL {URL_JUTAFOL_TL}",
             f"Na attic straně CD, pod minerální vlnou (stejně jako zbytek domu — "
-            f"ne proměnlivá fólie). Plocha šikmin {face_s:.2f} m². "
-            f"S rezervou 10 % ≈ {_fmt(face_s * 1.1, 1)} m² "
-            f"≈ {_ceil_pack(face_s * 1.1, 75.0)}× role 75 m². "
+            f"ne proměnlivá fólie). Plocha šikmin {face_s:.2f} m² + přesahy u okapů "
+            f"{vb_eave_m2:.2f} m² ({vb_eave_mm:.0f} mm × {eave_m:.1f} m: vlevo dolů přes pozednici "
+            "se smyčkou na omítku, vpravo přes víko kastlíku na omítku skříní). "
+            f"S rezervou 10 % ≈ {_fmt(vb_m2 * 1.1, 1)} m² "
+            f"≈ {_ceil_pack(vb_m2 * 1.1, 75.0)}× role 75 m². "
             "Spoje JUTAFOL SP AL / SP 1, napojení JUTAFOL MASTIC.",
         ),
         Line(
@@ -504,7 +518,7 @@ def build_lines(q) -> dict[str, list[Line]]:
             PRICE["rf_m2"][0],
             PRICE["rf_m2"][1],
             "Second layer on the road-side slope for road noise. Joints staggered "
-            "against the first layer. Same 3 mm acrylic joint at the soffit.",
+            "against the first layer. Both layers cut level and bear on the soffit lid (no gap).",
         ),
         Line(
             6,
@@ -563,15 +577,16 @@ def build_lines(q) -> dict[str, list[Line]]:
             '9b',
             "Wool below rafters, left",
             "Glass wool, λ 0.033",
-            _product("Knauf Unifit 033 80 mm", URL_UNIFIT033_80),
-            "80 mm · roll 6.6 m²",
+            _product("Knauf Unifit 033 100 mm", URL_UNIFIT033_100),
+            "100 mm · roll 1200×4400 (5.28 m²)",
             half_s,
             "m²",
             WOOL_WASTE_PCT,
-            UNIFIT033_80_KC_M2,
-            f"Stav-Invest, 1,420.65 Kč / 6.6 m² roll incl. VAT · {URL_UNIFIT033_80}",
-            f"Left slope face {half_s:.2f} m², 1 layer → {_ceil_pack(half_s * 1.05, 6.6)} rolls. "
-            f"Model cavity {g.wool_left:.1f} mm; 80 mm fills it with light compression. U ≈ 0.121, foil 13.2 °C at −15 °C.",
+            UNIFIT033_100_KC_M2,
+            f"Stav-Invest, 1,420.65 Kč / 5.28 m² roll incl. VAT · {URL_UNIFIT033_100}",
+            f"Left slope face {half_s:.2f} m², 1 layer → {_ceil_pack(half_s * 1.05, 5.28)} rolls. "
+            f"Model cavity {g.wool_left:.1f} mm; 100 mm is stuffed in, compressed {100.0 - g.wool_left:.0f} mm "
+            f"({(100.0 - g.wool_left):.0f} %), so no gap at the foil.",
         ),
         Line(
             '9c',
@@ -599,7 +614,8 @@ def build_lines(q) -> dict[str, list[Line]]:
             NATUROLL039_160_KC_M2,
             f"NonstopStavebniny, 815 Kč / 5.76 m² roll incl. VAT · {URL_NATUROLL039_160}",
             f"Right slope face {half_s:.2f} m² × 2 layers = {2 * half_s:.2f} m² → {_ceil_pack(2 * half_s * 1.05, 5.76)} rolls. "
-            f"Model cavity {g.wool_right:.1f} mm (2× GKF on this side), so 2 × 160 is compressed ~3 %. U ≈ 0.070, foil ≈ 13.9 °C at −15 °C; whole roof U ≈ 0.096.",
+            f"Model cavity {g.wool_right:.1f} mm (2× GKF on this side); 2 × 160 = 320 leaves {g.wool_right - 320.0:.0f} mm, "
+            f"taken up by the rolls' loft (no air layer). U ≈ 0.070; whole roof U ≈ 0.096.",
         ),
         Line(
             10,
@@ -708,13 +724,15 @@ def build_lines(q) -> dict[str, list[Line]]:
             "Víko kastlíku",
             "Sádrokarton GKF / RF",
             _product("Rigips RF (DF) 12,5 mm", URL_RF),
-            f"{p.sdk_t} mm",
-            q["lid_area"],
+            f"{p.soffit_lid_layers}× {p.sdk_t} mm",
+            q["lid_area"] * p.soffit_lid_layers,
             "m²",
             12,
             PRICE["rf_m2"][0],
             PRICE["rf_m2"][1],
-            "Horní líce v úrovni pozednice.",
+            f"{p.soffit_lid_layers} vrstvy: spodní pod horní hranou pozednice, další nad ní "
+            f"(na půdní straně). Plocha {q['lid_area']:.2f} m² × {p.soffit_lid_layers}. "
+            "Šikmý GKF na ní dosedá, CD kastlíku na ní leží nad svislým profilem.",
         ),
         Line(
             7,
@@ -903,7 +921,7 @@ def build_lines(q) -> dict[str, list[Line]]:
     finish_kg = finish_kg_s + finish_kg_k
     nonius_ks = q["n_slope_nonius"] + q["n_soffit_nonius"]
     other_wool = q["soffit_wool_m3"] + q["bass_wool_m3"]
-    gkf = face_s + q["lid_area"]
+    gkf = face_s + q["lid_area"] * p.soffit_lid_layers
     cd = q["slope_cd_lm"] + q["soffit_cd_lm"] + q["soffit_rost_cd_lm"] + q["bass_cd_lm"]
 
     souhrn = [
@@ -983,12 +1001,13 @@ def build_lines(q) -> dict[str, list[Line]]:
             "Jutafol N AL 170 Speciál",
             _product("Jutafol N AL 170 Speciál", URL_JUTAFOL),
             "role 75 m²",
-            face_s,
+            vb_m2,
             "m²",
             10,
             PRICE["jutafol_m2"][0],
             f"{PRICE['jutafol_m2'][1]} · TL {URL_JUTAFOL_TL}",
-            f"Šikminy {face_s:.2f} m² (+10 % ≈ {_fmt(face_s * 1.1, 1)} m²). Nad CD, pod vlnou. "
+            f"Šikminy {face_s:.2f} m² + okapy {vb_eave_m2:.2f} m² (+10 % ≈ {_fmt(vb_m2 * 1.1, 1)} m²). "
+            "Nad CD, pod vlnou; na obou okapech dolů na omítku se smyčkou. "
             "Spoje JUTAFOL SP AL / SP 1, napojení JUTAFOL MASTIC.",
         ),
         Line(
@@ -1002,7 +1021,7 @@ def build_lines(q) -> dict[str, list[Line]]:
             12,
             PRICE["rf_m2"][0],
             PRICE["rf_m2"][1],
-            "Šikminy + víko kastlíku.",
+            f"Šikminy + víko kastlíku ({p.soffit_lid_layers} vrstvy).",
         ),
         Line(
             "6b",
@@ -1131,15 +1150,16 @@ def build_lines(q) -> dict[str, list[Line]]:
             '12b',
             "Wool below rafters, left",
             "Glass wool, λ 0.033",
-            _product("Knauf Unifit 033 80 mm", URL_UNIFIT033_80),
-            "80 mm · roll 6.6 m²",
+            _product("Knauf Unifit 033 100 mm", URL_UNIFIT033_100),
+            "100 mm · roll 1200×4400 (5.28 m²)",
             half_s,
             "m²",
             WOOL_WASTE_PCT,
-            UNIFIT033_80_KC_M2,
-            f"Stav-Invest, 1,420.65 Kč / 6.6 m² roll incl. VAT · {URL_UNIFIT033_80}",
-            f"Left slope face {half_s:.2f} m², 1 layer → {_ceil_pack(half_s * 1.05, 6.6)} rolls. "
-            f"Model cavity {g.wool_left:.1f} mm; 80 mm fills it with light compression. U ≈ 0.121, foil 13.2 °C at −15 °C.",
+            UNIFIT033_100_KC_M2,
+            f"Stav-Invest, 1,420.65 Kč / 5.28 m² roll incl. VAT · {URL_UNIFIT033_100}",
+            f"Left slope face {half_s:.2f} m², 1 layer → {_ceil_pack(half_s * 1.05, 5.28)} rolls. "
+            f"Model cavity {g.wool_left:.1f} mm; 100 mm is stuffed in, compressed {100.0 - g.wool_left:.0f} mm "
+            f"({(100.0 - g.wool_left):.0f} %), so no gap at the foil.",
         ),
         Line(
             '12c',
@@ -1167,7 +1187,8 @@ def build_lines(q) -> dict[str, list[Line]]:
             NATUROLL039_160_KC_M2,
             f"NonstopStavebniny, 815 Kč / 5.76 m² roll incl. VAT · {URL_NATUROLL039_160}",
             f"Right slope face {half_s:.2f} m² × 2 layers = {2 * half_s:.2f} m² → {_ceil_pack(2 * half_s * 1.05, 5.76)} rolls. "
-            f"Model cavity {g.wool_right:.1f} mm (2× GKF on this side), so 2 × 160 is compressed ~3 %. U ≈ 0.070, foil ≈ 13.9 °C at −15 °C; whole roof U ≈ 0.096.",
+            f"Model cavity {g.wool_right:.1f} mm (2× GKF on this side); 2 × 160 = 320 leaves {g.wool_right - 320.0:.0f} mm, "
+            f"taken up by the rolls' loft (no air layer). U ≈ 0.070; whole roof U ≈ 0.096.",
         ),
         Line(
             "13b",
@@ -1181,7 +1202,7 @@ def build_lines(q) -> dict[str, list[Line]]:
             None,
             "—",
             "Přišroubovaný z boku CD kastlíku. Šikmé CD se do něj zasunou. "
-            f"Spára akryl + páska {joint_m:.2f} bm.",
+            "GKF šikminy dosedá na víko kastlíku bez spáry.",
             True,
         ),
         Line(
@@ -1211,6 +1232,51 @@ def build_lines(q) -> dict[str, list[Line]]:
             PRICE["cd_bm"][0],
             PRICE["cd_bm"][1],
             "U obvodové zdi kastlíku. Cena orientačně jako R-CD — UD ověřit nabídkou.",
+            True,
+        ),
+        Line(
+            "15b",
+            "UD 28×27 na pozednici (levý okap)",
+            "UD profil",
+            "Rigips UD 28/27, ohnutá pásnice",
+            f"{p.ud_w:.0f}×{p.cd_t:.0f} · vrut do dřeva 3,5×35 @ 300 mm",
+            eave_m,
+            "bm",
+            10,
+            PRICE["cd_bm"][0],
+            PRICE["cd_bm"][1],
+            "Konec GKF levé šikminy. Ohnutá pásnice přišroubovaná na čelo pozednice. "
+            "Cena orientačně jako R-CD — UD ověřit nabídkou.",
+            True,
+        ),
+        Line(
+            "15c",
+            "Napojení parozábrany na omítku",
+            "Lepicí páska / tmel",
+            "JUTAFOL MASTIC + páska (typ Contega / Orcon)",
+            "oba okapy",
+            vb_tape_m,
+            "bm",
+            10,
+            None,
+            "—",
+            "Vlevo: fólie dolů přes pozednici, volná smyčka, nalepit a přelepit na omítku zdi. "
+            "Vpravo: přes víko kastlíku dolů, smyčka, na omítku skříní. "
+            "Lepená plocha vlevo je krátká (~27 mm) — použít lepidlo pro omítky.",
+            True,
+        ),
+        Line(
+            "15d",
+            "Akryl v koutě (plánovaná spára)",
+            "Akrylový tmel",
+            "Akryl přetíratelný",
+            "levý kout stěna/šikmina",
+            eave_m,
+            "bm",
+            10,
+            None,
+            "—",
+            "Kout zeď / GKF levé šikminy je plánovaný řez, uzavřený akrylem.",
             True,
         ),
         Line(
