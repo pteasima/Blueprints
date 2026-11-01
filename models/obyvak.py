@@ -278,6 +278,75 @@ def _cut_away(solid: Solid, tools: list, label: str) -> Solid:
     return _paint(out, label)
 
 
+# Smallest fill piece kept (mm³): below this it is a sliver at a profile lip.
+WOOL_FILL_MIN_MM3 = 20_000.0
+# Wool stops this far from the round ducts (stuffed, not wrapped tight).
+WOOL_DUCT_CLEAR = 15.0
+
+
+def _wool_fill_parts(p: ObyvakParams, g: ObyvakLayout, parts: list) -> list:
+    """Stuff every remaining cavity in the roof, eave and soffit build-up.
+
+    Region A is the whole envelope band from the room face up to the rafter
+    tops, over the walls out to the EPS face, both eaves. Region B is the
+    soffit box under the lid. Every solid already in the model is cut out of
+    them; what is left is wool. Only the ducts keep a clear ring.
+    Pieces carry ``wool_fill`` so the BOM can price them on their own line.
+    """
+    gap = FACE_GAP
+    zw = p.eave_wall_z
+    W = p.room_width
+    top = lambda x: g.z_raf_outer(x) - gap  # noqa: E731
+    a_pts = [
+        (g.xl_eps, zw),
+        (0.0, zw),
+        # Lower edge is the GKF room face, so no wool reaches the NaturHeld
+        # or the acrylic joint at the wall.
+        (0.0, g.plane_z(0.0, g.t_gkf_room_left, right=False)),
+        (g.x_stack_joint, g.plane_z(g.x_stack_joint, g.t_gkf_room_left, right=False)),
+        (g.x_furn, g.plane_z(g.x_furn, g.t_gkf_room_right, right=True)),
+        (g.x_furn, g.z_soffit_lid),
+        (g.poz_r0, g.z_soffit_lid),
+        (g.poz_r0, zw),
+        (g.xr_eps, zw),
+        (g.xr_eps, top(g.xr_eps)),
+        (g.x_ridge, top(g.x_ridge)),
+        (g.xl_eps, top(g.xl_eps)),
+    ]
+    y0, y1 = gap, p.room_length - gap
+    region_a = _extrude_y(xz_face(a_pts, LABEL_PLENUM_WOOL), y0, y1, LABEL_PLENUM_WOOL)
+    ys0, ys1 = g.y_furn0 + gap, g.y_furn1 - gap
+    b_pts = [
+        (g.x_nh_inner, g.z_nabeh_bot),
+        (W, g.z_nabeh_bot),
+        (W, zw),
+        (g.poz_r0, zw),
+        (g.poz_r0, g.z_soffit_lid),
+        (g.x_nh_inner, g.z_soffit_lid),
+    ]
+    region_b = _extrude_y(xz_face(b_pts, LABEL_SOFFIT_WOOL), ys0, ys1, LABEL_SOFFIT_WOOL)
+    duct_clear = [
+        _cyl_y(cx, ys0 - 5.0, ys1 + 5.0, cz, p.duct_od * 0.5 + WOOL_DUCT_CLEAR, LABEL_SOFFIT_DUCT)
+        for cx, cz in g.soffit_duct_centers()
+    ]
+    out: list = []
+    for region, label, extra in ((region_a, LABEL_PLENUM_WOOL, []), (region_b, LABEL_SOFFIT_WOOL, duct_clear)):
+        tools = [t for t in parts if _aabb_hit(region, t)] + extra
+        if not tools:
+            continue
+        rest = region
+        for tool in tools:
+            if _aabb_hit(rest, tool):
+                rest = rest.cut(tool)
+        for piece in rest.solids():
+            if piece.volume < WOOL_FILL_MIN_MM3:
+                continue
+            piece = _paint(piece, label)
+            piece.wool_fill = True
+            out.append(piece)
+    return out
+
+
 def _aabb_hit(a, b) -> bool:
     ba, bb = a.bounding_box(), b.bounding_box()
     return (
@@ -1416,6 +1485,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         _cut_away(x, [b for b in bass if _aabb_hit(x, b)], x.label) if x.label in eave_seal else x
         for x in parts
     ]
+    parts.extend(_wool_fill_parts(p, g, parts))
     return parts
 
 

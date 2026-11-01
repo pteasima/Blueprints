@@ -110,6 +110,8 @@ URL_NATUROLL039_160 = "https://www.nonstopstavebniny.cz/mineralni-vata-knauf-nat
 # Retail prices incl. VAT, checked 30 Oct 2026.
 UNIFIT033_160_KC_M2 = 278.27  # 935 Kč / 3.36 m² roll
 UNIFIT033_80_KC_M2 = 215.25  # 1,420.65 Kč / 6.6 m² roll
+URL_UNIFIT033_100 = "https://eshop.stavinvest.cz/tepelna-izolace-knauf-unifit-033-100-mm/"
+UNIFIT033_100_KC_M2 = 269.06  # 1,420.65 Kč / 5.28 m² roll, checked 1 Nov 2026
 NATUROLL039_160_KC_M2 = 141.49  # 815 Kč / 5.76 m² roll
 WOOL_WASTE_PCT = 5
 URL_NONIUS_TOP = "https://www.rigips.cz/produkty/nonius-horni-dil/"
@@ -328,7 +330,8 @@ def collect_quantities():
         "n_rafters": len(by[LABEL_RAFTERS]),
         "n_soffit_ud": len(by[LABEL_SOFFIT_UD]),
         "n_ducts": len(by[LABEL_SOFFIT_DUCT]),
-        "plenum_wool_m3": _volume_m3(by[LABEL_PLENUM_WOOL]),
+        "plenum_wool_m3": _volume_m3([w for w in by[LABEL_PLENUM_WOOL] if not getattr(w, "wool_fill", False)]),
+        "fill_wool_m3": _volume_m3([w for w in by[LABEL_PLENUM_WOOL] if getattr(w, "wool_fill", False)]),
         "bay_wool_m3": _bay_wool_m3(p, g),
         "soffit_wool_m3": _volume_m3(by[LABEL_SOFFIT_WOOL]),
         "bass_wool_m3": _volume_m3(by[LABEL_BASS_WOOL]),
@@ -577,15 +580,16 @@ def build_lines(q) -> dict[str, list[Line]]:
             '9b',
             "Wool below rafters, left",
             "Glass wool, λ 0.033",
-            _product("Knauf Unifit 033 80 mm", URL_UNIFIT033_80),
-            "80 mm · roll 6.6 m²",
+            _product("Knauf Unifit 033 100 mm", URL_UNIFIT033_100),
+            "100 mm · roll 1200×4400 (5.28 m²)",
             half_s,
             "m²",
             WOOL_WASTE_PCT,
-            UNIFIT033_80_KC_M2,
-            f"Stav-Invest, 1,420.65 Kč / 6.6 m² roll incl. VAT · {URL_UNIFIT033_80}",
-            f"Left slope face {half_s:.2f} m², 1 layer → {_ceil_pack(half_s * 1.05, 6.6)} rolls. "
-            f"Model cavity {g.wool_left:.1f} mm; 80 mm fills it with light compression. U ≈ 0.121, foil 13.2 °C at −15 °C.",
+            UNIFIT033_100_KC_M2,
+            f"Stav-Invest, 1,420.65 Kč / 5.28 m² roll incl. VAT · {URL_UNIFIT033_100}",
+            f"Left slope face {half_s:.2f} m², 1 layer → {_ceil_pack(half_s * 1.05, 5.28)} rolls. "
+            f"Model cavity {g.wool_left:.1f} mm; 100 mm is stuffed in, compressed {100.0 - g.wool_left:.0f} mm "
+            f"({(100.0 - g.wool_left):.0f} %), so no gap at the foil.",
         ),
         Line(
             '9c',
@@ -613,7 +617,23 @@ def build_lines(q) -> dict[str, list[Line]]:
             NATUROLL039_160_KC_M2,
             f"NonstopStavebniny, 815 Kč / 5.76 m² roll incl. VAT · {URL_NATUROLL039_160}",
             f"Right slope face {half_s:.2f} m² × 2 layers = {2 * half_s:.2f} m² → {_ceil_pack(2 * half_s * 1.05, 5.76)} rolls. "
-            f"Model cavity {g.wool_right:.1f} mm (2× GKF on this side), so 2 × 160 is compressed ~3 %. U ≈ 0.070, foil ≈ 13.9 °C at −15 °C; whole roof U ≈ 0.096.",
+            f"Model cavity {g.wool_right:.1f} mm (2× GKF on this side); 2 × 160 = 320 leaves {g.wool_right - 320.0:.0f} mm, "
+            f"taken up by the rolls' loft (no air layer). U ≈ 0.070; whole roof U ≈ 0.096.",
+        ),
+        Line(
+            '9e',
+            "Fill wool: eaves, CD layer, joints",
+            "Glass wool, λ 0.033",
+            _product("Knauf Unifit 033 100 mm (cut to fit)", URL_UNIFIT033_100),
+            "cut strips, stuffed",
+            q["fill_wool_m3"] / 0.1,
+            "m²",
+            15,
+            UNIFIT033_100_KC_M2,
+            f"Stav-Invest, 1,420.65 Kč / 5.28 m² roll incl. VAT · {URL_UNIFIT033_100}",
+            f"Every cavity left in the model, cut from the 3D solids: {q['fill_wool_m3']:.3f} m³ "
+            f"(27 mm CD layer on both slopes, both eaves over the plate and wall crown out to the EPS, "
+            f"slope/lid joint, gaps at hangers). As 100 mm board-equivalent m².",
         ),
         Line(
             10,
@@ -1148,15 +1168,16 @@ def build_lines(q) -> dict[str, list[Line]]:
             '12b',
             "Wool below rafters, left",
             "Glass wool, λ 0.033",
-            _product("Knauf Unifit 033 80 mm", URL_UNIFIT033_80),
-            "80 mm · roll 6.6 m²",
+            _product("Knauf Unifit 033 100 mm", URL_UNIFIT033_100),
+            "100 mm · roll 1200×4400 (5.28 m²)",
             half_s,
             "m²",
             WOOL_WASTE_PCT,
-            UNIFIT033_80_KC_M2,
-            f"Stav-Invest, 1,420.65 Kč / 6.6 m² roll incl. VAT · {URL_UNIFIT033_80}",
-            f"Left slope face {half_s:.2f} m², 1 layer → {_ceil_pack(half_s * 1.05, 6.6)} rolls. "
-            f"Model cavity {g.wool_left:.1f} mm; 80 mm fills it with light compression. U ≈ 0.121, foil 13.2 °C at −15 °C.",
+            UNIFIT033_100_KC_M2,
+            f"Stav-Invest, 1,420.65 Kč / 5.28 m² roll incl. VAT · {URL_UNIFIT033_100}",
+            f"Left slope face {half_s:.2f} m², 1 layer → {_ceil_pack(half_s * 1.05, 5.28)} rolls. "
+            f"Model cavity {g.wool_left:.1f} mm; 100 mm is stuffed in, compressed {100.0 - g.wool_left:.0f} mm "
+            f"({(100.0 - g.wool_left):.0f} %), so no gap at the foil.",
         ),
         Line(
             '12c',
@@ -1184,7 +1205,23 @@ def build_lines(q) -> dict[str, list[Line]]:
             NATUROLL039_160_KC_M2,
             f"NonstopStavebniny, 815 Kč / 5.76 m² roll incl. VAT · {URL_NATUROLL039_160}",
             f"Right slope face {half_s:.2f} m² × 2 layers = {2 * half_s:.2f} m² → {_ceil_pack(2 * half_s * 1.05, 5.76)} rolls. "
-            f"Model cavity {g.wool_right:.1f} mm (2× GKF on this side), so 2 × 160 is compressed ~3 %. U ≈ 0.070, foil ≈ 13.9 °C at −15 °C; whole roof U ≈ 0.096.",
+            f"Model cavity {g.wool_right:.1f} mm (2× GKF on this side); 2 × 160 = 320 leaves {g.wool_right - 320.0:.0f} mm, "
+            f"taken up by the rolls' loft (no air layer). U ≈ 0.070; whole roof U ≈ 0.096.",
+        ),
+        Line(
+            '12e',
+            "Fill wool: eaves, CD layer, joints",
+            "Glass wool, λ 0.033",
+            _product("Knauf Unifit 033 100 mm (cut to fit)", URL_UNIFIT033_100),
+            "cut strips, stuffed",
+            q["fill_wool_m3"] / 0.1,
+            "m²",
+            15,
+            UNIFIT033_100_KC_M2,
+            f"Stav-Invest, 1,420.65 Kč / 5.28 m² roll incl. VAT · {URL_UNIFIT033_100}",
+            f"Every cavity left in the model, cut from the 3D solids: {q['fill_wool_m3']:.3f} m³ "
+            f"(27 mm CD layer on both slopes, both eaves over the plate and wall crown out to the EPS, "
+            f"slope/lid joint, gaps at hangers). As 100 mm board-equivalent m².",
         ),
         Line(
             "13b",

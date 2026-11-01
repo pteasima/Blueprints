@@ -205,8 +205,8 @@ def test_mineral_wool_fills_rafter_bays():
     g = build_layout(p)
     shape, _ = build(p)
     wool_parts = _labeled(shape, LABEL_PLENUM_WOOL)
-    assert len(wool_parts) == 1
-    wool = wool_parts[0]
+    # The main plenum wool plus the stuffed fill pieces (eaves, CD layer, joints).
+    wool = max(wool_parts, key=lambda w: w.bounding_box().size.Z * w.volume)
     bb = wool.bounding_box()
     # Into the rafter depth at the ridge, still below the ventilation / tiles.
     assert bb.max.Z > g.z_raf(g.x_ridge) + p.rafter_t * 0.5
@@ -1322,3 +1322,39 @@ def test_drawings_are_cut_from_the_3d_model():
         assert face.label in by_label, face.label
         q = interior_point(face)
         assert inside_any(face.label, Vector(x_cut, q.X, q.Z)), (face.label, q)
+
+
+def test_wool_stuffs_the_eaves_cd_layer_and_soffit():
+    """Petr, 1 Nov 2026: no empty cavities in the roof build-up (thermal bridges)."""
+    from build123d import Box, Compound, Location
+
+    p = ObyvakParams()
+    g = build_layout(p)
+    shape, _ = build(p)
+    y = 0.5 * (g.y_furn0 + g.y_furn1) + 7.0
+    plenum = Compound(children=_labeled(shape, LABEL_PLENUM_WOOL))
+    soffit = Compound(children=_labeled(shape, LABEL_SOFFIT_WOOL))
+
+    def vol(wool, xyz) -> float:
+        hit = wool.intersect(Location(xyz) * Box(4, 4, 4))
+        if not hit:
+            return 0.0
+        return sum(float(s.volume) for s in hit.solids())
+
+    stations = sorted(g.rafter_y_stations(FACE_GAP, p.room_length - FACE_GAP))
+    y_bay = 0.5 * (stations[4] + stations[5])
+    # Left eave, over the masonry crown outside the plate, below the rafters.
+    assert vol(plenum, (-240.0, y_bay, p.eave_wall_z + 20.0)) > 50.0
+    # Right eave, mirror.
+    assert vol(plenum, (g.xr_mas - 20.0, y_bay, p.eave_wall_z + 20.0)) > 50.0
+    # 27 mm CD layer between the GKF and the brake, left slope, between CDs.
+    x = 1000.0
+    t = g.t_gkf_attic_left + 13.5
+    zs = [g.plane_z(x + dx, t, right=False) for dx in range(-300, 301, 50)]
+    xs = list(range(-300, 301, 50))
+    assert max(vol(plenum, (x + dx, y_bay, z)) for dx, z in zip(xs, zs)) > 50.0
+    # Soffit void above the ducts is wool; the ducts keep a clear ring.
+    cx, cz = g.soffit_duct_centers()[0]
+    r = p.duct_od * 0.5
+    assert vol(soffit, (cx, y, cz + r + 5.0)) < 1.0
+    assert vol(soffit, (g.x_nh_inner + 20.0, y, g.z_soffit_lid - 20.0)) > 50.0

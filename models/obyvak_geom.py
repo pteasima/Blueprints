@@ -357,7 +357,8 @@ class ObyvakLayout:
         self.x_nh_outer = self.x_furn
         self.x_nh_inner = self.x_furn + self.t_soffit_face
         self.x_sdk_break = self.x_nh_inner
-        self.x_soffit_cd = self.x_nh_inner + p.cd_w * 0.5
+        # Lid CD centred over the vertical soffit CD (27 deep behind the NH face).
+        self.x_soffit_cd = self.x_nh_inner + p.cd_t * 0.5
         self.x_soffit_cd_room = self.x_soffit_cd - p.cd_w * 0.5
         # Lid pack grows up (attic side): bottom layer stays at the plate top,
         # the extra layers sit above it. The soffit CD sits on the pack.
@@ -427,7 +428,10 @@ class ObyvakLayout:
         # (it bears softly on the taped plaster edge).
         self.x_plate_cheek_l = self.poz_l0 + p.plate_w
         self.x_eave_ud_l = self.x_plate_cheek_l + p.foil_t
-        self.x_gkf_end_l = self.x_eave_ud_l + 1.0
+        # GKF lower end: on the UD leg, but its room-side corner must stay
+        # above the masonry crown (2 mm clear), so the board is shortened.
+        x_crown = (p.eave_wall_z + 2.0 - self.h_start - self.t_gkf_room_left / self.cos) / self.tan
+        self.x_gkf_end_l = max(self.x_eave_ud_l + 1.0, float(math.ceil(x_crown)))
         self.x_nh_end_l = p.foil_t + p.foil_t
         self.z_eave_ud_l = self.plane_z(self.x_eave_ud_l, self.t_gkf_attic_left, right=False)
 
