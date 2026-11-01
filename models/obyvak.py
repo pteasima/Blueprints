@@ -19,8 +19,6 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
   → Jutafol N AL 170 Speciál on the attic face of the CD → přímý závěs 200 on the
   window slope, Nonius on the cabinet slope → Knauf Unifit 035 (140 mm below +
   160 mm between rafters; right slope: full gap ≈429 mm) → krokve 100/160 @ 875 + straps.
-  Extra wool only in the cold hollows around both wall plates (between rafters);
-  the 27 mm CD layer and the soffit duct void stay empty.
   No slope latě and no Flex. `rafters` = roof timber. The kastlík frame is
   CD 60×27 plus a UD channel on the eave wall — no timber battens.
 - Soffit box: 40 mm NH L over cabinets (20 mm gap); mineral wool + CD/UD rost
@@ -278,150 +276,6 @@ def _cut_away(solid: Solid, tools: list, label: str) -> Solid:
         except Exception:
             continue
     return _paint(out, label)
-
-
-def _rafter_bay_spans(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list[tuple[float, float]]:
-    """Y intervals between krokve, with the same cheek clearance as the bay wool."""
-    half = p.rafter_w * 0.5
-    y1 = p.room_length - gap
-    cursor = gap
-    spans: list[tuple[float, float]] = []
-    for yc in g.rafter_y_stations(gap, y1):
-        ya = yc - half - gap
-        yb = yc + half + gap
-        if ya - cursor > gap:
-            spans.append((cursor, ya))
-        cursor = max(cursor, yb)
-    if y1 - cursor > gap:
-        spans.append((cursor, y1))
-    return spans
-
-
-def _xz_area(pts: list[tuple[float, float]]) -> float:
-    area = 0.0
-    for (x0, z0), (x1, z1) in zip(pts, pts[1:] + pts[:1]):
-        area += x0 * z1 - x1 * z0
-    return abs(area) * 0.5
-
-
-def _eave_plate_wool_parts(p: ObyvakParams, g: ObyvakLayout) -> list:
-    """Wool in the cold hollows around both wall plates. A few extruded polygons.
-
-    The under-rafter wool already covers the warm room and the inner half of
-    each plate top, up to the rafter underside, and it stops at the vapour
-    brake. What it does not cover, and what is still a thermal bridge:
-
-    - between the rafters, the 160 mm above that wool, from where the rafter
-      underside clears the plate top out to the room line (the bay wool stops
-      at the room face);
-    - between the rafters, above the outer half of the plate, from the plate
-      top up to the rafter top (the rafter is notched onto the plate here);
-    - between the rafters, above the wall crown just outside the plate, from
-      the wall top up to the rafter top.
-
-    Deliberately empty: the 27 mm CD layer (warm side of the brake), the
-    insides of CD/UD profiles, the vapour-brake slack loops, the soffit duct
-    void (it was already an empty warm-side service space, with mineral wool
-    only in the acoustic cavity below the ducts), and the gutter overhang
-    outside the masonry. Pieces carry ``wool_fill`` so the BOM can price them
-    apart from the slope wool. Each one is inset by ``FACE_GAP`` so it butts
-    the plate, the wall and the existing wool without intersecting them.
-    """
-    gap = FACE_GAP
-    depth = p.rafter_t / g.cos
-    seat = (g.z_raf(0.0) - g.z_plate_top) / g.tan
-    z_wall = p.eave_wall_z + gap
-    z_plate = g.z_plate_top + gap
-
-    def z_raf_top(x: float) -> float:
-        return g.z_raf(x) + depth - gap
-
-    def z_raf_bot(x: float) -> float:
-        return g.z_raf(x) + gap
-
-    x_seat_l = -seat
-    x_seat_r = p.room_width + seat
-    x_plate_l0 = g.poz_l0
-    x_plate_r1 = g.poz_r0 + p.plate_w
-    regions = [
-        (
-            "Left, rafter depth over the inner plate",
-            [
-                (x_seat_l + gap, z_raf_bot(x_seat_l + gap)),
-                (0.0, z_raf_bot(0.0)),
-                (0.0, z_raf_top(0.0)),
-                (x_seat_l + gap, z_raf_top(x_seat_l + gap)),
-            ],
-        ),
-        (
-            "Left, above the outer plate",
-            [
-                (x_plate_l0 + gap, z_plate),
-                (x_seat_l - gap, z_plate),
-                (x_seat_l - gap, z_raf_top(x_seat_l - gap)),
-                (x_plate_l0 + gap, z_raf_top(x_plate_l0 + gap)),
-            ],
-        ),
-        (
-            "Left, wall crown outside the plate",
-            [
-                (g.xl_mas + gap, z_wall),
-                (x_plate_l0 - gap, z_wall),
-                (x_plate_l0 - gap, z_raf_top(x_plate_l0 - gap)),
-                (g.xl_mas + gap, z_raf_top(g.xl_mas + gap)),
-            ],
-        ),
-        (
-            "Right, rafter depth over the inner plate",
-            [
-                (p.room_width, z_raf_bot(p.room_width)),
-                (x_seat_r - gap, z_raf_bot(x_seat_r - gap)),
-                (x_seat_r - gap, z_raf_top(x_seat_r - gap)),
-                (p.room_width, z_raf_top(p.room_width)),
-            ],
-        ),
-        (
-            "Right, above the outer plate",
-            [
-                (x_seat_r + gap, z_plate),
-                (x_plate_r1 - gap, z_plate),
-                (x_plate_r1 - gap, z_raf_top(x_plate_r1 - gap)),
-                (x_seat_r + gap, z_raf_top(x_seat_r + gap)),
-            ],
-        ),
-        (
-            "Right, wall crown outside the plate",
-            [
-                (x_plate_r1 + gap, z_wall),
-                (g.xr_mas - gap, z_wall),
-                (g.xr_mas - gap, z_raf_top(g.xr_mas - gap)),
-                (x_plate_r1 + gap, z_raf_top(x_plate_r1 + gap)),
-            ],
-        ),
-    ]
-    spans = _rafter_bay_spans(p, g, gap)
-    net_mm = sum(y1 - y0 for y0, y1 in spans)
-    out: list = []
-    for name, pts in regions:
-        for x, z0 in pts[:2]:
-            z1 = z_raf_top(x)
-            if z1 <= z0 + gap:
-                raise ValueError(f"{name} has no height at x={x:.1f}")
-        solid = None
-        for y0, y1 in spans:
-            piece = _extrude_y(xz_face(pts, LABEL_PLENUM_WOOL), y0, y1, LABEL_PLENUM_WOOL)
-            solid = piece if solid is None else solid.fuse(piece)
-        solid = _paint(solid, LABEL_PLENUM_WOOL)
-        xs = [x for x, _z in pts]
-        zs = [z for _x, z in pts]
-        solid.wool_fill = True
-        solid.wool_name = name
-        solid.wool_dims = (
-            f"x {min(xs):.0f}..{max(xs):.0f} mm, z {min(zs):.0f}..{max(zs):.0f} mm, "
-            f"section {_xz_area(pts)/1e6:.4f} m² × {net_mm/1000:.2f} m between rafters"
-        )
-        out.append(solid)
-    return out
 
 
 def _aabb_hit(a, b) -> bool:
@@ -1562,7 +1416,6 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         _cut_away(x, [b for b in bass if _aabb_hit(x, b)], x.label) if x.label in eave_seal else x
         for x in parts
     ]
-    parts.extend(_eave_plate_wool_parts(p, g))
     return parts
 
 
