@@ -1020,6 +1020,21 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         if not g.sikmina_cd_in_span(xs, st[0]):
             continue
         hang_quad = g.hanger_quad(*st)
+        # The eave CD is seated in the wall UD. Its direct hanger would run
+        # through the wall plate and the masonry; that hanger is not built.
+        if min(x for x, _z in hang_quad) < -0.5:
+            continue
+        plate_x0, plate_x1 = g.poz_l0, g.poz_l0 + p.plate_w
+        plate_z0, plate_z1 = p.eave_wall_z, g.z_plate_top
+        hxs = [x for x, _z in hang_quad]
+        hzs = [z for _x, z in hang_quad]
+        if (
+            max(hxs) > plate_x0
+            and min(hxs) < plate_x1
+            and max(hzs) > plate_z0
+            and min(hzs) < plate_z1
+        ):
+            continue
         # Window slope stays parallel to the rafters (140 mm plenum). Direct hanger 200.
         # Cabinet slope opens toward the furniture line — Nonius from the false
         # ridge onward (pack peak at x_false, left of the roof ridge).
@@ -1035,8 +1050,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
                     hang_label,
                 )
             )
-    # The eave direct hanger reaches the rafter through the wall head. Keep it
-    # in the room and in the timber, not in the masonry.
+    # Any other hanger that still meets the wall is trimmed back to the room.
     wall_solids = [
         s for s in parts if getattr(s, "label", None) in {LABEL_MASONRY, LABEL_PLASTER, LABEL_WALL_PLATE}
     ]
@@ -1070,7 +1084,12 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
             eave_ud = _cut_away(eave_ud, gkf_for_ud, LABEL_EAVE_UD)
         eave_ud = _paint(eave_ud, LABEL_EAVE_UD)
         parts.append(eave_ud)
-        parts.extend(_screw_solids(g, g.eave_ud_left_screw_quads(), y_ceil0 + 10.0, y_ceil1 - 10.0))
+        parts.extend(
+            _screw_solids(
+                g, g.eave_ud_left_screw_quads(), y_ceil0 + 10.0, y_ceil1 - 10.0, spacing=625.0
+            )
+        )
+        parts.extend(_screw_solids(g, g.eave_gkf_screw_quads(), y_ceil0 + 10.0, y_ceil1 - 10.0))
         for i, part in enumerate(parts):
             if part.label in {LABEL_SLOPE_NH, LABEL_SLOPE_FOIL} and _aabb_hit(part, eave_ud):
                 parts[i] = _cut_away(part, [eave_ud], part.label)

@@ -739,29 +739,42 @@ class ObyvakLayout:
         return [(0.2, z(0.2) - 5.0), (2.4, z(2.4) - 1.2), (2.4, z(2.4) - 3.2), (0.2, z(0.2) - 7.0)]
 
     def eave_ud_left_quads(self) -> list[list[tuple[float, float]]]:
-        """UD 28/27 on the plaster. The slope GKF's plumb end screws to it.
+        """UD on the plaster. The GKF edge screws into it; the eave CD seats in it.
 
-        Web on the wall, flanges into the room, tall enough to catch the
-        board end. The wool above the brake is not inside this channel.
+        Web dowelled to the wall. Flanges are the channel depth, long enough
+        to hold the CD end that remains in the room. No hanger through the
+        plate. The wool above the brake is not inside this channel.
         """
         tm = 0.8
+        flange = self.p.cd_t
         z_room = self.z_eave_ud_l
-        z_attic = self.plane_z(self.x_gkf_end_l, self.t_gkf_attic_left, right=False)
-        # Web on the plaster, short of the board. Flanges sit just outside the
-        # board end: one under it, one in the empty service gap above it.
+        # The eave CD's in-room tip sits just above the GKF attic face.
+        z_cd_top = self.plane_z(self.x_gkf_end_l, self.t_cd_outer_left, right=False)
         z0 = z_room - 4.0
-        z1 = z_attic + 6.0
+        z1 = z_cd_top + 1.2
         web = [(0.0, z0), (tm, z0), (tm, z1), (0.0, z1)]
-        bot = [(tm, z0), (tm + 12.0, z0), (tm + 12.0, z0 + tm), (tm, z0 + tm)]
-        top = [(tm, z1 - tm), (tm + 12.0, z1 - tm), (tm + 12.0, z1), (tm, z1)]
+        bot = [(tm, z0), (tm + flange, z0), (tm + flange, z0 + tm), (tm, z0 + tm)]
+        top = [(tm, z1 - tm), (tm + flange, z1 - tm), (tm + flange, z1), (tm, z1)]
         return [web, bot, top]
 
     def eave_ud_left_screw_quads(self) -> list[list[tuple[float, float]]]:
-        """Masonry screw through the UD web into the wall."""
+        """Masonry anchor through the UD web into the plastered wall.
+
+        Centres are 625 mm apart along the UD, the usual maximum.
+        """
         x0 = 1.0
         zs = self.z_eave_ud_l + 6.0
         head = [(x0, zs - 4.0), (x0 + 1.6, zs - 4.0), (x0 + 1.6, zs + 4.0), (x0, zs + 4.0)]
         shank = [(x0 - 35.0, zs - 1.75), (x0, zs - 1.75), (x0, zs + 1.75), (x0 - 35.0, zs + 1.75)]
+        return [head, shank]
+
+    def eave_gkf_screw_quads(self) -> list[list[tuple[float, float]]]:
+        """Screw through the slope GKF edge into the wall UD."""
+        z_room = self.z_eave_ud_l
+        z_attic = self.plane_z(self.x_gkf_end_l, self.t_gkf_attic_left, right=False)
+        z = 0.5 * (z_room + z_attic)
+        head = [(8.0, z - 4.0), (9.6, z - 4.0), (9.6, z + 4.0), (8.0, z + 4.0)]
+        shank = [(-2.0, z - 1.75), (8.0, z - 1.75), (8.0, z + 1.75), (-2.0, z + 1.75)]
         return [head, shank]
 
     def _sikmina_segments(self) -> list[tuple[tuple[float, float], tuple[float, float]]]:
@@ -798,16 +811,40 @@ class ObyvakLayout:
             cursor -= length
         return stations
 
+    def right_top_cd_station(
+        self,
+    ) -> tuple[float, float, float, float, float, float]:
+        """Right-slope CD one perimeter inset below the false ridge.
+
+        The 500 mm grid is started at the left eave, so its first station on
+        the right plane lands about 390 mm below the CD joint. That would leave
+        the top of the right slope carried only by the unframed butt at the
+        false ridge. This row is the top Nonius: the along-slope span from the
+        CD joint back to it stays inside the 875 mm hanger pitch.
+        """
+        s = self.p.cd_first_inset
+        x = self.x_false + self.cos * s
+        z = self.z_false - self.sin * s
+        tx, tz = self.cos, -self.sin
+        nx, nz = self.sin, self.cos
+        return (x, z, tx, tz, nx, nz)
+
     def sikmina_cd_stations(
         self,
     ) -> list[tuple[float, float, float, float, float, float]]:
         """CD centers along the šikmina (⊥ krokvím — spaced along the slope).
 
         The cabinet-slope run stops one module short of the gypsum joint. The
-        joint angle, not another CD, closes that bay.
+        joint angle, not another CD, closes that bay. An extra station at the
+        top of the right slope carries the Nonius row the grid misses.
         """
         p = self.p
-        return self._path_stations(p.cd_spacing, p.cd_first_inset)
+        stations = list(self._path_stations(p.cd_spacing, p.cd_first_inset))
+        top = self.right_top_cd_station()
+        if all(abs(st[0] - top[0]) > 20.0 for st in stations):
+            stations.append(top)
+        stations.sort(key=lambda st: st[0])
+        return stations
 
     def _frame_basis(
         self, x: float

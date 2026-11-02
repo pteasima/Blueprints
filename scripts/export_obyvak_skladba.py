@@ -508,6 +508,8 @@ def build_lines(q) -> dict[str, list[Line]]:
 
     raf_ys = g.rafter_y_stations(FACE_GAP, p.room_length - FACE_GAP)
     hanger_pitch = max((b - a for a, b in zip(raf_ys, raf_ys[1:])), default=p.rafter_spacing)
+    top_cd = g.right_top_cd_station()
+    top_along = (top_cd[0] - g.x_cd_joint) / g.cos
     _heavy_bare, heavy_kg = _slope_buildup_kg_m2(p, right=True)
     # Petr: at CD @ 500, hangers ≤ 800 mm, or ≤ 750 mm above 50 kg/m².
     hanger_limit = 750.0 if heavy_kg > 50.0 else 800.0
@@ -653,7 +655,8 @@ def build_lines(q) -> dict[str, list[Line]]:
             8,
             PRICE["direct_ks"][0],
             PRICE["direct_ks"][1],
-            f"Kotvení z boku krokve. Modelové svěšení {left_hang:.0f} mm, noha 200 mm.",
+            f"Kotvení z boku krokve. Modelové svěšení {left_hang:.0f} mm, noha 200 mm. "
+            "Okraj u stěny drží UD, bez závěsu skrz pozednici.",
         ),
         Line(
             8,
@@ -668,7 +671,8 @@ def build_lines(q) -> dict[str, list[Line]]:
             nonius_src,
             f"Pravá šikmina. Svěšení {right_hang:.0f} mm. Horní díl 440 mm by na přesah "
             f"spodního dílu (≥ 50 mm) nestačil, proto 540 mm (KB513732). "
-            f"Cena sady je zatím cena horního dílu 440 mm — 540 mm ověřit.",
+            f"Cena sady je zatím cena horního dílu 440 mm — 540 mm ověřit. "
+            f"Horní řada na CD X {top_cd[0]:.0f} mm, {top_along:.0f} mm po spádu od spoje CD.",
         ),
         Line(
             9,
@@ -1225,7 +1229,8 @@ def build_lines(q) -> dict[str, list[Line]]:
             8,
             PRICE["direct_ks"][0],
             PRICE["direct_ks"][1],
-            f"Okenní šikmina. Svěšení {left_hang:.0f} mm. Balení 100 ks.",
+            f"Okenní šikmina. Svěšení {left_hang:.0f} mm. Balení 100 ks. "
+            "CD u stěny sedí v UD, závěs skrz pozednici není.",
         ),
         Line(
             10,
@@ -1243,7 +1248,7 @@ def build_lines(q) -> dict[str, list[Line]]:
             f"Heavy slope {heavy_kg:.1f} kg/m². Point load ≈ {hanger_point_kg:.0f} kg "
             f"at {p.cd_spacing:.0f}×{hanger_pitch:.0f} mm, under Nonius 0.40 kN. "
             f"Hangers stay on the rafters at {hanger_pitch:.0f} mm, over the {hanger_limit:.0f} mm "
-            "Knauf figure for CD @ 500. Layout not changed.",
+            f"Knauf figure for CD @ 500. Top row is {top_along:.0f} mm down the slope from the CD joint.",
         ),
         Line(
             11,
@@ -1370,16 +1375,17 @@ def build_lines(q) -> dict[str, list[Line]]:
         ),
         Line(
             "15b",
-            "UD 28×27 na pozednici (levý okap)",
+            "UD 28×27 na omítce (levý okap)",
             "UD profil",
-            "Rigips UD 28/27, ohnutá pásnice",
-            f"{p.ud_w:.0f}×{p.cd_t:.0f} · vrut do dřeva 3,5×35 @ 300 mm",
+            "Rigips UD 28/27, hmoždinka do omítky",
+            f"{p.ud_w:.0f}×{p.cd_t:.0f} · kotva do zdi @ 625 mm",
             eave_m,
             "bm",
             10,
             PRICE["cd_bm"][0],
             PRICE["cd_bm"][1],
-            "Konec GKF levé šikminy. Ohnutá pásnice přišroubovaná na čelo pozednice. "
+            "Konec GKF a CD levé šikminy. UD je přikotvené do omítky po ≤ 625 mm, "
+            "CD v něm sedí, hrana GKF se do něj šroubuje. Žádný závěs skrz pozednici. "
             "Cena orientačně jako R-CD — UD ověřit nabídkou.",
             True,
         ),

@@ -123,6 +123,11 @@ def test_layout_ceiling_and_gable():
     assert left_cds
     assert abs(left_cds[0][0] / g.cos - p.cd_first_inset) < 1e-6
     assert left_cds[0][0] / g.cos <= 100.0
+    # Top Nonius row: the 500 mm grid misses the right slope just below the joint.
+    top = g.right_top_cd_station()
+    assert any(abs(st[0] - top[0]) < 1e-6 for st in g.sikmina_cd_stations())
+    along_top = (top[0] - g.x_cd_joint) / g.cos
+    assert 0.0 < along_top <= p.rafter_spacing
     for a, b in zip(left_cds, left_cds[1:]):
         assert abs((b[0] - a[0]) / g.cos - p.cd_spacing) < 1.0
     # One 500 mm grid for the soffit CD studs. The bay does not start a second inset.
@@ -350,6 +355,8 @@ def test_sikminy_and_soffit_stack_in_3d():
     direct = _labeled(shape, LABEL_SLOPE_DIRECT)
     assert direct
     assert all(c.bounding_box().center().X <= g.x_stack_joint + 5.0 for c in direct)
+    # The eave CD is in the wall UD. No direct hanger remains inside the wall.
+    assert all(c.bounding_box().min.X >= -1.0 for c in direct)
     slope_nonius = _labeled(shape, LABEL_SLOPE_NONIUS)
     assert slope_nonius
     assert all(c.bounding_box().center().X >= g.x_false - 1.0 for c in slope_nonius)
