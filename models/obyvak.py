@@ -987,9 +987,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     ceil_rafter_ys = [yc for yc in rafter_ys if y_ceil0 <= yc <= y_ceil1]
     for st in g.sikmina_cd_stations():
         xs = [pt[0] for pt in g.sikmina_cd_quad(*st)]
-        if min(xs) < 1.0 or max(xs) > g.x_furn - 1.0:
-            continue
-        if st[0] > g.x_false and max(xs) > g.gkf_end_attic[0] - 40.0:
+        if not g.sikmina_cd_in_span(xs, st[0]):
             continue
         hang_quad = g.hanger_quad(*st)
         # Window slope stays parallel to the rafters (140 mm plenum). Direct hanger 200.
@@ -1106,6 +1104,19 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
                 parts[i] = vata
                 break
 
+    # The eave CD axis stays within 100 mm of the room face, so its tail meets
+    # the plate UD. Wool is already cut to the full profile; trim only the CD.
+    if eave_ud is not None:
+        for i, cd in enumerate(cd_parts):
+            if not _aabb_hit(cd, eave_ud):
+                continue
+            trimmed = _cut_away(cd, [eave_ud], LABEL_SLOPE_CD)
+            cd_parts[i] = trimmed
+            for j, part in enumerate(parts):
+                if part is cd:
+                    parts[j] = trimmed
+                    break
+
     # --- Soffit bay: ducts under a lid that lands on the pozednice. ---
     # Box: krokve → Nonius → front CD → drop through the lid → vertical CD
     # → bottom CD into the wall UD. The wall angle is a brace only.
@@ -1204,6 +1215,22 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     if horiz_zaves and krov_parts:
         horiz_zaves = [_cut_away(z, krov_parts, LABEL_SOFFIT_NONIUS) for z in horiz_zaves]
     parts.extend(horiz_zaves)
+    # The last cabinet-slope CD is within one module of the joint, so its
+    # Nonius reaches the same rafter as the soffit hanger. Notch the slope
+    # hanger; the soffit rod stays the continuous piece.
+    if horiz_zaves:
+        for i, z in enumerate(zaves_parts):
+            if getattr(z, "label", None) != LABEL_SLOPE_NONIUS:
+                continue
+            hits = [h for h in horiz_zaves if _aabb_hit(z, h)]
+            if not hits:
+                continue
+            trimmed = _cut_away(z, hits, LABEL_SLOPE_NONIUS)
+            zaves_parts[i] = trimmed
+            for j, part in enumerate(parts):
+                if part is z:
+                    parts[j] = trimmed
+                    break
 
     # One bent UD: flat leg on the soffit CD, then the 40° channel.
     # Fused so the notched web is a single piece, not overlapping offcuts.

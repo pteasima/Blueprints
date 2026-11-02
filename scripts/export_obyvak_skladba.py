@@ -55,6 +55,15 @@ OUT_HTML = ROOT / "docs" / "skladba.html"
 # 1st coat Top Basic ≈ 2.5 kg/m²; 2nd coat Top Finish ≈ 3.0 kg/m².
 STOSILENT_BASIC_KG_M2 = 2.5
 STOSILENT_FINISH_KG_M2 = 3.0
+# Rigips RF (DF) 12.5 mm catalog areal mass; R-CD 27/60/27 is 0.54 kg/m (0.6 mm).
+GKF_RF_KG_M2 = 10.5
+CD_KG_PER_M = 0.54
+NH_KG_M3 = 140.0
+# Knauf EPD declared densities. The below-rafter wool sits on the foil, so the CD carries it.
+UNIFIT_033_KG_M3 = 25.2
+NATUROLL_039_KG_M3 = 12.4
+# Knauf D11: 2nd-layer screws ≤ 170 mm along the CD on a 1250 mm board.
+OUTER_SCREW_PITCH_MM = 170.0
 STOSILENT_PAIL_KG = 18.0
 
 URL_STOSILENT_FINISH = "https://www.sto.cz/s/p/a1F2p00000Piv9kEAB/stosilent-top-finish"
@@ -193,6 +202,35 @@ def _ceil_pack(qty: float, pack: float) -> int:
     return int(math.ceil(qty / pack - 1e-12))
 
 
+def _outer_screws_per_m2(cd_spacing_mm: float) -> float:
+    """Outer-layer screws per m². 170 mm along the CD, one row per CD.
+
+    Rounded up, which is how CD @ 625 mm became the old 10 pcs/m².
+    """
+    raw = (1000.0 / OUTER_SCREW_PITCH_MM) * (1000.0 / cd_spacing_mm)
+    return float(math.ceil(raw - 1e-9))
+
+
+def _slope_buildup_kg_m2(p: ObyvakParams, *, right: bool) -> tuple[float, float]:
+    """(boards + CD, same plus wool on the foil) in kg/m².
+
+    Wool between the rafters stays in the roof and is not on the hangers.
+    """
+    render = STOSILENT_BASIC_KG_M2 + STOSILENT_FINISH_KG_M2
+    if right:
+        nh = (p.naturheld_right / 1000.0) * NH_KG_M3
+        gkf = p.sdk_layers_right * GKF_RF_KG_M2
+        # Installed as 2 × 160 mm. The model cavity is about 324 mm.
+        wool = 2 * 0.160 * NATUROLL_039_KG_M3
+    else:
+        nh = (p.naturheld_left / 1000.0) * NH_KG_M3
+        gkf = GKF_RF_KG_M2
+        wool = 0.100 * UNIFIT_033_KG_M3
+    cd = CD_KG_PER_M * (1000.0 / p.cd_spacing)
+    bare = render + nh + gkf + cd
+    return bare, bare + wool
+
+
 def _longest(part) -> float:
     bb = part.bounding_box()
     return max(bb.size.X, bb.size.Y, bb.size.Z)
@@ -241,7 +279,7 @@ def _slope_hanger_lengths(g: ObyvakLayout) -> list[tuple[str, float]]:
     out: list[tuple[str, float]] = []
     for st in g.sikmina_cd_stations():
         xs = [pt[0] for pt in g.sikmina_cd_quad(*st)]
-        if min(xs) < 1.0 or max(xs) > g.x_furn - 1.0:
+        if not g.sikmina_cd_in_span(xs, st[0]):
             continue
         quad = g.hanger_quad(*st)
         (x0, z0), (x1, z1) = quad[1], quad[2]
@@ -419,6 +457,12 @@ def build_lines(q) -> dict[str, list[Line]]:
     vb_m2 = face_s + vb_eave_m2
     vb_tape_m = 2.0 * eave_m
 
+    raf_ys = g.rafter_y_stations(FACE_GAP, p.room_length - FACE_GAP)
+    hanger_pitch = max((b - a for a, b in zip(raf_ys, raf_ys[1:])), default=p.rafter_spacing)
+    _heavy_bare, heavy_kg = _slope_buildup_kg_m2(p, right=True)
+    # Petr: at CD @ 500, hangers ≤ 800 mm, or ≤ 750 mm above 50 kg/m².
+    hanger_limit = 750.0 if heavy_kg > 50.0 else 800.0
+    hanger_point_kg = heavy_kg * (p.cd_spacing / 1000.0) * (hanger_pitch / 1000.0)
     basic_kg_s = face_s * STOSILENT_BASIC_KG_M2
     finish_kg_s = face_s * STOSILENT_FINISH_KG_M2
     basic_kg_k = face_k * STOSILENT_BASIC_KG_M2
@@ -1043,12 +1087,13 @@ def build_lines(q) -> dict[str, list[Line]]:
             "Drywall screw",
             _product("DK Mont TN 35", URL_TN35_DEK),
             "3.5×35",
-            half_s * (p.sdk_layers_right - 1) * 10.0,
+            half_s * (p.sdk_layers_right - 1) * _outer_screws_per_m2(p.cd_spacing),
             "ks",
             10,
             PRICE["tn35_ks"][0],
             PRICE["tn35_ks"][1],
-            f"Outer layer @ ≤170 mm on CD @ {p.cd_spacing:.0f} mm ≈ 10 pcs/m². "
+            f"Outer layer @ ≤{OUTER_SCREW_PITCH_MM:.0f} mm on CD @ {p.cd_spacing:.0f} mm "
+            f"= {_outer_screws_per_m2(p.cd_spacing):.0f} pcs/m². "
             "First layer keeps TN 25 at wider spacing (not priced, as before).",
         ),
         Line(
@@ -1117,7 +1162,10 @@ def build_lines(q) -> dict[str, list[Line]]:
             nonius_unit,
             nonius_src,
             f"Pravá šikmina + kastlík. Svěšení šikminy {right_hang:.0f} mm, kastlík {soffit_drop:.0f} mm. "
-            "Load with 2× GKF ≈ 22 kg per hanger point (was ≈ 17 kg); Nonius load class 0.40 kN, so OK.",
+            f"Heavy slope {heavy_kg:.1f} kg/m². Point load ≈ {hanger_point_kg:.0f} kg "
+            f"at {p.cd_spacing:.0f}×{hanger_pitch:.0f} mm, under Nonius 0.40 kN. "
+            f"Hangers stay on the rafters at {hanger_pitch:.0f} mm, over the {hanger_limit:.0f} mm "
+            "Knauf figure for CD @ 500. Layout not changed.",
         ),
         Line(
             11,
