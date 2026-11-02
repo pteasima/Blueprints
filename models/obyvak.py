@@ -38,10 +38,12 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
 - Rafters seat on the wall plate (centred on the věnec); EPS is cut around rafters,
   not the other way around. Overhang past EPS is gutter-sized only.
 - Bass traps (štít): kitchen 190 at Y=L / living 450 at Y=0. Each is a
-  standalone CW wall on the gable only — not hung from the slopes. UW at
-  2450 and a sloped UW screwed to the gable wall, sealing tape under the
-  tracks, CW studs vertical @ 625, CW/UA offcuts back to the wall. GKB 12.5
-  meets the slope finish with a flexible acrylic bead.
+  standalone CW wall on the gable only — not hung from the slopes or the
+  soffit. UW at 2450 and a sloped UW screwed to the gable wall, sealing tape
+  under the tracks, CW studs vertical @ 625, CW/UA offcuts back to the wall.
+  The lining stops at the soffit face (cabinet line) as well as under the
+  slopes. GKB 12.5 meets each of those finishes with a flexible acrylic bead
+  and nothing else.
 
     python -m blueprints.export obyvak
 
@@ -452,6 +454,16 @@ def bass_cd_centres(length: float, spacing: float, profile_w: float, gap: float)
     return centres
 
 
+def bass_soffit_stop_x(p: ObyvakParams) -> float:
+    """X where the trap solids end, short of the soffit face by the acrylic bead.
+
+    The soffit face is the vertical NH at the cabinet line (``x_furn``). The
+    bead occupies the gap; the frame, board and wool stay on the room side of it.
+    """
+    x_furn = p.room_width - p.furniture_width
+    return x_furn - p.bass_acrylic - 2.0 * FACE_GAP
+
+
 def _down_normal(x0: float, z0: float, x1: float, z1: float) -> tuple[float, float]:
     """Unit normal of a ceiling segment, pointing downward."""
     dx, dz = x1 - x0, z1 - z0
@@ -495,12 +507,19 @@ def _offset_open(path: list[tuple[float, float]], dist: float) -> list[tuple[flo
     return out
 
 
-def _ceiling_segments(g: ObyvakLayout) -> list[tuple[float, float, float, float]]:
-    """Top of the trap outline, left to right: eave, false ridge, soffit line, eave."""
-    top = list(reversed(g.predstena_pts()[2:]))
+def _ceiling_segments(g: ObyvakLayout, x_stop: float) -> list[tuple[float, float, float, float]]:
+    """Top of the trap, left to right: window eave, false ridge, soffit stop.
+
+    The cabinet bay (past the soffit face) is not part of the trap.
+    """
+    path = [
+        (0.0, g.h_start),
+        (g.x_false, g.z_false),
+        (x_stop, g.z_ceil(x_stop)),
+    ]
     return [
         (a[0], a[1], b[0], b[1])
-        for a, b in zip(top, top[1:])
+        for a, b in zip(path, path[1:])
         if math.hypot(b[0] - a[0], b[1] - a[1]) > 1.0
     ]
 
@@ -541,25 +560,43 @@ def _strut_centres(z0: float, z1: float, bar: float, max_step: float) -> list[fl
     return out
 
 
+def _clip_span(
+    x0: float, z0: float, x1: float, z1: float, lo: float, hi: float
+) -> tuple[float, float, float, float] | None:
+    """Keep the portion of a segment inside ``lo <= x <= hi``."""
+    dx, dz = x1 - x0, z1 - z0
+    if abs(dx) < 1e-6:
+        return (x0, z0, x1, z1) if lo <= x0 <= hi else None
+    t_lo = (lo - x0) / dx
+    t_hi = (hi - x0) / dx
+    a, b = (t_lo, t_hi) if t_lo <= t_hi else (t_hi, t_lo)
+    t0, t1 = max(0.0, a), min(1.0, b)
+    if t1 - t0 < 0.02:
+        return None
+    return (x0 + dx * t0, z0 + dz * t0, x0 + dx * t1, z0 + dz * t1)
+
+
 def _bass_trap_parts(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
     """Standalone CW linings on the two gable walls.
 
-    Nothing here is fixed to the slopes. The bottom UW sits at 2450 on the
-    base, with sealing tape under it. The top UW follows the slope and is
-    screwed to the gable wall (tape between track and wall). Vertical CW
-    studs at 625 mm carry the GKB. CW/UA offcuts tie the studs back to the
-    wall. A flexible acrylic bead is the only meeting with the slope finish.
+    Nothing here is fixed to the slopes or to the soffit. The bottom UW sits
+    at 2450 on the base, with sealing tape under it. The top UW follows the
+    slope and is screwed to the gable wall (tape between track and wall).
+    Vertical CW studs at 625 mm carry the GKB. CW/UA offcuts tie the studs
+    back to the wall. The lining stops at the soffit face. A flexible acrylic
+    bead is the only meeting with the slope finish and with that face.
     """
     # Perpendicular-ish clearance under the new ceiling so the bead and the
-    # 1 mm mate gap both fit. 8 mm vertical is about 6 mm perpendicular at 40°.
+    # 1 mm mate gap both fit. 14 mm vertical is about 11 mm perpendicular at 40°.
     head_drop = 14.0
-    outline = []
-    for i, (x, z) in enumerate(g.predstena_pts()):
-        x = min(max(x, gap), p.room_width - gap)
-        if i < 2:
-            outline.append((x, z + gap))
-        else:
-            outline.append((x, z - head_drop))
+    x_stop = bass_soffit_stop_x(p)
+    outline = [
+        (gap, p.predstena_bottom_z + gap),
+        (x_stop, p.predstena_bottom_z + gap),
+        (x_stop, g.z_ceil(x_stop) - head_drop),
+        (g.x_false, g.z_false - head_drop),
+        (gap, g.h_start - head_drop),
+    ]
     face = xz_face(outline, "predstena")
     parts: list = []
     steel: list = []
@@ -598,16 +635,17 @@ def _bass_trap_parts(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
         z_uw0 = z_tape0 + p.bass_tape_t
         z_uw1 = z_uw0 + p.bass_uw_flange
         z_stud0 = z_uw1 + gap
-        # Bottom track on the stud line, tape under the web, full width.
+        # Bottom track on the stud line, tape under the web, up to the soffit stop.
+        track_w = x_stop - gap
         steel.append(
-            _box(gap, y_stud0, z_tape0, p.room_width - 2 * gap, y_stud1 - y_stud0, p.bass_tape_t, LABEL_BASS_TAPE)
+            _box(gap, y_stud0, z_tape0, track_w, y_stud1 - y_stud0, p.bass_tape_t, LABEL_BASS_TAPE)
         )
         steel.append(
             _box(
                 gap,
                 y_stud0,
                 z_uw0,
-                p.room_width - 2 * gap,
+                track_w,
                 y_stud1 - y_stud0,
                 p.bass_uw_flange,
                 LABEL_BASS_UW,
@@ -615,23 +653,27 @@ def _bass_trap_parts(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
         )
         # Separate segments, not a mitre: a mitred bead crosses the GKB, and
         # neighbouring tracks overlap at the ridge. Each piece stays under its face.
+        # Ridge ends are shortened so the two tracks do not meet; the free ends
+        # only leave the eave bead and the soffit bead.
         if toward > 0:
             ty0, ty1 = gap, gap + p.bass_tape_t
         else:
             ty1 = y_wall - gap
             ty0 = ty1 - p.bass_tape_t
-        for x0, z0, x1, z1 in _ceiling_segments(g):
+        segments = _ceiling_segments(g, x_stop)
+        for i, (x0, z0, x1, z1) in enumerate(segments):
             dx, dz = x1 - x0, z1 - z0
             span = math.hypot(dx, dz) or 1.0
-            trim = min(80.0, span * 0.15)
-            x0 += dx * trim / span
-            z0 += dz * trim / span
-            x1 -= dx * trim / span
-            z1 -= dz * trim / span
-            if x0 < 10.0:
-                x0 = 10.0
-            if x1 > p.room_width - 10.0:
-                x1 = p.room_width - 10.0
+            trim0 = 80.0 if i > 0 else 20.0
+            trim1 = 80.0 if i < len(segments) - 1 else 12.0
+            x0 += dx * trim0 / span
+            z0 += dz * trim0 / span
+            x1 -= dx * trim1 / span
+            z1 -= dz * trim1 / span
+            clipped = _clip_span(x0, z0, x1, z1, 10.0, x_stop)
+            if clipped is None:
+                continue
+            x0, z0, x1, z1 = clipped
             steel.append(
                 _extrude_y(
                     xz_face(_band_below(x0, z0, x1, z1, 12.0, 12.0 + p.bass_uw_flange), LABEL_BASS_UW),
@@ -656,8 +698,24 @@ def _bass_trap_parts(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
                     LABEL_BASS_ACRYLIC,
                 )
             )
+        # Vertical bead in the gap to the soffit face. Not fixed to the box.
+        x_bead0 = x_stop + gap
+        z_bead0 = g.z_nabeh_bot + gap
+        z_bead1 = min(g.z_ceil(x_bead0), g.z_ceil(x_bead0 + p.bass_acrylic)) - p.bass_acrylic
+        if z_bead1 - z_bead0 > 40.0:
+            parts.append(
+                _box(
+                    x_bead0,
+                    y_gkb0,
+                    z_bead0,
+                    p.bass_acrylic,
+                    y_gkb1 - y_gkb0,
+                    z_bead1 - z_bead0,
+                    LABEL_BASS_ACRYLIC,
+                )
+            )
 
-        stations = bass_cd_centres(p.room_width, p.bass_stud_spacing, p.bass_cw_w, gap)
+        stations = bass_cd_centres(x_stop, p.bass_stud_spacing, p.bass_cw_w, gap)
         half = p.bass_cw_w * 0.5
         for xc in stations:
             x0 = xc - half
@@ -681,7 +739,10 @@ def _bass_trap_parts(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
                     )
                 )
         # Vertical board joints: 1250 mm sheets span two 625 mm bays and land on a stud.
-        for xj in range(int(p.bass_board_w), int(p.room_width), int(p.bass_board_w)):
+        # The soffit end is the acrylic bead, not a taped joint.
+        for xj in range(int(p.bass_board_w), int(x_stop), int(p.bass_board_w)):
+            if xj + 25.0 > x_stop - gap:
+                continue
             z_top = min(g.z_ceil(x) for x in (xj - 25.0, float(xj), xj + 25.0)) - head_drop
             if z_top - z_uw1 < 40.0:
                 continue
@@ -705,10 +766,6 @@ def _bass_trap_parts(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
         kept.append(_cut_away(wool, tools, LABEL_BASS_WOOL) if tools else wool)
     kept.extend(steel)
     return kept
-
-    parts.extend(k_frame)
-
-    return parts
 
 
 def _glass_panes(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
@@ -2251,7 +2308,7 @@ def _mm_cs(value: float) -> str:
 
 
 def _bass_stud_xs(p: ObyvakParams, spacing: float) -> list[float]:
-    return bass_cd_centres(p.room_width, spacing, p.bass_cw_w, FACE_GAP)
+    return bass_cd_centres(bass_soffit_stop_x(p), spacing, p.bass_cw_w, FACE_GAP)
 
 
 # Drawing button renders an A3 landscape plate (see viewer/drawing.js).
@@ -2292,13 +2349,12 @@ def _column_callouts(
 
 
 def _bass_view_scenes(p: ObyvakParams) -> list[dict]:
-    """3/4 views of each trap. GKB is ghosted; a cut through the cabinet-end
-    stud opens the stack (wall, wool, air, CD) without dropping a bay.
+    """3/4 views of each trap. GKB is ghosted. A cut through an early stud
+    opens the stack and keeps the soffit end in frame, so the stop reads.
     """
     z0, z1 = 2100.0, 5300.0
-    # Cabinet-end stud. The cut keeps X below it, so the camera (outside that
-    # eave) looks straight onto the section face and back along the lattice.
-    end_x = _bass_stud_xs(p, p.bass_stud_spacing)[-1]
+    # Normal +X keeps the cabinet side (Three.js clips the opposite half).
+    cut_x = _bass_stud_xs(p, p.bass_stud_spacing)[2]
     opacity = {
         LABEL_BASS_CW: 1,
         LABEL_BASS_UW: 1,
@@ -2311,19 +2367,23 @@ def _bass_view_scenes(p: ObyvakParams) -> list[dict]:
         LABEL_MASONRY: 0.4,
         LABEL_WALL_GKF: 0.95,
         LABEL_POCKET_FRAME: 1,
+        LABEL_SOFFIT_NH: 0.55,
+        LABEL_SOFFIT_GKB: 0.4,
+        LABEL_FURNITURE: 0.28,
     }
 
     def one(side: str, spacing: float, depth: float, y_wall: float, toward: float) -> dict:
         y_room = y_wall + toward * depth
         y_lo, y_hi = (min(y_wall, y_room) - 280.0, max(y_wall, y_room) + 80.0)
-        corners = _box_corners(-60.0, p.room_width + 40.0, y_lo, y_hi, z0, z1)
-        # ~45° in plan, slightly above: lattice face and the cut stack both read.
+        corners = _box_corners(cut_x - 80.0, p.room_width + 80.0, y_lo, y_hi, z0, z1)
+        # From the window side, slightly above: the cut stack, then the soffit stop.
+        x_furn = p.room_width - p.furniture_width
         if toward > 0:
-            eye = (p.room_width + 900.0, depth + 3400.0, 5200.0)
-            aim = (0.42 * p.room_width, depth * 0.45, 3600.0)
+            eye = (-700.0, depth + 2800.0, 4800.0)
+            aim = (0.62 * x_furn, depth * 0.55, 3400.0)
         else:
-            eye = (p.room_width + 900.0, y_wall - 3400.0, 5200.0)
-            aim = (0.42 * p.room_width, y_wall - depth * 0.45, 3600.0)
+            eye = (-700.0, y_wall - 2800.0, 4800.0)
+            aim = (0.62 * x_furn, y_wall - depth * 0.55, 3400.0)
         cam = _frame_ortho(_look_between(eye, aim), corners)
         cam_y = _cad_of_gltf(cam["position"])[1]
         # Drop the other gable on the far side of the camera so its cap is behind us.
@@ -2350,7 +2410,7 @@ def _bass_view_scenes(p: ObyvakParams) -> list[dict]:
             "projection": "ortho",
             "edges": "transparent",
             "cuts": [
-                _cut((-1.0, 0.0, 0.0), (end_x, y_wall, 3000.0)),
+                _cut((1.0, 0.0, 0.0), (cut_x, y_wall, 3000.0)),
                 far,
             ],
             "opacity": opacity,
@@ -2386,9 +2446,11 @@ def _bass_elevation_scene(
     target = (0.5 * (x0 + x1), y_face, 0.5 * (z0 + z1))
     cam = _ortho_pose(target, look, (0.0, 1.0, 0.0), half_w, half_h)
     cw = p.bass_k_cw if side == "kitchen" else p.bass_l_cw
+    x_furn = p.room_width - p.furniture_width
     module_line = spacing
-    while module_line + spacing < p.room_width - 0.5:
+    while module_line + spacing < bass_soffit_stop_x(p) - 0.5:
         module_line += spacing
+    makeup = x_furn - module_line
     # Interior module, clear of both inset end studs.
     module_a = studs[2]
     module_b = studs[3]
@@ -2408,22 +2470,22 @@ def _bass_elevation_scene(
             (0.35 * p.room_width, y_face, 4700.0),
             (
                 f"CW {cw:g} vertical\n"
-                f"{n_studs} studs @ {spacing:g}, makeup bay {p.room_width - module_line:g} mm"
+                f"{n_studs} studs @ {spacing:g}, makeup bay {makeup:g} mm to the soffit"
             ),
             (
                 f"CW {cw:g} svisle\n"
-                f"{n_studs} stojek @ {spacing:g}, krajní pole {p.room_width - module_line:g} mm"
+                f"{n_studs} stojek @ {spacing:g}, krajní pole {makeup:g} mm ke kastlíku"
             ),
         ),
         (
             (0.22 * p.room_width, y_face, 3600.0),
             (
-                "UW at 2450 and sloped UW on the wall\n"
-                "tape under the tracks, not fixed to the slopes"
+                "Not fixed to the slopes or the soffit\n"
+                "UW at 2450, tape under the tracks"
             ),
             (
-                "UW v 2450 a šikmé UW na štítu\n"
-                "páska pod profily, ke šikmině nekotveno"
+                "Ke šikmině ani ke kastlíku nekotveno\n"
+                "UW v 2450, páska pod profily"
             ),
         ),
         (
@@ -2441,11 +2503,11 @@ def _bass_elevation_scene(
             (doors[0][0] + 0.5 * doors[0][1], y_face, 700.0),
             (
                 f"GKB {p.bass_board_w:g}×{p.bass_board_l:g}, joints on studs\n"
-                f"acrylic {p.bass_acrylic:g} mm to the slope"
+                f"acrylic {p.bass_acrylic:g} mm to the slope and the soffit"
             ),
             (
                 f"GKB {p.bass_board_w:g}×{p.bass_board_l:g}, spáry na stojkách\n"
-                f"akryl {p.bass_acrylic:g} mm ke šikmině"
+                f"akryl {p.bass_acrylic:g} mm ke šikmině a ke kastlíku"
             ),
         ),
     ]
@@ -2458,11 +2520,11 @@ def _bass_elevation_scene(
             f"{spacing:g} mm",
         ),
         _dim(
-            (module_line, y_face, 2920.0),
-            (p.room_width, y_face, 2920.0),
-            -0.045,
-            f"{p.room_width - module_line:g} mm",
-            f"{p.room_width - module_line:g} mm",
+            (module_line, y_face, 2680.0),
+            (x_furn, y_face, 2680.0),
+            0.04,
+            f"{makeup:g} mm",
+            f"{makeup:g} mm",
         ),
     ]
     for x_door, width in doors:
@@ -2490,15 +2552,19 @@ def _bass_elevation_scene(
             LABEL_BASS_TAPE: 0.9,
             LABEL_BASS_WOOL: 0.22,
             LABEL_BASS_GKB: 0,
+            LABEL_BASS_ACRYLIC: 1,
             LABEL_PLASTER: 1,
             LABEL_MASONRY: 0.45,
             LABEL_WALL_GKF: 1,
             LABEL_POCKET_FRAME: 1,
+            LABEL_SOFFIT_NH: 0.72,
+            LABEL_SOFFIT_GKB: 0.55,
+            LABEL_FURNITURE: 0.35,
         },
         "opacityDefault": 0,
         "annotations": [
             *_column_callouts(
-                notes, cam, look, col_x, [0.48, -0.18, 0.14, -0.50], size=0.82
+                notes, cam, look, col_x, [0.50, -0.40, 0.16, -0.62], size=0.82
             ),
             *dims,
         ],

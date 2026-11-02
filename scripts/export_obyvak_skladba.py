@@ -320,9 +320,10 @@ def collect_quantities():
         by[child.label].append(child)
 
     slope_face = (g.x_ridge / g.cos + (g.x_furn - g.x_ridge) / g.cos) * p.room_length / 1e6
-    trap_zs = [g.z_slope_offset(x, 0.0) for x in range(0, int(p.room_width) + 1, 50)]
+    # The trap stops at the soffit face, so the order does not include the cabinet bay.
+    trap_zs = [g.z_ceil(x) for x in range(0, int(g.x_furn) + 1, 50)]
     trap_h = sum(z - p.predstena_bottom_z for z in trap_zs) / len(trap_zs)
-    trap_face = trap_h * p.room_width / 1e6
+    trap_face = trap_h * g.x_furn / 1e6
     soffit_y = g.y_furn1 - g.y_furn0
     nh_pts = g.soffit_nh_pts()
     # NH + StoSilent on the side face only; the underside is plain GKB.
@@ -389,6 +390,7 @@ def collect_quantities():
         "joint_angle_lm": _length_m(joint_angles) if joint_angles else soffit_y / 1000.0,
         "cleat_lm": _length_m(cleats) if cleats else soffit_y / 1000.0,
         "n_bass_hanger": 0,
+        "n_bass_stud": len(by[LABEL_BASS_CW]) // 2,
         "n_rafters": len(by[LABEL_RAFTERS]),
         "n_soffit_ud": len(by[LABEL_SOFFIT_UD]),
         "n_ducts": len(by[LABEL_SOFFIT_DUCT]),
@@ -976,7 +978,7 @@ def build_lines(q) -> dict[str, list[Line]]:
             12,
             PRICE["gkb_m2"][0],
             PRICE["gkb_m2"][1],
-            "Bez spodního víka. Akrylový spoj k NH šikminy, konstrukce ke šikmině nekotvená.",
+            "Bez spodního víka. Akrylový spoj ke šikmině a k líci kastlíku. Konstrukce ke šikmině ani ke kastlíku nekotvená.",
         ),
         Line(
             "A2",
@@ -989,7 +991,7 @@ def build_lines(q) -> dict[str, list[Line]]:
             10,
             None,
             "—",
-            "10 stojek na štít. CW 50 je o 3 mm hlubší než 47 mm vzduch, zářez do vlny. CW 125 je nejhlubší profil do 137,5 mm.",
+            f"{q['n_bass_stud']} stojek na štít, mříž končí u kastlíku. CW 50 je o 3 mm hlubší než 47 mm vzduch, zářez do vlny. CW 125 je nejhlubší profil do 137,5 mm.",
             True,
         ),
         Line(
@@ -1003,7 +1005,7 @@ def build_lines(q) -> dict[str, list[Line]]:
             10,
             None,
             "—",
-            "Šikmé UW je přišroubované do štítové zdi, ne do šikminy.",
+            "Šikmé UW je přišroubované do štítové zdi, ne do šikminy ani do kastlíku.",
             True,
         ),
         Line(

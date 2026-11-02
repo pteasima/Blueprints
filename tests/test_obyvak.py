@@ -7,6 +7,7 @@ sys.path.insert(0, str(ROOT / "models"))
 from obyvak import (  # noqa: E402
     FACE_GAP,
     bass_cd_centres,
+    bass_soffit_stop_x,
     build,
     build_elevation_slice,
     build_section_slice,
@@ -43,6 +44,7 @@ from obyvak_geom import (  # noqa: E402
     LABEL_BASS_CW,
     LABEL_BASS_UW,
     LABEL_BASS_STRUT,
+    LABEL_BASS_TAPE,
     LABEL_BASS_ACRYLIC,
     LABEL_GLAZING,
     PART_GROUPS,
@@ -903,16 +905,19 @@ def test_bass_trap_scenes_keep_the_vertical_lattice():
     ] == [s["id"] for s in scenes() if s["id"].startswith("bass-")]
 
     p = ObyvakParams()
-    studs = bass_cd_centres(p.room_width, 625.0, p.bass_cw_w, FACE_GAP)
-    assert len(studs) == 10
+    x_stop = bass_soffit_stop_x(p)
+    x_furn = p.room_width - p.furniture_width
+    studs = bass_cd_centres(x_stop, 625.0, p.bass_cw_w, FACE_GAP)
+    assert len(studs) == 9
+    assert abs((x_furn - 4375.0) - 525.0) < 1e-6
 
     def cam_mm(spec):
         x, y_up, z = spec["camera"]["position"]
         return (x / 0.001, -z / 0.001, y_up / 0.001)
 
     for side, depth, spacing, n_studs, cw in (
-        ("kitchen", 190.0, 625.0, 10, 50.0),
-        ("living", 450.0, 625.0, 10, 125.0),
+        ("kitchen", 190.0, 625.0, 9, 50.0),
+        ("living", 450.0, 625.0, 9, 125.0),
     ):
         view = specs[f"bass-{side}"]
         assert view["projection"] == "ortho"
@@ -928,10 +933,10 @@ def test_bass_trap_scenes_keep_the_vertical_lattice():
         assert "vertical" in view["title"]["en"]
         assert "svislé" in view["title"]["cs"]
         assert f"{spacing:g}" in view["title"]["en"]
-        # Cut opens the cabinet-end stud; the other gable is behind the camera.
-        assert any(c["normal"] == [-1.0, 0.0, 0.0] and c["anchor"][0] == studs[-1] for c in view["cuts"])
+        # Cut opens an early stud and keeps the soffit end. The other gable is behind the camera.
+        assert any(c["normal"] == [1.0, 0.0, 0.0] and c["anchor"][0] == studs[2] for c in view["cuts"])
         cx, cy, _cz = cam_mm(view)
-        assert cx > studs[-1]
+        assert cx < studs[2]
         if side == "living":
             assert cy < p.room_length * 0.5
             assert view["camera"]["target"][2] > -1.0  # glTF Z = −CAD Y, living end
@@ -950,12 +955,13 @@ def test_bass_trap_scenes_keep_the_vertical_lattice():
         assert "svisle" in joined_cs
         assert f"{n_studs} studs @ {spacing:g}" in joined
         assert f"CW {cw:g}" in joined
-        assert "350 mm" in joined
+        assert "525 mm" in joined
+        assert "soffit" in joined
         assert "horizontal stud" not in joined.lower()
         dims = [a for a in elev["annotations"] if a["kind"] == "dim"]
         dim_text = " ".join(a["text"]["en"] for a in dims)
         assert f"{spacing:g} mm" in dim_text
-        assert "350 mm" in dim_text
+        assert "525 mm" in dim_text
         if side == "kitchen":
             assert "1100 mm" in dim_text and "1000 mm" in dim_text
         else:
@@ -1121,7 +1127,7 @@ def test_3d_matches_section_and_elevation_masses():
     assert not _labeled(shape, "bass_wall_hanger")
     assert not _labeled(shape, "bass_cd")
     assert len(_labeled(shape, LABEL_BASS_STRUT)) >= 8
-    assert len(_labeled(shape, LABEL_BASS_CW)) == 20
+    assert len(_labeled(shape, LABEL_BASS_CW)) == 18
 
     furn = _labeled(shape, LABEL_FURNITURE)[0].bounding_box()
     assert abs(furn.size.X - (p.furniture_width - FACE_GAP)) < 1e-6
@@ -1324,11 +1330,14 @@ def test_default_gable_lattices_and_as_built_wool():
     assert abs(p.bass_l_wool - 300.0) < 1e-9
     assert abs(p.bass_l_air - 137.5) < 1e-9
     assert p.bass_k_cw == 50.0 and p.bass_l_cw == 125.0
-    studs = bass_cd_centres(p.room_width, 625.0, p.bass_cw_w, FACE_GAP)
-    assert studs[1:-1] == [625.0, 1250.0, 1875.0, 2500.0, 3125.0, 3750.0, 4375.0, 5000.0]
+    x_stop = bass_soffit_stop_x(p)
+    x_furn = p.room_width - p.furniture_width
+    studs = bass_cd_centres(x_stop, 625.0, p.bass_cw_w, FACE_GAP)
+    assert studs[1:-1] == [625.0, 1250.0, 1875.0, 2500.0, 3125.0, 3750.0, 4375.0]
     assert abs(studs[0] - (p.bass_cw_w * 0.5 + FACE_GAP)) < 1e-6
-    assert abs(p.room_width - 5000.0 - 350.0) < 1e-6
-    assert len(studs) == 10
+    assert abs(studs[-1] - (x_stop - p.bass_cw_w * 0.5 - FACE_GAP)) < 1e-6
+    assert abs(x_furn - 4375.0 - 525.0) < 1e-6
+    assert len(studs) == 9
 
     shape, _ = build(p)
     cws = _labeled(shape, LABEL_BASS_CW)
@@ -1351,6 +1360,36 @@ def test_default_gable_lattices_and_as_built_wool():
     # CW 50 notches about 3 mm into the 130.5 mm wool; the bay air stays 47 mm.
     bite = kitchen_stud.bounding_box().max.Y - wool.bounding_box().min.Y
     assert 0.0 < bite < 6.0
+
+    # The lining stops at the soffit face. Only the acrylic bead enters the gap.
+    solid_labels = (
+        LABEL_BASS_GKB,
+        LABEL_BASS_WOOL,
+        LABEL_BASS_CW,
+        LABEL_BASS_UW,
+        LABEL_BASS_STRUT,
+        LABEL_BASS_TAPE,
+    )
+    for label in solid_labels:
+        for part in _labeled(shape, label):
+            assert part.bounding_box().max.X <= x_stop + 0.05, label
+    for part in _labeled(shape, LABEL_BASS_ACRYLIC):
+        assert part.bounding_box().max.X <= x_furn - FACE_GAP + 0.05
+    for side in ("kitchen", "living"):
+        beads = []
+        for part in _labeled(shape, LABEL_BASS_ACRYLIC):
+            bb = part.bounding_box()
+            if side == "kitchen" and bb.min.Y < p.room_length * 0.5:
+                continue
+            if side == "living" and bb.max.Y > p.room_length * 0.5:
+                continue
+            if bb.min.X >= x_stop - 0.1 and bb.size.Z > 200.0:
+                beads.append(bb)
+        assert len(beads) == 1
+        bb = beads[0]
+        assert abs(bb.size.X - p.bass_acrylic) < 0.2
+        assert bb.min.X >= x_stop + FACE_GAP - 0.05
+        assert bb.max.X <= x_furn - FACE_GAP + 0.05
 
 
 

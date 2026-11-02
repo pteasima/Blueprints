@@ -79,7 +79,7 @@ def test_souhrn_total_includes_naturheld_and_lists_other_gaps(bom):
     # Both slope boards are 100 mm at 664 Kč/m². Wool is Domo Plus now, so the
     # non-board subtotal is no longer the 102 159 Kč from the 60/100 build.
     assert round(priced) > round(sum(ln.line_total for ln in slopes))
-    assert round(priced) == 133_800
+    assert round(priced) == 133_755
     missing = {ln.layer for ln in lines if ln.unit_price is None and ln.qty_net}
     assert missing == UNPRICED_SOUHRN
 
