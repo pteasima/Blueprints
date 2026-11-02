@@ -170,7 +170,9 @@ def test_study_ranks_splits_and_states_the_fem_decision():
     assert "No slope latě" in text
     assert "cut" in text
     assert "625 vertical" in text and "1000 horizontal" in text
-    assert "The built gables are kitchen 625 vertical and living 1000 horizontal" in text
+    assert "The built gables are both 625 vertical CW studs" in text
+    assert "kitchen CW 50 and living CW 125" in text
+    assert "empty-cavity peak" in text
     assert "two sliding doors" in text
     assert "one sliding door" in text
     assert "do not cut" in text

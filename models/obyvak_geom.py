@@ -104,8 +104,11 @@ LABEL_SOFFIT_DUCT = "soffit_duct"
 # --- Bass traps ---
 LABEL_BASS_WOOL = "bass_mineral_wool"
 LABEL_BASS_GKB = "bass_gkb"
-LABEL_BASS_CD = "bass_cd"
-LABEL_BASS_HANGER = "bass_wall_hanger"
+LABEL_BASS_CW = "bass_cw"
+LABEL_BASS_UW = "bass_uw"
+LABEL_BASS_STRUT = "bass_strut"
+LABEL_BASS_TAPE = "bass_tape"
+LABEL_BASS_ACRYLIC = "bass_acrylic"
 # --- Furniture ---
 LABEL_FURNITURE = "furniture"
 
@@ -161,8 +164,11 @@ PART_GROUPS = [
         "children": [
             LABEL_BASS_WOOL,
             LABEL_BASS_GKB,
-            LABEL_BASS_CD,
-            LABEL_BASS_HANGER,
+            LABEL_BASS_CW,
+            LABEL_BASS_UW,
+            LABEL_BASS_STRUT,
+            LABEL_BASS_TAPE,
+            LABEL_BASS_ACRYLIC,
         ],
     },
     {
@@ -228,27 +234,32 @@ class ObyvakParams:
     predstena_kitchen: float = 190.0
     predstena_living: float = 450.0
     predstena_bottom_z: float = 2450.0
-    # Bass-trap stacks — wall → room.
-    # Kitchen 190: wool stops 20 mm short of the back of the front CD so the
-    # GKB leaf can move on the Sylomer washer. The front CD (27) sits against
-    # the GKB, so the geometric cavity from the wool face to the GKB is
-    # 20 + 27 = 47 mm. That 47 mm is not an empty air spring. The rear CD
-    # stays at 80 mm from the wall, inside the wool (catalog reach ≤ ~120).
+    # Bass-trap stacks — wall → room. Depths stay 190 / 450.
+    # Wool is against the wall. The air is the sealed cavity the CW stands in.
+    # Kitchen air is 47 mm; a CW 50 stud is 50 mm, so each stud notches 3 mm
+    # into the wool. The bay between studs stays 47 mm. Living air is 137.5 mm;
+    # CW 125 is the deepest standard profile that fits, with 12.5 mm of air
+    # left between the wool face and the back of the stud.
     bass_k_wool: float = 130.5
     bass_k_air: float = 47.0
     bass_k_gkb: float = 12.5
-    bass_k_rear_reach: float = 80.0  # wall → rear CD (≤ catalog ~120)
-    # Living 450: GKB 12.5 + vzduch 137.5 + MW 300 (mirrored).
+    bass_k_cw: float = 50.0
+    # Living 450: GKB 12.5 + vzduch 137.5 + MW 300.
     bass_l_gkb: float = 12.5
     bass_l_air: float = 137.5
     bass_l_wool: float = 300.0
-    bass_l_rear_reach: float = 100.0
-    # Short rear wall fix + vertical CD studs (no hangers through šikminy).
-    bass_hanger_z_inset: float = 200.0
-    bass_hanger_z_step: float = 700.0
-    bass_trmen_arm_t: float = 3.0
-    bass_trmen_arm_h: float = 16.0
-    bass_bottom_sdk_t: float = 12.5
+    bass_l_cw: float = 125.0
+    # Both gables: vertical CW @ 625, 1250 mm boards spanning two bays.
+    bass_stud_spacing: float = 625.0
+    bass_cw_w: float = 50.0
+    bass_uw_flange: float = 40.0
+    bass_tape_t: float = 2.0
+    bass_acrylic: float = 3.0
+    bass_strut_h: float = 40.0
+    bass_strut_max_step: float = 1200.0
+    bass_board_w: float = 1250.0
+    # 2750 mm sheets cover the peak (about 2626 mm above 2450) with no horizontal joint.
+    bass_board_l: float = 2750.0
     pouzdro_d: float = 120.0
     pocket_door_h: float = 2450.0
     # Clearance from the cabinet eave (X=room_width) to the far-gable opening at x=3700.
@@ -308,8 +319,8 @@ class ObyvakParams:
     def __post_init__(self) -> None:
         assert abs(self.bass_k_wool + self.bass_k_air + self.bass_k_gkb - self.predstena_kitchen) < 1e-9
         assert abs(self.bass_l_gkb + self.bass_l_air + self.bass_l_wool - self.predstena_living) < 1e-9
-        # 20 mm clear of the front CD, then the 27 mm profile, then the GKB.
-        assert abs(self.bass_k_air - (self.cd_t + 20.0)) < 1e-9
+        assert self.bass_k_cw <= self.bass_k_wool + self.bass_k_air
+        assert self.bass_l_cw <= self.bass_l_air
 
 
 class ObyvakLayout:
