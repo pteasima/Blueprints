@@ -1418,5 +1418,154 @@
         }
       }
     ]
+  },
+  {
+    "id": "ties-front",
+    "title": {
+      "en": "Ties and lights — front",
+      "cs": "Táhla a světla — pohled"
+    },
+    "project": "Obývák 1.02",
+    "hFovDeg": 55,
+    "projection": "perspective",
+    "camera": {
+      "target": [
+        2.9425000000000003,
+        3.371,
+        -6.882000000000001
+      ],
+      "position": [
+        -3.2,
+        1.5,
+        -4.662
+      ],
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ]
+    },
+    "cuts": [
+      {
+        "normal": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "anchor": [
+          80.0,
+          5550.0,
+          3291.0
+        ]
+      }
+    ],
+    "opacity": {
+      "tie_rod": 1,
+      "slope_light": 1
+    },
+    "opacityDefault": 1
+  },
+  {
+    "id": "ties-plan",
+    "title": {
+      "en": "Ties and lights — plan",
+      "cs": "Táhla a světla — půdorys"
+    },
+    "project": "Obývák 1.02",
+    "projection": "ortho",
+    "camera": {
+      "target": [
+        2.6750000000000003,
+        3.291,
+        -5.55
+      ],
+      "position": [
+        2.6750000000000003,
+        33.291,
+        -5.55
+      ],
+      "up": [
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "orthoFit": [
+        3.125,
+        6.0
+      ]
+    },
+    "opacityDefault": 0,
+    "opacity": {
+      "tie_rod": 1,
+      "slope_light": 1,
+      "rafters": 0.45,
+      "wall_plate": 0.9
+    }
+  },
+  {
+    "id": "ties-section",
+    "title": {
+      "en": "Tie — section through one bar",
+      "cs": "Táhlo — řez jednou tyčí"
+    },
+    "project": "Obývák 1.02",
+    "projection": "ortho",
+    "camera": {
+      "target": [
+        2.6750000000000003,
+        4.228800000000001,
+        -4.896
+      ],
+      "position": [
+        2.6750000000000003,
+        4.228800000000001,
+        12.204
+      ],
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "orthoFit": [
+        3.42,
+        2.0288000000000004
+      ]
+    },
+    "cuts": [
+      {
+        "normal": [
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "anchor": [
+          2675.0,
+          4866.0,
+          3291.0
+        ]
+      },
+      {
+        "normal": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "anchor": [
+          2675.0,
+          4926.0,
+          3291.0
+        ]
+      }
+    ],
+    "opacityDefault": 0.2,
+    "opacity": {
+      "tie_rod": 1,
+      "slope_light": 1,
+      "rafters": 1,
+      "wall_plate": 1,
+      "soffit_duct": 1,
+      "masonry": 1,
+      "plaster": 1
+    }
   }
 ]
