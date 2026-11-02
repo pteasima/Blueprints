@@ -2341,8 +2341,10 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     sec_notes = [
         (
             on_face(x_wool, y_note, t_wool),
-            f"Vata: Isover Domo Plus 038\n{raf_t} mm mezi krokvemi\n{wool_l} mm pod levou, 160+160+120 pod pravou",
-            f"Vata: Isover Domo Plus 038\n{raf_t} mm mezi krokvemi\n{wool_l} mm pod levou, 160+160+120 pod pravou",
+            f"Vata mezi krokvemi: Isover Domo Plus 038, {raf_t} mm\n"
+            f"Pod krokvemi u oken {wool_l} mm; u skříní 160+160+120 mm",
+            f"Vata mezi krokvemi: Isover Domo Plus 038, {raf_t} mm\n"
+            f"Pod krokvemi u oken {wool_l} mm; u skříní 160+160+120 mm",
         ),
         (
             on_face(x_hang, y_note, t_hanger),
@@ -2366,10 +2368,10 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
         ),
         (
             on_face(x_nh, y_note, t_nh * 0.5),
-            f"NaturHeld 140 {nh_l} mm levá, {nh_r} mm pravá\npřes GKF → CD\n"
-            f"StoSilent Finish + Basic {finish_mm}+{basic_mm} mm",
-            f"NaturHeld 140 {nh_l} mm levá, {nh_r} mm pravá\npřes GKF → CD\n"
-            f"StoSilent Finish + Basic {finish_mm}+{basic_mm} mm",
+            f"NaturHeld 140, {nh_l} mm\npřes GKF do CD\n"
+            f"StoSilent Top Basic + Top Finish, bílá ~RAL 9016, {finish_mm}+{basic_mm} mm",
+            f"NaturHeld 140, {nh_l} mm\npřes GKF do CD\n"
+            f"StoSilent Top Basic + Top Finish, bílá ~RAL 9016, {finish_mm}+{basic_mm} mm",
         ),
     ]
     col_x = -0.62

@@ -920,21 +920,21 @@ def test_sikmina_drawing_scenes():
     joined = " ".join(
         ann["text"]["cs"] for ann in section["annotations"] if "text" in ann
     )
-    assert "NaturHeld 140 100 mm levá, 100 mm pravá" in joined
+    assert "NaturHeld 140, 100 mm" in joined
     assert "přes GKF → CD" in joined or "přes GKF" in joined
     assert "Jutafol N AL 170 Speciál" in joined
     assert "GKF 12,5 mm" in joined
     assert "Vario" not in joined
     assert "Flex" not in joined
     assert "Domo Plus 038" in joined
-    assert "160 mm mezi" in joined
+    assert "mezi krokvemi" in joined and "160 mm" in joined
     assert "plénum" not in joined.lower()
     joined_en = " ".join(
         ann["text"]["en"] for ann in section["annotations"] if "text" in ann
     )
     assert "Domo Plus 038" in joined_en
-    assert "160 mm mezi" in joined_en
-    assert "100 mm levá, 100 mm pravá" in joined_en
+    assert "mezi krokvemi" in joined_en and "160 mm" in joined_en
+    assert "NaturHeld 140, 100 mm" in joined_en
     assert "Jutafol N AL 170 Speciál" in joined_en
     assert "Parozábrana" in joined_en
     assert "GKF 12,5 mm" in joined_en
@@ -984,7 +984,7 @@ def test_sikmina_drawing_scenes():
     # Top of column is outside (wool near ridge); bottom is room face (NaturHeld).
     order = [t.split("\n")[0] for t in (a["text"]["en"] for a in callouts)]
     by_y = [t for _, t in sorted(zip(label_ys, order), reverse=True)]
-    assert by_y[0].startswith("Vata: Isover Domo Plus")
+    assert by_y[0].startswith("Vata mezi krokvemi")
     assert by_y[1].startswith("Přímý závěs")
     assert by_y[2].startswith("Parozábrana")
     assert by_y[-1].startswith("NaturHeld 140")
