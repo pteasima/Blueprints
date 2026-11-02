@@ -20,7 +20,7 @@ from obyvak_geom import ObyvakParams, build_layout
 MODEL_NAME = "obyvak_joint"
 EXPORT_KIND = "section"
 PARAMS = asdict(ObyvakParams())
-WINDOW = (4480.0, 3000.0, 5520.0, 3680.0)
+WINDOW = (4480.0, 2760.0, 5520.0, 3680.0)
 
 
 def build(params: ObyvakParams | None = None):
@@ -45,13 +45,13 @@ def notes(p: ObyvakParams | None = None):
     g = build_layout(p or ObyvakParams())
     zl = g.z_soffit_lid
     return [
-        (4490, 3655, "Lid widens until it meets the lowered slope"),
-        (4490, 3641, "2x GKF cut level on the lid"),
-        (4490, 3627, f"joint {g.joint_overhang:.0f} mm past the lid CD room face"),
-        (5200, 3655, "bent UD under the NaturHeld, back to both CDs"),
-        (5200, 3641, "screws through the boards into the CDs"),
-        (5200, 3627, "Jutafol over the CD and along the lid"),
-        (5200, 3148, "brake taped to the cabinet plaster"),
+        (4500, 2920, "Lid widens until it meets the lowered slope"),
+        (4500, 2902, "2x GKF cut level on the lid"),
+        (4500, 2884, f"joint {g.joint_overhang:.0f} mm past the lid CD room face"),
+        (4500, 2866, "bent UD under the NaturHeld, back to both CDs"),
+        (4680, 2920, "screws through the boards into the CDs"),
+        (4680, 2902, "Jutafol over the CD and along the lid"),
+        (4680, 2884, "brake taped to the cabinet plaster"),
     ]
 
 

@@ -37,11 +37,11 @@ def build(params: ObyvakParams | None = None):
 
 def notes(p: ObyvakParams | None = None):
     return [
-        (-210, 3495, "Left eave: GKF fixed to a UD on the wall"),
-        (-210, 3481, "wool above the brake fills up to the plate"),
-        (250, 3495, "1x GKF 12.5 ends in the UD"),
-        (250, 3481, "NaturHeld 100 to the wall, acrylic in the corner"),
-        (250, 3467, "Jutafol taped to the plaster"),
+        (140, 3090, "Left eave: GKF fixed to a UD on the wall"),
+        (140, 3072, "1x GKF 12.5 ends in the UD"),
+        (140, 3054, "NaturHeld 100 to the wall, acrylic in the corner"),
+        (140, 3036, "Jutafol taped to the plaster"),
+        (140, 3018, "wool above the brake fills up to the plate"),
     ]
 
 
