@@ -1,6 +1,6 @@
 # Asymmetric slopes
 
-> **Status (Oct 30, 2026):** archived study from draft PR #69. The 60/100 column is the chosen build-up and is now on `main` (#68, #70): NaturHeld 60 mm on the window slope, 100 mm on the cabinet slope, 2× GKF on the cabinet (road) slope. Since then the soffit underside is plain GKB 12.5 and only the side face is NaturHeld 40 mm. The wave tables below were not re-run for that soffit change or the second GKF layer, which sits behind the rigid-backed slope stack and is not heard in this model. The behind-gypsum wool is now 160 + 80 mm Unifit 033 (left) and 160 + 320 mm NatuRoll 039 (right). The room does not hear it here either.
+> **Status:** archived acoustic run. Current slopes are NaturHeld 140 at 100 mm on both sides, with GKF and StoSilent Top Basic / Top Finish. The wool everywhere is mineral wool λ 0.039. The tables below were not recomputed for that.
 
 Left is the window slope, from the eave up to the false ridge. Right is the cabinet slope, from the ridge down to the soffit. The subwoofer sits against that cabinet wall, at the TV gable. In the cross-section the window slope is on the left and the cabinet slope on the right.
 
