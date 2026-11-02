@@ -65,14 +65,7 @@ NH_KG_M3 = 140.0
 # Knauf EPD declared densities. The below-rafter wool sits on the foil, so the CD carries it.
 UNIFIT_033_KG_M3 = 25.2
 NATUROLL_039_KG_M3 = 12.4
-# Isover Domo Plus, λ 0.038, 13 kg/m³. One product for every slope wool layer.
-DOMO_KG_M3 = 13.0
-DOMO_160_KC_M2 = 171.59
-URL_DOMO_160 = (
-    "https://www.stavago.cz/izolace-tepelna-isover-domo-plus-160-mm-role---6-72-m-bal/"
-)
-# Pack area from the Isover technical sheet, m² per roll.
-DOMO_PACK_M2 = {100: 10.08, 120: 8.88, 140: 7.68, 160: 6.72, 180: 6.00, 200: 5.34, 220: 4.68}
+# Slope wool is the same λ 0.039 mineral wool as the soffit and the gables.
 # Knauf D11: 2nd-layer screws ≤ 170 mm along the CD on a 1250 mm board.
 OUTER_SCREW_PITCH_MM = 170.0
 STOSILENT_PAIL_KG = 18.0
@@ -246,11 +239,11 @@ def _slope_buildup_kg_m2(p: ObyvakParams, *, right: bool) -> tuple[float, float]
         nh = (p.naturheld_right / 1000.0) * NH_KG_M3
         gkf = p.sdk_layers_right * GKF_RF_KG_M2
         # 160 + 160 + 120 mm into the ~437 mm cavity. The few mm over is loft.
-        wool = (0.160 + 0.160 + 0.120) * DOMO_KG_M3
+        wool = (0.160 + 0.160 + 0.120) * NATUROLL_039_KG_M3
     else:
         nh = (p.naturheld_left / 1000.0) * NH_KG_M3
         gkf = GKF_RF_KG_M2
-        wool = (p.wool_below_left / 1000.0) * DOMO_KG_M3
+        wool = (p.wool_below_left / 1000.0) * NATUROLL_039_KG_M3
     cd = CD_KG_PER_M * (1000.0 / p.cd_spacing)
     bare = render + nh + gkf + cd
     return bare, bare + wool
@@ -467,15 +460,16 @@ PRICE = {
 }
 
 
-def _domo_kc_m2(mm: float) -> float:
-    """160 mm shelf price scaled by thickness. Pack sizes differ; this is Kč/m²."""
-    return round(DOMO_160_KC_M2 * (mm / 160.0), 2)
+def _wool039_kc_m2(mm: float) -> float:
+    """160 mm NatuRoll Pro 039 shelf price scaled by thickness. Kč/m² s DPH."""
+    return round(NATUROLL039_160_KC_M2 * (mm / 160.0), 2)
 
 
-def _domo_src(mm: float) -> str:
+def _wool039_src(mm: float) -> str:
     return (
-        f"Stavago Isover Domo Plus 160 mm, {DOMO_160_KC_M2:.2f} Kč/m² s DPH, "
-        f"přepočet {mm:.0f}/160 → {_domo_kc_m2(mm):.2f} Kč/m² · {URL_DOMO_160}"
+        f"NonstopStavebniny Knauf NatuRoll Pro 039, 160 mm, "
+        f"{NATUROLL039_160_KC_M2:.2f} Kč/m² s DPH, "
+        f"přepočet {mm:.0f}/160 → {_wool039_kc_m2(mm):.2f} Kč/m² · {URL_NATUROLL039_160}"
     )
 
 
@@ -684,14 +678,14 @@ def build_lines(q) -> dict[str, list[Line]]:
         Line(
             9,
             "Minerální vata 160 mm",
-            "Skelná vata, λ 0,038",
-            _product("Isover Domo Plus 038, 160 mm", URL_DOMO_160),
-            f"160 mm · role {DOMO_PACK_M2[160]:.2f} m²",
+            "Minerální vata, λ 0,039",
+            _product("Knauf NatuRoll Pro 039, 160 mm", URL_NATUROLL039_160),
+            "160 mm",
             domo160_m2,
             "m²",
             WOOL_WASTE_PCT,
-            _domo_kc_m2(160),
-            _domo_src(160),
+            _wool039_kc_m2(160),
+            _wool039_src(160),
             f"Mezi krokvemi obě šikminy ({between_m2:.2f} m², čistá plocha polí). "
             f"Pod krokvemi: jedna vrstva na okenní šikmině ({half_s:.2f} m², dutina {g.wool_left:.0f} mm) "
             f"a dvě vrstvy na šikmině u skříní ({2 * half_s:.2f} m²). "
@@ -700,14 +694,14 @@ def build_lines(q) -> dict[str, list[Line]]:
         Line(
             "9b",
             "Minerální vata 120 mm",
-            "Skelná vata, λ 0,038",
-            _product("Isover Domo Plus 038, 120 mm", URL_DOMO_160),
-            f"120 mm · role {DOMO_PACK_M2[120]:.2f} m²",
+            "Minerální vata, λ 0,039",
+            _product("Knauf NatuRoll Pro 039, 120 mm", URL_NATUROLL039_160),
+            "120 mm",
             half_s,
             "m²",
             WOOL_WASTE_PCT,
-            _domo_kc_m2(120),
-            _domo_src(120),
+            _wool039_kc_m2(120),
+            _wool039_src(120),
             f"Třetí vrstva jen pod šikminou u skříní. Skladba 160+160+120 mm do dutiny {g.wool_right:.0f} mm.",
         ),
     ]
@@ -1186,28 +1180,28 @@ def build_lines(q) -> dict[str, list[Line]]:
         Line(
             12,
             "Minerální vata 160 mm, šikminy",
-            "Skelná vata, λ 0,038",
-            _product("Isover Domo Plus 038, 160 mm", URL_DOMO_160),
-            f"160 mm · role {DOMO_PACK_M2[160]:.2f} m²",
+            "Minerální vata, λ 0,039",
+            _product("Knauf NatuRoll Pro 039, 160 mm", URL_NATUROLL039_160),
+            "160 mm",
             domo160_m2,
             "m²",
             WOOL_WASTE_PCT,
-            _domo_kc_m2(160),
-            _domo_src(160),
+            _wool039_kc_m2(160),
+            _wool039_src(160),
             f"Mezi krokvemi obě šikminy a pod nimi: jedna vrstva u oken, dvě vrstvy u skříní. "
             f"Celkem {domo160_m2:.2f} m².",
         ),
         Line(
             "12b",
             "Minerální vata 120 mm, šikmina u skříní",
-            "Skelná vata, λ 0,038",
-            _product("Isover Domo Plus 038, 120 mm", URL_DOMO_160),
+            "Minerální vata, λ 0,039",
+            _product("Knauf NatuRoll Pro 039, 120 mm", URL_NATUROLL039_160),
             "120 mm",
             half_s,
             "m²",
             WOOL_WASTE_PCT,
-            _domo_kc_m2(120),
-            _domo_src(120),
+            _wool039_kc_m2(120),
+            _wool039_src(120),
             f"Třetí vrstva pod šikminou u skříní. Skladba 160+160+120 mm do dutiny {g.wool_right:.0f} mm.",
         ),
         Line(

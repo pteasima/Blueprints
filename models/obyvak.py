@@ -15,10 +15,11 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
   two on the kitchen gable at Y=L), and terrace glazing on the X=0 eave
   (opposite cabinets).
 - Floor slab is the clear room only; perimeter walls own the strip below z=0.
-- Šikminy: NaturHeld 140 (80) screwed through GKF into CD ⊥ krokvím
+- Šikminy: NaturHeld 140, 100 mm, screwed through GKF into CD ⊥ krokvím
   → Jutafol N AL 170 Speciál on the attic face of the CD → přímý závěs 200 on the
-  window slope, Nonius on the cabinet slope → Knauf Unifit 035 (140 mm below +
-  160 mm between rafters; right slope: full gap ≈429 mm) → krokve 100/160 @ 875 + straps.
+  window slope, Nonius on the cabinet slope → minerální vata λ 0,039 (160 mm below
+  the window slope and between the rafters; the cabinet slope fills its deeper
+  cavity with 160+160+120 mm) → krokve 100/160 @ 875 + straps.
   No slope latě and no Flex. `rafters` = roof timber. Six ø14 ties run from
   wall plate to wall plate in every other rafter bay (270 mm off the nearer
   rafter face). They sit in the top of the plate so they clear the Ø160 ducts.
@@ -1057,7 +1058,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         roofing_cutters,
         LABEL_ROOFING,
     )
-    # Domo Plus 038: the void above the CD pack, plus the 160 mm bays between
+    # Minerální vata λ 0,039: the void above the CD pack, plus the 160 mm bays between
     # krokve. Same part. The vent channel above the rafter top stays empty.
     # Notch the soffit rods while this solid is still one prism. Cutting them
     # out after the bay fuse inverts the shell.
@@ -2341,9 +2342,9 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     sec_notes = [
         (
             on_face(x_wool, y_note, t_wool),
-            f"Vata mezi krokvemi: Isover Domo Plus 038, {raf_t} mm\n"
+            f"Minerální vata λ 0,039, {raf_t} mm mezi krokvemi\n"
             f"Pod krokvemi u oken {wool_l} mm; u skříní 160+160+120 mm",
-            f"Vata mezi krokvemi: Isover Domo Plus 038, {raf_t} mm\n"
+            f"Minerální vata λ 0,039, {raf_t} mm mezi krokvemi\n"
             f"Pod krokvemi u oken {wool_l} mm; u skříní 160+160+120 mm",
         ),
         (
