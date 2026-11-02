@@ -37,9 +37,13 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
   Columns are drawn as masonry.
 - Rafters seat on the wall plate (centred on the věnec); EPS is cut around rafters,
   not the other way around. Overhang past EPS is gutter-sized only.
-- Bass traps (štít): kitchen 190 at Y=L / living 450 at Y=0, interior CD/UW cabinets under
-  continuous šikminy (pack runs wall-to-wall). Short rear třmeny to the gable;
-  top soft-joints to the NH face — no hangers through the slope pack.
+- Bass traps (štít): kitchen 190 at Y=L / living 450 at Y=0. Each is a
+  standalone CW wall on the gable only — not hung from the slopes or the
+  soffit. UW at 2450 and a sloped UW screwed to the gable wall, sealing tape
+  under the tracks, CW studs vertical @ 625, CW/UA offcuts back to the wall.
+  The lining stops at the soffit face (cabinet line) as well as under the
+  slopes. GKB 12.5 meets each of those finishes with a flexible acrylic bead
+  and nothing else.
 
     python -m blueprints.export obyvak
 
@@ -48,6 +52,7 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
 
 from __future__ import annotations
 
+import math
 from dataclasses import asdict
 
 from build123d import (
@@ -64,9 +69,14 @@ from build123d import (
 )
 
 from obyvak_geom import (
-    LABEL_BASS_CD,
+    LABEL_BASS_ACRYLIC,
+    LABEL_BASS_ANCHOR,
+    LABEL_BASS_ANGLE,
+    LABEL_BASS_CW,
     LABEL_BASS_GKB,
-    LABEL_BASS_HANGER,
+    LABEL_BASS_STRUT,
+    LABEL_BASS_TAPE,
+    LABEL_BASS_UW,
     LABEL_BASS_WOOL,
     LABEL_EPS,
     LABEL_FLOOR,
@@ -100,6 +110,7 @@ from obyvak_geom import (
     ObyvakParams,
     xz_face,
     xz_rect,
+    thicken_polyline,
     LABEL_EAVE_UD,
     LABEL_VB_TAPE,
     LABEL_EAVE_ACRYLIC,
@@ -445,281 +456,379 @@ def bass_cd_centres(length: float, spacing: float, profile_w: float, gap: float)
     return centres
 
 
-def _bass_trap_frame(
-    p: ObyvakParams,
-    g: ObyvakLayout,
-    gap: float,
-    *,
-    y_rear0: float,
-    y_rear1: float,
-    y_front0: float,
-    y_front1: float,
-    y_wall: float,
-    toward_room: float,
-    z_bot: float | None = None,
-    cd_spacing: float = 625.0,
-    joint_rails_mm: tuple[float, ...] = (),
-) -> list:
-    """Closed CD/UW cabinet: rear + front verticals, depth struts, bay rails.
+def bass_soffit_stop_x(p: ObyvakParams) -> float:
+    """X where the trap solids end, short of the soffit face by the acrylic bead.
 
-    ``cd_spacing`` is the stock module. The far bay is the make-up. ``joint_rails_mm``
-    are heights above the trap bottom where a horizontal CD sits under a board
-    joint, on the room-face studs (a level connector at each stud).
-
-    Gable-only hang via short wall třmeny to the rear studs — no Nonius through
-    the šikmina pack. Tops stay below the continuous ceiling (min z_ceil over
-    each part footprint) so the box sits under šikminy, not through them.
+    The soffit face is the vertical NH at the cabinet line (``x_furn``). The
+    bead occupies the gap; the frame, board and wool stay on the room side of it.
     """
-    parts: list = []
-    z0 = z_bot if z_bot is not None else p.predstena_bottom_z + gap
-    hw = p.cd_w * 0.5
-    arm_t = p.bass_trmen_arm_t
-    arm_h = p.bass_trmen_arm_h
-    d = p.cd_t
-    if toward_room > 0:
-        y_strut0, y_strut1 = y_rear1 + gap, y_front0 - gap
+    x_furn = p.room_width - p.furniture_width
+    return x_furn - p.bass_acrylic - 2.0 * FACE_GAP
+
+
+def _down_normal(x0: float, z0: float, x1: float, z1: float) -> tuple[float, float]:
+    """Unit normal of a ceiling segment, pointing downward."""
+    dx, dz = x1 - x0, z1 - z0
+    span = math.hypot(dx, dz) or 1.0
+    nx, nz = -dz / span, dx / span
+    if nz > 0.0:
+        nx, nz = -nx, -nz
+    return nx, nz
+
+
+def _band_below(
+    x0: float, z0: float, x1: float, z1: float, near: float, far: float
+) -> list[tuple[float, float]]:
+    """Quad under a segment, offset `near` then `far` along the downward normal."""
+    nx, nz = _down_normal(x0, z0, x1, z1)
+    return [
+        (x0 + nx * near, z0 + nz * near),
+        (x1 + nx * near, z1 + nz * near),
+        (x1 + nx * far, z1 + nz * far),
+        (x0 + nx * far, z0 + nz * far),
+    ]
+
+
+def _offset_open(path: list[tuple[float, float]], dist: float) -> list[tuple[float, float]]:
+    """Move an open polyline by ``dist`` along the downward bisector."""
+    if len(path) < 2:
+        return list(path)
+    normals = [_down_normal(a[0], a[1], b[0], b[1]) for a, b in zip(path, path[1:])]
+    out = []
+    for i, (x, z) in enumerate(path):
+        if i == 0:
+            nx, nz = normals[0]
+        elif i == len(path) - 1:
+            nx, nz = normals[-1]
+        else:
+            nx = normals[i - 1][0] + normals[i][0]
+            nz = normals[i - 1][1] + normals[i][1]
+            scale = math.hypot(nx, nz) or 1.0
+            nx, nz = nx / scale, nz / scale
+        out.append((x + nx * dist, z + nz * dist))
+    return out
+
+
+def _ceiling_segments(g: ObyvakLayout, x_stop: float) -> list[tuple[float, float, float, float]]:
+    """Top of the trap, left to right: window eave, false ridge, soffit stop.
+
+    The cabinet bay (past the soffit face) is not part of the trap.
+    """
+    path = [
+        (0.0, g.h_start),
+        (g.x_false, g.z_false),
+        (x_stop, g.z_ceil(x_stop)),
+    ]
+    return [
+        (a[0], a[1], b[0], b[1])
+        for a, b in zip(path, path[1:])
+        if math.hypot(b[0] - a[0], b[1] - a[1]) > 1.0
+    ]
+
+
+def _strut_centres(z0: float, z1: float, bar: float, max_step: float) -> list[float]:
+    """1/3 and 2/3 of the stud, plus a head fixing, with no gap over ``max_step``.
+
+    Short studs keep a single mid strut. The head bar is how the top of the
+    stud bears on the wall track instead of on the slope.
+    """
+    height = z1 - z0
+    margin = bar * 0.5 + 2.0
+    if height < bar + 20.0:
+        return []
+    lo, hi = z0 + margin, z1 - margin
+    if hi <= lo:
+        return []
+    if height <= max_step:
+        raw = [0.5 * (z0 + z1)]
     else:
-        y_strut0, y_strut1 = y_front1 + gap, y_rear0 - gap
-    strut_dy = y_strut1 - y_strut0
-    if strut_dy <= gap:
-        return parts
-
-    stations = bass_cd_centres(p.room_width, cd_spacing, p.cd_w, gap)
-    stations = [xc for xc in stations if gap <= xc - hw and xc + hw <= p.room_width - gap]
-    if not stations:
-        return parts
-
-    def _z_under_ceil(*xs: float) -> float:
-        """Flat top clear of the sloping acoustic face over the given X samples."""
-        return min(g.z_ceil(x) for x in xs) - gap
-
-    def _x_clear(xa: float, xb: float, z_need: float) -> tuple[float, float] | None:
-        """Longest run inside [xa, xb] where the ceiling is above ``z_need``."""
-        step = 10.0
-        run: list[float] = []
-        best: tuple[float, float] | None = None
-        x = xa
-        while x <= xb + 1e-6:
-            if g.z_ceil(min(x, xb)) >= z_need:
-                run.append(min(x, xb))
-            elif len(run) >= 2:
-                if best is None or run[-1] - run[0] > best[1] - best[0]:
-                    best = (run[0], run[-1])
-                run = []
-            else:
-                run = []
-            x += step
-        if len(run) >= 2 and (best is None or run[-1] - run[0] > best[1] - best[0]):
-            best = (run[0], run[-1])
-        return best
-
-    # Bay rails along X (between verticals) on rear and front planes.
-    for i in range(len(stations) - 1):
-        xa = stations[i] + hw + gap
-        xb = stations[i + 1] - hw - gap
-        if xb - xa <= gap:
+        raw = [z0 + height / 3.0, z0 + 2.0 * height / 3.0, hi]
+        # Extra bars if a third of a tall stud would still exceed the step.
+        guard = 0
+        while guard < 6:
+            guard += 1
+            pts = [z0, *sorted(raw), z1]
+            widest = max(range(len(pts) - 1), key=lambda i: pts[i + 1] - pts[i])
+            gap = pts[widest + 1] - pts[widest]
+            if gap <= max_step + 1.0:
+                break
+            raw.append(0.5 * (pts[widest] + pts[widest + 1]))
+    out: list[float] = []
+    for z in sorted(raw):
+        z = min(max(z, lo), hi)
+        if out and z - out[-1] < bar + 30.0:
             continue
-        z_top = _z_under_ceil(xa, 0.5 * (xa + xb), xb)
-        if z_top - z0 < 50.0:
-            continue
-        for ya, yb in ((y_rear0, y_rear1), (y_front0, y_front1)):
-            parts.append(_box(xa, ya, z0, xb - xa, yb - ya, d, LABEL_BASS_CD))
-            parts.append(_box(xa, ya, z_top - d, xb - xa, yb - ya, d, LABEL_BASS_CD))
-        # Board-joint rails on the room face. Where a stud reaches the joint,
-        # the rail butts it (level connector). In the peak the rail is only as
-        # long as the ceiling allows, so a high joint is not dropped with the bay.
-        for height in joint_rails_mm:
-            z_rail = p.predstena_bottom_z + height
-            z_a = z_rail - d * 0.5
-            if z_a < z0 + d + gap:
-                continue
-            if not (z_a > z_top + gap or z_a + d < z_top - d - gap):
-                continue
-            z_need = z_a + 2.0 * d + 2.0 * gap
-            span = _x_clear(xa, xb, z_need)
-            if span is None:
-                continue
-            x0, x1 = span
-            if x1 - x0 < 80.0:
-                continue
-            parts.append(_box(x0, y_front0, z_a, x1 - x0, y_front1 - y_front0, d, LABEL_BASS_CD))
+        out.append(z)
+    return out
 
-    for xc in stations:
-        x0 = xc - hw
-        x1 = xc + hw
-        z_top = _z_under_ceil(x0, xc, x1)
-        if z_top - z0 < 50.0:
-            continue
-        # Vertical studs — clear of top/bottom depth struts.
-        z_vert0 = z0 + d + gap
-        z_vert1 = z_top - d - gap
-        if z_vert1 - z_vert0 > 50.0:
-            parts.append(_box(x0, y_rear0, z_vert0, p.cd_w, y_rear1 - y_rear0, z_vert1 - z_vert0, LABEL_BASS_CD))
-            parts.append(_box(x0, y_front0, z_vert0, p.cd_w, y_front1 - y_front0, z_vert1 - z_vert0, LABEL_BASS_CD))
-        # Depth struts in the air gap only (skříň diaphragm).
-        z_levels = [z0, z_top - d]
-        z = z0 + p.bass_hanger_z_inset
-        while z < z_top - d - 80.0:
-            z_levels.append(max(z0, z - d * 0.5))
-            z += p.bass_hanger_z_step
-        seen: set[float] = set()
-        for z_s in z_levels:
-            key = round(z_s, 1)
-            if key in seen:
-                continue
-            seen.add(key)
-            if z_s < z0 - 0.1 or z_s + d > z_top + 0.1:
-                continue
-            parts.append(_box(x0, y_strut0, z_s, p.cd_w, strut_dy, d, LABEL_BASS_CD))
-        # Short třmen arms: wall → rear CD only.
-        z = z0 + p.bass_hanger_z_inset
-        while z < z_top - 80.0:
-            if toward_room > 0:
-                ya, yb = y_wall, y_rear0
-            else:
-                ya, yb = y_rear1, y_wall
-            if abs(yb - ya) > gap:
-                parts.append(
-                    _box(xc - arm_t * 0.5, ya, z - arm_h * 0.5, arm_t, yb - ya, arm_h, LABEL_BASS_HANGER)
-                )
-            z += p.bass_hanger_z_step
-    return parts
+
+def _clip_span(
+    x0: float, z0: float, x1: float, z1: float, lo: float, hi: float
+) -> tuple[float, float, float, float] | None:
+    """Keep the portion of a segment inside ``lo <= x <= hi``."""
+    dx, dz = x1 - x0, z1 - z0
+    if abs(dx) < 1e-6:
+        return (x0, z0, x1, z1) if lo <= x0 <= hi else None
+    t_lo = (lo - x0) / dx
+    t_hi = (hi - x0) / dx
+    a, b = (t_lo, t_hi) if t_lo <= t_hi else (t_hi, t_lo)
+    t0, t1 = max(0.0, a), min(1.0, b)
+    if t1 - t0 < 0.02:
+        return None
+    return (x0 + dx * t0, z0 + dz * t0, x0 + dx * t1, z0 + dz * t1)
 
 
 def _bass_trap_parts(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
-    """Bass traps at both gables — interior boxes under continuous šikminy.
+    """Standalone CW linings on the two gable walls.
 
-    Šikminy run full length to the gable; these assemblies sit in the room
-    against the štít from Z=2450 up to a soft joint under the NH face.
-    Frame is a closed CD/UW cabinet (rear + front + depth struts + rails).
+    Nothing here is fixed to the slopes or to the soffit. The bottom UW sits
+    at 2450 on the base, with sealing tape under it. The top UW follows the
+    slope and is screwed to the gable wall (tape between track and wall).
+    Vertical CW studs at 625 mm carry the GKB. CW/UA offcuts tie the studs
+    back to the wall. The lining stops at the soffit face. A flexible acrylic
+    bead is the only meeting with the slope finish and with that face.
     """
-    outline = _predstena_outline(p, g, gap)
+    # Perpendicular-ish clearance under the new ceiling so the bead and the
+    # 1 mm mate gap both fit. 14 mm vertical is about 11 mm perpendicular at 40°.
+    head_drop = 14.0
+    x_stop = bass_soffit_stop_x(p)
+    outline = [
+        (gap, p.predstena_bottom_z + gap),
+        (x_stop, p.predstena_bottom_z + gap),
+        (x_stop, g.z_ceil(x_stop) - head_drop),
+        (g.x_false, g.z_false - head_drop),
+        (gap, g.h_start - head_drop),
+    ]
     face = xz_face(outline, "predstena")
     parts: list = []
-    bot_t = min(p.bass_bottom_sdk_t, p.bass_k_gkb) - gap * 0.5
-    z_frame = p.predstena_bottom_z + gap + (bot_t + gap if bot_t > gap else 0.0)
+    steel: list = []
 
-    # Living is the one-door gable at Y=0 (deep 450). Kitchen is the two-door
-    # gable at Y=L (shallow 190: wool 130.5, air 47 = CD 27 + 20 mm clear).
-    # Stack from the wall toward the room is wool, then the air gap, then GKB.
-    # Door openings stay on the walls they already occupy.
+    def add_end(side: str) -> None:
+        cw = p.bass_k_cw if side == "kitchen" else p.bass_l_cw
+        wool = p.bass_k_wool if side == "kitchen" else p.bass_l_wool
+        gkb = p.bass_k_gkb if side == "kitchen" else p.bass_l_gkb
+        depth = p.predstena_kitchen if side == "kitchen" else p.predstena_living
+        toward = -1.0 if side == "kitchen" else 1.0
+        y_wall = p.room_length if side == "kitchen" else 0.0
+        y_room = y_wall + toward * depth
+        # Wool against the wall. GKB on the room face. CW against the GKB,
+        # so a stud deeper than the air notches the wool and nowhere else.
+        if toward > 0:
+            y_wool0, y_wool1 = gap, wool - gap
+            y_gkb0 = y_room - gkb + gap
+            y_gkb1 = y_room - gap
+            y_stud1 = y_gkb0 - gap
+            y_stud0 = y_stud1 - cw
+            y_track0, y_track1 = gap + p.bass_tape_t, gap + p.bass_tape_t + p.bass_uw_flange
+        else:
+            y_wool0, y_wool1 = y_wall - wool + gap, y_wall - gap
+            y_gkb0 = y_room + gap
+            y_gkb1 = y_room + gkb - gap
+            y_stud0 = y_gkb1 + gap
+            y_stud1 = y_stud0 + cw
+            y_track1 = y_wall - gap - p.bass_tape_t
+            y_track0 = y_track1 - p.bass_uw_flange
+        if y_wool1 > y_wool0:
+            parts.append(_extrude_y(face, y_wool0, y_wool1, LABEL_BASS_WOOL))
+        if y_gkb1 > y_gkb0:
+            parts.append(_extrude_y(face, y_gkb0, y_gkb1, LABEL_BASS_GKB))
 
-    # --- Living Y=0: zeď → MW 300 → air 137.5 → CD → GKB 12.5 ---
-    y_l0 = gap
-    y_l_wool1 = p.bass_l_wool - gap
-    y_l_gkb0 = p.predstena_living - p.bass_l_gkb + gap
-    y_l_gkb1 = p.predstena_living - gap
-    y_l_rear1 = p.bass_l_rear_reach - gap
-    y_l_rear0 = y_l_rear1 - p.cd_t
-    y_l_front1 = y_l_gkb0 - gap
-    y_l_front0 = y_l_front1 - p.cd_t
-    l_wool = None
-    if y_l_wool1 > y_l0:
-        l_wool = _extrude_y(face, y_l0, y_l_wool1, LABEL_BASS_WOOL)
-    if y_l_gkb1 > y_l_gkb0:
-        parts.append(_extrude_y(face, y_l_gkb0, y_l_gkb1, LABEL_BASS_GKB))
-    if bot_t > gap and y_l_gkb0 > y_l0 + gap:
-        parts.append(
+        z_tape0 = p.predstena_bottom_z + gap
+        z_uw0 = z_tape0 + p.bass_tape_t
+        z_uw1 = z_uw0 + p.bass_uw_flange
+        z_stud0 = z_uw1 + gap
+        # Bottom track on the stud line, tape under the web, up to the soffit stop.
+        track_w = x_stop - gap
+        steel.append(
+            _box(gap, y_stud0, z_tape0, track_w, y_stud1 - y_stud0, p.bass_tape_t, LABEL_BASS_TAPE)
+        )
+        steel.append(
             _box(
                 gap,
-                y_l0,
-                p.predstena_bottom_z + gap,
-                p.room_width - 2 * gap,
-                y_l_gkb0 - y_l0 - gap,
-                bot_t,
-                LABEL_BASS_GKB,
+                y_stud0,
+                z_uw0,
+                track_w,
+                y_stud1 - y_stud0,
+                p.bass_uw_flange,
+                LABEL_BASS_UW,
             )
         )
-    l_frame = _bass_trap_frame(
-        p,
-        g,
-        gap,
-        y_rear0=y_l_rear0,
-        y_rear1=y_l_rear1,
-        y_front0=y_l_front0,
-        y_front1=y_l_front1,
-        y_wall=y_l0,
-        toward_room=1.0,
-        z_bot=z_frame,
-        cd_spacing=1000.0,
-        joint_rails_mm=(1250.0, 2500.0),
-    )
-    if l_wool is not None:
-        tools = [s for s in l_frame if s.bounding_box().min.Y < y_l_wool1]
-        if bot_t > gap:
-            tools.append(
-                _box(
-                    gap,
-                    y_l0,
-                    p.predstena_bottom_z + gap,
-                    p.room_width - 2 * gap,
-                    y_l_wool1 - y_l0,
-                    bot_t + gap,
-                    "_bass_bot",
+        # Separate segments, not a mitre: a mitred bead crosses the GKB, and
+        # neighbouring tracks overlap at the ridge. Each piece stays under its face.
+        # Ridge ends are shortened so the two tracks do not meet; the free ends
+        # only leave the eave bead and the soffit bead.
+        if toward > 0:
+            ty0, ty1 = gap, gap + p.bass_tape_t
+        else:
+            ty1 = y_wall - gap
+            ty0 = ty1 - p.bass_tape_t
+        segments = _ceiling_segments(g, x_stop)
+        for i, (x0, z0, x1, z1) in enumerate(segments):
+            dx, dz = x1 - x0, z1 - z0
+            span = math.hypot(dx, dz) or 1.0
+            trim0 = 80.0 if i > 0 else 20.0
+            trim1 = 80.0 if i < len(segments) - 1 else 12.0
+            x0 += dx * trim0 / span
+            z0 += dz * trim0 / span
+            x1 -= dx * trim1 / span
+            z1 -= dz * trim1 / span
+            clipped = _clip_span(x0, z0, x1, z1, 10.0, x_stop)
+            if clipped is None:
+                continue
+            x0, z0, x1, z1 = clipped
+            steel.append(
+                _extrude_y(
+                    xz_face(_band_below(x0, z0, x1, z1, 12.0, 12.0 + p.bass_uw_flange), LABEL_BASS_UW),
+                    y_track0,
+                    y_track1,
+                    LABEL_BASS_UW,
                 )
             )
-        parts.append(_cut_away(l_wool, tools, LABEL_BASS_WOOL) if tools else l_wool)
-    parts.extend(l_frame)
-
-    # --- Kitchen Y=L: GKB 12.5 → air 47 → MW 130.5 → zeď ---
-    y_k1 = p.room_length - gap
-    y_k_gkb0 = g.y_pred_r + gap
-    y_k_gkb1 = g.y_pred_r + p.bass_k_gkb - gap
-    y_k_wool0 = p.room_length - p.bass_k_wool + gap
-    y_k_wool1 = y_k1
-    y_k_rear0 = p.room_length - p.bass_k_rear_reach + gap
-    y_k_rear1 = y_k_rear0 + p.cd_t
-    y_k_front0 = y_k_gkb1 + gap
-    y_k_front1 = y_k_front0 + p.cd_t
-    if y_k_gkb1 > y_k_gkb0:
-        parts.append(_extrude_y(face, y_k_gkb0, y_k_gkb1, LABEL_BASS_GKB))
-    k_wool = None
-    if y_k_wool1 > y_k_wool0:
-        k_wool = _extrude_y(face, y_k_wool0, y_k_wool1, LABEL_BASS_WOOL)
-    if bot_t > gap and y_k1 > y_k_gkb1 + gap:
-        parts.append(
-            _box(
-                gap,
-                y_k_gkb1 + gap,
-                p.predstena_bottom_z + gap,
-                p.room_width - 2 * gap,
-                y_k1 - (y_k_gkb1 + gap),
-                bot_t,
-                LABEL_BASS_GKB,
-            )
-        )
-    k_frame = _bass_trap_frame(
-        p,
-        g,
-        gap,
-        y_rear0=y_k_rear0,
-        y_rear1=y_k_rear1,
-        y_front0=y_k_front0,
-        y_front1=y_k_front1,
-        y_wall=y_k1,
-        toward_room=-1.0,
-        z_bot=z_frame,
-        cd_spacing=625.0,
-        joint_rails_mm=(2000.0,),
-    )
-    if k_wool is not None:
-        tools = [s for s in k_frame if s.bounding_box().max.Y > y_k_wool0]
-        if bot_t > gap:
-            tools.append(
-                _box(
-                    gap,
-                    y_k_wool0,
-                    p.predstena_bottom_z + gap,
-                    p.room_width - 2 * gap,
-                    y_k_wool1 - y_k_wool0,
-                    bot_t + gap,
-                    "_bass_bot",
+            steel.append(
+                _extrude_y(
+                    xz_face(_band_below(x0, z0, x1, z1, 8.0, 8.0 + p.bass_tape_t), LABEL_BASS_TAPE),
+                    ty0,
+                    ty1,
+                    LABEL_BASS_TAPE,
                 )
             )
-        parts.append(_cut_away(k_wool, tools, LABEL_BASS_WOOL) if tools else k_wool)
-    parts.extend(k_frame)
+            parts.append(
+                _extrude_y(
+                    xz_face(_band_below(x0, z0, x1, z1, 3.0, 3.0 + p.bass_acrylic), LABEL_BASS_ACRYLIC),
+                    y_gkb0,
+                    y_gkb1,
+                    LABEL_BASS_ACRYLIC,
+                )
+            )
+        # Vertical bead in the gap to the soffit face. Not fixed to the box.
+        x_bead0 = x_stop + gap
+        z_bead0 = g.z_nabeh_bot + gap
+        z_bead1 = min(g.z_ceil(x_bead0), g.z_ceil(x_bead0 + p.bass_acrylic)) - p.bass_acrylic
+        if z_bead1 - z_bead0 > 40.0:
+            parts.append(
+                _box(
+                    x_bead0,
+                    y_gkb0,
+                    z_bead0,
+                    p.bass_acrylic,
+                    y_gkb1 - y_gkb0,
+                    z_bead1 - z_bead0,
+                    LABEL_BASS_ACRYLIC,
+                )
+            )
 
-    return parts
+        stations = bass_cd_centres(x_stop, p.bass_stud_spacing, p.bass_cw_w, gap)
+        half = p.bass_cw_w * 0.5
+        for xc in stations:
+            x0 = xc - half
+            z_top = min(g.z_ceil(x) for x in (x0, xc, x0 + p.bass_cw_w)) - head_drop
+            if z_top - z_stud0 < 80.0:
+                continue
+            steel.append(_box(x0, y_stud0, z_stud0, p.bass_cw_w, y_stud1 - y_stud0, z_top - z_stud0, LABEL_BASS_CW))
+            # The track flange is only at the floor and the ceiling. Mid-height
+            # struts have to reach the wall themselves: clearance is the sealing
+            # tape and the mate gap, then a bent angle, then the offcut.
+            tab_t = 2.0
+            tab_return = 20.0
+            tab_lip = 15.0
+            anchor_embed = 60.0
+            y_steel = (gap + p.bass_tape_t) if toward > 0 else (y_wall - gap - p.bass_tape_t)
+            y_stud_near = (y_stud0 - gap) if toward > 0 else (y_stud1 + gap)
+            if toward > 0:
+                y_bar0 = y_steel + tab_t + tab_return + gap
+                y_bar1 = y_stud_near
+                plaster_face = -gap
+                mason_face = -p.wall_plaster - gap
+                y_shank0, y_shank1 = mason_face - anchor_embed, plaster_face + 0.4
+            else:
+                y_bar0 = y_stud_near
+                y_bar1 = y_steel - tab_t - tab_return - gap
+                plaster_face = y_wall + gap
+                mason_face = y_wall + p.wall_plaster + gap
+                y_shank0, y_shank1 = plaster_face - 0.4, mason_face + anchor_embed
+            if y_bar1 - y_bar0 < 20.0:
+                continue
+            uw_here = [s for s in steel if s.label == LABEL_BASS_UW]
+            for zc in _strut_centres(z_stud0, z_top, p.bass_strut_h, p.bass_strut_max_step):
+                bar = _box(
+                    x0,
+                    y_bar0,
+                    zc - p.bass_strut_h * 0.5,
+                    p.bass_cw_w,
+                    y_bar1 - y_bar0,
+                    p.bass_strut_h,
+                    LABEL_BASS_STRUT,
+                )
+                hits = [u for u in uw_here if _aabb_hit(bar, u)]
+                if hits:
+                    bar = _cut_away(bar, hits, LABEL_BASS_STRUT)
+                if float(bar.volume) < 100.0:
+                    continue
+                steel.append(bar)
+                bb = bar.bounding_box()
+                reaches = (bb.min.Y < y_bar0 + 2.0) if toward > 0 else (bb.max.Y > y_bar1 - 2.0)
+                if not reaches:
+                    continue
+                z_tab0 = zc - p.bass_strut_h * 0.5 - tab_lip
+                z_tab = p.bass_strut_h + 2.0 * tab_lip
+                if toward > 0:
+                    wall_leg = _box(x0, y_steel, z_tab0, p.bass_cw_w, tab_t, z_tab, LABEL_BASS_ANGLE)
+                    ret_leg = _box(
+                        x0,
+                        y_steel + tab_t,
+                        zc - p.bass_strut_h * 0.5,
+                        p.bass_cw_w,
+                        tab_return,
+                        p.bass_strut_h,
+                        LABEL_BASS_ANGLE,
+                    )
+                else:
+                    wall_leg = _box(x0, y_steel - tab_t, z_tab0, p.bass_cw_w, tab_t, z_tab, LABEL_BASS_ANGLE)
+                    ret_leg = _box(
+                        x0,
+                        y_steel - tab_t - tab_return,
+                        zc - p.bass_strut_h * 0.5,
+                        p.bass_cw_w,
+                        tab_return,
+                        p.bass_strut_h,
+                        LABEL_BASS_ANGLE,
+                    )
+                angle = _paint(wall_leg.fuse(ret_leg), LABEL_BASS_ANGLE)
+                hits = [u for u in uw_here if _aabb_hit(angle, u)]
+                if hits:
+                    angle = _cut_away(angle, hits, LABEL_BASS_ANGLE)
+                if float(angle.volume) < 40.0:
+                    continue
+                steel.append(angle)
+                steel.append(_cyl_y(xc, y_shank0, y_shank1, zc, 4.0, LABEL_BASS_ANCHOR))
+        # Vertical board joints: 1250 mm sheets span two 625 mm bays and land on a stud.
+        # The soffit end is the acrylic bead, not a taped joint.
+        for xj in range(int(p.bass_board_w), int(x_stop), int(p.bass_board_w)):
+            if xj + 25.0 > x_stop - gap:
+                continue
+            z_top = min(g.z_ceil(x) for x in (xj - 25.0, float(xj), xj + 25.0)) - head_drop
+            if z_top - z_uw1 < 40.0:
+                continue
+            if toward > 0:
+                jt0, jt1 = y_gkb1 + gap, y_gkb1 + gap + 1.0
+            else:
+                jt1 = y_gkb0 - gap
+                jt0 = jt1 - 1.0
+            parts.append(
+                _box(xj - 25.0, jt0, z_uw1, 50.0, jt1 - jt0, z_top - z_uw1, LABEL_BASS_TAPE)
+            )
+
+    add_end("living")
+    add_end("kitchen")
+
+    # Wool is friction-fit around the steel, never inside a profile.
+    wool_parts = [part for part in parts if part.label == LABEL_BASS_WOOL]
+    kept = [part for part in parts if part.label != LABEL_BASS_WOOL]
+    for wool in wool_parts:
+        tools = [tool for tool in steel if _aabb_hit(wool, tool)]
+        kept.append(_cut_away(wool, tools, LABEL_BASS_WOOL) if tools else wool)
+    kept.extend(steel)
+    return kept
 
 
 def _glass_panes(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
@@ -1537,7 +1646,11 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
 
     # Where a bass trap stands against the left wall, the brake's tape and the
     # acrylic bead stop at the trap (sealed to its board instead).
-    bass = [x for x in parts if x.label in {LABEL_BASS_CD, LABEL_BASS_GKB, LABEL_BASS_WOOL}]
+    bass = [
+        x
+        for x in parts
+        if x.label in {LABEL_BASS_CW, LABEL_BASS_UW, LABEL_BASS_STRUT, LABEL_BASS_GKB, LABEL_BASS_WOOL}
+    ]
     eave_seal = {LABEL_VB_TAPE, LABEL_EAVE_ACRYLIC}
     parts = [
         _cut_away(x, [b for b in bass if _aabb_hit(x, b)], x.label) if x.label in eave_seal else x
@@ -1719,6 +1832,7 @@ def _callout(
     cs: str,
     offset: tuple[float, float],
     tips: list[tuple[float, float, float]] | None = None,
+    size: float | None = None,
 ) -> dict:
     item: dict = {
         "kind": "callout",
@@ -1728,6 +1842,8 @@ def _callout(
     }
     if tips:
         item["tips"] = [[round(v, 1) for v in tip] for tip in tips]
+    if size:
+        item["size"] = size
     return item
 
 
@@ -2161,6 +2277,591 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     return [lattice, section]
 
 
+def _unit(v: tuple[float, float, float]) -> tuple[float, float, float]:
+    n = math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) or 1.0
+    return (v[0] / n, v[1] / n, v[2] / n)
+
+
+def _cross(
+    a: tuple[float, float, float], b: tuple[float, float, float]
+) -> tuple[float, float, float]:
+    return (
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    )
+
+
+def _look_between(
+    eye_cad: tuple[float, float, float], aim_cad: tuple[float, float, float]
+) -> tuple[float, float, float]:
+    """glTF look direction from a CAD eye toward a CAD aim."""
+    from blueprints.scenes import cad_mm_to_gltf_m
+
+    eye = cad_mm_to_gltf_m(eye_cad)
+    aim = cad_mm_to_gltf_m(aim_cad)
+    return _unit((aim[0] - eye[0], aim[1] - eye[1], aim[2] - eye[2]))
+
+
+def _box_corners(
+    x0: float, x1: float, y0: float, y1: float, z0: float, z1: float
+) -> list[tuple[float, float, float]]:
+    return [(x, y, z) for x in (x0, x1) for y in (y0, y1) for z in (z0, z1)]
+
+
+def _frame_ortho(
+    look: tuple[float, float, float],
+    corners: list[tuple[float, float, float]],
+    *,
+    pad: float = 1.14,
+    dist_scale: float = 2.4,
+) -> dict:
+    """Orthographic camera that fits ``corners``, Z up, look held fixed.
+
+    The camera sits ``dist_scale`` frustum-halves back along ``look`` so a
+    3/4 view stays near the trap instead of leaping past the other gable.
+    """
+    from blueprints.scenes import cad_mm_to_gltf_m
+
+    look_n = _unit(look)
+    world_up = (0.0, 1.0, 0.0)
+    right = _unit(_cross(look_n, world_up))
+    screen_up = _unit(_cross(tuple(-c for c in look_n), right))
+    projected: list[tuple[float, float, float]] = []
+    for corner in corners:
+        g = cad_mm_to_gltf_m(corner)
+        projected.append(
+            (
+                g[0] * right[0] + g[1] * right[1] + g[2] * right[2],
+                g[0] * screen_up[0] + g[1] * screen_up[1] + g[2] * screen_up[2],
+                g[0] * look_n[0] + g[1] * look_n[1] + g[2] * look_n[2],
+            )
+        )
+    minx, maxx = min(p[0] for p in projected), max(p[0] for p in projected)
+    miny, maxy = min(p[1] for p in projected), max(p[1] for p in projected)
+    midz = 0.5 * (min(p[2] for p in projected) + max(p[2] for p in projected))
+    cx, cy = 0.5 * (minx + maxx), 0.5 * (miny + maxy)
+    target = [
+        cx * right[0] + cy * screen_up[0] + midz * look_n[0],
+        cx * right[1] + cy * screen_up[1] + midz * look_n[1],
+        cx * right[2] + cy * screen_up[2] + midz * look_n[2],
+    ]
+    half_w = 0.5 * (maxx - minx) * pad
+    half_h = 0.5 * (maxy - miny) * pad
+    dist = max(half_w, half_h, 0.35) * dist_scale
+    return {
+        "target": target,
+        "position": [
+            target[0] - look_n[0] * dist,
+            target[1] - look_n[1] * dist,
+            target[2] - look_n[2] * dist,
+        ],
+        "up": [0.0, 1.0, 0.0],
+        "orthoFit": [half_w, half_h],
+    }
+
+
+def _cad_of_gltf(point: list[float]) -> tuple[float, float, float]:
+    """Inverse of ``cad_mm_to_gltf_m`` (metres → CAD mm)."""
+    return (point[0] / 0.001, -point[2] / 0.001, point[1] / 0.001)
+
+
+def _mm_cs(value: float) -> str:
+    return f"{value:g}".replace(".", ",")
+
+
+def _bass_stud_xs(p: ObyvakParams, spacing: float) -> list[float]:
+    return bass_cd_centres(bass_soffit_stop_x(p), spacing, p.bass_cw_w, FACE_GAP)
+
+
+# Drawing button renders an A3 landscape plate (see viewer/drawing.js).
+_PLATE_ASPECT = 2400 / 1697
+
+
+def _plate_halves(half_w: float, half_h: float) -> tuple[float, float]:
+    """Frustum the viewer actually uses: orthoFit, then letterboxed to the plate."""
+    fw, fh = float(half_w), float(half_h)
+    if fw < fh * _PLATE_ASPECT:
+        fw = fh * _PLATE_ASPECT
+    elif fh < fw / _PLATE_ASPECT:
+        fh = fw / _PLATE_ASPECT
+    return fw, fh
+
+
+def _column_callouts(
+    notes: list[tuple[tuple[float, float, float], str, str]],
+    cam: dict,
+    look: tuple[float, float, float],
+    col_x: float,
+    label_ys: list[float] | None = None,
+    size: float | None = None,
+) -> list[dict]:
+    """One vertical label column. ``label_ys`` keeps notes off the title and each other.
+
+    Offsets are in the plate's NDC, after the viewer letterboxes ``orthoFit``.
+    """
+    half_w, half_h = _plate_halves(*cam["orthoFit"])
+    items = []
+    for i, (anchor, en, cs) in enumerate(notes):
+        ndc = _lattice_ndc(anchor, cam["target"], look, (0.0, 1.0, 0.0), half_w, half_h)
+        label_y = label_ys[i] if label_ys is not None else ndc[1]
+        items.append(
+            _callout(anchor, en, cs, _ndc_offset(ndc, (col_x, label_y)), size=size)
+        )
+    return items
+
+
+def _bass_view_scenes(p: ObyvakParams) -> list[dict]:
+    """3/4 views of each trap. GKB is ghosted. A cut through an early stud
+    opens the stack and keeps the soffit end in frame, so the stop reads.
+    """
+    z0, z1 = 2100.0, 5300.0
+    # Normal +X keeps the cabinet side (Three.js clips the opposite half).
+    cut_x = _bass_stud_xs(p, p.bass_stud_spacing)[2]
+    opacity = {
+        LABEL_BASS_CW: 1,
+        LABEL_BASS_UW: 1,
+        LABEL_BASS_STRUT: 1,
+        LABEL_BASS_ANGLE: 1,
+        LABEL_BASS_ANCHOR: 1,
+        LABEL_BASS_TAPE: 1,
+        LABEL_BASS_ACRYLIC: 1,
+        LABEL_BASS_WOOL: 0.4,
+        LABEL_BASS_GKB: 0.14,
+        LABEL_PLASTER: 0.9,
+        LABEL_MASONRY: 0.4,
+        LABEL_WALL_GKF: 0.95,
+        LABEL_POCKET_FRAME: 1,
+        LABEL_SOFFIT_NH: 0.55,
+        LABEL_SOFFIT_GKB: 0.4,
+        LABEL_FURNITURE: 0.28,
+    }
+
+    def one(side: str, spacing: float, depth: float, y_wall: float, toward: float) -> dict:
+        y_room = y_wall + toward * depth
+        y_lo, y_hi = (min(y_wall, y_room) - 280.0, max(y_wall, y_room) + 80.0)
+        corners = _box_corners(cut_x - 80.0, p.room_width + 80.0, y_lo, y_hi, z0, z1)
+        # From the window side, slightly above: the cut stack, then the soffit stop.
+        x_furn = p.room_width - p.furniture_width
+        if toward > 0:
+            eye = (-700.0, depth + 2800.0, 4800.0)
+            aim = (0.62 * x_furn, depth * 0.55, 3400.0)
+        else:
+            eye = (-700.0, y_wall - 2800.0, 4800.0)
+            aim = (0.62 * x_furn, y_wall - depth * 0.55, 3400.0)
+        cam = _frame_ortho(_look_between(eye, aim), corners)
+        cam_y = _cad_of_gltf(cam["position"])[1]
+        # Drop the other gable on the far side of the camera so its cap is behind us.
+        if toward > 0:
+            far = _cut((0.0, 0.0, 1.0), (p.room_width * 0.5, cam_y + 1200.0, 3000.0))
+        else:
+            far = _cut((0.0, 0.0, -1.0), (p.room_width * 0.5, cam_y - 1200.0, 3000.0))
+        title = (
+            (
+                f"Kitchen gable — bass trap\n{depth:g} mm, vertical CW {p.bass_k_cw:g} @ {spacing:g}",
+                f"Štít kuchyně — basová past\n{depth:g} mm, svislé CW {p.bass_k_cw:g} @ {spacing:g}",
+            )
+            if side == "kitchen"
+            else (
+                f"Living gable — bass trap\n{depth:g} mm, vertical CW {p.bass_l_cw:g} @ {spacing:g}",
+                f"Štít obýváku — basová past\n{depth:g} mm, svislé CW {p.bass_l_cw:g} @ {spacing:g}",
+            )
+        )
+        return {
+            "id": f"bass-{side}",
+            "title": _tx(*title),
+            "project": "Obývák 1.02",
+            "camera": cam,
+            "projection": "ortho",
+            "edges": "transparent",
+            "cuts": [
+                _cut((1.0, 0.0, 0.0), (cut_x, y_wall, 3000.0)),
+                far,
+            ],
+            "opacity": opacity,
+            "opacityDefault": 0,
+        }
+
+    kitchen = one("kitchen", p.bass_stud_spacing, p.predstena_kitchen, p.room_length, -1.0)
+    living = one("living", p.bass_stud_spacing, p.predstena_living, 0.0, 1.0)
+    return [kitchen, living]
+
+
+def _bass_elevation_scene(
+    p: ObyvakParams,
+    *,
+    side: str,
+    spacing: float,
+    depth: float,
+    y_face: float,
+    look: tuple[float, float, float],
+    cut_y: float,
+    cut_normal: tuple[float, float, float],
+    col_x: float,
+    doors: list[tuple[float, float]],
+) -> dict:
+    """Straight elevation from the room. GKB is off so the vertical lattice shows."""
+    studs = _bass_stud_xs(p, spacing)
+    # Wide margin on the cabinet side (screen left for living, screen right for kitchen).
+    x0, x1 = -1100.0, 8900.0
+    z0, z1 = -180.0, 5300.0
+    pad_w, pad_h = 1.0, 1.04
+    half_w = 0.5 * (x1 - x0) * 0.001 * pad_w
+    half_h = 0.5 * (z1 - z0) * 0.001 * pad_h
+    target = (0.5 * (x0 + x1), y_face, 0.5 * (z0 + z1))
+    cam = _ortho_pose(target, look, (0.0, 1.0, 0.0), half_w, half_h)
+    cw = p.bass_k_cw if side == "kitchen" else p.bass_l_cw
+    x_furn = p.room_width - p.furniture_width
+    module_line = spacing
+    while module_line + spacing < bass_soffit_stop_x(p) - 0.5:
+        module_line += spacing
+    makeup = x_furn - module_line
+    # Interior module, clear of both inset end studs.
+    module_a = studs[2]
+    module_b = studs[3]
+    n_studs = len(studs)
+    if side == "kitchen":
+        title = (
+            f"Kitchen gable — bass trap\nGKB removed, vertical CW {cw:g} @ {spacing:g}",
+            f"Štít kuchyně — basová past\nbez GKB, svislé CW {cw:g} @ {spacing:g}",
+        )
+    else:
+        title = (
+            f"Living gable — bass trap\nGKB removed, vertical CW {cw:g} @ {spacing:g}",
+            f"Štít obýváku — basová past\nbez GKB, svislé CW {cw:g} @ {spacing:g}",
+        )
+    notes = [
+        (
+            (0.35 * p.room_width, y_face, 4700.0),
+            (
+                f"CW {cw:g} vertical\n"
+                f"{n_studs} studs @ {spacing:g}, makeup bay {makeup:g} mm to the soffit"
+            ),
+            (
+                f"CW {cw:g} svisle\n"
+                f"{n_studs} stojek @ {spacing:g}, krajní pole {makeup:g} mm ke kastlíku"
+            ),
+        ),
+        (
+            (0.22 * p.room_width, y_face, 3600.0),
+            (
+                "Not fixed to the slopes or the soffit\n"
+                "UW at 2450, tape under the tracks"
+            ),
+            (
+                "Ke šikmině ani ke kastlíku nekotveno\n"
+                "UW v 2450, páska pod profily"
+            ),
+        ),
+        (
+            (0.62 * p.room_width, y_face, 3200.0),
+            (
+                "CW/UA offcuts to a wall angle\n"
+                "about 1/3 and 2/3, anchor in the block"
+            ),
+            (
+                "Odstřižky CW/UA na úhelník\n"
+                "asi 1/3 a 2/3, hmoždinka do zdiva"
+            ),
+        ),
+        (
+            (doors[0][0] + 0.5 * doors[0][1], y_face, 700.0),
+            (
+                f"GKB {p.bass_board_w:g}×{p.bass_board_l:g}, joints on studs\n"
+                f"acrylic {p.bass_acrylic:g} mm to the slope and the soffit"
+            ),
+            (
+                f"GKB {p.bass_board_w:g}×{p.bass_board_l:g}, spáry na stojkách\n"
+                f"akryl {p.bass_acrylic:g} mm ke šikmině a ke kastlíku"
+            ),
+        ),
+    ]
+    dims = [
+        _dim(
+            (module_a, y_face, 2680.0),
+            (module_b, y_face, 2680.0),
+            -0.045,
+            f"{spacing:g} mm",
+            f"{spacing:g} mm",
+        ),
+        _dim(
+            (module_line, y_face, 2680.0),
+            (x_furn, y_face, 2680.0),
+            0.04,
+            f"{makeup:g} mm",
+            f"{makeup:g} mm",
+        ),
+    ]
+    for x_door, width in doors:
+        dims.append(
+            _dim(
+                (x_door, y_face, 1400.0),
+                (x_door + width, y_face, 1400.0),
+                0.04,
+                f"{width:g} mm",
+                f"{width:g} mm",
+            )
+        )
+    return {
+        "id": f"bass-{side}-elevation",
+        "title": _tx(*title),
+        "project": "Obývák 1.02",
+        "camera": cam,
+        "projection": "ortho",
+        "edges": "opaque",
+        "cuts": [_cut(cut_normal, (0.5 * p.room_width, cut_y, 3000.0))],
+        "opacity": {
+            LABEL_BASS_CW: 1,
+            LABEL_BASS_UW: 1,
+            LABEL_BASS_STRUT: 1,
+            LABEL_BASS_ANGLE: 1,
+            LABEL_BASS_ANCHOR: 1,
+            LABEL_BASS_TAPE: 0.9,
+            LABEL_BASS_WOOL: 0.22,
+            LABEL_BASS_GKB: 0,
+            LABEL_BASS_ACRYLIC: 1,
+            LABEL_PLASTER: 1,
+            LABEL_MASONRY: 0.45,
+            LABEL_WALL_GKF: 1,
+            LABEL_POCKET_FRAME: 1,
+            LABEL_SOFFIT_NH: 0.72,
+            LABEL_SOFFIT_GKB: 0.55,
+            LABEL_FURNITURE: 0.35,
+        },
+        "opacityDefault": 0,
+        "annotations": [
+            *_column_callouts(
+                notes, cam, look, col_x, [0.50, -0.40, 0.16, -0.62], size=0.82
+            ),
+            *dims,
+        ],
+    }
+
+
+def _bass_section_scene(
+    p: ObyvakParams,
+    *,
+    side: str,
+    stud_x: float,
+    y_wall: float,
+    toward: float,
+    depth: float,
+    wool: float,
+    air: float,
+    gkb: float,
+    cw: float,
+    look: tuple[float, float, float],
+    y0: float,
+    y1: float,
+    col_x: float,
+) -> dict:
+    """Vertical section through one stud. Layer thicknesses are the design stack."""
+    z0, z1 = 2300.0, 4400.0
+    pad_w, pad_h = 1.0, 1.04
+    half_w = 0.5 * (y1 - y0) * 0.001 * pad_w
+    half_h = 0.5 * (z1 - z0) * 0.001 * pad_h
+    cam = _ortho_pose(
+        (stud_x, 0.5 * (y0 + y1), 0.5 * (z0 + z1)),
+        look,
+        (0.0, 1.0, 0.0),
+        half_w,
+        half_h,
+    )
+    # Slab through the stud so the CW and a wall strut are in the cut.
+    half = p.bass_cw_w * 0.5
+    if look[0] < 0:
+        cuts = [
+            _cut((-1.0, 0.0, 0.0), (stud_x, y_wall, 3000.0)),
+            _cut((1.0, 0.0, 0.0), (stud_x - half, y_wall, 3000.0)),
+        ]
+    else:
+        cuts = [
+            _cut((1.0, 0.0, 0.0), (stud_x, y_wall, 3000.0)),
+            _cut((-1.0, 0.0, 0.0), (stud_x + half, y_wall, 3000.0)),
+        ]
+    y_wool = y_wall + toward * wool
+    y_gkb_back = y_wall + toward * (depth - gkb)
+    y_room = y_wall + toward * depth
+    y_stud_back = y_gkb_back - toward * cw
+    y_mas0 = y_wall - toward * p.wall_plaster
+    y_mas1 = y_mas0 - toward * p.wall_mason
+
+    def ymid(a: float, b: float) -> float:
+        return 0.5 * (a + b)
+
+    if side == "kitchen":
+        title = (
+            "Kitchen bass trap — section\nthrough a vertical CW stud",
+            "Basová past kuchyně — řez\npřes svislou CW stojku",
+        )
+    else:
+        title = (
+            "Living bass trap — section\nthrough a vertical CW stud",
+            "Basová past obýváku — řez\npřes svislou CW stojku",
+        )
+    wool_cs = _mm_cs(wool)
+    air_cs = _mm_cs(air)
+    gkb_cs = _mm_cs(gkb)
+    notes = [
+        (
+            (stud_x, ymid(y_mas0, y_mas1), 3000.0),
+            f"Masonry {p.wall_mason:g} + plaster {p.wall_plaster:g}",
+            f"Zdivo {p.wall_mason:g} + omítka {p.wall_plaster:g}",
+        ),
+        (
+            (stud_x, y_wall + toward * 8.0, 2800.0),
+            f"CW {cw:g} offcut to a wall angle\nanchor 60 mm into the block",
+            f"Odstřižek CW {cw:g} na úhelník\nhmoždinka 60 mm do zdiva",
+        ),
+        (
+            (stud_x, ymid(y_wall, y_wool), 3400.0),
+            f"Mineral wool {wool:g} mm",
+            f"Minerální vlna {wool_cs} mm",
+        ),
+        (
+            (stud_x, ymid(y_wool, y_gkb_back), 3750.0),
+            f"Air {air:g} mm, CW {cw:g}",
+            f"Vzduch {air_cs} mm, CW {cw:g}",
+        ),
+        (
+            (stud_x, ymid(y_gkb_back, y_room), 4100.0),
+            f"GKB {gkb:g} mm",
+            f"GKB {gkb_cs} mm",
+        ),
+    ]
+    # Dimension the design planes (the 1 mm mate clearance is not a layer).
+    dims = [
+        _dim(
+            (stud_x, y_mas1, 2420.0),
+            (stud_x, y_mas0, 2420.0),
+            -0.06,
+            f"{p.wall_mason:g} mm",
+            f"{p.wall_mason:g} mm",
+        ),
+        _dim(
+            (stud_x, y_wall, 3000.0),
+            (stud_x, y_wool, 3000.0),
+            -0.05,
+            f"{wool:g} mm",
+            f"{wool_cs} mm",
+        ),
+        _dim(
+            (stud_x, y_wool, 3480.0),
+            (stud_x, y_gkb_back, 3480.0),
+            -0.05,
+            f"{air:g} mm",
+            f"{air_cs} mm",
+        ),
+        _dim(
+            (stud_x, y_wall, 3980.0),
+            (stud_x, y_room, 3980.0),
+            -0.07,
+            f"{depth:g} mm",
+            f"{_mm_cs(depth)} mm",
+        ),
+    ]
+    return {
+        "id": f"bass-{side}-section",
+        "title": _tx(*title),
+        "project": "Obývák 1.02",
+        "camera": cam,
+        "projection": "ortho",
+        "edges": "opaque",
+        "cuts": cuts,
+        "opacity": {
+            LABEL_BASS_CW: 1,
+            LABEL_BASS_UW: 1,
+            LABEL_BASS_STRUT: 1,
+            LABEL_BASS_ANGLE: 1,
+            LABEL_BASS_ANCHOR: 1,
+            LABEL_BASS_TAPE: 1,
+            LABEL_BASS_ACRYLIC: 1,
+            LABEL_BASS_WOOL: 0.5,
+            LABEL_BASS_GKB: 1,
+            LABEL_PLASTER: 1,
+            LABEL_MASONRY: 0.72,
+        },
+        "opacityDefault": 0,
+        "annotations": [
+            *_column_callouts(
+                notes,
+                cam,
+                look,
+                col_x,
+                [-0.22, -0.48, 0.04, 0.30, 0.55],
+                size=0.85,
+            ),
+            *dims,
+        ],
+    }
+
+
+def _bass_drawing_scenes(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
+    """Elevation (GKB off) and a stud section for each trap. Geometry is the 3D model."""
+    living_doors = [(x0, width) for name, x0, width in p.pocket_doors if name == "living"]
+    kitchen_doors = [(x0, width) for name, x0, width in p.pocket_doors if name == "kitchen"]
+    # Label column sits in the cabinet-side margin (screen left on the living
+    # elevation, screen right on the kitchen elevation).
+    living_elev = _bass_elevation_scene(
+        p,
+        side="living",
+        spacing=p.bass_stud_spacing,
+        depth=p.predstena_living,
+        y_face=p.predstena_living - p.bass_l_gkb * 0.5,
+        look=(0.0, 0.0, 1.0),
+        cut_y=p.predstena_living + 250.0,
+        cut_normal=(0.0, 0.0, 1.0),
+        col_x=-0.58,
+        doors=living_doors,
+    )
+    kitchen_elev = _bass_elevation_scene(
+        p,
+        side="kitchen",
+        spacing=625.0,
+        depth=p.predstena_kitchen,
+        y_face=g.y_pred_r + p.bass_k_gkb * 0.5,
+        look=(0.0, 0.0, -1.0),
+        cut_y=g.y_pred_r - 250.0,
+        cut_normal=(0.0, 0.0, -1.0),
+        col_x=0.58,
+        doors=kitchen_doors,
+    )
+    # Section: wall on the left. Living looks toward −X; kitchen toward +X.
+    living_sec = _bass_section_scene(
+        p,
+        side="living",
+        stud_x=2500.0,
+        y_wall=0.0,
+        toward=1.0,
+        depth=p.predstena_living,
+        wool=p.bass_l_wool,
+        air=p.bass_l_air,
+        gkb=p.bass_l_gkb,
+        cw=p.bass_l_cw,
+        look=(-1.0, 0.0, 0.0),
+        y0=-940.0,
+        y1=650.0,
+        col_x=-0.72,
+    )
+    kitchen_sec = _bass_section_scene(
+        p,
+        side="kitchen",
+        stud_x=2500.0,
+        y_wall=p.room_length,
+        toward=-1.0,
+        depth=p.predstena_kitchen,
+        wool=p.bass_k_wool,
+        air=p.bass_k_air,
+        gkb=p.bass_k_gkb,
+        cw=p.bass_k_cw,
+        look=(1.0, 0.0, 0.0),
+        y0=10745.0,
+        y1=11930.0,
+        col_x=-0.72,
+    )
+    return [kitchen_elev, kitchen_sec, living_elev, living_sec]
+
+
 def scenes(params: ObyvakParams | None = None) -> list[dict]:
     """Named WebGL viewer scenes (see blueprints.scenes).
 
@@ -2247,7 +2948,13 @@ def scenes(params: ObyvakParams | None = None) -> list[dict]:
         "opacity": {"slopes": 1, LABEL_PLASTER: 1},
         "opacityDefault": 0.5,
     }
-    return [soffit, gable, *_sikmina_plates(p, g)]
+    return [
+        soffit,
+        gable,
+        *_sikmina_plates(p, g),
+        *_bass_view_scenes(p),
+        *_bass_drawing_scenes(p, g),
+    ]
 
 
 def part_groups() -> list[dict]:

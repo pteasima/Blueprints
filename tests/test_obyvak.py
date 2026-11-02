@@ -7,6 +7,7 @@ sys.path.insert(0, str(ROOT / "models"))
 from obyvak import (  # noqa: E402
     FACE_GAP,
     bass_cd_centres,
+    bass_soffit_stop_x,
     build,
     build_elevation_slice,
     build_section_slice,
@@ -40,8 +41,13 @@ from obyvak_geom import (  # noqa: E402
     LABEL_WALL_PLATE,
     LABEL_BASS_WOOL,
     LABEL_BASS_GKB,
-    LABEL_BASS_CD,
-    LABEL_BASS_HANGER,
+    LABEL_BASS_CW,
+    LABEL_BASS_UW,
+    LABEL_BASS_STRUT,
+    LABEL_BASS_ANGLE,
+    LABEL_BASS_ANCHOR,
+    LABEL_BASS_TAPE,
+    LABEL_BASS_ACRYLIC,
     LABEL_GLAZING,
     PART_GROUPS,
     ObyvakParams,
@@ -606,8 +612,7 @@ def test_soffit_ducts_sit_under_lid_on_wall_plate():
 
 def test_soffit_scene_recipe():
     specs = scenes()
-    assert len(specs) == 4
-    assert [s["id"] for s in specs] == [
+    assert [s["id"] for s in specs][:4] == [
         "soffit",
         "gable",
         "sikmina-lattice",
@@ -887,6 +892,126 @@ def test_sikmina_drawing_scenes():
     assert section["opacity"]["slope_foil"] == board
 
 
+def test_bass_trap_scenes_keep_the_vertical_lattice():
+    """Viewer scenes and plates describe the model as it is: vertical studs, no flip."""
+    import math
+
+    specs = {s["id"]: s for s in scenes()}
+    assert [
+        "bass-kitchen",
+        "bass-living",
+        "bass-kitchen-elevation",
+        "bass-kitchen-section",
+        "bass-living-elevation",
+        "bass-living-section",
+    ] == [s["id"] for s in scenes() if s["id"].startswith("bass-")]
+
+    p = ObyvakParams()
+    x_stop = bass_soffit_stop_x(p)
+    x_furn = p.room_width - p.furniture_width
+    studs = bass_cd_centres(x_stop, 625.0, p.bass_cw_w, FACE_GAP)
+    assert len(studs) == 9
+    assert abs((x_furn - 4375.0) - 525.0) < 1e-6
+
+    def cam_mm(spec):
+        x, y_up, z = spec["camera"]["position"]
+        return (x / 0.001, -z / 0.001, y_up / 0.001)
+
+    for side, depth, spacing, n_studs, cw in (
+        ("kitchen", 190.0, 625.0, 9, 50.0),
+        ("living", 450.0, 625.0, 9, 125.0),
+    ):
+        view = specs[f"bass-{side}"]
+        assert view["projection"] == "ortho"
+        assert view["opacityDefault"] == 0
+        assert view["opacity"][LABEL_BASS_GKB] < 0.25
+        assert view["opacity"][LABEL_BASS_CW] == 1
+        assert view["opacity"][LABEL_BASS_STRUT] == 1
+        assert "bass_wall_hanger" not in view["opacity"]
+        assert view["opacity"][LABEL_BASS_WOOL] < 1
+        assert view["title"]["en"].startswith(
+            "Kitchen" if side == "kitchen" else "Living"
+        )
+        assert "vertical" in view["title"]["en"]
+        assert "svislé" in view["title"]["cs"]
+        assert f"{spacing:g}" in view["title"]["en"]
+        # Cut opens an early stud and keeps the soffit end. The other gable is behind the camera.
+        assert any(c["normal"] == [1.0, 0.0, 0.0] and c["anchor"][0] == studs[2] for c in view["cuts"])
+        cx, cy, _cz = cam_mm(view)
+        assert cx < studs[2]
+        if side == "living":
+            assert cy < p.room_length * 0.5
+            assert view["camera"]["target"][2] > -1.0  # glTF Z = −CAD Y, living end
+        else:
+            assert cy > p.room_length * 0.5
+            assert view["camera"]["target"][2] < -p.room_length * 0.0005
+
+        elev = specs[f"bass-{side}-elevation"]
+        assert elev["opacity"][LABEL_BASS_GKB] == 0
+        assert elev["opacity"][LABEL_BASS_CW] == 1
+        assert elev["opacity"][LABEL_BASS_UW] == 1
+        assert elev["opacityDefault"] == 0
+        joined = " ".join(a["text"]["en"] for a in elev["annotations"] if "text" in a)
+        joined_cs = " ".join(a["text"]["cs"] for a in elev["annotations"] if "text" in a)
+        assert "vertical" in joined
+        assert "svisle" in joined_cs
+        assert f"{n_studs} studs @ {spacing:g}" in joined
+        assert f"CW {cw:g}" in joined
+        assert "525 mm" in joined
+        assert "soffit" in joined
+        assert "horizontal stud" not in joined.lower()
+        dims = [a for a in elev["annotations"] if a["kind"] == "dim"]
+        dim_text = " ".join(a["text"]["en"] for a in dims)
+        assert f"{spacing:g} mm" in dim_text
+        assert "525 mm" in dim_text
+        if side == "kitchen":
+            assert "1100 mm" in dim_text and "1000 mm" in dim_text
+        else:
+            assert "1000 mm" in dim_text
+
+        section = specs[f"bass-{side}-section"]
+        assert section["opacity"][LABEL_BASS_GKB] == 1
+        assert len(section["cuts"]) == 2
+        sec_text = " ".join(a["text"]["en"] for a in section["annotations"] if "text" in a)
+        if side == "kitchen":
+            assert "130.5 mm" in sec_text and "47 mm" in sec_text and "190 mm" in sec_text
+            assert section["cuts"][0]["anchor"][0] == 2500.0
+        else:
+            assert "300 mm" in sec_text and "137.5 mm" in sec_text and "450 mm" in sec_text
+            assert section["cuts"][0]["anchor"][0] == 2500.0
+        assert "250 mm" in sec_text and "12.5 mm" in sec_text
+
+        # Callouts share one column and stay on the plate.
+        callouts = [a for a in elev["annotations"] if a["kind"] == "callout"]
+        hw, hh = elev["camera"]["orthoFit"]
+        aspect = 2400 / 1697
+        if hw < hh * aspect:
+            hw = hh * aspect
+        elif hh < hw / aspect:
+            hh = hw / aspect
+        target = elev["camera"]["target"]
+        pos = elev["camera"]["position"]
+        look = (target[0] - pos[0], target[1] - pos[1], target[2] - pos[2])
+        ln = math.sqrt(sum(v * v for v in look)) or 1.0
+        look = tuple(v / ln for v in look)
+        up = tuple(elev["camera"]["up"])
+        label_x = []
+        for ann in callouts:
+            gx, gy, gz = cad_mm_to_gltf_m(ann["anchor"])
+            dx, dy, dz = gx - target[0], gy - target[1], gz - target[2]
+            rx = look[1] * up[2] - look[2] * up[1]
+            ry = look[2] * up[0] - look[0] * up[2]
+            rz = look[0] * up[1] - look[1] * up[0]
+            sx = (dx * rx + dy * ry + dz * rz) / hw
+            sy = (dx * up[0] + dy * up[1] + dz * up[2]) / hh
+            lx = sx + ann["offset"][0] * 2
+            ly = sy + ann["offset"][1] * 2
+            label_x.append(lx)
+            assert -0.82 < lx < 0.82
+            assert -0.7 < ly < 0.7
+        assert max(label_x) - min(label_x) < 0.05
+
+
 def test_write_scenes_json(tmp_path):
     path = write_scenes_json("obyvak", scenes(), tmp_path / "obyvak.scenes.json")
     data = path.read_text(encoding="utf-8")
@@ -894,6 +1019,10 @@ def test_write_scenes_json(tmp_path):
     assert '"gable"' in data
     assert '"sikmina-lattice"' in data
     assert '"sikmina-section"' in data
+    assert '"bass-kitchen"' in data
+    assert '"bass-living"' in data
+    assert '"bass-kitchen-elevation"' in data
+    assert '"bass-living-section"' in data
     assert path.stat().st_size > 0
 
 
@@ -931,8 +1060,12 @@ def test_3d_matches_section_and_elevation_masses():
         LABEL_RACKING_STRAP,
         LABEL_BASS_WOOL,
         LABEL_BASS_GKB,
-        LABEL_BASS_CD,
-        LABEL_BASS_HANGER,
+        LABEL_BASS_CW,
+        LABEL_BASS_UW,
+        LABEL_BASS_STRUT,
+        LABEL_BASS_ANGLE,
+        LABEL_BASS_ANCHOR,
+        LABEL_BASS_ACRYLIC,
     ):
         assert name in labels
     assert "koruna" not in labels
@@ -994,11 +1127,11 @@ def test_3d_matches_section_and_elevation_masses():
     l_gkb, k_gkb = sorted(bass_gkb, key=lambda s: s.bounding_box().min.Y)[:2]
     assert abs(l_gkb.bounding_box().max.Y - (p.predstena_living - FACE_GAP)) < 1.0
     assert abs(k_gkb.bounding_box().min.Y - (g.y_pred_r + FACE_GAP)) < 1.0
-    # Short rear třmeny exist at both gables (no hangers into krov).
-    bass_trmeny = _labeled(shape, LABEL_BASS_HANGER)
-    assert len(bass_trmeny) >= 4
-    bass_cd = _labeled(shape, LABEL_BASS_CD)
-    assert len(bass_cd) >= 8  # rear+front at several X stations × 2 gables
+    # Wall struts, no třmeny and no hangers into the slopes.
+    assert not _labeled(shape, "bass_wall_hanger")
+    assert not _labeled(shape, "bass_cd")
+    assert len(_labeled(shape, LABEL_BASS_STRUT)) >= 8
+    assert len(_labeled(shape, LABEL_BASS_CW)) == 18
 
     furn = _labeled(shape, LABEL_FURNITURE)[0].bounding_box()
     assert abs(furn.size.X - (p.furniture_width - FACE_GAP)) < 1e-6
@@ -1141,8 +1274,13 @@ def test_3d_parts_do_not_interpenetrate():
                 except Exception:
                     pass
             # Soffit Nonius rods pierce the vapour brake on purpose (taped grommet),
-            # and screws are driven into what they fix.
-            if {a.label, b.label} == {"slope_foil", "soffit_nonius"} or "joint_screw" in (a.label, b.label):
+            # screws are driven into what they fix, and the bass-trap anchor is
+            # set into the plaster and the Ytong.
+            wall = {LABEL_PLASTER, LABEL_MASONRY}
+            labels = {a.label, b.label}
+            if labels == {"slope_foil", "soffit_nonius"} or "joint_screw" in labels:
+                continue
+            if "bass_anchor" in labels and labels & wall:
                 continue
             if vol > 1.0:  # mm³
                 violations.append((a.label, b.label, round(vol, 1)))
@@ -1194,31 +1332,29 @@ def test_soffit_acoustics_ignore_the_steel_section():
 
 
 def test_default_gable_lattices_and_as_built_wool():
-    """Kitchen is 625 vertical plus a 350 mm bay; living is 1000 horizontal plus 350 mm."""
+    """Both traps are vertical CW @ 625. Wool stays 130.5 and 300."""
     p = ObyvakParams()
-    g = build_layout(p)
     assert abs(p.bass_k_wool - 130.5) < 1e-9
     assert abs(p.bass_k_air - 47.0) < 1e-9
     assert abs(p.bass_l_wool - 300.0) < 1e-9
     assert abs(p.bass_l_air - 137.5) < 1e-9
-    kitchen = bass_cd_centres(p.room_width, 625.0, p.cd_w, FACE_GAP)
-    living = bass_cd_centres(p.room_width, 1000.0, p.cd_w, FACE_GAP)
-    assert kitchen[1:-1] == [625.0, 1250.0, 1875.0, 2500.0, 3125.0, 3750.0, 4375.0, 5000.0]
-    assert abs(kitchen[0] - (p.cd_w * 0.5 + FACE_GAP)) < 1e-6
-    assert abs(kitchen[-1] - (p.room_width - p.cd_w * 0.5 - FACE_GAP)) < 1e-6
-    assert abs(8 * 625.0 - 5000.0) < 1e-9
-    assert abs(p.room_width - 5000.0 - 350.0) < 1e-6
-    assert living[1:-1] == [1000.0, 2000.0, 3000.0, 4000.0, 5000.0]
+    assert p.bass_k_cw == 50.0 and p.bass_l_cw == 125.0
+    x_stop = bass_soffit_stop_x(p)
+    x_furn = p.room_width - p.furniture_width
+    studs = bass_cd_centres(x_stop, 625.0, p.bass_cw_w, FACE_GAP)
+    assert studs[1:-1] == [625.0, 1250.0, 1875.0, 2500.0, 3125.0, 3750.0, 4375.0]
+    assert abs(studs[0] - (p.bass_cw_w * 0.5 + FACE_GAP)) < 1e-6
+    assert abs(studs[-1] - (x_stop - p.bass_cw_w * 0.5 - FACE_GAP)) < 1e-6
+    assert abs(x_furn - 4375.0 - 525.0) < 1e-6
+    assert len(studs) == 9
 
     shape, _ = build(p)
-    cds = _labeled(shape, LABEL_BASS_CD)
+    cws = _labeled(shape, LABEL_BASS_CW)
 
     def vertical_xs(side: str) -> list[float]:
         xs = []
-        for part in cds:
+        for part in cws:
             bb = part.bounding_box()
-            if bb.size.Z < 400.0 or abs(bb.size.X - p.cd_w) > 2.0:
-                continue
             if side == "kitchen" and bb.min.Y < p.room_length * 0.5:
                 continue
             if side == "living" and bb.max.Y > p.room_length * 0.5:
@@ -1226,34 +1362,82 @@ def test_default_gable_lattices_and_as_built_wool():
             xs.append(round(bb.center().X, 1))
         return sorted(set(xs))
 
-    assert vertical_xs("kitchen") == [round(x, 1) for x in kitchen]
-    assert vertical_xs("living") == [round(x, 1) for x in living]
+    assert vertical_xs("kitchen") == [round(x, 1) for x in studs]
+    assert vertical_xs("living") == [round(x, 1) for x in studs]
+    kitchen_stud = next(part for part in cws if part.bounding_box().min.Y > p.room_length * 0.5)
+    wool = next(part for part in _labeled(shape, LABEL_BASS_WOOL) if part.bounding_box().min.Y > p.room_length * 0.5)
+    # CW 50 notches about 3 mm into the 130.5 mm wool; the bay air stays 47 mm.
+    bite = kitchen_stud.bounding_box().max.Y - wool.bounding_box().min.Y
+    assert 0.0 < bite < 6.0
 
-    def joint_zs(side: str) -> list[float]:
-        zs = []
-        for part in cds:
+    # Mid-height struts reach the wall (tape + gap), not the UW flange.
+    # A bent angle sits there and an anchor continues into the block.
+    tab_t, tab_return = 2.0, 20.0
+    y_steel_l = FACE_GAP + p.bass_tape_t
+    y_bar_l = y_steel_l + tab_t + tab_return + FACE_GAP
+    y_steel_k = p.room_length - FACE_GAP - p.bass_tape_t
+    y_bar_k = y_steel_k - tab_t - tab_return - FACE_GAP
+    mason_l = -p.wall_plaster - FACE_GAP
+    mason_k = p.room_length + p.wall_plaster + FACE_GAP
+
+    def on_side(part, side: str) -> bool:
+        bb = part.bounding_box()
+        if side == "kitchen":
+            return bb.min.Y > p.room_length * 0.5
+        return bb.max.Y < p.room_length * 0.5
+
+    for side, y_bar, y_steel, mason_face, into_room in (
+        ("living", y_bar_l, y_steel_l, mason_l, 1.0),
+        ("kitchen", y_bar_k, y_steel_k, mason_k, -1.0),
+    ):
+        bars = [s.bounding_box() for s in _labeled(shape, LABEL_BASS_STRUT) if on_side(s, side)]
+        angles = [s.bounding_box() for s in _labeled(shape, LABEL_BASS_ANGLE) if on_side(s, side)]
+        anchors = [s.bounding_box() for s in _labeled(shape, LABEL_BASS_ANCHOR) if on_side(s, side)]
+        assert bars and angles and anchors
+        assert len(angles) == len(anchors)
+        if into_room > 0:
+            full = [bb for bb in bars if bb.min.Y < y_bar + 2.0]
+            assert full and all(abs(bb.min.Y - y_bar) < 1.0 for bb in full)
+            assert any(abs(bb.min.Y - y_steel) < 0.6 for bb in angles)
+            assert all(bb.min.Y < mason_face - 50.0 for bb in anchors)
+            assert all(bb.max.Y < 0.0 for bb in anchors)
+        else:
+            full = [bb for bb in bars if bb.max.Y > y_bar - 2.0]
+            assert full and all(abs(bb.max.Y - y_bar) < 1.0 for bb in full)
+            assert any(abs(bb.max.Y - y_steel) < 0.6 for bb in angles)
+            assert all(bb.max.Y > mason_face + 50.0 for bb in anchors)
+            assert all(bb.min.Y > p.room_length for bb in anchors)
+
+    # The lining stops at the soffit face. Only the acrylic bead enters the gap.
+    solid_labels = (
+        LABEL_BASS_GKB,
+        LABEL_BASS_WOOL,
+        LABEL_BASS_CW,
+        LABEL_BASS_UW,
+        LABEL_BASS_STRUT,
+        LABEL_BASS_TAPE,
+    )
+    for label in solid_labels:
+        for part in _labeled(shape, label):
+            assert part.bounding_box().max.X <= x_stop + 0.05, label
+    for part in _labeled(shape, LABEL_BASS_ACRYLIC):
+        assert part.bounding_box().max.X <= x_furn - FACE_GAP + 0.05
+    for side in ("kitchen", "living"):
+        beads = []
+        for part in _labeled(shape, LABEL_BASS_ACRYLIC):
             bb = part.bounding_box()
-            if bb.size.X < 200.0 or bb.size.Z > p.cd_t + 1.0:
-                continue
-            if bb.center().Z < p.predstena_bottom_z + 400.0:
-                continue
-            if bb.max.Z > g.z_ceil(bb.center().X) - p.cd_t - 5.0:
-                continue
             if side == "kitchen" and bb.min.Y < p.room_length * 0.5:
                 continue
             if side == "living" and bb.max.Y > p.room_length * 0.5:
                 continue
-            zs.append(bb.center().Z)
-        return zs
+            if bb.min.X >= x_stop - 0.1 and bb.size.Z > 200.0:
+                beads.append(bb)
+        assert len(beads) == 1
+        bb = beads[0]
+        assert abs(bb.size.X - p.bass_acrylic) < 0.2
+        assert bb.min.X >= x_stop + FACE_GAP - 0.05
+        assert bb.max.X <= x_furn - FACE_GAP + 0.05
 
-    kitchen_rails = joint_zs("kitchen")
-    living_rails = joint_zs("living")
-    assert any(abs(z - (p.predstena_bottom_z + 2000.0)) < 2.0 for z in kitchen_rails)
-    assert not any(abs(z - (p.predstena_bottom_z + 1250.0)) < 2.0 for z in kitchen_rails)
-    assert any(abs(z - (p.predstena_bottom_z + 1250.0)) < 2.0 for z in living_rails)
-    # The lowered ceiling no longer clears a separate rail at +2500 mm.
-    assert not any(abs(z - (p.predstena_bottom_z + 2500.0)) < 2.0 for z in living_rails)
-    assert all(z < g.z_false for z in living_rails)
 
 
 def test_shallow_trap_is_on_the_two_door_gable():

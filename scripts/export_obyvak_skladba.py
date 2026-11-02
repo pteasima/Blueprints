@@ -28,9 +28,12 @@ from openpyxl.utils import get_column_letter
 
 from obyvak import FACE_GAP, build
 from obyvak_geom import (
-    LABEL_BASS_CD,
+    LABEL_BASS_ANCHOR,
+    LABEL_BASS_ANGLE,
+    LABEL_BASS_CW,
     LABEL_BASS_GKB,
-    LABEL_BASS_HANGER,
+    LABEL_BASS_STRUT,
+    LABEL_BASS_UW,
     LABEL_BASS_WOOL,
     LABEL_PLENUM_WOOL,
     LABEL_RACKING_STRAP,
@@ -319,9 +322,10 @@ def collect_quantities():
         by[child.label].append(child)
 
     slope_face = (g.x_ridge / g.cos + (g.x_furn - g.x_ridge) / g.cos) * p.room_length / 1e6
-    trap_zs = [g.z_slope_offset(x, 0.0) for x in range(0, int(p.room_width) + 1, 50)]
+    # The trap stops at the soffit face, so the order does not include the cabinet bay.
+    trap_zs = [g.z_ceil(x) for x in range(0, int(g.x_furn) + 1, 50)]
     trap_h = sum(z - p.predstena_bottom_z for z in trap_zs) / len(trap_zs)
-    trap_face = trap_h * p.room_width / 1e6
+    trap_face = trap_h * g.x_furn / 1e6
     soffit_y = g.y_furn1 - g.y_furn0
     nh_pts = g.soffit_nh_pts()
     # NH + StoSilent on the side face only; the underside is plain GKB.
@@ -374,7 +378,12 @@ def collect_quantities():
         ),
         "soffit_ud_lm": _length_m(by[LABEL_SOFFIT_UD]),
         "n_soffit_rost_cd": len([c for c in by[LABEL_SOFFIT_CD] if c.bounding_box().size.Y <= 1000.0]),
-        "bass_cd_lm": _length_m(by[LABEL_BASS_CD]),
+        "bass_cw_lm": _length_m(by[LABEL_BASS_CW]),
+        "bass_uw_lm": _length_m(by[LABEL_BASS_UW]),
+        "bass_strut_lm": _length_m(by[LABEL_BASS_STRUT]),
+        "n_bass_strut": len(by[LABEL_BASS_STRUT]),
+        "n_bass_angle": len(by[LABEL_BASS_ANGLE]),
+        "n_bass_anchor": len(by[LABEL_BASS_ANCHOR]),
         "strap_lm": _length_m(by[LABEL_RACKING_STRAP]),
         "duct_lm": _length_m(by[LABEL_SOFFIT_DUCT]),
         "n_direct": len(by[LABEL_SLOPE_DIRECT]),
@@ -384,7 +393,8 @@ def collect_quantities():
         "n_wall_brackets": len(wall_brackets),
         "joint_angle_lm": _length_m(joint_angles) if joint_angles else soffit_y / 1000.0,
         "cleat_lm": _length_m(cleats) if cleats else soffit_y / 1000.0,
-        "n_bass_hanger": len(by[LABEL_BASS_HANGER]),
+        "n_bass_hanger": 0,
+        "n_bass_stud": len(by[LABEL_BASS_CW]) // 2,
         "n_rafters": len(by[LABEL_RAFTERS]),
         "n_soffit_ud": len(by[LABEL_SOFFIT_UD]),
         "n_ducts": len(by[LABEL_SOFFIT_DUCT]),
@@ -972,46 +982,76 @@ def build_lines(q) -> dict[str, list[Line]]:
             12,
             PRICE["gkb_m2"][0],
             PRICE["gkb_m2"][1],
-            "Včetně spodního víka. Soft-joint k NH šikminy.",
+            "Bez spodního víka. Akrylový spoj ke šikmině a k líci kastlíku. Konstrukce ke šikmině ani ke kastlíku nekotvená.",
         ),
         Line(
             "A2",
-            "Rám CD / UW",
-            "Profil CD 60×27",
-            _product("Rigips R-CD 27/60/27", URL_CD),
-            "kuchyň (Y=L, dva posuvné, 190) 625 svisle + dořez; obývák (Y=0, jedny, 450) 1000 + dořez",
-            q["bass_cd_lm"],
+            "Stojky CW",
+            "CW 50 kuchyň / CW 125 obývák",
+            _product("Knauf CW, svisle @ 625, oba štíty", ""),
+            f"CW {p.bass_k_cw:g} / CW {p.bass_l_cw:g}",
+            q["bass_cw_lm"],
             "bm",
             10,
-            PRICE["cd_bm"][0],
-            PRICE["cd_bm"][1],
-            "Lišty pod spárou: kuchyň 2000 mm na dvouposuvném štítu, obývák 1250 a 2500 mm na jednoposuvném. UW v modelu jako CD.",
+            None,
+            "—",
+            f"{q['n_bass_stud']} stojek na štít, mříž končí u kastlíku. CW 50 je o 3 mm hlubší než 47 mm vzduch, zářez do vlny. CW 125 je nejhlubší profil do 137,5 mm.",
+            True,
         ),
         Line(
             "A3",
-            "Kotvení ke zdi (vzadu)",
-            "Akustický třmen se Sylomerem",
-            _product("Rigips KB517112", URL_TRMEN),
-            "dosah ≤ ~120 mm",
-            q["n_bass_hanger"],
-            "ks",
-            8,
-            PRICE["trmen_ks"][0],
-            PRICE["trmen_ks"][1],
-            "Jen k zadnímu CD. Alt. Knauf W623.",
+            "UW profil",
+            "UW dole v 2450 a šikmé UW na štítu",
+            _product("Knauf UW, páska pod profilem", ""),
+            f"příruba {p.bass_uw_flange:g} mm",
+            q["bass_uw_lm"],
+            "bm",
+            10,
+            None,
+            "—",
+            "Šikmé UW je přišroubované do štítové zdi, ne do šikminy ani do kastlíku.",
+            True,
         ),
         Line(
             "A4",
-            "Závěs shora",
-            "Nonius / akust. stropní závěs",
-            _product("Rigips Nonius / akust. závěs", URL_NONIUS_TOP),
-            "k hornímu UW/CD",
-            0,
+            "Vzpěry do zdi",
+            "Odstřižek CW/UA",
+            _product("CW/UA offcut, cca 1/3 a 2/3 výšky", ""),
+            f"max {p.bass_strut_max_step:g} mm",
+            q["n_bass_strut"],
             "ks",
             None,
             None,
             "—",
-            "Nedořešeno v 3D počtu — hybrid dle detailů; model kotví hlavně třmeny ke štítu.",
+            f"{q['bass_strut_lm']:.2f} bm. Vzpěra jde k líci zdi (páska + spára), ne jen k přírubě UW. Třmeny a Sylomer pryč.",
+            True,
+        ),
+        Line(
+            "A5",
+            "Úhelník na zdi",
+            "Ohnutý plech na konci vzpěry",
+            _product("Úhelník 2 mm, rameno 20 mm", ""),
+            "2 mm",
+            q["n_bass_angle"],
+            "ks",
+            None,
+            None,
+            "—",
+            "Jeden na vzpěru, která dojde ke zdi. Hlava u šikmého UW sedí na profilu.",
+            True,
+        ),
+        Line(
+            "A6",
+            "Kotva do zdiva",
+            "Hmoždinka do Ytongu",
+            _product("Průměr 8 mm, kotevní délka 60 mm ve zdivu", ""),
+            "Ø8 × 60 mm",
+            q["n_bass_anchor"],
+            "ks",
+            None,
+            None,
+            "—",
+            "Přes omítku do zdiva štítu. Bez ceny, dokud není zvolený výrobek.",
             True,
         ),
         Line(
@@ -1050,7 +1090,7 @@ def build_lines(q) -> dict[str, list[Line]]:
     nonius_ks = q["n_slope_nonius"] + q["n_soffit_nonius"]
     other_wool = q["soffit_wool_m3"] + q["bass_wool_m3"]
     gkf = face_s + q["lid_area"] * p.soffit_lid_layers
-    cd = q["slope_cd_lm"] + q["soffit_cd_lm"] + q["soffit_rost_cd_lm"] + q["bass_cd_lm"]
+    cd = q["slope_cd_lm"] + q["soffit_cd_lm"] + q["soffit_rost_cd_lm"]
 
     souhrn = [
         Line(
@@ -1217,7 +1257,7 @@ def build_lines(q) -> dict[str, list[Line]]:
             10,
             PRICE["cd_bm"][0],
             PRICE["cd_bm"][1],
-            "Šikminy + kastlík + štíty.",
+            "Šikminy + kastlík. Štíty jsou CW/UW, ne CD.",
         ),
         Line(
             9,
@@ -1255,9 +1295,9 @@ def build_lines(q) -> dict[str, list[Line]]:
             11,
             "Akustický třmen KB517112",
             "Třmen + Sylomer",
-            _product("Rigips KB517112", URL_TRMEN),
+            _product("Rigips KB517112 — zrušeno", URL_TRMEN),
             "—",
-            q["n_bass_hanger"],
+            0,
             "ks",
             8,
             PRICE["trmen_ks"][0],

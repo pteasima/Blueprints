@@ -428,7 +428,7 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "roughness": 0.88,
         "metallic": 0.0,
     },
-    "bass_cd": {
+    "bass_cw": {
         "fill": (120, 120, 130),
         "line": (60, 60, 70),
         "dxf": ColorIndex.CYAN,
@@ -436,13 +436,53 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "roughness": 0.35,
         "metallic": 0.7,
     },
-    "bass_wall_hanger": {
-        "fill": (90, 90, 100),
-        "line": (40, 40, 50),
+    "bass_uw": {
+        "fill": (100, 108, 120),
+        "line": (50, 55, 65),
+        "dxf": ColorIndex.CYAN,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.35,
+        "metallic": 0.7,
+    },
+    "bass_strut": {
+        "fill": (80, 86, 98),
+        "line": (40, 44, 52),
         "dxf": ColorIndex.CYAN,
         "weight": SECTION_LINE_WEIGHT,
         "roughness": 0.4,
         "metallic": 0.75,
+    },
+    "bass_angle": {
+        "fill": (70, 76, 88),
+        "line": (35, 40, 48),
+        "dxf": ColorIndex.CYAN,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.4,
+        "metallic": 0.75,
+    },
+    "bass_anchor": {
+        "fill": (60, 64, 72),
+        "line": (30, 32, 38),
+        "dxf": ColorIndex.CYAN,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.45,
+        "metallic": 0.6,
+    },
+    "bass_tape": {
+        "fill": (210, 190, 90),
+        "line": (120, 100, 40),
+        "dxf": ColorIndex.YELLOW,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.8,
+        "metallic": 0.0,
+    },
+    "bass_acrylic": {
+        "fill": (190, 210, 220),
+        "line": (90, 110, 120),
+        "dxf": ColorIndex.CYAN,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.2,
+        "metallic": 0.0,
     },
 }
 
@@ -487,8 +527,13 @@ SECTION_LAYER_ORDER = [
     "soffit_duct",
     "bass_mineral_wool",
     "bass_gkb",
-    "bass_cd",
-    "bass_wall_hanger",
+    "bass_cw",
+    "bass_uw",
+    "bass_strut",
+    "bass_angle",
+    "bass_anchor",
+    "bass_tape",
+    "bass_acrylic",
 ]
 
 

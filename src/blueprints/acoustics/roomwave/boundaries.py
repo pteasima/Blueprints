@@ -125,7 +125,7 @@ def _membranes():
     import sys
     from pathlib import Path
 
-    from blueprints.acoustics.lattice import LATTICE_1000, LATTICE_625, layout_gable
+    from blueprints.acoustics.lattice import LATTICE_625, layout_gable
 
     root = Path(__file__).resolve().parents[4]
     models = str(root / "models")
@@ -137,7 +137,7 @@ def _membranes():
     outline = build_layout(params).predstena_pts()
     plate = Plate()
     kitchen = layout_gable(outline, LATTICE_625, inset_mm=params.cd_first_inset)
-    living = layout_gable(outline, LATTICE_1000, inset_mm=params.cd_first_inset)
+    living = layout_gable(outline, LATTICE_625, inset_mm=params.cd_first_inset)
     wool = Resistivity().mineral_wool
     return {
         "kitchen": (

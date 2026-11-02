@@ -1262,9 +1262,12 @@ def _sweep_table(
                     "on 31.5, 63 and 125 Hz, so the thickness is left as built"
                 )
             built_default = (
-                f"The built gables are kitchen {winner['kitchen']} and living {winner['living']}, "
-                f"{wool_note}. That is the model default. "
-                f"Room decay is {shown[31.5]:.2f} s at 31.5 Hz, "
+                "The built gables are both 625 vertical CW studs, "
+                "kitchen CW 50 and living CW 125. That is the model default. "
+                "The panel comparison still includes 1000 horizontal. "
+                "Do not take a single empty-cavity peak as the result: "
+                "the wool is on the wall and the profile is empty. "
+                f"Room decay on the coverage winner is {shown[31.5]:.2f} s at 31.5 Hz, "
                 f"{shown[63.0]:.2f} s at 63 Hz and {shown[125.0]:.2f} s at 125 Hz. "
                 "The sweep below is the other pairings and the wool grid."
             )

@@ -49,8 +49,13 @@
     "children": [
       "bass_mineral_wool",
       "bass_gkb",
-      "bass_cd",
-      "bass_wall_hanger"
+      "bass_cw",
+      "bass_uw",
+      "bass_strut",
+      "bass_angle",
+      "bass_anchor",
+      "bass_tape",
+      "bass_acrylic"
     ]
   },
   {
