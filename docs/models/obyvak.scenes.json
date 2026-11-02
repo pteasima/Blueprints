@@ -412,5 +412,1005 @@
         ]
       }
     ]
+  },
+  {
+    "id": "bass-kitchen",
+    "title": {
+      "en": "Kitchen gable — bass trap\n190 mm, vertical CD @ 625",
+      "cs": "Štít kuchyně — basová past\n190 mm, svislé CD @ 625"
+    },
+    "project": "Obývák 1.02",
+    "camera": {
+      "target": [
+        2.6649999999999996,
+        3.790000000000001,
+        -10.905000000000001
+      ],
+      "position": [
+        7.265886004780846,
+        5.628975170534439,
+        -7.095447998289756
+      ],
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "orthoFit": [
+        2.222666410456628,
+        2.604172272012799
+      ]
+    },
+    "projection": "ortho",
+    "edges": "transparent",
+    "cuts": [
+      {
+        "normal": [
+          -1.0,
+          0.0,
+          0.0
+        ],
+        "anchor": [
+          5319.0,
+          11100.0,
+          3000.0
+        ]
+      },
+      {
+        "normal": [
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "anchor": [
+          2675.0,
+          5895.4,
+          3000.0
+        ]
+      }
+    ],
+    "opacity": {
+      "bass_cd": 1,
+      "bass_wall_hanger": 1,
+      "bass_mineral_wool": 0.4,
+      "bass_gkb": 0.14,
+      "plaster": 0.9,
+      "masonry": 0.4,
+      "wall_gkf": 0.95,
+      "pocket_frame": 1
+    },
+    "opacityDefault": 0
+  },
+  {
+    "id": "bass-living",
+    "title": {
+      "en": "Living gable — bass trap\n450 mm, vertical CD @ 1000",
+      "cs": "Štít obýváku — basová past\n450 mm, svislé CD @ 1000"
+    },
+    "project": "Obývák 1.02",
+    "camera": {
+      "target": [
+        2.6649999999999996,
+        3.7900000000000005,
+        -0.12500000000000022
+      ],
+      "position": [
+        7.06518399924134,
+        5.54875453379619,
+        -4.1344107262635
+      ],
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "orthoFit": [
+        2.4335709393737566,
+        2.586362844230243
+      ]
+    },
+    "projection": "ortho",
+    "edges": "transparent",
+    "cuts": [
+      {
+        "normal": [
+          -1.0,
+          0.0,
+          0.0
+        ],
+        "anchor": [
+          5319.0,
+          0.0,
+          3000.0
+        ]
+      },
+      {
+        "normal": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "anchor": [
+          2675.0,
+          5334.4,
+          3000.0
+        ]
+      }
+    ],
+    "opacity": {
+      "bass_cd": 1,
+      "bass_wall_hanger": 1,
+      "bass_mineral_wool": 0.4,
+      "bass_gkb": 0.14,
+      "plaster": 0.9,
+      "masonry": 0.4,
+      "wall_gkf": 0.95,
+      "pocket_frame": 1
+    },
+    "opacityDefault": 0
+  },
+  {
+    "id": "bass-kitchen-elevation",
+    "title": {
+      "en": "Kitchen gable — bass trap\nGKB removed, vertical CD @ 625",
+      "cs": "Štít kuchyně — basová past\nbez GKB, svislé CD @ 625"
+    },
+    "project": "Obývák 1.02",
+    "camera": {
+      "target": [
+        3.9,
+        2.67,
+        -10.91625
+      ],
+      "position": [
+        3.9,
+        2.67,
+        14.08375
+      ],
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "orthoFit": [
+        5.0,
+        2.9640000000000004
+      ]
+    },
+    "projection": "ortho",
+    "edges": "opaque",
+    "cuts": [
+      {
+        "normal": [
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "anchor": [
+          2675.0,
+          10660.0,
+          3000.0
+        ]
+      }
+    ],
+    "opacity": {
+      "bass_cd": 1,
+      "bass_wall_hanger": 1,
+      "bass_mineral_wool": 0.22,
+      "bass_gkb": 0,
+      "plaster": 1,
+      "masonry": 0.45,
+      "wall_gkf": 1,
+      "pocket_frame": 1
+    },
+    "opacityDefault": 0,
+    "annotations": [
+      {
+        "kind": "callout",
+        "anchor": [
+          1872.5,
+          10916.2,
+          5000.0
+        ],
+        "text": {
+          "en": "CD 60×27 vertical\n10 studs @ 625, makeup bay 350 mm",
+          "cs": "CD 60×27 svisle\n10 stojek @ 625, krajní pole 350 mm"
+        },
+        "offset": [
+          0.493,
+          -0.09
+        ],
+        "size": 0.82
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          2500.0,
+          10916.2,
+          2664.0
+        ],
+        "text": {
+          "en": "Třmen 3×16 on each rear stud\n200 mm above the frame, then @ 700",
+          "cs": "Třmen 3×16 na každé zadní stojce\n200 mm nad rámem, pak po 700"
+        },
+        "offset": [
+          0.43,
+          -0.089
+        ],
+        "size": 0.82
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          2942.5,
+          10916.2,
+          3350.0
+        ],
+        "text": {
+          "en": "Horizontal joint CD +2000\nwhere the ceiling allows",
+          "cs": "Vodorovné CD ve spáře +2000\nkde to strop dovolí"
+        },
+        "offset": [
+          0.386,
+          -0.026
+        ],
+        "size": 0.82
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          4200.0,
+          10916.2,
+          700.0
+        ],
+        "text": {
+          "en": "Sliding door, head at 2450 mm",
+          "cs": "Posuvné dveře, nadpraží 2450 mm"
+        },
+        "offset": [
+          0.26,
+          0.029
+        ],
+        "size": 0.82
+      },
+      {
+        "kind": "dim",
+        "a": [
+          1250.0,
+          10916.2,
+          2680.0
+        ],
+        "b": [
+          1875.0,
+          10916.2,
+          2680.0
+        ],
+        "offset": -0.045,
+        "text": {
+          "en": "625 mm",
+          "cs": "625 mm"
+        }
+      },
+      {
+        "kind": "dim",
+        "a": [
+          5000.0,
+          10916.2,
+          2920.0
+        ],
+        "b": [
+          5350.0,
+          10916.2,
+          2920.0
+        ],
+        "offset": -0.045,
+        "text": {
+          "en": "350 mm",
+          "cs": "350 mm"
+        }
+      },
+      {
+        "kind": "dim",
+        "a": [
+          2640.0,
+          10916.2,
+          2664.0
+        ],
+        "b": [
+          2640.0,
+          10916.2,
+          3364.0
+        ],
+        "offset": 0.055,
+        "text": {
+          "en": "700 mm",
+          "cs": "700 mm"
+        }
+      },
+      {
+        "kind": "dim",
+        "a": [
+          3700.0,
+          10916.2,
+          1400.0
+        ],
+        "b": [
+          4700.0,
+          10916.2,
+          1400.0
+        ],
+        "offset": 0.04,
+        "text": {
+          "en": "1000 mm",
+          "cs": "1000 mm"
+        }
+      },
+      {
+        "kind": "dim",
+        "a": [
+          0.0,
+          10916.2,
+          1400.0
+        ],
+        "b": [
+          1100.0,
+          10916.2,
+          1400.0
+        ],
+        "offset": 0.04,
+        "text": {
+          "en": "1100 mm",
+          "cs": "1100 mm"
+        }
+      }
+    ]
+  },
+  {
+    "id": "bass-kitchen-section",
+    "title": {
+      "en": "Kitchen bass trap — section\nthrough a vertical CD stud",
+      "cs": "Basová past kuchyně — řez\npřes svislou CD stojku"
+    },
+    "project": "Obývák 1.02",
+    "camera": {
+      "target": [
+        2.5,
+        3.35,
+        -11.3375
+      ],
+      "position": [
+        -2.960000000000001,
+        3.35,
+        -11.3375
+      ],
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "orthoFit": [
+        0.5925,
+        1.092
+      ]
+    },
+    "projection": "ortho",
+    "edges": "opaque",
+    "cuts": [
+      {
+        "normal": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "anchor": [
+          2500.0,
+          11100.0,
+          3000.0
+        ]
+      },
+      {
+        "normal": [
+          -1.0,
+          0.0,
+          0.0
+        ],
+        "anchor": [
+          2530.0,
+          11100.0,
+          3000.0
+        ]
+      }
+    ],
+    "opacity": {
+      "bass_cd": 1,
+      "bass_wall_hanger": 1,
+      "bass_mineral_wool": 0.5,
+      "bass_gkb": 1,
+      "plaster": 1,
+      "masonry": 0.72
+    },
+    "opacityDefault": 0,
+    "annotations": [
+      {
+        "kind": "callout",
+        "anchor": [
+          2500.0,
+          11240.0,
+          3000.0
+        ],
+        "text": {
+          "en": "Masonry 250 + plaster 15",
+          "cs": "Zdivo 250 + omítka 15"
+        },
+        "offset": [
+          -0.392,
+          0.05
+        ],
+        "size": 0.85
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          2500.0,
+          11060.0,
+          2664.0
+        ],
+        "text": {
+          "en": "Třmen 3×16, reach 80 mm",
+          "cs": "Třmen 3×16, vyložení 80 mm"
+        },
+        "offset": [
+          -0.45,
+          0.074
+        ],
+        "size": 0.85
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          2500.0,
+          11034.8,
+          3400.0
+        ],
+        "text": {
+          "en": "Mineral wool 130.5 mm",
+          "cs": "Minerální vlna 130,5 mm"
+        },
+        "offset": [
+          -0.458,
+          -0.003
+        ],
+        "size": 0.85
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          2500.0,
+          10946.0,
+          3750.0
+        ],
+        "text": {
+          "en": "Air 47 mm, CD 60×27",
+          "cs": "Vzduch 47 mm, CD 60×27"
+        },
+        "offset": [
+          -0.487,
+          -0.033
+        ],
+        "size": 0.85
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          2500.0,
+          10916.2,
+          4100.0
+        ],
+        "text": {
+          "en": "GKB 12.5 mm",
+          "cs": "GKB 12,5 mm"
+        },
+        "offset": [
+          -0.496,
+          -0.068
+        ],
+        "size": 0.85
+      },
+      {
+        "kind": "dim",
+        "a": [
+          2500.0,
+          11365.0,
+          2420.0
+        ],
+        "b": [
+          2500.0,
+          11115.0,
+          2420.0
+        ],
+        "offset": -0.06,
+        "text": {
+          "en": "250 mm",
+          "cs": "250 mm"
+        }
+      },
+      {
+        "kind": "dim",
+        "a": [
+          2500.0,
+          11100.0,
+          3000.0
+        ],
+        "b": [
+          2500.0,
+          10969.5,
+          3000.0
+        ],
+        "offset": -0.05,
+        "text": {
+          "en": "130.5 mm",
+          "cs": "130,5 mm"
+        }
+      },
+      {
+        "kind": "dim",
+        "a": [
+          2500.0,
+          10969.5,
+          3480.0
+        ],
+        "b": [
+          2500.0,
+          10922.5,
+          3480.0
+        ],
+        "offset": -0.05,
+        "text": {
+          "en": "47 mm",
+          "cs": "47 mm"
+        }
+      },
+      {
+        "kind": "dim",
+        "a": [
+          2500.0,
+          11100.0,
+          3980.0
+        ],
+        "b": [
+          2500.0,
+          10910.0,
+          3980.0
+        ],
+        "offset": -0.07,
+        "text": {
+          "en": "190 mm",
+          "cs": "190 mm"
+        }
+      }
+    ]
+  },
+  {
+    "id": "bass-living-elevation",
+    "title": {
+      "en": "Living gable — bass trap\nGKB removed, vertical CD @ 1000",
+      "cs": "Štít obýváku — basová past\nbez GKB, svislé CD @ 1000"
+    },
+    "project": "Obývák 1.02",
+    "camera": {
+      "target": [
+        3.9,
+        2.67,
+        -0.44375000000000003
+      ],
+      "position": [
+        3.9,
+        2.67,
+        -25.44375
+      ],
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "orthoFit": [
+        5.0,
+        2.9640000000000004
+      ]
+    },
+    "projection": "ortho",
+    "edges": "opaque",
+    "cuts": [
+      {
+        "normal": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "anchor": [
+          2675.0,
+          700.0,
+          3000.0
+        ]
+      }
+    ],
+    "opacity": {
+      "bass_cd": 1,
+      "bass_wall_hanger": 1,
+      "bass_mineral_wool": 0.22,
+      "bass_gkb": 0,
+      "plaster": 1,
+      "masonry": 0.45,
+      "wall_gkf": 1,
+      "pocket_frame": 1
+    },
+    "opacityDefault": 0,
+    "annotations": [
+      {
+        "kind": "callout",
+        "anchor": [
+          1872.5,
+          443.8,
+          5000.0
+        ],
+        "text": {
+          "en": "CD 60×27 vertical\n7 studs @ 1000, makeup bay 350 mm",
+          "cs": "CD 60×27 svisle\n7 stojek @ 1000, krajní pole 350 mm"
+        },
+        "offset": [
+          -0.493,
+          -0.09
+        ],
+        "size": 0.82
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          2000.0,
+          443.8,
+          2664.0
+        ],
+        "text": {
+          "en": "Třmen 3×16 on each rear stud\n200 mm above the frame, then @ 700",
+          "cs": "Třmen 3×16 na každé zadní stojce\n200 mm nad rámem, pak po 700"
+        },
+        "offset": [
+          -0.48,
+          -0.089
+        ],
+        "size": 0.82
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          2942.5,
+          443.8,
+          3350.0
+        ],
+        "text": {
+          "en": "Horizontal joint CD +1250 and +2500\nwhere the ceiling allows",
+          "cs": "Vodorovné CD ve spáře +1250 a +2500\nkde to strop dovolí"
+        },
+        "offset": [
+          -0.386,
+          -0.026
+        ],
+        "size": 0.82
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          500.0,
+          443.8,
+          700.0
+        ],
+        "text": {
+          "en": "Sliding door, head at 2450 mm",
+          "cs": "Posuvné dveře, nadpraží 2450 mm"
+        },
+        "offset": [
+          -0.63,
+          0.029
+        ],
+        "size": 0.82
+      },
+      {
+        "kind": "dim",
+        "a": [
+          2000.0,
+          443.8,
+          2680.0
+        ],
+        "b": [
+          3000.0,
+          443.8,
+          2680.0
+        ],
+        "offset": -0.045,
+        "text": {
+          "en": "1000 mm",
+          "cs": "1000 mm"
+        }
+      },
+      {
+        "kind": "dim",
+        "a": [
+          5000.0,
+          443.8,
+          2920.0
+        ],
+        "b": [
+          5350.0,
+          443.8,
+          2920.0
+        ],
+        "offset": -0.045,
+        "text": {
+          "en": "350 mm",
+          "cs": "350 mm"
+        }
+      },
+      {
+        "kind": "dim",
+        "a": [
+          2140.0,
+          443.8,
+          2664.0
+        ],
+        "b": [
+          2140.0,
+          443.8,
+          3364.0
+        ],
+        "offset": 0.055,
+        "text": {
+          "en": "700 mm",
+          "cs": "700 mm"
+        }
+      },
+      {
+        "kind": "dim",
+        "a": [
+          0.0,
+          443.8,
+          1400.0
+        ],
+        "b": [
+          1000.0,
+          443.8,
+          1400.0
+        ],
+        "offset": 0.04,
+        "text": {
+          "en": "1000 mm",
+          "cs": "1000 mm"
+        }
+      }
+    ]
+  },
+  {
+    "id": "bass-living-section",
+    "title": {
+      "en": "Living bass trap — section\nthrough a vertical CD stud",
+      "cs": "Basová past obýváku — řez\npřes svislou CD stojku"
+    },
+    "project": "Obývák 1.02",
+    "camera": {
+      "target": [
+        2.0,
+        3.35,
+        0.145
+      ],
+      "position": [
+        7.460000000000001,
+        3.35,
+        0.145
+      ],
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "orthoFit": [
+        0.795,
+        1.092
+      ]
+    },
+    "projection": "ortho",
+    "edges": "opaque",
+    "cuts": [
+      {
+        "normal": [
+          -1.0,
+          0.0,
+          0.0
+        ],
+        "anchor": [
+          2000.0,
+          0.0,
+          3000.0
+        ]
+      },
+      {
+        "normal": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "anchor": [
+          1970.0,
+          0.0,
+          3000.0
+        ]
+      }
+    ],
+    "opacity": {
+      "bass_cd": 1,
+      "bass_wall_hanger": 1,
+      "bass_mineral_wool": 0.5,
+      "bass_gkb": 1,
+      "plaster": 1,
+      "masonry": 0.72
+    },
+    "opacityDefault": 0,
+    "annotations": [
+      {
+        "kind": "callout",
+        "anchor": [
+          2000.0,
+          -140.0,
+          3000.0
+        ],
+        "text": {
+          "en": "Masonry 250 + plaster 15",
+          "cs": "Zdivo 250 + omítka 15"
+        },
+        "offset": [
+          -0.362,
+          0.05
+        ],
+        "size": 0.85
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          2000.0,
+          50.0,
+          2664.0
+        ],
+        "text": {
+          "en": "Třmen 3×16, reach 100 mm",
+          "cs": "Třmen 3×16, vyložení 100 mm"
+        },
+        "offset": [
+          -0.423,
+          0.074
+        ],
+        "size": 0.85
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          2000.0,
+          150.0,
+          3400.0
+        ],
+        "text": {
+          "en": "Mineral wool 300 mm",
+          "cs": "Minerální vlna 300 mm"
+        },
+        "offset": [
+          -0.456,
+          -0.003
+        ],
+        "size": 0.85
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          2000.0,
+          368.8,
+          3750.0
+        ],
+        "text": {
+          "en": "Air 137.5 mm, CD 60×27",
+          "cs": "Vzduch 137,5 mm, CD 60×27"
+        },
+        "offset": [
+          -0.526,
+          -0.033
+        ],
+        "size": 0.85
+      },
+      {
+        "kind": "callout",
+        "anchor": [
+          2000.0,
+          443.8,
+          4100.0
+        ],
+        "text": {
+          "en": "GKB 12.5 mm",
+          "cs": "GKB 12,5 mm"
+        },
+        "offset": [
+          -0.551,
+          -0.068
+        ],
+        "size": 0.85
+      },
+      {
+        "kind": "dim",
+        "a": [
+          2000.0,
+          -265.0,
+          2420.0
+        ],
+        "b": [
+          2000.0,
+          -15.0,
+          2420.0
+        ],
+        "offset": -0.06,
+        "text": {
+          "en": "250 mm",
+          "cs": "250 mm"
+        }
+      },
+      {
+        "kind": "dim",
+        "a": [
+          2000.0,
+          0.0,
+          3000.0
+        ],
+        "b": [
+          2000.0,
+          300.0,
+          3000.0
+        ],
+        "offset": -0.05,
+        "text": {
+          "en": "300 mm",
+          "cs": "300 mm"
+        }
+      },
+      {
+        "kind": "dim",
+        "a": [
+          2000.0,
+          300.0,
+          3480.0
+        ],
+        "b": [
+          2000.0,
+          437.5,
+          3480.0
+        ],
+        "offset": -0.05,
+        "text": {
+          "en": "137.5 mm",
+          "cs": "137,5 mm"
+        }
+      },
+      {
+        "kind": "dim",
+        "a": [
+          2000.0,
+          0.0,
+          3980.0
+        ],
+        "b": [
+          2000.0,
+          450.0,
+          3980.0
+        ],
+        "offset": -0.07,
+        "text": {
+          "en": "450 mm",
+          "cs": "450 mm"
+        }
+      }
+    ]
   }
 ]

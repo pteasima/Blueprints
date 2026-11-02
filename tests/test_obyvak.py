@@ -606,8 +606,7 @@ def test_soffit_ducts_sit_under_lid_on_wall_plate():
 
 def test_soffit_scene_recipe():
     specs = scenes()
-    assert len(specs) == 4
-    assert [s["id"] for s in specs] == [
+    assert [s["id"] for s in specs][:4] == [
         "soffit",
         "gable",
         "sikmina-lattice",
@@ -887,6 +886,121 @@ def test_sikmina_drawing_scenes():
     assert section["opacity"]["slope_foil"] == board
 
 
+def test_bass_trap_scenes_keep_the_vertical_lattice():
+    """Viewer scenes and plates describe the model as it is: vertical studs, no flip."""
+    import math
+
+    specs = {s["id"]: s for s in scenes()}
+    assert [
+        "bass-kitchen",
+        "bass-living",
+        "bass-kitchen-elevation",
+        "bass-kitchen-section",
+        "bass-living-elevation",
+        "bass-living-section",
+    ] == [s["id"] for s in scenes() if s["id"].startswith("bass-")]
+
+    p = ObyvakParams()
+    kitchen_xs = bass_cd_centres(p.room_width, 625.0, p.cd_w, FACE_GAP)
+    living_xs = bass_cd_centres(p.room_width, 1000.0, p.cd_w, FACE_GAP)
+    assert len(kitchen_xs) == 10
+    assert len(living_xs) == 7
+
+    def cam_mm(spec):
+        x, y_up, z = spec["camera"]["position"]
+        return (x / 0.001, -z / 0.001, y_up / 0.001)
+
+    for side, depth, spacing, n_studs in (
+        ("kitchen", 190.0, 625.0, 10),
+        ("living", 450.0, 1000.0, 7),
+    ):
+        view = specs[f"bass-{side}"]
+        assert view["projection"] == "ortho"
+        assert view["opacityDefault"] == 0
+        assert view["opacity"][LABEL_BASS_GKB] < 0.25
+        assert view["opacity"][LABEL_BASS_CD] == 1
+        assert view["opacity"][LABEL_BASS_HANGER] == 1
+        assert view["opacity"][LABEL_BASS_WOOL] < 1
+        assert view["title"]["en"].startswith(
+            "Kitchen" if side == "kitchen" else "Living"
+        )
+        assert "vertical" in view["title"]["en"]
+        assert "svislé" in view["title"]["cs"]
+        assert f"{spacing:g}" in view["title"]["en"]
+        # Cut opens the cabinet-end stud; the other gable is behind the camera.
+        assert any(c["normal"] == [-1.0, 0.0, 0.0] and c["anchor"][0] == kitchen_xs[-1] for c in view["cuts"])
+        cx, cy, _cz = cam_mm(view)
+        assert cx > kitchen_xs[-1]
+        if side == "living":
+            assert cy < p.room_length * 0.5
+            assert view["camera"]["target"][2] > -1.0  # glTF Z = −CAD Y, living end
+        else:
+            assert cy > p.room_length * 0.5
+            assert view["camera"]["target"][2] < -p.room_length * 0.0005
+
+        elev = specs[f"bass-{side}-elevation"]
+        assert elev["opacity"][LABEL_BASS_GKB] == 0
+        assert elev["opacity"][LABEL_BASS_CD] == 1
+        assert elev["opacityDefault"] == 0
+        joined = " ".join(a["text"]["en"] for a in elev["annotations"] if "text" in a)
+        joined_cs = " ".join(a["text"]["cs"] for a in elev["annotations"] if "text" in a)
+        assert "vertical" in joined
+        assert "svisle" in joined_cs
+        assert f"{n_studs} studs @ {spacing:g}" in joined
+        assert "350 mm" in joined
+        assert "horizontal stud" not in joined.lower()
+        dims = [a for a in elev["annotations"] if a["kind"] == "dim"]
+        dim_text = " ".join(a["text"]["en"] for a in dims)
+        assert f"{spacing:g} mm" in dim_text
+        assert "350 mm" in dim_text
+        if side == "kitchen":
+            assert "1100 mm" in dim_text and "1000 mm" in dim_text
+        else:
+            assert "1000 mm" in dim_text
+
+        section = specs[f"bass-{side}-section"]
+        assert section["opacity"][LABEL_BASS_GKB] == 1
+        assert len(section["cuts"]) == 2
+        sec_text = " ".join(a["text"]["en"] for a in section["annotations"] if "text" in a)
+        if side == "kitchen":
+            assert "130.5 mm" in sec_text and "47 mm" in sec_text and "190 mm" in sec_text
+            assert section["cuts"][0]["anchor"][0] == 2500.0
+        else:
+            assert "300 mm" in sec_text and "137.5 mm" in sec_text and "450 mm" in sec_text
+            assert section["cuts"][0]["anchor"][0] == 2000.0
+        assert "250 mm" in sec_text and "12.5 mm" in sec_text
+
+        # Callouts share one column and stay on the plate.
+        callouts = [a for a in elev["annotations"] if a["kind"] == "callout"]
+        hw, hh = elev["camera"]["orthoFit"]
+        aspect = 2400 / 1697
+        if hw < hh * aspect:
+            hw = hh * aspect
+        elif hh < hw / aspect:
+            hh = hw / aspect
+        target = elev["camera"]["target"]
+        pos = elev["camera"]["position"]
+        look = (target[0] - pos[0], target[1] - pos[1], target[2] - pos[2])
+        ln = math.sqrt(sum(v * v for v in look)) or 1.0
+        look = tuple(v / ln for v in look)
+        up = tuple(elev["camera"]["up"])
+        label_x = []
+        for ann in callouts:
+            gx, gy, gz = cad_mm_to_gltf_m(ann["anchor"])
+            dx, dy, dz = gx - target[0], gy - target[1], gz - target[2]
+            rx = look[1] * up[2] - look[2] * up[1]
+            ry = look[2] * up[0] - look[0] * up[2]
+            rz = look[0] * up[1] - look[1] * up[0]
+            sx = (dx * rx + dy * ry + dz * rz) / hw
+            sy = (dx * up[0] + dy * up[1] + dz * up[2]) / hh
+            lx = sx + ann["offset"][0] * 2
+            ly = sy + ann["offset"][1] * 2
+            label_x.append(lx)
+            assert -0.82 < lx < 0.82
+            assert -0.7 < ly < 0.7
+        assert max(label_x) - min(label_x) < 0.05
+
+
 def test_write_scenes_json(tmp_path):
     path = write_scenes_json("obyvak", scenes(), tmp_path / "obyvak.scenes.json")
     data = path.read_text(encoding="utf-8")
@@ -894,6 +1008,10 @@ def test_write_scenes_json(tmp_path):
     assert '"gable"' in data
     assert '"sikmina-lattice"' in data
     assert '"sikmina-section"' in data
+    assert '"bass-kitchen"' in data
+    assert '"bass-living"' in data
+    assert '"bass-kitchen-elevation"' in data
+    assert '"bass-living-section"' in data
     assert path.stat().st_size > 0
 
 
@@ -1194,7 +1312,7 @@ def test_soffit_acoustics_ignore_the_steel_section():
 
 
 def test_default_gable_lattices_and_as_built_wool():
-    """Kitchen is 625 vertical plus a 350 mm bay; living is 1000 horizontal plus 350 mm."""
+    """Both traps are vertical CD studs: kitchen @ 625, living @ 1000, plus a 350 mm bay."""
     p = ObyvakParams()
     g = build_layout(p)
     assert abs(p.bass_k_wool - 130.5) < 1e-9

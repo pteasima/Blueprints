@@ -48,6 +48,7 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
 
 from __future__ import annotations
 
+import math
 from dataclasses import asdict
 
 from build123d import (
@@ -1719,6 +1720,7 @@ def _callout(
     cs: str,
     offset: tuple[float, float],
     tips: list[tuple[float, float, float]] | None = None,
+    size: float | None = None,
 ) -> dict:
     item: dict = {
         "kind": "callout",
@@ -1728,6 +1730,8 @@ def _callout(
     }
     if tips:
         item["tips"] = [[round(v, 1) for v in tip] for tip in tips]
+    if size:
+        item["size"] = size
     return item
 
 
@@ -2161,6 +2165,579 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     return [lattice, section]
 
 
+def _unit(v: tuple[float, float, float]) -> tuple[float, float, float]:
+    n = math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) or 1.0
+    return (v[0] / n, v[1] / n, v[2] / n)
+
+
+def _cross(
+    a: tuple[float, float, float], b: tuple[float, float, float]
+) -> tuple[float, float, float]:
+    return (
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    )
+
+
+def _look_between(
+    eye_cad: tuple[float, float, float], aim_cad: tuple[float, float, float]
+) -> tuple[float, float, float]:
+    """glTF look direction from a CAD eye toward a CAD aim."""
+    from blueprints.scenes import cad_mm_to_gltf_m
+
+    eye = cad_mm_to_gltf_m(eye_cad)
+    aim = cad_mm_to_gltf_m(aim_cad)
+    return _unit((aim[0] - eye[0], aim[1] - eye[1], aim[2] - eye[2]))
+
+
+def _box_corners(
+    x0: float, x1: float, y0: float, y1: float, z0: float, z1: float
+) -> list[tuple[float, float, float]]:
+    return [(x, y, z) for x in (x0, x1) for y in (y0, y1) for z in (z0, z1)]
+
+
+def _frame_ortho(
+    look: tuple[float, float, float],
+    corners: list[tuple[float, float, float]],
+    *,
+    pad: float = 1.14,
+    dist_scale: float = 2.4,
+) -> dict:
+    """Orthographic camera that fits ``corners``, Z up, look held fixed.
+
+    The camera sits ``dist_scale`` frustum-halves back along ``look`` so a
+    3/4 view stays near the trap instead of leaping past the other gable.
+    """
+    from blueprints.scenes import cad_mm_to_gltf_m
+
+    look_n = _unit(look)
+    world_up = (0.0, 1.0, 0.0)
+    right = _unit(_cross(look_n, world_up))
+    screen_up = _unit(_cross(tuple(-c for c in look_n), right))
+    projected: list[tuple[float, float, float]] = []
+    for corner in corners:
+        g = cad_mm_to_gltf_m(corner)
+        projected.append(
+            (
+                g[0] * right[0] + g[1] * right[1] + g[2] * right[2],
+                g[0] * screen_up[0] + g[1] * screen_up[1] + g[2] * screen_up[2],
+                g[0] * look_n[0] + g[1] * look_n[1] + g[2] * look_n[2],
+            )
+        )
+    minx, maxx = min(p[0] for p in projected), max(p[0] for p in projected)
+    miny, maxy = min(p[1] for p in projected), max(p[1] for p in projected)
+    midz = 0.5 * (min(p[2] for p in projected) + max(p[2] for p in projected))
+    cx, cy = 0.5 * (minx + maxx), 0.5 * (miny + maxy)
+    target = [
+        cx * right[0] + cy * screen_up[0] + midz * look_n[0],
+        cx * right[1] + cy * screen_up[1] + midz * look_n[1],
+        cx * right[2] + cy * screen_up[2] + midz * look_n[2],
+    ]
+    half_w = 0.5 * (maxx - minx) * pad
+    half_h = 0.5 * (maxy - miny) * pad
+    dist = max(half_w, half_h, 0.35) * dist_scale
+    return {
+        "target": target,
+        "position": [
+            target[0] - look_n[0] * dist,
+            target[1] - look_n[1] * dist,
+            target[2] - look_n[2] * dist,
+        ],
+        "up": [0.0, 1.0, 0.0],
+        "orthoFit": [half_w, half_h],
+    }
+
+
+def _cad_of_gltf(point: list[float]) -> tuple[float, float, float]:
+    """Inverse of ``cad_mm_to_gltf_m`` (metres → CAD mm)."""
+    return (point[0] / 0.001, -point[2] / 0.001, point[1] / 0.001)
+
+
+def _mm_cs(value: float) -> str:
+    return f"{value:g}".replace(".", ",")
+
+
+def _bass_z_frame(p: ObyvakParams) -> float:
+    """Bottom of the CD frame. Same clearance the solids use."""
+    bot_t = min(p.bass_bottom_sdk_t, p.bass_k_gkb) - FACE_GAP * 0.5
+    return p.predstena_bottom_z + FACE_GAP + (bot_t + FACE_GAP if bot_t > FACE_GAP else 0.0)
+
+
+def _bass_stud_xs(p: ObyvakParams, spacing: float) -> list[float]:
+    return bass_cd_centres(p.room_width, spacing, p.cd_w, FACE_GAP)
+
+
+# Drawing button renders an A3 landscape plate (see viewer/drawing.js).
+_PLATE_ASPECT = 2400 / 1697
+
+
+def _plate_halves(half_w: float, half_h: float) -> tuple[float, float]:
+    """Frustum the viewer actually uses: orthoFit, then letterboxed to the plate."""
+    fw, fh = float(half_w), float(half_h)
+    if fw < fh * _PLATE_ASPECT:
+        fw = fh * _PLATE_ASPECT
+    elif fh < fw / _PLATE_ASPECT:
+        fh = fw / _PLATE_ASPECT
+    return fw, fh
+
+
+def _column_callouts(
+    notes: list[tuple[tuple[float, float, float], str, str]],
+    cam: dict,
+    look: tuple[float, float, float],
+    col_x: float,
+    label_ys: list[float] | None = None,
+    size: float | None = None,
+) -> list[dict]:
+    """One vertical label column. ``label_ys`` keeps notes off the title and each other.
+
+    Offsets are in the plate's NDC, after the viewer letterboxes ``orthoFit``.
+    """
+    half_w, half_h = _plate_halves(*cam["orthoFit"])
+    items = []
+    for i, (anchor, en, cs) in enumerate(notes):
+        ndc = _lattice_ndc(anchor, cam["target"], look, (0.0, 1.0, 0.0), half_w, half_h)
+        label_y = label_ys[i] if label_ys is not None else ndc[1]
+        items.append(
+            _callout(anchor, en, cs, _ndc_offset(ndc, (col_x, label_y)), size=size)
+        )
+    return items
+
+
+def _bass_view_scenes(p: ObyvakParams) -> list[dict]:
+    """3/4 views of each trap. GKB is ghosted; a cut through the cabinet-end
+    stud opens the stack (wall, wool, air, CD) without dropping a bay.
+    """
+    z0, z1 = 2100.0, 5480.0
+    # Cabinet-end stud. The cut keeps X below it, so the camera (outside that
+    # eave) looks straight onto the section face and back along the lattice.
+    end_x = _bass_stud_xs(p, 1000.0)[-1]
+    opacity = {
+        LABEL_BASS_CD: 1,
+        LABEL_BASS_HANGER: 1,
+        LABEL_BASS_WOOL: 0.4,
+        LABEL_BASS_GKB: 0.14,
+        LABEL_PLASTER: 0.9,
+        LABEL_MASONRY: 0.4,
+        LABEL_WALL_GKF: 0.95,
+        LABEL_POCKET_FRAME: 1,
+    }
+
+    def one(side: str, spacing: float, depth: float, y_wall: float, toward: float) -> dict:
+        y_room = y_wall + toward * depth
+        y_lo, y_hi = (min(y_wall, y_room) - 280.0, max(y_wall, y_room) + 80.0)
+        corners = _box_corners(-60.0, p.room_width + 40.0, y_lo, y_hi, z0, z1)
+        # ~45° in plan, slightly above: lattice face and the cut stack both read.
+        if toward > 0:
+            eye = (p.room_width + 900.0, depth + 3400.0, 5200.0)
+            aim = (0.42 * p.room_width, depth * 0.45, 3600.0)
+        else:
+            eye = (p.room_width + 900.0, y_wall - 3400.0, 5200.0)
+            aim = (0.42 * p.room_width, y_wall - depth * 0.45, 3600.0)
+        cam = _frame_ortho(_look_between(eye, aim), corners)
+        cam_y = _cad_of_gltf(cam["position"])[1]
+        # Drop the other gable on the far side of the camera so its cap is behind us.
+        if toward > 0:
+            far = _cut((0.0, 0.0, 1.0), (p.room_width * 0.5, cam_y + 1200.0, 3000.0))
+        else:
+            far = _cut((0.0, 0.0, -1.0), (p.room_width * 0.5, cam_y - 1200.0, 3000.0))
+        title = (
+            (
+                f"Kitchen gable — bass trap\n{depth:g} mm, vertical CD @ {spacing:g}",
+                f"Štít kuchyně — basová past\n{depth:g} mm, svislé CD @ {spacing:g}",
+            )
+            if side == "kitchen"
+            else (
+                f"Living gable — bass trap\n{depth:g} mm, vertical CD @ {spacing:g}",
+                f"Štít obýváku — basová past\n{depth:g} mm, svislé CD @ {spacing:g}",
+            )
+        )
+        return {
+            "id": f"bass-{side}",
+            "title": _tx(*title),
+            "project": "Obývák 1.02",
+            "camera": cam,
+            "projection": "ortho",
+            "edges": "transparent",
+            "cuts": [
+                _cut((-1.0, 0.0, 0.0), (end_x, y_wall, 3000.0)),
+                far,
+            ],
+            "opacity": opacity,
+            "opacityDefault": 0,
+        }
+
+    kitchen = one("kitchen", 625.0, p.predstena_kitchen, p.room_length, -1.0)
+    living = one("living", 1000.0, p.predstena_living, 0.0, 1.0)
+    return [kitchen, living]
+
+
+def _bass_elevation_scene(
+    p: ObyvakParams,
+    *,
+    side: str,
+    spacing: float,
+    depth: float,
+    y_face: float,
+    look: tuple[float, float, float],
+    cut_y: float,
+    cut_normal: tuple[float, float, float],
+    col_x: float,
+    doors: list[tuple[float, float]],
+    joint_mm: tuple[float, ...],
+) -> dict:
+    """Straight elevation from the room. GKB is off so the vertical lattice shows."""
+    studs = _bass_stud_xs(p, spacing)
+    # Wide margin on the cabinet side (screen left for living, screen right for kitchen).
+    x0, x1 = -1100.0, 8900.0
+    z0, z1 = -180.0, 5520.0
+    pad_w, pad_h = 1.0, 1.04
+    half_w = 0.5 * (x1 - x0) * 0.001 * pad_w
+    half_h = 0.5 * (z1 - z0) * 0.001 * pad_h
+    target = (0.5 * (x0 + x1), y_face, 0.5 * (z0 + z1))
+    cam = _ortho_pose(target, look, (0.0, 1.0, 0.0), half_w, half_h)
+    z_frame = _bass_z_frame(p)
+    z_h0 = z_frame + p.bass_hanger_z_inset
+    z_h1 = z_h0 + p.bass_hanger_z_step
+    module_line = spacing
+    while module_line + spacing < p.room_width - 0.5:
+        module_line += spacing
+    # Interior module, clear of both inset end studs.
+    module_a = studs[2]
+    module_b = studs[3]
+    hanger_x = min(studs, key=lambda x: abs(x - 0.45 * p.room_width))
+    n_studs = len(studs)
+    joints = " and ".join(f"+{v:g}" for v in joint_mm)
+    joints_cs = " a ".join(f"+{v:g}" for v in joint_mm)
+    if side == "kitchen":
+        title = (
+            "Kitchen gable — bass trap\nGKB removed, vertical CD @ 625",
+            "Štít kuchyně — basová past\nbez GKB, svislé CD @ 625",
+        )
+        where = ("kitchen gable", "štít kuchyně")
+    else:
+        title = (
+            "Living gable — bass trap\nGKB removed, vertical CD @ 1000",
+            "Štít obýváku — basová past\nbez GKB, svislé CD @ 1000",
+        )
+        where = ("living gable", "štít obýváku")
+    notes = [
+        (
+            (0.35 * p.room_width, y_face, 5000.0),
+            (
+                f"CD {p.cd_w:g}×{p.cd_t:g} vertical\n"
+                f"{n_studs} studs @ {spacing:g}, makeup bay {p.room_width - module_line:g} mm"
+            ),
+            (
+                f"CD {p.cd_w:g}×{p.cd_t:g} svisle\n"
+                f"{n_studs} stojek @ {spacing:g}, krajní pole {p.room_width - module_line:g} mm"
+            ),
+        ),
+        (
+            (hanger_x, y_face, z_h0),
+            (
+                f"Třmen {p.bass_trmen_arm_t:g}×{p.bass_trmen_arm_h:g} on each rear stud\n"
+                f"{p.bass_hanger_z_inset:g} mm above the frame, then @ {p.bass_hanger_z_step:g}"
+            ),
+            (
+                f"Třmen {p.bass_trmen_arm_t:g}×{p.bass_trmen_arm_h:g} na každé zadní stojce\n"
+                f"{p.bass_hanger_z_inset:g} mm nad rámem, pak po {p.bass_hanger_z_step:g}"
+            ),
+        ),
+        (
+            (0.55 * p.room_width, y_face, p.predstena_bottom_z + 900.0),
+            f"Horizontal joint CD {joints}\nwhere the ceiling allows",
+            f"Vodorovné CD ve spáře {joints_cs}\nkde to strop dovolí",
+        ),
+        (
+            (doors[0][0] + 0.5 * doors[0][1], y_face, 700.0),
+            f"Sliding door, head at {p.predstena_bottom_z:g} mm",
+            f"Posuvné dveře, nadpraží {p.predstena_bottom_z:g} mm",
+        ),
+    ]
+    dims = [
+        _dim(
+            (module_a, y_face, 2680.0),
+            (module_b, y_face, 2680.0),
+            -0.045,
+            f"{spacing:g} mm",
+            f"{spacing:g} mm",
+        ),
+        _dim(
+            (module_line, y_face, 2920.0),
+            (p.room_width, y_face, 2920.0),
+            -0.045,
+            f"{p.room_width - module_line:g} mm",
+            f"{p.room_width - module_line:g} mm",
+        ),
+        _dim(
+            (hanger_x + 140.0, y_face, z_h0),
+            (hanger_x + 140.0, y_face, z_h1),
+            0.055,
+            f"{p.bass_hanger_z_step:g} mm",
+            f"{p.bass_hanger_z_step:g} mm",
+        ),
+    ]
+    for x_door, width in doors:
+        dims.append(
+            _dim(
+                (x_door, y_face, 1400.0),
+                (x_door + width, y_face, 1400.0),
+                0.04,
+                f"{width:g} mm",
+                f"{width:g} mm",
+            )
+        )
+    return {
+        "id": f"bass-{side}-elevation",
+        "title": _tx(*title),
+        "project": "Obývák 1.02",
+        "camera": cam,
+        "projection": "ortho",
+        "edges": "opaque",
+        "cuts": [_cut(cut_normal, (0.5 * p.room_width, cut_y, 3000.0))],
+        "opacity": {
+            LABEL_BASS_CD: 1,
+            LABEL_BASS_HANGER: 1,
+            LABEL_BASS_WOOL: 0.22,
+            LABEL_BASS_GKB: 0,
+            LABEL_PLASTER: 1,
+            LABEL_MASONRY: 0.45,
+            LABEL_WALL_GKF: 1,
+            LABEL_POCKET_FRAME: 1,
+        },
+        "opacityDefault": 0,
+        "annotations": [
+            *_column_callouts(
+                notes, cam, look, col_x, [0.48, -0.18, 0.14, -0.50], size=0.82
+            ),
+            *dims,
+        ],
+    }
+
+
+def _bass_section_scene(
+    p: ObyvakParams,
+    *,
+    side: str,
+    stud_x: float,
+    y_wall: float,
+    toward: float,
+    depth: float,
+    wool: float,
+    air: float,
+    gkb: float,
+    reach: float,
+    look: tuple[float, float, float],
+    y0: float,
+    y1: float,
+    col_x: float,
+) -> dict:
+    """Vertical section through one stud. Layer thicknesses are the design stack."""
+    z0, z1 = 2300.0, 4400.0
+    pad_w, pad_h = 1.0, 1.04
+    half_w = 0.5 * (y1 - y0) * 0.001 * pad_w
+    half_h = 0.5 * (z1 - z0) * 0.001 * pad_h
+    cam = _ortho_pose(
+        (stud_x, 0.5 * (y0 + y1), 0.5 * (z0 + z1)),
+        look,
+        (0.0, 1.0, 0.0),
+        half_w,
+        half_h,
+    )
+    # Slab through the stud centre, thick enough to keep the 3 mm třmen.
+    if look[0] < 0:
+        cuts = [
+            _cut((-1.0, 0.0, 0.0), (stud_x, y_wall, 3000.0)),
+            _cut((1.0, 0.0, 0.0), (stud_x - p.cd_w * 0.5, y_wall, 3000.0)),
+        ]
+    else:
+        cuts = [
+            _cut((1.0, 0.0, 0.0), (stud_x, y_wall, 3000.0)),
+            _cut((-1.0, 0.0, 0.0), (stud_x + p.cd_w * 0.5, y_wall, 3000.0)),
+        ]
+    y_wool = y_wall + toward * wool
+    y_gkb_back = y_wall + toward * (depth - gkb)
+    y_room = y_wall + toward * depth
+    y_reach = y_wall + toward * reach
+    y_mas0 = y_wall - toward * p.wall_plaster
+    y_mas1 = y_mas0 - toward * p.wall_mason
+    z_hang = _bass_z_frame(p) + p.bass_hanger_z_inset
+
+    def ymid(a: float, b: float) -> float:
+        return 0.5 * (a + b)
+
+    if side == "kitchen":
+        title = (
+            "Kitchen bass trap — section\nthrough a vertical CD stud",
+            "Basová past kuchyně — řez\npřes svislou CD stojku",
+        )
+    else:
+        title = (
+            "Living bass trap — section\nthrough a vertical CD stud",
+            "Basová past obýváku — řez\npřes svislou CD stojku",
+        )
+    wool_cs = _mm_cs(wool)
+    air_cs = _mm_cs(air)
+    gkb_cs = _mm_cs(gkb)
+    notes = [
+        (
+            (stud_x, ymid(y_mas0, y_mas1), 3000.0),
+            f"Masonry {p.wall_mason:g} + plaster {p.wall_plaster:g}",
+            f"Zdivo {p.wall_mason:g} + omítka {p.wall_plaster:g}",
+        ),
+        (
+            (stud_x, ymid(y_wall, y_reach), z_hang),
+            f"Třmen {p.bass_trmen_arm_t:g}×{p.bass_trmen_arm_h:g}, reach {reach:g} mm",
+            f"Třmen {p.bass_trmen_arm_t:g}×{p.bass_trmen_arm_h:g}, vyložení {reach:g} mm",
+        ),
+        (
+            (stud_x, ymid(y_wall, y_wool), 3400.0),
+            f"Mineral wool {wool:g} mm",
+            f"Minerální vlna {wool_cs} mm",
+        ),
+        (
+            (stud_x, ymid(y_wool, y_gkb_back), 3750.0),
+            f"Air {air:g} mm, CD {p.cd_w:g}×{p.cd_t:g}",
+            f"Vzduch {air_cs} mm, CD {p.cd_w:g}×{p.cd_t:g}",
+        ),
+        (
+            (stud_x, ymid(y_gkb_back, y_room), 4100.0),
+            f"GKB {gkb:g} mm",
+            f"GKB {gkb_cs} mm",
+        ),
+    ]
+    # Dimension the design planes (the 1 mm mate clearance is not a layer).
+    dims = [
+        _dim(
+            (stud_x, y_mas1, 2420.0),
+            (stud_x, y_mas0, 2420.0),
+            -0.06,
+            f"{p.wall_mason:g} mm",
+            f"{p.wall_mason:g} mm",
+        ),
+        _dim(
+            (stud_x, y_wall, 3000.0),
+            (stud_x, y_wool, 3000.0),
+            -0.05,
+            f"{wool:g} mm",
+            f"{wool_cs} mm",
+        ),
+        _dim(
+            (stud_x, y_wool, 3480.0),
+            (stud_x, y_gkb_back, 3480.0),
+            -0.05,
+            f"{air:g} mm",
+            f"{air_cs} mm",
+        ),
+        _dim(
+            (stud_x, y_wall, 3980.0),
+            (stud_x, y_room, 3980.0),
+            -0.07,
+            f"{depth:g} mm",
+            f"{_mm_cs(depth)} mm",
+        ),
+    ]
+    return {
+        "id": f"bass-{side}-section",
+        "title": _tx(*title),
+        "project": "Obývák 1.02",
+        "camera": cam,
+        "projection": "ortho",
+        "edges": "opaque",
+        "cuts": cuts,
+        "opacity": {
+            LABEL_BASS_CD: 1,
+            LABEL_BASS_HANGER: 1,
+            LABEL_BASS_WOOL: 0.5,
+            LABEL_BASS_GKB: 1,
+            LABEL_PLASTER: 1,
+            LABEL_MASONRY: 0.72,
+        },
+        "opacityDefault": 0,
+        "annotations": [
+            *_column_callouts(
+                notes,
+                cam,
+                look,
+                col_x,
+                [-0.22, -0.48, 0.04, 0.30, 0.55],
+                size=0.85,
+            ),
+            *dims,
+        ],
+    }
+
+
+def _bass_drawing_scenes(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
+    """Elevation (GKB off) and a stud section for each trap. Geometry is the 3D model."""
+    living_doors = [(x0, width) for name, x0, width in p.pocket_doors if name == "living"]
+    kitchen_doors = [(x0, width) for name, x0, width in p.pocket_doors if name == "kitchen"]
+    # Label column sits in the cabinet-side margin (screen left on the living
+    # elevation, screen right on the kitchen elevation).
+    living_elev = _bass_elevation_scene(
+        p,
+        side="living",
+        spacing=1000.0,
+        depth=p.predstena_living,
+        y_face=p.predstena_living - p.bass_l_gkb * 0.5,
+        look=(0.0, 0.0, 1.0),
+        cut_y=p.predstena_living + 250.0,
+        cut_normal=(0.0, 0.0, 1.0),
+        col_x=-0.58,
+        doors=living_doors,
+        joint_mm=(1250.0, 2500.0),
+    )
+    kitchen_elev = _bass_elevation_scene(
+        p,
+        side="kitchen",
+        spacing=625.0,
+        depth=p.predstena_kitchen,
+        y_face=g.y_pred_r + p.bass_k_gkb * 0.5,
+        look=(0.0, 0.0, -1.0),
+        cut_y=g.y_pred_r - 250.0,
+        cut_normal=(0.0, 0.0, -1.0),
+        col_x=0.58,
+        doors=kitchen_doors,
+        joint_mm=(2000.0,),
+    )
+    # Section: wall on the left. Living looks toward −X; kitchen toward +X.
+    living_sec = _bass_section_scene(
+        p,
+        side="living",
+        stud_x=2000.0,
+        y_wall=0.0,
+        toward=1.0,
+        depth=p.predstena_living,
+        wool=p.bass_l_wool,
+        air=p.bass_l_air,
+        gkb=p.bass_l_gkb,
+        reach=p.bass_l_rear_reach,
+        look=(-1.0, 0.0, 0.0),
+        y0=-940.0,
+        y1=650.0,
+        col_x=-0.72,
+    )
+    kitchen_sec = _bass_section_scene(
+        p,
+        side="kitchen",
+        stud_x=2500.0,
+        y_wall=p.room_length,
+        toward=-1.0,
+        depth=p.predstena_kitchen,
+        wool=p.bass_k_wool,
+        air=p.bass_k_air,
+        gkb=p.bass_k_gkb,
+        reach=p.bass_k_rear_reach,
+        look=(1.0, 0.0, 0.0),
+        y0=10745.0,
+        y1=11930.0,
+        col_x=-0.72,
+    )
+    return [kitchen_elev, kitchen_sec, living_elev, living_sec]
+
+
 def scenes(params: ObyvakParams | None = None) -> list[dict]:
     """Named WebGL viewer scenes (see blueprints.scenes).
 
@@ -2247,7 +2824,13 @@ def scenes(params: ObyvakParams | None = None) -> list[dict]:
         "opacity": {"slopes": 1, LABEL_PLASTER: 1},
         "opacityDefault": 0.5,
     }
-    return [soffit, gable, *_sikmina_plates(p, g)]
+    return [
+        soffit,
+        gable,
+        *_sikmina_plates(p, g),
+        *_bass_view_scenes(p),
+        *_bass_drawing_scenes(p, g),
+    ]
 
 
 def part_groups() -> list[dict]:
