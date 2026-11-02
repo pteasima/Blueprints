@@ -85,7 +85,7 @@ LABEL_RACKING_STRAP = "racking_strap"
 LABEL_TIE_ROD = "tie_rod"
 LABEL_SLOPE_LIGHT = "slope_light"
 # Pair of spots on the room face. The pair centre is this far vertically
-# above the tie axis; the two heads are this far apart along the slope.
+# above the tie axis; the two heads are this far apart along the room.
 TIE_LIGHT_ABOVE = 120.0
 TIE_LIGHT_PAIR = 140.0
 TIE_LIGHT_D = 70.0
@@ -1100,7 +1100,8 @@ class ObyvakLayout:
         """Room-face points for each spot head.
 
         Returns (x, y, z, nx, nz, side). ``(nx, nz)`` points into the room.
-        Five sets per slope; each set is two heads along the slope, centred
+        Five sets per slope. Each set is two heads side by side along the
+        room (the ridge direction), both at the pair centre on the slope,
         ``TIE_LIGHT_ABOVE`` vertically above the tie.
         """
         z_mid = self.tie_axis_z(gap) + TIE_LIGHT_ABOVE
@@ -1110,15 +1111,12 @@ class ObyvakLayout:
         for side, right in (("L", False), ("R", True)):
             x_mid = self._ceil_x_at_z(z_mid, right=right)
             if right:
-                tx, tz = -self.cos, self.sin
                 nx, nz = -self.sin, -self.cos
             else:
-                tx, tz = self.cos, self.sin
                 nx, nz = self.sin, -self.cos
             for y in ys:
                 for sign in (-1.0, 1.0):
-                    s = sign * half
-                    heads.append((x_mid + tx * s, y, z_mid + tz * s, nx, nz, side))
+                    heads.append((x_mid, y + sign * half, z_mid, nx, nz, side))
         return heads
 
     def hanger_quad(

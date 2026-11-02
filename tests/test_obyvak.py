@@ -287,20 +287,20 @@ def test_tie_rods_and_slope_lights():
     assert sum(1 for lit in lights if lit.bounding_box().center().X < g.x_ridge) == 10
     assert sum(1 for lit in lights if lit.bounding_box().center().X > g.x_ridge) == 10
     assert min(lit.bounding_box().min.Z for lit in lights) > z
-    # Two heads of a pair are TIE_LIGHT_PAIR apart, not two unrelated rows.
-    left = sorted(
-        (lit.bounding_box().center().X, lit.bounding_box().center().Y)
+    # Two heads of a pair sit side by side along the room, same point on the slope.
+    left = [
+        lit.bounding_box().center()
         for lit in lights
         if lit.bounding_box().center().X < g.x_ridge
-    )
-    by_y: dict[float, list[float]] = {}
-    for x, y in left:
-        by_y.setdefault(round(y, 1), []).append(x)
-    assert len(by_y) == 5
-    for xs in by_y.values():
-        assert len(xs) == 2
-        gap_x = abs(xs[1] - xs[0])
-        assert gap_x == pytest.approx(TIE_LIGHT_PAIR * g.cos, abs=1.0)
+    ]
+    assert max(c.X for c in left) - min(c.X for c in left) < 0.5
+    assert max(c.Z for c in left) - min(c.Z for c in left) < 0.5
+    ys_l = sorted(c.Y for c in left)
+    assert len(ys_l) == 10
+    for i, centre in enumerate(light_ys):
+        a, b = ys_l[2 * i], ys_l[2 * i + 1]
+        assert b - a == pytest.approx(TIE_LIGHT_PAIR, abs=0.5)
+        assert 0.5 * (a + b) == pytest.approx(centre)
 
     ducts = _labeled(shape, LABEL_SOFFIT_DUCT)
     rafters = _labeled(shape, LABEL_RAFTERS)
