@@ -24,10 +24,10 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
 - Soffit box: 40 mm NH L over cabinets (20 mm gap); mineral wool + CD/UD rost
   below a service void; three Ø160 spiral ducts (HRV + AC) in that void; GKF
   lid raised onto the pozednice (above the wall head, not the plaster). Slope
-  GKF butts the lid where the two planes meet, at full 12.5 mm. The slope
-  board ends at the furniture line; the soffit board butts it. A light-gauge
-  angle backs that hidden joint and screws to the rost CD; that CD keeps the
-  only Nonius for the corner. Vertical CD studs hang from it; bottom CD studs
+  GKF butts the lid where the two planes meet, at full 12.5 mm. The nearest
+  slope CD carries that slope edge. An angle on the end of that CD holds a
+  horizontal UD, and the widened lid edge screws into the UD. The lid CD keeps
+  the only Nonius for the corner. Vertical CD studs hang from it; bottom CD studs
   socket into the wall UD. The three ducts are already anchored to the wall
   and are not hung from this box. Nothing heavy is fixed to the frame, so
   there are no timber packers. Furniture and pozednice do not carry the box —
@@ -1305,8 +1305,8 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
                     parts[j] = trimmed
                     break
 
-    # UD at the joint, held by an angle bracket on the nearest slope CD.
-    # Both gypsum edges screw into the UD. Nothing of this sits in the NaturHeld.
+    # Horizontal UD for the lid edge, held by an angle on the nearest slope CD.
+    # The slope GKF screws into that CD, not into the UD.
     ud_quads = g.soffit_ud_track_quads()
     ud_track = None
     for quad in ud_quads:
@@ -1322,15 +1322,17 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         for yc in ceil_rafter_ys:
             if not (y_soff0 + 20.0 <= yc <= y_soff1 - 20.0):
                 continue
+            bracket = None
             for quad in bracket_quads:
-                bracket_parts.append(
-                    _extrude_y(
-                        xz_face(quad, LABEL_SOFFIT_UD),
-                        yc - 20.0,
-                        yc + 20.0,
-                        LABEL_SOFFIT_UD,
-                    )
+                piece = _extrude_y(
+                    xz_face(quad, LABEL_SOFFIT_UD),
+                    yc - 20.0,
+                    yc + 20.0,
+                    LABEL_SOFFIT_UD,
                 )
+                bracket = piece if bracket is None else bracket.fuse(piece)
+            if bracket is not None:
+                bracket_parts.append(_paint(bracket, LABEL_SOFFIT_UD))
     parts.extend(ud_parts)
     parts.extend(bracket_parts)
     if ud_parts:
@@ -1339,6 +1341,11 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     if bracket_parts:
         parts.extend(
             _screw_solids(g, g.joint_bracket_screw_quads(), y_soff0 + 10.0, y_soff1 - 10.0, spacing=p.rafter_spacing)
+        )
+        parts.extend(
+            _screw_solids(
+                g, g.joint_ud_hold_screw_quads(), y_soff0 + 10.0, y_soff1 - 10.0, spacing=p.rafter_spacing
+            )
         )
 
     # CD/UD rost: vertical CD behind the NH, bottom CD into a wall UD.
@@ -1493,9 +1500,8 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
             if hits:
                 parts[i] = _cut_away(part, hits, LABEL_SLOPE_NH)
 
-    # The last slope CD stops where the lid begins. A boolean against the
-    # finished lid keeps the profile off the board. The joint UD also wins
-    # where the grid CD happens to cross the corner.
+    # The last slope CD is cut off at the outer GKF corner so it stays behind
+    # the slope board and out of the lid. The horizontal UD is past that end.
     clear_cd = _extrude_y(
         xz_face(g.joint_clear_pts(), LABEL_SOFFIT_UD), y_soff0, y_soff1, LABEL_SOFFIT_UD
     )

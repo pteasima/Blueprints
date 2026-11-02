@@ -1,9 +1,8 @@
 """Right eave detail: the widened soffit lid meets the lowered slope.
 
-The lid stays at the plate. It extends into the room until the slope GKF,
-cut level, lands on it. That joint cantilevers past the lid CD, so a UD bent
-to the slope/lid angle sits on the room side, under the NaturHeld, and runs
-back to the lid CD and to the nearest slope CD.
+The lid stays at the plate and widens until the slope GKF, cut level, lands
+on it. The nearest slope CD carries that slope edge. An angle on the end of
+that CD holds a horizontal UD, and the lid edge screws into the UD.
 
 Cut from the same faces as `obyvak_section` (see obyvak_detail.clip_section).
 
@@ -46,9 +45,9 @@ def notes(p: ObyvakParams | None = None):
     zl = g.z_soffit_lid
     return [
         (4500, 2920, "Lid widens until it meets the lowered slope"),
-        (4500, 2902, "2x GKF cut level on the lid"),
-        (4500, 2884, "UD at the joint, both boards screw into it"),
-        (4500, 2866, "angle bracket from the nearest slope CD holds the UD"),
+        (4500, 2902, "slope GKF screws into the nearest slope CD"),
+        (4500, 2884, "angle on that CD holds a horizontal UD"),
+        (4500, 2866, "lid edge screws into that UD"),
         (4680, 2920, "slope NaturHeld runs to the vertical soffit face"),
         (4680, 2902, "wool triangle under the lid, one solid"),
         (4680, 2884, "brake taped to the cabinet plaster"),

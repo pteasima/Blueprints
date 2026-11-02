@@ -163,14 +163,26 @@ def test_layout_ceiling_and_gable():
     assert cds == [g.x_soffit_cd]
     assert abs(g.x_soffit_cd - (g.x_soffit_cd_room + p.cd_w * 0.5)) < 1e-6
     ud = g.soffit_ud_track_quads()
-    assert len(ud) == 4  # slope web, lid leg, two short flanges
-    # The UD stays at the joint. It does not run back to the lid CD.
+    assert len(ud) == 3  # horizontal web, two flanges
+    web = ud[0]
+    # Flat on the lid, wall-side of the slope board, short of the lid CD.
+    assert max(z for _x, z in web) - min(z for _x, z in web) < 1.5
+    assert min(x for x, _z in web) > g.gkf_end_attic[0] + 5.0
     assert max(x for quad in ud for x, _z in quad) < g.x_soffit_cd_room - 50.0
-    assert g.joint_bracket_quads()
+    assert max(z for quad in ud for _x, z in quad) < g.z_soffit_cd_top
+    brackets = g.joint_bracket_quads()
+    assert len(brackets) == 2
+    # The clear stops at the outer corner. It does not eat the CD off the board.
+    ax, az = g.gkf_end_attic
+    for x, z in g.joint_clear_pts():
+        s = (x - ax) * -g.cos + (z - az) * g.sin
+        assert s < 0.5
     screws = g.soffit_ud_screw_quads()
     assert len(screws) == 2
     shank = screws[1]
     assert max(z for _x, z in shank) > g.z_soffit_cd_bot
+    edge = g.soffit_ud_slope_screw_quads()
+    assert len(edge) == 2
     # Equal boards: the GKF planes meet on the false ridge.
     assert abs(g.x_stack_joint - g.x_false) < 1e-6
     assert abs(

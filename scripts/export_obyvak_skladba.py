@@ -1326,17 +1326,17 @@ def build_lines(q) -> dict[str, list[Line]]:
         ),
         Line(
             "13b",
-            "UD 40° na spoji šikminy",
+            "UD vodorovný na hraně víka",
             "UD profil",
-            "UD 28×27 ohnutý na úhel šikminy a víka",
-            "1 mm UD v koutě, úhelník 3 mm na CD",
+            "UD 28×27 vodorovně na víku",
+            "vodorovný UD, úhelník 3 mm na šikmém CD",
             joint_m,
             "bm",
             10,
             None,
             "—",
-            "Úhelník na nejbližším šikmém CD drží UD v koutě spoje. "
-            "Obě hrany GKF (šikmina i víko) se šroubují do toho UD.",
+            "Nejbližší šikmé CD nese hranu šikmé GKF. Úhelník na tom CD drží "
+            "vodorovný UD, do kterého se šroubuje jen hrana rozšířeného víka.",
             True,
         ),
         Line(

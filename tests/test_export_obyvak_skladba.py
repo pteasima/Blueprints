@@ -12,12 +12,12 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "export_obyvak_skladba.py"
 
 # Still unpriced on purpose. Each one has no single retail SKU to snapshot:
-# Sto is quote-only, the bent UD and the sealants have no chosen product,
+# Sto is quote-only, the joint UD and the sealants have no chosen product,
 # and the soffit/gable wool product is not decided.
 UNPRICED_SOUHRN = {
     "StoSilent Top Finish",
     "StoSilent Top Basic",
-    "UD 40° na spoji šikminy",
+    "UD vodorovný na hraně víka",
     "Minerální vlna kastlík + štíty",
     "Napojení parozábrany na omítku",
     "Akryl v koutě (plánovaná spára)",

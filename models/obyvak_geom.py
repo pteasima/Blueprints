@@ -37,13 +37,11 @@ extract, AC) sit in a 2-over-1 pack against the cabinet eave, below the lid
 and above the column heads. They are already anchored to the wall; this box
 does not hang them. The GKF lid is raised so its top is flush with the
 pozednice and its cut end meets the plate cheek — above the wall head, not
-on the plaster. Slope GKF stops where that board's underside meets the lid.
-The slope board ends at the furniture line; the thinner soffit board butts it
-there, its top following the slope board's attic face so the joint is not a
-level cut through the slope pack. The board stays 12.5 mm to a square end. A
-light-gauge angle backs that hidden butt: a short leg on the slope board, a
-horizontal leg screwed to the rost CD. That CD is the only horizontal rail
-and the only Nonius row. No vertical riser. Furniture and the wall plate do
+on the plaster. The lid widens until the slope GKF, cut level, lands on it.
+The nearest slope CD carries that slope edge. An angle on the end of that CD
+holds a horizontal UD, and the lid edge screws into the UD. The lid CD is
+the only horizontal rail and the only Nonius row.
+No vertical riser. Furniture and the wall plate do
 not carry the box (the plate only fixes the board edge). The soffit CD
 studs hang from that CD and brace into a UD on the eave wall. There is no
 timber in the kastlík frame. CAD ids are zone-prefixed so
@@ -875,8 +873,8 @@ class ObyvakLayout:
         # centre is still on the board; the wall UD trims the tail.
         if station_x < self.x_gkf_end_l - 5.0:
             return False
-        # Right-hand grid: the profile has to sit on the slope board, short of
-        # the lid joint. The bent UD then reaches back to this CD.
+        # Right-hand grid: the profile has to sit on the slope board. The
+        # station nearest the joint is the one the board edge screws into.
         if station_x > self.x_false:
             along = (self.gkf_end_room[0] - station_x) / self.cos
             if along < self.p.cd_w * 0.5 + 5.0:
@@ -1215,9 +1213,9 @@ class ObyvakLayout:
     def horiz_cd_x_stations(self) -> list[float]:
         """CD centre on the raised GKF lid.
 
-        One rail. The rost CD hangs the box and takes the joint angle. The
-        plate cleat fixes the board edge. The ducts are anchored to the wall,
-        so there is no second rail and no trapeze.
+        One rail. The rost CD hangs the box. The joint angle is on the
+        nearest slope CD, not on this rail. The plate cleat fixes the board
+        edge. The ducts are anchored to the wall, so there is no second rail.
         """
         p = self.p
         front = self.x_soffit_cd
@@ -1246,90 +1244,82 @@ class ObyvakLayout:
                 best = st
         return best
 
-    def soffit_ud_track_quads(self) -> list[list[tuple[float, float]]]:
-        """Short UD bent to the joint, on the attic side of both boards.
+    def _corner_frame(self):
+        """(s, t) at the outer GKF corner. +s is up-slope, +t is the attic normal."""
+        x0, z0 = self.gkf_end_attic
 
-        One leg lies on the lid top, the other on the slope GKF attic face.
-        Flanges stay inside the CD layer. The angle bracket on the nearest
-        slope CD holds this UD. Both board edges screw into it.
+        def slope(s: float, t: float) -> tuple[float, float]:
+            return (
+                x0 - self.cos * s + self.sin * t,
+                z0 + self.sin * s + self.cos * t,
+            )
+
+        return slope
+
+    def _angle_wall_face(self) -> tuple[tuple[float, float], tuple[float, float], float, float]:
+        """Bottom and top of the angle's wall-side face, where the horizontal leg starts."""
+        slope = self._corner_frame()
+        s0 = -1.0 - self.p.wall_bracket_t
+        t0 = 8.0
+        dt = self.p.wall_bracket_t / self.cos
+        return slope(s0, t0), slope(s0, t0 + dt), s0, t0
+
+    def _joint_ud_x0(self) -> float:
+        """Room face of the horizontal UD, just past the angle's horizontal leg."""
+        a, b, _s0, _t0 = self._angle_wall_face()
+        return max(a[0], b[0]) + 24.0 + 0.8
+
+    def soffit_ud_track_quads(self) -> list[list[tuple[float, float]]]:
+        """Horizontal UD on the lid, for the lid edge only.
+
+        Web on the lid top, flanges up, stopped short of the vapour brake.
+        The slope board does not screw into this profile. An angle on the
+        nearest slope CD holds it.
         """
         tm = 1.0
         flange = 18.0
-        x0, z0 = self.gkf_end_attic
-        leg_h = 42.0
-        leg_s = 14.0
-        lift = 0.4
-
-        def slope(s: float, t: float) -> tuple[float, float]:
-            return (
-                x0 - self.cos * s + self.sin * t,
-                z0 + self.sin * s + self.cos * t,
-            )
-
-        web = [slope(0.0, lift), slope(leg_s, lift), slope(leg_s, lift + tm), slope(0.0, lift + tm)]
-        z = z0 + lift
-        horiz = [
-            (x0 + lift, z),
-            (x0 + leg_h, z),
-            (x0 + leg_h, z + tm),
-            (x0 + lift, z + tm),
-        ]
-        fl_s = [
-            slope(leg_s - tm, lift + tm),
-            slope(leg_s, lift + tm),
-            slope(leg_s, lift + tm + flange),
-            slope(leg_s - tm, lift + tm + flange),
-        ]
-        fl_h = [
-            (x0 + leg_h - tm, z + tm),
-            (x0 + leg_h, z + tm),
-            (x0 + leg_h, z + tm + flange),
-            (x0 + leg_h - tm, z + tm + flange),
-        ]
-        return [web, horiz, fl_s, fl_h]
+        x0 = self._joint_ud_x0()
+        x1 = x0 + self.p.ud_w
+        z0 = self.z_soffit_cd_bot + 0.4
+        z1 = z0 + tm
+        web = [(x0, z0), (x1, z0), (x1, z1), (x0, z1)]
+        room = [(x0, z1), (x0 + tm, z1), (x0 + tm, z1 + flange), (x0, z1 + flange)]
+        wall = [(x1 - tm, z1), (x1, z1), (x1, z1 + flange), (x1 - tm, z1 + flange)]
+        return [web, room, wall]
 
     def joint_clear_pts(self) -> list[tuple[float, float]]:
-        """Zone the grid CD and its hanger give up so the joint UD fits.
+        """Cut the grid CD off at the outer GKF corner.
 
-        The 500 mm station nearest the joint happens to land on the corner.
+        The station is the 500 mm grid. Past the corner the profile enters
+        the lid, so that tip goes. The board still has this CD behind its edge.
         """
-        x0, z0 = self.gkf_end_attic
-
-        def slope(s: float, t: float) -> tuple[float, float]:
-            return (
-                x0 - self.cos * s + self.sin * t,
-                z0 + self.sin * s + self.cos * t,
-            )
-
-        return [slope(-30.0, -8.0), slope(22.0, -8.0), slope(22.0, 40.0), slope(-30.0, 40.0)]
+        slope = self._corner_frame()
+        return [slope(-40.0, -8.0), slope(0.0, -8.0), slope(0.0, 40.0), slope(-40.0, 40.0)]
 
     def joint_bracket_quads(self) -> list[list[tuple[float, float]]]:
-        """3 mm angle from the nearest slope CD to the joint UD.
+        """3 mm angle: one leg on the end of the slope CD, one leg out to the UD.
 
-        It stays in the CD layer: clear of the CD profile, the foil and the
-        NaturHeld. A screw crosses the last millimetre into the CD.
+        The two legs overlap slightly so they fuse into one bracket. The CD
+        leg stays on the end face, clear of the board, the foil and the wool.
         """
-        x0, z0 = self.gkf_end_attic
-        # UD slope leg ends at 36 mm is too far; this angle sits in the notch
-        # between the UD (to 14 mm) and the CD, which is cut back to 22 mm.
-        s0, s1 = 15.0, 21.0
-        t0, t1 = 4.0, 4.0 + self.p.wall_bracket_t
-
-        def slope(s: float, t: float) -> tuple[float, float]:
-            return (
-                x0 - self.cos * s + self.sin * t,
-                z0 + self.sin * s + self.cos * t,
-            )
-
+        slope = self._corner_frame()
+        a, b, s0, t0 = self._angle_wall_face()
+        s1 = -1.0
+        t1 = 22.0
         leg = [slope(s0, t0), slope(s1, t0), slope(s1, t1), slope(s0, t1)]
-        return [leg]
+        # 0.3 mm back into the CD leg so the fuse is one solid.
+        a_in = slope(s0 + 0.3, t0)
+        b_in = slope(s0 + 0.3, t0 + self.p.wall_bracket_t / self.cos)
+        x_end = self._joint_ud_x0() - 0.8
+        horiz = [a_in, b_in, (x_end, b_in[1]), (x_end, a_in[1])]
+        return [leg, horiz]
 
     def soffit_ud_screw_quads(self) -> list[list[tuple[float, float]]]:
-        """Screw up through the lid edge into the UD's horizontal leg."""
-        x = self.gkf_end_attic[0] + 18.0
-        z0 = self.z_soffit_cd_bot - 8.0
+        """Screw up through the lid edge into the horizontal UD web."""
+        x = self._joint_ud_x0() + self.p.ud_w * 0.5
+        z0 = self.z_soffit_lid
         head_w, head_t = 8.0, 1.6
-        shank_d, shank_l = 3.5, 16.0
+        shank_d, shank_l = 3.5, 32.0
         head = [
             (x - head_w * 0.5, z0 - head_t),
             (x + head_w * 0.5, z0 - head_t),
@@ -1345,53 +1335,55 @@ class ObyvakLayout:
         return [head, shank]
 
     def soffit_ud_slope_screw_quads(self) -> list[list[tuple[float, float]]]:
-        """Screw through the slope GKF into the UD's slope leg."""
-        x0, z0 = self.gkf_end_attic
-        s = 18.0
-        # Room side of the GKF attic face, then through the board into the UD.
-        cx = x0 - self.cos * s - self.sin * 2.0
-        cz = z0 + self.sin * s - self.cos * 2.0
-        tx, tz = self.cos, -self.sin
+        """Screw through the slope GKF into the nearest slope CD.
+
+        Head on the room face, shank through both layers into the CD.
+        This board does not screw into the horizontal UD.
+        """
+        slope = self._corner_frame()
+        s = 16.0
+        t_face = -self.t_gkf_right
+        tx, tz = -self.cos, self.sin
         nx, nz = self.sin, self.cos
         head_w, head_t = 8.0, 1.6
-        shank_l = 16.0
-        hx = cx - nx * head_t
-        hz = cz - nz * head_t
+        shank_l = 35.0
+        cx, cz = slope(s, t_face)
+        hx, hz = slope(s, t_face - head_t)
         head = [
             (hx - tx * head_w * 0.5, hz - tz * head_w * 0.5),
             (hx + tx * head_w * 0.5, hz + tz * head_w * 0.5),
             (cx + tx * head_w * 0.5, cz + tz * head_w * 0.5),
             (cx - tx * head_w * 0.5, cz - tz * head_w * 0.5),
         ]
-        tip_x = cx + nx * shank_l
-        tip_z = cz + nz * shank_l
+        tip = slope(s, t_face + shank_l)
         shank = [
             (cx - tx * 1.75, cz - tz * 1.75),
             (cx + tx * 1.75, cz + tz * 1.75),
-            (tip_x + tx * 1.75, tip_z + tz * 1.75),
-            (tip_x - tx * 1.75, tip_z - tz * 1.75),
+            (tip[0] + tx * 1.75, tip[1] + tz * 1.75),
+            (tip[0] - tx * 1.75, tip[1] - tz * 1.75),
         ]
         return [head, shank]
 
     def joint_bracket_screw_quads(self) -> list[list[tuple[float, float]]]:
-        """Screw from the angle foot into the nearest slope CD."""
+        """Screw from the angle's CD leg up-slope into the slope CD."""
         quads = self.joint_bracket_quads()
         if not quads:
             return []
         leg = quads[0]
         cx = sum(x for x, _z in leg) / 4.0
         cz = sum(z for _x, z in leg) / 4.0
-        # The CD is up-slope of the bracket.
         nx, nz = -self.cos, self.sin
         tx, tz = self.sin, self.cos
         head_w, head_t = 8.0, 1.6
-        hx = cx - nx * head_t
-        hz = cz - nz * head_t
+        hx = cx - nx * (head_t + 1.5)
+        hz = cz - nz * (head_t + 1.5)
+        face_x = cx - nx * 1.5
+        face_z = cz - nz * 1.5
         head = [
             (hx - tx * head_w * 0.5, hz - tz * head_w * 0.5),
             (hx + tx * head_w * 0.5, hz + tz * head_w * 0.5),
-            (cx + tx * head_w * 0.5, cz + tz * head_w * 0.5),
-            (cx - tx * head_w * 0.5, cz - tz * head_w * 0.5),
+            (face_x + tx * head_w * 0.5, face_z + tz * head_w * 0.5),
+            (face_x - tx * head_w * 0.5, face_z - tz * head_w * 0.5),
         ]
         tip_x = cx + nx * 12.0
         tip_z = cz + nz * 12.0
@@ -1400,6 +1392,29 @@ class ObyvakLayout:
             (cx + tx * 1.75, cz + tz * 1.75),
             (tip_x + tx * 1.75, tip_z + tz * 1.75),
             (tip_x - tx * 1.75, tip_z - tz * 1.75),
+        ]
+        return [head, shank]
+
+    def joint_ud_hold_screw_quads(self) -> list[list[tuple[float, float]]]:
+        """Screw from the angle's horizontal leg into the UD flange."""
+        quads = self.joint_bracket_quads()
+        if len(quads) < 2:
+            return []
+        horiz = quads[1]
+        x_end = max(x for x, _z in horiz)
+        z = sum(z for _x, z in horiz) / 4.0
+        head_w, head_t = 8.0, 1.6
+        head = [
+            (x_end - head_t - 1.0, z - head_w * 0.5),
+            (x_end - 1.0, z - head_w * 0.5),
+            (x_end - 1.0, z + head_w * 0.5),
+            (x_end - head_t - 1.0, z + head_w * 0.5),
+        ]
+        shank = [
+            (x_end - 1.0, z - 1.75),
+            (x_end + 8.0, z - 1.75),
+            (x_end + 8.0, z + 1.75),
+            (x_end - 1.0, z + 1.75),
         ]
         return [head, shank]
 
