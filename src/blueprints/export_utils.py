@@ -452,6 +452,22 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "roughness": 0.4,
         "metallic": 0.75,
     },
+    "bass_angle": {
+        "fill": (70, 76, 88),
+        "line": (35, 40, 48),
+        "dxf": ColorIndex.CYAN,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.4,
+        "metallic": 0.75,
+    },
+    "bass_anchor": {
+        "fill": (60, 64, 72),
+        "line": (30, 32, 38),
+        "dxf": ColorIndex.CYAN,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.45,
+        "metallic": 0.6,
+    },
     "bass_tape": {
         "fill": (210, 190, 90),
         "line": (120, 100, 40),
@@ -514,6 +530,8 @@ SECTION_LAYER_ORDER = [
     "bass_cw",
     "bass_uw",
     "bass_strut",
+    "bass_angle",
+    "bass_anchor",
     "bass_tape",
     "bass_acrylic",
 ]

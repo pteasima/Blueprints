@@ -107,6 +107,8 @@ LABEL_BASS_GKB = "bass_gkb"
 LABEL_BASS_CW = "bass_cw"
 LABEL_BASS_UW = "bass_uw"
 LABEL_BASS_STRUT = "bass_strut"
+LABEL_BASS_ANGLE = "bass_angle"
+LABEL_BASS_ANCHOR = "bass_anchor"
 LABEL_BASS_TAPE = "bass_tape"
 LABEL_BASS_ACRYLIC = "bass_acrylic"
 # --- Furniture ---
@@ -167,6 +169,8 @@ PART_GROUPS = [
             LABEL_BASS_CW,
             LABEL_BASS_UW,
             LABEL_BASS_STRUT,
+            LABEL_BASS_ANGLE,
+            LABEL_BASS_ANCHOR,
             LABEL_BASS_TAPE,
             LABEL_BASS_ACRYLIC,
         ],

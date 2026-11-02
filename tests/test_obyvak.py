@@ -44,6 +44,8 @@ from obyvak_geom import (  # noqa: E402
     LABEL_BASS_CW,
     LABEL_BASS_UW,
     LABEL_BASS_STRUT,
+    LABEL_BASS_ANGLE,
+    LABEL_BASS_ANCHOR,
     LABEL_BASS_TAPE,
     LABEL_BASS_ACRYLIC,
     LABEL_GLAZING,
@@ -1061,6 +1063,8 @@ def test_3d_matches_section_and_elevation_masses():
         LABEL_BASS_CW,
         LABEL_BASS_UW,
         LABEL_BASS_STRUT,
+        LABEL_BASS_ANGLE,
+        LABEL_BASS_ANCHOR,
         LABEL_BASS_ACRYLIC,
     ):
         assert name in labels
@@ -1270,8 +1274,13 @@ def test_3d_parts_do_not_interpenetrate():
                 except Exception:
                     pass
             # Soffit Nonius rods pierce the vapour brake on purpose (taped grommet),
-            # and screws are driven into what they fix.
-            if {a.label, b.label} == {"slope_foil", "soffit_nonius"} or "joint_screw" in (a.label, b.label):
+            # screws are driven into what they fix, and the bass-trap anchor is
+            # set into the plaster and the Ytong.
+            wall = {LABEL_PLASTER, LABEL_MASONRY}
+            labels = {a.label, b.label}
+            if labels == {"slope_foil", "soffit_nonius"} or "joint_screw" in labels:
+                continue
+            if "bass_anchor" in labels and labels & wall:
                 continue
             if vol > 1.0:  # mm³
                 violations.append((a.label, b.label, round(vol, 1)))
@@ -1360,6 +1369,44 @@ def test_default_gable_lattices_and_as_built_wool():
     # CW 50 notches about 3 mm into the 130.5 mm wool; the bay air stays 47 mm.
     bite = kitchen_stud.bounding_box().max.Y - wool.bounding_box().min.Y
     assert 0.0 < bite < 6.0
+
+    # Mid-height struts reach the wall (tape + gap), not the UW flange.
+    # A bent angle sits there and an anchor continues into the block.
+    tab_t, tab_return = 2.0, 20.0
+    y_steel_l = FACE_GAP + p.bass_tape_t
+    y_bar_l = y_steel_l + tab_t + tab_return + FACE_GAP
+    y_steel_k = p.room_length - FACE_GAP - p.bass_tape_t
+    y_bar_k = y_steel_k - tab_t - tab_return - FACE_GAP
+    mason_l = -p.wall_plaster - FACE_GAP
+    mason_k = p.room_length + p.wall_plaster + FACE_GAP
+
+    def on_side(part, side: str) -> bool:
+        bb = part.bounding_box()
+        if side == "kitchen":
+            return bb.min.Y > p.room_length * 0.5
+        return bb.max.Y < p.room_length * 0.5
+
+    for side, y_bar, y_steel, mason_face, into_room in (
+        ("living", y_bar_l, y_steel_l, mason_l, 1.0),
+        ("kitchen", y_bar_k, y_steel_k, mason_k, -1.0),
+    ):
+        bars = [s.bounding_box() for s in _labeled(shape, LABEL_BASS_STRUT) if on_side(s, side)]
+        angles = [s.bounding_box() for s in _labeled(shape, LABEL_BASS_ANGLE) if on_side(s, side)]
+        anchors = [s.bounding_box() for s in _labeled(shape, LABEL_BASS_ANCHOR) if on_side(s, side)]
+        assert bars and angles and anchors
+        assert len(angles) == len(anchors)
+        if into_room > 0:
+            full = [bb for bb in bars if bb.min.Y < y_bar + 2.0]
+            assert full and all(abs(bb.min.Y - y_bar) < 1.0 for bb in full)
+            assert any(abs(bb.min.Y - y_steel) < 0.6 for bb in angles)
+            assert all(bb.min.Y < mason_face - 50.0 for bb in anchors)
+            assert all(bb.max.Y < 0.0 for bb in anchors)
+        else:
+            full = [bb for bb in bars if bb.max.Y > y_bar - 2.0]
+            assert full and all(abs(bb.max.Y - y_bar) < 1.0 for bb in full)
+            assert any(abs(bb.max.Y - y_steel) < 0.6 for bb in angles)
+            assert all(bb.max.Y > mason_face + 50.0 for bb in anchors)
+            assert all(bb.min.Y > p.room_length for bb in anchors)
 
     # The lining stops at the soffit face. Only the acrylic bead enters the gap.
     solid_labels = (

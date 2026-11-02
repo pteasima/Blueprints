@@ -70,6 +70,8 @@ from build123d import (
 
 from obyvak_geom import (
     LABEL_BASS_ACRYLIC,
+    LABEL_BASS_ANCHOR,
+    LABEL_BASS_ANGLE,
     LABEL_BASS_CW,
     LABEL_BASS_GKB,
     LABEL_BASS_STRUT,
@@ -723,21 +725,82 @@ def _bass_trap_parts(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
             if z_top - z_stud0 < 80.0:
                 continue
             steel.append(_box(x0, y_stud0, z_stud0, p.bass_cw_w, y_stud1 - y_stud0, z_top - z_stud0, LABEL_BASS_CW))
-            y_strut0, y_strut1 = (y_track1 + gap, y_stud0 - gap) if toward > 0 else (y_stud1 + gap, y_track0 - gap)
-            if y_strut1 - y_strut0 < 20.0:
+            # The track flange is only at the floor and the ceiling. Mid-height
+            # struts have to reach the wall themselves: clearance is the sealing
+            # tape and the mate gap, then a bent angle, then the offcut.
+            tab_t = 2.0
+            tab_return = 20.0
+            tab_lip = 15.0
+            anchor_embed = 60.0
+            y_steel = (gap + p.bass_tape_t) if toward > 0 else (y_wall - gap - p.bass_tape_t)
+            y_stud_near = (y_stud0 - gap) if toward > 0 else (y_stud1 + gap)
+            if toward > 0:
+                y_bar0 = y_steel + tab_t + tab_return + gap
+                y_bar1 = y_stud_near
+                plaster_face = -gap
+                mason_face = -p.wall_plaster - gap
+                y_shank0, y_shank1 = mason_face - anchor_embed, plaster_face + 0.4
+            else:
+                y_bar0 = y_stud_near
+                y_bar1 = y_steel - tab_t - tab_return - gap
+                plaster_face = y_wall + gap
+                mason_face = y_wall + p.wall_plaster + gap
+                y_shank0, y_shank1 = plaster_face - 0.4, mason_face + anchor_embed
+            if y_bar1 - y_bar0 < 20.0:
                 continue
+            uw_here = [s for s in steel if s.label == LABEL_BASS_UW]
             for zc in _strut_centres(z_stud0, z_top, p.bass_strut_h, p.bass_strut_max_step):
-                steel.append(
-                    _box(
+                bar = _box(
+                    x0,
+                    y_bar0,
+                    zc - p.bass_strut_h * 0.5,
+                    p.bass_cw_w,
+                    y_bar1 - y_bar0,
+                    p.bass_strut_h,
+                    LABEL_BASS_STRUT,
+                )
+                hits = [u for u in uw_here if _aabb_hit(bar, u)]
+                if hits:
+                    bar = _cut_away(bar, hits, LABEL_BASS_STRUT)
+                if float(bar.volume) < 100.0:
+                    continue
+                steel.append(bar)
+                bb = bar.bounding_box()
+                reaches = (bb.min.Y < y_bar0 + 2.0) if toward > 0 else (bb.max.Y > y_bar1 - 2.0)
+                if not reaches:
+                    continue
+                z_tab0 = zc - p.bass_strut_h * 0.5 - tab_lip
+                z_tab = p.bass_strut_h + 2.0 * tab_lip
+                if toward > 0:
+                    wall_leg = _box(x0, y_steel, z_tab0, p.bass_cw_w, tab_t, z_tab, LABEL_BASS_ANGLE)
+                    ret_leg = _box(
                         x0,
-                        y_strut0,
+                        y_steel + tab_t,
                         zc - p.bass_strut_h * 0.5,
                         p.bass_cw_w,
-                        y_strut1 - y_strut0,
+                        tab_return,
                         p.bass_strut_h,
-                        LABEL_BASS_STRUT,
+                        LABEL_BASS_ANGLE,
                     )
-                )
+                else:
+                    wall_leg = _box(x0, y_steel - tab_t, z_tab0, p.bass_cw_w, tab_t, z_tab, LABEL_BASS_ANGLE)
+                    ret_leg = _box(
+                        x0,
+                        y_steel - tab_t - tab_return,
+                        zc - p.bass_strut_h * 0.5,
+                        p.bass_cw_w,
+                        tab_return,
+                        p.bass_strut_h,
+                        LABEL_BASS_ANGLE,
+                    )
+                angle = _paint(wall_leg.fuse(ret_leg), LABEL_BASS_ANGLE)
+                hits = [u for u in uw_here if _aabb_hit(angle, u)]
+                if hits:
+                    angle = _cut_away(angle, hits, LABEL_BASS_ANGLE)
+                if float(angle.volume) < 40.0:
+                    continue
+                steel.append(angle)
+                steel.append(_cyl_y(xc, y_shank0, y_shank1, zc, 4.0, LABEL_BASS_ANCHOR))
         # Vertical board joints: 1250 mm sheets span two 625 mm bays and land on a stud.
         # The soffit end is the acrylic bead, not a taped joint.
         for xj in range(int(p.bass_board_w), int(x_stop), int(p.bass_board_w)):
@@ -2359,6 +2422,8 @@ def _bass_view_scenes(p: ObyvakParams) -> list[dict]:
         LABEL_BASS_CW: 1,
         LABEL_BASS_UW: 1,
         LABEL_BASS_STRUT: 1,
+        LABEL_BASS_ANGLE: 1,
+        LABEL_BASS_ANCHOR: 1,
         LABEL_BASS_TAPE: 1,
         LABEL_BASS_ACRYLIC: 1,
         LABEL_BASS_WOOL: 0.4,
@@ -2491,12 +2556,12 @@ def _bass_elevation_scene(
         (
             (0.62 * p.room_width, y_face, 3200.0),
             (
-                "CW/UA offcuts to the wall\n"
-                "about 1/3 and 2/3, spacing ≤ 1200 mm"
+                "CW/UA offcuts to a wall angle\n"
+                "about 1/3 and 2/3, anchor in the block"
             ),
             (
-                "Odstřižky CW/UA do zdi\n"
-                "asi 1/3 a 2/3, rozteč ≤ 1200 mm"
+                "Odstřižky CW/UA na úhelník\n"
+                "asi 1/3 a 2/3, hmoždinka do zdiva"
             ),
         ),
         (
@@ -2549,6 +2614,8 @@ def _bass_elevation_scene(
             LABEL_BASS_CW: 1,
             LABEL_BASS_UW: 1,
             LABEL_BASS_STRUT: 1,
+            LABEL_BASS_ANGLE: 1,
+            LABEL_BASS_ANCHOR: 1,
             LABEL_BASS_TAPE: 0.9,
             LABEL_BASS_WOOL: 0.22,
             LABEL_BASS_GKB: 0,
@@ -2642,9 +2709,9 @@ def _bass_section_scene(
             f"Zdivo {p.wall_mason:g} + omítka {p.wall_plaster:g}",
         ),
         (
-            (stud_x, ymid(y_wall, y_stud_back), 2800.0),
-            f"CW {cw:g} offcut back to the wall",
-            f"Odstřižek CW {cw:g} do zdi",
+            (stud_x, y_wall + toward * 8.0, 2800.0),
+            f"CW {cw:g} offcut to a wall angle\nanchor 60 mm into the block",
+            f"Odstřižek CW {cw:g} na úhelník\nhmoždinka 60 mm do zdiva",
         ),
         (
             (stud_x, ymid(y_wall, y_wool), 3400.0),
@@ -2705,6 +2772,8 @@ def _bass_section_scene(
             LABEL_BASS_CW: 1,
             LABEL_BASS_UW: 1,
             LABEL_BASS_STRUT: 1,
+            LABEL_BASS_ANGLE: 1,
+            LABEL_BASS_ANCHOR: 1,
             LABEL_BASS_TAPE: 1,
             LABEL_BASS_ACRYLIC: 1,
             LABEL_BASS_WOOL: 0.5,
