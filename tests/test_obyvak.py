@@ -1334,6 +1334,18 @@ def test_3d_matches_section_and_elevation_masses():
         assert abs(bb.min.Y - (y0 + FACE_GAP)) < 1e-6
         assert abs(bb.size.Y - (width - 2 * FACE_GAP)) < 1e-6
         assert abs(bb.max.Z - (p.window_h - FACE_GAP)) <= 1.0
+        # Lintel sits on the opening head. The ring beam stays at column_top_z.
+        y_mid = y0 + width * 0.5
+        lintel_bottom = [
+            part.bounding_box().min.Z
+            for part in _labeled(shape, LABEL_MASONRY)
+            if part.bounding_box().min.Y <= y_mid <= part.bounding_box().max.Y
+            and part.bounding_box().max.X < 0.0
+            and part.bounding_box().min.Z < g.column_top_z - 1.0
+            and part.bounding_box().max.Z > p.window_h
+        ]
+        assert lintel_bottom, (y0, width)
+        assert abs(min(lintel_bottom) - (p.window_h + FACE_GAP)) <= 0.5
     gable_walls = [
         c
         for c in _labeled(shape, LABEL_MASONRY)
