@@ -62,8 +62,7 @@ STOSILENT_FINISH_KG_M2 = 3.0
 GKF_RF_KG_M2 = 10.5
 CD_KG_PER_M = 0.54
 NH_KG_M3 = 140.0
-# Knauf EPD declared densities. The below-rafter wool sits on the foil, so the CD carries it.
-UNIFIT_033_KG_M3 = 25.2
+# Knauf NatuRoll Pro 039. The wool sits on the foil, so the CD carries it.
 NATUROLL_039_KG_M3 = 12.4
 # Slope wool is the same λ 0.039 mineral wool as the soffit and the gables.
 # Knauf D11: 2nd-layer screws ≤ 170 mm along the CD on a 1250 mm board.
@@ -120,25 +119,7 @@ URL_DIRECT = (
     "https://www.dek.cz/produkty/detail/3631100170-primy-zaves-cd-i-drevo-200mm-dkm"
 )
 URL_DIRECT_DEK = URL_DIRECT
-URL_UNIFIT_TL = "https://www.e-sadrokartony.cz/storage/TL-Knauf-Insulation-Unifit-035.pdf"
-URL_UNIFIT_160 = (
-    "https://www.dek.cz/produkty/detail/1460107750-knauf-unifit-035-160mm-3-84m2-role"
-)
-URL_UNIFIT_140 = (
-    "https://www.dek.cz/produkty/detail/1460107749-knauf-unifit-035-140mm-4-44m2-role"
-)
-# DEK sale prices, Kč s DPH, October 2026. 140/160 mm rolls are "na poptávku".
-UNIFIT_160_KC_M2 = 242.24
-UNIFIT_140_KC_M2 = 212.00
-UNIFIT_KC_M3 = UNIFIT_140_KC_M2 / 0.140
-URL_UNIFIT033_160 = "https://www.nonstopstavebniny.cz/vata-knauf-unifit-033-tl--160-mm-tepelna-izolace-baleni-3-36-m2/"
-URL_UNIFIT033_80 = "https://eshop.stavinvest.cz/tepelna-izolace-knauf-unifit-033-80-mm/"
 URL_NATUROLL039_160 = "https://www.nonstopstavebniny.cz/mineralni-vata-knauf-naturoll-pro-039-tepelna-izolace-160-mm-2/"
-# Retail prices incl. VAT, checked 30 Oct 2026.
-UNIFIT033_160_KC_M2 = 278.27  # 935 Kč / 3.36 m² roll
-UNIFIT033_80_KC_M2 = 215.25  # 1,420.65 Kč / 6.6 m² roll
-URL_UNIFIT033_100 = "https://eshop.stavinvest.cz/tepelna-izolace-knauf-unifit-033-100-mm/"
-UNIFIT033_100_KC_M2 = 269.06  # 1,420.65 Kč / 5.28 m² roll, checked 1 Nov 2026
 NATUROLL039_160_KC_M2 = 141.49  # 815 Kč / 5.76 m² roll
 WOOL_WASTE_PCT = 5
 URL_NONIUS_TOP = "https://www.rigips.cz/produkty/nonius-horni-dil/"
@@ -440,14 +421,6 @@ PRICE = {
     "nonius_top_ks": (
         15.68,
         f"IZOMAT Rigips Nonius horní 440 mm, 1 568,16 Kč/100 ks s DPH · {URL_NONIUS_TOP_SHOP}",
-    ),
-    "unifit_160_m2": (
-        UNIFIT_160_KC_M2,
-        f"DEK Unifit 035 160 mm, {UNIFIT_160_KC_M2:.2f} Kč/m² s DPH, na poptávku · {URL_UNIFIT_160}",
-    ),
-    "unifit_m3": (
-        round(UNIFIT_KC_M3, 2),
-        f"DEK Unifit 035 140 mm, {UNIFIT_140_KC_M2:.2f} Kč/m² → {UNIFIT_KC_M3:.2f} Kč/m³ · {URL_UNIFIT_140}",
     ),
     "nonius_bot_ks": (10.43, f"DEK spodní CD · {URL_NONIUS_BOT_DEK}"),
     "nonius_pin_ks": (2.98, f"IZOMAT závlačka · {URL_NONIUS_PIN_SHOP}"),
