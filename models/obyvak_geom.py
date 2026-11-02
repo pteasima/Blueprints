@@ -14,7 +14,7 @@ World:
 
   StoSilent Top Finish + Top Basic + NaturHeld 140 (80)     → `slope_naturheld_140`
   GKF/RF 12.5                                               → `slope_gkf`
-  CD Rigips 60×27 @ ~625 ⊥ krokvím                          → `slope_cd`
+  CD Rigips 60×27 @ 500 ⊥ krokvím                          → `slope_cd`
   Jutafol N AL 170 Speciál vapour barrier (~1)               → `slope_foil`
   přímý závěs 200 on the window slope (void 140)            → `slope_direct_hanger`
   Nonius horní 440 on the cabinet slope (gap ~429)          → `slope_nonius`
@@ -26,11 +26,12 @@ World:
 The 80 mm board is screwed through the GKF into the CD. Foil sits on the
 attic side of the CD (below the mineral wool), matching the rest of the
 house (Jutafol N AL 170 Speciál — not a variable membrane). There is no slope lať
-and no NaturHeld Flex. CD spacing stays 625 mm, which is the published
-NaturHeld 140 stud spacing.
+and no NaturHeld Flex. CD spacing is 500 mm: Knauf D112 for 12.5 mm GKF
+in one or two layers, boards across the CDs. 2000, 2500 and 3000 mm boards
+then end on a CD. The first axis stays within 100 mm of the eave.
 
 Right eave soffit box: 40 mm NaturHeld 140 + StoSilent on the side and the
-bottom, mineral wool in the cavity, a CD/UD rost (@625) hanging the box.
+bottom, mineral wool in the cavity, a CD/UD rost (@500) hanging the box.
 The wool stops short of the ducts. Three Ø160 spiral ducts (HRV supply, HRV
 extract, AC) sit in a 2-over-1 pack against the cabinet eave, below the lid
 and above the column heads. They are already anchored to the wall; this box
@@ -259,11 +260,14 @@ class ObyvakParams:
     )
     glass_t: float = 20.0
     # Y grid of the kastlík CD studs. The section is CD 60×27, not a timber lať.
-    rost_spacing: float = 625.0
+    # Same 500 mm module as the slope CDs (12.5 mm board across the profiles).
+    rost_spacing: float = 500.0
     rost_first_inset: float = 90.0
     # CD grid holding SDK — ⊥ krokvím. UD is the wall channel the soffit CDs enter.
+    # 500 mm: Knauf D112 max for 12.5 mm GKF, one or two layers, boards across the CDs.
     cd_w: float = 60.0
-    cd_spacing: float = 625.0
+    cd_spacing: float = 500.0
+    # Axis of the first CD from the room face. Knauf perimeter offset is ≤ 100 mm.
     cd_first_inset: float = 90.0
     ud_w: float = 28.0
     # Rafters (spacing along Y) + bracing straps on underside.
@@ -878,18 +882,28 @@ class ObyvakLayout:
             (cx - tx * hw + nx * d, cz - tz * hw + nz * d),
         ]
 
-    def sikmina_cd_quads(self) -> list[list[tuple[float, float]]]:
-        """CD profiles fully inside the clear šikmina span."""
-        quads = []
-        x_lo, x_hi = 1.0, self.x_furn - 1.0
+    def sikmina_cd_in_span(self, xs: list[float], station_x: float) -> bool:
+        """True when this CD is on the šikmina, including the eave profile.
+
+        The first axis is ``cd_first_inset`` from the room face (≤ 100 mm).
+        That profile's attic corner crosses x=0 because the board runs out
+        onto the plate. Cutting at x=1 dropped it and left a full module of
+        board with no CD. The profile still has to sit on the GKF.
+        """
+        if min(xs) < self.x_gkf_end_l or max(xs) > self.x_furn - 1.0:
+            return False
         # The right-hand grid ends in the UD, so the last module is the track.
-        x_ud = self.gkf_end_attic[0] - 40.0
+        if station_x > self.x_false and max(xs) > self.gkf_end_attic[0] - 40.0:
+            return False
+        return True
+
+    def sikmina_cd_quads(self) -> list[list[tuple[float, float]]]:
+        """CD profiles on the šikmina, first axis within 100 mm of the eave."""
+        quads = []
         for st in self.sikmina_cd_stations():
             quad = self.sikmina_cd_quad(*st)
             xs = [pt[0] for pt in quad]
-            if min(xs) < x_lo or max(xs) > x_hi:
-                continue
-            if st[0] > self.x_false and max(xs) > x_ud:
+            if not self.sikmina_cd_in_span(xs, st[0]):
                 continue
             quads.append(quad)
         return quads
@@ -906,14 +920,14 @@ class ObyvakLayout:
         return out
 
     def sikmina_rost_y_stations(self, y0: float, y1: float) -> list[float]:
-        """625 mm centres. The slope has no latě; the soffit CD studs use this module."""
+        """500 mm centres. The slope has no latě; the soffit CD studs use this module."""
         p = self.p
         return self.y_stations(y0, y1, p.rost_spacing, p.rost_first_inset)
 
     def soffit_rost_y_stations(
         self, bay0: float, bay1: float, slope_ys: list[float]
     ) -> list[float]:
-        """Soffit CD studs on the 625 mm module, limited to the soffit bay.
+        """Soffit CD studs on the 500 mm module, limited to the soffit bay.
 
         The module is not restarted at the předstěna, so the verticals stay
         on one grid along the room.

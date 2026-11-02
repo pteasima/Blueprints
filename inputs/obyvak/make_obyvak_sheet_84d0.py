@@ -131,7 +131,9 @@ B450_GKB, B450_AIR, B450_WOOL = 12.5, 137.5, 300.0
 B450_TOTAL = B450_GKB + B450_AIR + B450_WOOL
 B450_REACH = 100.0
 
-CD_W, CD_D, CD_SPACING = 60.0, 27.0, 625.0
+# Ceiling CD module (šikmina + soffit rost). Bass walls keep their own grids.
+CD_W, CD_D, CD_SPACING = 60.0, 27.0, 500.0
+BASS_CD_SPACING = 625.0
 HANGER_CODE = "KB517112"
 HANGER_NAME = "Rigips akustický třmen se Sylomerem"
 HANGER_ALT = "Knauf W623 / přímý akustický závěs"
@@ -359,7 +361,7 @@ def dxf_panel_rez(ox=0.0, oy=0.0):
         "STACK interiér→exteriér:",
         "  1 StoSilent Finish+Basic",
         "  2 NaturHeld 140 / 60 mm",
-        "  3 Flex 50 / 60 + latě 60×40@625",
+        f"  3 CD 60×27 @{CD_SPACING:.0f} (desky napříč, bez latí)",
         "  5 Intello / Vario Xtra",
         "  6 SDK RF/GKF 12,5",
         "  7 CD 60×27 + plénum + krokev",
@@ -738,7 +740,7 @@ lines_leg = [
     ("STACK interiér → exteriér", 8.5, "bold", "#111"),
     ("1  StoSilent Finish + Basic", 7.0, "normal", "#333"),
     ("2  NaturHeld 140 / 60 mm", 7.0, "normal", "#333"),
-    ("3  Flex 50 / 60 + latě 60×40 @625", 7.0, "normal", "#333"),
+    (f"3  CD 60×27 @{CD_SPACING:.0f} (desky napříč, bez latí)", 7.0, "normal", "#333"),
     ("5  Intello / Vario Xtra", 7.0, "normal", "#333"),
     ("6  SDK RF/GKF 12,5", 7.0, "normal", "#333"),
     ("7  CD 60×27 + plénum + krokev 100/160", 7.0, "normal", "#333"),
@@ -931,7 +933,7 @@ def paint_bass(ax, *, wool, air, gkb, total, reach, wall_left, title, band):
        "Zhotovitel zhodnotí třmeny NEBO Sylomer podložky · NE dlouhý třmen skrz dutinu",
        fontsize=7, ha="left", color="#8b3a00", fontweight="bold", halo=False)
     ht(ax, 0 if wall_left else 0, y0 - 172,
-       f"spodek @ 2450 · CD 60/27 @{CD_SPACING:.0f} · {band}",
+       f"spodek @ 2450 · CD 60/27 @{BASS_CD_SPACING:.0f} · {band}",
        fontsize=6.5, ha="left", color="#555", halo=False)
 
     # mini ceiling hang stub top-right

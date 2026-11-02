@@ -112,13 +112,28 @@ def test_layout_ceiling_and_gable():
     assert g.l_hanger_right > g.l_hanger_left
     assert abs(g.z_nabeh_bot - (p.furniture_height + p.furniture_gap)) < 1e-9
     assert g.x_nh_inner == g.x_furn + g.t_soffit_face
-    # One 625 mm grid for the soffit latě. The bay does not start a second inset.
+    # Ceiling CD module is 500 mm. 2 m / 2.5 m / 3 m boards end on a CD.
+    assert p.cd_spacing == 500.0
+    assert p.rost_spacing == 500.0
+    assert p.cd_first_inset <= 100.0
+    assert p.rost_first_inset <= 100.0
+    for board_mm in (2000.0, 2500.0, 3000.0):
+        assert abs(board_mm % p.cd_spacing) < 1e-6
+    left_cds = [st for st in g.sikmina_cd_stations() if st[0] < g.x_false]
+    assert left_cds
+    assert abs(left_cds[0][0] / g.cos - p.cd_first_inset) < 1e-6
+    assert left_cds[0][0] / g.cos <= 100.0
+    for a, b in zip(left_cds, left_cds[1:]):
+        assert abs((b[0] - a[0]) / g.cos - p.cd_spacing) < 1.0
+    # One 500 mm grid for the soffit CD studs. The bay does not start a second inset.
     slope_ys = g.sikmina_rost_y_stations(1.0, p.room_length - 1.0)
     soffit_ys = g.soffit_rost_y_stations(g.y_furn0 + 1.0, g.y_furn1 - 1.0, slope_ys)
     assert soffit_ys
     assert all(y in slope_ys for y in soffit_ys)
     restarted = g.sikmina_rost_y_stations(g.y_furn0 + 1.0, g.y_furn1 - 1.0)
-    assert abs(soffit_ys[0] - restarted[0]) > 50.0
+    # Not a second inset at the předstěna. At 500 mm the two origins are 50 mm apart.
+    assert soffit_ys[0] in slope_ys
+    assert abs(soffit_ys[0] - restarted[0]) > 1.0
     # The slope attic face is up at the lid, so there is no wool wedge under it.
     assert g.soffit_wool_wedge_pts() == []
     nh_pts = g.soffit_nh_pts()
@@ -256,9 +271,7 @@ def test_plenum_fill_hangers_and_vent():
         found = []
         for st in g.sikmina_cd_stations():
             xs = [pt[0] for pt in g.sikmina_cd_quad(*st)]
-            if min(xs) < 1.0 or max(xs) > g.x_furn - 1.0:
-                continue
-            if st[0] > g.x_false and max(xs) > g.gkf_end_attic[0] - 40.0:
+            if not g.sikmina_cd_in_span(xs, st[0]):
                 continue
             quad = g.hanger_quad(*st)
             (x0, z0), (x1, z1) = quad[1], quad[2]
@@ -435,7 +448,7 @@ def test_sikminy_and_soffit_stack_in_3d():
     # Šikminy pack runs wall-to-wall (bass traps sit under it, do not replace it).
     nh = _labeled(shape, LABEL_SLOPE_NH)
     assert any(c.bounding_box().size.Y > p.room_length - 10.0 for c in nh)
-    # Soffit rost is a CD lattice (@625), not full-depth solid boards.
+    # Soffit rost is a CD lattice (@500), not full-depth solid boards.
     soffit_rost = [
         c
         for c in rost
@@ -467,6 +480,10 @@ def test_sikminy_and_soffit_stack_in_3d():
     slope_cds = [c for c in cds if c.bounding_box().size.Y > 1000.0]
     assert slope_cds
     assert all(c.bounding_box().size.X < p.cd_spacing for c in slope_cds)
+    # First slope CD is the 90 mm eave axis, not the next module.
+    eave_cd = min(slope_cds, key=lambda c: c.bounding_box().min.X)
+    assert eave_cd.bounding_box().min.X < 50.0
+    assert eave_cd.bounding_box().min.X >= g.x_gkf_end_l - 1.0
     # One horizontal CD + Nonius over the soffit bay (GKF lid → rost CD → rafters).
     rost_x = g.x_soffit_cd
     horiz_cds = [c for c in slope_cds if c.bounding_box().min.X >= g.x_furn - 1.0]
@@ -688,7 +705,8 @@ def test_sikmina_drawing_scenes():
             continue
         assert "en" in ann["text"] and "cs" in ann["text"]
         texts.append(ann["text"]["cs"])
-    assert any("625" in t for t in texts)
+    assert any("500" in t for t in texts)
+    assert not any("625" in t for t in texts)
     assert any("krokv" in t.lower() for t in texts)
     assert any("60×27 mm" in t for t in texts)
     assert any("200 mm" in t for t in texts)
@@ -1133,7 +1151,7 @@ def test_obyvak_3d_exports(tmp_path, monkeypatch):
     assert "slope_naturheld_flex_50" not in sec_labels
     assert "slope_battens" not in sec_labels
     assert LABEL_SLOPE_NH in sec_labels
-    # Slice is snapped onto a krokev (875 grid); soffit CD studs use 625 and may miss.
+    # Slice is snapped onto a krokev (875 grid); soffit CD studs use 500 and may miss.
     assert LABEL_RAFTERS in sec_labels
     assert "predstena" not in sec_labels
 
