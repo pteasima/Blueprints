@@ -1,10 +1,9 @@
-"""Left eave detail: GKF on a UD screwed to the wall plate; vapour brake to plaster.
+"""Left eave detail: GKF on a UD screwed to the wall; wool up to the plate.
 
-The slope GKF ends in a UD track whose bent leg is screwed to the room cheek of
-the wall plate (wood screw 3.5×35 @ 300 mm). NaturHeld bears softly on the
-masonry wall. The vapour brake runs down past the plate, keeps a slack loop for
-movement, and is bonded and taped to the wall plaster. The wall/ceiling corner
-is a planned cut closed with an acrylic bead.
+The lowered slope meets the wall below the crown. The GKF ends tight on a UD
+fixed to the plaster. NaturHeld ends on the wall, with an acrylic bead in the
+corner. The vapour brake is taped to the plaster, and the wool above it fills
+back to the wall plate.
 
 Cut from the same faces as `obyvak_section` (see obyvak_detail.clip_section).
 
@@ -21,7 +20,7 @@ from obyvak_geom import ObyvakParams, build_layout
 MODEL_NAME = "obyvak_eave_left"
 EXPORT_KIND = "section"
 PARAMS = asdict(ObyvakParams())
-WINDOW = (-200.0, 3120.0, 260.0, 3420.0)
+WINDOW = (-220.0, 2960.0, 480.0, 3520.0)
 
 
 def build(params: ObyvakParams | None = None):
@@ -38,14 +37,11 @@ def build(params: ObyvakParams | None = None):
 
 def notes(p: ObyvakParams | None = None):
     return [
-        (-195, 3405, "Left eave: GKF fixed to the wall plate, brake taped to plaster"),
-        (-195, 3392, "UD 28/27 bent leg screwed to the plate, wood screw 3.5x35 @ 300 mm"),
-        (60, 3330, "1x GKF 12.5 ends in the UD"),
-        (60, 3316, "NaturHeld 140 bears softly on the wall"),
-        (60, 3302, "Jutafol N AL 170, continuous"),
-        (-195, 3175, "brake: slack loop below the plate,"),
-        (-195, 3162, "bonded + taped to wall plaster"),
-        (-195, 3140, "planned cut: acrylic bead in the corner"),
+        (-210, 3495, "Left eave: GKF fixed to a UD on the wall"),
+        (-210, 3481, "wool above the brake fills up to the plate"),
+        (250, 3495, "1x GKF 12.5 ends in the UD"),
+        (250, 3481, "NaturHeld 100 to the wall, acrylic in the corner"),
+        (250, 3467, "Jutafol taped to the plaster"),
     ]
 
 

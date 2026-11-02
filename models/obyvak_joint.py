@@ -1,13 +1,9 @@
-"""Right eave detail: the slope GKF bears on the soffit lid, with no gap.
+"""Right eave detail: the widened soffit lid meets the lowered slope.
 
-The 2× GKF of the right slope is cut level and sits on the top of the soffit
-lid. The lid is two GKF layers: the lower one flush with the wall-plate top,
-the upper one on the attic side of it. The lid CD sits over the soffit's
-vertical CD, where the outer GKF plane meets the lid top, and the 40°
-UD track on it takes the slope CDs. The NaturHeld board gets a level toe on the
-lid, so the wool runs right up to the boards. The vapour brake runs over the
-lid CD, along the lid and down the plate cheek, then is bonded to the cabinet
-plaster inside the soffit void.
+The lid stays at the plate. It extends into the room until the slope GKF,
+cut level, lands on it. That joint cantilevers past the lid CD, so a UD bent
+to the slope/lid angle sits on the room side, under the NaturHeld, and runs
+back to the lid CD and to the nearest slope CD.
 
 Cut from the same faces as `obyvak_section` (see obyvak_detail.clip_section).
 
@@ -24,7 +20,7 @@ from obyvak_geom import ObyvakParams, build_layout
 MODEL_NAME = "obyvak_joint"
 EXPORT_KIND = "section"
 PARAMS = asdict(ObyvakParams())
-WINDOW = (4780.0, 3110.0, 5480.0, 3480.0)
+WINDOW = (4480.0, 3000.0, 5520.0, 3680.0)
 
 
 def build(params: ObyvakParams | None = None):
@@ -49,16 +45,13 @@ def notes(p: ObyvakParams | None = None):
     g = build_layout(p or ObyvakParams())
     zl = g.z_soffit_lid
     return [
-        (4790, 3462, "Right eave: slope GKF bears on the soffit lid, no gap"),
-        (4790, 3448, "2x GKF 12.5 cut level, sits on the upper lid layer"),
-        (4790, 3434, "NaturHeld 100 with a level toe on the lid; wool fills to the boards"),
-        (g.x_soffit_cd + 25, zl + 60, "soffit CD + 40 deg UD (slope CDs slide in)"),
-        (g.x_soffit_cd + 25, zl + 46, "LB 3.5x9.5 @ 300 mm"),
-        (5130, zl + 28, "Jutafol N AL 170 over the CD and lid"),
-        (5130, zl - 30, "soffit lid: 2x GKF, upper layer above the plate"),
-        (5220, 3150, "brake: slack loop, then"),
-        (5220, 3137, "bonded + taped to cabinet plaster"),
-        (5220, 3124, "(inside the soffit void)"),
+        (4490, 3655, "Lid widens until it meets the lowered slope"),
+        (4490, 3641, "2x GKF cut level on the lid"),
+        (4490, 3627, f"joint {g.joint_overhang:.0f} mm past the lid CD room face"),
+        (5200, 3655, "bent UD under the NaturHeld, back to both CDs"),
+        (5200, 3641, "screws through the boards into the CDs"),
+        (5200, 3627, "Jutafol over the CD and along the lid"),
+        (5200, 3148, "brake taped to the cabinet plaster"),
     ]
 
 

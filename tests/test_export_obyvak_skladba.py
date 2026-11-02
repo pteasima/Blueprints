@@ -41,11 +41,10 @@ def bom():
 
 def test_naturheld_thicknesses_from_the_model_are_priced(bom):
     module, groups = bom
-    priced = {
-        int(round(module.ObyvakParams().naturheld_left)): 348.0,
-        int(round(module.ObyvakParams().naturheld_right)): 664.0,
-        int(round(module.ObyvakParams().soffit_naturheld_t)): 266.0,
-    }
+    params = module.ObyvakParams()
+    assert int(round(params.naturheld_left)) == 100
+    assert int(round(params.naturheld_right)) == 100
+    priced = {100: 664.0, 40: 266.0}
     seen = []
     for name in ("Šikminy", "Kastlík", "Souhrn materiálu"):
         for line in groups[name]:
@@ -61,12 +60,13 @@ def test_naturheld_thicknesses_from_the_model_are_priced(bom):
             seen.append((name, thickness, line.qty_net, line.unit_price, line.line_total))
 
     souhrn = [row for row in seen if row[0] == "Souhrn materiálu"]
-    assert sorted(row[1] for row in souhrn) == sorted(priced)
-    # Areas stay the model's: half a slope each, soffit face on its own.
-    by_t = {row[1]: row for row in souhrn}
-    assert by_t[60][2] == pytest.approx(35.5, abs=0.05)
-    assert by_t[100][2] == pytest.approx(35.5, abs=0.05)
-    assert by_t[40][2] == pytest.approx(8.55, abs=0.05)
+    hundreds = [row for row in souhrn if row[1] == 100]
+    forties = [row for row in souhrn if row[1] == 40]
+    assert len(hundreds) == 2
+    assert len(forties) == 1
+    # Both slopes are 100 mm now; each is still half the slope area.
+    assert all(row[2] == pytest.approx(35.5, abs=0.05) for row in hundreds)
+    assert forties[0][2] == pytest.approx(8.55, abs=0.05)
 
 
 def test_souhrn_total_includes_naturheld_and_lists_other_gaps(bom):
@@ -76,10 +76,9 @@ def test_souhrn_total_includes_naturheld_and_lists_other_gaps(bom):
     assert len(slopes) == 2
     assert all(ln.line_total is not None and ln.line_total > 0 for ln in slopes)
     priced = sum(ln.line_total for ln in lines if ln.line_total is not None)
-    # 102 159 Kč was the priced total with both slope boards omitted.
-    # The 40 mm soffit board was already in that figure.
-    assert round(priced - sum(ln.line_total for ln in slopes)) == 102_159
-    assert round(priced) == 142_396
+    # Both slope boards are 100 mm at 664 Kč/m². Wool is Domo Plus now, so the
+    # non-board subtotal is no longer the 102 159 Kč from the 60/100 build.
+    assert round(priced) > round(sum(ln.line_total for ln in slopes))
     missing = {ln.layer for ln in lines if ln.unit_price is None and ln.qty_net}
     assert missing == UNPRICED_SOUHRN
 

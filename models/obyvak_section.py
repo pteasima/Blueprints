@@ -81,11 +81,16 @@ def annotate(svg_path, dxf_path=None, png_path=None) -> None:
         svg_open,
         count=1,
     )
+    if abs(xj - xf) < 1.0:
+        joint_notes = f"""    <text x="{xf - 78:.1f}" y="{-g.z_false + 22:.1f}">NaturHeld and GKF joint</text>
+    <text x="{g.x_cd_joint + 8:.1f}" y="{-(z1 - 18):.1f}">2nd GKF bevelled to CD line</text>"""
+    else:
+        joint_notes = f"""    <text x="{xf - 78:.1f}" y="{-g.z_false + 22:.1f}">NaturHeld joint</text>
+    <text x="{xj - 16:.1f}" y="{-(z1 - 16):.1f}">GKF joint, no step</text>
+    <text x="{g.x_cd_joint + 6:.1f}" y="{-(z1 - 30):.1f}">2nd GKF bevelled to CD line</text>"""
     labels = f"""
   <g font-family="sans-serif" font-size="8" fill="#1a2433">
-    <text x="{xf - 78:.1f}" y="{-g.z_false + 22:.1f}">NaturHeld joint</text>
-    <text x="{xj - 16:.1f}" y="{-(z1 - 16):.1f}">GKF joint, no step</text>
-    <text x="{g.x_cd_joint + 6:.1f}" y="{-(z1 - 30):.1f}">2nd GKF bevelled to CD line</text>
+{joint_notes}
   </g>
 """
     out = Path(svg_path).with_name("ridge.svg")

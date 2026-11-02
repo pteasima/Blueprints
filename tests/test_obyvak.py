@@ -95,12 +95,12 @@ def test_layout_ceiling_and_gable():
     x_bear = g.poz_l0 + p.plate_w * 0.5
     assert abs(g.z_raf(x_bear) - (p.eave_wall_z + p.plate_h)) < 1.0
     # Slope board + foil + GKF. The soffit face is the thinner 40 mm board.
-    assert p.naturheld_left == 60.0
+    assert p.naturheld_left == 100.0
     assert p.naturheld_right == 100.0
     assert p.soffit_naturheld_t == 40.0
     assert abs(g.t_nh_left - (p.finish_t + p.basic_t + p.naturheld_left)) < 1e-9
     assert abs(g.t_nh_right - (p.finish_t + p.basic_t + p.naturheld_right)) < 1e-9
-    assert abs(g.t_gkf_room_right - g.t_gkf_room_left - 40.0) < 1e-9
+    assert abs(g.t_gkf_room_right - g.t_gkf_room_left) < 1e-9
     assert abs(g.t_soffit_face - (p.finish_t + p.basic_t + p.soffit_naturheld_t)) < 1e-9
     assert abs(g.t_flex_pack - 0.0) < 1e-9
     assert abs(g.t_foil_outer_left - g.t_cd_outer_left - p.foil_t) < 1e-9
@@ -150,24 +150,25 @@ def test_layout_ceiling_and_gable():
     assert abs(lid_top - (g.z_soffit_lid + p.soffit_lid_layers * p.sdk_t)) < 1e-6
     assert abs(g.gkf_end_room[1] - lid_top) < 1e-6
     assert abs(g.gkf_end_attic[1] - lid_top) < 1e-6
-    assert abs(g.x_gkf_kink - g.x_furn) < 1e-6
-    # The lid CD sits where the outer GKF plane meets the lid; the UD is on its room side.
-    assert abs(g.gkf_end_attic[0] - g.x_soffit_cd_room) < 1e-6
+    # Lid widens to the lowered slope. The outer GKF contact is the old CD line, shifted.
+    assert abs(g.x_gkf_kink - g.gkf_end_room[0]) < 1e-6
+    assert g.x_gkf_kink < g.x_furn
+    assert abs((g.x_soffit_cd_room - g.gkf_end_attic[0]) - 175.43) < 0.2
+    assert abs(g.joint_overhang - (g.x_soffit_cd_room - g.gkf_end_room[0])) < 1e-6
     cds = g.horiz_cd_x_stations()
     assert cds == [g.x_soffit_cd]
     assert abs(g.x_soffit_cd - (g.x_soffit_cd_room + p.cd_w * 0.5)) < 1e-6
     ud = g.soffit_ud_track_quads()
-    assert len(ud) == 6  # leg, bend, strap, web, two flanges; all real 3D parts
-    leg = ud[0]
-    # Flat leg lies on the room-side face of the soffit CD, tall enough to screw.
-    assert abs(max(x for x, _z in leg) - g.x_soffit_cd_room) < 0.2
-    assert max(z for _x, z in leg) - min(z for _x, z in leg) > 15.0
+    assert len(ud) == 5  # slope web, two flanges, lid-end drop, lid strap
+    strap = ud[-1]
+    assert min(x for x, _z in strap) <= g.x_gkf_kink + 1.0
+    assert max(x for x, _z in strap) > g.x_soffit_cd + p.cd_w * 0.5
     screws = g.soffit_ud_screw_quads()
     assert len(screws) == 2
     shank = screws[1]
-    assert max(x for x, _z in shank) > g.x_soffit_cd_room + 5.0
-    # GKF planes meet past the false ridge. NaturHeld still butts at x_false.
-    assert g.x_stack_joint > g.x_false + 20.0
+    assert max(z for _x, z in shank) > g.z_soffit_lid + 10.0
+    # Equal boards: the GKF planes meet on the false ridge.
+    assert abs(g.x_stack_joint - g.x_false) < 1e-6
     assert abs(
         g.plane_z(g.x_stack_joint, g.t_gkf_room_left, right=False)
         - g.plane_z(g.x_stack_joint, g.t_gkf_room_right, right=True)
@@ -187,8 +188,9 @@ def test_layout_ceiling_and_gable():
         g.plane_z(g.x_cd_joint, g.t_gkf_attic_left, right=False)
         - g.plane_z(g.x_cd_joint, g.t_gkf_attic_right, right=True)
     ) < 1e-6
-    # About 2 x 160 mm wool still fits below the right rafters.
-    assert 300.0 < g.wool_right < 330.0
+    # Left cavity is the 160 mm design target. Right is the deeper hang.
+    assert abs(g.wool_left - 160.0) < 0.05
+    assert 430.0 < g.wool_right < 445.0
 
 
 def test_krov_is_discrete_rafters():
@@ -264,8 +266,8 @@ def test_plenum_fill_hangers_and_vent():
     assert g.z_soffit_lid == p.eave_wall_z + p.plate_h - p.sdk_t
     assert abs(g.wool_left - (g.t_left - g.t_foil_outer_left)) < 1e-6
     assert abs(g.wool_right - (g.t_right - g.t_foil_outer_right)) < 1e-6
-    assert 60.0 < g.wool_left < 120.0
-    assert 280.0 < g.wool_right < 400.0
+    assert abs(g.wool_left - p.wool_below_left) < 0.05
+    assert 430.0 < g.wool_right < 445.0
 
     def _lengths():
         found = []
@@ -283,11 +285,11 @@ def test_plenum_fill_hangers_and_vent():
     left = [n for side, n in hangs if side == "L"]
     right = [n for side, n in hangs if side == "R"]
     assert left and right
-    assert all(50.0 < n < 120.0 for n in left)
+    assert all(150.0 < n < 170.0 for n in left)
     # 200 mm leg reaches the underside. The spare folds up the rafter cheek
     # and stays below the rafter top, clear of the 40 mm vent.
     assert all(0.0 < 200.0 - n < p.rafter_t for n in left)
-    assert all(250.0 < n < 400.0 for n in right)
+    assert all(420.0 < n < 450.0 for n in right)
     xc = g.horiz_cd_x_stations()[0]
     soffit_drop = g.horiz_hanger_top_z(xc) - g.horiz_hanger_bot_z()
     assert soffit_drop < 440.0
@@ -357,8 +359,9 @@ def test_sikminy_and_soffit_stack_in_3d():
         assert bb.size.X > 400.0
     # Room-facing NH on slopes sits at H_START.
     slope_nh = min(nh, key=lambda s: s.bounding_box().min.X)
-    # The NH toe starts ~3 mm off the wall, so its lowest corner is 3·tan higher.
-    assert abs(slope_nh.bounding_box().min.Z - (g.h_start + FACE_GAP)) < 3.5
+    # NaturHeld stops 3 mm off the wall for the acrylic bead, so the lowest
+    # corner sits a few millimetres above the room-face datum.
+    assert abs(slope_nh.bounding_box().min.Z - g.h_start) < 6.0
     # Soffit box underside clears the cabinets by furniture_gap.
     box_nh = max(nh, key=lambda s: s.bounding_box().min.X)
     assert abs(box_nh.bounding_box().min.Z - (g.z_nabeh_bot + FACE_GAP)) < 2.0
@@ -369,8 +372,8 @@ def test_sikminy_and_soffit_stack_in_3d():
     slope_boards = _labeled(shape, LABEL_SLOPE_GKF)
     assert slope_boards
     slope_board = max(slope_boards, key=lambda s: s.bounding_box().max.X)
-    assert slope_board.bounding_box().max.X <= g.x_soffit_cd_room + 1.0
-    assert g.x_soffit_cd_room - slope_board.bounding_box().max.X < 3.0
+    assert abs(slope_board.bounding_box().max.X - g.gkf_end_attic[0]) < 8.0
+    assert g.x_soffit_cd_room - slope_board.bounding_box().max.X > 150.0
     assert abs(slope_board.bounding_box().min.Z - g.z_soffit_cd_bot) < 2.0
     horiz_lids = [
         c
@@ -790,21 +793,21 @@ def test_sikmina_drawing_scenes():
     joined = " ".join(
         ann["text"]["cs"] for ann in section["annotations"] if "text" in ann
     )
-    assert "NaturHeld 140 60 mm levá, 100 mm pravá" in joined
+    assert "NaturHeld 140 100 mm levá, 100 mm pravá" in joined
     assert "přes GKF → CD" in joined or "přes GKF" in joined
     assert "Jutafol N AL 170 Speciál" in joined
     assert "GKF 12,5 mm" in joined
     assert "Vario" not in joined
     assert "Flex" not in joined
-    assert "Unifit 033" in joined and "NatuRoll 039" in joined
+    assert "Domo Plus 038" in joined
     assert "160 mm mezi" in joined
     assert "plénum" not in joined.lower()
     joined_en = " ".join(
         ann["text"]["en"] for ann in section["annotations"] if "text" in ann
     )
-    assert "Unifit 033" in joined_en
+    assert "Domo Plus 038" in joined_en
     assert "160 mm between" in joined_en
-    assert "60 mm left, 100 mm right" in joined_en
+    assert "100 mm left, 100 mm right" in joined_en
     assert "Jutafol N AL 170 Speciál" in joined_en
     assert "GKF 12.5 mm" in joined_en
     assert "through GKF" in joined_en
@@ -812,7 +815,7 @@ def test_sikmina_drawing_scenes():
     assert "Nonius" in joined
     assert "200 mm" in joined
     assert "3631100170" in joined
-    assert "440 mm" in joined
+    assert "540 mm" in joined
     # StoSilent must not own the through-GKF note.
     for ann in section["annotations"]:
         if ann.get("kind") != "callout":
@@ -853,7 +856,7 @@ def test_sikmina_drawing_scenes():
     # Top of column is outside (wool near ridge); bottom is room face (NaturHeld).
     order = [t.split("\n")[0] for t in (a["text"]["en"] for a in callouts)]
     by_y = [t for _, t in sorted(zip(label_ys, order), reverse=True)]
-    assert by_y[0].startswith("Wool: Unifit 033")
+    assert by_y[0].startswith("Wool: Isover Domo Plus")
     assert by_y[1].startswith("Direct hanger")
     assert by_y[2].startswith("Jutafol")
     assert by_y[-1].startswith("NaturHeld 140")
@@ -1169,9 +1172,9 @@ def test_soffit_acoustics_ignore_the_steel_section():
 
     geom = room_geometry()
     assert geom.soffit_board == 0.04
-    assert abs(geom.soffit - 11.99947873712053) < 1e-6
+    assert abs(geom.soffit - 10.459723420146625) < 1e-6
     assert abs(geom.soffit_wool_depth - 0.47910580837556743) < 1e-9
-    assert abs(geom.soffit_under_fraction - 0.3922670395205452) < 1e-9
+    assert abs(geom.soffit_under_fraction - 0.45001189906549344) < 1e-9
     assert abs(geom.soffit_air_depth - 0.32589419162443256) < 1e-9
 
 
@@ -1233,7 +1236,9 @@ def test_default_gable_lattices_and_as_built_wool():
     assert any(abs(z - (p.predstena_bottom_z + 2000.0)) < 2.0 for z in kitchen_rails)
     assert not any(abs(z - (p.predstena_bottom_z + 1250.0)) < 2.0 for z in kitchen_rails)
     assert any(abs(z - (p.predstena_bottom_z + 1250.0)) < 2.0 for z in living_rails)
-    assert any(abs(z - (p.predstena_bottom_z + 2500.0)) < 2.0 for z in living_rails)
+    # The lowered ceiling no longer clears a separate rail at +2500 mm.
+    assert not any(abs(z - (p.predstena_bottom_z + 2500.0)) < 2.0 for z in living_rails)
+    assert all(z < g.z_false for z in living_rails)
 
 
 def test_shallow_trap_is_on_the_two_door_gable():
