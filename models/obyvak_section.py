@@ -62,7 +62,7 @@ def annotate(svg_path, dxf_path=None, png_path=None) -> None:
     g = build_layout(ObyvakParams())
     src = Path(svg_path).read_text(encoding="utf-8")
     xf, xj = g.x_false, g.x_stack_joint
-    z0 = g.z_false - 50.0
+    z0 = g.z_false - 110.0
     z1 = g.plane_z(xj, g.t_gkf_attic_left, right=False) + 55.0
     minx = xf - 90.0
     width = (g.x_cd_joint + 150.0) - minx
@@ -81,11 +81,16 @@ def annotate(svg_path, dxf_path=None, png_path=None) -> None:
         svg_open,
         count=1,
     )
+    if abs(xj - xf) < 1.0:
+        joint_notes = f"""    <text x="{xf - 78:.1f}" y="{-g.z_false + 62:.1f}">volný kout, bez profilu</text>
+    <text x="{xf - 78:.1f}" y="{-g.z_false + 76:.1f}">StoSilent: řezaná spára páskou</text>
+    <text x="{xf - 78:.1f}" y="{-g.z_false + 90:.1f}">bez akrylu na povrchu</text>"""
+    else:
+        joint_notes = f"""    <text x="{xf - 78:.1f}" y="{-g.z_false + 62:.1f}">volný kout, bez profilu</text>
+    <text x="{xj - 16:.1f}" y="{-(z1 - 16):.1f}">StoSilent: řezaná spára páskou</text>"""
     labels = f"""
   <g font-family="sans-serif" font-size="8" fill="#1a2433">
-    <text x="{xf - 78:.1f}" y="{-g.z_false + 22:.1f}">NaturHeld joint</text>
-    <text x="{xj - 16:.1f}" y="{-(z1 - 16):.1f}">GKF joint, no step</text>
-    <text x="{g.x_cd_joint + 6:.1f}" y="{-(z1 - 30):.1f}">2nd GKF bevelled to CD line</text>
+{joint_notes}
   </g>
 """
     out = Path(svg_path).with_name("ridge.svg")

@@ -1,13 +1,8 @@
-"""Right eave detail: the slope GKF bears on the soffit lid, with no gap.
+"""Right eave detail: the widened soffit lid meets the lowered slope.
 
-The 2× GKF of the right slope is cut level and sits on the top of the soffit
-lid. The lid is two GKF layers: the lower one flush with the wall-plate top,
-the upper one on the attic side of it. The lid CD sits over the soffit's
-vertical CD, where the outer GKF plane meets the lid top, and the 40°
-UD track on it takes the slope CDs. The NaturHeld board gets a level toe on the
-lid, so the wool runs right up to the boards. The vapour brake runs over the
-lid CD, along the lid and down the plate cheek, then is bonded to the cabinet
-plaster inside the soffit void.
+The lid stays at the plate and widens until the slope GKF, cut level, lands
+on it. That meeting is a floating joint: no angle and no UD. The right CD
+grid stops short of the board end.
 
 Cut from the same faces as `obyvak_section` (see obyvak_detail.clip_section).
 
@@ -24,7 +19,7 @@ from obyvak_geom import ObyvakParams, build_layout
 MODEL_NAME = "obyvak_joint"
 EXPORT_KIND = "section"
 PARAMS = asdict(ObyvakParams())
-WINDOW = (4780.0, 3110.0, 5480.0, 3480.0)
+WINDOW = (4480.0, 2760.0, 5520.0, 3680.0)
 
 
 def build(params: ObyvakParams | None = None):
@@ -49,16 +44,17 @@ def notes(p: ObyvakParams | None = None):
     g = build_layout(p or ObyvakParams())
     zl = g.z_soffit_lid
     return [
-        (4790, 3462, "Right eave: slope GKF bears on the soffit lid, no gap"),
-        (4790, 3448, "2x GKF 12.5 cut level, sits on the upper lid layer"),
-        (4790, 3434, "NaturHeld 100 with a level toe on the lid; wool fills to the boards"),
-        (g.x_soffit_cd + 25, zl + 60, "soffit CD + 40 deg UD (slope CDs slide in)"),
-        (g.x_soffit_cd + 25, zl + 46, "LB 3.5x9.5 @ 300 mm"),
-        (5130, zl + 28, "Jutafol N AL 170 over the CD and lid"),
-        (5130, zl - 30, "soffit lid: 2x GKF, upper layer above the plate"),
-        (5220, 3150, "brake: slack loop, then"),
-        (5220, 3137, "bonded + taped to cabinet plaster"),
-        (5220, 3124, "(inside the soffit void)"),
+        (4500, 2920, "Lid widens until it meets the lowered slope"),
+        (4500, 2902, "floating joint, connection left open"),
+        (4500, 2884, "no angle and no UD on this edge"),
+        (4500, 2866, "bottom CD stays clear of the lid"),
+        (4680, 2920, "slope NaturHeld runs to the vertical soffit face"),
+        (4680, 2902, "wool triangle under the lid, one solid"),
+        (4680, 2884, "brake taped to the cabinet plaster"),
+        (4500, 2848, "StoSilent kout: 1. strana do koutu, nechat schnout"),
+        (4500, 2830, "2. páska Sto-Stuckband, přesah pár mm"),
+        (4500, 2812, "3. druhá strana přes pásku"),
+        (4500, 2794, "4. za čerstva řezat a pásku stáhnout"),
     ]
 
 

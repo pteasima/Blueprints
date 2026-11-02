@@ -52,6 +52,40 @@ def build(params: ObyvakParams | None = None):
     return shape, meta
 
 
+def notes(p: ObyvakParams | None = None):
+    """Gable junction. Czech for the contractor; the procedure is in obyvak_geom."""
+    return [
+        (400.0, -280.0, "Kout šikmina–štít: StoSilent řezaná spára páskou, bez akrylu"),
+        (400.0, -480.0, "alternativně stínová spára StoSilent Profile AP 210"),
+        (400.0, -680.0, "potvrdit se štukatérem a Sto, podklad NaturHeld"),
+    ]
+
+
+def annotate(svg_path, dxf_path=None, png_path=None) -> None:
+    """Notes sit below the floor. The section viewBox is extended so they are not clipped."""
+    import re
+    from pathlib import Path
+
+    from obyvak_detail import annotate_notes
+
+    path = Path(svg_path)
+    text = path.read_text(encoding="utf-8")
+
+    def _grow(match: re.Match) -> str:
+        minx, miny, width, height = (float(v) for v in match.group(1).split())
+        return f'viewBox="{minx:.1f} {miny:.1f} {width:.1f} {height + 1100:.1f}"'
+
+    text = re.sub(r'viewBox="([^"]+)"', _grow, text, count=1)
+    text = re.sub(
+        r'height="([0-9.]+)mm"',
+        lambda m: f'height="{float(m.group(1)) + 1100:.1f}mm"',
+        text,
+        count=1,
+    )
+    path.write_text(text, encoding="utf-8")
+    annotate_notes(svg_path, dxf_path, png_path, notes(), font=120.0, thin=1.0)
+
+
 if __name__ == "__main__":
     from blueprints.export_utils import export_section, summarize_params
 

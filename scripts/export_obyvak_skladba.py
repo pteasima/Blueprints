@@ -62,6 +62,14 @@ NH_KG_M3 = 140.0
 # Knauf EPD declared densities. The below-rafter wool sits on the foil, so the CD carries it.
 UNIFIT_033_KG_M3 = 25.2
 NATUROLL_039_KG_M3 = 12.4
+# Isover Domo Plus, λ 0.038, 13 kg/m³. One product for every slope wool layer.
+DOMO_KG_M3 = 13.0
+DOMO_160_KC_M2 = 171.59
+URL_DOMO_160 = (
+    "https://www.stavago.cz/izolace-tepelna-isover-domo-plus-160-mm-role---6-72-m-bal/"
+)
+# Pack area from the Isover technical sheet, m² per roll.
+DOMO_PACK_M2 = {100: 10.08, 120: 8.88, 140: 7.68, 160: 6.72, 180: 6.00, 200: 5.34, 220: 4.68}
 # Knauf D11: 2nd-layer screws ≤ 170 mm along the CD on a 1250 mm board.
 OUTER_SCREW_PITCH_MM = 170.0
 STOSILENT_PAIL_KG = 18.0
@@ -234,12 +242,12 @@ def _slope_buildup_kg_m2(p: ObyvakParams, *, right: bool) -> tuple[float, float]
     if right:
         nh = (p.naturheld_right / 1000.0) * NH_KG_M3
         gkf = p.sdk_layers_right * GKF_RF_KG_M2
-        # Installed as 2 × 160 mm. The model cavity is about 324 mm.
-        wool = 2 * 0.160 * NATUROLL_039_KG_M3
+        # 160 + 160 + 120 mm into the ~437 mm cavity. The few mm over is loft.
+        wool = (0.160 + 0.160 + 0.120) * DOMO_KG_M3
     else:
         nh = (p.naturheld_left / 1000.0) * NH_KG_M3
         gkf = GKF_RF_KG_M2
-        wool = 0.100 * UNIFIT_033_KG_M3
+        wool = (p.wool_below_left / 1000.0) * DOMO_KG_M3
     cd = CD_KG_PER_M * (1000.0 / p.cd_spacing)
     bare = render + nh + gkf + cd
     return bare, bare + wool
@@ -441,6 +449,18 @@ PRICE = {
 }
 
 
+def _domo_kc_m2(mm: float) -> float:
+    """160 mm shelf price scaled by thickness. Pack sizes differ; this is Kč/m²."""
+    return round(DOMO_160_KC_M2 * (mm / 160.0), 2)
+
+
+def _domo_src(mm: float) -> str:
+    return (
+        f"Stavago Isover Domo Plus 160 mm, {DOMO_160_KC_M2:.2f} Kč/m² s DPH, "
+        f"scaled × {mm:.0f}/160 → {_domo_kc_m2(mm):.2f} Kč/m² · {URL_DOMO_160}"
+    )
+
+
 def _nonius_set_price() -> tuple[float, str]:
     # 1 horní + 1 spodní + 2 závlačky (požární / vzpěr)
     top, st = PRICE["nonius_top_ks"]
@@ -479,7 +499,7 @@ def build_lines(q) -> dict[str, list[Line]]:
     vb_path = g.vapour_brake_path()
     for (xa, za), (xb, zb) in zip(vb_path, vb_path[1:]):
         xm = 0.5 * (xa + xb)
-        if xm < g.x_nh_end_l or xm > g.x_furn:
+        if xm < g.x_gkf_end_l or xm > g.x_gkf_kink:
             vb_eave_mm += math.hypot(xb - xa, zb - za)
     eave_m = p.room_length / 1000.0
     vb_eave_m2 = vb_eave_mm / 1000.0 * eave_m
@@ -488,9 +508,11 @@ def build_lines(q) -> dict[str, list[Line]]:
 
     raf_ys = g.rafter_y_stations(FACE_GAP, p.room_length - FACE_GAP)
     hanger_pitch = max((b - a for a, b in zip(raf_ys, raf_ys[1:])), default=p.rafter_spacing)
+    top_cd = g.right_top_cd_station()
     _heavy_bare, heavy_kg = _slope_buildup_kg_m2(p, right=True)
-    # Petr: at CD @ 500, hangers ≤ 800 mm, or ≤ 750 mm above 50 kg/m².
-    hanger_limit = 750.0 if heavy_kg > 50.0 else 800.0
+    # Hanger pitch on the rafters is 875 mm at CD @ 500. Above 50 kg/m² the
+    # tighter 750 mm figure still applies.
+    hanger_limit = 750.0 if heavy_kg > 50.0 else 875.0
     hanger_point_kg = heavy_kg * (p.cd_spacing / 1000.0) * (hanger_pitch / 1000.0)
     basic_kg_s = face_s * STOSILENT_BASIC_KG_M2
     finish_kg_s = face_s * STOSILENT_FINISH_KG_M2
@@ -546,7 +568,7 @@ def build_lines(q) -> dict[str, list[Line]]:
             12,
             nh_left_kc,
             nh_left_src,
-            f"Okenní šikmina {half_s:.2f} m². "
+            f"Okenní šikmina {half_s:.2f} m² × {p.naturheld_left:.0f} mm. "
             f"Šroubováno přes GKF do CD @ {p.cd_spacing:.0f} mm. Rezerva 12 % jako ostatní desky.",
         ),
         Line(
@@ -560,7 +582,7 @@ def build_lines(q) -> dict[str, list[Line]]:
             12,
             nh_right_kc,
             nh_right_src,
-            f"Šikmina u skříní {half_s:.2f} m². "
+            f"Šikmina u skříní {half_s:.2f} m² × {p.naturheld_right:.0f} mm. "
             f"Šroubováno přes GKF do CD @ {p.cd_spacing:.0f} mm. Rezerva 12 % jako ostatní desky.",
         ),
         Line(
@@ -633,78 +655,95 @@ def build_lines(q) -> dict[str, list[Line]]:
             8,
             PRICE["direct_ks"][0],
             PRICE["direct_ks"][1],
-            f"Kotvení z boku krokve. Modelové svěšení {left_hang:.0f} mm, noha 200 mm.",
+            f"Kotvení z boku krokve. Modelové svěšení {left_hang:.0f} mm, noha 200 mm. "
+            "Okraj u stěny drží UD, bez závěsu skrz pozednici.",
         ),
         Line(
             8,
             "Závěs — šikmina u skříní",
             "Nonius sada (horní+spodní+2× závlačka)",
-            _product("Rigips Nonius horní 440 + spodní CD + 2× závlačka", URL_NONIUS_TOP),
-            "horní 440 mm",
+            _product("Rigips Nonius horní 540 + spodní CD + 2× závlačka", URL_NONIUS_TOP),
+            "horní 540 mm",
             q["n_slope_nonius"],
             "ks",
             8,
             nonius_unit,
             nonius_src,
-            f"Pravá šikmina. Nejdelší svěšení v modelu {right_hang:.0f} mm (u okapu).",
+            f"Pravá šikmina. Svěšení {right_hang:.0f} mm. Horní díl 440 mm by na přesah "
+            f"spodního dílu (≥ 50 mm) nestačil, proto 540 mm (KB513732). "
+            f"Cena sady je zatím cena horního dílu 440 mm — 540 mm ověřit. "
+            f"Pravá šikmina od falešného hřebene: 90 mm, pak po 500 mm. "
+            f"Horní CD X {top_cd[0]:.0f} mm.",
         ),
         Line(
             9,
             "Wool between rafters, left",
-            "Glass wool, λ 0.033",
-            _product("Knauf Unifit 033 160 mm", URL_UNIFIT033_160),
-            "160 mm · roll 1200×2800 (3.36 m²)",
+            "Glass wool, λ 0.038",
+            _product("Isover Domo Plus 038, 160 mm", URL_DOMO_160),
+            f"160 mm · role {DOMO_PACK_M2[160]:.2f} m²",
             between_half,
             "m²",
             WOOL_WASTE_PCT,
-            UNIFIT033_160_KC_M2,
-            f"NonstopStavebniny, 935 Kč / 3.36 m² roll incl. VAT · {URL_UNIFIT033_160}",
+            _domo_kc_m2(160),
+            _domo_src(160),
             f"Left slope {roof_half:.2f} m² × ({bay_clear:.0f}/{p.rafter_spacing:.0f}) net of rafters "
-            f"= {between_half:.2f} m² → {_ceil_pack(between_half * 1.05, 3.36)} rolls.",
+            f"= {between_half:.2f} m² → {_ceil_pack(between_half * 1.05, DOMO_PACK_M2[160])} rolls.",
         ),
         Line(
-            '9b',
+            "9b",
             "Wool below rafters, left",
-            "Glass wool, λ 0.033",
-            _product("Knauf Unifit 033 100 mm", URL_UNIFIT033_100),
-            "100 mm · roll 1200×4400 (5.28 m²)",
+            "Glass wool, λ 0.038",
+            _product("Isover Domo Plus 038, 160 mm", URL_DOMO_160),
+            f"160 mm · role {DOMO_PACK_M2[160]:.2f} m²",
             half_s,
             "m²",
             WOOL_WASTE_PCT,
-            UNIFIT033_100_KC_M2,
-            f"Stav-Invest, 1,420.65 Kč / 5.28 m² roll incl. VAT · {URL_UNIFIT033_100}",
-            f"Left slope face {half_s:.2f} m², 1 layer → {_ceil_pack(half_s * 1.05, 5.28)} rolls. "
-            f"Model cavity {g.wool_left:.1f} mm; 100 mm is stuffed in, compressed {100.0 - g.wool_left:.0f} mm "
-            f"({(100.0 - g.wool_left):.0f} %), so no gap at the foil.",
+            _domo_kc_m2(160),
+            _domo_src(160),
+            f"Left slope face {half_s:.2f} m², one layer. Model cavity {g.wool_left:.1f} mm.",
         ),
         Line(
-            '9c',
+            "9c",
             "Wool between rafters, right",
-            "Glass wool, λ 0.039",
-            _product("Knauf NatuRoll Pro 039 160 mm", URL_NATUROLL039_160),
-            "160 mm · roll 1200×4800 (5.76 m²)",
+            "Glass wool, λ 0.038",
+            _product("Isover Domo Plus 038, 160 mm", URL_DOMO_160),
+            f"160 mm · role {DOMO_PACK_M2[160]:.2f} m²",
             between_half,
             "m²",
             WOOL_WASTE_PCT,
-            NATUROLL039_160_KC_M2,
-            f"NonstopStavebniny, 815 Kč / 5.76 m² roll incl. VAT · {URL_NATUROLL039_160}",
+            _domo_kc_m2(160),
+            _domo_src(160),
             f"Right slope {roof_half:.2f} m² × ({bay_clear:.0f}/{p.rafter_spacing:.0f}) net of rafters "
-            f"= {between_half:.2f} m² → {_ceil_pack(between_half * 1.05, 5.76)} rolls.",
+            f"= {between_half:.2f} m² → {_ceil_pack(between_half * 1.05, DOMO_PACK_M2[160])} rolls.",
         ),
         Line(
-            '9d',
-            "Wool below rafters, right",
-            "Glass wool, λ 0.039",
-            _product("Knauf NatuRoll Pro 039 160 mm", URL_NATUROLL039_160),
-            "2 × 160 = 320 mm",
+            "9d",
+            "Wool below rafters, right — 160 mm",
+            "Glass wool, λ 0.038",
+            _product("Isover Domo Plus 038, 160 mm", URL_DOMO_160),
+            "2 × 160 mm",
             2 * half_s,
             "m²",
             WOOL_WASTE_PCT,
-            NATUROLL039_160_KC_M2,
-            f"NonstopStavebniny, 815 Kč / 5.76 m² roll incl. VAT · {URL_NATUROLL039_160}",
-            f"Right slope face {half_s:.2f} m² × 2 layers = {2 * half_s:.2f} m² → {_ceil_pack(2 * half_s * 1.05, 5.76)} rolls. "
-            f"Model cavity {g.wool_right:.1f} mm (2× GKF on this side); 2 × 160 = 320 leaves {g.wool_right - 320.0:.0f} mm, "
-            f"taken up by the rolls' loft (no air layer). U ≈ 0.070; whole roof U ≈ 0.096.",
+            _domo_kc_m2(160),
+            _domo_src(160),
+            f"Right cavity {g.wool_right:.1f} mm. Two 160 mm layers "
+            f"({2 * half_s:.2f} m²) → {_ceil_pack(2 * half_s * 1.05, DOMO_PACK_M2[160])} rolls.",
+        ),
+        Line(
+            "9e",
+            "Wool below rafters, right — 120 mm",
+            "Glass wool, λ 0.038",
+            _product("Isover Domo Plus 038, 120 mm", URL_DOMO_160),
+            f"120 mm · role {DOMO_PACK_M2[120]:.2f} m²",
+            half_s,
+            "m²",
+            WOOL_WASTE_PCT,
+            _domo_kc_m2(120),
+            _domo_src(120),
+            f"Third layer. 160+160+120 = 440 mm in a {g.wool_right:.1f} mm cavity "
+            f"({440.0 - g.wool_right:.1f} mm of loft). "
+            f"{half_s:.2f} m² → {_ceil_pack(half_s * 1.05, DOMO_PACK_M2[120])} rolls.",
         ),
         Line(
             10,
@@ -1191,24 +1230,26 @@ def build_lines(q) -> dict[str, list[Line]]:
             8,
             PRICE["direct_ks"][0],
             PRICE["direct_ks"][1],
-            f"Okenní šikmina. Svěšení {left_hang:.0f} mm. Balení 100 ks.",
+            f"Okenní šikmina. Svěšení {left_hang:.0f} mm. Balení 100 ks. "
+            "CD u stěny sedí v UD, závěs skrz pozednici není.",
         ),
         Line(
             10,
             "Nonius sada",
             "H+S+2× závlačka",
-            _product("Rigips Nonius horní 440 + spodní + 2× závlačka", URL_NONIUS_TOP),
-            "440",
+            _product("Rigips Nonius horní 540 (šikmina) / 440 (kastlík)", URL_NONIUS_TOP),
+            "540 / 440",
             nonius_ks,
             "ks",
             8,
             nonius_unit,
             nonius_src,
-            f"Pravá šikmina + kastlík. Svěšení šikminy {right_hang:.0f} mm, kastlík {soffit_drop:.0f} mm. "
+            f"Šikmina horní díl 540 mm (svěšení {right_hang:.0f} mm; 440 mm nestačí na přesah). "
+            f"Kastlík zůstává 440 mm (svěšení {soffit_drop:.0f} mm). "
             f"Heavy slope {heavy_kg:.1f} kg/m². Point load ≈ {hanger_point_kg:.0f} kg "
             f"at {p.cd_spacing:.0f}×{hanger_pitch:.0f} mm, under Nonius 0.40 kN. "
-            f"Hangers stay on the rafters at {hanger_pitch:.0f} mm, over the {hanger_limit:.0f} mm "
-            "Knauf figure for CD @ 500. Layout not changed.",
+            f"Hangers stay on the rafters at {hanger_pitch:.0f} mm, the {hanger_limit:.0f} mm limit "
+            f"for CD @ 500. Right grid restarts at the false ridge: 90 mm, then 500 mm.",
         ),
         Line(
             11,
@@ -1226,74 +1267,82 @@ def build_lines(q) -> dict[str, list[Line]]:
         Line(
             12,
             "Wool between rafters, left",
-            "Glass wool, λ 0.033",
-            _product("Knauf Unifit 033 160 mm", URL_UNIFIT033_160),
-            "160 mm · roll 1200×2800 (3.36 m²)",
+            "Glass wool, λ 0.038",
+            _product("Isover Domo Plus 038, 160 mm", URL_DOMO_160),
+            f"160 mm · role {DOMO_PACK_M2[160]:.2f} m²",
             between_half,
             "m²",
             WOOL_WASTE_PCT,
-            UNIFIT033_160_KC_M2,
-            f"NonstopStavebniny, 935 Kč / 3.36 m² roll incl. VAT · {URL_UNIFIT033_160}",
-            f"Left slope {roof_half:.2f} m² × ({bay_clear:.0f}/{p.rafter_spacing:.0f}) net of rafters "
-            f"= {between_half:.2f} m² → {_ceil_pack(between_half * 1.05, 3.36)} rolls.",
+            _domo_kc_m2(160),
+            _domo_src(160),
+            f"Left slope {between_half:.2f} m² → {_ceil_pack(between_half * 1.05, DOMO_PACK_M2[160])} rolls.",
         ),
         Line(
-            '12b',
+            "12b",
             "Wool below rafters, left",
-            "Glass wool, λ 0.033",
-            _product("Knauf Unifit 033 100 mm", URL_UNIFIT033_100),
-            "100 mm · roll 1200×4400 (5.28 m²)",
+            "Glass wool, λ 0.038",
+            _product("Isover Domo Plus 038, 160 mm", URL_DOMO_160),
+            "160 mm",
             half_s,
             "m²",
             WOOL_WASTE_PCT,
-            UNIFIT033_100_KC_M2,
-            f"Stav-Invest, 1,420.65 Kč / 5.28 m² roll incl. VAT · {URL_UNIFIT033_100}",
-            f"Left slope face {half_s:.2f} m², 1 layer → {_ceil_pack(half_s * 1.05, 5.28)} rolls. "
-            f"Model cavity {g.wool_left:.1f} mm; 100 mm is stuffed in, compressed {100.0 - g.wool_left:.0f} mm "
-            f"({(100.0 - g.wool_left):.0f} %), so no gap at the foil.",
+            _domo_kc_m2(160),
+            _domo_src(160),
+            f"Cavity {g.wool_left:.1f} mm, one layer.",
         ),
         Line(
-            '12c',
+            "12c",
             "Wool between rafters, right",
-            "Glass wool, λ 0.039",
-            _product("Knauf NatuRoll Pro 039 160 mm", URL_NATUROLL039_160),
-            "160 mm · roll 1200×4800 (5.76 m²)",
+            "Glass wool, λ 0.038",
+            _product("Isover Domo Plus 038, 160 mm", URL_DOMO_160),
+            f"160 mm · role {DOMO_PACK_M2[160]:.2f} m²",
             between_half,
             "m²",
             WOOL_WASTE_PCT,
-            NATUROLL039_160_KC_M2,
-            f"NonstopStavebniny, 815 Kč / 5.76 m² roll incl. VAT · {URL_NATUROLL039_160}",
-            f"Right slope {roof_half:.2f} m² × ({bay_clear:.0f}/{p.rafter_spacing:.0f}) net of rafters "
-            f"= {between_half:.2f} m² → {_ceil_pack(between_half * 1.05, 5.76)} rolls.",
+            _domo_kc_m2(160),
+            _domo_src(160),
+            f"Right slope {between_half:.2f} m² → {_ceil_pack(between_half * 1.05, DOMO_PACK_M2[160])} rolls.",
         ),
         Line(
-            '12d',
-            "Wool below rafters, right",
-            "Glass wool, λ 0.039",
-            _product("Knauf NatuRoll Pro 039 160 mm", URL_NATUROLL039_160),
-            "2 × 160 = 320 mm",
+            "12d",
+            "Wool below rafters, right — 160 mm",
+            "Glass wool, λ 0.038",
+            _product("Isover Domo Plus 038, 160 mm", URL_DOMO_160),
+            "2 × 160 mm",
             2 * half_s,
             "m²",
             WOOL_WASTE_PCT,
-            NATUROLL039_160_KC_M2,
-            f"NonstopStavebniny, 815 Kč / 5.76 m² roll incl. VAT · {URL_NATUROLL039_160}",
-            f"Right slope face {half_s:.2f} m² × 2 layers = {2 * half_s:.2f} m² → {_ceil_pack(2 * half_s * 1.05, 5.76)} rolls. "
-            f"Model cavity {g.wool_right:.1f} mm (2× GKF on this side); 2 × 160 = 320 leaves {g.wool_right - 320.0:.0f} mm, "
-            f"taken up by the rolls' loft (no air layer). U ≈ 0.070; whole roof U ≈ 0.096.",
+            _domo_kc_m2(160),
+            _domo_src(160),
+            f"Two layers, {2 * half_s:.2f} m².",
+        ),
+        Line(
+            "12e",
+            "Wool below rafters, right — 120 mm",
+            "Glass wool, λ 0.038",
+            _product("Isover Domo Plus 038, 120 mm", URL_DOMO_160),
+            "120 mm",
+            half_s,
+            "m²",
+            WOOL_WASTE_PCT,
+            _domo_kc_m2(120),
+            _domo_src(120),
+            f"160+160+120 = 440 mm in a {g.wool_right:.1f} mm cavity "
+            f"({440.0 - g.wool_right:.1f} mm loft).",
         ),
         Line(
             "13b",
-            "UD 40° na spoji šikminy",
-            "UD profil",
-            "UD 28×27 naříznutý a ohnutý na 40°",
-            "40°",
+            "Plovoucí spoj šikmina / víko",
+            "neřešeno",
+            "zatím bez úhelníku a bez UD",
+            "otevřený detail",
             joint_m,
             "bm",
             10,
             None,
             "—",
-            "Přišroubovaný z boku CD kastlíku. Šikmé CD se do něj zasunou. "
-            "GKF šikminy dosedá na víko kastlíku bez spáry.",
+            "Spoj šikmé GKF a víka je záměrně neuzavřený. Žádný úhelník, žádné UD. "
+            "Dokončení spáry se doplní později.",
             True,
         ),
         Line(
@@ -1327,16 +1376,17 @@ def build_lines(q) -> dict[str, list[Line]]:
         ),
         Line(
             "15b",
-            "UD 28×27 na pozednici (levý okap)",
+            "UD 28×27 na omítce (levý okap)",
             "UD profil",
-            "Rigips UD 28/27, ohnutá pásnice",
-            f"{p.ud_w:.0f}×{p.cd_t:.0f} · vrut do dřeva 3,5×35 @ 300 mm",
+            "Rigips UD 28/27, hmoždinka do omítky",
+            f"{p.ud_w:.0f}×{p.cd_t:.0f} · kotva do zdi @ 625 mm",
             eave_m,
             "bm",
             10,
             PRICE["cd_bm"][0],
             PRICE["cd_bm"][1],
-            "Konec GKF levé šikminy. Ohnutá pásnice přišroubovaná na čelo pozednice. "
+            "Konec GKF a CD levé šikminy. UD je přikotvené do omítky po ≤ 625 mm, "
+            "CD v něm sedí, hrana GKF se do něj šroubuje. Žádný závěs skrz pozednici. "
             "Cena orientačně jako R-CD — UD ověřit nabídkou.",
             True,
         ),
@@ -1572,6 +1622,16 @@ def write_meta(wb, q, index: int):
         ("Regenerace", "PYTHONPATH=models:src python scripts/export_obyvak_skladba.py"),
         ("StoSilent Basic", f"{STOSILENT_BASIC_KG_M2} kg/m² (StoSilent Distance checklist / TL)"),
         ("StoSilent Finish", f"{STOSILENT_FINISH_KG_M2} kg/m² (TL Top Finish + checklist)"),
+        (
+            "StoSilent kouty",
+            "Vnitřní kouty (hřeben šikmina–šikmina, šikmina–štít, šikmina–podhled kde je omítka): "
+            "dělící spára řezem pásky dle StoSilent Direct. 1) první stranu omítnout do koutu a nechat zaschnout; "
+            "2) na hotový povrch nalepit Sto-Stuckband nebo malířskou pásku podél koutu s přesahem pár mm do koutu; "
+            "3) druhou stranu omítnout do koutu přes přesah; 4) dokud je čerstvá, nejpozději před finální vrstvou, "
+            "řezat podél koutu naplocho a pásku i s přichycenou omítkou stáhnout. Tenká přímá spára, bez akrylu na povrchu. "
+            "U štítů alternativa: stínová spára StoSilent Profile AP 210. Potvrdit se štukatérem a technickou podporou Sto "
+            "pro podklad NaturHeld.",
+        ),
         ("StoSilent balení", f"{STOSILENT_PAIL_KG:.0f} kg / kbelík"),
         ("Ceny", "Kč s DPH, webové snapshoty — ověřit aktuální nabídkou; Sto jen na poptávku"),
         ("Rezerva desky/SDK", "12 % (prořez)"),
@@ -1591,7 +1651,7 @@ def write_meta(wb, q, index: int):
         ws.cell(i, 1, a).border = THIN
         ws.cell(i, 2, b).border = THIN
         ws.cell(i, 2).alignment = WRAP
-        ws.row_dimensions[i].height = 28
+        ws.row_dimensions[i].height = 36 if len(b) < 180 else 96
     return ws
 
 

@@ -24,10 +24,9 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
 - Soffit box: 40 mm NH L over cabinets (20 mm gap); mineral wool + CD/UD rost
   below a service void; three Ø160 spiral ducts (HRV + AC) in that void; GKF
   lid raised onto the pozednice (above the wall head, not the plaster). Slope
-  GKF butts the lid where the two planes meet, at full 12.5 mm. The slope
-  board ends at the furniture line; the soffit board butts it. A light-gauge
-  angle backs that hidden joint and screws to the rost CD; that CD keeps the
-  only Nonius for the corner. Vertical CD studs hang from it; bottom CD studs
+  GKF butts the lid where the two planes meet, at full 12.5 mm. That joint is
+  left floating: no angle and no UD. The lid CD keeps
+  the only Nonius for the corner. Vertical CD studs hang from it; bottom CD studs
   socket into the wall UD. The three ducts are already anchored to the wall
   and are not hung from this box. Nothing heavy is fixed to the frame, so
   there are no timber packers. Furniture and pozednice do not carry the box —
@@ -909,10 +908,35 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         roofing_cutters,
         LABEL_ROOFING,
     )
-    # Unifit 035: the void above the CD pack (full right-slope gap, no air),
-    # plus the 160 mm bays between krokve. Same part. The vent channel above
-    # the rafter top stays empty.
+    # Domo Plus 038: the void above the CD pack, plus the 160 mm bays between
+    # krokve. Same part. The vent channel above the rafter top stays empty.
+    # Notch the soffit rods while this solid is still one prism. Cutting them
+    # out after the bay fuse inverts the shell.
     vata = _extrude_y(vata_face, gap, p.room_length - gap, LABEL_PLENUM_WOOL)
+    _half_hang = p.hanger_w * 0.5
+    _z_cd = g.horiz_hanger_bot_z()
+    _wool_notches = []
+    for _xc in g.horiz_cd_x_stations():
+        _wool_notches.append(
+            _extrude_y(xz_face(g.horiz_cd_quad(_xc), LABEL_SOFFIT_CD), g.y_furn0, g.y_furn1, LABEL_SOFFIT_CD)
+        )
+        _hang_h = g.horiz_hanger_top_z(_xc) - 2.0 * gap - _z_cd
+        if _hang_h < 20.0:
+            continue
+        for _yc in rafter_ys:
+            _wool_notches.append(
+                _box(
+                    _xc - _half_hang,
+                    _yc - _half_hang,
+                    _z_cd,
+                    p.hanger_w,
+                    p.hanger_w,
+                    _hang_h,
+                    LABEL_SOFFIT_NONIUS,
+                )
+            )
+    if _wool_notches:
+        vata = _cut_away(vata, _wool_notches, LABEL_PLENUM_WOOL)
     # Same wool, between the rafters: rafter depth from plate face to plate face.
     # Where the rafter is seated in the plate the bay starts on the plate top.
     bay_face = xz_face(g.vata_rafter_bay_pts(gap), LABEL_PLENUM_WOOL)
@@ -958,14 +982,15 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     # Only the soffit bay has that lid. Same mineral wool as the soffit cavity.
     wedge_pts = g.soffit_wool_wedge_pts()
     wedge_solid = None
-    if len(wedge_pts) >= 4:
-        x_w0 = wedge_pts[0][0] + gap
-        z_w_top = g.z_soffit_lid - gap
+    if len(wedge_pts) >= 3:
+        # One triangle, held off the lid, the vertical face and the slope board.
+        x0, _z_lid = wedge_pts[0]
+        x1, z_nh = wedge_pts[1]
+        z_top = g.z_soffit_lid - gap
         wedge = [
-            (x_w0, wedge_pts[0][1]),
-            (wedge_pts[1][0], wedge_pts[1][1]),
-            (wedge_pts[1][0], z_w_top),
-            (x_w0, z_w_top),
+            (x0, z_top),
+            (x1 - gap, z_nh + gap),
+            (x1 - gap, z_top),
         ]
         wedge_solid = _extrude_y(xz_face(wedge, LABEL_SOFFIT_WOOL), y_soff0, y_soff1, LABEL_SOFFIT_WOOL)
 
@@ -990,6 +1015,21 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         if not g.sikmina_cd_in_span(xs, st[0]):
             continue
         hang_quad = g.hanger_quad(*st)
+        # The eave CD is seated in the wall UD. Its direct hanger would run
+        # through the wall plate and the masonry; that hanger is not built.
+        if min(x for x, _z in hang_quad) < -0.5:
+            continue
+        plate_x0, plate_x1 = g.poz_l0, g.poz_l0 + p.plate_w
+        plate_z0, plate_z1 = p.eave_wall_z, g.z_plate_top
+        hxs = [x for x, _z in hang_quad]
+        hzs = [z for _x, z in hang_quad]
+        if (
+            max(hxs) > plate_x0
+            and min(hxs) < plate_x1
+            and max(hzs) > plate_z0
+            and min(hzs) < plate_z1
+        ):
+            continue
         # Window slope stays parallel to the rafters (140 mm plenum). Direct hanger 200.
         # Cabinet slope opens toward the furniture line — Nonius from the false
         # ridge onward (pack peak at x_false, left of the roof ridge).
@@ -1005,13 +1045,26 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
                     hang_label,
                 )
             )
+    # Any other hanger that still meets the wall is trimmed back to the room.
+    wall_solids = [
+        s for s in parts if getattr(s, "label", None) in {LABEL_MASONRY, LABEL_PLASTER, LABEL_WALL_PLATE}
+    ]
+    if wall_solids:
+        for i, hanger in enumerate(zaves_parts):
+            hits = [w for w in wall_solids if _aabb_hit(hanger, w)]
+            if not hits:
+                continue
+            zaves_parts[i] = _cut_away(hanger, hits, hanger.label)
     parts.extend(zaves_parts)
 
     # 5b) Jutafol N AL 170 Speciál — attic face of CD, below mineral wool. Hangers pierce it.
     # Vapour brake, eave to eave (1 mm: no inset, it is thinner than two gaps).
     foil_part = _extrude_y(xz_face(g.sikmina_foil_pts(), LABEL_SLOPE_FOIL), y_ceil0, y_ceil1, LABEL_SLOPE_FOIL)
+    foil_tools = list(cd_parts) + [part for part in parts if part.label == LABEL_SLOPE_GKF]
     if zaves_parts:
-        foil_part = _cut_away(foil_part, zaves_parts, LABEL_SLOPE_FOIL)
+        foil_tools = zaves_parts + foil_tools
+    if foil_tools:
+        foil_part = _cut_away(foil_part, foil_tools, LABEL_SLOPE_FOIL)
     parts.append(foil_part)
 
     # Left eave: bent UD screwed to the plate (the GKF is fixed to it) and the
@@ -1021,10 +1074,30 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         piece = _extrude_y(xz_face(quad, LABEL_EAVE_UD), y_ceil0, y_ceil1, LABEL_EAVE_UD)
         eave_ud = piece if eave_ud is None else eave_ud.fuse(piece)
     if eave_ud is not None:
-        parts.append(_paint(eave_ud, LABEL_EAVE_UD))
-        parts.extend(_screw_solids(g, g.eave_ud_left_screw_quads(), y_ceil0 + 10.0, y_ceil1 - 10.0))
+        gkf_for_ud = [part for part in parts if part.label == LABEL_SLOPE_GKF]
+        if gkf_for_ud:
+            eave_ud = _cut_away(eave_ud, gkf_for_ud, LABEL_EAVE_UD)
+        eave_ud = _paint(eave_ud, LABEL_EAVE_UD)
+        parts.append(eave_ud)
+        parts.extend(
+            _screw_solids(
+                g, g.eave_ud_left_screw_quads(), y_ceil0 + 10.0, y_ceil1 - 10.0, spacing=625.0
+            )
+        )
+        parts.extend(_screw_solids(g, g.eave_gkf_screw_quads(), y_ceil0 + 10.0, y_ceil1 - 10.0))
+        for i, part in enumerate(parts):
+            if part.label in {LABEL_SLOPE_NH, LABEL_SLOPE_FOIL} and _aabb_hit(part, eave_ud):
+                parts[i] = _cut_away(part, [eave_ud], part.label)
     for band in g.vb_tape_pts():
-        parts.append(_extrude_y(xz_face(band, LABEL_VB_TAPE), y_ceil0, y_ceil1, LABEL_VB_TAPE))
+        tape = _extrude_y(xz_face(band, LABEL_VB_TAPE), y_ceil0, y_ceil1, LABEL_VB_TAPE)
+        tape_tools = []
+        if eave_ud is not None and _aabb_hit(tape, eave_ud):
+            tape_tools.append(eave_ud)
+        if _aabb_hit(tape, foil_part):
+            tape_tools.append(foil_part)
+        if tape_tools:
+            tape = _cut_away(tape, tape_tools, LABEL_VB_TAPE)
+        parts.append(tape)
     parts.append(
         _extrude_y(xz_face(g.eave_acrylic_pts(), LABEL_EAVE_ACRYLIC), y_ceil0, y_ceil1, LABEL_EAVE_ACRYLIC)
     )
@@ -1104,13 +1177,27 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
                 parts[i] = vata
                 break
 
-    # The eave CD axis stays within 100 mm of the room face, so its tail meets
-    # the plate UD. Wool is already cut to the full profile; trim only the CD.
+    # The eave CD is centred within 100 mm of the wall. Its attic corner
+    # crosses the plaster; cut that tail off at the UD and the wall.
     if eave_ud is not None:
+        wall_clip = _box(
+            -400.0,
+            y_ceil0 - 5.0,
+            2000.0,
+            400.0 + g.x_gkf_end_l,
+            (y_ceil1 - y_ceil0) + 10.0,
+            5000.0,
+            LABEL_EAVE_UD,
+        )
         for i, cd in enumerate(cd_parts):
-            if not _aabb_hit(cd, eave_ud):
+            tools = []
+            if _aabb_hit(cd, eave_ud):
+                tools.append(eave_ud)
+            if cd.bounding_box().min.X < g.x_gkf_end_l - 0.5:
+                tools.append(wall_clip)
+            if not tools:
                 continue
-            trimmed = _cut_away(cd, [eave_ud], LABEL_SLOPE_CD)
+            trimmed = _cut_away(cd, tools, LABEL_SLOPE_CD)
             cd_parts[i] = trimmed
             for j, part in enumerate(parts):
                 if part is cd:
@@ -1232,28 +1319,8 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
                     parts[j] = trimmed
                     break
 
-    # One bent UD: flat leg on the soffit CD, then the 40° channel.
-    # Fused so the notched web is a single piece, not overlapping offcuts.
-    ud_quads = g.soffit_ud_track_quads()
-    ud_track = None
-    for quad in ud_quads[:-1]:
-        piece = _extrude_y(xz_face(quad, LABEL_SOFFIT_UD), y_soff0, y_soff1, LABEL_SOFFIT_UD)
-        ud_track = piece if ud_track is None else ud_track.fuse(piece)
+    # Slope GKF / lid joint is intentionally unresolved. No angle, no UD.
     ud_parts: list = []
-    if ud_track is not None:
-        ud_track = _paint(ud_track, LABEL_SOFFIT_UD)
-        gkf_cutters = [part for part in parts if part.label == LABEL_SLOPE_GKF]
-        if horiz_cd_parts or gkf_cutters:
-            ud_track = _cut_away(ud_track, horiz_cd_parts + gkf_cutters, LABEL_SOFFIT_UD)
-        ud_parts = [ud_track]
-    parts.extend(ud_parts)
-    if ud_parts:
-        parts.extend(_screw_solids(g, g.soffit_ud_screw_quads(), y_soff0 + 10.0, y_soff1 - 10.0))
-    if ud_parts:
-        for i, part in enumerate(parts):
-            if part.label == LABEL_SLOPE_FOIL:
-                parts[i] = _cut_away(part, ud_parts, LABEL_SLOPE_FOIL)
-                break
 
     # CD/UD rost: vertical CD behind the NH, bottom CD into a wall UD.
     # The lid CD is the only hang. The ducts are not. No timber packers —
@@ -1384,10 +1451,53 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         if ud_parts:
             wedge_solid = _cut_away(wedge_solid, ud_parts, LABEL_SOFFIT_WOOL)
         parts.append(wedge_solid)
+    if drop_parts or horiz_zaves:
+        for i, part in enumerate(parts):
+            if part.label != LABEL_SOFFIT_UD or part.bounding_box().size.Y < 1000.0:
+                continue
+            hits = [d for d in drop_parts + horiz_zaves if _aabb_hit(part, d)]
+            if hits:
+                parts[i] = _cut_away(part, hits, LABEL_SOFFIT_UD)
     parts.extend(drop_parts)
     parts.extend(bracket_parts)
     parts.extend(cleat_parts)
     parts.extend(duct_parts)
+
+    # The slope NaturHeld keeps its thickness up to the vertical soffit face,
+    # so its top corner crosses the lid. The lid wins; the wool triangle is
+    # what's left above the board.
+    if lid_solids:
+        for i, part in enumerate(parts):
+            if part.label != LABEL_SLOPE_NH:
+                continue
+            hits = [lid for lid in lid_solids if _aabb_hit(part, lid)]
+            if hits:
+                parts[i] = _cut_away(part, hits, LABEL_SLOPE_NH)
+
+    # The slope grid stops short of the lid. If a profile still meets the
+    # board, the lid wins. The joint itself is not framed.
+    if lid_solids:
+        for i, cd in enumerate(cd_parts):
+            hits = [lid for lid in lid_solids if _aabb_hit(cd, lid)]
+            if not hits:
+                continue
+            trimmed = _cut_away(cd, hits, LABEL_SLOPE_CD)
+            cd_parts[i] = trimmed
+            for j, part in enumerate(parts):
+                if part is cd:
+                    parts[j] = trimmed
+                    break
+    if bracket_parts and cd_parts:
+        for i, bracket in enumerate(bracket_parts):
+            hits = [cd for cd in cd_parts if _aabb_hit(bracket, cd)]
+            if not hits:
+                continue
+            trimmed = _cut_away(bracket, hits, LABEL_SOFFIT_UD)
+            bracket_parts[i] = trimmed
+            for j, part in enumerate(parts):
+                if part is bracket:
+                    parts[j] = trimmed
+                    break
 
     # GKF last so the rost drop can pierce the lid.
     pierce = drop_parts
@@ -1395,14 +1505,6 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         if pierce:
             lid_solid = _cut_away(lid_solid, pierce, LABEL_SOFFIT_GKF)
         parts.append(lid_solid)
-
-    # MW over the soffit bay must clear horizontal CD + Nonius.
-    steel_over_soffit = horiz_cd_parts + horiz_zaves + ud_parts
-    if steel_over_soffit:
-        for i, part in enumerate(parts):
-            if part.label == LABEL_PLENUM_WOOL:
-                parts[i] = _cut_away(part, steel_over_soffit, LABEL_PLENUM_WOOL)
-                break
 
     # --- Cabinets: clear of right plaster; top leaves furniture_gap under the box. ---
     furn_w = p.furniture_width - gap
@@ -1977,13 +2079,13 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     sec_notes = [
         (
             on_face(x_wool, y_note, t_wool),
-            f"Wool: Unifit 033 left, NatuRoll 039 right\n{raf_t} mm between rafters\n80 mm below left, 2×160 mm below right",
-            f"Vlna: Unifit 033 levá, NatuRoll 039 pravá\n{raf_t} mm mezi krokvemi\n80 mm pod levou, 2×160 mm pod pravou",
+            f"Wool: Isover Domo Plus 038\n{raf_t} mm between rafters\n{wool_l} mm below left, 160+160+120 below right",
+            f"Vlna: Isover Domo Plus 038\n{raf_t} mm mezi krokvemi\n{wool_l} mm pod levou, 160+160+120 pod pravou",
         ),
         (
             on_face(x_hang, y_note, t_hanger),
-            "Direct hanger 200 mm (window)\nDK Mont 3631100170\nNonius 440 mm (cabinet)",
-            "Přímý závěs 200 mm (okna)\nDK Mont 3631100170\nNonius horní 440 mm (skříně)",
+            "Direct hanger 200 mm (window)\nDK Mont 3631100170\nNonius 540 mm (cabinet)",
+            "Přímý závěs 200 mm (okna)\nDK Mont 3631100170\nNonius horní 540 mm (skříně)",
         ),
         (
             on_face(x_foil, y_note, t_foil),
