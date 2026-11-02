@@ -7,6 +7,7 @@
       "eps",
       "plaster",
       "wall_plate",
+      "tie_rod",
       "rafters",
       "roofing",
       "plenum_wool",
@@ -20,6 +21,7 @@
     "id": "slopes",
     "children": [
       "slope_naturheld_140",
+      "slope_light",
       "slope_gkf",
       "slope_cd",
       "slope_foil",

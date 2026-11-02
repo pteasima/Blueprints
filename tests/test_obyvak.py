@@ -1,6 +1,8 @@
 from pathlib import Path
 import sys
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "models"))
 
@@ -25,6 +27,8 @@ from obyvak_geom import (  # noqa: E402
     LABEL_RACKING_STRAP,
     LABEL_RAFTERS,
     LABEL_ROOFING,
+    LABEL_SLOPE_LIGHT,
+    LABEL_TIE_ROD,
     LABEL_SLOPE_CD,
     LABEL_SLOPE_DIRECT,
     LABEL_SLOPE_GKF,
@@ -51,6 +55,8 @@ from obyvak_geom import (  # noqa: E402
     LABEL_GLAZING,
     PART_GROUPS,
     ObyvakParams,
+    TIE_LIGHT_ABOVE,
+    TIE_LIGHT_PAIR,
     build_layout,
 )
 from obyvak_section import build as build_section  # noqa: E402
@@ -207,6 +213,107 @@ def test_layout_ceiling_and_gable():
     # Left cavity is the 160 mm design target. Right is the deeper hang.
     assert abs(g.wool_left - 160.0) < 0.05
     assert 430.0 < g.wool_right < 445.0
+
+
+def _overlap_volume(a, b) -> float:
+    ba, bb = a.bounding_box(), b.bounding_box()
+    if (
+        min(ba.max.X, bb.max.X) <= max(ba.min.X, bb.min.X)
+        or min(ba.max.Y, bb.max.Y) <= max(ba.min.Y, bb.min.Y)
+        or min(ba.max.Z, bb.max.Z) <= max(ba.min.Z, bb.min.Z)
+    ):
+        return 0.0
+    hit = a.intersect(b)
+    if hit is None:
+        return 0.0
+    try:
+        return float(hit.volume)
+    except Exception:
+        return 0.0
+
+
+def test_tie_rods_and_slope_lights():
+    """Six ø14 ties in every other bay, and five spot pairs on each slope."""
+    p = ObyvakParams()
+    g = build_layout(p)
+    y0, y1 = FACE_GAP, p.room_length - FACE_GAP
+    ys = g.tie_y_stations(y0, y1)
+    raf = g.rafter_y_stations(y0, y1)
+    half = p.rafter_w * 0.5
+    assert p.tie_d == 14.0
+    assert len(ys) == 6
+    assert len(raf) == 13
+    for a, b in zip(ys, ys[1:]):
+        assert b - a == pytest.approx(2 * p.rafter_spacing)
+    for y in ys:
+        bay = next((a, b) for a, b in zip(raf, raf[1:]) if a + half < y < b - half)
+        near = y - (bay[0] + half)
+        far = (bay[1] - half) - y
+        assert near == pytest.approx(p.tie_face_clear)
+        assert near < far
+    z = g.tie_axis_z(FACE_GAP)
+    # Mid-plate (3250) is inside the ducts. The bar sits in the top of the plate.
+    assert z > p.eave_wall_z + 0.5 * p.plate_h
+    assert z < p.eave_wall_z + p.plate_h
+    assert z > g.z_soffit_duct_crown() + 0.5 * p.tie_d + FACE_GAP - 1e-6
+    light_ys = g.light_y_between_ties(ys)
+    assert len(light_ys) == 5
+    for y, a, b in zip(light_ys, ys, ys[1:]):
+        assert y == pytest.approx(0.5 * (a + b))
+    heads = g.light_contacts(y0, y1, FACE_GAP)
+    assert len(heads) == 20
+    assert sum(1 for h in heads if h[5] == "L") == 10
+    assert sum(1 for h in heads if h[5] == "R") == 10
+    # Pair centre is TIE_LIGHT_ABOVE above the tie; both heads stay above the bar.
+    assert min(h[2] for h in heads) > z + 40.0
+    assert abs(
+        sum(h[2] for h in heads if h[5] == "L") / 10.0 - (z + TIE_LIGHT_ABOVE)
+    ) < 1e-6
+
+    shape, _ = build(p)
+    rods = _labeled(shape, LABEL_TIE_ROD)
+    lights = _labeled(shape, LABEL_SLOPE_LIGHT)
+    assert len(rods) == 6
+    assert len(lights) == 20
+    x0, x1 = g.tie_x_ends(FACE_GAP)
+    for rod, y in zip(sorted(rods, key=lambda s: s.bounding_box().center().Y), ys):
+        bb = rod.bounding_box()
+        assert bb.center().Y == pytest.approx(y)
+        assert bb.size.Y == pytest.approx(p.tie_d, abs=0.05)
+        assert bb.size.Z == pytest.approx(p.tie_d, abs=0.05)
+        assert bb.size.X == pytest.approx(x1 - x0, abs=0.05)
+        assert bb.min.Z > g.z_soffit_duct_crown() + FACE_GAP
+        assert bb.max.Z < p.eave_wall_z + p.plate_h
+    assert sum(1 for lit in lights if lit.bounding_box().center().X < g.x_ridge) == 10
+    assert sum(1 for lit in lights if lit.bounding_box().center().X > g.x_ridge) == 10
+    assert min(lit.bounding_box().min.Z for lit in lights) > z
+    # Two heads of a pair sit side by side along the room, same point on the slope.
+    left = [
+        lit.bounding_box().center()
+        for lit in lights
+        if lit.bounding_box().center().X < g.x_ridge
+    ]
+    assert max(c.X for c in left) - min(c.X for c in left) < 0.5
+    assert max(c.Z for c in left) - min(c.Z for c in left) < 0.5
+    ys_l = sorted(c.Y for c in left)
+    assert len(ys_l) == 10
+    for i, centre in enumerate(light_ys):
+        a, b = ys_l[2 * i], ys_l[2 * i + 1]
+        assert b - a == pytest.approx(TIE_LIGHT_PAIR, abs=0.5)
+        assert 0.5 * (a + b) == pytest.approx(centre)
+
+    ducts = _labeled(shape, LABEL_SOFFIT_DUCT)
+    rafters = _labeled(shape, LABEL_RAFTERS)
+    boards = _labeled(shape, LABEL_SLOPE_NH)
+    for rod in rods:
+        for other in ducts + rafters:
+            assert _overlap_volume(rod, other) < 1.0
+    for lit in lights:
+        for board in boards:
+            assert _overlap_volume(lit, board) < 1.0
+
+    ids = [s["id"] for s in scenes()]
+    assert {"ties-front", "ties-plan", "ties-section"} <= set(ids)
 
 
 def test_krov_is_discrete_rafters():
@@ -1313,6 +1420,7 @@ def test_obyvak_3d_exports(tmp_path, monkeypatch):
 
     elev, _ = build_elevation_slice()
     elev_labels = {c.label for c in elev.children}
+    assert LABEL_TIE_ROD in elev_labels  # ridge cut sees each tie as a circle
     assert "predstena" not in elev_labels
     assert LABEL_BASS_WOOL in elev_labels  # schematic trap massing at gables
     assert LABEL_WALL_GKF in elev_labels
