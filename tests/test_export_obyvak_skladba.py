@@ -21,6 +21,7 @@ UNPRICED_SOUHRN = {
     "Minerální vlna kastlík + štíty",
     "Napojení parozábrany na omítku",
     "Akryl v koutě (plánovaná spára)",
+    "Táhlo ø14 z pozednice",
 }
 
 

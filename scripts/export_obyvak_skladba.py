@@ -396,6 +396,14 @@ def collect_quantities():
         "n_bass_hanger": 0,
         "n_bass_stud": len(by[LABEL_BASS_CW]) // 2,
         "n_rafters": len(by[LABEL_RAFTERS]),
+        "n_ties": len(g.tie_y_stations(FACE_GAP, p.room_length - FACE_GAP)),
+        "tie_each_mm": g.tie_x_ends(FACE_GAP)[1] - g.tie_x_ends(FACE_GAP)[0],
+        "tie_lm": (
+            len(g.tie_y_stations(FACE_GAP, p.room_length - FACE_GAP))
+            * (g.tie_x_ends(FACE_GAP)[1] - g.tie_x_ends(FACE_GAP)[0])
+            / 1000.0
+        ),
+        "tie_z": g.tie_axis_z(FACE_GAP),
         "n_soffit_ud": len(by[LABEL_SOFFIT_UD]),
         "n_ducts": len(by[LABEL_SOFFIT_DUCT]),
         "plenum_wool_m3": _volume_m3(by[LABEL_PLENUM_WOOL]),
@@ -781,6 +789,24 @@ def build_lines(q) -> dict[str, list[Line]]:
             None,
             "—",
             "Není položka nákupu akustiky.",
+        ),
+        Line(
+            "11b",
+            "Táhlo z pozednice",
+            "Ocelová tyč",
+            "Výrobek dosud nezvolen",
+            f"ø{p.tie_d:.0f}",
+            q["n_ties"],
+            "ks",
+            None,
+            None,
+            "—",
+            f"{q['n_ties']}× ø{p.tie_d:.0f}, každé {q['tie_each_mm']:.0f} mm "
+            f"(celkem {q['tie_lm']:.2f} bm). Osa Z {q['tie_z']:.0f}: horní část pozednice, "
+            f"ne střed 3250 — ten protíná spiro Ø160. Každé druhé pole krokví, "
+            f"{p.tie_face_clear:.0f} mm od bližšího líce (strana obýváku). "
+            "Světla na šikminách nejsou v této skladbě. Cena na poptávku.",
+            True,
         ),
     ]
 
@@ -1528,6 +1554,23 @@ def build_lines(q) -> dict[str, list[Line]]:
             PRICE["bracket_ks"][0],
             PRICE["bracket_ks"][1],
             "Vzpěra u zdi.",
+            True,
+        ),
+        Line(
+            21,
+            "Táhlo ø14 z pozednice",
+            "Ocelová tyč",
+            "Výrobek dosud nezvolen",
+            f"ø{p.tie_d:.0f} × {q['tie_each_mm']:.0f} mm",
+            q["n_ties"],
+            "ks",
+            None,
+            None,
+            "—",
+            f"6 tyčí, {q['tie_lm']:.2f} bm. Osa Z {q['tie_z']:.0f} (horní část pozednice; "
+            f"střed desky 3250 vede skrz spiro). Každé druhé pole, "
+            f"{p.tie_face_clear:.0f} mm od bližšího líce krokve. "
+            "Bodovky (5 dvojic na šikminu) nejsou položka této skladby. Cena na poptávku.",
             True,
         ),
     ]

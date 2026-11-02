@@ -19,8 +19,11 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
   → Jutafol N AL 170 Speciál on the attic face of the CD → přímý závěs 200 on the
   window slope, Nonius on the cabinet slope → Knauf Unifit 035 (140 mm below +
   160 mm between rafters; right slope: full gap ≈429 mm) → krokve 100/160 @ 875 + straps.
-  No slope latě and no Flex. `rafters` = roof timber. The kastlík frame is
-  CD 60×27 plus a UD channel on the eave wall — no timber battens.
+  No slope latě and no Flex. `rafters` = roof timber. Six ø14 ties run from
+  wall plate to wall plate in every other rafter bay (270 mm off the nearer
+  rafter face). They sit in the top of the plate so they clear the Ø160 ducts.
+  Five pairs of spots on each slope sit on the ceiling between the ties.
+  The kastlík frame is CD 60×27 plus a UD channel on the eave wall — no timber battens.
 - Soffit box: 40 mm NH L over cabinets (20 mm gap); mineral wool + CD/UD rost
   below a service void; three Ø160 spiral ducts (HRV + AC) in that void; GKF
   lid raised onto the pozednice (above the wall head, not the plaster). Slope
@@ -88,6 +91,8 @@ from obyvak_geom import (
     LABEL_POCKET_FRAME,
     LABEL_RACKING_STRAP,
     LABEL_RAFTERS,
+    LABEL_SLOPE_LIGHT,
+    LABEL_TIE_ROD,
     LABEL_ROOFING,
     LABEL_SLOPE_CD,
     LABEL_SLOPE_DIRECT,
@@ -108,6 +113,8 @@ from obyvak_geom import (
     PART_GROUPS,
     ObyvakLayout,
     ObyvakParams,
+    TIE_LIGHT_D,
+    TIE_LIGHT_H,
     xz_face,
     xz_rect,
     thicken_polyline,
@@ -179,6 +186,17 @@ def _oriented_bar(
     hyp = math.hypot(fx, fy)
     pitch = math.degrees(math.atan2(fz, hyp))
     solid = Location(mid) * Rotation(Z=yaw) * Rotation(Y=-pitch) * solid
+    return _paint(solid, label)
+
+
+def _cyl_x(x0: float, x1: float, y: float, z: float, radius: float, label: str):
+    """Cylinder along X, centred on (mid-X, y, z). Radius is the true OD/2."""
+    length = x1 - x0
+    if length <= 0 or radius <= 0:
+        raise ValueError(f"non-positive bar for {label}")
+    solid = Cylinder(radius, length, align=(Align.CENTER, Align.CENTER, Align.CENTER))
+    # Local +Z → world +X.
+    solid = Location((0.5 * (x0 + x1), y, z)) * Rotation(Y=90) * solid
     return _paint(solid, label)
 
 
@@ -1656,7 +1674,83 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         _cut_away(x, [b for b in bass if _aabb_hit(x, b)], x.label) if x.label in eave_seal else x
         for x in parts
     ]
+    _add_ties_and_lights(parts, p, g, gap)
     return parts
+
+
+def _cut_strict(solid: Solid, tools: list, label: str) -> Solid:
+    """Like ``_cut_away``, but a failed boolean is a broken tie, not a skip."""
+    out = solid
+    for tool in tools:
+        try:
+            nxt = out.cut(tool)
+        except Exception as exc:
+            raise RuntimeError(f"tie clearance failed on {label}") from exc
+        if nxt is None or nxt.volume <= 0:
+            raise RuntimeError(f"tie clearance removed {label}")
+        out = nxt
+    return _paint(out, label)
+
+
+def _add_ties_and_lights(parts: list, p: ObyvakParams, g: ObyvakLayout, gap: float) -> None:
+    """Ø14 ties between the wall plates, and the spot pairs on the slopes.
+
+    The bars are bored through whatever they cross (plates, walls, ceiling
+    pack) with 1 mm radial clearance. They are not bored through the ducts.
+    Spot heads stand just proud of the room face; they do not cut the board.
+    """
+    z = g.tie_axis_z(gap)
+    ys = g.tie_y_stations(gap, p.room_length - gap)
+    if len(ys) != 6:
+        raise ValueError(f"expected 6 tie rods, the rafter grid gives {len(ys)}")
+    x0, x1 = g.tie_x_ends(gap)
+    radius = p.tie_d * 0.5
+    rods = [_cyl_x(x0, x1, y, z, radius, LABEL_TIE_ROD) for y in ys]
+    # Open the hole on the outer cheek, 1 mm past the bar end.
+    cutters = [
+        _cyl_x(
+            g.poz_l0 - gap,
+            g.poz_r0 + p.plate_w + gap,
+            y,
+            z,
+            radius + gap,
+            LABEL_TIE_ROD,
+        )
+        for y in ys
+    ]
+    try:
+        cutter = cutters[0]
+        for extra in cutters[1:]:
+            cutter = cutter.fuse(extra)
+        tools = [cutter]
+    except Exception:
+        tools = cutters
+
+    for rod in rods:
+        for part in parts:
+            if part.label == LABEL_SOFFIT_DUCT and _aabb_hit(rod, part):
+                raise ValueError("tie rod intersects a soffit duct")
+
+    for i, part in enumerate(parts):
+        if part.label in {LABEL_SOFFIT_DUCT, LABEL_TIE_ROD, LABEL_SLOPE_LIGHT}:
+            continue
+        if not any(_aabb_hit(part, tool) for tool in tools):
+            continue
+        parts[i] = _cut_strict(part, tools, part.label)
+
+    parts.extend(rods)
+
+    head_r = TIE_LIGHT_D * 0.5
+    for x, y, zc, nx, nz, _side in g.light_contacts(gap, p.room_length - gap, gap):
+        nlen = math.hypot(nx, nz) or 1.0
+        nx, nz = nx / nlen, nz / nlen
+        tx, tz = -nz, nx
+        lift = gap + TIE_LIGHT_H * 0.5
+        origin = (x + nx * lift, y, zc + nz * lift)
+        solid = Plane(origin=origin, x_dir=(tx, 0.0, tz), z_dir=(nx, 0.0, nz)) * Cylinder(
+            head_r, TIE_LIGHT_H, align=(Align.CENTER, Align.CENTER, Align.CENTER)
+        )
+        parts.append(_paint(solid, LABEL_SLOPE_LIGHT))
 
 
 def _compound(parts: list, label: str = MODEL_NAME) -> Compound:
@@ -1719,6 +1813,35 @@ def build_section_slice(params: ObyvakParams | None = None):
     return _compound(moved, label=f"{MODEL_NAME}_slice_section"), meta
 
 
+def _elevation_outline(placed) -> list[tuple[float, float]]:
+    """XZ outline of a ridge section face.
+
+    Faceted parts (walls, rafters) keep their corner vertices. A tie is a
+    circle in this cut, and a circle's vertices are only the seam, so the
+    edge is sampled when the corners do not already close a polygon.
+    """
+    unique: list[tuple[float, float]] = []
+    seen: set[tuple[float, float]] = set()
+    for v in placed.vertices():
+        key = (round(v.X, 3), round(v.Z, 3))
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append((v.X, v.Z))
+    if len(unique) >= 3:
+        return unique
+    wires = list(placed.wires())
+    if not wires:
+        return unique
+    wire = max(wires, key=lambda w: w.length)
+    pts: list[tuple[float, float]] = []
+    for edge in wire.edges():
+        samples = edge.positions(deflection=0.5)
+        for v in samples[:-1]:
+            pts.append((v.X, v.Z))
+    return pts
+
+
 def build_elevation_slice(params: ObyvakParams | None = None):
     """YZ slice at the ridge, remapped to XZ (drawing X = world Y) like panel B."""
     p = params or ObyvakParams()
@@ -1728,7 +1851,9 @@ def build_elevation_slice(params: ObyvakParams | None = None):
     for face in faces:
         placed = face.moved(Location((-g.x_ridge, 0.0, 0.0))).rotate(Axis.Z, -90)
         # Snap onto XZ so SVG export stays planar.
-        pts = [(v.X, v.Z) for v in placed.vertices()]
+        pts = _elevation_outline(placed)
+        if len(pts) < 3:
+            continue
         mapped.append(xz_face(pts, face.label))
     meta = _meta(p, g)
     meta["kind"] = "section"
@@ -2954,7 +3079,92 @@ def scenes(params: ObyvakParams | None = None) -> list[dict]:
         *_sikmina_plates(p, g),
         *_bass_view_scenes(p),
         *_bass_drawing_scenes(p, g),
+        *_tie_scenes(p, g),
     ]
+
+
+def _tie_scenes(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
+    """Front (like the SketchUp view), plan, and one tie section.
+
+    Front stands outside the window wall and looks across the length, slightly
+    up, so both slopes and the foreshortened ties are in one shot. The plan
+    hides the ceiling and shows where the six bars and the ten pairs sit.
+    """
+    from blueprints.scenes import cad_mm_to_gltf_m
+
+    z = g.tie_axis_z(FACE_GAP)
+    ys = g.tie_y_stations(FACE_GAP, p.room_length - FACE_GAP)
+    y_cut = min(ys, key=lambda y: abs(y - 0.5 * p.room_length))
+    eye = cad_mm_to_gltf_m((-3200.0, 0.42 * p.room_length, 1500.0))
+    aim = cad_mm_to_gltf_m((0.55 * p.room_width, 0.62 * p.room_length, z + 80.0))
+    front = {
+        "id": "ties-front",
+        "title": _tx(
+            "Ties and lights — front",
+            "Táhla a světla — pohled",
+        ),
+        "project": "Obývák 1.02",
+        "hFovDeg": 55,
+        "projection": "perspective",
+        "camera": {"target": aim, "position": eye, "up": [0.0, 1.0, 0.0]},
+        "cuts": [_cut((1.0, 0.0, 0.0), (80.0, 0.5 * p.room_length, z))],
+        "opacity": {LABEL_TIE_ROD: 1, LABEL_SLOPE_LIGHT: 1},
+        "opacityDefault": 1,
+    }
+    plan = {
+        "id": "ties-plan",
+        "title": _tx(
+            "Ties and lights — plan",
+            "Táhla a světla — půdorys",
+        ),
+        "project": "Obývák 1.02",
+        "projection": "ortho",
+        "camera": _ortho_pose(
+            (0.5 * p.room_width, 0.5 * p.room_length, z),
+            (0.0, -1.0, 0.0),
+            (0.0, 0.0, -1.0),
+            0.5 * (p.room_width + 900.0) * 0.001,
+            0.5 * (p.room_length + 900.0) * 0.001,
+        ),
+        "opacityDefault": 0,
+        "opacity": {
+            LABEL_TIE_ROD: 1,
+            LABEL_SLOPE_LIGHT: 1,
+            LABEL_RAFTERS: 0.45,
+            LABEL_WALL_PLATE: 0.9,
+        },
+    }
+    section = {
+        "id": "ties-section",
+        "title": _tx(
+            "Tie — section through one bar",
+            "Táhlo — řez jednou tyčí",
+        ),
+        "project": "Obývák 1.02",
+        "projection": "ortho",
+        "camera": _ortho_pose(
+            (0.5 * p.room_width, y_cut, 0.5 * (2400.0 + p.ridge_z)),
+            (0.0, 0.0, -1.0),
+            (0.0, 1.0, 0.0),
+            0.5 * (g.right_eave - g.left_eave + 400.0) * 0.001,
+            0.5 * (p.ridge_z - 2000.0) * 0.001,
+        ),
+        "cuts": [
+            _cut((0.0, 0.0, -1.0), (0.5 * p.room_width, y_cut - 30.0, z)),
+            _cut((0.0, 0.0, 1.0), (0.5 * p.room_width, y_cut + 30.0, z)),
+        ],
+        "opacityDefault": 0.2,
+        "opacity": {
+            LABEL_TIE_ROD: 1,
+            LABEL_SLOPE_LIGHT: 1,
+            LABEL_RAFTERS: 1,
+            LABEL_WALL_PLATE: 1,
+            LABEL_SOFFIT_DUCT: 1,
+            LABEL_MASONRY: 1,
+            LABEL_PLASTER: 1,
+        },
+    }
+    return [front, plan, section]
 
 
 def part_groups() -> list[dict]:

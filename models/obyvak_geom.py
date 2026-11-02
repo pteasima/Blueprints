@@ -33,6 +33,9 @@ World:
   Nonius horní 440 on the cabinet slope (gap ~429)          → `slope_nonius`
   Knauf Unifit 035: void below krokve + bays between them  → `plenum_wool`
   krokve 100/160 @ ~875                                     → `rafters`
+  6× táhlo ø14 mezi pozednicemi, každé druhé pole,
+  270 mm od bližšího líce krokve                            → `tie_rod`
+  5 dvojic bodovek na šikminu, mezi táhly                   → `slope_light`
   zavětrovací pásky 40×2 @ 45° X across krokve (racking)    → `racking_strap`
   (střešní latě / kontralatě above rafters stay in roofing)
 
@@ -79,6 +82,14 @@ LABEL_RAFTERS = "rafters"
 LABEL_ROOFING = "roofing"
 LABEL_PLENUM_WOOL = "plenum_wool"
 LABEL_RACKING_STRAP = "racking_strap"
+LABEL_TIE_ROD = "tie_rod"
+LABEL_SLOPE_LIGHT = "slope_light"
+# Pair of spots on the room face. The pair centre is this far vertically
+# above the tie axis; the two heads are this far apart along the slope.
+TIE_LIGHT_ABOVE = 120.0
+TIE_LIGHT_PAIR = 140.0
+TIE_LIGHT_D = 70.0
+TIE_LIGHT_H = 28.0
 LABEL_POCKET_FRAME = "pocket_frame"
 LABEL_WALL_GKF = "wall_gkf"
 LABEL_GLAZING = "glazing"
@@ -124,6 +135,7 @@ PART_GROUPS = [
             LABEL_EPS,
             LABEL_PLASTER,
             LABEL_WALL_PLATE,
+            LABEL_TIE_ROD,
             LABEL_RAFTERS,
             LABEL_ROOFING,
             LABEL_PLENUM_WOOL,
@@ -137,6 +149,7 @@ PART_GROUPS = [
         "id": "slopes",
         "children": [
             LABEL_SLOPE_NH,
+            LABEL_SLOPE_LIGHT,
             LABEL_SLOPE_GKF,
             LABEL_SLOPE_CD,
             LABEL_SLOPE_FOIL,
@@ -302,6 +315,10 @@ class ObyvakParams:
     rafter_w: float = 100.0
     rafter_spacing: float = 875.0
     rafter_first_inset: float = 200.0
+    # Sheet note "6× táhlo ø14 z pozednice". The bar is in every other rafter
+    # bay, this far clear of the nearer (living-gable) rafter face.
+    tie_d: float = 14.0
+    tie_face_clear: float = 270.0
     strap_w: float = 40.0
     strap_t: float = 2.0
     hanger_w: float = 20.0
@@ -1025,6 +1042,84 @@ class ObyvakLayout:
     def rafter_y_stations(self, y0: float, y1: float) -> list[float]:
         p = self.p
         return self.y_stations(y0, y1, p.rafter_spacing, p.rafter_first_inset)
+
+    def tie_axis_z(self, gap: float = 1.0) -> float:
+        """Tie centreline inside the pozednice, clear of the Ø160 ducts.
+
+        The sheet draws the bar at mid-plate (eave + plate_h/2 = 3250). That
+        line runs through the spiral ducts under the soffit lid. The only Ø14
+        that still lies in the plate and misses the pipes sits in the top of
+        the timber: the clearance hole stays 1 mm under the plate top.
+        """
+        r = self.p.tie_d * 0.5
+        plate_top = self.p.eave_wall_z + self.p.plate_h
+        z_hi = plate_top - gap - (r + gap)
+        z_lo = self.z_soffit_duct_crown() + gap + r
+        if z_lo > z_hi + 1e-6:
+            raise ValueError(
+                f"ø{self.p.tie_d:g} tie cannot sit in the pozednice and clear the ducts "
+                f"(need Z≥{z_lo:.1f}, plate allows ≤{z_hi:.1f})"
+            )
+        return z_hi
+
+    def tie_x_ends(self, gap: float = 1.0) -> tuple[float, float]:
+        """Bar ends 1 mm inside the outer cheeks of the two wall plates."""
+        return (self.poz_l0 + gap, self.poz_r0 + self.p.plate_w - gap)
+
+    def tie_y_stations(self, y0: float, y1: float) -> list[float]:
+        """Six ties, one in every other rafter bay, 270 mm off the nearer face.
+
+        Bays are numbered from the living gable. The odd bays (2nd, 4th, …)
+        put the run closer to mid-room than the even bays. Inside each bay the
+        bar is ``tie_face_clear`` past the living-side rafter face, so that
+        face is the nearer one (the kitchen-side face is a bay further away).
+        """
+        raf = self.rafter_y_stations(y0, y1)
+        half = self.p.rafter_w * 0.5
+        clear = self.p.tie_face_clear
+        out: list[float] = []
+        for i in range(1, len(raf) - 1, 2):
+            y = raf[i] + half + clear
+            if y >= raf[i + 1] - half:
+                continue
+            out.append(y)
+        return out
+
+    def light_y_between_ties(self, tie_ys: list[float]) -> list[float]:
+        """One light set centred between each pair of adjacent ties."""
+        return [0.5 * (a + b) for a, b in zip(tie_ys, tie_ys[1:])]
+
+    def _ceil_x_at_z(self, z: float, *, right: bool) -> float:
+        if right:
+            return self.x_false + (self.z_false - z) / self.tan
+        return (z - self.h_start) / self.tan
+
+    def light_contacts(
+        self, y0: float, y1: float, gap: float = 1.0
+    ) -> list[tuple[float, float, float, float, float, str]]:
+        """Room-face points for each spot head.
+
+        Returns (x, y, z, nx, nz, side). ``(nx, nz)`` points into the room.
+        Five sets per slope; each set is two heads along the slope, centred
+        ``TIE_LIGHT_ABOVE`` vertically above the tie.
+        """
+        z_mid = self.tie_axis_z(gap) + TIE_LIGHT_ABOVE
+        half = TIE_LIGHT_PAIR * 0.5
+        ys = self.light_y_between_ties(self.tie_y_stations(y0, y1))
+        heads: list[tuple[float, float, float, float, float, str]] = []
+        for side, right in (("L", False), ("R", True)):
+            x_mid = self._ceil_x_at_z(z_mid, right=right)
+            if right:
+                tx, tz = -self.cos, self.sin
+                nx, nz = -self.sin, -self.cos
+            else:
+                tx, tz = self.cos, self.sin
+                nx, nz = self.sin, -self.cos
+            for y in ys:
+                for sign in (-1.0, 1.0):
+                    s = sign * half
+                    heads.append((x_mid + tx * s, y, z_mid + tz * s, nx, nz, side))
+        return heads
 
     def hanger_quad(
         self,
