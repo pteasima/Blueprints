@@ -509,10 +509,10 @@ def build_lines(q) -> dict[str, list[Line]]:
     raf_ys = g.rafter_y_stations(FACE_GAP, p.room_length - FACE_GAP)
     hanger_pitch = max((b - a for a, b in zip(raf_ys, raf_ys[1:])), default=p.rafter_spacing)
     top_cd = g.right_top_cd_station()
-    top_along = (top_cd[0] - g.x_cd_joint) / g.cos
     _heavy_bare, heavy_kg = _slope_buildup_kg_m2(p, right=True)
-    # Petr: at CD @ 500, hangers ≤ 800 mm, or ≤ 750 mm above 50 kg/m².
-    hanger_limit = 750.0 if heavy_kg > 50.0 else 800.0
+    # Hanger pitch on the rafters is 875 mm at CD @ 500. Above 50 kg/m² the
+    # tighter 750 mm figure still applies.
+    hanger_limit = 750.0 if heavy_kg > 50.0 else 875.0
     hanger_point_kg = heavy_kg * (p.cd_spacing / 1000.0) * (hanger_pitch / 1000.0)
     basic_kg_s = face_s * STOSILENT_BASIC_KG_M2
     finish_kg_s = face_s * STOSILENT_FINISH_KG_M2
@@ -672,7 +672,8 @@ def build_lines(q) -> dict[str, list[Line]]:
             f"Pravá šikmina. Svěšení {right_hang:.0f} mm. Horní díl 440 mm by na přesah "
             f"spodního dílu (≥ 50 mm) nestačil, proto 540 mm (KB513732). "
             f"Cena sady je zatím cena horního dílu 440 mm — 540 mm ověřit. "
-            f"Horní řada na CD X {top_cd[0]:.0f} mm, {top_along:.0f} mm po spádu od spoje CD.",
+            f"Pravá šikmina od falešného hřebene: 90 mm, pak po 500 mm. "
+            f"Horní CD X {top_cd[0]:.0f} mm.",
         ),
         Line(
             9,
@@ -1247,8 +1248,8 @@ def build_lines(q) -> dict[str, list[Line]]:
             f"Kastlík zůstává 440 mm (svěšení {soffit_drop:.0f} mm). "
             f"Heavy slope {heavy_kg:.1f} kg/m². Point load ≈ {hanger_point_kg:.0f} kg "
             f"at {p.cd_spacing:.0f}×{hanger_pitch:.0f} mm, under Nonius 0.40 kN. "
-            f"Hangers stay on the rafters at {hanger_pitch:.0f} mm, over the {hanger_limit:.0f} mm "
-            f"Knauf figure for CD @ 500. Top row is {top_along:.0f} mm down the slope from the CD joint.",
+            f"Hangers stay on the rafters at {hanger_pitch:.0f} mm, the {hanger_limit:.0f} mm limit "
+            f"for CD @ 500. Right grid restarts at the false ridge: 90 mm, then 500 mm.",
         ),
         Line(
             11,
@@ -1331,17 +1332,17 @@ def build_lines(q) -> dict[str, list[Line]]:
         ),
         Line(
             "13b",
-            "UD vodorovný na hraně víka",
-            "UD profil",
-            "UD 28×27 vodorovně na víku",
-            "vodorovný UD, úhelník 3 mm na šikmém CD",
+            "Plovoucí spoj šikmina / víko",
+            "neřešeno",
+            "zatím bez úhelníku a bez UD",
+            "otevřený detail",
             joint_m,
             "bm",
             10,
             None,
             "—",
-            "Nejbližší šikmé CD nese hranu šikmé GKF. Úhelník na tom CD drží "
-            "vodorovný UD, do kterého se šroubuje jen hrana rozšířeného víka.",
+            "Spoj šikmé GKF a víka je záměrně neuzavřený. Žádný úhelník, žádné UD. "
+            "Dokončení spáry se doplní později.",
             True,
         ),
         Line(
@@ -1621,6 +1622,16 @@ def write_meta(wb, q, index: int):
         ("Regenerace", "PYTHONPATH=models:src python scripts/export_obyvak_skladba.py"),
         ("StoSilent Basic", f"{STOSILENT_BASIC_KG_M2} kg/m² (StoSilent Distance checklist / TL)"),
         ("StoSilent Finish", f"{STOSILENT_FINISH_KG_M2} kg/m² (TL Top Finish + checklist)"),
+        (
+            "StoSilent kouty",
+            "Vnitřní kouty (hřeben šikmina–šikmina, šikmina–štít, šikmina–podhled kde je omítka): "
+            "dělící spára řezem pásky dle StoSilent Direct. 1) první stranu omítnout do koutu a nechat zaschnout; "
+            "2) na hotový povrch nalepit Sto-Stuckband nebo malířskou pásku podél koutu s přesahem pár mm do koutu; "
+            "3) druhou stranu omítnout do koutu přes přesah; 4) dokud je čerstvá, nejpozději před finální vrstvou, "
+            "řezat podél koutu naplocho a pásku i s přichycenou omítkou stáhnout. Tenká přímá spára, bez akrylu na povrchu. "
+            "U štítů alternativa: stínová spára StoSilent Profile AP 210. Potvrdit se štukatérem a technickou podporou Sto "
+            "pro podklad NaturHeld.",
+        ),
         ("StoSilent balení", f"{STOSILENT_PAIL_KG:.0f} kg / kbelík"),
         ("Ceny", "Kč s DPH, webové snapshoty — ověřit aktuální nabídkou; Sto jen na poptávku"),
         ("Rezerva desky/SDK", "12 % (prořez)"),
@@ -1640,7 +1651,7 @@ def write_meta(wb, q, index: int):
         ws.cell(i, 1, a).border = THIN
         ws.cell(i, 2, b).border = THIN
         ws.cell(i, 2).alignment = WRAP
-        ws.row_dimensions[i].height = 28
+        ws.row_dimensions[i].height = 36 if len(b) < 180 else 96
     return ws
 
 

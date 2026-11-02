@@ -12,12 +12,12 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "export_obyvak_skladba.py"
 
 # Still unpriced on purpose. Each one has no single retail SKU to snapshot:
-# Sto is quote-only, the joint UD and the sealants have no chosen product,
+# Sto is quote-only, the floating slope/lid joint and the sealants have no product,
 # and the soffit/gable wool product is not decided.
 UNPRICED_SOUHRN = {
     "StoSilent Top Finish",
     "StoSilent Top Basic",
-    "UD vodorovný na hraně víka",
+    "Plovoucí spoj šikmina / víko",
     "Minerální vlna kastlík + štíty",
     "Napojení parozábrany na omítku",
     "Akryl v koutě (plánovaná spára)",
@@ -79,7 +79,7 @@ def test_souhrn_total_includes_naturheld_and_lists_other_gaps(bom):
     # Both slope boards are 100 mm at 664 Kč/m². Wool is Domo Plus now, so the
     # non-board subtotal is no longer the 102 159 Kč from the 60/100 build.
     assert round(priced) > round(sum(ln.line_total for ln in slopes))
-    assert round(priced) == 155_403
+    assert round(priced) == 154_244
     missing = {ln.layer for ln in lines if ln.unit_price is None and ln.qty_net}
     assert missing == UNPRICED_SOUHRN
 

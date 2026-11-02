@@ -1,8 +1,8 @@
 """Right eave detail: the widened soffit lid meets the lowered slope.
 
 The lid stays at the plate and widens until the slope GKF, cut level, lands
-on it. The nearest slope CD carries that slope edge. An angle on the end of
-that CD holds a horizontal UD, and the lid edge screws into the UD.
+on it. That meeting is a floating joint: no angle and no UD. The right CD
+grid stops short of the board end.
 
 Cut from the same faces as `obyvak_section` (see obyvak_detail.clip_section).
 
@@ -45,12 +45,16 @@ def notes(p: ObyvakParams | None = None):
     zl = g.z_soffit_lid
     return [
         (4500, 2920, "Lid widens until it meets the lowered slope"),
-        (4500, 2902, "slope GKF screws into the nearest slope CD"),
-        (4500, 2884, "angle on that CD holds a horizontal UD"),
-        (4500, 2866, "lid edge screws into that UD"),
+        (4500, 2902, "floating joint, connection left open"),
+        (4500, 2884, "no angle and no UD on this edge"),
+        (4500, 2866, "bottom CD stays clear of the lid"),
         (4680, 2920, "slope NaturHeld runs to the vertical soffit face"),
         (4680, 2902, "wool triangle under the lid, one solid"),
         (4680, 2884, "brake taped to the cabinet plaster"),
+        (4500, 2848, "StoSilent kout: 1. strana do koutu, nechat schnout"),
+        (4500, 2830, "2. páska Sto-Stuckband, přesah pár mm"),
+        (4500, 2812, "3. druhá strana přes pásku"),
+        (4500, 2794, "4. za čerstva řezat a pásku stáhnout"),
     ]
 
 

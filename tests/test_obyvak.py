@@ -123,11 +123,20 @@ def test_layout_ceiling_and_gable():
     assert left_cds
     assert abs(left_cds[0][0] / g.cos - p.cd_first_inset) < 1e-6
     assert left_cds[0][0] / g.cos <= 100.0
-    # Top Nonius row: the 500 mm grid misses the right slope just below the joint.
-    top = g.right_top_cd_station()
-    assert any(abs(st[0] - top[0]) < 1e-6 for st in g.sikmina_cd_stations())
-    along_top = (top[0] - g.x_cd_joint) / g.cos
-    assert 0.0 < along_top <= p.rafter_spacing
+    # Right slope restarts at the false ridge: 90 mm, then even 500 mm steps.
+    rights = [st for st in g.sikmina_cd_stations() if st[0] > g.x_false]
+    alongs = [(st[0] - g.x_false) / g.cos for st in rights]
+    assert alongs
+    assert abs(alongs[0] - p.cd_first_inset) < 1e-6
+    for a, b in zip(alongs, alongs[1:]):
+        assert abs((b - a) - p.cd_spacing) < 1e-6
+    board_end = g.right_slope_along_end()
+    assert alongs[-1] + p.cd_w * 0.5 < board_end - 5.0
+    assert alongs[-1] + p.cd_spacing + p.cd_w * 0.5 > board_end - 5.0
+    bottom = rights[-1]
+    quad = g.sikmina_cd_quad(*bottom)
+    assert max(x for x, _z in quad) < g.gkf_end_room[0] - 5.0
+    assert max(x for x, _z in quad) < g.x_soffit_cd_room - 50.0
     for a, b in zip(left_cds, left_cds[1:]):
         assert abs((b[0] - a[0]) / g.cos - p.cd_spacing) < 1.0
     # One 500 mm grid for the soffit CD studs. The bay does not start a second inset.
@@ -167,27 +176,7 @@ def test_layout_ceiling_and_gable():
     cds = g.horiz_cd_x_stations()
     assert cds == [g.x_soffit_cd]
     assert abs(g.x_soffit_cd - (g.x_soffit_cd_room + p.cd_w * 0.5)) < 1e-6
-    ud = g.soffit_ud_track_quads()
-    assert len(ud) == 3  # horizontal web, two flanges
-    web = ud[0]
-    # Flat on the lid, wall-side of the slope board, short of the lid CD.
-    assert max(z for _x, z in web) - min(z for _x, z in web) < 1.5
-    assert min(x for x, _z in web) > g.gkf_end_attic[0] + 5.0
-    assert max(x for quad in ud for x, _z in quad) < g.x_soffit_cd_room - 50.0
-    assert max(z for quad in ud for _x, z in quad) < g.z_soffit_cd_top
-    brackets = g.joint_bracket_quads()
-    assert len(brackets) == 2
-    # The clear stops at the outer corner. It does not eat the CD off the board.
-    ax, az = g.gkf_end_attic
-    for x, z in g.joint_clear_pts():
-        s = (x - ax) * -g.cos + (z - az) * g.sin
-        assert s < 0.5
-    screws = g.soffit_ud_screw_quads()
-    assert len(screws) == 2
-    shank = screws[1]
-    assert max(z for _x, z in shank) > g.z_soffit_cd_bot
-    edge = g.soffit_ud_slope_screw_quads()
-    assert len(edge) == 2
+    # The slope/lid joint is open: no angle and no horizontal UD.
     # Equal boards: the GKF planes meet on the false ridge.
     assert abs(g.x_stack_joint - g.x_false) < 1e-6
     assert abs(
@@ -413,7 +402,7 @@ def test_sikminy_and_soffit_stack_in_3d():
         if c.bounding_box().size.X < p.sdk_t + 2.0
     ]
     assert risers == []
-    # Last slope CD is still inside one module of the joint. The angle closes it.
+    # Last slope CD stays inside one module of the open joint, clear of the lid.
     slope_carriers = [
         c
         for c in cds
@@ -432,15 +421,13 @@ def test_sikminy_and_soffit_stack_in_3d():
         for c in _labeled(shape, LABEL_SOFFIT_UD)
         if c.bounding_box().size.Y > 1000.0 and c.bounding_box().min.X < g.x_furn
     ]
-    assert ud_track
-    # The track is the joint UD, upslope of the lid CD.
-    assert all(c.bounding_box().max.X < g.x_soffit_cd_room - 50.0 for c in ud_track)
+    assert ud_track == []
     brackets = [
         c
         for c in _labeled(shape, LABEL_SOFFIT_UD)
         if c.bounding_box().size.Y < 80.0
     ]
-    assert len(brackets) >= 4
+    assert brackets == []
     from build123d import Box, Location
 
     ex, ez = g.gkf_end_room
