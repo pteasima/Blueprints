@@ -82,7 +82,7 @@
   {
     "id": "sikmina-lattice",
     "title": {
-      "en": "Slopes — CD and hangers",
+      "en": "Šikmina — CD a závěsy",
       "cs": "Šikmina — CD a závěsy"
     },
     "project": "Obývák 1.02",
@@ -165,7 +165,7 @@
           4692.1
         ],
         "text": {
-          "en": "Bracing strap 40×2 mm\n45° across rafters",
+          "en": "Páska 40×2 mm\n45° přes krokve",
           "cs": "Páska 40×2 mm\n45° přes krokve"
         },
         "offset": [
@@ -181,7 +181,7 @@
           4247.3
         ],
         "text": {
-          "en": "Direct hanger 200 mm\nDK Mont 3631100170\nCD → side of rafter",
+          "en": "Přímý závěs 200 mm\nDK Mont 3631100170\nCD → bok krokve",
           "cs": "Přímý závěs 200 mm\nDK Mont 3631100170\nCD → bok krokve"
         },
         "offset": [
@@ -197,7 +197,7 @@
           3765.3
         ],
         "text": {
-          "en": "CD 60×27 mm @ 500\n⊥ rafters",
+          "en": "CD 60×27 mm @ 500\n⊥ krokvím",
           "cs": "CD 60×27 mm @ 500\n⊥ krokvím"
         },
         "offset": [
@@ -238,7 +238,7 @@
   {
     "id": "sikmina-section",
     "title": {
-      "en": "Slopes — section\nperpendicular to the rafters",
+      "en": "Šikmina — řez\nkolmo na krokve",
       "cs": "Šikmina — řez\nkolmo na krokve"
     },
     "project": "Obývák 1.02",
@@ -323,8 +323,8 @@
           5289.9
         ],
         "text": {
-          "en": "Wool: Isover Domo Plus 038\n160 mm between rafters\n160 mm below left, 160+160+120 below right",
-          "cs": "Vlna: Isover Domo Plus 038\n160 mm mezi krokvemi\n160 mm pod levou, 160+160+120 pod pravou"
+          "en": "Vata: Isover Domo Plus 038\n160 mm mezi krokvemi\n160 mm pod levou, 160+160+120 pod pravou",
+          "cs": "Vata: Isover Domo Plus 038\n160 mm mezi krokvemi\n160 mm pod levou, 160+160+120 pod pravou"
         },
         "offset": [
           -0.337,
@@ -339,8 +339,8 @@
           4720.1
         ],
         "text": {
-          "en": "Direct hanger 200 mm (window)\nDK Mont 3631100170\nNonius 540 mm (cabinet)",
-          "cs": "Přímý závěs 200 mm (okna)\nDK Mont 3631100170\nNonius horní 540 mm (skříně)"
+          "en": "Přímý závěs 200 mm (okna)\nDK Mont 3631100170\nNonius 540 mm (skříně)",
+          "cs": "Přímý závěs 200 mm (okna)\nDK Mont 3631100170\nNonius 540 mm (skříně)"
         },
         "offset": [
           -0.286,
@@ -355,8 +355,8 @@
           4235.8
         ],
         "text": {
-          "en": "Jutafol N AL 170 Speciál",
-          "cs": "Jutafol N AL 170 Speciál"
+          "en": "Parozábrana\nJutafol N AL 170 Speciál",
+          "cs": "Parozábrana\nJutafol N AL 170 Speciál"
         },
         "offset": [
           -0.235,
@@ -371,7 +371,7 @@
           3888.6
         ],
         "text": {
-          "en": "CD 60×27 mm @ 500\n⊥ rafters",
+          "en": "CD 60×27 mm @ 500\n⊥ krokvím",
           "cs": "CD 60×27 mm @ 500\n⊥ krokvím"
         },
         "offset": [
@@ -387,7 +387,7 @@
           3575.1
         ],
         "text": {
-          "en": "GKF 12.5 mm",
+          "en": "GKF 12,5 mm",
           "cs": "GKF 12,5 mm"
         },
         "offset": [
@@ -403,7 +403,7 @@
           3252.3
         ],
         "text": {
-          "en": "NaturHeld 140 100 mm left, 100 mm right\nthrough GKF → CD\nStoSilent Finish + Basic 2+2 mm",
+          "en": "NaturHeld 140 100 mm levá, 100 mm pravá\npřes GKF → CD\nStoSilent Finish + Basic 2+2 mm",
           "cs": "NaturHeld 140 100 mm levá, 100 mm pravá\npřes GKF → CD\nStoSilent Finish + Basic 2+2 mm"
         },
         "offset": [
@@ -416,7 +416,7 @@
   {
     "id": "bass-kitchen",
     "title": {
-      "en": "Kitchen gable — bass trap\n190 mm, vertical CW 50 @ 625",
+      "en": "Štít kuchyně — basová past\n190 mm, svislé CW 50 @ 625",
       "cs": "Štít kuchyně — basová past\n190 mm, svislé CW 50 @ 625"
     },
     "project": "Obývák 1.02",
@@ -492,7 +492,7 @@
   {
     "id": "bass-living",
     "title": {
-      "en": "Living gable — bass trap\n450 mm, vertical CW 125 @ 625",
+      "en": "Štít obýváku — basová past\n450 mm, svislé CW 125 @ 625",
       "cs": "Štít obýváku — basová past\n450 mm, svislé CW 125 @ 625"
     },
     "project": "Obývák 1.02",
@@ -568,7 +568,7 @@
   {
     "id": "bass-kitchen-elevation",
     "title": {
-      "en": "Kitchen gable — bass trap\nGKB removed, vertical CW 50 @ 625",
+      "en": "Štít kuchyně — basová past\nbez GKB, svislé CW 50 @ 625",
       "cs": "Štít kuchyně — basová past\nbez GKB, svislé CW 50 @ 625"
     },
     "project": "Obývák 1.02",
@@ -637,8 +637,8 @@
           4700.0
         ],
         "text": {
-          "en": "CW 50 vertical\n9 studs @ 625, makeup bay 525 mm to the soffit",
-          "cs": "CW 50 svisle\n9 stojek @ 625, krajní pole 525 mm ke kastlíku"
+          "en": "CW 50 svisle\n9 stojek @ 625, krajní pole 525 mm k podhledu",
+          "cs": "CW 50 svisle\n9 stojek @ 625, krajní pole 525 mm k podhledu"
         },
         "offset": [
           0.493,
@@ -654,8 +654,8 @@
           3600.0
         ],
         "text": {
-          "en": "Not fixed to the slopes or the soffit\nUW at 2450, tape under the tracks",
-          "cs": "Ke šikmině ani ke kastlíku nekotveno\nUW v 2450, páska pod profily"
+          "en": "Ke šikmině ani k podhledu nekotveno\nUW v 2450, páska pod profily",
+          "cs": "Ke šikmině ani k podhledu nekotveno\nUW v 2450, páska pod profily"
         },
         "offset": [
           0.562,
@@ -671,8 +671,8 @@
           3200.0
         ],
         "text": {
-          "en": "CW/UA offcuts to a wall angle\nabout 1/3 and 2/3, anchor in the block",
-          "cs": "Odstřižky CW/UA na úhelník\nasi 1/3 a 2/3, hmoždinka do zdiva"
+          "en": "Odstřižky CW/UA na úhelník\nasi 1/3 a 2/3, kotva do zdiva",
+          "cs": "Odstřižky CW/UA na úhelník\nasi 1/3 a 2/3, kotva do zdiva"
         },
         "offset": [
           0.348,
@@ -688,8 +688,8 @@
           700.0
         ],
         "text": {
-          "en": "GKB 1250×2750, joints on studs\nacrylic 3 mm to the slope and the soffit",
-          "cs": "GKB 1250×2750, spáry na stojkách\nakryl 3 mm ke šikmině a ke kastlíku"
+          "en": "GKB 1250×2750, spáry na stojkách\nakryl 3 mm ke šikmině a k podhledu",
+          "cs": "GKB 1250×2750, spáry na stojkách\nakryl 3 mm ke šikmině a k podhledu"
         },
         "offset": [
           0.26,
@@ -774,7 +774,7 @@
   {
     "id": "bass-kitchen-section",
     "title": {
-      "en": "Kitchen bass trap — section\nthrough a vertical CW stud",
+      "en": "Basová past kuchyně — řez\npřes svislou CW stojku",
       "cs": "Basová past kuchyně — řez\npřes svislou CW stojku"
     },
     "project": "Obývák 1.02",
@@ -850,7 +850,7 @@
           3000.0
         ],
         "text": {
-          "en": "Masonry 250 + plaster 15",
+          "en": "Zdivo 250 + omítka 15",
           "cs": "Zdivo 250 + omítka 15"
         },
         "offset": [
@@ -867,8 +867,8 @@
           2800.0
         ],
         "text": {
-          "en": "CW 50 offcut to a wall angle\nanchor 60 mm into the block",
-          "cs": "Odstřižek CW 50 na úhelník\nhmoždinka 60 mm do zdiva"
+          "en": "Odstřižek CW 50 na úhelník\nkotva 60 mm do zdiva",
+          "cs": "Odstřižek CW 50 na úhelník\nkotva 60 mm do zdiva"
         },
         "offset": [
           -0.439,
@@ -884,8 +884,8 @@
           3400.0
         ],
         "text": {
-          "en": "Mineral wool 130.5 mm",
-          "cs": "Minerální vlna 130,5 mm"
+          "en": "Minerální vata 130,5 mm",
+          "cs": "Minerální vata 130,5 mm"
         },
         "offset": [
           -0.458,
@@ -901,7 +901,7 @@
           3750.0
         ],
         "text": {
-          "en": "Air 47 mm, CW 50",
+          "en": "Vzduch 47 mm, CW 50",
           "cs": "Vzduch 47 mm, CW 50"
         },
         "offset": [
@@ -918,7 +918,7 @@
           4100.0
         ],
         "text": {
-          "en": "GKB 12.5 mm",
+          "en": "GKB 12,5 mm",
           "cs": "GKB 12,5 mm"
         },
         "offset": [
@@ -959,7 +959,7 @@
         ],
         "offset": -0.05,
         "text": {
-          "en": "130.5 mm",
+          "en": "130,5 mm",
           "cs": "130,5 mm"
         }
       },
@@ -1004,7 +1004,7 @@
   {
     "id": "bass-living-elevation",
     "title": {
-      "en": "Living gable — bass trap\nGKB removed, vertical CW 125 @ 625",
+      "en": "Štít obýváku — basová past\nbez GKB, svislé CW 125 @ 625",
       "cs": "Štít obýváku — basová past\nbez GKB, svislé CW 125 @ 625"
     },
     "project": "Obývák 1.02",
@@ -1073,8 +1073,8 @@
           4700.0
         ],
         "text": {
-          "en": "CW 125 vertical\n9 studs @ 625, makeup bay 525 mm to the soffit",
-          "cs": "CW 125 svisle\n9 stojek @ 625, krajní pole 525 mm ke kastlíku"
+          "en": "CW 125 svisle\n9 stojek @ 625, krajní pole 525 mm k podhledu",
+          "cs": "CW 125 svisle\n9 stojek @ 625, krajní pole 525 mm k podhledu"
         },
         "offset": [
           -0.493,
@@ -1090,8 +1090,8 @@
           3600.0
         ],
         "text": {
-          "en": "Not fixed to the slopes or the soffit\nUW at 2450, tape under the tracks",
-          "cs": "Ke šikmině ani ke kastlíku nekotveno\nUW v 2450, páska pod profily"
+          "en": "Ke šikmině ani k podhledu nekotveno\nUW v 2450, páska pod profily",
+          "cs": "Ke šikmině ani k podhledu nekotveno\nUW v 2450, páska pod profily"
         },
         "offset": [
           -0.562,
@@ -1107,8 +1107,8 @@
           3200.0
         ],
         "text": {
-          "en": "CW/UA offcuts to a wall angle\nabout 1/3 and 2/3, anchor in the block",
-          "cs": "Odstřižky CW/UA na úhelník\nasi 1/3 a 2/3, hmoždinka do zdiva"
+          "en": "Odstřižky CW/UA na úhelník\nasi 1/3 a 2/3, kotva do zdiva",
+          "cs": "Odstřižky CW/UA na úhelník\nasi 1/3 a 2/3, kotva do zdiva"
         },
         "offset": [
           -0.348,
@@ -1124,8 +1124,8 @@
           700.0
         ],
         "text": {
-          "en": "GKB 1250×2750, joints on studs\nacrylic 3 mm to the slope and the soffit",
-          "cs": "GKB 1250×2750, spáry na stojkách\nakryl 3 mm ke šikmině a ke kastlíku"
+          "en": "GKB 1250×2750, spáry na stojkách\nakryl 3 mm ke šikmině a k podhledu",
+          "cs": "GKB 1250×2750, spáry na stojkách\nakryl 3 mm ke šikmině a k podhledu"
         },
         "offset": [
           -0.63,
@@ -1192,7 +1192,7 @@
   {
     "id": "bass-living-section",
     "title": {
-      "en": "Living bass trap — section\nthrough a vertical CW stud",
+      "en": "Basová past obýváku — řez\npřes svislou CW stojku",
       "cs": "Basová past obýváku — řez\npřes svislou CW stojku"
     },
     "project": "Obývák 1.02",
@@ -1268,7 +1268,7 @@
           3000.0
         ],
         "text": {
-          "en": "Masonry 250 + plaster 15",
+          "en": "Zdivo 250 + omítka 15",
           "cs": "Zdivo 250 + omítka 15"
         },
         "offset": [
@@ -1285,8 +1285,8 @@
           2800.0
         ],
         "text": {
-          "en": "CW 125 offcut to a wall angle\nanchor 60 mm into the block",
-          "cs": "Odstřižek CW 125 na úhelník\nhmoždinka 60 mm do zdiva"
+          "en": "Odstřižek CW 125 na úhelník\nkotva 60 mm do zdiva",
+          "cs": "Odstřižek CW 125 na úhelník\nkotva 60 mm do zdiva"
         },
         "offset": [
           -0.41,
@@ -1302,8 +1302,8 @@
           3400.0
         ],
         "text": {
-          "en": "Mineral wool 300 mm",
-          "cs": "Minerální vlna 300 mm"
+          "en": "Minerální vata 300 mm",
+          "cs": "Minerální vata 300 mm"
         },
         "offset": [
           -0.456,
@@ -1319,7 +1319,7 @@
           3750.0
         ],
         "text": {
-          "en": "Air 137.5 mm, CW 125",
+          "en": "Vzduch 137,5 mm, CW 125",
           "cs": "Vzduch 137,5 mm, CW 125"
         },
         "offset": [
@@ -1336,7 +1336,7 @@
           4100.0
         ],
         "text": {
-          "en": "GKB 12.5 mm",
+          "en": "GKB 12,5 mm",
           "cs": "GKB 12,5 mm"
         },
         "offset": [
@@ -1395,7 +1395,7 @@
         ],
         "offset": -0.05,
         "text": {
-          "en": "137.5 mm",
+          "en": "137,5 mm",
           "cs": "137,5 mm"
         }
       },
@@ -1422,7 +1422,7 @@
   {
     "id": "ties-front",
     "title": {
-      "en": "Ties and lights — front",
+      "en": "Táhla a světla — pohled",
       "cs": "Táhla a světla — pohled"
     },
     "project": "Obývák 1.02",
@@ -1468,7 +1468,7 @@
   {
     "id": "ties-plan",
     "title": {
-      "en": "Ties and lights — plan",
+      "en": "Táhla a světla — půdorys",
       "cs": "Táhla a světla — půdorys"
     },
     "project": "Obývák 1.02",
@@ -1505,7 +1505,7 @@
   {
     "id": "ties-section",
     "title": {
-      "en": "Tie — section through one bar",
+      "en": "Táhlo — řez jednou tyčí",
       "cs": "Táhlo — řez jednou tyčí"
     },
     "project": "Obývák 1.02",

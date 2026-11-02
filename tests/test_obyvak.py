@@ -818,7 +818,7 @@ def test_sikmina_drawing_scenes():
     assert LABEL_ROOFING not in lattice["opacity"]
     assert len(lattice["cuts"]) == 3
     assert lattice["title"]["cs"].startswith("Šikmina")
-    assert lattice["title"]["en"].startswith("Slopes")
+    assert lattice["title"]["en"].startswith("Šikmina")
     assert lattice["project"] == "Obývák 1.02"
     up = lattice["camera"]["up"]
     assert abs(up[2]) < 1e-9
@@ -878,9 +878,9 @@ def test_sikmina_drawing_scenes():
             zip(lat_callouts, label_ndc), key=lambda pair: pair[1][1], reverse=True
         )
     ]
-    assert by_y[0].startswith("Bracing strap")
+    assert by_y[0].startswith("Páska")
     assert by_y[-1].startswith("CD")
-    assert any(t.startswith("Direct hanger") for t in by_y)
+    assert any(t.startswith("Přímý závěs") for t in by_y)
 
     section = specs["sikmina-section"]
     assert section["opacityDefault"] == 0
@@ -906,7 +906,7 @@ def test_sikmina_drawing_scenes():
     assert section["opacity"][LABEL_SOFFIT_GKF] == board
     assert LABEL_FURNITURE not in section["opacity"]
     assert len(section["cuts"]) == 2
-    assert section["title"]["en"].startswith("Slopes")
+    assert section["title"]["en"].startswith("Šikmina")
     assert section["title"]["cs"].startswith("Šikmina")
     assert section["camera"]["position"][2] > section["camera"]["target"][2]
     # Both slopes: the frame reaches the cabinet eave, and nothing cuts at the ridge.
@@ -933,11 +933,12 @@ def test_sikmina_drawing_scenes():
         ann["text"]["en"] for ann in section["annotations"] if "text" in ann
     )
     assert "Domo Plus 038" in joined_en
-    assert "160 mm between" in joined_en
-    assert "100 mm left, 100 mm right" in joined_en
+    assert "160 mm mezi" in joined_en
+    assert "100 mm levá, 100 mm pravá" in joined_en
     assert "Jutafol N AL 170 Speciál" in joined_en
-    assert "GKF 12.5 mm" in joined_en
-    assert "through GKF" in joined_en
+    assert "Parozábrana" in joined_en
+    assert "GKF 12,5 mm" in joined_en
+    assert "přes GKF" in joined_en
     assert "plenum" not in joined_en.lower()
     assert "Nonius" in joined
     assert "200 mm" in joined
@@ -949,7 +950,7 @@ def test_sikmina_drawing_scenes():
             continue
         en = ann["text"]["en"]
         if "StoSilent" in en and "NaturHeld" not in en:
-            assert "through GKF" not in en
+            assert "přes GKF" not in en
     low = joined.lower()
     assert "přesah" not in low and "overhang" not in low
     assert "pozednic" not in low and "wall plate" not in low
@@ -983,13 +984,13 @@ def test_sikmina_drawing_scenes():
     # Top of column is outside (wool near ridge); bottom is room face (NaturHeld).
     order = [t.split("\n")[0] for t in (a["text"]["en"] for a in callouts)]
     by_y = [t for _, t in sorted(zip(label_ys, order), reverse=True)]
-    assert by_y[0].startswith("Wool: Isover Domo Plus")
-    assert by_y[1].startswith("Direct hanger")
-    assert by_y[2].startswith("Jutafol")
+    assert by_y[0].startswith("Vata: Isover Domo Plus")
+    assert by_y[1].startswith("Přímý závěs")
+    assert by_y[2].startswith("Parozábrana")
     assert by_y[-1].startswith("NaturHeld 140")
     assert any(t.startswith("GKF") for t in by_y)
     # Direct + Nonius share one note and one leader.
-    hang = next(a for a in callouts if a["text"]["en"].startswith("Direct hanger"))
+    hang = next(a for a in callouts if a["text"]["en"].startswith("Přímý závěs"))
     assert "Nonius" in hang["text"]["en"]
     assert hang["anchor"][0] < g.x_false
     assert "tips" not in hang
@@ -1037,9 +1038,9 @@ def test_bass_trap_scenes_keep_the_vertical_lattice():
         assert "bass_wall_hanger" not in view["opacity"]
         assert view["opacity"][LABEL_BASS_WOOL] < 1
         assert view["title"]["en"].startswith(
-            "Kitchen" if side == "kitchen" else "Living"
+            "Štít kuchyně" if side == "kitchen" else "Štít obýváku"
         )
-        assert "vertical" in view["title"]["en"]
+        assert "svislé" in view["title"]["en"]
         assert "svislé" in view["title"]["cs"]
         assert f"{spacing:g}" in view["title"]["en"]
         # Cut opens an early stud and keeps the soffit end. The other gable is behind the camera.
@@ -1060,12 +1061,12 @@ def test_bass_trap_scenes_keep_the_vertical_lattice():
         assert elev["opacityDefault"] == 0
         joined = " ".join(a["text"]["en"] for a in elev["annotations"] if "text" in a)
         joined_cs = " ".join(a["text"]["cs"] for a in elev["annotations"] if "text" in a)
-        assert "vertical" in joined
+        assert "svisle" in joined
         assert "svisle" in joined_cs
-        assert f"{n_studs} studs @ {spacing:g}" in joined
+        assert f"{n_studs} stojek @ {spacing:g}" in joined
         assert f"CW {cw:g}" in joined
         assert "525 mm" in joined
-        assert "soffit" in joined
+        assert "podhled" in joined
         assert "horizontal stud" not in joined.lower()
         dims = [a for a in elev["annotations"] if a["kind"] == "dim"]
         dim_text = " ".join(a["text"]["en"] for a in dims)
@@ -1081,12 +1082,12 @@ def test_bass_trap_scenes_keep_the_vertical_lattice():
         assert len(section["cuts"]) == 2
         sec_text = " ".join(a["text"]["en"] for a in section["annotations"] if "text" in a)
         if side == "kitchen":
-            assert "130.5 mm" in sec_text and "47 mm" in sec_text and "190 mm" in sec_text
+            assert "130,5 mm" in sec_text and "47 mm" in sec_text and "190 mm" in sec_text
             assert section["cuts"][0]["anchor"][0] == 2500.0
         else:
-            assert "300 mm" in sec_text and "137.5 mm" in sec_text and "450 mm" in sec_text
+            assert "300 mm" in sec_text and "137,5 mm" in sec_text and "450 mm" in sec_text
             assert section["cuts"][0]["anchor"][0] == 2500.0
-        assert "250 mm" in sec_text and "12.5 mm" in sec_text
+        assert "250 mm" in sec_text and "12,5 mm" in sec_text
 
         # Callouts share one column and stay on the plate.
         callouts = [a for a in elev["annotations"] if a["kind"] == "callout"]
@@ -1683,5 +1684,5 @@ def test_left_eave_note_is_one_gkf_layer():
     import obyvak_eave_left
 
     notes = [text for *_skip, text in obyvak_eave_left.notes()]
-    assert any(text == "1x GKF 12.5 ends in the UD" for text in notes)
+    assert any(text == "1× GKF 12,5 končí v UD" for text in notes)
     assert not any("2x GKF" in text for text in notes)

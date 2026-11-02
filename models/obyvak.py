@@ -2192,7 +2192,6 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     nh_l = f"{p.naturheld_left:g}"
     nh_r = f"{p.naturheld_right:g}"
     sdk_mm = f"{p.sdk_t:g}".replace(".", ",")
-    sdk_mm_en = f"{p.sdk_t:g}"
     finish_mm = f"{p.finish_t:g}"
     basic_mm = f"{p.basic_t:g}"
     cd_w = f"{p.cd_w:g}"
@@ -2228,17 +2227,17 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     lat_notes = [
         (
             (x_out, y_lat, g.z_raf(x_out)),
-            f"Bracing strap {strap_w}×{strap_t} mm\n45° across rafters",
+            f"Páska {strap_w}×{strap_t} mm\n45° přes krokve",
             f"Páska {strap_w}×{strap_t} mm\n45° přes krokve",
         ),
         (
             on_face(x_mid, y_lat, t_hanger),
-            "Direct hanger 200 mm\nDK Mont 3631100170\nCD → side of rafter",
+            "Přímý závěs 200 mm\nDK Mont 3631100170\nCD → bok krokve",
             "Přímý závěs 200 mm\nDK Mont 3631100170\nCD → bok krokve",
         ),
         (
             on_face(x_in, y_lat, t_cd),
-            f"CD {cd_w}×{cd_t} mm @ {cd_sp}\n⊥ rafters",
+            f"CD {cd_w}×{cd_t} mm @ {cd_sp}\n⊥ krokvím",
             f"CD {cd_w}×{cd_t} mm @ {cd_sp}\n⊥ krokvím",
         ),
     ]
@@ -2269,7 +2268,7 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
 
     lattice = {
         "id": "sikmina-lattice",
-        "title": _tx("Slopes — CD and hangers", "Šikmina — CD a závěsy"),
+        "title": _tx("Šikmina — CD a závěsy", "Šikmina — CD a závěsy"),
         "project": "Obývák 1.02",
         "camera": lat_cam,
         "projection": "ortho",
@@ -2342,32 +2341,32 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     sec_notes = [
         (
             on_face(x_wool, y_note, t_wool),
-            f"Wool: Isover Domo Plus 038\n{raf_t} mm between rafters\n{wool_l} mm below left, 160+160+120 below right",
-            f"Vlna: Isover Domo Plus 038\n{raf_t} mm mezi krokvemi\n{wool_l} mm pod levou, 160+160+120 pod pravou",
+            f"Vata: Isover Domo Plus 038\n{raf_t} mm mezi krokvemi\n{wool_l} mm pod levou, 160+160+120 pod pravou",
+            f"Vata: Isover Domo Plus 038\n{raf_t} mm mezi krokvemi\n{wool_l} mm pod levou, 160+160+120 pod pravou",
         ),
         (
             on_face(x_hang, y_note, t_hanger),
-            "Direct hanger 200 mm (window)\nDK Mont 3631100170\nNonius 540 mm (cabinet)",
-            "Přímý závěs 200 mm (okna)\nDK Mont 3631100170\nNonius horní 540 mm (skříně)",
+            "Přímý závěs 200 mm (okna)\nDK Mont 3631100170\nNonius 540 mm (skříně)",
+            "Přímý závěs 200 mm (okna)\nDK Mont 3631100170\nNonius 540 mm (skříně)",
         ),
         (
             on_face(x_foil, y_note, t_foil),
-            "Jutafol N AL 170 Speciál",
-            "Jutafol N AL 170 Speciál",
+            "Parozábrana\nJutafol N AL 170 Speciál",
+            "Parozábrana\nJutafol N AL 170 Speciál",
         ),
         (
             on_face(x_cd, y_note, t_cd),
-            f"CD {cd_w}×{cd_t} mm @ {cd_sp}\n⊥ rafters",
+            f"CD {cd_w}×{cd_t} mm @ {cd_sp}\n⊥ krokvím",
             f"CD {cd_w}×{cd_t} mm @ {cd_sp}\n⊥ krokvím",
         ),
         (
             on_face(x_gkf, y_note, t_gkf),
-            f"GKF {sdk_mm_en} mm",
+            f"GKF {sdk_mm} mm",
             f"GKF {sdk_mm} mm",
         ),
         (
             on_face(x_nh, y_note, t_nh * 0.5),
-            f"NaturHeld 140 {nh_l} mm left, {nh_r} mm right\nthrough GKF → CD\n"
+            f"NaturHeld 140 {nh_l} mm levá, {nh_r} mm pravá\npřes GKF → CD\n"
             f"StoSilent Finish + Basic {finish_mm}+{basic_mm} mm",
             f"NaturHeld 140 {nh_l} mm levá, {nh_r} mm pravá\npřes GKF → CD\n"
             f"StoSilent Finish + Basic {finish_mm}+{basic_mm} mm",
@@ -2385,7 +2384,7 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     section = {
         "id": "sikmina-section",
         "title": _tx(
-            "Slopes — section\nperpendicular to the rafters",
+            "Šikmina — řez\nkolmo na krokve",
             "Šikmina — řez\nkolmo na krokve",
         ),
         "project": "Obývák 1.02",
@@ -2605,12 +2604,12 @@ def _bass_view_scenes(p: ObyvakParams) -> list[dict]:
             far = _cut((0.0, 0.0, -1.0), (p.room_width * 0.5, cam_y - 1200.0, 3000.0))
         title = (
             (
-                f"Kitchen gable — bass trap\n{depth:g} mm, vertical CW {p.bass_k_cw:g} @ {spacing:g}",
+                f"Štít kuchyně — basová past\n{depth:g} mm, svislé CW {p.bass_k_cw:g} @ {spacing:g}",
                 f"Štít kuchyně — basová past\n{depth:g} mm, svislé CW {p.bass_k_cw:g} @ {spacing:g}",
             )
             if side == "kitchen"
             else (
-                f"Living gable — bass trap\n{depth:g} mm, vertical CW {p.bass_l_cw:g} @ {spacing:g}",
+                f"Štít obýváku — basová past\n{depth:g} mm, svislé CW {p.bass_l_cw:g} @ {spacing:g}",
                 f"Štít obýváku — basová past\n{depth:g} mm, svislé CW {p.bass_l_cw:g} @ {spacing:g}",
             )
         )
@@ -2669,59 +2668,29 @@ def _bass_elevation_scene(
     n_studs = len(studs)
     if side == "kitchen":
         title = (
-            f"Kitchen gable — bass trap\nGKB removed, vertical CW {cw:g} @ {spacing:g}",
+            f"Štít kuchyně — basová past\nbez GKB, svislé CW {cw:g} @ {spacing:g}",
             f"Štít kuchyně — basová past\nbez GKB, svislé CW {cw:g} @ {spacing:g}",
         )
     else:
         title = (
-            f"Living gable — bass trap\nGKB removed, vertical CW {cw:g} @ {spacing:g}",
+            f"Štít obýváku — basová past\nbez GKB, svislé CW {cw:g} @ {spacing:g}",
             f"Štít obýváku — basová past\nbez GKB, svislé CW {cw:g} @ {spacing:g}",
         )
+    studs_note = (
+        f"CW {cw:g} svisle\n"
+        f"{n_studs} stojek @ {spacing:g}, krajní pole {makeup:g} mm k podhledu"
+    )
+    free_note = "Ke šikmině ani k podhledu nekotveno\nUW v 2450, páska pod profily"
+    brace_note = "Odstřižky CW/UA na úhelník\nasi 1/3 a 2/3, kotva do zdiva"
+    board_note = (
+        f"GKB {p.bass_board_w:g}×{p.bass_board_l:g}, spáry na stojkách\n"
+        f"akryl {p.bass_acrylic:g} mm ke šikmině a k podhledu"
+    )
     notes = [
-        (
-            (0.35 * p.room_width, y_face, 4700.0),
-            (
-                f"CW {cw:g} vertical\n"
-                f"{n_studs} studs @ {spacing:g}, makeup bay {makeup:g} mm to the soffit"
-            ),
-            (
-                f"CW {cw:g} svisle\n"
-                f"{n_studs} stojek @ {spacing:g}, krajní pole {makeup:g} mm ke kastlíku"
-            ),
-        ),
-        (
-            (0.22 * p.room_width, y_face, 3600.0),
-            (
-                "Not fixed to the slopes or the soffit\n"
-                "UW at 2450, tape under the tracks"
-            ),
-            (
-                "Ke šikmině ani ke kastlíku nekotveno\n"
-                "UW v 2450, páska pod profily"
-            ),
-        ),
-        (
-            (0.62 * p.room_width, y_face, 3200.0),
-            (
-                "CW/UA offcuts to a wall angle\n"
-                "about 1/3 and 2/3, anchor in the block"
-            ),
-            (
-                "Odstřižky CW/UA na úhelník\n"
-                "asi 1/3 a 2/3, hmoždinka do zdiva"
-            ),
-        ),
-        (
-            (doors[0][0] + 0.5 * doors[0][1], y_face, 700.0),
-            (
-                f"GKB {p.bass_board_w:g}×{p.bass_board_l:g}, joints on studs\n"
-                f"acrylic {p.bass_acrylic:g} mm to the slope and the soffit"
-            ),
-            (
-                f"GKB {p.bass_board_w:g}×{p.bass_board_l:g}, spáry na stojkách\n"
-                f"akryl {p.bass_acrylic:g} mm ke šikmině a ke kastlíku"
-            ),
-        ),
+        ((0.35 * p.room_width, y_face, 4700.0), studs_note, studs_note),
+        ((0.22 * p.room_width, y_face, 3600.0), free_note, free_note),
+        ((0.62 * p.room_width, y_face, 3200.0), brace_note, brace_note),
+        ((doors[0][0] + 0.5 * doors[0][1], y_face, 700.0), board_note, board_note),
     ]
     dims = [
         _dim(
@@ -2838,43 +2807,28 @@ def _bass_section_scene(
 
     if side == "kitchen":
         title = (
-            "Kitchen bass trap — section\nthrough a vertical CW stud",
+            "Basová past kuchyně — řez\npřes svislou CW stojku",
             "Basová past kuchyně — řez\npřes svislou CW stojku",
         )
     else:
         title = (
-            "Living bass trap — section\nthrough a vertical CW stud",
+            "Basová past obýváku — řez\npřes svislou CW stojku",
             "Basová past obýváku — řez\npřes svislou CW stojku",
         )
     wool_cs = _mm_cs(wool)
     air_cs = _mm_cs(air)
     gkb_cs = _mm_cs(gkb)
+    masonry_note = f"Zdivo {p.wall_mason:g} + omítka {p.wall_plaster:g}"
+    anchor_note = f"Odstřižek CW {cw:g} na úhelník\nkotva 60 mm do zdiva"
+    wool_note = f"Minerální vata {wool_cs} mm"
+    air_note = f"Vzduch {air_cs} mm, CW {cw:g}"
+    gkb_note = f"GKB {gkb_cs} mm"
     notes = [
-        (
-            (stud_x, ymid(y_mas0, y_mas1), 3000.0),
-            f"Masonry {p.wall_mason:g} + plaster {p.wall_plaster:g}",
-            f"Zdivo {p.wall_mason:g} + omítka {p.wall_plaster:g}",
-        ),
-        (
-            (stud_x, y_wall + toward * 8.0, 2800.0),
-            f"CW {cw:g} offcut to a wall angle\nanchor 60 mm into the block",
-            f"Odstřižek CW {cw:g} na úhelník\nhmoždinka 60 mm do zdiva",
-        ),
-        (
-            (stud_x, ymid(y_wall, y_wool), 3400.0),
-            f"Mineral wool {wool:g} mm",
-            f"Minerální vlna {wool_cs} mm",
-        ),
-        (
-            (stud_x, ymid(y_wool, y_gkb_back), 3750.0),
-            f"Air {air:g} mm, CW {cw:g}",
-            f"Vzduch {air_cs} mm, CW {cw:g}",
-        ),
-        (
-            (stud_x, ymid(y_gkb_back, y_room), 4100.0),
-            f"GKB {gkb:g} mm",
-            f"GKB {gkb_cs} mm",
-        ),
+        ((stud_x, ymid(y_mas0, y_mas1), 3000.0), masonry_note, masonry_note),
+        ((stud_x, y_wall + toward * 8.0, 2800.0), anchor_note, anchor_note),
+        ((stud_x, ymid(y_wall, y_wool), 3400.0), wool_note, wool_note),
+        ((stud_x, ymid(y_wool, y_gkb_back), 3750.0), air_note, air_note),
+        ((stud_x, ymid(y_gkb_back, y_room), 4100.0), gkb_note, gkb_note),
     ]
     # Dimension the design planes (the 1 mm mate clearance is not a layer).
     dims = [
@@ -2889,14 +2843,14 @@ def _bass_section_scene(
             (stud_x, y_wall, 3000.0),
             (stud_x, y_wool, 3000.0),
             -0.05,
-            f"{wool:g} mm",
+            f"{wool_cs} mm",
             f"{wool_cs} mm",
         ),
         _dim(
             (stud_x, y_wool, 3480.0),
             (stud_x, y_gkb_back, 3480.0),
             -0.05,
-            f"{air:g} mm",
+            f"{air_cs} mm",
             f"{air_cs} mm",
         ),
         _dim(
@@ -3122,7 +3076,7 @@ def _tie_scenes(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     front = {
         "id": "ties-front",
         "title": _tx(
-            "Ties and lights — front",
+            "Táhla a světla — pohled",
             "Táhla a světla — pohled",
         ),
         "project": "Obývák 1.02",
@@ -3136,7 +3090,7 @@ def _tie_scenes(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     plan = {
         "id": "ties-plan",
         "title": _tx(
-            "Ties and lights — plan",
+            "Táhla a světla — půdorys",
             "Táhla a světla — půdorys",
         ),
         "project": "Obývák 1.02",
@@ -3159,7 +3113,7 @@ def _tie_scenes(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     section = {
         "id": "ties-section",
         "title": _tx(
-            "Tie — section through one bar",
+            "Táhlo — řez jednou tyčí",
             "Táhlo — řez jednou tyčí",
         ),
         "project": "Obývák 1.02",

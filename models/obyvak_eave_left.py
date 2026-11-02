@@ -37,11 +37,11 @@ def build(params: ObyvakParams | None = None):
 
 def notes(p: ObyvakParams | None = None):
     return [
-        (140, 3090, "UD dowelled to the plaster, anchors at 625 mm"),
-        (140, 3072, "1x GKF 12.5 ends in the UD"),
-        (140, 3054, "CD seated in the UD, no hanger through the plate"),
-        (140, 3036, "NaturHeld 100 to the wall, acrylic in the corner"),
-        (140, 3018, "wool above the brake fills up to the plate"),
+        (140, 3090, "UD kotvené do omítky, kotvy po 625 mm"),
+        (140, 3072, "1× GKF 12,5 končí v UD"),
+        (140, 3054, "CD osazené v UD, bez závěsu přes pozednici"),
+        (140, 3036, "NaturHeld 100 ke zdi, akryl v koutu"),
+        (140, 3018, "vata nad parozábranou až k pozednici"),
     ]
 
 
