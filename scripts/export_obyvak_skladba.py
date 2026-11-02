@@ -76,14 +76,28 @@ URL_STOSILENT_FINISH_TDS = (
     "https://www.sto.co.nz/00_common/tds/StoSilent%20TDS/StoSilent%20Top%20Finish%20TDS.PDF"
 )
 URL_NATURHELD_140 = "https://naturheld-izolace.cz/produkt/naturheld-140/"
-URL_NATURHELD_80 = (
-    "https://www.prirodnistavba.cz/drevovlaknita-deska-natur-held-140-kg-m3-"
-    "1880-615-mm-tl-80-mm-pero-drazka-15725.html"
-)
 URL_NATURHELD_40 = (
     "https://www.prirodnistavba.cz/drevovlaknita-deska-natur-held-140-kg-m3-"
     "1250-600-mm-tl-40-mm-15722.html"
 )
+URL_NATURHELD_60 = (
+    "https://www.prirodnistavba.cz/drevovlaknita-deska-natur-held-140-kg-m3-"
+    "1880-615-mm-tl-60-mm-pero-drazka-15724.html"
+)
+URL_NATURHELD_100 = (
+    "https://www.prirodnistavba.cz/drevovlaknita-deska-natur-held-140-kg-m3-"
+    "1880-615-mm-tl-100-mm-pero-drazka-15726.html"
+)
+# Kč/m² s DPH, přírodnístavba.cz, checked 2 Nov 2026.
+# Slopes use P+D 1880×615. 40 mm is straight edge 1250×600 (P+D starts at 60 mm).
+# 80 mm P+D on the same site is 534 Kč/m²; the model does not use 80 mm.
+# 60 mm P+D is listed as an akční price (348); straight-edge 60 mm is 402 Kč/m².
+NATURHELD_PRICE_DATE = "2 Nov 2026"
+NATURHELD_M2: dict[int, tuple[float, str, str]] = {
+    40: (266.0, URL_NATURHELD_40, "rovná hrana 1250×600"),
+    60: (348.0, URL_NATURHELD_60, "P+D 1880×615, akční"),
+    100: (664.0, URL_NATURHELD_100, "P+D 1880×615"),
+}
 URL_RF = "https://www.rigips.cz/produkty/protipozarni-deska-rf-df/"
 URL_RF_DEK = (
     "https://www.dek.cz/produkty/detail/3630042500-sadrokarton-po-deska-rf-12-5mm-1250-2000mm"
@@ -375,10 +389,25 @@ def collect_quantities():
     }
 
 
+def _naturheld_price(thickness_mm: float) -> tuple[float, str]:
+    """Unit price (Kč/m² s DPH) for a NaturHeld 140 thickness the model uses."""
+    key = int(round(thickness_mm))
+    spec = NATURHELD_M2.get(key)
+    if spec is None:
+        known = ", ".join(f"{k} mm" for k in sorted(NATURHELD_M2))
+        raise KeyError(
+            f"NaturHeld 140 at {thickness_mm:g} mm has no přírodnístavba.cz price "
+            f"(priced thicknesses: {known})."
+        )
+    kc, url, kind = spec
+    source = (
+        f"přírodnístavba.cz, {kc:.0f} Kč/m² s DPH, {kind}, {NATURHELD_PRICE_DATE} · {url}"
+    )
+    return kc, source
+
+
 # Retail snapshots (Kč s DPH), Sep 2026 web checks — update as quotes arrive.
 PRICE = {
-    "nh80_m2": (534.0, f"přírodnístavba.cz · {URL_NATURHELD_80}"),
-    "nh40_m2": (266.0, f"přírodnístavba.cz · {URL_NATURHELD_40}"),
     "rf_m2": (115.88, f"DEK · {URL_RF_DEK}"),
     "jutafol_m2": (35.73, f"IZOMAT JUTAFOL N AL 170 Speciál · {URL_JUTAFOL_SHOP}"),
     "gkb_m2": (96.0, "NonstopStavebniny / DEK RB~GKB orientačně"),
@@ -467,6 +496,9 @@ def build_lines(q) -> dict[str, list[Line]]:
     finish_kg_s = face_s * STOSILENT_FINISH_KG_M2
     basic_kg_k = face_k * STOSILENT_BASIC_KG_M2
     finish_kg_k = face_k * STOSILENT_FINISH_KG_M2
+    nh_left_kc, nh_left_src = _naturheld_price(p.naturheld_left)
+    nh_right_kc, nh_right_src = _naturheld_price(p.naturheld_right)
+    nh_soffit_kc, nh_soffit_src = _naturheld_price(p.soffit_naturheld_t)
 
     sikminy = [
         Line(
@@ -505,18 +537,31 @@ def build_lines(q) -> dict[str, list[Line]]:
         ),
         Line(
             3,
-            "Akustická deska",
+            "Akustická deska — levá šikmina",
             "Dřevovláknitá deska ρ 140",
-            _product("NaturHeld 140, 60 mm levá / 100 mm pravá", URL_NATURHELD_140),
-            f"{p.naturheld_left:.0f} / {p.naturheld_right:.0f} mm",
-            face_s,
+            _product(f"NaturHeld 140, {p.naturheld_left:.0f} mm", URL_NATURHELD_140),
+            f"{p.naturheld_left:.0f} mm",
+            half_s,
             "m²",
             12,
-            None,
-            "—",
-            f"Levá {half_s:.2f} m² × {p.naturheld_left:.0f} mm, pravá {half_s:.2f} m² × {p.naturheld_right:.0f} mm. "
-            f"Šroubováno přes GKF do CD @ {p.cd_spacing:.0f} mm. Cenu 60 a 100 mm ověřit (80 mm už neplatí).",
-            True,
+            nh_left_kc,
+            nh_left_src,
+            f"Okenní šikmina {half_s:.2f} m². "
+            f"Šroubováno přes GKF do CD @ {p.cd_spacing:.0f} mm. Rezerva 12 % jako ostatní desky.",
+        ),
+        Line(
+            "3b",
+            "Akustická deska — pravá šikmina",
+            "Dřevovláknitá deska ρ 140",
+            _product(f"NaturHeld 140, {p.naturheld_right:.0f} mm", URL_NATURHELD_140),
+            f"{p.naturheld_right:.0f} mm",
+            half_s,
+            "m²",
+            12,
+            nh_right_kc,
+            nh_right_src,
+            f"Šikmina u skříní {half_s:.2f} m². "
+            f"Šroubováno přes GKF do CD @ {p.cd_spacing:.0f} mm. Rezerva 12 % jako ostatní desky.",
         ),
         Line(
             4,
@@ -725,14 +770,14 @@ def build_lines(q) -> dict[str, list[Line]]:
             3,
             "Akustická deska L",
             "Dřevovláknitá deska ρ 140",
-            _product("NaturHeld 140, tl. 40 mm", URL_NATURHELD_140),
-            "40 mm",
+            _product(f"NaturHeld 140, tl. {p.soffit_naturheld_t:.0f} mm", URL_NATURHELD_140),
+            f"{p.soffit_naturheld_t:.0f} mm",
             face_k,
             "m²",
             12,
-            PRICE["nh40_m2"][0],
-            PRICE["nh40_m2"][1],
-            "Butuje na X_FURN; mezera ke skříním 20 mm.",
+            nh_soffit_kc,
+            nh_soffit_src,
+            "Butuje na X_FURN; mezera ke skříním 20 mm. Rezerva 12 % jako ostatní desky.",
         ),
         Line(
             4,
@@ -1000,44 +1045,42 @@ def build_lines(q) -> dict[str, list[Line]]:
         ),
         Line(
             3,
-            "NaturHeld 140 — 60 mm levá",
+            f"NaturHeld 140 — {p.naturheld_left:.0f} mm levá",
             "Dřevovláknitá deska",
-            _product("NaturHeld 140 / 60 mm", URL_NATURHELD_140),
-            "60 mm",
+            _product(f"NaturHeld 140 / {p.naturheld_left:.0f} mm", URL_NATURHELD_140),
+            f"{p.naturheld_left:.0f} mm",
             half_s,
             "m²",
             12,
-            None,
-            "—",
-            "Okenní šikmina. Cenu ověřit.",
-            True,
+            nh_left_kc,
+            nh_left_src,
+            "Okenní šikmina. Rezerva 12 % jako ostatní desky.",
         ),
         Line(
             "3b",
-            "NaturHeld 140 — 100 mm pravá",
+            f"NaturHeld 140 — {p.naturheld_right:.0f} mm pravá",
             "Dřevovláknitá deska",
-            _product("NaturHeld 140 / 100 mm", URL_NATURHELD_140),
-            "100 mm",
+            _product(f"NaturHeld 140 / {p.naturheld_right:.0f} mm", URL_NATURHELD_140),
+            f"{p.naturheld_right:.0f} mm",
             half_s,
             "m²",
             12,
-            None,
-            "—",
-            "Šikmina u skříní. Cenu ověřit.",
-            True,
+            nh_right_kc,
+            nh_right_src,
+            "Šikmina u skříní. Rezerva 12 % jako ostatní desky.",
         ),
         Line(
             4,
-            "NaturHeld 140 — 40 mm",
+            f"NaturHeld 140 — {p.soffit_naturheld_t:.0f} mm",
             "Dřevovláknitá deska",
-            _product("NaturHeld 140 / 40 mm", URL_NATURHELD_140),
-            "40 mm",
+            _product(f"NaturHeld 140 / {p.soffit_naturheld_t:.0f} mm", URL_NATURHELD_140),
+            f"{p.soffit_naturheld_t:.0f} mm",
             face_k,
             "m²",
             12,
-            PRICE["nh40_m2"][0],
-            PRICE["nh40_m2"][1],
-            "Kastlík, svislý líc (podhled je GKB).",
+            nh_soffit_kc,
+            nh_soffit_src,
+            "Kastlík, svislý líc (podhled je GKB). Rezerva 12 % jako ostatní desky.",
         ),
         Line(
             5,
