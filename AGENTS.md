@@ -14,7 +14,7 @@ When a pull request branch is behind `main`, rebase that feature branch onto `ma
 
 ## One source of truth
 
-The 3D model is the source. Every 2D sheet, section, label, and bill of materials is cut, projected, or computed from it; never draw 2D-only geometry or hand-type quantities. When the model changes, update everything derived from it in the same pull request: exports, BOMs, 2D sheets, labels, and test assertions. In the report, give old → new BOM totals for anything that changed.
+The 3D model is the source: 2D drawings and any derived outputs (exports, quantities, labels, tests) are cut, projected or computed from it, and get updated in the same PR when the model changes.
 
 ## Measure first
 
