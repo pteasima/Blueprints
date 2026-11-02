@@ -12,6 +12,10 @@ Open every pull request as a draft. A draft means agents are still working. Read
 
 When a pull request branch is behind `main`, rebase that feature branch onto `main` and force-push the feature branch. Do not merge `main` into the feature branch. Pull requests merge to `main` only by squash, so a merge from `main` would fold upstream history into that squash; a rebase keeps the branch a linear stack of its own work. Force-push only the feature branch. The ruleset on `main` blocks force-pushes and deletion. The only exception is a branch that someone else is also committing to, because a rebase would rewrite commits they still have locally.
 
+## One source of truth
+
+The 3D model is the source: 2D drawings and any derived outputs (exports, quantities, labels, tests) are cut, projected or computed from it, and get updated in the same PR when the model changes.
+
 ## Measure first
 
 Prefer building the model and measuring it over hand calculation. Use code and tests to get numbers, and use reasoning to decide what to try next. Do not derive millimetre values by hand when the model can report them. Example: start tiling from the reference corner at level zero, build, measure the far corner, then shift.
