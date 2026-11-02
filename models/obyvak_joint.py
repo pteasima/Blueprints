@@ -47,10 +47,10 @@ def notes(p: ObyvakParams | None = None):
     return [
         (4500, 2920, "Lid widens until it meets the lowered slope"),
         (4500, 2902, "2x GKF cut level on the lid"),
-        (4500, 2884, f"joint {g.joint_overhang:.0f} mm past the lid CD room face"),
-        (4500, 2866, "bent UD under the NaturHeld, back to both CDs"),
-        (4680, 2920, "screws through the boards into the CDs"),
-        (4680, 2902, "Jutafol over the CD and along the lid"),
+        (4500, 2884, "UD at the joint, both boards screw into it"),
+        (4500, 2866, "angle bracket from the nearest slope CD holds the UD"),
+        (4680, 2920, "slope NaturHeld runs to the vertical soffit face"),
+        (4680, 2902, "wool triangle under the lid, one solid"),
         (4680, 2884, "brake taped to the cabinet plaster"),
     ]
 

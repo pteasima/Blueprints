@@ -987,14 +987,15 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     # Only the soffit bay has that lid. Same mineral wool as the soffit cavity.
     wedge_pts = g.soffit_wool_wedge_pts()
     wedge_solid = None
-    if len(wedge_pts) >= 4:
-        x_w0 = wedge_pts[0][0] + gap
-        z_w_top = g.z_soffit_lid - gap
+    if len(wedge_pts) >= 3:
+        # One triangle, held off the lid, the vertical face and the slope board.
+        x0, _z_lid = wedge_pts[0]
+        x1, z_nh = wedge_pts[1]
+        z_top = g.z_soffit_lid - gap
         wedge = [
-            (x_w0, wedge_pts[0][1]),
-            (wedge_pts[1][0], wedge_pts[1][1]),
-            (wedge_pts[1][0], z_w_top),
-            (x_w0, z_w_top),
+            (x0, z_top),
+            (x1 - gap, z_nh + gap),
+            (x1 - gap, z_top),
         ]
         wedge_solid = _extrude_y(xz_face(wedge, LABEL_SOFFIT_WOOL), y_soff0, y_soff1, LABEL_SOFFIT_WOOL)
 
@@ -1304,8 +1305,8 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
                     parts[j] = trimmed
                     break
 
-    # Bent UD on the room side of the joint: lid underside back to the lid CD,
-    # slope face back to the nearest slope CD. Flanges sit in the NaturHeld.
+    # UD at the joint, held by an angle bracket on the nearest slope CD.
+    # Both gypsum edges screw into the UD. Nothing of this sits in the NaturHeld.
     ud_quads = g.soffit_ud_track_quads()
     ud_track = None
     for quad in ud_quads:
@@ -1315,15 +1316,30 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     if ud_track is not None:
         ud_track = _paint(ud_track, LABEL_SOFFIT_UD)
         ud_parts = [ud_track]
+    bracket_quads = g.joint_bracket_quads()
+    bracket_parts: list = []
+    if bracket_quads:
+        for yc in ceil_rafter_ys:
+            if not (y_soff0 + 20.0 <= yc <= y_soff1 - 20.0):
+                continue
+            for quad in bracket_quads:
+                bracket_parts.append(
+                    _extrude_y(
+                        xz_face(quad, LABEL_SOFFIT_UD),
+                        yc - 20.0,
+                        yc + 20.0,
+                        LABEL_SOFFIT_UD,
+                    )
+                )
     parts.extend(ud_parts)
+    parts.extend(bracket_parts)
     if ud_parts:
         parts.extend(_screw_solids(g, g.soffit_ud_screw_quads(), y_soff0 + 10.0, y_soff1 - 10.0))
-        slope_screws = g.soffit_ud_slope_screw_quads()
-        if slope_screws:
-            parts.extend(_screw_solids(g, slope_screws, y_soff0 + 10.0, y_soff1 - 10.0))
-        for i, part in enumerate(parts):
-            if part.label == LABEL_SLOPE_NH and _aabb_hit(part, ud_track):
-                parts[i] = _cut_away(part, ud_parts, LABEL_SLOPE_NH)
+        parts.extend(_screw_solids(g, g.soffit_ud_slope_screw_quads(), y_soff0 + 10.0, y_soff1 - 10.0))
+    if bracket_parts:
+        parts.extend(
+            _screw_solids(g, g.joint_bracket_screw_quads(), y_soff0 + 10.0, y_soff1 - 10.0, spacing=p.rafter_spacing)
+        )
 
     # CD/UD rost: vertical CD behind the NH, bottom CD into a wall UD.
     # The lid CD is the only hang. The ducts are not. No timber packers —
@@ -1466,17 +1482,55 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     parts.extend(cleat_parts)
     parts.extend(duct_parts)
 
-    # The last slope CD stops where the lid begins. A boolean against the
-    # finished lid keeps the profile off the board.
+    # The slope NaturHeld keeps its thickness up to the vertical soffit face,
+    # so its top corner crosses the lid. The lid wins; the wool triangle is
+    # what's left above the board.
     if lid_solids:
+        for i, part in enumerate(parts):
+            if part.label != LABEL_SLOPE_NH:
+                continue
+            hits = [lid for lid in lid_solids if _aabb_hit(part, lid)]
+            if hits:
+                parts[i] = _cut_away(part, hits, LABEL_SLOPE_NH)
+
+    # The last slope CD stops where the lid begins. A boolean against the
+    # finished lid keeps the profile off the board. The joint UD also wins
+    # where the grid CD happens to cross the corner.
+    clear_cd = _extrude_y(
+        xz_face(g.joint_clear_pts(), LABEL_SOFFIT_UD), y_soff0, y_soff1, LABEL_SOFFIT_UD
+    )
+    if lid_solids or ud_parts:
+        cutters = list(lid_solids) + list(ud_parts) + [clear_cd]
         for i, cd in enumerate(cd_parts):
-            hits = [lid for lid in lid_solids if _aabb_hit(cd, lid)]
+            hits = [tool for tool in cutters if _aabb_hit(cd, tool)]
             if not hits:
                 continue
             trimmed = _cut_away(cd, hits, LABEL_SLOPE_CD)
             cd_parts[i] = trimmed
             for j, part in enumerate(parts):
                 if part is cd:
+                    parts[j] = trimmed
+                    break
+        for i, hanger in enumerate(zaves_parts):
+            if hanger.label not in {LABEL_SLOPE_NONIUS, LABEL_SLOPE_DIRECT}:
+                continue
+            if not _aabb_hit(hanger, clear_cd):
+                continue
+            trimmed = _cut_away(hanger, [clear_cd], hanger.label)
+            zaves_parts[i] = trimmed
+            for j, part in enumerate(parts):
+                if part is hanger:
+                    parts[j] = trimmed
+                    break
+    if bracket_parts and cd_parts:
+        for i, bracket in enumerate(bracket_parts):
+            hits = [cd for cd in cd_parts if _aabb_hit(bracket, cd)]
+            if not hits:
+                continue
+            trimmed = _cut_away(bracket, hits, LABEL_SOFFIT_UD)
+            bracket_parts[i] = trimmed
+            for j, part in enumerate(parts):
+                if part is bracket:
                     parts[j] = trimmed
                     break
 

@@ -134,8 +134,12 @@ def test_layout_ceiling_and_gable():
     # Not a second inset at the předstěna. At 500 mm the two origins are 50 mm apart.
     assert soffit_ys[0] in slope_ys
     assert abs(soffit_ys[0] - restarted[0]) > 1.0
-    # The slope attic face is up at the lid, so there is no wool wedge under it.
-    assert g.soffit_wool_wedge_pts() == []
+    # Slope NaturHeld runs to the vertical soffit face. The triangle above it,
+    # under the lid, is one wool solid and stops at that face.
+    wedge = g.soffit_wool_wedge_pts()
+    assert len(wedge) == 3
+    assert abs(max(x for x, _z in wedge) - g.x_furn) < 1e-6
+    assert abs(max(z for _x, z in wedge) - g.z_soffit_lid) < 1e-6
     nh_pts = g.soffit_nh_pts()
     # Riser board is flat-topped under the lid now; the slope GKF bears on the lid.
     assert any(abs(x - g.x_nh_inner) < 1e-6 and abs(z - g.z_soffit_lid) < 1e-6 for x, z in nh_pts)
@@ -159,14 +163,14 @@ def test_layout_ceiling_and_gable():
     assert cds == [g.x_soffit_cd]
     assert abs(g.x_soffit_cd - (g.x_soffit_cd_room + p.cd_w * 0.5)) < 1e-6
     ud = g.soffit_ud_track_quads()
-    assert len(ud) == 5  # slope web, two flanges, lid-end drop, lid strap
-    strap = ud[-1]
-    assert min(x for x, _z in strap) <= g.x_gkf_kink + 1.0
-    assert max(x for x, _z in strap) > g.x_soffit_cd + p.cd_w * 0.5
+    assert len(ud) == 4  # slope web, lid leg, two short flanges
+    # The UD stays at the joint. It does not run back to the lid CD.
+    assert max(x for quad in ud for x, _z in quad) < g.x_soffit_cd_room - 50.0
+    assert g.joint_bracket_quads()
     screws = g.soffit_ud_screw_quads()
     assert len(screws) == 2
     shank = screws[1]
-    assert max(z for _x, z in shank) > g.z_soffit_lid + 10.0
+    assert max(z for _x, z in shank) > g.z_soffit_cd_bot
     # Equal boards: the GKF planes meet on the false ridge.
     assert abs(g.x_stack_joint - g.x_false) < 1e-6
     assert abs(
@@ -344,7 +348,7 @@ def test_sikminy_and_soffit_stack_in_3d():
     assert (fn.size.X ** 2 + fn.size.Z ** 2) ** 0.5 > 250.0
     pasky = _labeled(shape, LABEL_RACKING_STRAP)
     assert len(nh) >= 2  # slope NH + soffit L
-    assert len(wool) >= 1  # soffit cavity; the lid wedge is gone with this joint
+    assert len(wool) >= 2  # soffit cavity plus the one triangle under the lid
     assert len(rost) >= 8  # soffit CD studs only; the slope has none
     assert "soffit_battens" not in {c.label for c in shape.children}
     assert len(cds) >= 5  # CD ⊥ krokvím along slope
@@ -407,12 +411,17 @@ def test_sikminy_and_soffit_stack_in_3d():
     ud_track = [
         c
         for c in _labeled(shape, LABEL_SOFFIT_UD)
-        if c.bounding_box().size.Y > 1000.0
-        and c.bounding_box().min.X < g.x_soffit_cd_room
-        and c.bounding_box().max.X > g.x_soffit_cd_room - 30.0
+        if c.bounding_box().size.Y > 1000.0 and c.bounding_box().min.X < g.x_furn
     ]
-    assert len(ud_track) == 1
-    assert ud_track[0].bounding_box().max.X >= g.x_soffit_cd_room - 1.0
+    assert ud_track
+    # The track is the joint UD, upslope of the lid CD.
+    assert all(c.bounding_box().max.X < g.x_soffit_cd_room - 50.0 for c in ud_track)
+    brackets = [
+        c
+        for c in _labeled(shape, LABEL_SOFFIT_UD)
+        if c.bounding_box().size.Y < 80.0
+    ]
+    assert len(brackets) >= 4
     from build123d import Box, Location
 
     ex, ez = g.gkf_end_room
