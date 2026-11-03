@@ -15,8 +15,8 @@ the new piece of ceiling is rigid (the lid), so it does not add slope absorption
 Rigid gypsum keeps the step and sets its impedance to a hard wall.
 
 Slope impedance is StoSilent (2 + 2 mm) on NaturHeld 140, rigid-backed, from
-`layers.surface_impedance` at normal incidence. The 80 mm gap under the rafters
-(Unifit 032 on the window side, Isover Domo Plus on the cabinet side) stays behind
+`layers.surface_impedance` at normal incidence. The wool under the rafters
+is mineral wool λ 0.039. It stays behind
 the GKF and is not part of the room impedance, same as the Eyring model.
 Soffit impedance is the 40 mm NaturHeld face, the mineral wool, and the duct void.
 Gable faces use the membrane model: kitchen 625 mm vertical, living 1000 mm
