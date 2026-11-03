@@ -244,14 +244,14 @@
     "project": "Obývák 1.02",
     "camera": {
       "target": [
-        1.875,
+        1.075,
         4.263800000000001,
         -4.666
       ],
       "position": [
-        1.875,
+        1.075,
         4.263800000000001,
-        17.064
+        21.304000000000006
       ],
       "up": [
         0.0,
@@ -259,7 +259,7 @@
         0.0
       ],
       "orthoFit": [
-        4.346,
+        5.194000000000001,
         2.1317040000000005
       ]
     },
@@ -323,12 +323,12 @@
           5289.9
         ],
         "text": {
-          "en": "Minerální vata λ 0,039, 160 mm mezi krokvemi\nPod krokvemi u oken 160 mm; u skříní 160+160+120 mm",
-          "cs": "Minerální vata λ 0,039, 160 mm mezi krokvemi\nPod krokvemi u oken 160 mm; u skříní 160+160+120 mm"
+          "en": "Minerální vata λ 0,039\n160 mm mezi krokvemi\nPod krokvemi u oken 160 mm\nu skříní 160+160+120 mm",
+          "cs": "Minerální vata λ 0,039\n160 mm mezi krokvemi\nPod krokvemi u oken 160 mm\nu skříní 160+160+120 mm"
         },
         "offset": [
-          -0.337,
-          0.0
+          -0.419,
+          0.026
         ]
       },
       {
@@ -343,8 +343,8 @@
           "cs": "Přímý závěs 200 mm (okna)\nDK Mont 3631100170\nNonius 540 mm (skříně)"
         },
         "offset": [
-          -0.286,
-          0.0
+          -0.377,
+          -0.005
         ]
       },
       {
@@ -359,8 +359,8 @@
           "cs": "Parozábrana\nJutafol N AL 170 Speciál"
         },
         "offset": [
-          -0.235,
-          0.0
+          -0.334,
+          -0.008
         ]
       },
       {
@@ -375,8 +375,8 @@
           "cs": "CD 60×27 mm @ 500\n⊥ krokvím"
         },
         "offset": [
-          -0.19,
-          0.0
+          -0.297,
+          -0.021
         ]
       },
       {
@@ -391,8 +391,8 @@
           "cs": "GKF 12,5 mm"
         },
         "offset": [
-          -0.151,
-          0.0
+          -0.264,
+          -0.018
         ]
       },
       {
@@ -403,12 +403,12 @@
           3252.3
         ],
         "text": {
-          "en": "NaturHeld 140, 100 mm\npřes GKF do CD\nStoSilent Top Basic + Top Finish, bílá ~RAL 9016, 2+2 mm",
-          "cs": "NaturHeld 140, 100 mm\npřes GKF do CD\nStoSilent Top Basic + Top Finish, bílá ~RAL 9016, 2+2 mm"
+          "en": "NaturHeld 140, 100 mm\npřes GKF do CD\nStoSilent Top Basic + Top Finish\nbílá ~RAL 9016, 2+2 mm",
+          "cs": "NaturHeld 140, 100 mm\npřes GKF do CD\nStoSilent Top Basic + Top Finish\nbílá ~RAL 9016, 2+2 mm"
         },
         "offset": [
-          -0.117,
-          0.0
+          -0.235,
+          -0.059
         ]
       }
     ]
@@ -575,12 +575,12 @@
     "camera": {
       "target": [
         3.9,
-        2.56,
+        2.29,
         -10.91625
       ],
       "position": [
         3.9,
-        2.56,
+        2.29,
         14.08375
       ],
       "up": [
@@ -590,7 +590,7 @@
       ],
       "orthoFit": [
         5.0,
-        2.8496
+        3.1304000000000003
       ]
     },
     "projection": "ortho",
@@ -642,7 +642,7 @@
         },
         "offset": [
           0.493,
-          -0.053
+          -0.091
         ],
         "size": 0.82
       },
@@ -659,7 +659,7 @@
         },
         "offset": [
           0.562,
-          -0.347
+          -0.385
         ],
         "size": 0.82
       },
@@ -676,7 +676,7 @@
         },
         "offset": [
           0.348,
-          -0.011
+          -0.049
         ],
         "size": 0.82
       },
@@ -693,7 +693,7 @@
         },
         "offset": [
           0.26,
-          -0.047
+          -0.085
         ],
         "size": 0.82
       },
@@ -1011,12 +1011,12 @@
     "camera": {
       "target": [
         3.9,
-        2.56,
+        2.29,
         -0.44375000000000003
       ],
       "position": [
         3.9,
-        2.56,
+        2.29,
         -25.44375
       ],
       "up": [
@@ -1026,7 +1026,7 @@
       ],
       "orthoFit": [
         5.0,
-        2.8496
+        3.1304000000000003
       ]
     },
     "projection": "ortho",
@@ -1078,7 +1078,7 @@
         },
         "offset": [
           -0.493,
-          -0.053
+          -0.091
         ],
         "size": 0.82
       },
@@ -1095,7 +1095,7 @@
         },
         "offset": [
           -0.562,
-          -0.347
+          -0.385
         ],
         "size": 0.82
       },
@@ -1112,7 +1112,7 @@
         },
         "offset": [
           -0.348,
-          -0.011
+          -0.049
         ],
         "size": 0.82
       },
@@ -1129,7 +1129,7 @@
         },
         "offset": [
           -0.63,
-          -0.047
+          -0.085
         ],
         "size": 0.82
       },
@@ -1426,7 +1426,7 @@
       "cs": "Táhla a světla — pohled"
     },
     "project": "Obývák 1.02",
-    "hFovDeg": 55,
+    "hFovDeg": 72,
     "projection": "perspective",
     "camera": {
       "target": [
