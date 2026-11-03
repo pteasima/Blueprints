@@ -886,6 +886,12 @@ def test_sikmina_drawing_scenes():
     assert section["opacityDefault"] == 0
     assert "slopes" not in section["opacity"]
     assert section["opacity"][LABEL_MASONRY] == 1
+    assert section["opacity"][LABEL_TIE_ROD] == 1
+    assert not any(
+        "Táhlo" in (ann.get("text") or {}).get("cs", "")
+        for ann in section["annotations"]
+        if ann.get("kind") == "callout"
+    )
     assert section["opacity"][LABEL_WALL_PLATE] == 1
     assert section["opacity"][LABEL_RAFTERS] == 1
     assert "slope_battens" not in section["opacity"]
@@ -1336,8 +1342,32 @@ def test_3d_matches_section_and_elevation_masses():
         assert abs(bb.min.Y - (y0 + FACE_GAP)) < 1e-6
         assert abs(bb.size.Y - (width - 2 * FACE_GAP)) < 1e-6
         assert abs(bb.max.Z - (p.window_h - FACE_GAP)) <= 1.0
-        # Lintel sits on the opening head. The ring beam stays at column_top_z.
+        # Masonry from the glass head to the ring beam. Mate gaps are 1 mm.
         y_mid = y0 + width * 0.5
+        glass_top = p.window_h - FACE_GAP
+        beam_z = g.column_top_z + FACE_GAP
+        x_mas = g.xl_mas + 0.5 * (p.wall_mason - FACE_GAP)
+        x_eps = g.xl_eps + 0.5 * (p.wall_eps - FACE_GAP)
+        x_pls = -0.5 * p.wall_plaster
+
+        def _probe(label: str, xyz: tuple[float, float, float]) -> float:
+            from build123d import Box, Location
+
+            total = 0.0
+            for part in _labeled(shape, label):
+                hit = part.intersect(Location(xyz) * Box(6, 6, 6))
+                if hit is None:
+                    continue
+                solids = list(hit.solids()) if hasattr(hit, "solids") else [hit]
+                total += sum(float(s.volume) for s in solids if s is not None)
+            return total
+
+        assert _probe(LABEL_MASONRY, (x_mas, y_mid, glass_top + FACE_GAP + 5.0)) > 50.0
+        assert _probe(LABEL_MASONRY, (x_mas, y_mid, beam_z - FACE_GAP - 5.0)) > 50.0
+        assert _probe(LABEL_MASONRY, (x_mas, y_mid, glass_top - 5.0)) < 1.0
+        # Skins are open over the lintel, so the masonry is the elevation face.
+        assert _probe(LABEL_EPS, (x_eps, y_mid, glass_top + 40.0)) < 1.0
+        assert _probe(LABEL_PLASTER, (x_pls, y_mid, glass_top + 40.0)) < 1.0
         lintel_bottom = [
             part.bounding_box().min.Z
             for part in _labeled(shape, LABEL_MASONRY)
@@ -1347,7 +1377,13 @@ def test_3d_matches_section_and_elevation_masses():
             and part.bounding_box().max.Z > p.window_h
         ]
         assert lintel_bottom, (y0, width)
-        assert abs(min(lintel_bottom) - (p.window_h + FACE_GAP)) <= 0.5
+        assert min(lintel_bottom) - glass_top <= 1.0
+        assert beam_z - max(
+            part.bounding_box().max.Z
+            for part in _labeled(shape, LABEL_MASONRY)
+            if part.bounding_box().min.Y <= y_mid <= part.bounding_box().max.Y
+            and abs(part.bounding_box().min.Z - p.window_h) <= 1.0
+        ) <= 1.0
     gable_walls = [
         c
         for c in _labeled(shape, LABEL_MASONRY)
