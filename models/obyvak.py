@@ -35,8 +35,10 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
   and are not hung from this box. Nothing heavy is fixed to the frame, so
   there are no timber packers. Furniture and pozednice do not carry the box —
   the plate only cleats the board edge.
-- Terrace eave (X=0): glass stops at the 2500 mm opening head. The masonry
-  lintel sits on that head and runs up to the ring beam. 100×100 columns in
+- Terrace eave (X=0): glass stops at the 2500 mm opening head. Above that
+  head the wall is the same plaster, masonry and EPS as the solid eave, cut
+  to the head (1 mm off the glass). There is no separate lintel piece.
+  100×100 columns in
   front of the glass at the pier centres stop one brick course below the beam.
   Cabinet eave keeps a continuous wall with 300×300 columns standing in front
   of it on the room side (same Y grid). Columns are drawn as masonry.
@@ -352,14 +354,14 @@ def _pocket_door_cutters(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
     return cutters
 
 
-def _eave_window_cutters(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
-    """Through-openings in the X=0 eave, stopped at the window head.
-
-    The glass fills this void. The lintel above it is masonry, so the cut
-    does not continue up to the ring beam.
-    """
+def _eave_window_boxes(
+    p: ObyvakParams, g: ObyvakLayout, gap: float, z1: float, tag: str
+) -> list:
+    """X=0 eave openings, from below the slab up to ``z1``."""
     cutters = []
     z0 = -1.0
+    if z1 <= z0:
+        return cutters
     for y0, width in p.eave_windows:
         ya, yb = y0 + gap, y0 + width - gap
         if yb <= ya:
@@ -371,24 +373,35 @@ def _eave_window_cutters(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
                 z0,
                 -g.xl_eps + p.wall_plaster + 2.0,
                 yb - ya,
-                p.window_h - z0,
-                "_window_cut",
+                z1 - z0,
+                tag,
             )
         )
     return cutters
 
 
-def _cut_wall_openings(parts: list, cutters: list) -> list:
+def _eave_window_cutters(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
+    """Opening through every eave layer, stopped at the window head.
+
+    Interior plaster, masonry and EPS are the same solids as the rest of the
+    wall. The cut ends on the head, so nothing extra is built over the glass.
+    """
+    return _eave_window_boxes(p, g, gap, p.window_h, "_window_cut")
+
+
+def _cut_wall_openings(parts: list, cutters: list, labels: set | None = None) -> list:
     if not cutters:
         return parts
-    out = []
-    for part in parts:
-        if part.label not in {
+    if labels is None:
+        labels = {
             LABEL_EPS,
             LABEL_MASONRY,
             LABEL_PLASTER,
             LABEL_WALL_GKF,
-        }:
+        }
+    out = []
+    for part in parts:
+        if part.label not in labels:
             out.append(part)
             continue
         cut = part
@@ -888,37 +901,20 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     )
 
     # --- Eave walls (panel A): mid-span only. Layer stack outside → inside. ---
-    # Left (terrace / glazing): EPS full height; masonry ends + continuous ring-beam
-    # course; 100×100 columns in front of the glass (same masonry material).
+    # Left (terrace / glazing): one EPS, one masonry wall, one plaster, each
+    # the full run. Window cuts (below) stop at the glass head. The ring beam
+    # is the same top course as on the solid wall. 100×100 columns stand in
+    # pockets at the pier centres.
     structure.append(
         _box(g.xl_eps, y0, -p.floor_t, p.wall_eps - gap, ey, p.eave_wall_z + p.floor_t, LABEL_EPS)
     )
-    for ya, yb in g.eave_masonry_end_spans(y0, y1):
-        if yb <= ya + gap:
-            continue
-        structure.append(
-            _box(g.xl_mas, ya, -p.floor_t, p.wall_mason - gap, yb - ya, z_col + p.floor_t, LABEL_MASONRY)
-        )
+    terrace_wall = _box(
+        g.xl_mas, y0, -p.floor_t, p.wall_mason - gap, ey, z_col + p.floor_t, LABEL_MASONRY
+    )
+    structure.append(terrace_wall)
     structure.append(
         _box(g.xl_mas, y0, z_col + gap, p.wall_mason - gap, ey, p.venec_h - gap, LABEL_MASONRY)
     )
-    # Lintel over each window: from the opening head up to the ring beam.
-    # The beam stays the top course. Without this band the beam floats.
-    lintel_h = z_col - (p.window_h + gap)
-    for y_win, width in p.eave_windows:
-        if lintel_h <= gap or width <= 2 * gap:
-            continue
-        structure.append(
-            _box(
-                g.xl_mas,
-                y_win + gap,
-                p.window_h + gap,
-                p.wall_mason - gap,
-                width - 2 * gap,
-                lintel_h,
-                LABEL_MASONRY,
-            )
-        )
     structure.append(_box(-p.wall_plaster, y0, 0.0, p.wall_plaster, ey, p.eave_wall_z, LABEL_PLASTER))
 
     x_glass = g.xl_mas + (p.wall_mason - p.glass_t) / 2.0
@@ -936,6 +932,22 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
                 LABEL_MASONRY,
             )
         )
+    # Columns occupy the pier. The wall is pocketed around them so the two
+    # masonry solids do not share a volume, and the wall stays one piece.
+    pockets = []
+    for yc in g.eave_column_y_centres():
+        pockets.append(
+            _box(
+                x_win_col - gap,
+                yc - half_win - gap,
+                -p.floor_t - 1.0,
+                p.window_column_size + gap,
+                p.window_column_size + 2 * gap,
+                z_col + p.floor_t + 2.0,
+                "_pier_pocket",
+            )
+        )
+    structure[structure.index(terrace_wall)] = _cut_away(terrace_wall, pockets, LABEL_MASONRY)
 
     # Right (cabinets): continuous masonry wall; 300×300 columns stand in front of
     # the interior plaster face (entirely in the room), same Y grid as the glass posts.
@@ -1010,8 +1022,10 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         )
 
     door_cutters = _pocket_door_cutters(p, g, gap)
-    window_cutters = _eave_window_cutters(p, g, gap)
-    structure = _cut_wall_openings(structure, door_cutters + window_cutters)
+    # Openings stop at the glass head. Plaster, masonry and EPS above it are
+    # the same solids as the wall beside the glass.
+    structure = _cut_wall_openings(structure, door_cutters)
+    structure = _cut_wall_openings(structure, _eave_window_cutters(p, g, gap))
 
     # Rafter seat: pozednice (+ minor masonry/column/plaster contact). EPS is cut
     # around the finished rafters — real build order.
@@ -1930,6 +1944,10 @@ def model_section(params: ObyvakParams | None = None, y_cut: float | None = None
         bb = part.bounding_box()
         if bb.min.Y <= y <= bb.max.Y:
             yy, bucket = y, cut
+        elif part.label == LABEL_TIE_ROD:
+            # The six bars share one axis. The section shows that circle,
+            # whether this plane cuts the bar or the bar sits in the depth.
+            yy, bucket = 0.5 * (bb.min.Y + bb.max.Y), seen
         elif y < bb.min.Y and bb.max.Y <= y + depth:
             yy, bucket = 0.5 * (bb.min.Y + bb.max.Y), seen
         else:
@@ -2422,6 +2440,7 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
             LABEL_SOFFIT_NONIUS: 1,
             LABEL_SOFFIT_DUCT: 1,
             LABEL_RACKING_STRAP: 1,
+            LABEL_TIE_ROD: 1,
             LABEL_ROOFING: 1,
             LABEL_MASONRY: 1,
             LABEL_EPS: 1,

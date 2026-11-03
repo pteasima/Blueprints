@@ -886,6 +886,12 @@ def test_sikmina_drawing_scenes():
     assert section["opacityDefault"] == 0
     assert "slopes" not in section["opacity"]
     assert section["opacity"][LABEL_MASONRY] == 1
+    assert section["opacity"][LABEL_TIE_ROD] == 1
+    assert not any(
+        "Táhlo" in (ann.get("text") or {}).get("cs", "")
+        for ann in section["annotations"]
+        if ann.get("kind") == "callout"
+    )
     assert section["opacity"][LABEL_WALL_PLATE] == 1
     assert section["opacity"][LABEL_RAFTERS] == 1
     assert "slope_battens" not in section["opacity"]
@@ -1336,18 +1342,69 @@ def test_3d_matches_section_and_elevation_masses():
         assert abs(bb.min.Y - (y0 + FACE_GAP)) < 1e-6
         assert abs(bb.size.Y - (width - 2 * FACE_GAP)) < 1e-6
         assert abs(bb.max.Z - (p.window_h - FACE_GAP)) <= 1.0
-        # Lintel sits on the opening head. The ring beam stays at column_top_z.
+        # Every layer of the solid eave wall, brought down to the glass head.
         y_mid = y0 + width * 0.5
-        lintel_bottom = [
-            part.bounding_box().min.Z
-            for part in _labeled(shape, LABEL_MASONRY)
-            if part.bounding_box().min.Y <= y_mid <= part.bounding_box().max.Y
-            and part.bounding_box().max.X < 0.0
-            and part.bounding_box().min.Z < g.column_top_z - 1.0
-            and part.bounding_box().max.Z > p.window_h
-        ]
-        assert lintel_bottom, (y0, width)
-        assert abs(min(lintel_bottom) - (p.window_h + FACE_GAP)) <= 0.5
+        glass_top = p.window_h - FACE_GAP
+        beam_z = g.column_top_z + FACE_GAP
+        z_in = glass_top + FACE_GAP + 5.0
+        # Solid eave wall, past the living trap (450) and short of the first opening.
+        y_ref = min(w[0] for w in p.eave_windows) - 20.0
+
+        def _probe(label: str, xyz: tuple[float, float, float]) -> float:
+            from build123d import Box, Location
+
+            total = 0.0
+            for part in _labeled(shape, label):
+                hit = part.intersect(Location(xyz) * Box(6, 6, 6))
+                if hit is None:
+                    continue
+                solids = list(hit.solids()) if hasattr(hit, "solids") else [hit]
+                total += sum(float(s.volume) for s in solids if s is not None)
+            return total
+
+        def _stack(y: float, z: float) -> dict[str, float]:
+            found: dict[str, float] = {}
+            for part in shape.children:
+                bb = part.bounding_box()
+                if bb.max.Y < y or bb.min.Y > y or bb.max.Z < z or bb.min.Z > z:
+                    continue
+                if bb.max.X < g.xl_eps - 2.0 or bb.min.X > 2.0:
+                    continue
+                x = 0.5 * (max(bb.min.X, g.xl_eps) + min(bb.max.X, 0.0))
+                if _probe(part.label, (x, y, z)) > 1.0:
+                    found[part.label] = x
+            return found
+
+        wall = _stack(y_ref, z_in)
+        assert {LABEL_PLASTER, LABEL_MASONRY, LABEL_EPS} <= set(wall)
+        assert set(_stack(y_mid, z_in)) == set(wall), (y0, set(_stack(y_mid, z_in)), set(wall))
+        def _owner(label: str, xyz: tuple[float, float, float]):
+            from build123d import Box, Location
+
+            found = []
+            for part in _labeled(shape, label):
+                hit = part.intersect(Location(xyz) * Box(6, 6, 6))
+                if hit is None:
+                    continue
+                solids = list(hit.solids()) if hasattr(hit, "solids") else [hit]
+                if sum(float(s.volume) for s in solids if s is not None) > 1.0:
+                    found.append(part)
+            return found
+
+        for label, x in wall.items():
+            assert _probe(label, (x, y_mid, z_in)) > 50.0, (label, y0)
+            assert _probe(label, (x, y_mid, glass_top - 5.0)) < 1.0, (label, y0)
+            assert _probe(label, (x, y_mid, beam_z - FACE_GAP - 5.0)) > 50.0, (label, y0)
+            over = _owner(label, (x, y_mid, z_in))
+            side = _owner(label, (x, y_ref, z_in))
+            assert len(over) == 1 and len(side) == 1, (label, y0)
+            assert over[0] is side[0], (label, y0)
+    # No added lintel: nothing masonry sits only over a window bay.
+    for part in _labeled(shape, LABEL_MASONRY):
+        bb = part.bounding_box()
+        if bb.max.X >= 0.0 or bb.min.Z <= p.window_h - FACE_GAP:
+            continue
+        assert not (bb.min.Z < g.column_top_z - 1.0 and bb.size.Y < p.room_length * 0.5), bb.size
     gable_walls = [
         c
         for c in _labeled(shape, LABEL_MASONRY)
