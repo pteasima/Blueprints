@@ -40,11 +40,22 @@ def clip_section(window, params: ObyvakParams | None = None, name: str = "detail
     return Compound(obj=parts, children=parts, label=name)
 
 
+def _note_width(note: str, font: float) -> float:
+    """Width of one note in SVG user units (the same millimetres as the font size)."""
+    from PIL import ImageFont
+
+    sample = 64.0
+    face = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", int(sample))
+    return float(face.getlength(note)) * (font / sample)
+
+
 def annotate_notes(svg_path, dxf_path, png_path, notes, font=6.0, thin=10.0) -> None:
     """notes: list of (x, z, text) in model mm.
 
     Section strokes are sized for the whole room; at detail scale they would
     swallow 0.2 mm foil and 12.5 mm boards, so they are divided by `thin`.
+    The viewBox grows to include every note, which zooms the sheet out
+    instead of clipping a longer Czech line.
     """
     import re
 
@@ -55,11 +66,31 @@ def annotate_notes(svg_path, dxf_path, png_path, notes, font=6.0, thin=10.0) -> 
         lambda m: f'stroke-width="{float(m.group(1)) / thin:.3f}"',
         text,
     )
-    start = text.find("<svg")
-    tag_end = text.find(">", start)
     vb = text[text.find('viewBox="') + 9 :]
     minx, miny, width, height = (float(v) for v in vb[: vb.find('"')].split())
-    rect = f'\n  <rect x="{minx}" y="{miny}" width="{width}" height="{height}" fill="#ffffff"/>'
+    maxx = minx + width
+    maxy = miny + height
+    pad = max(font * 0.8, 6.0)
+    for x, z, note in notes:
+        sx, sy = float(x), -float(z)
+        note_w = _note_width(note, font)
+        minx = min(minx, sx - pad)
+        maxx = max(maxx, sx + note_w + pad)
+        # Baseline sits on z; glyphs extend above it (smaller SVG y).
+        miny = min(miny, sy - font * 1.05 - pad)
+        maxy = max(maxy, sy + font * 0.35 + pad)
+    width = maxx - minx
+    height = maxy - miny
+    text = re.sub(
+        r'viewBox="[^"]*"',
+        f'viewBox="{minx:.2f} {miny:.2f} {width:.2f} {height:.2f}"',
+        text,
+        count=1,
+    )
+    text = re.sub(r'width="[^"]*"', f'width="{width:.2f}mm"', text, count=1)
+    text = re.sub(r'height="[^"]*"', f'height="{height:.2f}mm"', text, count=1)
+    tag_end = text.find(">", text.find("<svg"))
+    rect = f'\n  <rect x="{minx:.2f}" y="{miny:.2f}" width="{width:.2f}" height="{height:.2f}" fill="#ffffff"/>'
     text = text[: tag_end + 1] + rect + text[tag_end + 1 :]
     # Put the white background behind the drawing: move it right after <svg>, then
     # the labels go last so they sit on top.

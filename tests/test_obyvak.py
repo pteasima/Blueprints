@@ -977,9 +977,10 @@ def test_sikmina_drawing_scenes():
         label_xs.append(lx)
         label_ys.append(ly)
         tip_ys.append(ndc_y)
-        # Horizontal leader: label Y matches tip Y.
-        assert abs(ly - ndc_y) < 0.02
     assert max(label_xs) - min(label_xs) < 0.05
+    # Same top-to-bottom order as the tips, so the leaders do not cross.
+    assert all(label_ys[i] > label_ys[i + 1] for i in range(len(label_ys) - 1))
+    assert all(tip_ys[i] > tip_ys[i + 1] for i in range(len(tip_ys) - 1))
     assert all(-0.8 < x < -0.45 for x in label_xs)
     # Top of column is outside (wool near ridge); bottom is room face (NaturHeld).
     order = [t.split("\n")[0] for t in (a["text"]["en"] for a in callouts)]

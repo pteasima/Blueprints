@@ -2303,9 +2303,10 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     wool = 0.18
     board = 0.35
     # Extra left margin so the outside→in column sits clear of the eave.
-    # Callout sprites are centred on the column X, so leave ~0.3 NDC of pad
-    # inside the plate edge for the widest three-line note.
-    label_margin = 1600.0
+    # Czech lines are wider than the English ones this frame was drawn for.
+    # A larger margin zooms the section out and leaves a blank column; the
+    # two lines that are still wider than that column are broken below.
+    label_margin = 3200.0
     frame_x0 = g.left_eave - 80.0 - label_margin
     frame_x1 = g.right_eave + 80.0
     frame_z0 = g.z_nabeh_bot - 180.0
@@ -2342,10 +2343,12 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
     sec_notes = [
         (
             on_face(x_wool, y_note, t_wool),
-            f"Minerální vata λ 0,039, {raf_t} mm mezi krokvemi\n"
-            f"Pod krokvemi u oken {wool_l} mm; u skříní 160+160+120 mm",
-            f"Minerální vata λ 0,039, {raf_t} mm mezi krokvemi\n"
-            f"Pod krokvemi u oken {wool_l} mm; u skříní 160+160+120 mm",
+            f"Minerální vata λ 0,039\n{raf_t} mm mezi krokvemi\n"
+            f"Pod krokvemi u oken {wool_l} mm\n"
+            f"u skříní 160+160+120 mm",
+            f"Minerální vata λ 0,039\n{raf_t} mm mezi krokvemi\n"
+            f"Pod krokvemi u oken {wool_l} mm\n"
+            f"u skříní 160+160+120 mm",
         ),
         (
             on_face(x_hang, y_note, t_hanger),
@@ -2370,16 +2373,27 @@ def _sikmina_plates(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
         (
             on_face(x_nh, y_note, t_nh * 0.5),
             f"NaturHeld 140, {nh_l} mm\npřes GKF do CD\n"
-            f"StoSilent Top Basic + Top Finish, bílá ~RAL 9016, {finish_mm}+{basic_mm} mm",
+            f"StoSilent Top Basic + Top Finish\n"
+            f"bílá ~RAL 9016, {finish_mm}+{basic_mm} mm",
             f"NaturHeld 140, {nh_l} mm\npřes GKF do CD\n"
-            f"StoSilent Top Basic + Top Finish, bílá ~RAL 9016, {finish_mm}+{basic_mm} mm",
+            f"StoSilent Top Basic + Top Finish\n"
+            f"bílá ~RAL 9016, {finish_mm}+{basic_mm} mm",
         ),
     ]
-    col_x = -0.62
+    col_x = -0.64
+    # Spread by line count. Sharing each tip's Y stacked the longer Czech
+    # notes on top of each other. Order still follows the slope, so the
+    # leaders do not cross.
+    sec_ys = _column_label_ndcs(
+        len(sec_notes),
+        col_x=col_x,
+        y_top=0.72,
+        y_bot=-0.78,
+        weights=[text.count("\n") + 1 for _anchor, text, _cs in sec_notes],
+    )
     sec_annotations = []
-    for anchor, en, cs in sec_notes:
+    for (anchor, en, cs), label_ndc in zip(sec_notes, sec_ys):
         tip_ndc = _section_ndc(anchor, sec_cam["target"], sec_half_w, sec_half_h)
-        label_ndc = (col_x, tip_ndc[1])
         sec_annotations.append(
             _callout(anchor, en, cs, _ndc_offset(tip_ndc, label_ndc))
         )
@@ -2652,8 +2666,9 @@ def _bass_elevation_scene(
     """Straight elevation from the room. GKB is off so the vertical lattice shows."""
     studs = _bass_stud_xs(p, spacing)
     # Wide margin on the cabinet side (screen left for living, screen right for kitchen).
+    # Room below the slab so the scale bar is not sitting on the floor.
     x0, x1 = -1100.0, 8900.0
-    z0, z1 = -180.0, 5300.0
+    z0, z1 = -720.0, 5300.0
     pad_w, pad_h = 1.0, 1.04
     half_w = 0.5 * (x1 - x0) * 0.001 * pad_w
     half_h = 0.5 * (z1 - z0) * 0.001 * pad_h
@@ -3083,7 +3098,7 @@ def _tie_scenes(p: ObyvakParams, g: ObyvakLayout) -> list[dict]:
             "Táhla a světla — pohled",
         ),
         "project": "Obývák 1.02",
-        "hFovDeg": 55,
+        "hFovDeg": 72,
         "projection": "perspective",
         "camera": {"target": aim, "position": eye, "up": [0.0, 1.0, 0.0]},
         "cuts": [_cut((1.0, 0.0, 0.0), (80.0, 0.5 * p.room_length, z))],
