@@ -195,4 +195,54 @@ function totalArea(buffers) {
   assert.ok(Math.abs(areaOf(positions) - 5) < 1e-3, areaOf(positions));
 }
 
+// A 0.1 mm crack where two faces should meet still fills the section.
+// A 2 mm opening stays open: it is wider than the join and is not a face.
+{
+  function wallsArea(crack) {
+    const seams = [
+      [[0, 0], [1, 0]],
+      [[1, 0], [1, 0.5]],
+      [[1, 0.5], [0, 0.5]],
+      [[crack, 0.5], [crack, 0]],
+    ];
+    /** @type {THREE.Vector3[][]} */
+    const segs = [];
+    const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -0.5);
+    for (const [a, b] of seams) {
+      const positions = [
+        a[0], a[1], 0, b[0], b[1], 0, b[0], b[1], 1,
+        a[0], a[1], 0, b[0], b[1], 1, a[0], a[1], 1,
+      ];
+      const geom = new THREE.BufferGeometry();
+      geom.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+      const local = worldPlanesToLocal([plane], new THREE.Matrix4());
+      for (const pair of cutPlaneSegments(geom, local)[0] || []) segs.push(pair);
+    }
+    return areaOf(triangulateCutSegments(segs, plane));
+  }
+  const cracked = wallsArea(0.0001);
+  assert.ok(Math.abs(cracked - 0.5) < 1e-2, cracked);
+  const open = wallsArea(0.002);
+  assert.ok(open < 1e-6, open);
+}
+
+// A closed ø14 circle tessellated finer than the join tolerance keeps its area.
+// Joining every nearby sample would chain around the loop and collapse it.
+{
+  const radius = 0.007;
+  const n = 320;
+  /** @type {number[][]} */
+  const ring = [];
+  for (let i = 0; i < n; i++) {
+    const t = (i / n) * Math.PI * 2;
+    ring.push([Math.cos(t) * radius, Math.sin(t) * radius]);
+  }
+  const geom = extrudeWalls(ring, 0, 1);
+  const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -0.5);
+  const caps = cutCapBuffers(geom, [plane]);
+  const area = totalArea(caps);
+  const expect = Math.PI * radius * radius;
+  assert.ok(Math.abs(area - expect) / expect < 0.02, area);
+}
+
 console.log("sectionCaps.test.mjs: ok");

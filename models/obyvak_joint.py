@@ -44,13 +44,13 @@ def notes(p: ObyvakParams | None = None):
     g = build_layout(p or ObyvakParams())
     zl = g.z_soffit_lid
     return [
-        (4500, 2920, "Lid widens until it meets the lowered slope"),
-        (4500, 2902, "floating joint, connection left open"),
-        (4500, 2884, "no angle and no UD on this edge"),
-        (4500, 2866, "bottom CD stays clear of the lid"),
-        (4680, 2920, "slope NaturHeld runs to the vertical soffit face"),
-        (4680, 2902, "wool triangle under the lid, one solid"),
-        (4680, 2884, "brake taped to the cabinet plaster"),
+        (4500, 2920, "Víko podhledu se rozšiřuje, až dosedne na sníženou šikminu"),
+        (4500, 2902, "volný spoj, napojení nechané otevřené"),
+        (4500, 2884, "na této hraně bez úhelníku a bez UD"),
+        (4500, 2866, "spodní CD zůstává mimo víko"),
+        (4680, 2920, "NaturHeld šikminy dobíhá ke svislému líci podhledu"),
+        (4680, 2902, "trojúhelník vaty pod víkem, jeden kus"),
+        (4680, 2884, "parozábrana lepená k omítce u skříní"),
         (4500, 2848, "StoSilent kout: 1. strana do koutu, nechat schnout"),
         (4500, 2830, "2. páska Sto-Stuckband, přesah pár mm"),
         (4500, 2812, "3. druhá strana přes pásku"),

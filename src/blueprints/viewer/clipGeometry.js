@@ -225,10 +225,25 @@ function extractLocalTriangles(geometry) {
 }
 
 /**
- * Weld tolerance in mesh-local units (glTF metres). Smaller than any real
- * layer (foil is 1 mm) and larger than shared-edge lerp noise.
+ * Weld tolerance in mesh-local metres. Vertices that quantise to the same
+ * cell are one point. Pairs that miss the cell are joined later, and only
+ * when they are the free ends of a cut chain.
  */
 const CAP_WELD = 1e-6;
+
+/**
+ * Close an open cut chain when its two free ends are this close (metres).
+ *
+ * House-scale parts are tessellated at 2 mm and each OCCT face is its own
+ * mesh, so the same geometric edge is cut twice and the hits can sit
+ * ~0.1 mm apart. Leaving that chain open drops the whole cap: a board sliced
+ * on both ends then reads as an empty tube until the camera tilts onto the
+ * long faces. Only odd-degree ends are joined. Merging every sample within
+ * the tolerance would chain along a finely tessellated circle (a ø14 tie)
+ * and collapse it. 0.2 mm stays under the 1 mm foil and the 1 mm face gap,
+ * so a real opening is not bridged.
+ */
+const CAP_GAP_JOIN = 2e-4;
 
 /**
  * Push the filled face into the kept half-space so it survives the clip
@@ -320,6 +335,98 @@ function ensureCutData(geometry, localPlanes) {
 }
 
 /**
+ * Join free ends of a cut chain when they are a tessellation crack apart.
+ * A run of degree-2 samples is left alone, so a fine circle does not collapse.
+ * @param {Map<string, THREE.Vector3>} points
+ * @param {{ a: string, b: string, used: boolean, dead?: boolean }[]} edges
+ * @param {Map<string, number[]>} adj
+ */
+function joinOpenEnds(points, edges, adj) {
+  /** @type {Map<string, string>} */
+  const parent = new Map();
+  for (const key of points.keys()) parent.set(key, key);
+
+  /**
+   * @param {string} key
+   */
+  function find(key) {
+    let k = key;
+    while (parent.get(k) !== k) {
+      const up = parent.get(parent.get(k));
+      parent.set(k, up);
+      k = up;
+    }
+    return k;
+  }
+
+  /**
+   * @param {string} key
+   */
+  function degree(key) {
+    const k = find(key);
+    let d = 0;
+    for (const id of adj.get(k) || []) {
+      if (!edges[id].dead) d++;
+    }
+    return d;
+  }
+
+  function oddKeys() {
+    /** @type {string[]} */
+    const out = [];
+    for (const key of points.keys()) {
+      if (find(key) === key && degree(key) % 2) out.push(key);
+    }
+    return out;
+  }
+
+  const joinLimit = CAP_GAP_JOIN * CAP_GAP_JOIN;
+  // A crack is one pair. Bound the work; a real opening stays open.
+  for (let guard = 0; guard < edges.length + 2; guard++) {
+    const odds = oddKeys();
+    if (odds.length < 2) break;
+    let bi = -1;
+    let bj = -1;
+    let best = Infinity;
+    for (let i = 0; i < odds.length; i++) {
+      const pi = points.get(odds[i]);
+      for (let j = i + 1; j < odds.length; j++) {
+        const pj = points.get(odds[j]);
+        const dx = pi.x - pj.x;
+        const dy = pi.y - pj.y;
+        const dz = pi.z - pj.z;
+        const d2 = dx * dx + dy * dy + dz * dz;
+        if (d2 < best) {
+          best = d2;
+          bi = i;
+          bj = j;
+        }
+      }
+    }
+    if (best > joinLimit) break;
+    const keep = odds[bi];
+    const drop = odds[bj];
+    const keepPt = points.get(keep);
+    const dropPt = points.get(drop);
+    keepPt.add(dropPt).multiplyScalar(0.5);
+    for (const id of adj.get(drop) || []) {
+      const edge = edges[id];
+      if (edge.dead) continue;
+      const other = find(edge.a === drop ? edge.b : edge.a);
+      if (other === keep) {
+        edge.dead = true;
+        continue;
+      }
+      edge.a = keep;
+      edge.b = other;
+      if (!adj.has(keep)) adj.set(keep, []);
+      adj.get(keep).push(id);
+    }
+    parent.set(drop, keep);
+  }
+}
+
+/**
  * Chain undirected cut segments into closed loops.
  * Open chains (T-junctions, clip slivers) are dropped.
  * @param {THREE.Vector3[][]} segments
@@ -340,12 +447,13 @@ function stitchLoops(segments) {
     if (!points.has(ka)) points.set(ka, a.clone());
     if (!points.has(kb)) points.set(kb, b.clone());
     const id = edges.length;
-    edges.push({ a: ka, b: kb, used: false });
+    edges.push({ a: ka, b: kb, used: false, dead: false });
     if (!adj.has(ka)) adj.set(ka, []);
     if (!adj.has(kb)) adj.set(kb, []);
     adj.get(ka).push(id);
     adj.get(kb).push(id);
   }
+  joinOpenEnds(points, edges, adj);
 
   /**
    * @param {string} at
@@ -358,7 +466,7 @@ function stitchLoops(segments) {
     const here = points.get(at);
     const pin = prev ? points.get(prev) : null;
     for (const id of ids) {
-      if (edges[id].used) continue;
+      if (edges[id].used || edges[id].dead) continue;
       if (!pin) return id;
       const e = edges[id];
       const nk = e.a === at ? e.b : e.a;
@@ -381,7 +489,7 @@ function stitchLoops(segments) {
   /** @type {THREE.Vector3[][]} */
   const loops = [];
   for (let i = 0; i < edges.length; i++) {
-    if (edges[i].used) continue;
+    if (edges[i].used || edges[i].dead) continue;
     /** @type {THREE.Vector3[]} */
     const loop = [];
     /** @type {number[]} */

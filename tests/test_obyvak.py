@@ -818,7 +818,7 @@ def test_sikmina_drawing_scenes():
     assert LABEL_ROOFING not in lattice["opacity"]
     assert len(lattice["cuts"]) == 3
     assert lattice["title"]["cs"].startswith("Šikmina")
-    assert lattice["title"]["en"].startswith("Slopes")
+    assert lattice["title"]["en"].startswith("Šikmina")
     assert lattice["project"] == "Obývák 1.02"
     up = lattice["camera"]["up"]
     assert abs(up[2]) < 1e-9
@@ -878,9 +878,9 @@ def test_sikmina_drawing_scenes():
             zip(lat_callouts, label_ndc), key=lambda pair: pair[1][1], reverse=True
         )
     ]
-    assert by_y[0].startswith("Bracing strap")
+    assert by_y[0].startswith("Páska")
     assert by_y[-1].startswith("CD")
-    assert any(t.startswith("Direct hanger") for t in by_y)
+    assert any(t.startswith("Přímý závěs") for t in by_y)
 
     section = specs["sikmina-section"]
     assert section["opacityDefault"] == 0
@@ -906,7 +906,7 @@ def test_sikmina_drawing_scenes():
     assert section["opacity"][LABEL_SOFFIT_GKF] == board
     assert LABEL_FURNITURE not in section["opacity"]
     assert len(section["cuts"]) == 2
-    assert section["title"]["en"].startswith("Slopes")
+    assert section["title"]["en"].startswith("Šikmina")
     assert section["title"]["cs"].startswith("Šikmina")
     assert section["camera"]["position"][2] > section["camera"]["target"][2]
     # Both slopes: the frame reaches the cabinet eave, and nothing cuts at the ridge.
@@ -920,24 +920,25 @@ def test_sikmina_drawing_scenes():
     joined = " ".join(
         ann["text"]["cs"] for ann in section["annotations"] if "text" in ann
     )
-    assert "NaturHeld 140 100 mm levá, 100 mm pravá" in joined
+    assert "NaturHeld 140, 100 mm" in joined
     assert "přes GKF → CD" in joined or "přes GKF" in joined
     assert "Jutafol N AL 170 Speciál" in joined
     assert "GKF 12,5 mm" in joined
     assert "Vario" not in joined
     assert "Flex" not in joined
-    assert "Domo Plus 038" in joined
-    assert "160 mm mezi" in joined
+    assert "λ 0,039" in joined
+    assert "mezi krokvemi" in joined and "160 mm" in joined
     assert "plénum" not in joined.lower()
     joined_en = " ".join(
         ann["text"]["en"] for ann in section["annotations"] if "text" in ann
     )
-    assert "Domo Plus 038" in joined_en
-    assert "160 mm between" in joined_en
-    assert "100 mm left, 100 mm right" in joined_en
+    assert "λ 0,039" in joined_en
+    assert "mezi krokvemi" in joined_en and "160 mm" in joined_en
+    assert "NaturHeld 140, 100 mm" in joined_en
     assert "Jutafol N AL 170 Speciál" in joined_en
-    assert "GKF 12.5 mm" in joined_en
-    assert "through GKF" in joined_en
+    assert "Parozábrana" in joined_en
+    assert "GKF 12,5 mm" in joined_en
+    assert "přes GKF" in joined_en
     assert "plenum" not in joined_en.lower()
     assert "Nonius" in joined
     assert "200 mm" in joined
@@ -949,7 +950,7 @@ def test_sikmina_drawing_scenes():
             continue
         en = ann["text"]["en"]
         if "StoSilent" in en and "NaturHeld" not in en:
-            assert "through GKF" not in en
+            assert "přes GKF" not in en
     low = joined.lower()
     assert "přesah" not in low and "overhang" not in low
     assert "pozednic" not in low and "wall plate" not in low
@@ -976,20 +977,21 @@ def test_sikmina_drawing_scenes():
         label_xs.append(lx)
         label_ys.append(ly)
         tip_ys.append(ndc_y)
-        # Horizontal leader: label Y matches tip Y.
-        assert abs(ly - ndc_y) < 0.02
     assert max(label_xs) - min(label_xs) < 0.05
+    # Same top-to-bottom order as the tips, so the leaders do not cross.
+    assert all(label_ys[i] > label_ys[i + 1] for i in range(len(label_ys) - 1))
+    assert all(tip_ys[i] > tip_ys[i + 1] for i in range(len(tip_ys) - 1))
     assert all(-0.8 < x < -0.45 for x in label_xs)
     # Top of column is outside (wool near ridge); bottom is room face (NaturHeld).
     order = [t.split("\n")[0] for t in (a["text"]["en"] for a in callouts)]
     by_y = [t for _, t in sorted(zip(label_ys, order), reverse=True)]
-    assert by_y[0].startswith("Wool: Isover Domo Plus")
-    assert by_y[1].startswith("Direct hanger")
-    assert by_y[2].startswith("Jutafol")
+    assert by_y[0].startswith("Minerální vata")
+    assert by_y[1].startswith("Přímý závěs")
+    assert by_y[2].startswith("Parozábrana")
     assert by_y[-1].startswith("NaturHeld 140")
     assert any(t.startswith("GKF") for t in by_y)
     # Direct + Nonius share one note and one leader.
-    hang = next(a for a in callouts if a["text"]["en"].startswith("Direct hanger"))
+    hang = next(a for a in callouts if a["text"]["en"].startswith("Přímý závěs"))
     assert "Nonius" in hang["text"]["en"]
     assert hang["anchor"][0] < g.x_false
     assert "tips" not in hang
@@ -1037,9 +1039,9 @@ def test_bass_trap_scenes_keep_the_vertical_lattice():
         assert "bass_wall_hanger" not in view["opacity"]
         assert view["opacity"][LABEL_BASS_WOOL] < 1
         assert view["title"]["en"].startswith(
-            "Kitchen" if side == "kitchen" else "Living"
+            "Štít kuchyně" if side == "kitchen" else "Štít obýváku"
         )
-        assert "vertical" in view["title"]["en"]
+        assert "svislé" in view["title"]["en"]
         assert "svislé" in view["title"]["cs"]
         assert f"{spacing:g}" in view["title"]["en"]
         # Cut opens an early stud and keeps the soffit end. The other gable is behind the camera.
@@ -1060,12 +1062,12 @@ def test_bass_trap_scenes_keep_the_vertical_lattice():
         assert elev["opacityDefault"] == 0
         joined = " ".join(a["text"]["en"] for a in elev["annotations"] if "text" in a)
         joined_cs = " ".join(a["text"]["cs"] for a in elev["annotations"] if "text" in a)
-        assert "vertical" in joined
+        assert "svisle" in joined
         assert "svisle" in joined_cs
-        assert f"{n_studs} studs @ {spacing:g}" in joined
+        assert f"{n_studs} stojek @ {spacing:g}" in joined
         assert f"CW {cw:g}" in joined
         assert "525 mm" in joined
-        assert "soffit" in joined
+        assert "podhled" in joined
         assert "horizontal stud" not in joined.lower()
         dims = [a for a in elev["annotations"] if a["kind"] == "dim"]
         dim_text = " ".join(a["text"]["en"] for a in dims)
@@ -1081,12 +1083,12 @@ def test_bass_trap_scenes_keep_the_vertical_lattice():
         assert len(section["cuts"]) == 2
         sec_text = " ".join(a["text"]["en"] for a in section["annotations"] if "text" in a)
         if side == "kitchen":
-            assert "130.5 mm" in sec_text and "47 mm" in sec_text and "190 mm" in sec_text
+            assert "130,5 mm" in sec_text and "47 mm" in sec_text and "190 mm" in sec_text
             assert section["cuts"][0]["anchor"][0] == 2500.0
         else:
-            assert "300 mm" in sec_text and "137.5 mm" in sec_text and "450 mm" in sec_text
+            assert "300 mm" in sec_text and "137,5 mm" in sec_text and "450 mm" in sec_text
             assert section["cuts"][0]["anchor"][0] == 2500.0
-        assert "250 mm" in sec_text and "12.5 mm" in sec_text
+        assert "250 mm" in sec_text and "12,5 mm" in sec_text
 
         # Callouts share one column and stay on the plate.
         callouts = [a for a in elev["annotations"] if a["kind"] == "callout"]
@@ -1334,6 +1336,18 @@ def test_3d_matches_section_and_elevation_masses():
         assert abs(bb.min.Y - (y0 + FACE_GAP)) < 1e-6
         assert abs(bb.size.Y - (width - 2 * FACE_GAP)) < 1e-6
         assert abs(bb.max.Z - (p.window_h - FACE_GAP)) <= 1.0
+        # Lintel sits on the opening head. The ring beam stays at column_top_z.
+        y_mid = y0 + width * 0.5
+        lintel_bottom = [
+            part.bounding_box().min.Z
+            for part in _labeled(shape, LABEL_MASONRY)
+            if part.bounding_box().min.Y <= y_mid <= part.bounding_box().max.Y
+            and part.bounding_box().max.X < 0.0
+            and part.bounding_box().min.Z < g.column_top_z - 1.0
+            and part.bounding_box().max.Z > p.window_h
+        ]
+        assert lintel_bottom, (y0, width)
+        assert abs(min(lintel_bottom) - (p.window_h + FACE_GAP)) <= 0.5
     gable_walls = [
         c
         for c in _labeled(shape, LABEL_MASONRY)
@@ -1671,5 +1685,5 @@ def test_left_eave_note_is_one_gkf_layer():
     import obyvak_eave_left
 
     notes = [text for *_skip, text in obyvak_eave_left.notes()]
-    assert any(text == "1x GKF 12.5 ends in the UD" for text in notes)
+    assert any(text == "1× GKF 12,5 končí v UD" for text in notes)
     assert not any("2x GKF" in text for text in notes)

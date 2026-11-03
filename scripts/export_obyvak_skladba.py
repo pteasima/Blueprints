@@ -62,17 +62,9 @@ STOSILENT_FINISH_KG_M2 = 3.0
 GKF_RF_KG_M2 = 10.5
 CD_KG_PER_M = 0.54
 NH_KG_M3 = 140.0
-# Knauf EPD declared densities. The below-rafter wool sits on the foil, so the CD carries it.
-UNIFIT_033_KG_M3 = 25.2
+# Knauf NatuRoll Pro 039. The wool sits on the foil, so the CD carries it.
 NATUROLL_039_KG_M3 = 12.4
-# Isover Domo Plus, λ 0.038, 13 kg/m³. One product for every slope wool layer.
-DOMO_KG_M3 = 13.0
-DOMO_160_KC_M2 = 171.59
-URL_DOMO_160 = (
-    "https://www.stavago.cz/izolace-tepelna-isover-domo-plus-160-mm-role---6-72-m-bal/"
-)
-# Pack area from the Isover technical sheet, m² per roll.
-DOMO_PACK_M2 = {100: 10.08, 120: 8.88, 140: 7.68, 160: 6.72, 180: 6.00, 200: 5.34, 220: 4.68}
+# Slope wool is the same λ 0.039 mineral wool as the soffit and the gables.
 # Knauf D11: 2nd-layer screws ≤ 170 mm along the CD on a 1250 mm board.
 OUTER_SCREW_PITCH_MM = 170.0
 STOSILENT_PAIL_KG = 18.0
@@ -127,25 +119,7 @@ URL_DIRECT = (
     "https://www.dek.cz/produkty/detail/3631100170-primy-zaves-cd-i-drevo-200mm-dkm"
 )
 URL_DIRECT_DEK = URL_DIRECT
-URL_UNIFIT_TL = "https://www.e-sadrokartony.cz/storage/TL-Knauf-Insulation-Unifit-035.pdf"
-URL_UNIFIT_160 = (
-    "https://www.dek.cz/produkty/detail/1460107750-knauf-unifit-035-160mm-3-84m2-role"
-)
-URL_UNIFIT_140 = (
-    "https://www.dek.cz/produkty/detail/1460107749-knauf-unifit-035-140mm-4-44m2-role"
-)
-# DEK sale prices, Kč s DPH, October 2026. 140/160 mm rolls are "na poptávku".
-UNIFIT_160_KC_M2 = 242.24
-UNIFIT_140_KC_M2 = 212.00
-UNIFIT_KC_M3 = UNIFIT_140_KC_M2 / 0.140
-URL_UNIFIT033_160 = "https://www.nonstopstavebniny.cz/vata-knauf-unifit-033-tl--160-mm-tepelna-izolace-baleni-3-36-m2/"
-URL_UNIFIT033_80 = "https://eshop.stavinvest.cz/tepelna-izolace-knauf-unifit-033-80-mm/"
 URL_NATUROLL039_160 = "https://www.nonstopstavebniny.cz/mineralni-vata-knauf-naturoll-pro-039-tepelna-izolace-160-mm-2/"
-# Retail prices incl. VAT, checked 30 Oct 2026.
-UNIFIT033_160_KC_M2 = 278.27  # 935 Kč / 3.36 m² roll
-UNIFIT033_80_KC_M2 = 215.25  # 1,420.65 Kč / 6.6 m² roll
-URL_UNIFIT033_100 = "https://eshop.stavinvest.cz/tepelna-izolace-knauf-unifit-033-100-mm/"
-UNIFIT033_100_KC_M2 = 269.06  # 1,420.65 Kč / 5.28 m² roll, checked 1 Nov 2026
 NATUROLL039_160_KC_M2 = 141.49  # 815 Kč / 5.76 m² roll
 WOOL_WASTE_PCT = 5
 URL_NONIUS_TOP = "https://www.rigips.cz/produkty/nonius-horni-dil/"
@@ -246,11 +220,11 @@ def _slope_buildup_kg_m2(p: ObyvakParams, *, right: bool) -> tuple[float, float]
         nh = (p.naturheld_right / 1000.0) * NH_KG_M3
         gkf = p.sdk_layers_right * GKF_RF_KG_M2
         # 160 + 160 + 120 mm into the ~437 mm cavity. The few mm over is loft.
-        wool = (0.160 + 0.160 + 0.120) * DOMO_KG_M3
+        wool = (0.160 + 0.160 + 0.120) * NATUROLL_039_KG_M3
     else:
         nh = (p.naturheld_left / 1000.0) * NH_KG_M3
         gkf = GKF_RF_KG_M2
-        wool = (p.wool_below_left / 1000.0) * DOMO_KG_M3
+        wool = (p.wool_below_left / 1000.0) * NATUROLL_039_KG_M3
     cd = CD_KG_PER_M * (1000.0 / p.cd_spacing)
     bare = render + nh + gkf + cd
     return bare, bare + wool
@@ -437,8 +411,8 @@ PRICE = {
     "rf_m2": (115.88, f"DEK · {URL_RF_DEK}"),
     "jutafol_m2": (35.73, f"IZOMAT JUTAFOL N AL 170 Speciál · {URL_JUTAFOL_SHOP}"),
     "gkb_m2": (96.0, "NonstopStavebniny / DEK RB~GKB orientačně"),
-    "tn35_ks": (0.22, f"DEK DK Mont TN 35, 220.78 Kč / 1000 pcs incl. VAT · {URL_TN35_DEK}"),
-    "vario_kg": (39.32, f"izosystems.cz Rigips Vario, 983 Kč / 25 kg incl. VAT · {URL_VARIO}"),
+    "tn35_ks": (0.22, f"DEK DK Mont TN 35, 220,78 Kč / 1000 ks s DPH · {URL_TN35_DEK}"),
+    "vario_kg": (39.32, f"izosystems.cz Rigips Vario, 983 Kč / 25 kg s DPH · {URL_VARIO}"),
     "cd_bm": (29.21, f"DEK R-CD · {URL_CD_DEK}"),
     "direct_ks": (
         12.52,
@@ -448,34 +422,27 @@ PRICE = {
         15.68,
         f"IZOMAT Rigips Nonius horní 440 mm, 1 568,16 Kč/100 ks s DPH · {URL_NONIUS_TOP_SHOP}",
     ),
-    "unifit_160_m2": (
-        UNIFIT_160_KC_M2,
-        f"DEK Unifit 035 160 mm, {UNIFIT_160_KC_M2:.2f} Kč/m² s DPH, na poptávku · {URL_UNIFIT_160}",
-    ),
-    "unifit_m3": (
-        round(UNIFIT_KC_M3, 2),
-        f"DEK Unifit 035 140 mm, {UNIFIT_140_KC_M2:.2f} Kč/m² → {UNIFIT_KC_M3:.2f} Kč/m³ · {URL_UNIFIT_140}",
-    ),
     "nonius_bot_ks": (10.43, f"DEK spodní CD · {URL_NONIUS_BOT_DEK}"),
     "nonius_pin_ks": (2.98, f"IZOMAT závlačka · {URL_NONIUS_PIN_SHOP}"),
     "trmen_ks": (477.0, "ceník Rigips KB517112 (sci-data / distributor) — ověřit nabídkou"),
     "strap_bm": (25.0, "orientační ocelová páska 40×2"),
     "duct_bm": (180.0, "orientační spirála Ø160 pozink"),
     "angle_bm": (55.0, "orientační L-profil / tenký úhelník"),
-    "drop_ks": (8.0, "orientační krátký pásek/drop"),
+    "drop_ks": (8.0, "orientační krátký pásek"),
     "bracket_ks": (35.0, "orientační nástěnný úhelník"),
 }
 
 
-def _domo_kc_m2(mm: float) -> float:
-    """160 mm shelf price scaled by thickness. Pack sizes differ; this is Kč/m²."""
-    return round(DOMO_160_KC_M2 * (mm / 160.0), 2)
+def _wool039_kc_m2(mm: float) -> float:
+    """160 mm NatuRoll Pro 039 shelf price scaled by thickness. Kč/m² s DPH."""
+    return round(NATUROLL039_160_KC_M2 * (mm / 160.0), 2)
 
 
-def _domo_src(mm: float) -> str:
+def _wool039_src(mm: float) -> str:
     return (
-        f"Stavago Isover Domo Plus 160 mm, {DOMO_160_KC_M2:.2f} Kč/m² s DPH, "
-        f"scaled × {mm:.0f}/160 → {_domo_kc_m2(mm):.2f} Kč/m² · {URL_DOMO_160}"
+        f"NonstopStavebniny Knauf NatuRoll Pro 039, 160 mm, "
+        f"{NATUROLL039_160_KC_M2:.2f} Kč/m² s DPH, "
+        f"přepočet {mm:.0f}/160 → {_wool039_kc_m2(mm):.2f} Kč/m² · {URL_NATUROLL039_160}"
     )
 
 
@@ -539,6 +506,14 @@ def build_lines(q) -> dict[str, list[Line]]:
     nh_left_kc, nh_left_src = _naturheld_price(p.naturheld_left)
     nh_right_kc, nh_right_src = _naturheld_price(p.naturheld_right)
     nh_soffit_kc, nh_soffit_src = _naturheld_price(p.soffit_naturheld_t)
+    # Same board on both slopes: one order line. Split only if the thicknesses diverge.
+    nh_same = abs(p.naturheld_left - p.naturheld_right) < 0.5
+    naturoll_m3 = NATUROLL039_160_KC_M2 / 0.160
+    naturoll_src = (
+        f"NonstopStavebniny Knauf NatuRoll Pro 039, 160 mm, "
+        f"{NATUROLL039_160_KC_M2:.2f} Kč/m² s DPH, přepočet / 0,16 m · {URL_NATUROLL039_160}"
+    )
+    domo160_m2 = between_m2 + half_s + 2 * half_s
 
     sikminy = [
         Line(
@@ -552,10 +527,10 @@ def build_lines(q) -> dict[str, list[Line]]:
             10,
             None,
             f"TL Finish ≈3,0 kg/m² · {URL_STOSILENT_FINISH_TDS} · checklist {URL_STOSILENT_GUIDE}",
-            f"Plocha {face_s:.2f} m² × 3,0 = {finish_kg_s:.1f} kg. "
+            f"Bílá, přibližně RAL 9016. Plocha {face_s:.2f} m² × 3,0 = {finish_kg_s:.1f} kg. "
             f"S rezervou ≈ {_fmt(finish_kg_s * 1.1, 1)} kg ≈ "
             f"{_ceil_pack(finish_kg_s * 1.1, STOSILENT_PAIL_KG)}× kbelík 18 kg. "
-            "Cena u Sto CZ jen na poptávku.",
+            "Cenu sdělí Sto.",
             True,
         ),
         Line(
@@ -577,31 +552,17 @@ def build_lines(q) -> dict[str, list[Line]]:
         ),
         Line(
             3,
-            "Akustická deska — levá šikmina",
+            "Akustická deska šikmin",
             "Dřevovláknitá deska ρ 140",
             _product(f"NaturHeld 140, {p.naturheld_left:.0f} mm", URL_NATURHELD_140),
             f"{p.naturheld_left:.0f} mm",
-            half_s,
+            face_s if nh_same else half_s,
             "m²",
             12,
             nh_left_kc,
             nh_left_src,
-            f"Okenní šikmina {half_s:.2f} m² × {p.naturheld_left:.0f} mm. "
-            f"Šroubováno přes GKF do CD @ {p.cd_spacing:.0f} mm. Rezerva 12 % jako ostatní desky.",
-        ),
-        Line(
-            "3b",
-            "Akustická deska — pravá šikmina",
-            "Dřevovláknitá deska ρ 140",
-            _product(f"NaturHeld 140, {p.naturheld_right:.0f} mm", URL_NATURHELD_140),
-            f"{p.naturheld_right:.0f} mm",
-            half_s,
-            "m²",
-            12,
-            nh_right_kc,
-            nh_right_src,
-            f"Šikmina u skříní {half_s:.2f} m² × {p.naturheld_right:.0f} mm. "
-            f"Šroubováno přes GKF do CD @ {p.cd_spacing:.0f} mm. Rezerva 12 % jako ostatní desky.",
+            f"Obě šikminy, {face_s:.2f} m², {p.naturheld_left:.0f} mm. "
+            f"Šroubovat přes GKF do CD po {p.cd_spacing:.0f} mm. Spáry desek vyplnit StoSilent Filler.",
         ),
         Line(
             4,
@@ -614,13 +575,10 @@ def build_lines(q) -> dict[str, list[Line]]:
             10,
             PRICE["jutafol_m2"][0],
             f"{PRICE['jutafol_m2'][1]} · TL {URL_JUTAFOL_TL}",
-            f"Na attic straně CD, pod minerální vlnou (stejně jako zbytek domu — "
-            f"ne proměnlivá fólie). Plocha šikmin {face_s:.2f} m² + přesahy u okapů "
-            f"{vb_eave_m2:.2f} m² ({vb_eave_mm:.0f} mm × {eave_m:.1f} m: vlevo dolů přes pozednici "
-            "se smyčkou na omítku, vpravo přes víko kastlíku na omítku skříní). "
-            f"S rezervou 10 % ≈ {_fmt(vb_m2 * 1.1, 1)} m² "
-            f"≈ {_ceil_pack(vb_m2 * 1.1, 75.0)}× role 75 m². "
-            "Spoje JUTAFOL SP AL / SP 1, napojení JUTAFOL MASTIC.",
+            f"Na půdní straně CD, pod minerální vatou. Šikminy {face_s:.2f} m², "
+            f"okapy {vb_eave_m2:.2f} m². U okna stáhnout fólii na omítku se smyčkou, "
+            f"u skříní přes víko podhledu na omítku. Spoje páskou JUTAFOL SP AL, "
+            f"na omítku tmel JUTAFOL MASTIC. S rezervou ≈ {_ceil_pack(vb_m2 * 1.1, 75.0)}× role 75 m².",
         ),
         Line(
             5,
@@ -646,8 +604,8 @@ def build_lines(q) -> dict[str, list[Line]]:
             12,
             PRICE["rf_m2"][0],
             PRICE["rf_m2"][1],
-            "Second layer on the road-side slope for road noise. Joints staggered "
-            "against the first layer. Both layers cut level and bear on the soffit lid (no gap).",
+            "Jen šikmina ke skříním, kvůli hluku ze silnice. Spáry prostřídat vůči první vrstvě. "
+            "Obě vrstvy dosedají na víko podhledu.",
         ),
         Line(
             6,
@@ -687,126 +645,37 @@ def build_lines(q) -> dict[str, list[Line]]:
             8,
             nonius_unit,
             nonius_src,
-            f"Pravá šikmina. Svěšení {right_hang:.0f} mm. Horní díl 440 mm by na přesah "
-            f"spodního dílu (≥ 50 mm) nestačil, proto 540 mm (KB513732). "
-            f"Cena sady je zatím cena horního dílu 440 mm — 540 mm ověřit. "
-            f"Pravá šikmina od falešného hřebene: 90 mm, pak po 500 mm. "
-            f"Horní CD X {top_cd[0]:.0f} mm.",
+            f"Šikmina ke skříním. Svěšení {right_hang:.0f} mm, horní díl 540 mm. "
+            f"První CD je 90 mm od zlomu, další po {p.cd_spacing:.0f} mm.",
         ),
         Line(
             9,
-            "Wool between rafters, left",
-            "Glass wool, λ 0.038",
-            _product("Isover Domo Plus 038, 160 mm", URL_DOMO_160),
-            f"160 mm · role {DOMO_PACK_M2[160]:.2f} m²",
-            between_half,
+            "Minerální vata 160 mm",
+            "Minerální vata, λ 0,039",
+            _product("Knauf NatuRoll Pro 039, 160 mm", URL_NATUROLL039_160),
+            "160 mm",
+            domo160_m2,
             "m²",
             WOOL_WASTE_PCT,
-            _domo_kc_m2(160),
-            _domo_src(160),
-            f"Left slope {roof_half:.2f} m² × ({bay_clear:.0f}/{p.rafter_spacing:.0f}) net of rafters "
-            f"= {between_half:.2f} m² → {_ceil_pack(between_half * 1.05, DOMO_PACK_M2[160])} rolls.",
+            _wool039_kc_m2(160),
+            _wool039_src(160),
+            f"Mezi krokvemi obě šikminy ({between_m2:.2f} m², čistá plocha polí). "
+            f"Pod krokvemi: jedna vrstva na okenní šikmině ({half_s:.2f} m², dutina {g.wool_left:.0f} mm) "
+            f"a dvě vrstvy na šikmině u skříní ({2 * half_s:.2f} m²). "
+            f"Celkem {domo160_m2:.2f} m².",
         ),
         Line(
             "9b",
-            "Wool below rafters, left",
-            "Glass wool, λ 0.038",
-            _product("Isover Domo Plus 038, 160 mm", URL_DOMO_160),
-            f"160 mm · role {DOMO_PACK_M2[160]:.2f} m²",
+            "Minerální vata 120 mm",
+            "Minerální vata, λ 0,039",
+            _product("Knauf NatuRoll Pro 039, 120 mm", URL_NATUROLL039_160),
+            "120 mm",
             half_s,
             "m²",
             WOOL_WASTE_PCT,
-            _domo_kc_m2(160),
-            _domo_src(160),
-            f"Left slope face {half_s:.2f} m², one layer. Model cavity {g.wool_left:.1f} mm.",
-        ),
-        Line(
-            "9c",
-            "Wool between rafters, right",
-            "Glass wool, λ 0.038",
-            _product("Isover Domo Plus 038, 160 mm", URL_DOMO_160),
-            f"160 mm · role {DOMO_PACK_M2[160]:.2f} m²",
-            between_half,
-            "m²",
-            WOOL_WASTE_PCT,
-            _domo_kc_m2(160),
-            _domo_src(160),
-            f"Right slope {roof_half:.2f} m² × ({bay_clear:.0f}/{p.rafter_spacing:.0f}) net of rafters "
-            f"= {between_half:.2f} m² → {_ceil_pack(between_half * 1.05, DOMO_PACK_M2[160])} rolls.",
-        ),
-        Line(
-            "9d",
-            "Wool below rafters, right — 160 mm",
-            "Glass wool, λ 0.038",
-            _product("Isover Domo Plus 038, 160 mm", URL_DOMO_160),
-            "2 × 160 mm",
-            2 * half_s,
-            "m²",
-            WOOL_WASTE_PCT,
-            _domo_kc_m2(160),
-            _domo_src(160),
-            f"Right cavity {g.wool_right:.1f} mm. Two 160 mm layers "
-            f"({2 * half_s:.2f} m²) → {_ceil_pack(2 * half_s * 1.05, DOMO_PACK_M2[160])} rolls.",
-        ),
-        Line(
-            "9e",
-            "Wool below rafters, right — 120 mm",
-            "Glass wool, λ 0.038",
-            _product("Isover Domo Plus 038, 120 mm", URL_DOMO_160),
-            f"120 mm · role {DOMO_PACK_M2[120]:.2f} m²",
-            half_s,
-            "m²",
-            WOOL_WASTE_PCT,
-            _domo_kc_m2(120),
-            _domo_src(120),
-            f"Third layer. 160+160+120 = 440 mm in a {g.wool_right:.1f} mm cavity "
-            f"({440.0 - g.wool_right:.1f} mm of loft). "
-            f"{half_s:.2f} m² → {_ceil_pack(half_s * 1.05, DOMO_PACK_M2[120])} rolls.",
-        ),
-        Line(
-            10,
-            "Zavětrování",
-            "Ocelová páska",
-            "Výrobek dosud nezvolen",
-            f"{p.strap_w:.0f}×{p.strap_t:.0f} mm @ 45°",
-            q["strap_lm"],
-            "bm",
-            10,
-            PRICE["strap_bm"][0],
-            PRICE["strap_bm"][1],
-            "Typ pásky / kotevní prvky ještě sjednotit.",
-            True,
-        ),
-        Line(
-            11,
-            "Krov (nosná konstrukce)",
-            "Krokve",
-            "Stávající krov",
-            f"{p.rafter_w:.0f}/{p.rafter_t:.0f} @ {p.rafter_spacing:.0f}",
-            q["n_rafters"],
-            "ks",
-            None,
-            None,
-            "—",
-            "Není položka nákupu akustiky.",
-        ),
-        Line(
-            "11b",
-            "Táhlo z pozednice",
-            "Ocelová tyč",
-            "Výrobek dosud nezvolen",
-            f"ø{p.tie_d:.0f}",
-            q["n_ties"],
-            "ks",
-            None,
-            None,
-            "—",
-            f"{q['n_ties']}× ø{p.tie_d:.0f}, každé {q['tie_each_mm']:.0f} mm "
-            f"(celkem {q['tie_lm']:.2f} bm). Osa Z {q['tie_z']:.0f}: horní část pozednice, "
-            f"ne střed 3250 — ten protíná spiro Ø160. Každé druhé pole krokví, "
-            f"{p.tie_face_clear:.0f} mm od bližšího líce (strana obýváku). "
-            "Světla na šikminách nejsou v této skladbě. Cena na poptávku.",
-            True,
+            _wool039_kc_m2(120),
+            _wool039_src(120),
+            f"Třetí vrstva jen pod šikminou u skříní. Skladba 160+160+120 mm do dutiny {g.wool_right:.0f} mm.",
         ),
     ]
 
@@ -852,21 +721,20 @@ def build_lines(q) -> dict[str, list[Line]]:
             12,
             nh_soffit_kc,
             nh_soffit_src,
-            "Butuje na X_FURN; mezera ke skříním 20 mm. Rezerva 12 % jako ostatní desky.",
+            "Jen svislý líc podhledu. Spodní líc je sádrokarton. Mezera ke skříním 20 mm.",
         ),
         Line(
             4,
             "Výplň akustické dutiny",
-            "Knauf Unifit 035",
-            _product("Knauf Insulation Unifit 035", URL_UNIFIT_140),
-            "tloušťka dle modelu, před potrubím",
+            "Minerální vata λ 0,039",
+            _product("Knauf NatuRoll Pro 039", URL_NATUROLL039_160),
+            "tloušťka dle dutiny, před potrubím",
             q["soffit_wool_m3"],
             "m³",
             10,
-            None,
-            wool_tl,
-            "Stejný výrobek jako šikminy. Tloušťka zůstává dle modelu (zastaveno před potrubím).",
-            True,
+            naturoll_m3,
+            naturoll_src,
+            "Výplň podhledu. Skončit před potrubím, potrubí neobalovat.",
         ),
         Line(
             5,
@@ -879,9 +747,8 @@ def build_lines(q) -> dict[str, list[Line]]:
             10,
             PRICE["cd_bm"][0],
             PRICE["cd_bm"][1],
-            f"{q['n_soffit_rost_cd']} prvků (svislé + spodní). "
-            f"UD {p.ud_w:.0f}×{p.cd_t:.0f} u zdi {q['soffit_ud_lm']:.2f} bm "
-            f"({q['n_soffit_ud']} ks). Žádné latě, žádné podložky.",
+            f"{q['n_soffit_rost_cd']} profilů (svislé a spodní). "
+            f"UD {p.ud_w:.0f}×{p.cd_t:.0f} u zdi je samostatná položka.",
         ),
         Line(
             6,
@@ -935,7 +802,7 @@ def build_lines(q) -> dict[str, list[Line]]:
             10,
             PRICE["drop_ks"][0],
             PRICE["drop_ks"][1],
-            "Nedořešeno: katalog vs. pásek na míru.",
+            "Krátký závěs mezi vodorovným a svislým CD. Přesný katalogový kus zvolí montážník SDK.",
             True,
         ),
         Line(
@@ -949,7 +816,7 @@ def build_lines(q) -> dict[str, list[Line]]:
             10,
             PRICE["angle_bm"][0],
             PRICE["angle_bm"][1],
-            "Nedořešeno: přesný profil.",
+            "Úhelník na skrytém spoji. Přesný profil zvolí montážník SDK.",
             True,
         ),
         Line(
@@ -977,21 +844,7 @@ def build_lines(q) -> dict[str, list[Line]]:
             10,
             PRICE["angle_bm"][0],
             PRICE["angle_bm"][1],
-            "Pozednice nenosí kastlík.",
-            True,
-        ),
-        Line(
-            13,
-            "VZT / klimatizace",
-            "Spirála Ø160",
-            "Spirála Ø160 (3 trasy)",
-            f"OD {p.duct_od:.0f} mm",
-            q["duct_lm"],
-            "bm",
-            8,
-            PRICE["duct_bm"][0],
-            PRICE["duct_bm"][1],
-            f"{q['n_ducts']} trubky; výrobce VZT doplnit.",
+            "Přichytí hranu víka k pozednici. Podhled na pozednici nevisí.",
             True,
         ),
     ]
@@ -1008,7 +861,7 @@ def build_lines(q) -> dict[str, list[Line]]:
             12,
             PRICE["gkb_m2"][0],
             PRICE["gkb_m2"][1],
-            "Bez spodního víka. Akrylový spoj ke šikmině a k líci kastlíku. Konstrukce ke šikmině ani ke kastlíku nekotvená.",
+            "Plná deska, ne děrovaná. Obvod a prostupy tmelit Knauf Trennwandkitt. Konstrukci nekotvit do šikminy ani do podhledu.",
         ),
         Line(
             "A2",
@@ -1049,7 +902,7 @@ def build_lines(q) -> dict[str, list[Line]]:
             None,
             None,
             "—",
-            f"{q['bass_strut_lm']:.2f} bm. Vzpěra jde k líci zdi (páska + spára), ne jen k přírubě UW. Třmeny a Sylomer pryč.",
+            f"{q['bass_strut_lm']:.2f} bm. Vzpěra jde k líci zdi, ne jen k přírubě UW.",
             True,
         ),
         Line(
@@ -1083,30 +936,28 @@ def build_lines(q) -> dict[str, list[Line]]:
         Line(
             "B1",
             "MW kuchyně u zdi",
-            "Knauf Unifit 035",
-            _product("Knauf Insulation Unifit 035", URL_UNIFIT_140),
-            f"{p.bass_k_wool} mm",
+            "Minerální vata λ 0,039",
+            _product("Knauf NatuRoll Pro 039", URL_NATUROLL039_160),
+            f"{p.bass_k_wool:g} mm",
             face_t * p.bass_k_wool / 1000.0,
             "m³",
             10,
-            None,
-            wool_tl,
-            f"Split {p.bass_k_wool}+{p.bass_k_air}+{p.bass_k_gkb} = {p.predstena_kitchen:.0f} mm. Štít se dvěma posuvnými dveřmi. Tloušťka dle modelu.",
-            True,
+            naturoll_m3,
+            naturoll_src,
+            f"Kuchyňský štít, tloušťka {p.bass_k_wool:g} mm. Skladba vata + vzduch {p.bass_k_air:g} mm + deska {p.bass_k_gkb:g} mm.",
         ),
         Line(
             "C2",
             "MW obývák u zdi",
-            "Knauf Unifit 035",
-            _product("Knauf Insulation Unifit 035", URL_UNIFIT_140),
-            f"{p.bass_l_wool} mm",
+            "Minerální vata λ 0,039",
+            _product("Knauf NatuRoll Pro 039", URL_NATUROLL039_160),
+            f"{p.bass_l_wool:g} mm",
             face_t * p.bass_l_wool / 1000.0,
             "m³",
             10,
-            None,
-            wool_tl,
-            f"Split {p.bass_l_gkb}+{p.bass_l_air}+{p.bass_l_wool} = {p.predstena_living:.0f} mm. Štít s jedněmi posuvnými dveřmi, subwoofer v rohu u TV. Tloušťka dle modelu.",
-            True,
+            naturoll_m3,
+            naturoll_src,
+            f"Štít obýváku, tloušťka {p.bass_l_wool:g} mm. Skladba deska {p.bass_l_gkb:g} mm + vzduch {p.bass_l_air:g} mm + vata.",
         ),
     ]
 
@@ -1130,8 +981,8 @@ def build_lines(q) -> dict[str, list[Line]]:
             10,
             None,
             f"TL 3,0 kg/m² · {URL_STOSILENT_FINISH_TDS}",
-            f"Šikminy+kastlík {(face_s+face_k):.2f} m² → {finish_kg:.1f} kg; "
-            f"objednat {_ceil_pack(finish_kg * 1.1, STOSILENT_PAIL_KG)}× 18 kg. Cena na poptávku Sto.",
+            f"Bílá, přibližně RAL 9016. Šikminy a podhled {(face_s+face_k):.2f} m² → {finish_kg:.1f} kg. "
+            f"Objednat {_ceil_pack(finish_kg * 1.1, STOSILENT_PAIL_KG)}× 18 kg. Cenu sdělí Sto.",
             True,
         ),
         Line(
@@ -1145,34 +996,21 @@ def build_lines(q) -> dict[str, list[Line]]:
             10,
             None,
             f"Checklist 2,5 kg/m² · {URL_STOSILENT_GUIDE}",
-            f"{basic_kg:.1f} kg; objednat {_ceil_pack(basic_kg * 1.1, STOSILENT_PAIL_KG)}× 18 kg. Cena na poptávku Sto.",
+            f"{basic_kg:.1f} kg. Objednat {_ceil_pack(basic_kg * 1.1, STOSILENT_PAIL_KG)}× 18 kg. Cenu sdělí Sto.",
             True,
         ),
         Line(
             3,
-            f"NaturHeld 140 — {p.naturheld_left:.0f} mm levá",
+            f"NaturHeld 140 — {p.naturheld_left:.0f} mm",
             "Dřevovláknitá deska",
             _product(f"NaturHeld 140 / {p.naturheld_left:.0f} mm", URL_NATURHELD_140),
             f"{p.naturheld_left:.0f} mm",
-            half_s,
+            face_s if nh_same else half_s,
             "m²",
             12,
             nh_left_kc,
             nh_left_src,
-            "Okenní šikmina. Rezerva 12 % jako ostatní desky.",
-        ),
-        Line(
-            "3b",
-            f"NaturHeld 140 — {p.naturheld_right:.0f} mm pravá",
-            "Dřevovláknitá deska",
-            _product(f"NaturHeld 140 / {p.naturheld_right:.0f} mm", URL_NATURHELD_140),
-            f"{p.naturheld_right:.0f} mm",
-            half_s,
-            "m²",
-            12,
-            nh_right_kc,
-            nh_right_src,
-            "Šikmina u skříní. Rezerva 12 % jako ostatní desky.",
+            f"Obě šikminy, {face_s:.2f} m². Šroubovat přes sádrokarton do CD. Spáry vyplnit StoSilent Filler.",
         ),
         Line(
             4,
@@ -1185,7 +1023,7 @@ def build_lines(q) -> dict[str, list[Line]]:
             12,
             nh_soffit_kc,
             nh_soffit_src,
-            "Kastlík, svislý líc (podhled je GKB). Rezerva 12 % jako ostatní desky.",
+            "Svislý líc podhledu. Spodní líc je sádrokarton GKB.",
         ),
         Line(
             5,
@@ -1198,9 +1036,9 @@ def build_lines(q) -> dict[str, list[Line]]:
             10,
             PRICE["jutafol_m2"][0],
             f"{PRICE['jutafol_m2'][1]} · TL {URL_JUTAFOL_TL}",
-            f"Šikminy {face_s:.2f} m² + okapy {vb_eave_m2:.2f} m² (+10 % ≈ {_fmt(vb_m2 * 1.1, 1)} m²). "
-            "Nad CD, pod vlnou; na obou okapech dolů na omítku se smyčkou. "
-            "Spoje JUTAFOL SP AL / SP 1, napojení JUTAFOL MASTIC.",
+            f"Šikminy {face_s:.2f} m² a okapy {vb_eave_m2:.2f} m². "
+            "Fólie leží na půdní straně CD, pod vatou. Na obou okapech ji stáhnout na omítku se smyčkou. "
+            "Spoje páskou JUTAFOL SP AL, na omítku tmel JUTAFOL MASTIC.",
         ),
         Line(
             6,
@@ -1217,7 +1055,7 @@ def build_lines(q) -> dict[str, list[Line]]:
         ),
         Line(
             "6b",
-            "GKF RF 12.5, 2nd layer, right slope",
+            "Sádrokarton RF 12,5, druhá vrstva",
             "GKF/RF",
             _product("Rigips RF 12,5", URL_RF),
             "12,5 mm",
@@ -1226,28 +1064,26 @@ def build_lines(q) -> dict[str, list[Line]]:
             12,
             PRICE["rf_m2"][0],
             PRICE["rf_m2"][1],
-            f"Road-side slope only (2× GKF for road noise). {half_s * (p.sdk_layers_right - 1):.2f} m² "
-            f"→ {_ceil_pack(half_s * (p.sdk_layers_right - 1) * 1.12, 2.5)} boards 1250×2000.",
+            "Jen šikmina ke skříním, druhá deska kvůli hluku ze silnice. Spáry prostřídat.",
         ),
         Line(
             "6c",
-            "Screws TN 35, 2nd GKF layer",
-            "Drywall screw",
+            "Rychlošroub TN 35, druhá vrstva GKF",
+            "Šroub do sádrokartonu",
             _product("DK Mont TN 35", URL_TN35_DEK),
-            "3.5×35",
+            "3,5×35",
             half_s * (p.sdk_layers_right - 1) * _outer_screws_per_m2(p.cd_spacing),
             "ks",
             10,
             PRICE["tn35_ks"][0],
             PRICE["tn35_ks"][1],
-            f"Outer layer @ ≤{OUTER_SCREW_PITCH_MM:.0f} mm on CD @ {p.cd_spacing:.0f} mm "
-            f"= {_outer_screws_per_m2(p.cd_spacing):.0f} pcs/m². "
-            "First layer keeps TN 25 at wider spacing (not priced, as before).",
+            f"Druhá vrstva: po ≤ {OUTER_SCREW_PITCH_MM:.0f} mm na CD á {p.cd_spacing:.0f} mm "
+            f"({_outer_screws_per_m2(p.cd_spacing):.0f} ks/m²). První vrstva je TN 25, v této tabulce bez ceny.",
         ),
         Line(
             "6d",
-            "Joint compound, 1st-layer joints",
-            "Gypsum filler",
+            "Tmel spár první vrstvy GKF",
+            "Sádrový tmel",
             _product("Rigips Vario 25 kg", URL_VARIO),
             "25 kg",
             half_s * (p.sdk_layers_right - 1) * 0.3,
@@ -1255,8 +1091,8 @@ def build_lines(q) -> dict[str, list[Line]]:
             10,
             PRICE["vario_kg"][0],
             PRICE["vario_kg"][1],
-            "Inner-layer joints filled (no tape) at 0.3 kg/m². Outer-layer joints and tape "
-            "as for the single board (not priced, as before).",
+            "Spáry první, zakryté vrstvy GKF vytmelit bez pásky, 0,3 kg/m². "
+            "Lícové spáry sádrokartonu tmelit a bandážovat jako u jedné desky.",
         ),
         Line(
             7,
@@ -1310,121 +1146,64 @@ def build_lines(q) -> dict[str, list[Line]]:
             8,
             nonius_unit,
             nonius_src,
-            f"Šikmina horní díl 540 mm (svěšení {right_hang:.0f} mm; 440 mm nestačí na přesah). "
-            f"Kastlík zůstává 440 mm (svěšení {soffit_drop:.0f} mm). "
-            f"Heavy slope {heavy_kg:.1f} kg/m². Point load ≈ {hanger_point_kg:.0f} kg "
-            f"at {p.cd_spacing:.0f}×{hanger_pitch:.0f} mm, under Nonius 0.40 kN. "
-            f"Hangers stay on the rafters at {hanger_pitch:.0f} mm, the {hanger_limit:.0f} mm limit "
-            f"for CD @ 500. Right grid restarts at the false ridge: 90 mm, then 500 mm.",
-        ),
-        Line(
-            11,
-            "Akustický třmen KB517112",
-            "Třmen + Sylomer",
-            _product("Rigips KB517112 — zrušeno", URL_TRMEN),
-            "—",
-            0,
-            "ks",
-            8,
-            PRICE["trmen_ks"][0],
-            PRICE["trmen_ks"][1],
-            "Štíty.",
+            f"Šikmina ke skříním: horní díl 540 mm (svěšení {right_hang:.0f} mm). "
+            f"Podhled: horní díl 440 mm (svěšení {soffit_drop:.0f} mm). "
+            f"Závěsy kotvit do krokví po {hanger_pitch:.0f} mm.",
         ),
         Line(
             12,
-            "Wool between rafters, left",
-            "Glass wool, λ 0.038",
-            _product("Isover Domo Plus 038, 160 mm", URL_DOMO_160),
-            f"160 mm · role {DOMO_PACK_M2[160]:.2f} m²",
-            between_half,
+            "Minerální vata 160 mm, šikminy",
+            "Minerální vata, λ 0,039",
+            _product("Knauf NatuRoll Pro 039, 160 mm", URL_NATUROLL039_160),
+            "160 mm",
+            domo160_m2,
             "m²",
             WOOL_WASTE_PCT,
-            _domo_kc_m2(160),
-            _domo_src(160),
-            f"Left slope {between_half:.2f} m² → {_ceil_pack(between_half * 1.05, DOMO_PACK_M2[160])} rolls.",
+            _wool039_kc_m2(160),
+            _wool039_src(160),
+            f"Mezi krokvemi obě šikminy a pod nimi: jedna vrstva u oken, dvě vrstvy u skříní. "
+            f"Celkem {domo160_m2:.2f} m².",
         ),
         Line(
             "12b",
-            "Wool below rafters, left",
-            "Glass wool, λ 0.038",
-            _product("Isover Domo Plus 038, 160 mm", URL_DOMO_160),
-            "160 mm",
-            half_s,
-            "m²",
-            WOOL_WASTE_PCT,
-            _domo_kc_m2(160),
-            _domo_src(160),
-            f"Cavity {g.wool_left:.1f} mm, one layer.",
-        ),
-        Line(
-            "12c",
-            "Wool between rafters, right",
-            "Glass wool, λ 0.038",
-            _product("Isover Domo Plus 038, 160 mm", URL_DOMO_160),
-            f"160 mm · role {DOMO_PACK_M2[160]:.2f} m²",
-            between_half,
-            "m²",
-            WOOL_WASTE_PCT,
-            _domo_kc_m2(160),
-            _domo_src(160),
-            f"Right slope {between_half:.2f} m² → {_ceil_pack(between_half * 1.05, DOMO_PACK_M2[160])} rolls.",
-        ),
-        Line(
-            "12d",
-            "Wool below rafters, right — 160 mm",
-            "Glass wool, λ 0.038",
-            _product("Isover Domo Plus 038, 160 mm", URL_DOMO_160),
-            "2 × 160 mm",
-            2 * half_s,
-            "m²",
-            WOOL_WASTE_PCT,
-            _domo_kc_m2(160),
-            _domo_src(160),
-            f"Two layers, {2 * half_s:.2f} m².",
-        ),
-        Line(
-            "12e",
-            "Wool below rafters, right — 120 mm",
-            "Glass wool, λ 0.038",
-            _product("Isover Domo Plus 038, 120 mm", URL_DOMO_160),
+            "Minerální vata 120 mm, šikmina u skříní",
+            "Minerální vata, λ 0,039",
+            _product("Knauf NatuRoll Pro 039, 120 mm", URL_NATUROLL039_160),
             "120 mm",
             half_s,
             "m²",
             WOOL_WASTE_PCT,
-            _domo_kc_m2(120),
-            _domo_src(120),
-            f"160+160+120 = 440 mm in a {g.wool_right:.1f} mm cavity "
-            f"({440.0 - g.wool_right:.1f} mm loft).",
+            _wool039_kc_m2(120),
+            _wool039_src(120),
+            f"Třetí vrstva pod šikminou u skříní. Skladba 160+160+120 mm do dutiny {g.wool_right:.0f} mm.",
         ),
         Line(
-            "13b",
-            "Plovoucí spoj šikmina / víko",
-            "neřešeno",
-            "zatím bez úhelníku a bez UD",
-            "otevřený detail",
+            13,
+            "Spoj šikminy a víka podhledu",
+            "Otevřený spoj",
+            "Bez úhelníku a bez UD",
+            "délka spoje",
             joint_m,
             "bm",
-            10,
+            None,
             None,
             "—",
-            "Spoj šikmé GKF a víka je záměrně neuzavřený. Žádný úhelník, žádné UD. "
-            "Dokončení spáry se doplní později.",
+            "Šikmou desku a víko podhledu nespojovat úhelníkem ani UD. Spáru nechat otevřenou.",
             True,
         ),
         Line(
             14,
-            "Minerální vlna kastlík + štíty",
-            "zatím neurčeno",
-            "zatím neurčeno",
-            f"kastlík dle modelu · štíty {p.bass_k_wool:g}/{p.bass_l_wool:g} mm",
+            "Minerální vata podhled a štíty",
+            "Minerální vata, λ 0,039",
+            _product("Knauf NatuRoll Pro 039", URL_NATUROLL039_160),
+            f"podhled dle dutiny · štíty {p.bass_k_wool:g} a {p.bass_l_wool:g} mm",
             other_wool,
             "m³",
             10,
-            None,
-            wool_tl,
-            f"Kastlík {q['soffit_wool_m3']:.2f} + štíty {q['bass_wool_m3']:.2f} m³. "
-            "Tloušťky beze změny, stejný výrobek.",
-            True,
+            naturoll_m3,
+            naturoll_src,
+            f"Podhled {q['soffit_wool_m3']:.2f} m³, skončit před potrubím. "
+            f"Štíty {q['bass_wool_m3']:.2f} m³. Cena je přepočet z role 160 mm.",
         ),
         Line(
             15,
@@ -1437,7 +1216,7 @@ def build_lines(q) -> dict[str, list[Line]]:
             10,
             PRICE["cd_bm"][0],
             PRICE["cd_bm"][1],
-            "U obvodové zdi kastlíku. Cena orientačně jako R-CD — UD ověřit nabídkou.",
+            "Obvod podhledu u zdi. V tabulce je cena R-CD. Cenu UD sdělí dodavatel.",
             True,
         ),
         Line(
@@ -1451,126 +1230,156 @@ def build_lines(q) -> dict[str, list[Line]]:
             10,
             PRICE["cd_bm"][0],
             PRICE["cd_bm"][1],
-            "Konec GKF a CD levé šikminy. UD je přikotvené do omítky po ≤ 625 mm, "
-            "CD v něm sedí, hrana GKF se do něj šroubuje. Žádný závěs skrz pozednici. "
-            "Cena orientačně jako R-CD — UD ověřit nabídkou.",
+            "Konec šikminy u okna. UD kotvit do omítky po 625 mm. CD v něm sedí, hranu GKF do něj šroubovat. "
+            "Závěs skrz pozednici nedělat. V tabulce je cena R-CD. Cenu UD sdělí dodavatel.",
             True,
         ),
         Line(
             "15c",
-            "Napojení parozábrany na omítku",
-            "Lepicí páska / tmel",
-            "JUTAFOL MASTIC + páska (typ Contega / Orcon)",
+            "Páska spojů parozábrany",
+            "Hliníková lepicí páska",
+            "JUTAFOL SP AL",
+            "spoje rolí a okapy",
+            vb_tape_m,
+            "bm",
+            10,
+            None,
+            "—",
+            "Spoje rolí Jutafol N AL 170 a přelepení okapů. Délka v tabulce je napojení na obou okapech; "
+            "spoje rolí přidat podle kladečského plánu. Cenu sdělí dodavatel Juty.",
+            True,
+        ),
+        Line(
+            "15d",
+            "Tmel parozábrany na omítku",
+            "Tmel na omítku",
+            "JUTAFOL MASTIC",
             "oba okapy",
             vb_tape_m,
             "bm",
             10,
             None,
             "—",
-            "Vlevo: fólie dolů přes pozednici, volná smyčka, nalepit a přelepit na omítku zdi. "
-            "Vpravo: přes víko kastlíku dolů, smyčka, na omítku skříní. "
-            "Lepená plocha vlevo je krátká (~27 mm) — použít lepidlo pro omítky.",
+            "U okna stáhnout fólii na omítku se smyčkou a přilepit. U skříní stejně, přes víko podhledu. "
+            "Cenu sdělí dodavatel Juty.",
             True,
         ),
         Line(
-            "15d",
-            "Akryl v koutě (plánovaná spára)",
+            "15e",
+            "Akryl v koutě u okna",
             "Akrylový tmel",
-            "Akryl přetíratelný",
-            "levý kout stěna/šikmina",
+            "Přetíratelný akryl",
+            "kout omítka / šikmina",
             eave_m,
             "bm",
             10,
             None,
             "—",
-            "Kout zeď / GKF levé šikminy je plánovaný řez, uzavřený akrylem.",
+            "Kout omítky a GKF u okna uzavřít přetíratelným akrylem. Konkrétní výrobek zvolí štukatér.",
             True,
         ),
         Line(
-            16,
-            "Zavětrovací pásky 40×2",
-            "Ocelová páska",
-            "Výrobek dosud nezvolen",
-            "40×2",
-            q["strap_lm"],
+            "15f",
+            "Tmel spár NaturHeld",
+            "StoSilent Filler",
+            "StoSilent Filler",
+            "spáry desek před omítkou",
+            face_s + face_k,
+            "m²",
+            10,
+            None,
+            "—",
+            "Vyplnit spáry desek NaturHeld před StoSilent Top Basic. Množství je plocha desek. "
+            "Spotřebu v kg a cenu sdělí Sto.",
+            True,
+        ),
+        Line(
+            "15g",
+            "Páska koutů StoSilent",
+            "Dělící páska",
+            "Sto-Stuckband",
+            "hřeben, štíty, podhled",
+            (p.room_length + 2.0 * p.room_width / g.cos + (g.y_furn1 - g.y_furn0)) / 1000.0,
             "bm",
             10,
-            PRICE["strap_bm"][0],
-            PRICE["strap_bm"][1],
-            "Nedořešeno: přesný typ.",
+            None,
+            "—",
+            "Dělící spára v koutech omítky: hřeben, štít a napojení na podhled. "
+            "Postup je na listu Meta. U štítu lze místo pásky stínový profil StoSilent AP 210. "
+            "Volbu a cenu potvrdí štukatér se Sto.",
             True,
         ),
         Line(
-            17,
-            "Spirála Ø160",
-            "VZT potrubí",
-            "Výrobce VZT dosud nezvolen",
-            "Ø160",
-            q["duct_lm"],
+            "15h",
+            "Akustický tmel obvodu",
+            "Tmel na sádrokarton",
+            "Knauf Trennwandkitt",
+            "pod UW a prostupy",
+            q["bass_uw_lm"],
             "bm",
-            8,
-            PRICE["duct_bm"][0],
-            PRICE["duct_bm"][1],
-            "3 trasy v kastlíku.",
+            10,
+            None,
+            "—",
+            "Housenka pod UW štítových předstěn a kolem prostupů. Délka je délka UW. "
+            "Počet kartuší podle spotřeby na obalu. Cenu sdělí Knauf.",
+            True,
+        ),
+        Line(
+            "15i",
+            "Latě pod svítidla",
+            "Dřevěná lať",
+            "Lať 30×50 mm",
+            "30×50 mm",
+            10,
+            "ks",
+            None,
+            None,
+            "—",
+            "Deset latí, jedna na každé místo světel. Šroubovat napříč přes dva sousední CD, pod parozábranu. "
+            "Do modelu se nekreslí.",
             True,
         ),
         Line(
             18,
-            "Dropy kastlíku",
+            "Krátké závěsy podhledu",
             "Krátký závěs",
-            "Dosud nezvolen",
-            "20×2",
+            "Pásek nebo katalogový závěs 20×2 mm",
+            "20×2 mm",
             q["n_drops"],
             "ks",
             10,
             PRICE["drop_ks"][0],
             PRICE["drop_ks"][1],
-            "Kastlík.",
+            "Spoj vodorovného a svislého CD v podhledu. Katalogový kus zvolí montážník SDK.",
             True,
         ),
         Line(
             19,
-            "Úhelníky kastlíku (spoj + cleat)",
+            "Úhelníky podhledu",
             "L-profil",
-            "Dosud nezvolen",
-            "—",
+            "Tenký úhelník",
+            "spoj a hrana víka",
             q["joint_angle_lm"] + q["cleat_lm"],
             "bm",
             10,
             PRICE["angle_bm"][0],
             PRICE["angle_bm"][1],
-            "Spoj + cleat na pozednici.",
+            "Skrytý spoj a přichycení hrany víka k pozednici. Přesný profil zvolí montážník SDK. "
+            "Podhled na pozednici nevisí.",
             True,
         ),
         Line(
             20,
-            "Nástěnné úhelníky kastlíku",
+            "Nástěnné úhelníky podhledu",
             "Úhelník",
-            "Dosud nezvolen",
-            "—",
+            "Nástěnný úhelník",
+            "vzpěra u zdi",
             q["n_wall_brackets"],
             "ks",
             10,
             PRICE["bracket_ks"][0],
             PRICE["bracket_ks"][1],
-            "Vzpěra u zdi.",
-            True,
-        ),
-        Line(
-            21,
-            "Táhlo ø14 z pozednice",
-            "Ocelová tyč",
-            "Výrobek dosud nezvolen",
-            f"ø{p.tie_d:.0f} × {q['tie_each_mm']:.0f} mm",
-            q["n_ties"],
-            "ks",
-            None,
-            None,
-            "—",
-            f"6 tyčí, {q['tie_lm']:.2f} bm. Osa Z {q['tie_z']:.0f} (horní část pozednice; "
-            f"střed desky 3250 vede skrz spiro). Každé druhé pole, "
-            f"{p.tie_face_clear:.0f} mm od bližšího líce krokve. "
-            "Bodovky (5 dvojic na šikminu) nejsou položka této skladby. Cena na poptávku.",
+            "Vzpěra roštu do obvodové zdi. Není to závěs podhledu.",
             True,
         ),
     ]
@@ -1725,9 +1534,9 @@ def write_meta(wb, q, index: int):
         ("Plocha jednoho štítu", f"{q['trap_face']:.2f} m²"),
         ("Místnost", f"{p.room_width:.0f} × {p.room_length:.0f} mm, sklon {p.roof_angle_deg:.0f}°"),
         (
-            "iOS / Numbers",
-            "Otevři docs/skladba.html na Pages preview — tlačítka stáhnou .xlsx / .csv. "
-            "Chat nepřiloží xlsx (jen obrázky/video).",
+            "Rozsah",
+            "Jen práce na šikminách, podhledu a štítech: desky, vata, profily, závěsy, "
+            "sádrokarton, omítka StoSilent, parozábrana. Krov, pozednice, krytina a táhla v tabulce nejsou.",
         ),
     ]
     for i, (a, b) in enumerate(rows, 2):

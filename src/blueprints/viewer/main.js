@@ -1874,6 +1874,44 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   /**
    * Zero the sheet's view offset so the plate is the full orthographic frame.
    */
+  /**
+   * Grow the ortho frame (or dolly a perspective camera) so callout glyphs
+   * that hang off the plate move back inside. Capped so the model stays
+   * readable. Offsets are in NDC, so this only recovers a modest overflow.
+   */
+  function fitLabelsOnPlate() {
+    const pad = 0.04;
+    let grown = 1;
+    const maxGrow = 1.35;
+    for (let step = 0; step < 6; step += 1) {
+      annotations.update();
+      const bounds = annotations.glyphBoundsNdc();
+      if (!bounds) return;
+      const over = Math.max(
+        -1 + pad - bounds.minX,
+        bounds.maxX - (1 - pad),
+        -1 + pad - bounds.minY,
+        bounds.maxY - (1 - pad),
+        0,
+      );
+      if (over < 0.012) return;
+      if (grown >= maxGrow - 0.01) return;
+      const factor = Math.min(maxGrow / grown, Math.max(1.05, 1 + over * 1.6));
+      grown *= factor;
+      if (camera.isOrthographicCamera) {
+        orthoCamera.left *= factor;
+        orthoCamera.right *= factor;
+        orthoCamera.top *= factor;
+        orthoCamera.bottom *= factor;
+        orthoCamera.updateProjectionMatrix();
+      } else {
+        _look.copy(camera.position).sub(controls.target).multiplyScalar(factor);
+        camera.position.copy(controls.target).add(_look);
+        updateCameraClipPlanes();
+      }
+    }
+  }
+
   function lockPlateFrame() {
     frameAnim = 0;
     frameZoom = 1;
@@ -1918,6 +1956,11 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       annotations.setInk("plate");
       applyScene(spec);
       lockPlateFrame();
+      // Czech notes are wider than the English ones the frames were built
+      // for. Zoom the plate out until the glyphs sit inside the sheet.
+      // A line that is still wider than the sheet has to be broken in the
+      // scene text; zooming alone cannot shrink the plate font.
+      fitLabelsOnPlate();
       annotations.update();
       depthPeel.render(scene, camera, root, anyPartFaded, { quality: "high" });
       const { png, pdf } = await plateFromCanvas(canvas);

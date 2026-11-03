@@ -17,11 +17,14 @@ SCRIPT = ROOT / "scripts" / "export_obyvak_skladba.py"
 UNPRICED_SOUHRN = {
     "StoSilent Top Finish",
     "StoSilent Top Basic",
-    "Plovoucí spoj šikmina / víko",
-    "Minerální vlna kastlík + štíty",
-    "Napojení parozábrany na omítku",
-    "Akryl v koutě (plánovaná spára)",
-    "Táhlo ø14 z pozednice",
+    "Spoj šikminy a víka podhledu",
+    "Páska spojů parozábrany",
+    "Tmel parozábrany na omítku",
+    "Akryl v koutě u okna",
+    "Tmel spár NaturHeld",
+    "Páska koutů StoSilent",
+    "Akustický tmel obvodu",
+    "Latě pod svítidla",
 }
 
 
@@ -49,7 +52,7 @@ def test_naturheld_thicknesses_from_the_model_are_priced(bom):
     seen = []
     for name in ("Šikminy", "Kastlík", "Souhrn materiálu"):
         for line in groups[name]:
-            if "NaturHeld" not in line.layer and "NaturHeld" not in line.product:
+            if "Dřevovláknitá" not in line.product_type:
                 continue
             thickness = int(line.dimension.split()[0])
             assert line.unit_price == priced[thickness]
@@ -63,24 +66,28 @@ def test_naturheld_thicknesses_from_the_model_are_priced(bom):
     souhrn = [row for row in seen if row[0] == "Souhrn materiálu"]
     hundreds = [row for row in souhrn if row[1] == 100]
     forties = [row for row in souhrn if row[1] == 40]
-    assert len(hundreds) == 2
+    assert len(hundreds) == 1
     assert len(forties) == 1
-    # Both slopes are 100 mm now; each is still half the slope area.
-    assert all(row[2] == pytest.approx(35.5, abs=0.05) for row in hundreds)
+    # Both slopes are the same 100 mm board, so one line covers the whole face.
+    assert hundreds[0][2] == pytest.approx(71.0, abs=0.1)
     assert forties[0][2] == pytest.approx(8.55, abs=0.05)
 
 
 def test_souhrn_total_includes_naturheld_and_lists_other_gaps(bom):
     _module, groups = bom
     lines = groups["Souhrn materiálu"]
-    slopes = [ln for ln in lines if ln.order in (3, "3b")]
-    assert len(slopes) == 2
-    assert all(ln.line_total is not None and ln.line_total > 0 for ln in slopes)
+    slopes = [ln for ln in lines if ln.order == 3]
+    assert len(slopes) == 1
+    assert slopes[0].line_total is not None and slopes[0].line_total > 0
+    names = {ln.layer for ln in lines}
+    assert "Táhlo ø14 z pozednice" not in names
+    assert "Krov (nosná konstrukce)" not in names
+    assert "Zavětrovací pásky 40×2" not in names
+    assert "Spirála Ø160" not in names
+    assert any("NatuRoll" in ln.product for ln in lines)
+    assert any(ln.layer == "Latě pod svítidla" and ln.qty_net == 10 for ln in lines)
     priced = sum(ln.line_total for ln in lines if ln.line_total is not None)
-    # Both slope boards are 100 mm at 664 Kč/m². Wool is Domo Plus now, so the
-    # non-board subtotal is no longer the 102 159 Kč from the 60/100 build.
-    assert round(priced) > round(sum(ln.line_total for ln in slopes))
-    assert round(priced) == 133_755
+    assert round(priced) > round(slopes[0].line_total)
     missing = {ln.layer for ln in lines if ln.unit_price is None and ln.qty_net}
     assert missing == UNPRICED_SOUHRN
 

@@ -721,6 +721,38 @@ export function createAnnotations(opts) {
       rebuild();
       update();
     },
+    /**
+     * NDC rectangle of callout and dimension glyphs (not the pinned title
+     * or scale). Half-extents are the plate font, which does not shrink
+     * when the camera zooms out.
+     * @returns {{ minX: number, maxX: number, minY: number, maxY: number } | null}
+     */
+    glyphBoundsNdc() {
+      const canvas = getCanvas();
+      const w = Math.max(1, canvas.clientWidth);
+      const h = Math.max(1, canvas.clientHeight);
+      let minX = Infinity;
+      let maxX = -Infinity;
+      let minY = Infinity;
+      let maxY = -Infinity;
+      let any = false;
+      for (const item of items) {
+        const sprite = item.sprite;
+        if (!sprite || sprite === titleSprite || sprite === scaleSprite) continue;
+        if (item.kind !== "callout" && item.kind !== "dim" && item.kind !== "line") {
+          continue;
+        }
+        const ndc = projectNdc(sprite.position);
+        const hx = (sprite.userData.cssWidth || 0) / w;
+        const hy = (sprite.userData.cssHeight || 0) / h;
+        minX = Math.min(minX, ndc.x - hx);
+        maxX = Math.max(maxX, ndc.x + hx);
+        minY = Math.min(minY, ndc.y - hy);
+        maxY = Math.max(maxY, ndc.y + hy);
+        any = true;
+      }
+      return any ? { minX, maxX, minY, maxY } : null;
+    },
     update,
     clear() {
       spec = null;

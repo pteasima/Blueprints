@@ -31,7 +31,7 @@ World:
   Jutafol N AL 170 Speciál vapour barrier (~1)               → `slope_foil`
   přímý závěs 200 on the window slope (void 140)            → `slope_direct_hanger`
   Nonius horní 440 on the cabinet slope (gap ~429)          → `slope_nonius`
-  Knauf Unifit 035: void below krokve + bays between them  → `plenum_wool`
+  Minerální vata λ 0,039: void below krokve + bays between them  → `plenum_wool`
   krokve 100/160 @ ~875                                     → `rafters`
   6× táhlo ø14 mezi pozednicemi, každé druhé pole,
   270 mm od bližšího líce krokve                            → `tie_rod`
@@ -1314,7 +1314,7 @@ class ObyvakLayout:
         ]
 
     def vata_pts(self) -> list[tuple[float, float]]:
-        """Wool below the rafters (one 038 product, both slopes).
+        """Wool below the rafters (mineral wool λ 0.039, both slopes).
 
         The bottom is the attic face of the vapour brake. On the left the
         brake ends on the wall, and the wool fills the pocket above it up to
