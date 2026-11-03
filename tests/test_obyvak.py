@@ -1378,26 +1378,33 @@ def test_3d_matches_section_and_elevation_masses():
         wall = _stack(y_ref, z_in)
         assert {LABEL_PLASTER, LABEL_MASONRY, LABEL_EPS} <= set(wall)
         assert set(_stack(y_mid, z_in)) == set(wall), (y0, set(_stack(y_mid, z_in)), set(wall))
+        def _owner(label: str, xyz: tuple[float, float, float]):
+            from build123d import Box, Location
+
+            found = []
+            for part in _labeled(shape, label):
+                hit = part.intersect(Location(xyz) * Box(6, 6, 6))
+                if hit is None:
+                    continue
+                solids = list(hit.solids()) if hasattr(hit, "solids") else [hit]
+                if sum(float(s.volume) for s in solids if s is not None) > 1.0:
+                    found.append(part)
+            return found
+
         for label, x in wall.items():
             assert _probe(label, (x, y_mid, z_in)) > 50.0, (label, y0)
             assert _probe(label, (x, y_mid, glass_top - 5.0)) < 1.0, (label, y0)
             assert _probe(label, (x, y_mid, beam_z - FACE_GAP - 5.0)) > 50.0, (label, y0)
-        lintel_bottom = [
-            part.bounding_box().min.Z
-            for part in _labeled(shape, LABEL_MASONRY)
-            if part.bounding_box().min.Y <= y_mid <= part.bounding_box().max.Y
-            and part.bounding_box().max.X < 0.0
-            and part.bounding_box().min.Z < g.column_top_z - 1.0
-            and part.bounding_box().max.Z > p.window_h
-        ]
-        assert lintel_bottom, (y0, width)
-        assert min(lintel_bottom) - glass_top <= 1.0
-        assert beam_z - max(
-            part.bounding_box().max.Z
-            for part in _labeled(shape, LABEL_MASONRY)
-            if part.bounding_box().min.Y <= y_mid <= part.bounding_box().max.Y
-            and abs(part.bounding_box().min.Z - p.window_h) <= 1.0
-        ) <= 1.0
+            over = _owner(label, (x, y_mid, z_in))
+            side = _owner(label, (x, y_ref, z_in))
+            assert len(over) == 1 and len(side) == 1, (label, y0)
+            assert over[0] is side[0], (label, y0)
+    # No added lintel: nothing masonry sits only over a window bay.
+    for part in _labeled(shape, LABEL_MASONRY):
+        bb = part.bounding_box()
+        if bb.max.X >= 0.0 or bb.min.Z <= p.window_h - FACE_GAP:
+            continue
+        assert not (bb.min.Z < g.column_top_z - 1.0 and bb.size.Y < p.room_length * 0.5), bb.size
     gable_walls = [
         c
         for c in _labeled(shape, LABEL_MASONRY)
