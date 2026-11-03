@@ -1342,13 +1342,13 @@ def test_3d_matches_section_and_elevation_masses():
         assert abs(bb.min.Y - (y0 + FACE_GAP)) < 1e-6
         assert abs(bb.size.Y - (width - 2 * FACE_GAP)) < 1e-6
         assert abs(bb.max.Z - (p.window_h - FACE_GAP)) <= 1.0
-        # Masonry from the glass head to the ring beam. Mate gaps are 1 mm.
+        # Every layer of the solid eave wall, brought down to the glass head.
         y_mid = y0 + width * 0.5
         glass_top = p.window_h - FACE_GAP
         beam_z = g.column_top_z + FACE_GAP
-        x_mas = g.xl_mas + 0.5 * (p.wall_mason - FACE_GAP)
-        x_eps = g.xl_eps + 0.5 * (p.wall_eps - FACE_GAP)
-        x_pls = -0.5 * p.wall_plaster
+        z_in = glass_top + FACE_GAP + 5.0
+        # Solid eave wall, past the living trap (450) and short of the first opening.
+        y_ref = min(w[0] for w in p.eave_windows) - 20.0
 
         def _probe(label: str, xyz: tuple[float, float, float]) -> float:
             from build123d import Box, Location
@@ -1362,12 +1362,26 @@ def test_3d_matches_section_and_elevation_masses():
                 total += sum(float(s.volume) for s in solids if s is not None)
             return total
 
-        assert _probe(LABEL_MASONRY, (x_mas, y_mid, glass_top + FACE_GAP + 5.0)) > 50.0
-        assert _probe(LABEL_MASONRY, (x_mas, y_mid, beam_z - FACE_GAP - 5.0)) > 50.0
-        assert _probe(LABEL_MASONRY, (x_mas, y_mid, glass_top - 5.0)) < 1.0
-        # Skins are open over the lintel, so the masonry is the elevation face.
-        assert _probe(LABEL_EPS, (x_eps, y_mid, glass_top + 40.0)) < 1.0
-        assert _probe(LABEL_PLASTER, (x_pls, y_mid, glass_top + 40.0)) < 1.0
+        def _stack(y: float, z: float) -> dict[str, float]:
+            found: dict[str, float] = {}
+            for part in shape.children:
+                bb = part.bounding_box()
+                if bb.max.Y < y or bb.min.Y > y or bb.max.Z < z or bb.min.Z > z:
+                    continue
+                if bb.max.X < g.xl_eps - 2.0 or bb.min.X > 2.0:
+                    continue
+                x = 0.5 * (max(bb.min.X, g.xl_eps) + min(bb.max.X, 0.0))
+                if _probe(part.label, (x, y, z)) > 1.0:
+                    found[part.label] = x
+            return found
+
+        wall = _stack(y_ref, z_in)
+        assert {LABEL_PLASTER, LABEL_MASONRY, LABEL_EPS} <= set(wall)
+        assert set(_stack(y_mid, z_in)) == set(wall), (y0, set(_stack(y_mid, z_in)), set(wall))
+        for label, x in wall.items():
+            assert _probe(label, (x, y_mid, z_in)) > 50.0, (label, y0)
+            assert _probe(label, (x, y_mid, glass_top - 5.0)) < 1.0, (label, y0)
+            assert _probe(label, (x, y_mid, beam_z - FACE_GAP - 5.0)) > 50.0, (label, y0)
         lintel_bottom = [
             part.bounding_box().min.Z
             for part in _labeled(shape, LABEL_MASONRY)

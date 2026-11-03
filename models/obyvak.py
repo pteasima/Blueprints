@@ -35,9 +35,10 @@ Physical assembly rules (also keep the web viewer free of z-fighting):
   and are not hung from this box. Nothing heavy is fixed to the frame, so
   there are no timber packers. Furniture and pozednice do not carry the box —
   the plate only cleats the board edge.
-- Terrace eave (X=0): glass stops at the 2500 mm opening head. The masonry
-  lintel sits on that head and runs up to the ring beam, and is the face of
-  that band: EPS and plaster are cut back to the beam so they do not hide it.
+- Terrace eave (X=0): glass stops at the 2500 mm opening head. Above that
+  head the wall is the same stack as the rest of the eave — interior plaster,
+  masonry, EPS — each brought down to the head (1 mm off the glass). The
+  masonry course is the lintel up to the ring beam.
   100×100 columns in
   front of the glass at the pier centres stop one brick course below the beam.
   Cabinet eave keeps a continuous wall with 300×300 columns standing in front
@@ -381,22 +382,12 @@ def _eave_window_boxes(
 
 
 def _eave_window_cutters(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
-    """Masonry opening, stopped at the window head.
+    """Opening through every eave layer, stopped at the window head.
 
-    The glass fills this void. The lintel above it is masonry, so this cut
-    does not continue up to the ring beam.
+    Interior plaster, masonry and EPS all end on that head. The lintel is
+    the masonry course above it, still inside the same plaster and EPS.
     """
     return _eave_window_boxes(p, g, gap, p.window_h, "_window_cut")
-
-
-def _eave_window_skin_cutters(p: ObyvakParams, g: ObyvakLayout, gap: float) -> list:
-    """EPS and plaster stay open over the lintel, up to the ring beam.
-
-    The lintel is the face of that band. If the skins closed over it, the
-    elevation would show insulation sitting on the glass and the masonry
-    would be hidden inside the wall.
-    """
-    return _eave_window_boxes(p, g, gap, g.column_top_z, "_window_skin_cut")
 
 
 def _cut_wall_openings(parts: list, cutters: list, labels: set | None = None) -> list:
@@ -925,10 +916,10 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
     structure.append(
         _box(g.xl_mas, y0, z_col + gap, p.wall_mason - gap, ey, p.venec_h - gap, LABEL_MASONRY)
     )
-    # Lintel over each window: from the opening head up to the ring beam.
-    # The beam stays the top course. Without this band the beam floats.
-    # 1 mm above the glass (glass stops at window_h - gap). Top meets the
-    # ring beam, which starts at column_top + gap.
+    # Lintel: the same masonry course as the piers, from the opening head up
+    # to the ring beam. 1 mm above the glass (glass stops at window_h - gap).
+    # The beam starts at column_top + gap. Plaster and EPS are the same
+    # solids as the rest of the wall; the opening cut stops on this head.
     lintel_h = z_col - p.window_h
     for y_win, width in p.eave_windows:
         if lintel_h <= gap or width <= 2 * gap:
@@ -1035,17 +1026,10 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         )
 
     door_cutters = _pocket_door_cutters(p, g, gap)
-    # Masonry stops at the glass head; the lintel boxes fill up to the beam.
-    # EPS and plaster stay open over that band so the lintel is the elevation.
+    # Every terrace layer stops at the glass head. The lintel boxes, which
+    # start on that head, stay inside the plaster and the EPS.
     structure = _cut_wall_openings(structure, door_cutters)
-    structure = _cut_wall_openings(
-        structure, _eave_window_cutters(p, g, gap), labels={LABEL_MASONRY}
-    )
-    structure = _cut_wall_openings(
-        structure,
-        _eave_window_skin_cutters(p, g, gap),
-        labels={LABEL_EPS, LABEL_PLASTER, LABEL_WALL_GKF},
-    )
+    structure = _cut_wall_openings(structure, _eave_window_cutters(p, g, gap))
 
     # Rafter seat: pozednice (+ minor masonry/column/plaster contact). EPS is cut
     # around the finished rafters — real build order.
