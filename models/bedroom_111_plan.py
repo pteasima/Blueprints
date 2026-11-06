@@ -13,7 +13,8 @@ from pathlib import Path
 from yaml_ifc import footprints
 from yaml_ifc.yamlio import load as load_yaml
 
-from bedroom_111 import SOURCE_PATH, WALLS_PATH, device_records, room_faces
+from bedroom_111 import SOURCE_PATH, WALLS_PATH, device_records
+from bedroom_111_geometry import FRAME_PITCH_MM, bounds, opening, polygon
 
 
 PLAN_SVG = (
@@ -26,16 +27,9 @@ PLAN_HTML = Path(__file__).resolve().parents[1] / "docs" / "electrical" / "1.11.
 # The next plate in a stack is one 80 mm module above that centre.
 SOCKET_CENTRE_MM = 300
 SWITCH_CENTRE_MM = 1350
-MODULE_MM = 80
-ETHERNET_CENTRE_MM = SOCKET_CENTRE_MM + MODULE_MM
 FROM_DOOR_MM = 150
 FROM_INNER_CORNER_MM = 300
 FROM_OUTER_CORNER_OUTDOORS_MM = 300
-
-# Door leaf traced on the floor-plan screenshot (py 386, px 129–178),
-# registered to the inner west face. The wall model has no opening here.
-DOOR_X0 = 0.676
-DOOR_X1 = 1.680
 
 _FILL = {
     "light": "#e6b20a",
@@ -47,8 +41,8 @@ _FILL = {
     "strip": "#e07a28",
 }
 _PARKED_FILL = "#b9b3a8"
-# Plan view, metres: west exterior, south exterior, east of the bay, north of W-018.
-_VIEW = (-1.4, 2.15, 5.4, 10.55)
+# Plan view, metres: west exterior, south exterior, the corridor, north of W-018.
+_VIEW = (-1.6, 2.15, 7.6, 10.8)
 
 
 @dataclass(frozen=True)
@@ -68,27 +62,8 @@ class Mark:
 
 
 def envelope() -> dict[str, float]:
-    """Floor-plan room faces, plus the smaller bay the wall model actually closes.
-
-    The model stops the east partition on the line of W-013. The floor plan
-    keeps the room going north through the narrow west window to W-018.
-    """
-    faces = room_faces()
-    doc = load_yaml(WALLS_PATH)
-    walls = {wall["id"]: wall for wall in doc["walls"]}
-    west = walls["W-030"]
-    south = walls["W-002"]
-    north = walls["W-018"]
-    return {
-        "west": faces["west"],
-        "east": faces["east"],
-        "south": faces["south"],
-        "model_north": faces["north"],
-        "north": float(north["Axis"]["Start"][1]) - float(north["Thickness"]) / 2.0,
-        "west_out": float(west["Axis"]["Start"][0]) - float(west["Thickness"]) / 2.0,
-        "south_out": float(south["Axis"]["Start"][1]) - float(south["Thickness"]) / 2.0,
-        "north_out": float(north["Axis"]["Start"][1]) + float(north["Thickness"]) / 2.0,
-    }
+    """Clear faces of the L, from the wall model. See bedroom_111_geometry."""
+    return bounds()
 
 
 def _opening_span(opening_id: str) -> tuple[float, float]:
@@ -104,50 +79,58 @@ def _opening_span(opening_id: str) -> tuple[float, float]:
 
 
 def marks() -> list[Mark]:
-    """Plan positions. Centres follow the house rules; the along-wall place is from a corner or the door."""
+    """Plan positions on the L. Centres follow the house rules and the 71 mm frame pitch."""
     box = envelope()
     west_in, east_in = box["west"], box["east"]
     south_in, north_in = box["south"], box["north"]
     west_out, south_out = box["west_out"], box["south_out"]
-    north_out = box["north_out"]
-    south_win0, _south_win1 = _opening_span("OP05")
-    _wide0, wide1 = _opening_span("OP01")
-    _narrow0, narrow1 = _opening_span("OP02")
+    door = opening("OP09")
+    pocket = opening("OP03")
+    wide = opening("OP01")
+    narrow = opening("OP02")
+    south_win = opening("OP05")
     outside = 0.06
-    door_switch_x = DOOR_X1 + FROM_DOOR_MM / 1000.0
+    # Latch is the north jamb. The only pier is north of it, 250 mm, so 150 mm fits.
+    switch_y = door.y1 + FROM_DOOR_MM / 1000.0
+    socket_x = west_in + FROM_INNER_CORNER_MM / 1000.0
+    button_x = pocket.x0 - FROM_DOOR_MM / 1000.0
     east_south_y = south_in + FROM_INNER_CORNER_MM / 1000.0
-    east_north_y = north_in - FROM_INNER_CORNER_MM / 1000.0
+    east_upper_y = box["entry_south"] - FROM_INNER_CORNER_MM / 1000.0
     outdoor_y = south_out + FROM_OUTER_CORNER_OUTDOORS_MM / 1000.0
     bed_x0, bed_y0, bed_x1, bed_y1 = bed_outline()
+    ethernet = f"{300 + 2 * FRAME_PITCH_MM}"
+    second = f"{300 + FRAME_PITCH_MM}"
+    above = f"1350+{FRAME_PITCH_MM}"
     rows = [
         Mark("C12-S", "1.11-L2", "light", (bed_x0 + bed_x1) / 2.0, (bed_y0 + bed_y1) / 2.0, "ceiling", "", "ceiling", "Pendant above the bed. Cable 12."),
         Mark("C3-S", "1.11-L4", "strip", bed_x0, bed_y0, "bed", "", "bed-edge", "LED strip under the bed, all around the unfinished outline. Cable 3."),
-        Mark("C11-S", "1.11-L1", "light", east_in - 0.55, north_in - 1.15, "ceiling", "", "ceiling", "Ceiling near the door."),
-        Mark("C14-W", "1.11-AP1", "light", (west_in + east_in) / 2.0, north_in - 2.4, "ceiling", "", "ceiling", "Access point on the bedroom ceiling."),
-        Mark("C5-S", "1.11-L3", "light", east_in - 0.7, north_in - 1.85, "ceiling", "", "ceiling", "Ceiling light by the north east plates."),
-        Mark("C2-S", "1.11-L5", "light", east_in - 1.15, south_in + 0.9, "ceiling", "", "ceiling", "Ceiling light by the south east plates."),
-        Mark("C7-S", "1.11-L6", "light", west_in + 0.60, south_in + 0.70, "ceiling", "", "ceiling", "Southwest ceiling pair."),
-        Mark("C8-S", "1.11-L7", "light", west_in + 1.30, south_in + 0.70, "ceiling", "", "ceiling", "Southwest ceiling pair."),
-        Mark("C32-V-1", "1.11-B2", "switch", door_switch_x, north_in, "wall", "door", "1350", "Bedroom light switch, 150 mm from the door edge. Centre 1350."),
-        Mark("C9-R", "1.11-P1", "sensor", door_switch_x, north_in, "wall", "door", "in box", "mmWave inside the bedroom door switch C32-V-1. No dot of its own."),
-        Mark("C10-V", "1.11-B1", "switch", door_switch_x, north_in, "wall", "door", "1350+80", "Second button, stacked above 1350."),
-        Mark("SOCK-N", "1.11-Z1", "socket", door_switch_x, north_in, "wall", "door", "300", "Power socket, centre 300. No cable."),
-        Mark("C13-E", "1.11-D1", "outlet", door_switch_x, north_in, "wall", "door", "380", "Ethernet right above the socket. Centre 380."),
-        Mark("C32-M", "1.11-K1", "sensor", DOOR_X1, north_in, "frame", "", "frame", "Door contact in the frame, east jamb."),
-        Mark("C32-V-2", "1.11-B3", "switch", door_switch_x, north_out, "corridor", "", "1350", "Hallway switch on the other side of the door. Centre 1350."),
-        Mark("C4-2V", "1.11-B4", "switch", east_in, east_north_y, "wall", "east-n", "1350", "300 mm from the inner north-east corner. Centre 1350."),
-        Mark("SOCK-EN", "1.11-Z2", "socket", east_in, east_north_y, "wall", "east-n", "300", "Power socket, centre 300. No cable."),
-        Mark("C1-2V", "1.11-B5", "switch", east_in, east_south_y, "wall", "east-s", "1350", "300 mm from the inner south-east corner. Centre 1350."),
-        Mark("SOCK-ES", "1.11-Z3", "socket", east_in, east_south_y, "wall", "east-s", "300", "Power socket, centre 300. No cable."),
-        Mark("C9-M", "1.11-K2", "sensor", south_win0, south_in, "frame", "", "frame", "Contact in the south window frame, west jamb."),
-        Mark("C46-B", "1.11-XR1", "actuator", south_win0 - 0.15, south_out - outside, "exterior", "", "facade", "Blind motor outside, west of the south window."),
-        Mark("C18-B", "1.11-XR2", "actuator", west_out - outside, wide1 + 0.15, "exterior", "", "facade", "Blind motor outside, north of the wide west window OP01."),
-        Mark("C16-B", "1.11-XR3", "actuator", west_out - outside, (narrow1 + north_in) / 2.0, "exterior", "", "facade", "Blind motor outside, beside the narrow west window OP02."),
+        Mark("C11-S", "1.11-L1", "light", box["entry_east"] - 0.7, box["entry_south"] + 0.55, "ceiling", "", "ceiling", "Ceiling in the entry, inside the room."),
+        Mark("C14-W", "1.11-AP1", "light", (west_in + east_in) / 2.0, (south_in + north_in) / 2.0, "ceiling", "", "ceiling", "Access point on the bedroom ceiling."),
+        Mark("C5-S", "1.11-L3", "light", east_in - 1.15, east_upper_y - 0.7, "ceiling", "", "ceiling", "Ceiling light by the upper east plates."),
+        Mark("C2-S", "1.11-L5", "light", east_in - 1.35, east_south_y + 0.85, "ceiling", "", "ceiling", "Ceiling light by the lower east plates."),
+        Mark("C7-S", "1.11-L6", "light", west_in + 0.70, south_in + 0.70, "ceiling", "", "ceiling", "Southwest ceiling pair."),
+        Mark("C8-S", "1.11-L7", "light", west_in + 1.40, south_in + 0.70, "ceiling", "", "ceiling", "Southwest ceiling pair."),
+        Mark("C32-V-1", "1.11-B2", "switch", box["entry_east"], switch_y, "wall", "hall-door", "1350", "Bedroom light switch, 150 mm from the latch of OP09. Centre 1350."),
+        Mark("C9-R", "1.11-P1", "sensor", box["entry_east"], switch_y, "wall", "hall-door", "in box", "mmWave inside the bedroom door switch C32-V-1."),
+        Mark("C32-M", "1.11-K1", "sensor", box["entry_east"], door.y1, "frame", "", "frame", "Door contact in the latch jamb of OP09."),
+        Mark("C32-V-2", "1.11-B3", "switch", box["entry_east_out"], switch_y, "corridor", "", "1350", "Hallway switch on the east face of OP09. Centre 1350."),
+        Mark("C10-V", "1.11-B1", "switch", button_x, north_in, "wall", "pocket", "1350", "Button 150 mm from the pocket door, not in the socket stack."),
+        Mark("SOCK-N", "1.11-Z1", "socket", socket_x, north_in, "wall", "nw", "300", "First power module, 300 mm from the inner north-west corner."),
+        Mark("SOCK-N2", "1.11-Z4", "socket", socket_x, north_in, "wall", "nw", second, "Second power module, one 71 mm pitch above the first."),
+        Mark("C13-E", "1.11-D1", "outlet", socket_x, north_in, "wall", "nw", ethernet, "Ethernet two pitches above the first socket."),
+        Mark("C4-2V", "1.11-B4", "switch", east_in, east_upper_y, "wall", "east-n", "1350", "300 mm from the inner corner at the top of the east wall."),
+        Mark("SOCK-EN", "1.11-Z2", "socket", east_in, east_upper_y, "wall", "east-n", "300", "Power socket, centre 300. No ethernet."),
+        Mark("C1-2V", "1.11-B5", "switch", east_in, east_south_y, "wall", "east-s", "1350", "300 mm from the inner south-east corner."),
+        Mark("SOCK-ES", "1.11-Z3", "socket", east_in, east_south_y, "wall", "east-s", "300", "Power socket, centre 300. No ethernet."),
+        Mark("C9-M", "1.11-K2", "sensor", south_win.x0, south_in, "frame", "", "frame", "Contact in the south window frame, west jamb."),
+        Mark("C46-B", "1.11-XR1", "actuator", south_win.x0 - 0.15, south_out - outside, "exterior", "", "facade", "Blind motor outside, west of the south window."),
+        Mark("C18-B", "1.11-XR2", "actuator", west_out - outside, wide.y1 + 0.15, "exterior", "", "facade", "Blind motor outside, north of the wide west window OP01."),
+        Mark("C16-B", "1.11-XR3", "actuator", west_out - outside, (narrow.y1 + north_in) / 2.0, "exterior", "", "facade", "Blind motor outside, on the 150 mm pier beside OP02."),
         Mark("C6-2V", "1.11-XB1", "switch", west_out - outside, outdoor_y, "exterior", "sw", "1350", "Double button, 300 mm from the outer corner. Centre 1350."),
-        Mark("C6-V", "1.11-XB2", "switch", west_out - outside, outdoor_y, "exterior", "sw", "1350+80", "Single button on the same cable 6, stacked above."),
+        Mark("C6-V", "1.11-XB2", "switch", west_out - outside, outdoor_y, "exterior", "sw", above, "Single button on the same cable 6, one pitch above."),
         Mark("SOCK-X", "1.11-XZ1", "socket", west_out - outside, outdoor_y, "exterior", "sw", "300", "Outdoor socket, centre 300. No cable."),
         Mark("LAMP-X-W", "1.11-XL1", "light", west_out - outside, outdoor_y + 0.45, "exterior", "", "unused", "UNUSED. Parked. TODO: cable number unresolved.", parked=True),
-        Mark("LAMP-X-S", "1.11-XL2", "light", south_win0 - 0.55, south_out - outside, "exterior", "", "unused", "UNUSED. Parked. Not wired.", parked=True),
+        Mark("LAMP-X-S", "1.11-XL2", "light", south_win.x0 - 0.55, south_out - outside, "exterior", "", "unused", "UNUSED. Parked. Not wired.", parked=True),
     ]
     known = {record["id"] for record in device_records()}
     drawn = {mark.current_id for mark in rows if mark.current_id}
@@ -216,7 +199,7 @@ def _opening_rects() -> list[tuple[str, float, float, float, float]]:
         x0, y0, x1, y1 = rect[1:]
         if x1 < _VIEW[0] or x0 > _VIEW[2] or y1 < _VIEW[1] or y0 > _VIEW[3]:
             continue
-        if opening["VoidsElement"] in {"W-002", "W-030", "W-031", "W-013"}:
+        if opening["VoidsElement"] in {"W-002", "W-030", "W-031", "W-013", "W-018", "W-033"}:
             rects.append(rect)
     return rects
 
@@ -227,8 +210,12 @@ def _esc(text: str) -> str:
 
 def _label_offset(mark: Mark, box: dict[str, float]) -> tuple[str, float, float]:
     """(anchor, dx, dy) in SVG pixels. Keeps a stack's words off the wall."""
-    if mark.stack == "door":
-        return "start", 16, 52
+    if mark.stack == "hall-door":
+        return "end", -16, 8
+    if mark.stack == "nw":
+        return "start", 14, 28
+    if mark.stack == "pocket":
+        return "start", 14, -16
     if mark.current_id == "C32-M":
         return "end", -12, 16
     if mark.place == "corridor":
@@ -252,15 +239,15 @@ def _item_label(item: Mark) -> str:
     name = item.current_id or item.proposed_id
     if item.parked:
         return f"{name} UNUSED"
-    if item.rule in {"1350", "1350+80", "300", "380", "in box"}:
+    if item.rule in {"1350", "1350+71", "300", "371", "442", "in box"} or item.rule.startswith("1350+"):
         return f"{name} {item.rule}"
     return name
 
 
 def render_svg() -> str:
     box = envelope()
-    xmin, ymin, xmax, ymax = -2.7, 1.7, 5.3, 10.7
-    scale = 92.0
+    xmin, ymin, xmax, ymax = -2.4, 1.7, 7.2, 10.6
+    scale = 78.0
     pad = 28.0
     legend_w = 460.0
 
@@ -301,12 +288,9 @@ def render_svg() -> str:
         f'<text x="{sx(xmin) + 8:.0f}" y="{sy((ymin + box["south_out"]) / 2):.0f}" '
         f'fill="#3d6d86" font-size="13">exteriér</text>'
     )
-    # Room floor.
-    parts.append(
-        f'<rect x="{sx(box["west"]):.1f}" y="{sy(box["north"]):.1f}" '
-        f'width="{(box["east"] - box["west"]) * scale:.1f}" '
-        f'height="{(box["north"] - box["south"]) * scale:.1f}" fill="#fffdf8" stroke="none"/>'
-    )
+    # Room floor, the L.
+    ring = " ".join(f"{sx(x):.1f},{sy(y):.1f}" for x, y in polygon())
+    parts.append(f'<polygon points="{ring}" fill="#fffdf8" stroke="none"/>')
     for wall_id, ring in _walls_in_view():
         points = " ".join(f"{sx(x):.1f},{sy(y):.1f}" for x, y in ring)
         parts.append(f'<polygon points="{points}" fill="#d9d3c7" stroke="#5c564c" stroke-width="1"/>')
@@ -316,6 +300,8 @@ def render_svg() -> str:
             f'width="{abs(x1 - x0) * scale:.1f}" height="{abs(y1 - y0) * scale:.1f}" '
             f'fill="#fffdf8" stroke="none"/>'
         )
+        if opening_id not in {"OP01", "OP02", "OP05"}:
+            continue
         mx, my = (x0 + x1) / 2.0, (y0 + y1) / 2.0
         if abs(x1 - x0) > abs(y1 - y0):
             parts.append(
@@ -327,51 +313,6 @@ def render_svg() -> str:
                 f'<line x1="{sx(mx):.1f}" y1="{sy(y0):.1f}" x2="{sx(mx):.1f}" y2="{sy(y1):.1f}" '
                 f'stroke="#3d8eb8" stroke-width="3"/>'
             )
-    # Floor the plan keeps and the wall model does not close.
-    parts.append(
-        f'<rect x="{sx(box["west"]):.1f}" y="{sy(box["north"]):.1f}" '
-        f'width="{(box["east"] - box["west"]) * scale:.1f}" '
-        f'height="{(box["north"] - box["model_north"]) * scale:.1f}" fill="url(#gap)" stroke="none"/>'
-    )
-    parts.append(
-        f'<line x1="{sx(box["west"]):.1f}" y1="{sy(box["model_north"]):.1f}" '
-        f'x2="{sx(box["east"]):.1f}" y2="{sy(box["model_north"]):.1f}" '
-        f'stroke="#8a5a2a" stroke-width="1.2" stroke-dasharray="5 3"/>'
-    )
-    parts.append(
-        f'<line x1="{sx(box["east"]):.1f}" y1="{sy(box["model_north"]):.1f}" '
-        f'x2="{sx(box["east"]):.1f}" y2="{sy(box["north"]):.1f}" '
-        f'stroke="#8a5a2a" stroke-width="1.6" stroke-dasharray="5 3"/>'
-    )
-    parts.append(
-        f'<text x="{sx(box["east"] - 0.08):.1f}" y="{sy(box["model_north"]) + 13:.1f}" '
-        f'text-anchor="end" fill="#6b5344" font-size="10">model stops</text>'
-    )
-    # Door traced on the floor plan. The wall model has no opening on this bay.
-    parts.append(
-        f'<rect x="{sx(DOOR_X0):.1f}" y="{sy(box["north_out"]):.1f}" '
-        f'width="{(DOOR_X1 - DOOR_X0) * scale:.1f}" height="{(box["north_out"] - box["north"]) * scale:.1f}" '
-        f'fill="#fffdf8" stroke="none"/>'
-    )
-    leaf = DOOR_X1 - DOOR_X0
-    parts.append(
-        f'<line x1="{sx(DOOR_X0):.1f}" y1="{sy(box["north"]):.1f}" x2="{sx(DOOR_X1):.1f}" '
-        f'y2="{sy(box["north"]):.1f}" stroke="#1c1c1c" stroke-width="3"/>'
-    )
-    parts.append(
-        f'<line x1="{sx(DOOR_X0):.1f}" y1="{sy(box["north"]):.1f}" x2="{sx(DOOR_X0):.1f}" '
-        f'y2="{sy(box["north"] + leaf):.1f}" stroke="#1c1c1c" stroke-width="1.3"/>'
-    )
-    parts.append(
-        f'<path d="M {sx(DOOR_X1):.1f} {sy(box["north"]):.1f} '
-        f'A {leaf * scale:.1f} {leaf * scale:.1f} 0 0 1 '
-        f'{sx(DOOR_X0):.1f} {sy(box["north"] + leaf):.1f}" '
-        f'fill="none" stroke="#1c1c1c" stroke-width="1"/>'
-    )
-    parts.append(
-        f'<text x="{sx(DOOR_X0) - 8:.1f}" y="{sy(box["north"] + leaf * 0.45):.1f}" '
-        f'text-anchor="end" fill="#444" font-size="10">floor-plan door</text>'
-    )
     bx0, by0, bx1, by1 = bed_outline()
     inset = 0.04
     parts.append(
@@ -430,7 +371,7 @@ def render_svg() -> str:
                 f'font-size="11" fill="#1c1c1c">{_esc(_item_label(item))}</text>'
             )
         rule = group[0].rule
-        if not parked and rule not in {"1350", "1350+80", "300", "380", "in box"}:
+        if not parked and rule not in {"1350", "1350+71", "300", "371", "442", "in box"} and not rule.startswith("1350+"):
             parts.append(
                 f'<text x="{tx:.1f}" y="{ty + len(group) * 13:.1f}" text-anchor="{anchor}" '
                 f'font-size="9" fill="#6b645c">{_esc(rule)}</text>'
@@ -467,9 +408,8 @@ def render_svg() -> str:
     line_y += 8
     for note in (
         "Bed outline: UNFINISHED placeholder.",
-        "Hatched strip: on the floor plan, not closed by the wall model.",
-        "Drawn room 20.54 m². Table 22.98 m². Model bay 15.43 m².",
-        "Centres: socket 300, ethernet 380, button 1350, next +80.",
+        "Room is the L, 22.98 m². OP09 is the hall door.",
+        "Jung LS 990 pitch 71 mm. Sockets 300 and 371, ethernet 442.",
         "150 from a door. 300 from an inner corner.",
         "300 from an outer corner outdoors.",
     ):

@@ -78,9 +78,10 @@ Petr filled the three blank underscores, as house-wide centres in millimetres. T
 | What | Centre |
 | --- | --- |
 | First socket | 300 |
-| Next socket, or ethernet above a socket | one module above the one below. This plan uses 80 mm, so ethernet is at 380 |
+| Next module | one Jung LS 990 pitch above the one below. The pitch is 71 mm: a 1-gang frame is 81 mm and each added gang adds 71 mm (2-gang 152, 3-gang 223) |
+| Two sockets, then ethernet | centres 300, 371, and 442 |
 | First button | 1350 |
-| Next button | stacked above the one below (80 mm on this plan) |
+| Next button | stacked above the one below, 71 mm |
 | Sockets above a counter (kitchen, bathroom, laundry) | 1400 |
 
 Along the wall: 150 mm from a door edge, or from an outer corner when the device is indoors. 300 mm from an inner corner, or from an outer corner when the device is outdoors.
@@ -95,10 +96,11 @@ The drawing cites the short name.
 
 | Short name | Rule |
 | --- | --- |
-| `300` | Socket centre 300 mm. |
-| `380` | Ethernet centre, one 80 mm module above the socket. |
+| `300` | First socket centre. |
+| `371` | Second socket, one 71 mm pitch above. |
+| `442` | Ethernet, two pitches above the first socket. |
 | `1350` | First button centre. |
-| `1350+80` | Next button, stacked above. |
+| `1350+71` | Next button, one pitch above. |
 | `in box` | The mmWave has no position of its own. It sits in the named switch box. |
 | `frame` | A contact is in the window or door frame, at the jamb. |
 | `facade` | A blind motor is outside, on the outer face, beside the window. The cloth is not drawn. |
@@ -109,7 +111,7 @@ The drawing cites the short name.
 
 ## Room 1.11, as answered
 
-Cable 12 is the pendant above the bed. Cable 3 is the LED strip under the bed, all around that outline. Cable 6 is one 8-core cable for the single button and the double button in the same outdoor stack. Cable 32 is the door contact, the bedroom light switch, and the hallway switch on the other side of that door. Cable 16 is the blind for the narrow west window. The access point is on the bedroom ceiling. The mmWave is inside the bedroom light-switch box.
+Cable 12 is the pendant above the bed. Cable 3 is the LED strip under the bed, all around that outline. Cable 6 is one 8-core cable for the single button and the double button in the same outdoor stack. Cable 32 is the contact and the two switches of OP09, the hinged door between the entry and the corridor. Cable 16 is the blind for the narrow west window. The access point is on the bedroom ceiling. The mmWave is inside the bedroom light-switch box. The bedroom is the L in `rooms/1.11-geometry.md`, 22.98 m².
 
 Power sockets have no cable number and no circuit. They are positions only. The two outdoor lamps stay where they were and are marked UNUSED. The west lamp's cable number is still a TODO.
 

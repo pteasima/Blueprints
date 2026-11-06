@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "models"))
 
 from bedroom_111 import SOURCE_PATH, device_records  # noqa: E402
+from bedroom_111_geometry import contains  # noqa: E402
 from bedroom_111_plan import (  # noqa: E402
     PLAN_HTML,
     PLAN_SVG,
@@ -18,6 +19,14 @@ from bedroom_111_plan import (  # noqa: E402
     render_svg,
     write_outputs,
 )
+
+
+def test_room_area_is_the_table_value_and_the_three_doors_are_the_model():
+    from bedroom_111_geometry import area, openings
+
+    assert area() == pytest.approx(22.98)
+    doors = {item.id: item.kind for item in openings() if item.kind != "window"}
+    assert doors == {"OP03": "pocket", "OP06": "hinged", "OP09": "hinged"}
 
 
 def test_every_yaml_device_is_on_the_plan_and_ids_are_unique():
@@ -30,12 +39,6 @@ def test_every_yaml_device_is_on_the_plan_and_ids_are_unique():
 
 def test_rules_put_devices_on_the_right_side_of_the_wall():
     box = envelope()
-    inner = (
-        box["west"] - 1e-6,
-        box["south"] - 1e-6,
-        box["east"] + 1e-6,
-        box["north"] + 1e-6,
-    )
     stacks: dict[str, set[tuple[float, float]]] = {}
     for mark in marks():
         if mark.stack:
@@ -43,28 +46,25 @@ def test_rules_put_devices_on_the_right_side_of_the_wall():
         if mark.place == "exterior":
             outside = mark.x < box["west_out"] or mark.y < box["south_out"]
             assert outside, mark.proposed_id
-            assert not (inner[0] < mark.x < inner[2] and inner[1] < mark.y < inner[3])
+            assert not contains(mark.x, mark.y)
         elif mark.place == "wall":
             on_face = (
                 mark.x == pytest.approx(box["west"])
                 or mark.x == pytest.approx(box["east"])
+                or mark.x == pytest.approx(box["entry_east"])
                 or mark.y == pytest.approx(box["south"])
                 or mark.y == pytest.approx(box["north"])
             )
             assert on_face, mark.current_id
         elif mark.place == "frame":
-            on_opening_face = mark.y == pytest.approx(box["south"]) or mark.y == pytest.approx(
-                box["north"]
+            on_opening = mark.y == pytest.approx(box["south"]) or (
+                mark.x == pytest.approx(box["entry_east"]) and mark.y == pytest.approx(9.25)
             )
-            assert on_opening_face, mark.current_id
+            assert on_opening, mark.current_id
         elif mark.place == "corridor":
-            assert mark.y > box["north"]
-        elif mark.place == "ceiling":
-            assert inner[0] < mark.x < inner[2]
-            assert inner[1] < mark.y < inner[3]
-        elif mark.place == "bed":
-            assert inner[0] < mark.x < inner[2]
-            assert inner[1] < mark.y < inner[3]
+            assert mark.x > box["entry_east"]
+        elif mark.place in {"ceiling", "bed"}:
+            assert contains(mark.x, mark.y), mark.current_id
     for name, points in stacks.items():
         assert len(points) == 1, name
     # Blind motors are outside. Contacts are not.
@@ -101,7 +101,7 @@ def test_published_plan_matches_the_renderer_and_names_both_schemes():
     assert "1.11-L1" in page
     assert "C11-S" in page
     assert "UNFINISHED placeholder" in page
-    assert "Where is the other 2.44" in page
+    assert "cable number is unresolved" in page
     # The 3D file still carries the first-pass origins. This drawing must not be that pass.
     yaml_text = SOURCE_PATH.read_text(encoding="utf-8")
     assert "Origin: [0.72, 7.57]" in yaml_text

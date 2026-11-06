@@ -98,7 +98,7 @@ def test_room_faces_are_the_wall_model():
     assert width * depth < 22.0
 
 
-_POSITION_ONLY = {"SOCK-N", "SOCK-EN", "SOCK-ES", "SOCK-X", "LAMP-X-W", "LAMP-X-S"}
+_POSITION_ONLY = {"SOCK-N", "SOCK-N2", "SOCK-EN", "SOCK-ES", "SOCK-X", "LAMP-X-W", "LAMP-X-S"}
 _NO_BOX = {"C3-S", "C9-R", *_POSITION_ONLY}
 
 

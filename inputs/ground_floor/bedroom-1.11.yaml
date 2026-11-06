@@ -15,14 +15,11 @@
 # same code. CableNumber and Panel are Pset_YamlIfc. Home joins on those.
 # DeviceCode, CableSpec, and CableLength repeat the Soupis row.
 #
-# The wall model closes a bay of 3.300 × 4.675 m (15.428 m²):
-#   west  x=0.450   W-030 inner face
-#   east  x=3.750   W-031 west face
-#   south y=3.275   W-002 inner face
-#   north y=7.950   W-013 south face, and W-031 stops on that line
-# The floor plan keeps the room going north to W-018 (south face y=9.500,
-# 125 mm thick). That rectangle is 3.300 × 6.225 m = 20.543 m². The room
-# table lists 22.98 m². The remaining 2.44 m² is not drawn.
+# The clear room is the L in docs/electrical/rooms/1.11-geometry.md.
+# Main wing x 0.450–3.750, y 3.275–9.500, plus the entry
+# x 3.750–5.625, y 8.200–9.500. Area 22.98 m².
+# Doors: OP03 double pocket into 1.10, OP06 hinged north into 1.09,
+# OP09 hinged into the corridor (cable 32).
 # The 2D plan is the position. Origins below are the first 3D pass.
 #
 # Bed outline, screenshot pixels registered to the model bay. Image y is down.
@@ -33,7 +30,8 @@
 # That bed is UNFINISHED placeholder furniture, not a solid.
 #
 # House centres, millimetres, on the 2D plan (see PlanNotes.md):
-#   socket 300, ethernet one module above it, button 1350, next button above
+#   sockets 300 and 371, ethernet 442 (Jung LS 990 pitch 71 mm)
+#   button 1350, next button one pitch above
 #   150 from a door edge, 300 from an inner corner, 300 from an outer corner outdoors
 #
 # Decisions recorded from the review, still not a moved 3D box:
@@ -41,8 +39,8 @@
 #   cable 12 is the pendant above the bed (CYKY 2x1.5).
 #   cable 3 is the LED strip under the bed, around the unfinished outline. No box.
 #   cable 6 is one 8-core cable: the double and the single, one outdoor stack.
-#   cable 32 is the door contact plus the bedroom switch and the hallway switch.
-#   The door is the floor-plan leaf. The wall model has no opening there.
+#   cable 32 is the door contact plus the bedroom switch and the hallway switch
+#   of OP09, 150 mm from the latch.
 #   cable 16 is the blind for the narrow west window OP02.
 #   The two outdoor lamps stay, marked UNUSED, and are not wired or counted.
 #   The mmWave (cable 9) is inside the bedroom door switch, not its own dot.
@@ -271,7 +269,7 @@ switchingDevices:
           CableLength: 8
   - id: C32-V-1
     Name: "Vypínač 32 ložnice"
-    Description: "Bedroom light switch, cable 32, 150 mm from the door edge. The mmWave C9-R is inside this box. The 3D origin is the first pass."
+    Description: "Bedroom light switch on OP09, 150 mm from the latch. The mmWave C9-R is inside this box. The 3D origin is the first pass."
     PredefinedType: MOMENTARYSWITCH
     ObjectType: PushButton
     ContainedInStructure: SP-1.11
@@ -291,7 +289,7 @@ switchingDevices:
           CableLength: 2
   - id: C32-V-2
     Name: "Vypínač 32 chodba"
-    Description: "Hallway light switch on the other side of the bedroom door. Same cable 32. The 3D origin is the first pass."
+    Description: "Hallway light switch on the corridor face of OP09. Same cable 32. The 3D origin is the first pass."
     PredefinedType: MOMENTARYSWITCH
     ObjectType: PushButton
     ContainedInStructure: SP-1.11
@@ -372,7 +370,7 @@ switchingDevices:
 sensors:
   - id: C32-M
     Name: "Kontakt dveří 32"
-    Description: "Door contact, cable 32. The door is on the floor plan at the west end of the north wall. The wall model has no opening there."
+    Description: "Door contact, cable 32, in the latch jamb of OP09. The 3D origin is the first pass."
     PredefinedType: CONTACTSENSOR
     ObjectType: DoorContact
     ContainedInStructure: SP-1.11
@@ -428,7 +426,7 @@ sensors:
 outlets:
   - id: C13-E
     Name: "Ethernet 13"
-    Description: "Data outlet on the north wall. Plan mark 1(013). Panel 1."
+    Description: "Ethernet, two Jung LS 990 pitches (142 mm) above the first socket. Centre 442. Panel 1."
     PredefinedType: DATAOUTLET
     ObjectType: Ethernet
     ContainedInStructure: SP-1.11
@@ -467,7 +465,18 @@ outlets:
           CableLength: 23
   - id: SOCK-N
     Name: "Zásuvka sever"
-    Description: "Dumb power socket. Position only. No cable number and no circuit. Main panel. Wiring skipped."
+    Description: "First power module at the north-west corner. Centre 300. Position only. No cable. The second module is SOCK-N2."
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.11
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-N2
+    Name: "Zásuvka sever 2"
+    Description: "Second power module, one Jung LS 990 pitch (71 mm) above SOCK-N. Centre 371. Position only. No cable. Ethernet is the module above this one."
     PredefinedType: POWEROUTLET
     ObjectType: Socket
     ContainedInStructure: SP-1.11
