@@ -446,10 +446,24 @@ def test_living_room_boxes_follow_plan_v3():
     assert (sx1 - sx0) == pytest.approx(4380.0 - MESH_GAP_MM, abs=0.2)
     assert (sy1 - sy0) == pytest.approx(3780.0 - MESH_GAP_MM, abs=0.2)
 
-    chaise = _world_box(next(row for row in furnishing_records() if row["id"] == "FN-S3"))
+    by_id = {row["id"]: row for row in furnishing_records()}
+    chaise = _world_box(by_id["FN-S3"])
     assert chaise[3] - chaise[0] == pytest.approx(1.46, abs=1e-6)
     assert chaise[4] - chaise[1] == pytest.approx(0.86, abs=1e-6)
     assert chaise[1] == pytest.approx(13.99, abs=1e-6)
+    chaise_back = _world_box(by_id["FN-BN3"])
+    assert (chaise_back[0], chaise_back[3]) == pytest.approx((chaise[0], chaise[3]), abs=1e-6)
+    south_back = _world_box(by_id["FN-BW3"])
+    south_seat = _world_box(by_id["FN-S4B"])
+    assert (south_back[1], south_back[4]) == pytest.approx((south_seat[1], south_seat[4]), abs=1e-6)
+    east_arm = _world_box(by_id["FN-ARME"])
+    assert east_arm[4] == pytest.approx(15.15, abs=1e-6)
+    assert east_arm[1] == pytest.approx(14.42, abs=1e-6)
+    assert east_arm[5] - east_arm[2] == pytest.approx(0.66, abs=1e-6)
+    south_arm = _world_box(by_id["FN-ARMS"])
+    assert south_arm[0] == pytest.approx(25.52, abs=1e-6)
+    assert south_arm[3] == pytest.approx(26.40, abs=1e-6)
+    assert south_arm[5] - south_arm[2] == pytest.approx(0.66, abs=1e-6)
 
     ids = {row["id"] for row in furnishing_records()}
     assert "FN-S700" not in ids
