@@ -439,10 +439,17 @@ def test_living_room_boxes_follow_plan_v3():
         )
 
     sx0, sy0, sx1, sy1 = union(SOFA_IDS)
-    assert sx0 == pytest.approx(26120.0 + half, abs=0.2)
+    assert sx0 == pytest.approx(25520.0 + half, abs=0.2)
     assert sy0 == pytest.approx(11370.0 + half, abs=0.2)
     assert sx1 == pytest.approx(29900.0 - half, abs=0.2)
     assert sy1 == pytest.approx(15150.0 - half, abs=0.2)
+    assert (sx1 - sx0) == pytest.approx(4380.0 - MESH_GAP_MM, abs=0.2)
+    assert (sy1 - sy0) == pytest.approx(3780.0 - MESH_GAP_MM, abs=0.2)
+
+    chaise = _world_box(next(row for row in furnishing_records() if row["id"] == "FN-S3"))
+    assert chaise[3] - chaise[0] == pytest.approx(1.46, abs=1e-6)
+    assert chaise[4] - chaise[1] == pytest.approx(0.86, abs=1e-6)
+    assert chaise[1] == pytest.approx(13.99, abs=1e-6)
 
     ids = {row["id"] for row in furnishing_records()}
     assert "FN-S700" not in ids
