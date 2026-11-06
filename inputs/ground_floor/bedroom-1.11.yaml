@@ -1,0 +1,549 @@
+# Room 1.11 (Ložnice) field devices. yaml-ifc electrical schema
+# (pteasima/yaml-ifc PR #7, vendored at 0f96c26). Lengths are metres.
+# Boxes sit in the room. No back boxes, no wall host, no panels, no routes.
+#
+# Sources, not the permit electrical PDFs:
+#   FixturePlan.pdf — Petr's marks on a floor-plan screenshot.
+#   CableSchedule.xlsx, sheet Soupis (legend in column A) and sheet Kabelaz.
+# The green mark on the plan is panel(cable), zero-padded, for example
+# 2(011) is panel 2, cable 11. The Soupis panel is what is stored. A mark
+# whose first digit did not read as that panel is named below.
+#
+# Id is C<cable>-<device code>, plus -1/-2 when one cable has two of the
+# same code. CableNumber and Panel are Pset_YamlIfc. Home joins on those.
+# DeviceCode, CableSpec, and CableLength repeat the Soupis row.
+#
+# Room faces, from ground-floor.yaml (axis ± half thickness):
+#   west  x=0.450   W-030 inner face
+#   east  x=3.750   W-031 west face
+#   south y=3.275   W-002 inner face
+#   north y=7.950   W-013 south face, extended across this bay
+# W-013 itself starts at W-031, so the model has no north wall solid on
+# 1.11. The drawing does: clear width 3300 mm, clear depth 4675 mm.
+# 3.300 × 4.675 = 15.428 m². The room table lists 22.98 m².
+#
+# Plan registration, screenshot pixels to those faces. Image y is down.
+#   west inner px 118, east inner px 279, south inner py 674, north py 462.
+#   world_x = 0.450 + (px - 118) / 161 * 3.300
+#   world_y = 7.950 - (py - 462) / 212 * 4.675
+# The two scales differ by about 8 percent. Each device below is the plan
+# mark, pulled inside these faces. A symbol that sat on the wall line is
+# inset so the box is in the room.
+#
+# Mounting, Czech residential defaults, not written on the plan:
+#   wall button centre 1.05 m (box base 1.01, height 0.08)
+#   data outlet centre 0.30 m (base 0.26)
+#   window and door contacts at 1.00 m
+#   ceiling boxes at base 2.40 or 2.42, top at or under 2.48
+#   pendant base 2.05, top 2.35 (the plan's hanging light)
+#   blind actuator base 2.32, under the 2.50 m window head
+# The bedroom clear height in the wall file is the range 2.50–4.875 m.
+# Which side is the low side is not in this model, so nothing is placed
+# above 2.50 m. OP01 (west) and OP05 (south) are sill 0, height 2.50.
+#
+# Open questions — not resolved by moving a box:
+#   SCHUKO: the plan legend's red socket icon is on the north wall, the
+#   east wall (twice), and outside the southwest corner. Soupis has no
+#   socket cable for 1.11, so those marks are not devices here.
+#   cable 12: CYKY 2x1.5, the only 2-core light. Assigned to the pendant
+#   because that bulb is marked "?" (no cable number) and 120W. A west
+#   outdoor lamp also reads as (012), with a first digit that is not 2.
+#   The south outdoor lamp reads as (141), which is not a 1.11 cable.
+#   cable 3: 2(003) is written in the same east cluster as lamp 2(005),
+#   and there is one bulb icon. C3-S is a second box 0.45 m from C5-S.
+#   cable 6: Soupis is V and 2V on one cable. The plan shows one 532-4U
+#   outside the southwest corner. C6-V is placed beside C6-2V; it has no
+#   mark of its own.
+#   cable 32: shared with 1.05, length 2 m, devices V, V, M. No (032) mark
+#   was readable in the room. Placed at the northwest door the plan draws
+#   and the wall file does not (no opening). C32-V-2 is the corridor half,
+#   north of y=7.950. The door width is not taken from a model opening.
+#   cable 16: the (16) blind mark sits on the northwest corner, past the
+#   room face. The box is on the west wall, north of OP01.
+#   Handwritten panel digits (4, 5, 7) on some blinds and the outdoor lamps
+#   did not match Soupis panel 2. Panel is the sheet's Rozvadec.
+#   Area 22.98 m² against the 15.428 m² clear rectangle above.
+schema: IFC4 ADD2 TC1
+units:
+  LengthUnit: METRE
+project:
+  id: PRJ
+  Name: "RD Šíma"
+  Aggregates: [SITE]
+site:
+  id: SITE
+  Name: "Bor u Tachova"
+  RefElevation: 472.1
+  Aggregates: [BLD]
+building:
+  id: BLD
+  Name: "RD Šíma"
+  Aggregates: [STOREY-1NP]
+storey:
+  id: STOREY-1NP
+  Name: "1.NP"
+  Elevation: 0
+spaces:
+  - id: SP-1.11
+    Name: "1.11 Ložnice"
+    LongName: "Ložnice"
+    PredefinedType: INTERNAL
+walls: []
+openings: []
+doors: []
+windows: []
+lightFixtures:
+  - id: C11-S
+    Name: "Světlo 11"
+    Description: "North ceiling, by the entrance. Plan mark 2(011) on a lamp."
+    PredefinedType: POINTSOURCE
+    ObjectType: Lamp
+    ContainedInStructure: SP-1.11
+    Origin: [0.72, 7.57]
+    Elevation: 2.4
+    Width: 0.16
+    Depth: 0.16
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 11
+          Panel: 2
+          DeviceCode: S
+          CableSpec: "CYKY 4x1.5"
+          CableLength: 8
+  - id: C12-S
+    Name: "Lustr 12"
+    Description: "Hanging light in the room, plan text zaveseny lustr cca 120W, bulb marked ?. Cable 12 is the 2-core light. See the open question."
+    PredefinedType: POINTSOURCE
+    ObjectType: Pendant
+    ContainedInStructure: SP-1.11
+    Origin: [2.11, 5.24]
+    Elevation: 2.05
+    Width: 0.36
+    Depth: 0.36
+    Height: 0.3
+    Wattage: 120
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 12
+          Panel: 2
+          DeviceCode: S
+          CableSpec: "CYKY 2x1.5"
+          CableLength: 16
+  - id: C2-S
+    Name: "Světlo 2"
+    Description: "East side, lower lamp. Plan mark 2(002)."
+    PredefinedType: POINTSOURCE
+    ObjectType: Lamp
+    ContainedInStructure: SP-1.11
+    Origin: [3.47, 4.42]
+    Elevation: 2.4
+    Width: 0.16
+    Depth: 0.16
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 2
+          Panel: 2
+          DeviceCode: S
+          CableSpec: "CYKY 4x1.5"
+          CableLength: 12
+  - id: C3-S
+    Name: "Světlo 3"
+    Description: "East cluster. 2(003) is written next to lamp 2(005); this box is the second light. See the open question."
+    PredefinedType: POINTSOURCE
+    ObjectType: Lamp
+    ContainedInStructure: SP-1.11
+    Origin: [3.12, 5.97]
+    Elevation: 2.4
+    Width: 0.16
+    Depth: 0.16
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 3
+          Panel: 2
+          DeviceCode: S
+          CableSpec: "CYKY 4x1.5"
+          CableLength: 12
+  - id: C5-S
+    Name: "Světlo 5"
+    Description: "East side, upper lamp. Plan mark 2(005) on the bulb."
+    PredefinedType: POINTSOURCE
+    ObjectType: Lamp
+    ContainedInStructure: SP-1.11
+    Origin: [3.47, 6.42]
+    Elevation: 2.4
+    Width: 0.16
+    Depth: 0.16
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 5
+          Panel: 2
+          DeviceCode: S
+          CableSpec: "CYKY 4x1.5"
+          CableLength: 10
+  - id: C7-S
+    Name: "Světlo 7"
+    Description: "Southwest interior. 2(007) and 2(008) share one corner note; this is the west one."
+    PredefinedType: POINTSOURCE
+    ObjectType: Lamp
+    ContainedInStructure: SP-1.11
+    Origin: [0.92, 3.62]
+    Elevation: 2.4
+    Width: 0.16
+    Depth: 0.16
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 7
+          Panel: 2
+          DeviceCode: S
+          CableSpec: "CYKY 4x1.5"
+          CableLength: 15
+  - id: C8-S
+    Name: "Světlo 8"
+    Description: "Southwest interior, east of cable 7. Same shared corner note."
+    PredefinedType: POINTSOURCE
+    ObjectType: Lamp
+    ContainedInStructure: SP-1.11
+    Origin: [1.47, 3.62]
+    Elevation: 2.4
+    Width: 0.16
+    Depth: 0.16
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 8
+          Panel: 2
+          DeviceCode: S
+          CableSpec: "CYKY 4x1.5"
+          CableLength: 15
+switchingDevices:
+  - id: C1-2V
+    Name: "Dvojvypínač 1"
+    Description: "East wall, lower. 532-4U. Plan mark (001) at that plate."
+    PredefinedType: MOMENTARYSWITCH
+    ObjectType: DoublePushButton
+    ContainedInStructure: SP-1.11
+    Origin: [3.75, 4.43]
+    Elevation: 1.01
+    RefDirection: [0, 1]
+    Width: 0.14
+    Depth: 0.02
+    Height: 0.08
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 1
+          Panel: 2
+          DeviceCode: 2V
+          CableSpec: "UTP Cat6a"
+          CableLength: 12
+  - id: C10-V
+    Name: "Vypínač 10"
+    Description: "North wall, by the entrance lamp. Plan mark (010)."
+    PredefinedType: MOMENTARYSWITCH
+    ObjectType: PushButton
+    ContainedInStructure: SP-1.11
+    Origin: [0.99, 7.95]
+    Elevation: 1.01
+    RefDirection: [-1, 0]
+    Width: 0.08
+    Depth: 0.02
+    Height: 0.08
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 10
+          Panel: 2
+          DeviceCode: V
+          CableSpec: "UTP Cat6a"
+          CableLength: 8
+  - id: C32-V-1
+    Name: "Vypínač 32 ložnice"
+    Description: "Bedroom half of shared cable 32, east of the northwest door. No (032) mark was readable. See the open question."
+    PredefinedType: MOMENTARYSWITCH
+    ObjectType: PushButton
+    ContainedInStructure: SP-1.11
+    Origin: [1.74, 7.95]
+    Elevation: 1.01
+    RefDirection: [-1, 0]
+    Width: 0.08
+    Depth: 0.02
+    Height: 0.08
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 32
+          Panel: 2
+          DeviceCode: V
+          CableSpec: "UTP Cat6a"
+          CableLength: 2
+  - id: C32-V-2
+    Name: "Vypínač 32 chodba"
+    Description: "Corridor half of shared cable 32, north of the bedroom face. The 1.05 device on this cable. No (032) mark was readable."
+    PredefinedType: MOMENTARYSWITCH
+    ObjectType: PushButton
+    ContainedInStructure: SP-1.11
+    Origin: [1.66, 8.05]
+    Elevation: 1.01
+    RefDirection: [1, 0]
+    Width: 0.08
+    Depth: 0.02
+    Height: 0.08
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 32
+          Panel: 2
+          DeviceCode: V
+          CableSpec: "UTP Cat6a"
+          CableLength: 2
+  - id: C4-2V
+    Name: "Dvojvypínač 4"
+    Description: "East wall, upper. 532-4U. Plan mark (004) in that cluster."
+    PredefinedType: MOMENTARYSWITCH
+    ObjectType: DoublePushButton
+    ContainedInStructure: SP-1.11
+    Origin: [3.75, 6.43]
+    Elevation: 1.01
+    RefDirection: [0, 1]
+    Width: 0.14
+    Depth: 0.02
+    Height: 0.08
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 4
+          Panel: 2
+          DeviceCode: 2V
+          CableSpec: "UTP Cat6a"
+          CableLength: 10
+  - id: C6-2V
+    Name: "Dvojvypínač 6"
+    Description: "South wall, west pier. The 532-4U drawn just outside the southwest corner, brought inside. Cable 6 also has a single button."
+    PredefinedType: MOMENTARYSWITCH
+    ObjectType: DoublePushButton
+    ContainedInStructure: SP-1.11
+    Origin: [0.68, 3.275]
+    Elevation: 1.01
+    RefDirection: [1, 0]
+    Width: 0.14
+    Depth: 0.02
+    Height: 0.08
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 6
+          Panel: 2
+          DeviceCode: 2V
+          CableSpec: "UTP Cat6a"
+          CableLength: 15
+  - id: C6-V
+    Name: "Vypínač 6"
+    Description: "Single button on cable 6, beside the double. The plan does not number it on its own. See the open question."
+    PredefinedType: MOMENTARYSWITCH
+    ObjectType: PushButton
+    ContainedInStructure: SP-1.11
+    Origin: [1.06, 3.275]
+    Elevation: 1.01
+    RefDirection: [1, 0]
+    Width: 0.08
+    Depth: 0.02
+    Height: 0.08
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 6
+          Panel: 2
+          DeviceCode: V
+          CableSpec: "UTP Cat6a"
+          CableLength: 15
+sensors:
+  - id: C32-M
+    Name: "Kontakt dveří 32"
+    Description: "Door contact for the shared cable, at the northwest door. The wall file has no opening there."
+    PredefinedType: CONTACTSENSOR
+    ObjectType: DoorContact
+    ContainedInStructure: SP-1.11
+    Origin: [1.47, 7.95]
+    Elevation: 1.0
+    RefDirection: [-1, 0]
+    Width: 0.04
+    Depth: 0.02
+    Height: 0.02
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 32
+          Panel: 2
+          DeviceCode: M
+          CableSpec: "UTP Cat6a"
+          CableLength: 2
+  - id: C9-M
+    Name: "Kontakt okna 9"
+    Description: "Window contact on the south window, with the mmWave on the same cable. Plan mark (009)."
+    PredefinedType: CONTACTSENSOR
+    ObjectType: WindowContact
+    ContainedInStructure: SP-1.11
+    Origin: [1.73, 3.275]
+    Elevation: 1.0
+    RefDirection: [1, 0]
+    Width: 0.04
+    Depth: 0.02
+    Height: 0.02
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 9
+          Panel: 2
+          DeviceCode: M
+          CableSpec: "UTP Cat6a"
+          CableLength: 15
+  - id: C9-R
+    Name: "mmWave 9"
+    Description: "Presence sensor inside the south window. Plan mark (009) on the radar icon."
+    PredefinedType: MOVEMENTSENSOR
+    ObjectType: MmWavePresence
+    ContainedInStructure: SP-1.11
+    Origin: [1.71, 3.81]
+    Elevation: 2.42
+    Width: 0.08
+    Depth: 0.08
+    Height: 0.03
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 9
+          Panel: 2
+          DeviceCode: R
+          CableSpec: "UTP Cat6a"
+          CableLength: 15
+outlets:
+  - id: C13-E
+    Name: "Ethernet 13"
+    Description: "Data outlet on the north wall. Plan mark 1(013). Panel 1."
+    PredefinedType: DATAOUTLET
+    ObjectType: Ethernet
+    ContainedInStructure: SP-1.11
+    Origin: [1.24, 7.95]
+    Elevation: 0.26
+    RefDirection: [-1, 0]
+    Width: 0.08
+    Depth: 0.02
+    Height: 0.08
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 13
+          Panel: 1
+          DeviceCode: E
+          CableSpec: "UTP Cat6a"
+          CableLength: 25
+  - id: C14-W
+    Name: "Wi-Fi 14"
+    Description: "U7 Pro, plan note na strope. The sticker is drawn on the corridor side of the north wall; the box is inside 1.11. Panel 1."
+    PredefinedType: COMMUNICATIONSOUTLET
+    ObjectType: WifiAccessPoint
+    ContainedInStructure: SP-1.11
+    Origin: [1.07, 7.32]
+    Elevation: 2.42
+    Width: 0.16
+    Depth: 0.16
+    Height: 0.04
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 14
+          Panel: 1
+          DeviceCode: W
+          CableSpec: "UTP Cat6a"
+          CableLength: 23
+actuators:
+  - id: C16-B
+    Name: "Žaluzie 16"
+    Description: "West wall, north of OP01. The (16) mark is outside the corner; the box is inside."
+    PredefinedType: ELECTRICACTUATOR
+    ObjectType: BlindActuator
+    ContainedInStructure: SP-1.11
+    Origin: [0.45, 7.26]
+    Elevation: 2.32
+    RefDirection: [0, -1]
+    Width: 0.12
+    Depth: 0.06
+    Height: 0.06
+    PropertySets:
+      - Name: Pset_ActuatorTypeCommon
+        Properties:
+          Application: SUNBLINDACTUATOR
+      - Name: Pset_ActuatorTypeElectricActuator
+        Properties:
+          ElectricActuatorType: MOTORDRIVE
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 16
+          Panel: 2
+          DeviceCode: B
+          CableSpec: "CYKY 4x1.5"
+          CableLength: 10
+  - id: C18-B
+    Name: "Žaluzie 18"
+    Description: "West window OP01, upper part. Plan mark (18) on the blind icon."
+    PredefinedType: ELECTRICACTUATOR
+    ObjectType: BlindActuator
+    ContainedInStructure: SP-1.11
+    Origin: [0.45, 6.26]
+    Elevation: 2.32
+    RefDirection: [0, -1]
+    Width: 0.12
+    Depth: 0.06
+    Height: 0.06
+    PropertySets:
+      - Name: Pset_ActuatorTypeCommon
+        Properties:
+          Application: SUNBLINDACTUATOR
+      - Name: Pset_ActuatorTypeElectricActuator
+        Properties:
+          ElectricActuatorType: MOTORDRIVE
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 18
+          Panel: 2
+          DeviceCode: B
+          CableSpec: "CYKY 4x1.5"
+          CableLength: 11
+  - id: C46-B
+    Name: "Žaluzie 46"
+    Description: "South window OP05. Plan mark (46) on the blind icon."
+    PredefinedType: ELECTRICACTUATOR
+    ObjectType: BlindActuator
+    ContainedInStructure: SP-1.11
+    Origin: [1.84, 3.275]
+    Elevation: 2.32
+    RefDirection: [1, 0]
+    Width: 0.12
+    Depth: 0.06
+    Height: 0.06
+    PropertySets:
+      - Name: Pset_ActuatorTypeCommon
+        Properties:
+          Application: SUNBLINDACTUATOR
+      - Name: Pset_ActuatorTypeElectricActuator
+        Properties:
+          ElectricActuatorType: MOTORDRIVE
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 46
+          Panel: 2
+          DeviceCode: B
+          CableSpec: "CYKY 4x1.5"
+          CableLength: 16

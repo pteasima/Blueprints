@@ -11352,5 +11352,49 @@
     },
     "edges": "none",
     "annotationColor": "#1d4ed8"
+  },
+  {
+    "id": "plan-1.11",
+    "projection": "ortho",
+    "title": {
+      "en": "1.11 bedroom, top",
+      "cs": "1.11 ložnice, půdorys"
+    },
+    "project": "RD Šíma 1.NP",
+    "cuts": [
+      {
+        "normal": [
+          0.0,
+          -1.0,
+          0.0
+        ],
+        "anchor": [
+          2100.0,
+          5612.5,
+          2550.0
+        ]
+      }
+    ],
+    "camera": {
+      "target": [
+        2.1,
+        0.0,
+        -5.6125
+      ],
+      "position": [
+        2.1,
+        30.0,
+        -5.6125
+      ],
+      "up": [
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "orthoFit": [
+        2.55,
+        3.2374999999999994
+      ]
+    }
   }
 ]

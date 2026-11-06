@@ -52,6 +52,9 @@ thickness and are not extruded.
 Bathroom 1.07 is ``bathroom-1.07.yaml``. The shower falls 1.25% from the
 south toward a wall drain in the north pre-wall. EPS under the shower is 60+40.
 
+Bedroom 1.11 field devices are ``bedroom-1.11.yaml``. Lights, buttons,
+sensors, outlets, and blind actuators are boxes in the room.
+
     python -m blueprints.export ground_floor
 """
 
@@ -83,6 +86,10 @@ from bathroom_107 import (
     figures as bathroom_107_figures,
     parts as bathroom_107_parts,
     scenes as bathroom_107_scenes,
+)
+from bedroom_111 import (
+    parts as bedroom_111_parts,
+    scenes as bedroom_111_scenes,
 )
 from bathroom_120 import (
     LABEL_DRAIN,
@@ -592,7 +599,11 @@ def _span_y(body, thickness: float) -> tuple[float, float]:
     return min(float(bounds.min.Y), -half), max(float(bounds.max.Y), half)
 
 
-def build(path: Path | None = None, furnishings_path: Path | None = None):
+def build(
+    path: Path | None = None,
+    furnishings_path: Path | None = None,
+    electrical_path: Path | None = None,
+):
     doc = load_document(path)
     furn_path = furnishings_path
     if furn_path is None:
@@ -727,6 +738,10 @@ def build(path: Path | None = None, furnishings_path: Path | None = None):
     parts.extend(bath_parts)
     bath107_parts = bathroom_107_parts()
     parts.extend(bath107_parts)
+    if electrical_path is None and path is not None:
+        electrical_path = Path(path).with_name("bedroom-1.11.yaml")
+    bed_parts = bedroom_111_parts(electrical_path)
+    parts.extend(bed_parts)
     bath107 = bathroom_107_figures()
 
     assembly = Compound(obj=parts, children=parts, label=MODEL_NAME)
@@ -754,6 +769,7 @@ def build(path: Path | None = None, furnishings_path: Path | None = None):
             "bathroom_107_head_mm": round(bath107["head_mm"], 3),
             "bathroom_107_drop_mm": round(bath107["drop_mm"], 3),
             "bathroom_107_screed_drain_mm": round(bath107["screed_drain_mm"], 3),
+            "bedroom_111": len(bed_parts),
         },
         "footprints_omitted": omitted,
         "openings_cut": cut_ids,
@@ -1048,6 +1064,7 @@ def scenes() -> list[dict]:
         ),
         *bathroom_scenes(),
         *bathroom_107_scenes(),
+        *bedroom_111_scenes(),
     ]
 
 
@@ -1082,6 +1099,15 @@ def part_groups() -> list[dict]:
                 "screen",
                 "profile",
                 "vanity",
+            ],
+        },
+        {
+            "id": "electrical",
+            "children": [
+                "switch",
+                "sensor",
+                "outlet",
+                "actuator",
             ],
         },
     ]
