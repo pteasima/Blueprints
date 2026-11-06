@@ -31,13 +31,13 @@ Source: the closing line of the module note in `models/obyvak.py`, and `models/o
 
 | Name | Value | What it is |
 | --- | ---: | --- |
-| `furniture_width` | 450 mm | Depth of the north cabinet band, from the cabinet wall toward the windows. Sets the soffit face (`x_furn` = 4900) and the false ridge. |
+| `furniture_width` | 450 mm | Depth of the soffit band, from the cabinet wall toward the windows. Dining and living-area cabinets are this deep too. Sets the soffit face (`x_furn` = 4900) and the false ridge. |
 | `furniture_height` | 2450 mm | Top of that band. Same figure Petr wrote for the tall cabinets (furnishings file). |
 | `furniture_gap` | 20 mm | Gap between that top and the soffit underside. Underside is 2470 mm (`z_nabeh_bot`). |
 | `predstena_living` | 450 mm | Trap on the living gable, Y = 0, existing only above Z = 2450. |
 | `predstena_kitchen` | 190 mm | Trap on the kitchen gable, Y = 11100, above Z = 2450. |
 
-**The kitchen tall carcasses are 600 mm deep, not 450.** Source: `furnishings.yaml` (“Tall carcasses are 600 deep”). The section still pulls one 450 mm soffit line along the whole cabinet wall. A 600 mm carcass stands 150 mm past that line. Which depth the soffit should follow is not decided in either file.
+The soffit band is 450 mm deep, and so are the dining and living-area cabinets. The 600 mm kitchen tall cabinets stick out beyond that line on purpose, 150 mm past the soffit face. The section keeps the one 450 mm line (`furniture_width`). The false ridge stays the middle of the width minus that 450 mm. It does not move out to the tall-cabinet face. Source: Petr, 2026-11-06. The 600 mm depth is the tall-run note in `furnishings.yaml`.
 
 ## Room and which gable is which
 
@@ -70,7 +70,7 @@ East and north, in the storey frame, are in [README.md](README.md).
 
 The left stack is the tight one. StoSilent, 100 mm NaturHeld, one GKF, the CD, the vapour brake and 160 mm of wool have to fit under the rafter at the window eave. Both slopes use that room-face height. Source: `ObyvakLayout` comments, and the PR #77 body, which prints the same eave and the same false-ridge height.
 
-**`docs/acoustics/LAYOUT.md` still prints 3151 mm and 5206 mm for those two heights.** That is the ceiling before PR #77. Do not copy it into a new placement.
+`docs/acoustics/LAYOUT.md` and `docs/acoustics/obyvak-wave.md` are labeled as the ceiling before PR #77 (eave 3151 mm, false ridge height 5206 mm). Their tables were not recomputed. Do not copy those two heights into a new placement.
 
 ## Slope build-up, interior to attic
 
@@ -81,7 +81,7 @@ Both slopes are 100 mm NaturHeld 140 with StoSilent Top Finish + Top Basic (2 + 
 | Road-side (cabinet) GKF | 2 × 12.5 mm, for road noise. The window slope stays one layer. The room face does not move; the right CD plane moves up by 12.5 mm. | `sdk_layers_right`, PR #70 |
 | CD grid | 60×27 at 500 mm. Knauf D112 maximum for 12.5 mm GKF in one or two layers, boards across the profiles. First axis 90 mm from the room face (Knauf allows ≤ 100). 2000 / 2500 / 3000 mm boards then end on a CD. | `cd_spacing`, `cd_first_inset`, PR #75 (was 625 mm) |
 | Right-hand grid | Restarts at the false ridge: 90 mm along the slope, then every 500 mm. The false ridge itself has no profile. | `sikmina_cd` comments, PR #77 body |
-| Vapour brake | Jutafol N AL 170 Speciál, about 1 mm, on the attic face of the CD, below the wool. Not a variable membrane. Continuous eave to eave. | module note; bill line in `docs/obyvak-skladba-souhrn.csv` |
+| Vapour brake | Jutafol N AL 170 Speciál, about 1 mm, on the attic face of the CD, below the wool. Not a variable membrane. Continuous eave to eave. Commit `89330ae`’s subject says “Jutafol 145 Al”; the model and the bill do not. | module note; bill line in `docs/obyvak-skladba-souhrn.csv` |
 | Wool | Mineral wool λ 0.039. Left: 160 mm under the rafters, and the same in the rafter bays. Right cavity filled 160+160+120 mm. | `wool_below_left`, `vata_pts`, bill lines 12 and 12b |
 | Rafters | 100/160 mm at about 875 mm. First inset 200 mm. | `rafter_w`, `rafter_t`, `rafter_spacing` |
 | Ties | 6 × Ø14 from wall plate to wall plate, every other rafter bay, 270 mm clear of the nearer (living-gable) rafter face. Sheet note “6× táhlo ø14 z pozednice”. They sit in the top of the plate so they clear the Ø160 ducts. | `tie_d`, `tie_face_clear`, PR #79 |
@@ -89,13 +89,13 @@ Both slopes are 100 mm NaturHeld 140 with StoSilent Top Finish + Top Basic (2 + 
 | Racking | 40×2 mm straps at 45°, X across the rafters. | module note |
 | Above the rafters | 40 mm vent, 1 mm DHV, 40 mm counter-battens, 40 mm battens, 22 mm tiles. Overhang past the EPS is 80 mm, gutter-sized only. | `vent_t` through `roof_overhang`, PR #37 |
 
-`open:` the bill prices Knauf NatuRoll Pro 039. PR #77’s body instead names Isover Domo Plus 038 for the 160 mm layer, and PR #68’s title names Unifit 033 / NatuRoll 039. The lambda in the model matches 039. Which product was confirmed is not a single sentence in the code.
+**open:** the bill prices Knauf NatuRoll Pro 039. PR #77’s body instead names Isover Domo Plus 038 for the 160 mm layer, and PR #68’s title names Unifit 033 / NatuRoll 039. The lambda in the model matches 039. Which product was confirmed is not settled.
 
-**The hanger lengths are written two ways.** The module note in `obyvak_geom.py` says a 140 mm void under the window rafters and a 440 mm Nonius top (gap about 429). The section label in `models/obyvak.py` says “Přímý závěs 200 mm” and “Nonius 540 mm”. PR #77 prints a direct-hanger gap of 159 mm, a slope Nonius of 540 mm (gap 436) and a soffit Nonius of 440 mm (drop 407), and says the 540 mm top is still priced as the 440 mm set. This pass did not remeasure the solids.
+**open:** hanger catalogue lengths. The section label in `models/obyvak.py` says “Přímý závěs 200 mm” and “Nonius 540 mm”. PR #77 prints a direct-hanger gap of 159 mm, a slope Nonius of 540 mm (gap 436) and a soffit Nonius of 440 mm (drop 407), and says the 540 mm top is still priced as the 440 mm set. An older note in this file said a 140 mm void and a 440 mm Nonius top. The solids were not remeasured, and neither length is chosen here.
 
 `open:` internal StoSilent corners (slope-to-slope, slope-to-gable, slope-to-soffit where the face is plastered) are a tape-cut separation joint, not acrylic on the finish. At the gables the alternative is a StoSilent Profile AP 210 shadow gap. Confirm with the plasterer and Sto for a NaturHeld substrate. Sources are the two Sto links in the module note of `obyvak_geom.py`, and the Czech steps in the PR #77 body.
 
-Because both NaturHeld boards are now 100 mm, the room faces and the NaturHeld butts meet on the false ridge (`x_stack_joint` = `x_false`). The CD, foil and wool planes meet 9.72 mm further toward the cabinets (`x_cd_joint` = 2459.72), which is the extra GKF layer on the road side. The comment above `x_stack_joint` still says “Thicker right NaturHeld”; that described the earlier 60/100 stack (PR #68), not the current boards.
+Because both NaturHeld boards are 100 mm, the room faces and the NaturHeld butts meet on the false ridge (`x_stack_joint` = `x_false`). The CD, foil and wool planes meet 9.72 mm further toward the cabinets (`x_cd_joint` = 2459.72), which is the extra GKF layer on the road side. The formula still shifts `x_stack_joint` if the two boards ever differ. PR #68 was the 60/100 stack, where they did.
 
 ## Soffit over the north cabinets
 
@@ -105,7 +105,7 @@ Three Ø160 spiral ducts (HRV supply, HRV extract, AC) sit in a 2-over-1 pack ag
 
 The GKF lid (2 × 12.5 mm, extra layer on the attic side) has its top flush with the wall plate. Its cut end meets the plate cheek, above the wall head, not on the plaster. The lid widens until the slope GKF, cut level, lands on it. Source: `z_soffit_lid`, PR #73 and PR #77.
 
-`open:` that slope-to-lid joint is intentionally not detailed. No angle, no UD. Finish of the edge is undecided. Source: PR #77 body (“Open: slope / lid joint”). PR #68 had specified a 40° UD screwed to the soffit CD with an acrylic joint; the later model removed that profile. The module note in `models/obyvak_section.py` still describes the old angle.
+`open:` that slope-to-lid joint is intentionally not detailed. No angle, no UD. Finish of the edge is undecided. Source: PR #77 body (“Open: slope / lid joint”). PR #68 had specified a 40° UD screwed to the soffit CD with an acrylic joint; the later model removed that profile.
 
 The kastlík frame is CD 60×27 at the same 500 mm module, plus a UD on the eave wall. No timber. Furniture and the wall plate do not carry the box. The plate only fixes the board edge. Vertical CD studs hang from the lid CD and brace into the wall UD. Source: module notes in `obyvak_geom.py` and `obyvak.py`.
 

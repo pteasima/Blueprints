@@ -22,16 +22,16 @@ Section frame, millimetres. X runs from the window wall to the cabinet wall (535
 
 The spans match: 29.90 − 18.80 = 11.10 m and 15.60 − 10.25 = 5.35 m. The cabinet wall is north (tall-run backs on y = 15.60). The glazed wall is south (`W-023` in `ground-floor.yaml`, room face y = 10.25). PR #83 calls the east inner face x = 29.90 the TV wall, which is the living gable (section Y = 0). West is the kitchen gable (section Y = 11100).
 
+The soffit band is 450 mm deep, and so are the dining and living-area cabinets. The 600 mm kitchen tall cabinets stick out beyond it on purpose. Source: Petr, 2026-11-06. Detail in [obyvak.md](obyvak.md).
+
+`docs/acoustics/LAYOUT.md` and `docs/acoustics/obyvak-wave.md` are labeled as the ceiling before PR #77 (eave 3151 mm, false ridge 5206 mm). The current section is an eave of 3019.97 mm and a false ridge of 5075.77 mm. Do not copy the old heights.
+
 ## Disagreements
 
 These are not resolved here.
 
-**The published wave-study pages still describe an older ceiling.** `docs/acoustics/LAYOUT.md` lists an interior eave of 3151 mm and a false ridge at 5206 mm. The current section, measured from `ObyvakLayout` while writing this file, is an eave of 3019.97 mm and a false ridge of 5075.77 mm. Those current figures are the ones in the PR #77 body. `docs/acoustics/obyvak-wave.md` still says the kastlík step starts at Z = 3.15 m.
+**open:** three furniture layouts disagree about the living room. The kitchen file on this branch, the unmerged living-room file on PR #83, and the wave-study boxes in `src/blueprints/acoustics/roomwave/geometry.py` do not place the same sofa, television, island, or fridge. On the current PR #83 branch the sofa’s west face, the low base and the bookshelf are all at x = 25.52, and the table-to-sofa gap is 1333 mm. Details are in [furnishings.md](furnishings.md) and [acoustics.md](acoustics.md).
 
-**Three furniture layouts disagree about the living room.** The kitchen file on this branch, the unmerged living-room file on PR #83, and the wave-study boxes in `src/blueprints/acoustics/roomwave/geometry.py` do not place the same sofa, television, island, or fridge. Details are in [furnishings.md](furnishings.md) and [acoustics.md](acoustics.md).
+**open:** the slope wool has been named as three products. PR #68’s title says Unifit 033 / NatuRoll 039. The PR #77 body says the under-rafter layer is Isover Domo Plus 038. The current bill of materials (`scripts/export_obyvak_skladba.py`, `docs/obyvak-skladba-souhrn.csv`) prices Knauf NatuRoll Pro 039, and the section comment says λ 0.039. The model has a lambda, not a product enum.
 
-**Inside PR #83 the sofa moved and the pieces around it did not.** The west face of the sofa is x = 26.12. The low base, the bookshelf and the table’s “1333 mm to the sofa” still use x = 25.52.
-
-**The roof’s north cabinet band is 450 mm deep. The kitchen tall cabinets are 600 mm deep.** One soffit line cannot satisfy both. See [obyvak.md](obyvak.md) and [furnishings.md](furnishings.md).
-
-**The slope wool has been named as three products.** PR #68’s title says Unifit 033 / NatuRoll 039. The PR #77 body says the under-rafter layer is Isover Domo Plus 038. The current bill of materials (`scripts/export_obyvak_skladba.py`, `docs/obyvak-skladba-souhrn.csv`) prices Knauf NatuRoll Pro 039, and the section comment says λ 0.039. The model has a lambda, not a product enum.
+**open:** hanger catalogue lengths, 440 mm and 540 mm. The section label says Nonius 540 mm. PR #77 also prints a 440 mm soffit Nonius and prices the 540 mm top as the 440 mm set. Neither length is chosen. See [obyvak.md](obyvak.md).
