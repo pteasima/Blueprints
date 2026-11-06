@@ -1,4 +1,6 @@
 # Room 1.11 (Ložnice) field devices. yaml-ifc electrical schema
+# The 2D plan (docs/previews/bedroom-1.11/) is what Petr is reviewing.
+# These Origins are the first 3D pass and are not the approved positions.
 # (pteasima/yaml-ifc PR #7, vendored at 0f96c26). Lengths are metres.
 # Boxes sit in the room. No back boxes, no wall host, no panels, no routes.
 #
