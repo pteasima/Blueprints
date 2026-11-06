@@ -71,19 +71,51 @@ Other height notes that do name a number:
 | Podhled 200 mm nebo více / 30 mm nebo 45 mm / 20 mm nebo 35 mm (ještě potvrdím kolik) | Suspended-ceiling zones. The thickness is still to be confirmed. Room 1.11 is not named on these three |
 | K světlům D600 a D800 … mezi světlo a strop … ohebný profil s LED páskem | An LED tape in a flexible profile between a D600 or D800 and the ceiling, switched separately |
 
+## House defaults
+
+Petr filled the three blank underscores, as house-wide centres in millimetres. The 1.11 plan uses these. Exceptions come later, room by room.
+
+| What | Centre |
+| --- | --- |
+| First socket | 300 |
+| Next socket, or ethernet above a socket | one module above the one below. This plan uses 80 mm, so ethernet is at 380 |
+| First button | 1350 |
+| Next button | stacked above the one below (80 mm on this plan) |
+| Sockets above a counter (kitchen, bathroom, laundry) | 1400 |
+
+Along the wall: 150 mm from a door edge, or from an outer corner when the device is indoors. 300 mm from an inner corner, or from an outer corner when the device is outdoors.
+
+At one wall position the plates share x and y. Power is the lowest, starting at 300. Ethernet is right above it. Switches are a separate stack, starting at 1350.
+
+Routing, for later wiring, not drawn here: 24 V and ethernet go up through ceilings, soffits, and attics, with rare exceptions. All 230 V runs in the floors.
+
 ## Rules used for the 1.11 plan
 
-The 2D plan applies these readings. Each device on the drawing cites the short name.
+The drawing cites the short name.
 
 | Short name | Rule |
 | --- | --- |
-| `stack` | A row of symbols drawn together (button, power socket, data socket) is one place on the wall. In the room they sit one below another. The top-to-bottom order is not written. |
-| `face` | A wall device is on the room face of the wall. The along-wall place is the sketch. The note's offset from the corner is the blank `_`, so it is not a measured set-off. |
-| `frame` | A contact is in the window or door frame, at the jamb the mark sits nearest. |
-| `facade` | A blind motor is outside, on the outer face of the wall, on the pier beside the window, on the side the mark is nearer. The blind cloth is not drawn. |
-| `exterior` | An outdoor lamp or outdoor button is outside the outer face of the facade, not in the room. |
-| `ceiling` | A bulb or the access point marked as a ceiling light stays in the room, off the wall. |
-| `corridor` | The second button of a door pair is on the corridor face of the same wall. It is not an outdoor device. |
+| `300` | Socket centre 300 mm. |
+| `380` | Ethernet centre, one 80 mm module above the socket. |
+| `1350` | First button centre. |
+| `1350+80` | Next button, stacked above. |
+| `in box` | The mmWave has no position of its own. It sits in the named switch box. |
+| `frame` | A contact is in the window or door frame, at the jamb. |
+| `facade` | A blind motor is outside, on the outer face, beside the window. The cloth is not drawn. |
+| `ceiling` | A light or the access point, in the room, off the wall. |
+| `bed-edge` | The LED strip follows the unfinished bed outline. |
+| `unused` | The fixture is parked. It is not wired, not on a panel, and not counted. |
+| `corridor` | The hallway button is on the other face of the bedroom door. |
+
+## Room 1.11, as answered
+
+Cable 12 is the pendant above the bed. Cable 3 is the LED strip under the bed, all around that outline. Cable 6 is one 8-core cable for the single button and the double button in the same outdoor stack. Cable 32 is the door contact, the bedroom light switch, and the hallway switch on the other side of that door. Cable 16 is the blind for the narrow west window. The access point is on the bedroom ceiling. The mmWave is inside the bedroom light-switch box.
+
+Power sockets have no cable number and no circuit. They are positions only. The two outdoor lamps stay where they were and are marked UNUSED. The west lamp's cable number is still a TODO.
+
+The bed outline stays, because the strip needs it. In the plan and in `BED-1.11` it is marked UNFINISHED placeholder furniture. It is not a solid.
+
+The room table's 22.98 m² is the area to follow. The wall model closes 15.43 m². The drawing extends the room north to W-018 and hatches the part the model does not close. That rectangle is 20.54 m². The other 2.44 m² is not drawn.
 
 ## Other notes that bound the work
 
