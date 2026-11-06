@@ -15,56 +15,37 @@
 # same code. CableNumber and Panel are Pset_YamlIfc. Home joins on those.
 # DeviceCode, CableSpec, and CableLength repeat the Soupis row.
 #
-# Room faces, from ground-floor.yaml (axis ± half thickness):
+# The wall model closes a bay of 3.300 × 4.675 m (15.428 m²):
 #   west  x=0.450   W-030 inner face
 #   east  x=3.750   W-031 west face
 #   south y=3.275   W-002 inner face
-#   north y=7.950   W-013 south face, extended across this bay
-# W-013 itself starts at W-031, so the model has no north wall solid on
-# 1.11. The drawing does: clear width 3300 mm, clear depth 4675 mm.
-# 3.300 × 4.675 = 15.428 m². The room table lists 22.98 m².
+#   north y=7.950   W-013 south face, and W-031 stops on that line
+# The floor plan keeps the room going north to W-018 (south face y=9.500,
+# 125 mm thick). That rectangle is 3.300 × 6.225 m = 20.543 m². The room
+# table lists 22.98 m². The remaining 2.44 m² is not drawn.
+# The 2D plan is the position. Origins below are the first 3D pass.
 #
-# Plan registration, screenshot pixels to those faces. Image y is down.
-#   west inner px 118, east inner px 279, south inner py 674, north py 462.
+# Bed outline, screenshot pixels registered to the model bay. Image y is down.
+#   west inner px 118, east inner px 279, north py 462 = y 7.950.
 #   world_x = 0.450 + (px - 118) / 161 * 3.300
 #   world_y = 7.950 - (py - 462) / 212 * 4.675
-# The two scales differ by about 8 percent. Each device below is the plan
-# mark, pulled inside these faces. A symbol that sat on the wall line is
-# inset so the box is in the room.
+# Corners (184, 539) and (267, 612), rounded to 1 mm, are on BED-1.11.
+# That bed is UNFINISHED placeholder furniture, not a solid.
 #
-# Mounting, Czech residential defaults, not written on the plan:
-#   wall button centre 1.05 m (box base 1.01, height 0.08)
-#   data outlet centre 0.30 m (base 0.26)
-#   window and door contacts at 1.00 m
-#   ceiling boxes at base 2.40 or 2.42, top at or under 2.48
-#   pendant base 2.05, top 2.35 (the plan's hanging light)
-#   blind actuator base 2.32, under the 2.50 m window head
-# The bedroom clear height in the wall file is the range 2.50–4.875 m.
-# Which side is the low side is not in this model, so nothing is placed
-# above 2.50 m. OP01 (west) and OP05 (south) are sill 0, height 2.50.
+# House centres, millimetres, on the 2D plan (see PlanNotes.md):
+#   socket 300, ethernet one module above it, button 1350, next button above
+#   150 from a door edge, 300 from an inner corner, 300 from an outer corner outdoors
 #
-# Open questions — not resolved by moving a box:
-#   SCHUKO: the plan legend's red socket icon is on the north wall, the
-#   east wall (twice), and outside the southwest corner. Soupis has no
-#   socket cable for 1.11, so those marks are not devices here.
-#   cable 12: CYKY 2x1.5, the only 2-core light. Assigned to the pendant
-#   because that bulb is marked "?" (no cable number) and 120W. A west
-#   outdoor lamp also reads as (012), with a first digit that is not 2.
-#   The south outdoor lamp reads as (141), which is not a 1.11 cable.
-#   cable 3: 2(003) is written in the same east cluster as lamp 2(005),
-#   and there is one bulb icon. C3-S is a second box 0.45 m from C5-S.
-#   cable 6: Soupis is V and 2V on one cable. The plan shows one 532-4U
-#   outside the southwest corner. C6-V is placed beside C6-2V; it has no
-#   mark of its own.
-#   cable 32: shared with 1.05, length 2 m, devices V, V, M. No (032) mark
-#   was readable in the room. Placed at the northwest door the plan draws
-#   and the wall file does not (no opening). C32-V-2 is the corridor half,
-#   north of y=7.950. The door width is not taken from a model opening.
-#   cable 16: the (16) blind mark sits on the northwest corner, past the
-#   room face. The box is on the west wall, north of OP01.
-#   Handwritten panel digits (4, 5, 7) on some blinds and the outdoor lamps
-#   did not match Soupis panel 2. Panel is the sheet's Rozvadec.
-#   Area 22.98 m² against the 15.428 m² clear rectangle above.
+# Decisions recorded from the review, still not a moved 3D box:
+#   SCHUKO sockets are position only. No cable number, no circuit, wiring skipped.
+#   cable 12 is the pendant above the bed (CYKY 2x1.5).
+#   cable 3 is the LED strip under the bed, around the unfinished outline. No box.
+#   cable 6 is one 8-core cable: the double and the single, one outdoor stack.
+#   cable 32 is the door contact plus the bedroom switch and the hallway switch.
+#   The door is the floor-plan leaf. The wall model has no opening there.
+#   cable 16 is the blind for the narrow west window OP02.
+#   The two outdoor lamps stay, marked UNUSED, and are not wired or counted.
+#   The mmWave (cable 9) is inside the bedroom door switch, not its own dot.
 schema: IFC4 ADD2 TC1
 units:
   LengthUnit: METRE
@@ -97,7 +78,7 @@ windows: []
 lightFixtures:
   - id: C11-S
     Name: "Světlo 11"
-    Description: "North ceiling, by the entrance. Plan mark 2(011) on a lamp."
+    Description: "Ceiling near the door. Plan mark 2(011). The 3D origin is the first pass."
     PredefinedType: POINTSOURCE
     ObjectType: Lamp
     ContainedInStructure: SP-1.11
@@ -116,7 +97,7 @@ lightFixtures:
           CableLength: 8
   - id: C12-S
     Name: "Lustr 12"
-    Description: "Hanging light in the room, plan text zaveseny lustr cca 120W, bulb marked ?. Cable 12 is the 2-core light. See the open question."
+    Description: "Pendant above the bed. Cable 12, the 2-core light. Plan text zaveseny lustr cca 120W."
     PredefinedType: POINTSOURCE
     ObjectType: Pendant
     ContainedInStructure: SP-1.11
@@ -154,16 +135,11 @@ lightFixtures:
           CableSpec: "CYKY 4x1.5"
           CableLength: 12
   - id: C3-S
-    Name: "Světlo 3"
-    Description: "East cluster. 2(003) is written next to lamp 2(005); this box is the second light. See the open question."
-    PredefinedType: POINTSOURCE
-    ObjectType: Lamp
+    Name: "Pásek 3"
+    Description: "LED strip under the bed, all around the unfinished bed outline. No box. Cable 3."
+    PredefinedType: USERDEFINED
+    ObjectType: LedStrip
     ContainedInStructure: SP-1.11
-    Origin: [3.12, 5.97]
-    Elevation: 2.4
-    Width: 0.16
-    Depth: 0.16
-    Height: 0.05
     PropertySets:
       - Name: Pset_YamlIfc
         Properties:
@@ -229,6 +205,29 @@ lightFixtures:
           DeviceCode: S
           CableSpec: "CYKY 4x1.5"
           CableLength: 15
+  - id: LAMP-X-W
+    Name: "Venkovní lampa západ"
+    Description: "UNUSED. Parked. Not wired, not on a panel, not counted. TODO: cable number is unresolved."
+    PredefinedType: POINTSOURCE
+    ObjectType: OutdoorLamp
+    ContainedInStructure: SP-1.11
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          Unused: true
+          PositionOnly: true
+          Todo: "cable number unresolved"
+  - id: LAMP-X-S
+    Name: "Venkovní lampa jih"
+    Description: "UNUSED. Parked. Not wired, not on a panel, not counted."
+    PredefinedType: POINTSOURCE
+    ObjectType: OutdoorLamp
+    ContainedInStructure: SP-1.11
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          Unused: true
+          PositionOnly: true
 switchingDevices:
   - id: C1-2V
     Name: "Dvojvypínač 1"
@@ -252,7 +251,7 @@ switchingDevices:
           CableLength: 12
   - id: C10-V
     Name: "Vypínač 10"
-    Description: "North wall, by the entrance lamp. Plan mark (010)."
+    Description: "Bedroom side of the door, stacked above the bedroom light switch. The 3D origin is the first pass."
     PredefinedType: MOMENTARYSWITCH
     ObjectType: PushButton
     ContainedInStructure: SP-1.11
@@ -272,7 +271,7 @@ switchingDevices:
           CableLength: 8
   - id: C32-V-1
     Name: "Vypínač 32 ložnice"
-    Description: "Bedroom half of shared cable 32, east of the northwest door. No (032) mark was readable. See the open question."
+    Description: "Bedroom light switch, cable 32, 150 mm from the door edge. The mmWave C9-R is inside this box. The 3D origin is the first pass."
     PredefinedType: MOMENTARYSWITCH
     ObjectType: PushButton
     ContainedInStructure: SP-1.11
@@ -292,7 +291,7 @@ switchingDevices:
           CableLength: 2
   - id: C32-V-2
     Name: "Vypínač 32 chodba"
-    Description: "Corridor half of shared cable 32, north of the bedroom face. The 1.05 device on this cable. No (032) mark was readable."
+    Description: "Hallway light switch on the other side of the bedroom door. Same cable 32. The 3D origin is the first pass."
     PredefinedType: MOMENTARYSWITCH
     ObjectType: PushButton
     ContainedInStructure: SP-1.11
@@ -332,7 +331,7 @@ switchingDevices:
           CableLength: 10
   - id: C6-2V
     Name: "Dvojvypínač 6"
-    Description: "South wall, west pier. The 532-4U drawn just outside the southwest corner, brought inside. Cable 6 also has a single button."
+    Description: "Double button. Cable 6 is one 8-core UTP with the single button, same stack, outside the southwest corner."
     PredefinedType: MOMENTARYSWITCH
     ObjectType: DoublePushButton
     ContainedInStructure: SP-1.11
@@ -352,7 +351,7 @@ switchingDevices:
           CableLength: 15
   - id: C6-V
     Name: "Vypínač 6"
-    Description: "Single button on cable 6, beside the double. The plan does not number it on its own. See the open question."
+    Description: "Single button on the same 8-core cable 6, stacked above the double."
     PredefinedType: MOMENTARYSWITCH
     ObjectType: PushButton
     ContainedInStructure: SP-1.11
@@ -373,7 +372,7 @@ switchingDevices:
 sensors:
   - id: C32-M
     Name: "Kontakt dveří 32"
-    Description: "Door contact for the shared cable, at the northwest door. The wall file has no opening there."
+    Description: "Door contact, cable 32. The door is on the floor plan at the west end of the north wall. The wall model has no opening there."
     PredefinedType: CONTACTSENSOR
     ObjectType: DoorContact
     ContainedInStructure: SP-1.11
@@ -393,7 +392,7 @@ sensors:
           CableLength: 2
   - id: C9-M
     Name: "Kontakt okna 9"
-    Description: "Window contact on the south window, with the mmWave on the same cable. Plan mark (009)."
+    Description: "Window contact, cable 9, in the south window frame. The mmWave on this cable sits in a switch box, not here."
     PredefinedType: CONTACTSENSOR
     ObjectType: WindowContact
     ContainedInStructure: SP-1.11
@@ -413,15 +412,10 @@ sensors:
           CableLength: 15
   - id: C9-R
     Name: "mmWave 9"
-    Description: "Presence sensor inside the south window. Plan mark (009) on the radar icon."
+    Description: "mmWave on cable 9. It is inside the bedroom door switch box (C32-V-1), not a separate position. No box of its own."
     PredefinedType: MOVEMENTSENSOR
     ObjectType: MmWavePresence
     ContainedInStructure: SP-1.11
-    Origin: [1.71, 3.81]
-    Elevation: 2.42
-    Width: 0.08
-    Depth: 0.08
-    Height: 0.03
     PropertySets:
       - Name: Pset_YamlIfc
         Properties:
@@ -430,6 +424,7 @@ sensors:
           DeviceCode: R
           CableSpec: "UTP Cat6a"
           CableLength: 15
+          InSwitchBox: C32-V-1
 outlets:
   - id: C13-E
     Name: "Ethernet 13"
@@ -453,7 +448,7 @@ outlets:
           CableLength: 25
   - id: C14-W
     Name: "Wi-Fi 14"
-    Description: "U7 Pro, plan note na strope. The sticker is drawn on the corridor side of the north wall; the box is inside 1.11. Panel 1."
+    Description: "U7 Pro on the bedroom ceiling. Panel 1. The 3D origin is the first pass."
     PredefinedType: COMMUNICATIONSOUTLET
     ObjectType: WifiAccessPoint
     ContainedInStructure: SP-1.11
@@ -470,10 +465,54 @@ outlets:
           DeviceCode: W
           CableSpec: "UTP Cat6a"
           CableLength: 23
+  - id: SOCK-N
+    Name: "Zásuvka sever"
+    Description: "Dumb power socket. Position only. No cable number and no circuit. Main panel. Wiring skipped."
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.11
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-EN
+    Name: "Zásuvka východ sever"
+    Description: "Dumb power socket. Position only. No cable number and no circuit. Main panel. Wiring skipped."
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.11
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-ES
+    Name: "Zásuvka východ jih"
+    Description: "Dumb power socket. Position only. No cable number and no circuit. Main panel. Wiring skipped."
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.11
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-X
+    Name: "Zásuvka exteriér"
+    Description: "Dumb power socket outside the southwest corner. Position only. No cable number and no circuit. Wiring skipped."
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.11
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
 actuators:
   - id: C16-B
     Name: "Žaluzie 16"
-    Description: "West wall, north of OP01. The (16) mark is outside the corner; the box is inside."
+    Description: "Blind motor for the narrow west window OP02, on the outside face beside that window."
     PredefinedType: ELECTRICACTUATOR
     ObjectType: BlindActuator
     ContainedInStructure: SP-1.11
@@ -549,3 +588,18 @@ actuators:
           DeviceCode: B
           CableSpec: "CYKY 4x1.5"
           CableLength: 16
+furniture:
+  - id: BED-1.11
+    Name: "Postel"
+    Description: "UNFINISHED placeholder furniture. Outline traced from the floor-plan screenshot so the cable-3 strip has an edge. Not a model solid."
+    PredefinedType: BED
+    ContainedInStructure: SP-1.11
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          Status: UNFINISHED
+          Placeholder: true
+          X0: 1.803
+          Y0: 4.642
+          X1: 3.504
+          Y1: 6.252

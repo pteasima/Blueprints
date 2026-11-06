@@ -98,6 +98,14 @@ def test_room_faces_are_the_wall_model():
     assert width * depth < 22.0
 
 
+_POSITION_ONLY = {"SOCK-N", "SOCK-EN", "SOCK-ES", "SOCK-X", "LAMP-X-W", "LAMP-X-S"}
+_NO_BOX = {"C3-S", "C9-R", *_POSITION_ONLY}
+
+
+def _boxed(record) -> bool:
+    return all(record.get(key) for key in ("Width", "Depth", "Height"))
+
+
 def test_schedule_codes_cable_numbers_and_panels():
     text = SOURCE_PATH.read_text(encoding="utf-8")
     for phrase in ("SCHUKO", "cable 12", "cable 3", "cable 6", "cable 32", "22.98"):
@@ -105,8 +113,14 @@ def test_schedule_codes_cable_numbers_and_panels():
     records = device_records()
     by_cable: dict[int, list[str]] = {}
     ids = []
+    bare = []
     for record in records:
         props = _pset(record)
+        if "CableNumber" not in props:
+            bare.append(record["id"])
+            assert props.get("PositionOnly") is True
+            assert record["id"] in _POSITION_ONLY
+            continue
         cable = props["CableNumber"]
         assert isinstance(cable, int)
         assert record["id"].startswith(f"C{cable}-")
@@ -118,25 +132,46 @@ def test_schedule_codes_cable_numbers_and_panels():
         by_cable.setdefault(cable, []).append(props["DeviceCode"])
         ids.append(record["id"])
     assert sorted(ids) == sorted(set(ids))
+    assert set(bare) == _POSITION_ONLY
     assert {cable: sorted(codes) for cable, codes in by_cable.items()} == {
         cable: sorted(codes) for cable, codes in SCHEDULE.items()
     }
     pendant = next(record for record in records if record["id"] == "C12-S")
     assert pendant["Wattage"] == 120
     assert pendant["ObjectType"] == "Pendant"
+    strip = next(record for record in records if record["id"] == "C3-S")
+    assert strip["ObjectType"] == "LedStrip"
+    assert not _boxed(strip)
+    radar = next(record for record in records if record["id"] == "C9-R")
+    assert _pset(radar)["InSwitchBox"] == "C32-V-1"
+    assert not _boxed(radar)
+    for lamp_id in ("LAMP-X-W", "LAMP-X-S"):
+        lamp = next(record for record in records if record["id"] == lamp_id)
+        assert _pset(lamp)["Unused"] is True
+        assert not _boxed(lamp)
+    bed = next(item for item in load_document()["furniture"] if item["id"] == "BED-1.11")
+    bed_props = _pset(bed)
+    assert bed_props["Status"] == "UNFINISHED"
+    assert bed_props["Placeholder"] is True
+    assert "UNFINISHED" in bed["Description"]
+    assert "placeholder" in bed["Description"]
 
 
 def test_boxes_sit_in_the_bay_and_round_trip(tmp_path):
     faces = room_faces()
     placed = parts()
-    assert len(placed) == sum(len(codes) for codes in SCHEDULE.values())
-    assert {part.device_id for part in placed} == {record["id"] for record in device_records()}
+    records = device_records()
+    boxed = {record["id"] for record in records if _boxed(record)}
+    assert boxed.isdisjoint(_NO_BOX)
+    assert len(placed) == len(boxed)
+    assert {part.device_id for part in placed} == boxed
     labels = {part.device_id: part.label for part in placed}
     assert labels["C2-S"] == "light"
     assert labels["C1-2V"] == "switch"
-    assert labels["C9-R"] == "sensor"
     assert labels["C13-E"] == "outlet"
     assert labels["C46-B"] == "actuator"
+    assert "C9-R" not in labels
+    assert "C3-S" not in labels
 
     for part in placed:
         box = part.bounding_box()
@@ -167,7 +202,9 @@ def test_boxes_sit_in_the_bay_and_round_trip(tmp_path):
 
 def test_ground_floor_carries_the_bedroom_plan():
     _shape, meta = build()
-    assert meta["derived"]["bedroom_111"] == sum(len(codes) for codes in SCHEDULE.values())
+    boxed = sum(1 for record in device_records() if _boxed(record))
+    assert meta["derived"]["bedroom_111"] == boxed
+    assert boxed < sum(len(codes) for codes in SCHEDULE.values())
     plan = next(scene for scene in scenes() if scene["id"] == "plan-1.11")
     assert plan["projection"] == "ortho"
     assert plan["cuts"][0]["anchor"][2] == pytest.approx(PLAN_CUT_Z_M * 1000.0)

@@ -62,6 +62,9 @@ def test_rules_put_devices_on_the_right_side_of_the_wall():
         elif mark.place == "ceiling":
             assert inner[0] < mark.x < inner[2]
             assert inner[1] < mark.y < inner[3]
+        elif mark.place == "bed":
+            assert inner[0] < mark.x < inner[2]
+            assert inner[1] < mark.y < inner[3]
     for name, points in stacks.items():
         assert len(points) == 1, name
     # Blind motors are outside. Contacts are not.
@@ -79,6 +82,12 @@ def test_bed_outline_is_inside_the_room_and_not_from_furnishings():
     assert box["south"] < y0 < y1 < box["north"]
     text = (ROOT / "inputs" / "ground_floor" / "furnishings.yaml").read_text(encoding="utf-8")
     assert "SP-1.11" not in text
+    bed = (ROOT / "inputs" / "ground_floor" / "bedroom-1.11.yaml").read_text(encoding="utf-8")
+    assert "Status: UNFINISHED" in bed
+    assert "Placeholder: true" in bed
+    svg = render_svg()
+    assert "UNFINISHED" in svg
+    assert "placeholder furniture" in svg
 
 
 def test_published_plan_matches_the_renderer_and_names_both_schemes():
@@ -91,7 +100,8 @@ def test_published_plan_matches_the_renderer_and_names_both_schemes():
     page = PLAN_HTML.read_text(encoding="utf-8")
     assert "1.11-L1" in page
     assert "C11-S" in page
-    assert "What are the three missing numbers" in page
+    assert "UNFINISHED placeholder" in page
+    assert "Where is the other 2.44" in page
     # The 3D file still carries the first-pass origins. This drawing must not be that pass.
     yaml_text = SOURCE_PATH.read_text(encoding="utf-8")
     assert "Origin: [0.72, 7.57]" in yaml_text
