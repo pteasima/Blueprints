@@ -92,6 +92,72 @@
 #
 # The space is the room an element can belong to. It has no body.
 # Clear height in the drawing for 1.02 is 2.50–5.05 m, and that is not a field.
+#
+# Living room, plan v3. The kitchen boxes above are unchanged. North inner
+# face y=15.60, east inner face x=29.90. The base run is x 22.15–29.90,
+# front y=15.15, depth 450, so the back sits on the north face. Piers
+# W-052 (x 22.15–22.45) and W-053 (x 25.15–25.45) project to y=15.35.
+# In front of each pier the box is 300 wide and 200 deep, front flush.
+# The 450 run stops at the pier and starts again on the other side.
+# W-053's east face is x=25.45 and the sofa's west face is x=25.52, so a
+# 70 mm counter-height piece fills that gap. Both piers are west of the
+# sofa, so the fillers and that sliver are at the kitchen counter, 930.
+# Behind the sofa the base is 800, 40 mm above the 760 back. The tall
+# corner cabinet takes the east 200 (x 29.70–29.90), floor to 2450, the
+# kitchen tall height, not the 5.05 slope. It is one armrest wide.
+# Oak-front wall cabinets follow the kitchen wall cabinet: depth 350,
+# bottom 1550, height 900, top 2450. A 350 cabinet from the wall would
+# enter a pier (pier face y=15.35, cabinet front would be y=15.25), so
+# the wall cabinet is only the clear bay x 22.45–25.15.
+# The bookshelf is above the sofa, x 25.52–29.70, depth 250 (front
+# y=15.35, which is the pier face, so it does not pass the piers). Bottom
+# 850, 50 mm above the low base, top 2450. Three shelf boards, oak
+# lamella on the back. Sides, top and shelves are 20. Slats are 40 wide,
+# 20 apart, 12 thick. Those thicknesses are not on the plan.
+# Sofa, Livom Harvey, matching the configurator (4.38 × 3.78 × 0.76).
+# Catalogue (livom.de): seats S4 1160×1160×395, S2 1160×860×395,
+# S3 1460×860×395. Arm and back cushions are 300 thick. The 75.5 cm
+# cushions are 755 high; the screenshot says 0.76, so the model uses 760
+# (5 mm above the catalogue). Seat height stays 395.
+# The 86 run is the north leg, free end at the TV wall. From the east:
+# arm, chaise 1460 along × 860 deep, 116×86, corner 116×86. The chaise
+# is in line with the other two 860-deep seats (y 13.99–14.85). The
+# other leg is the two 116×116 squares running south, then an arm.
+# Backs are 300 thick and 760 high, outside the seats, and each one ends
+# flush with its seat. The two that meet at the inner corner are each
+# 1160: the north one is the corner seat's 1160 edge, the west one is the
+# corner's 860 side plus the 300 return that caps that corner. The chaise
+# back is 1460, flush with the chaise (x 28.14–29.60). The south-end west
+# back is 1160, flush with that seat (y 11.67–12.83).
+# Arms are the Livom low armrest: 860 long, 660 high, 300 thick. Each
+# starts at the outer face of the back and closes the corner. East arm
+# y 14.29–15.15. South arm x 25.52–26.38.
+# East-west is 300 + 1160 + 1160 + 1460 + 300 = 4380. North-south is
+# 300 + 860 + 1160 + 1160 + 300 = 3780. East face x=29.90 on the TV wall,
+# west face x=25.52. The TV spans y 11.585–13.815. The east arm ends at
+# y=14.29, 475 mm north of the TV. No overlap.
+# Gatta, Kaplan 1934. 1100 × 2400, catalog height 760 (the plan's ~750).
+# Long axis north-south, y 11.35–13.75. Centred in the island-to-sofa
+# gap: island east face x=21.754, sofa west x=25.52, centre x=23.637,
+# so the top is x 23.087–24.187. Each side gap is 1333. Top 30, apron
+# 60×20 set in 40, legs 50 square set in 80. Lacquered natural oak.
+# The plan's "Ancona x6" is not a modeled product. Six simple oak chairs,
+# 500 deep (east-west) by 450 wide, seat top 450, back top 800. Three on
+# each long side, centres 400/1200/2000 along the 2400. Backs face away
+# from the table. Legs 40, seat board 36, back board 20.
+# Rug 2800 × 3780 × 10, x 26.65–29.45, y 11.37–15.15. Furniture is not
+# lifted, so the rug and the seats overlap by the rug thickness.
+# TV. Visible 16:9 screen of a 100 inch set is 2214 × 1245.
+# Overall without the stand, a typical 2025/2026 set (LG 100QNED86):
+# 2230 × 1277 × 49.9. Modeled 2230 × 1277 × 50, centred on y=12.700
+# (centre of y 10.25–15.15, the room below the 450 cabinet), so
+# y 11.585–13.815, 225 mm south of the full-room centre. Bottom stays
+# 650. IfcAudioVisualAppliance is not in
+# this yaml-ifc pin, so it is USERDEFINED / Television. No cabinet under it.
+# Subwoofer is the same kind of appliance, ObjectType Subwoofer. No
+# catalog size: a 350 cube, 300 clear of the east wall and of the cabinet
+# front (east face x=29.60, north face y=14.85). That sits inside the
+# east seat. The plan's red dot is in that corner; the clash is flagged.
 schema: IFC4 ADD2 TC1
 units:
   LengthUnit: METRE
@@ -345,6 +411,112 @@ systemFurniture:
     Width: 0.85
     Depth: 0.35
     Height: 0.9
+  - id: SF-F052
+    Name: "Výplň W-052"
+    Description: "Shallow filler in front of pier W-052. 300 wide, 200 deep, front flush at y=15.15. Dining side, counter 930. Natural oak."
+    PredefinedType: USERDEFINED
+    ObjectType: FillerCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [22.15, 15.15]
+    Width: 0.3
+    Depth: 0.2
+    Height: 0.93
+    PropertySets:
+      - Name: Pset_Finish
+        Properties:
+          Material: "natural oak"
+          Form: "solid or veneer"
+  - id: SF-DN
+    Name: "Jídelna spodní"
+    Description: "Dining base between W-052 and W-053. 450 deep, front y=15.15, counter 930, the kitchen counter height. Butts both piers. Natural oak."
+    PredefinedType: USERDEFINED
+    ObjectType: BaseCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [22.45, 15.15]
+    Width: 2.7
+    Depth: 0.45
+    Height: 0.93
+    PropertySets:
+      - Name: Pset_Finish
+        Properties:
+          Material: "natural oak"
+          Form: "solid or veneer"
+  - id: SF-F053
+    Name: "Výplň W-053"
+    Description: "Shallow filler in front of pier W-053. 300 wide, 200 deep, front flush at y=15.15. Still west of the sofa, counter 930. Natural oak."
+    PredefinedType: USERDEFINED
+    ObjectType: FillerCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [25.15, 15.15]
+    Width: 0.3
+    Depth: 0.2
+    Height: 0.93
+    PropertySets:
+      - Name: Pset_Finish
+        Properties:
+          Material: "natural oak"
+          Form: "solid or veneer"
+  - id: SF-DN70
+    Name: "Jídelna 70"
+    Description: "70 mm between W-053 (x=25.45) and the sofa (x=25.52). Full 450 depth, counter 930, so the dining run reaches the sofa with no gap. Natural oak."
+    PredefinedType: USERDEFINED
+    ObjectType: BaseCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [25.45, 15.15]
+    Width: 0.07
+    Depth: 0.45
+    Height: 0.93
+    PropertySets:
+      - Name: Pset_Finish
+        Properties:
+          Material: "natural oak"
+          Form: "solid or veneer"
+  - id: SF-LB
+    Name: "Obývák nízká"
+    Description: "Low base behind the sofa, x 25.52–29.70. 450 deep, front y=15.15. Top 800, 40 mm above the 760 sofa back. The east 200 is the tall cabinet. Natural oak."
+    PredefinedType: USERDEFINED
+    ObjectType: BaseCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [25.52, 15.15]
+    Width: 4.18
+    Depth: 0.45
+    Height: 0.8
+    PropertySets:
+      - Name: Pset_Finish
+        Properties:
+          Material: "natural oak"
+          Form: "solid or veneer"
+  - id: SF-DH
+    Name: "Jídelna horní"
+    Description: "Oak-front wall cabinet over the dining bay, x 22.45–25.15. Kitchen wall-cabinet size: depth 350, bottom 1550, height 900, top 2450. Not carried across the piers."
+    PredefinedType: USERDEFINED
+    ObjectType: WallCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [22.45, 15.25]
+    Elevation: 1.55
+    Width: 2.7
+    Depth: 0.35
+    Height: 0.9
+    PropertySets:
+      - Name: Pset_Finish
+        Properties:
+          Material: "natural oak"
+          Form: "solid or veneer"
+  - id: SF-TC
+    Name: "Rohová vysoká"
+    Description: "Tall corner cabinet, east end of the north wall. 200 wide, one sofa armrest, x 29.70–29.90. 450 deep, front y=15.15. Height 2450, the kitchen tall height. Natural oak."
+    PredefinedType: USERDEFINED
+    ObjectType: TallCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [29.7, 15.15]
+    Width: 0.2
+    Depth: 0.45
+    Height: 2.45
+    PropertySets:
+      - Name: Pset_Finish
+        Properties:
+          Material: "natural oak"
+          Form: "solid or veneer"
 sanitaryTerminals:
   - id: SN-RS15
     Name: "Teka BE LINEA RS15 71.40"
@@ -377,3 +549,310 @@ electricAppliances:
     Width: 0.598
     Depth: 0.55
     Height: 0.865
+  - id: EA-TV
+    Name: "Televize 100"
+    Description: "100 inch 16:9. Visible screen 2214 × 1245. Overall without stand 2230 × 1277 × 50, the LG 100QNED86 size (published depth 49.9). Centred at y=12.700, midway from y=10.25 to the cabinet front y=15.15, so y 11.585–13.815. Bottom 650. The east arm starts at y=13.99, 175 mm north of the TV. No overlap."
+    PredefinedType: USERDEFINED
+    ObjectType: Television
+    ContainedInStructure: SP-1.02
+    Origin: [29.9, 11.585]
+    Elevation: 0.65
+    RefDirection: [0, 1]
+    Width: 2.23
+    Depth: 0.05
+    Height: 1.277
+  - id: EA-SUB
+    Name: "Subwoofer"
+    Description: "NE corner box. No catalog size: 350 cube. East face 300 off the east wall (x=29.60), north face 300 off the cabinet front (y=14.85). Sits inside the east sofa seat. USERDEFINED, same reason as the television."
+    PredefinedType: USERDEFINED
+    ObjectType: Subwoofer
+    ContainedInStructure: SP-1.02
+    Origin: [29.25, 14.5]
+    Width: 0.35
+    Depth: 0.35
+    Height: 0.35
+furniture:
+  - id: FN-S2B
+    Name: "Harvey S2 roh"
+    Description: "Corner of the 86 run. 1160 along the cabinets, 860 deep, 395 high. x 25.82–26.98, y 13.99–14.85."
+    PredefinedType: SOFA
+    ObjectType: SofaSeat
+    ContainedInStructure: SP-1.02
+    Origin: [25.82, 13.99]
+    Width: 1.16
+    Depth: 0.86
+    Height: 0.395
+  - id: FN-S2A
+    Name: "Harvey S2"
+    Description: "116×86 between the corner and the chaise. 1160 along the cabinets, 860 deep. x 26.98–28.14, y 13.99–14.85."
+    PredefinedType: SOFA
+    ObjectType: SofaSeat
+    ContainedInStructure: SP-1.02
+    Origin: [26.98, 13.99]
+    Width: 1.16
+    Depth: 0.86
+    Height: 0.395
+  - id: FN-S3
+    Name: "Harvey S3 chaise"
+    Description: "Chaise at the east free end. 1460 along the cabinets, 860 deep, 395 high. x 28.14–29.60, y 13.99–14.85. Same depth as the other two 86 seats."
+    PredefinedType: SOFA
+    ObjectType: SofaSeat
+    ContainedInStructure: SP-1.02
+    Origin: [28.14, 13.99]
+    Width: 1.46
+    Depth: 0.86
+    Height: 0.395
+  - id: FN-S4A
+    Name: "Harvey S4"
+    Description: "First 116×116 of the south leg, against the corner. 1160 east-west, 1160 north-south. x 25.82–26.98, y 12.83–13.99."
+    PredefinedType: SOFA
+    ObjectType: SofaSeat
+    ContainedInStructure: SP-1.02
+    Origin: [25.82, 12.83]
+    Width: 1.16
+    Depth: 1.16
+    Height: 0.395
+  - id: FN-S4B
+    Name: "Harvey S4"
+    Description: "Second 116×116, the south free-end seat. x 25.82–26.98, y 11.67–12.83."
+    PredefinedType: SOFA
+    ObjectType: SofaSeat
+    ContainedInStructure: SP-1.02
+    Origin: [25.82, 11.67]
+    Width: 1.16
+    Depth: 1.16
+    Height: 0.395
+  - id: FN-BN2
+    Name: "Opěradlo roh"
+    Description: "North corner back, 1160 × 300 × 760. x 25.82–26.98, y 14.85–15.15. Meets the 1160 west back; the west back caps the inner corner."
+    PredefinedType: SOFA
+    ObjectType: SofaBack
+    ContainedInStructure: SP-1.02
+    Origin: [25.82, 14.85]
+    Width: 1.16
+    Depth: 0.3
+    Height: 0.76
+  - id: FN-BN1
+    Name: "Opěradlo S2"
+    Description: "North back on the middle 116×86, 1160 × 300 × 760. x 26.98–28.14."
+    PredefinedType: SOFA
+    ObjectType: SofaBack
+    ContainedInStructure: SP-1.02
+    Origin: [26.98, 14.85]
+    Width: 1.16
+    Depth: 0.3
+    Height: 0.76
+  - id: FN-BN3
+    Name: "Opěradlo chaise"
+    Description: "North back on the chaise, 1460 × 300 × 760. x 28.14–29.60, flush with both ends of the chaise. No return over the arm."
+    PredefinedType: SOFA
+    ObjectType: SofaBack
+    ContainedInStructure: SP-1.02
+    Origin: [28.14, 14.85]
+    Width: 1.46
+    Depth: 0.3
+    Height: 0.76
+  - id: FN-BW1
+    Name: "Opěradlo západ roh"
+    Description: "West corner back, 300 × 1160 × 760. x 25.52–25.82, y 13.99–15.15. The north 300 is the inner-corner cap, so the corner is closed against the 1160 north back."
+    PredefinedType: SOFA
+    ObjectType: SofaBack
+    ContainedInStructure: SP-1.02
+    Origin: [25.52, 13.99]
+    Width: 0.3
+    Depth: 1.16
+    Height: 0.76
+  - id: FN-BW2
+    Name: "Opěradlo západ S4"
+    Description: "West back on the first 116×116, 300 × 1160 × 760. x 25.52–25.82, y 12.83–13.99."
+    PredefinedType: SOFA
+    ObjectType: SofaBack
+    ContainedInStructure: SP-1.02
+    Origin: [25.52, 12.83]
+    Width: 0.3
+    Depth: 1.16
+    Height: 0.76
+  - id: FN-BW3
+    Name: "Opěradlo západ S4"
+    Description: "West back on the south 116×116, 300 × 1160 × 760. y 11.67–12.83, flush with that seat. No return beside the arm."
+    PredefinedType: SOFA
+    ObjectType: SofaBack
+    ContainedInStructure: SP-1.02
+    Origin: [25.52, 11.67]
+    Width: 0.3
+    Depth: 1.16
+    Height: 0.76
+  - id: FN-ARME
+    Name: "Područka východ"
+    Description: "Livom low armrest, 860 long, 660 high, 300 thick. From the outer face of the back, y=15.15, forward to y=14.29. x 29.60–29.90. Closes the outer corner. The TV ends at y=13.815, 475 mm south of this arm. No overlap."
+    PredefinedType: SOFA
+    ObjectType: SofaArm
+    ContainedInStructure: SP-1.02
+    Origin: [29.6, 14.29]
+    Width: 0.3
+    Depth: 0.86
+    Height: 0.66
+  - id: FN-ARMS
+    Name: "Područka jih"
+    Description: "Livom low armrest, 860 long, 660 high, 300 thick. From the outer face of the west back, x=25.52, inward to x=26.38. y 11.37–11.67. Closes the outer corner."
+    PredefinedType: SOFA
+    ObjectType: SofaArm
+    ContainedInStructure: SP-1.02
+    Origin: [25.52, 11.37]
+    Width: 0.86
+    Depth: 0.3
+    Height: 0.66
+  - id: FN-BK
+    Name: "Knihovna"
+    Description: "Open bookshelf above the sofa, x 25.52–29.70. Depth 250, bottom 850, top 2450. Three shelves. Oak lamella back, slats 40 / gap 20 / thick 12. Sides, top and shelves 20."
+    PredefinedType: SHELF
+    ObjectType: Bookshelf
+    ContainedInStructure: SP-1.02
+    Origin: [25.52, 15.35]
+    Elevation: 0.85
+    Width: 4.18
+    Depth: 0.25
+    Height: 1.6
+    PropertySets:
+      - Name: Pset_Finish
+        Properties:
+          Material: "natural oak"
+          Form: "solid or veneer"
+      - Name: Pset_Bookshelf
+        Properties:
+          ShelfCount: 3
+  - id: FN-GATTA
+    Name: "Stůl Gatta"
+    Description: "Kaplan 1934 Gatta, lacquered natural oak. 1100 × 2400, catalog height 760. y 11.35–13.75, x 23.087–24.187, centred, 1333 to the island and to the sofa. Top 30, apron 60×20 set in 40, legs 50 square set in 80."
+    PredefinedType: TABLE
+    ObjectType: DiningTable
+    ContainedInStructure: SP-1.02
+    Origin: [23.087, 11.35]
+    Width: 1.1
+    Depth: 2.4
+    Height: 0.76
+    PropertySets:
+      - Name: Pset_Finish
+        Properties:
+          Material: "natural oak"
+          Form: "solid"
+          Finish: "lacquer"
+  - id: FN-CHW1
+    Name: "Židle západ 1"
+    Description: "Simple oak chair, south of the west three. 500 deep, 450 wide, seat 450, back 800. Back faces west."
+    PredefinedType: CHAIR
+    ObjectType: DiningChair
+    ContainedInStructure: SP-1.02
+    Origin: [22.587, 11.525]
+    Width: 0.5
+    Depth: 0.45
+    Height: 0.8
+    PropertySets:
+      - Name: Pset_Finish
+        Properties:
+          Material: "natural oak"
+          Form: "solid or veneer"
+      - Name: Pset_Chair
+        Properties:
+          Facing: "W"
+  - id: FN-CHW2
+    Name: "Židle západ 2"
+    Description: "Middle west chair. Same size. Back faces west."
+    PredefinedType: CHAIR
+    ObjectType: DiningChair
+    ContainedInStructure: SP-1.02
+    Origin: [22.587, 12.325]
+    Width: 0.5
+    Depth: 0.45
+    Height: 0.8
+    PropertySets:
+      - Name: Pset_Finish
+        Properties:
+          Material: "natural oak"
+          Form: "solid or veneer"
+      - Name: Pset_Chair
+        Properties:
+          Facing: "W"
+  - id: FN-CHW3
+    Name: "Židle západ 3"
+    Description: "North west chair. Same size. Back faces west."
+    PredefinedType: CHAIR
+    ObjectType: DiningChair
+    ContainedInStructure: SP-1.02
+    Origin: [22.587, 13.125]
+    Width: 0.5
+    Depth: 0.45
+    Height: 0.8
+    PropertySets:
+      - Name: Pset_Finish
+        Properties:
+          Material: "natural oak"
+          Form: "solid or veneer"
+      - Name: Pset_Chair
+        Properties:
+          Facing: "W"
+  - id: FN-CHE1
+    Name: "Židle východ 1"
+    Description: "South east chair. Same size. Back faces east."
+    PredefinedType: CHAIR
+    ObjectType: DiningChair
+    ContainedInStructure: SP-1.02
+    Origin: [24.187, 11.525]
+    Width: 0.5
+    Depth: 0.45
+    Height: 0.8
+    PropertySets:
+      - Name: Pset_Finish
+        Properties:
+          Material: "natural oak"
+          Form: "solid or veneer"
+      - Name: Pset_Chair
+        Properties:
+          Facing: "E"
+  - id: FN-CHE2
+    Name: "Židle východ 2"
+    Description: "Middle east chair. Same size. Back faces east."
+    PredefinedType: CHAIR
+    ObjectType: DiningChair
+    ContainedInStructure: SP-1.02
+    Origin: [24.187, 12.325]
+    Width: 0.5
+    Depth: 0.45
+    Height: 0.8
+    PropertySets:
+      - Name: Pset_Finish
+        Properties:
+          Material: "natural oak"
+          Form: "solid or veneer"
+      - Name: Pset_Chair
+        Properties:
+          Facing: "E"
+  - id: FN-CHE3
+    Name: "Židle východ 3"
+    Description: "North east chair. Same size. Back faces east."
+    PredefinedType: CHAIR
+    ObjectType: DiningChair
+    ContainedInStructure: SP-1.02
+    Origin: [24.187, 13.125]
+    Width: 0.5
+    Depth: 0.45
+    Height: 0.8
+    PropertySets:
+      - Name: Pset_Finish
+        Properties:
+          Material: "natural oak"
+          Form: "solid or veneer"
+      - Name: Pset_Chair
+        Properties:
+          Facing: "E"
+coverings:
+  - id: CV-RUG
+    Name: "Koberec"
+    Description: "Rug 2800 × 3780 × 10. x 26.65–29.45, y 11.37–15.15, from Petr's markup. Seats are not lifted onto it."
+    PredefinedType: FLOORING
+    ObjectType: Rug
+    ContainedInStructure: SP-1.02
+    Origin: [26.65, 11.37]
+    Width: 2.8
+    Depth: 3.78
+    Height: 0.01

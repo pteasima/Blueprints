@@ -35,10 +35,13 @@ another wall, so at overview scale they read as two thin vertical bars.
 
 Kitchen and living furniture is a second file, ``furnishings.yaml``, the
 same commit's furnishings schema. The file has the room space, the kitchen
-boxes, and the fridge. Each element is one box: the ``IfcExtrudedAreaSolid``
-that ``yaml_ifc`` writes (placement origin at the minimum corner, profile
-centred so the box fills Width × Depth × Height). This model does not read
-those sizes itself. Solids are inset by 1 mm so flush modules do not share
+boxes, the fridge, and the living-room run from plan v3. Each element is
+one placement: the ``IfcExtrudedAreaSolid`` that ``yaml_ifc`` writes
+(placement origin at the minimum corner, profile centred so the box fills
+Width × Depth × Height). The kitchen, the sofa and the cabinets stay that
+box. The Gatta table, the chairs and the bookshelf are drawn inside the
+same box. This model does not read the sizes itself; the detail builders
+use the extrusion. Solids are inset by 1 mm so flush modules do not share
 a face. Walls are not moved to make a box fit. The space has no body.
 
 Bathroom 1.20 is a third file, ``bathroom-1.20.yaml``. Floor tiles, wall
@@ -90,6 +93,7 @@ from bathroom_120 import (
     parts as bathroom_parts,
     scenes as bathroom_scenes,
 )
+from living_geometry import OAK_TYPES, living_detail
 from blueprints.export_utils import SECTION_LAYERS
 from blueprints.scenes import cad_mm_to_gltf_m
 
@@ -127,8 +131,11 @@ LABEL_CABINET = "cabinet"
 LABEL_APPLIANCE = "appliance"
 LABEL_SINK = "sink"
 LABEL_FURNITURE = "furniture"
+LABEL_UPHOLSTERY = "upholstery"
+LABEL_OAK = "oak"
 LABEL_RUG = "rug"
 LABEL_LIGHT = "light"
+SOFA_TYPES = frozenset({"SofaSeat", "SofaBack", "SofaArm"})
 
 # YAML list → viewer label. The list keys are yaml-ifc's, not a local guess.
 # Spaces are not extruded.
@@ -221,8 +228,8 @@ def _corner_size(product, solid) -> tuple[float, float, float]:
     return width, depth, float(solid.Depth)
 
 
-def _solid_from_product(product, label: str, list_key: str):
-    """build123d box from the converter's extrusion, in millimetres."""
+def _solid_from_product(product, label: str, list_key: str, element: dict | None):
+    """build123d solid from the converter's extrusion, in millimetres."""
     solid = _body_extrusion(product)
     if solid is None:
         return None
@@ -233,13 +240,15 @@ def _solid_from_product(product, label: str, list_key: str):
     z_dir = tuple(float(matrix[index, 2]) for index in range(3))
     gap = min(MESH_GAP_MM, width * 0.25, depth * 0.25, height * 0.25)
     plane = Plane(origin=origin, x_dir=x_dir, z_dir=z_dir)
-    box = Pos(gap / 2.0, gap / 2.0, gap / 2.0) * Box(
-        width - gap,
-        depth - gap,
-        height - gap,
-        align=(Align.MIN, Align.MIN, Align.MIN),
-    )
-    painted = _paint(plane * box, label)
+    detail = living_detail(element, width, depth, height, gap) if element else None
+    if detail is None:
+        detail = Pos(gap / 2.0, gap / 2.0, gap / 2.0) * Box(
+            width - gap,
+            depth - gap,
+            height - gap,
+            align=(Align.MIN, Align.MIN, Align.MIN),
+        )
+    painted = _paint(plane * detail, label)
     painted.furnishing_id = _yaml_id(product)
     painted.furnishing_list = list_key
     return painted
@@ -251,6 +260,11 @@ def _furnishing_parts(doc: dict) -> list:
         return []
     if set(FURNISHING_LABELS) != set(FURNISHING_LISTS):
         raise ValueError("viewer labels do not match yaml-ifc furnishing lists")
+    by_id = {
+        element["id"]: element
+        for key in FURNISHING_LISTS
+        for element in (doc.get(key) or [])
+    }
     model = build_ifc(doc)
     errors = validation_errors(model)
     if errors:
@@ -258,7 +272,14 @@ def _furnishing_parts(doc: dict) -> list:
     parts = []
     for key, ifc_class, _type_class in FURNISHINGS:
         for product in model.by_type(ifc_class):
-            part = _solid_from_product(product, FURNISHING_LABELS[key], key)
+            element = by_id.get(_yaml_id(product))
+            label = FURNISHING_LABELS[key]
+            object_type = element.get("ObjectType") if element is not None else None
+            if object_type in OAK_TYPES:
+                label = LABEL_OAK
+            elif object_type in SOFA_TYPES:
+                label = LABEL_UPHOLSTERY
+            part = _solid_from_product(product, label, key, element)
             if part is not None:
                 parts.append(part)
     return parts
@@ -751,7 +772,14 @@ PLAN_HALF_M = 1.35
 PLAN_CUT_Z_M = 1.0
 
 
-def _plan_scene(scene_id: str, px: float, py: float, half_x_m: float, half_y_m: float) -> dict:
+def _plan_scene(
+    scene_id: str,
+    px: float,
+    py: float,
+    half_x_m: float,
+    half_y_m: float,
+    cut_z_m: float = PLAN_CUT_Z_M,
+) -> dict:
     """Top-down orthographic view with a horizontal cut at 1 m.
 
     The cut normal is glTF −Y (CAD down), so the storey above 1 m is removed
@@ -763,7 +791,7 @@ def _plan_scene(scene_id: str, px: float, py: float, half_x_m: float, half_y_m: 
         "cuts": [
             {
                 "normal": [0.0, -1.0, 0.0],
-                "anchor": [_mm(px), _mm(py), _mm(PLAN_CUT_Z_M)],
+                "anchor": [_mm(px), _mm(py), _mm(cut_z_m)],
             }
         ],
         "camera": {
@@ -840,6 +868,13 @@ FURNITURE_VIEWS = (
         "hFovDeg": 50,
         "title": {"en": "Kitchen cabinet wall", "cs": "Kuchyňská linka"},
     },
+    {
+        "id": "living-terrace",
+        "eye": (22.9, 10.55, 1.55),
+        "target": (27.0, 14.3, 1.05),
+        "hFovDeg": 70,
+        "title": {"en": "Living room from the terrace", "cs": "Obývák od terasy"},
+    },
 )
 
 
@@ -856,6 +891,14 @@ def scenes() -> list[dict]:
             _room_scene(spec["id"], spec["eye"], spec["target"], spec["hFovDeg"], spec["title"])
             for spec in FURNITURE_VIEWS
         ),
+        _plan_scene(
+            "living-plan",
+            (ROOM_X0 + ROOM_X1) / 2.0,
+            (ROOM_Y0 + ROOM_Y1) / 2.0,
+            (ROOM_X1 - ROOM_X0) / 2.0 + 0.7,
+            (ROOM_Y1 - ROOM_Y0) / 2.0 + 0.55,
+            2.0,
+        ),
         *bathroom_scenes(),
         *bathroom_107_scenes(),
     ]
@@ -871,8 +914,10 @@ def part_groups() -> list[dict]:
             "id": "interior",
             "children": [
                 LABEL_CABINET,
+                LABEL_OAK,
                 LABEL_APPLIANCE,
                 LABEL_SINK,
+                LABEL_UPHOLSTERY,
                 LABEL_FURNITURE,
                 LABEL_RUG,
                 LABEL_LIGHT,

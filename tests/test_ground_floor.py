@@ -22,6 +22,7 @@ from ground_floor import (  # noqa: E402
     SOURCE_COMMIT,
     SOURCE_PATH,
     build,
+    furnishing_records,
     scenes,
 )
 
@@ -92,7 +93,7 @@ def test_ground_floor_builds_and_cuts_openings():
 
     labels = {child.label for child in shape.children}
     assert {"masonry", "glazing", "door"} <= labels
-    assert derived["furnishings"] == 22
+    assert derived["furnishings"] == len(furnishing_records())
     host = next(wall for wall in walls if wall["id"] == OPENING_VIEW_WALL)
     hosted = [item["id"] for item in openings if item["VoidsElement"] == host["id"]]
     assert "OP39a" in hosted and "OP39b" in hosted
