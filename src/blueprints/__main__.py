@@ -47,6 +47,12 @@ def main(argv: list[str] | None = None) -> int:
     scenes = scenes_fn() if callable(scenes_fn) else None
     parts_fn = getattr(mod, "part_groups", None)
     part_groups = parts_fn() if callable(parts_fn) else None
+    motions = meta.get("door_motions")
+    if isinstance(motions, list):
+        from blueprints.scenes import write_doors_json
+
+        repo = Path(__file__).resolve().parents[2]
+        write_doors_json(model_name, motions, repo / "docs" / "models" / f"{model_name}.doors.json")
     if kind == "section":
         paths = export_section(shape, model_name)
         annot = getattr(mod, "annotate", None)

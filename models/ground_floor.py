@@ -407,6 +407,142 @@ def _leaf(kind: str, along, width, sill, oheight, thickness, filler: dict):
     )
 
 
+# A single swing leaf. Wider panels are garage / double leaves modelled as one
+# slab; pocket and sliding leaves (obývák gable pockets, D5/D6) are not swung.
+# TODO: slide those instead of leaving them shut.
+HINGED_LEAF_MAX_M = 1.4
+_SLIDING_OPS = frozenset(
+    {
+        "SLIDING_TO_LEFT",
+        "SLIDING_TO_RIGHT",
+        "DOUBLE_DOOR_SLIDING",
+        "DOUBLE_DOOR_SINGLE_SWING",
+        "DOUBLE_DOOR_DOUBLE_SWING",
+        "FOLDING_TO_LEFT",
+        "FOLDING_TO_RIGHT",
+        "DOUBLE_DOOR_FOLDING",
+        "REVOLVING",
+        "ROLLINGUP",
+    }
+)
+# Hinge side is along the host wall. Facing local +Y (looking toward −Y),
+# start/L is the left jamb. Swing +1 opens toward local +Y.
+# SINGLE_SWING_LEFT / RIGHT name that same pair; the file does not set them.
+_SWING_OPS = {
+    "SINGLE_SWING_LEFT": ("start", 1),
+    "DOUBLE_SWING_LEFT": ("start", 1),
+    "SINGLE_SWING_RIGHT": ("end", 1),
+    "DOUBLE_SWING_RIGHT": ("end", 1),
+}
+
+
+def _door_field(filler: dict, name: str):
+    if filler.get(name) is not None:
+        return filler.get(name)
+    for pset in filler.get("PropertySets") or []:
+        props = pset.get("Properties") or {}
+        if name in props and props[name] is not None:
+            return props[name]
+    return None
+
+
+def _hinge_side(value) -> str:
+    """``start``/``L`` or ``end``/``R`` along the wall axis. Default start."""
+    if value is None:
+        return "start"
+    text = str(value).strip().lower()
+    if text in {"end", "r", "right"}:
+        return "end"
+    return "start"
+
+
+def _opens_toward_plus_y(value) -> int:
+    """+1 opens toward local +Y, −1 toward local −Y. Default +1."""
+    if value is None:
+        return 1
+    if isinstance(value, str):
+        text = value.strip().lower()
+        if text in {"-", "-1", "m", "-y", "minus"}:
+            return -1
+        return 1
+    try:
+        return 1 if float(value) >= 0 else -1
+    except (TypeError, ValueError):
+        return 1
+
+
+def hinge_rotation_sign(side: str, opens_toward_plus_y: int) -> int:
+    """Sign of a 90° rotation about local +Z (glTF +Y) that opens the leaf.
+
+    The leaf runs +X from a start hinge and the opposite way from an end
+    hinge. +90° about +Z carries +X toward +Y and −X toward −Y.
+    """
+    plus_rotation_opens_plus_y = side != "end"
+    want_plus = opens_toward_plus_y > 0
+    return 1 if plus_rotation_opens_plus_y == want_plus else -1
+
+
+def _classify_door(filler: dict) -> dict:
+    """Hinged or sliding, from width and the hinge/swing fields."""
+    op = filler.get("OperationType")
+    width = filler.get("OverallWidth")
+    sliding = op in _SLIDING_OPS or (
+        op not in _SWING_OPS and width is not None and float(width) > HINGED_LEAF_MAX_M
+    )
+    if op in _SWING_OPS and not sliding:
+        side, opens = _SWING_OPS[op]
+    else:
+        side = _hinge_side(_door_field(filler, "HingeSide"))
+        opens = _opens_toward_plus_y(_door_field(filler, "Swing"))
+    return {
+        "id": filler.get("id"),
+        "kind": "sliding" if sliding else "hinged",
+        "side": side,
+        "opens": opens,
+        "sign": hinge_rotation_sign(side, opens),
+    }
+
+
+def _point_cad(location, x: float, y: float, z: float) -> tuple[float, float, float]:
+    moved = location * Pos(x, y, z)
+    v = moved.position
+    return (float(v.X), float(v.Y), float(v.Z))
+
+
+def _door_motion(part, filler: dict) -> dict | None:
+    """glTF-metre hinge for one placed leaf. None when the solid is not a panel.
+
+    The leaf's local frame (its placement) has X along the wall, Y through the
+    thickness, Z up. The pivot sits on the hinge edge, mid-thickness. ``sign``
+    is the 90° rotation about glTF +Y.
+    """
+    spec = _classify_door(filler)
+    local = part.moved(part.location.inverse())
+    bb = local.bounding_box()
+    w = float(bb.max.X - bb.min.X)
+    t = float(bb.max.Y - bb.min.Y)
+    h = float(bb.max.Z - bb.min.Z)
+    if w < 20.0 or t < 1.0 or h < 20.0 or t > w or t > h:
+        return None
+    x0, y0, z0 = float(bb.min.X), float(bb.min.Y), float(bb.min.Z)
+    center_local = (x0 + w / 2.0, y0 + t / 2.0, z0 + h / 2.0)
+    hinge_x = x0 if spec["side"] == "start" else x0 + w
+    hinge_local = (hinge_x, y0 + t / 2.0, z0 + h / 2.0)
+    center = cad_mm_to_gltf_m(_point_cad(part.location, *center_local))
+    record = {
+        "id": spec["id"],
+        "kind": spec["kind"],
+        "center": [round(v, 6) for v in center],
+    }
+    if spec["kind"] != "hinged":
+        return record
+    hinge = cad_mm_to_gltf_m(_point_cad(part.location, *hinge_local))
+    record["hinge"] = [round(v, 6) for v in hinge]
+    record["axis"] = [0.0, 1.0, 0.0]
+    record["sign"] = spec["sign"]
+    return record
+
+
 def _solids(shape):
     found = list(shape.solids())
     return found or [shape]
@@ -480,6 +616,7 @@ def build(path: Path | None = None, furnishings_path: Path | None = None):
 
     storey_z = float((doc.get("storey") or {}).get("Elevation") or 0.0)
     parts = []
+    door_motions: list[dict] = []
     cut_ids: list[str] = []
     skipped: list[dict[str, str]] = []
     failed: list[str] = []
@@ -518,6 +655,7 @@ def build(path: Path | None = None, furnishings_path: Path | None = None):
         y0, y1 = _span_y(body, thickness)
         label = _wall_label(wall["id"])
         leaves = []
+        door_leaves = []
 
         for opening in by_wall.get(wall["id"], []):
             void = _void(opening)
@@ -554,9 +692,10 @@ def build(path: Path | None = None, furnishings_path: Path | None = None):
             cut_ids.append(opening["id"])
             expected_mm3 += expected
             if opening["id"] in doors:
-                leaf = _leaf("door", along, width, sill, oheight, thickness, doors[opening["id"]])
+                filler = doors[opening["id"]]
+                leaf = _leaf("door", along, width, sill, oheight, thickness, filler)
                 if leaf is not None:
-                    leaves.append((leaf, LABEL_DOOR))
+                    door_leaves.append((leaf, filler))
             elif opening["id"] in windows:
                 leaf = _leaf(
                     "window", along, width, sill, oheight, thickness, windows[opening["id"]]
@@ -574,6 +713,13 @@ def build(path: Path | None = None, furnishings_path: Path | None = None):
         for leaf, leaf_label in leaves:
             for solid in _solids(leaf):
                 parts.append(_place(solid, origin, angle, leaf_label))
+        for leaf, filler in door_leaves:
+            for solid in _solids(leaf):
+                part = _place(solid, origin, angle, LABEL_DOOR)
+                parts.append(part)
+                motion = _door_motion(part, filler)
+                if motion is not None:
+                    door_motions.append(motion)
 
     furnishing_parts = _furnishing_parts(furnishings)
     parts.extend(furnishing_parts)
@@ -617,6 +763,7 @@ def build(path: Path | None = None, furnishings_path: Path | None = None):
         "removed_volume_m3": removed,
         "expected_opening_volume_m3": expected_mm3 / 1e9,
         "doors": len(doors),
+        "door_motions": door_motions,
         "windows": len(windows),
     }
     return assembly, meta
@@ -951,6 +1098,11 @@ if __name__ == "__main__":
         part_groups=part_groups(),
         label=MODEL_LABEL,
     )
+    from blueprints.scenes import write_doors_json
+
+    motions = meta.get("door_motions") or []
+    repo = Path(__file__).resolve().parents[1]
+    write_doors_json(MODEL_NAME, motions, repo / "docs" / "models" / f"{MODEL_NAME}.doors.json")
     print(f"Built {MODEL_NAME}: {summarize_params(meta['derived'])}")
     if meta["openings_skipped"]:
         print("  not cut:", ", ".join(item["id"] for item in meta["openings_skipped"]))

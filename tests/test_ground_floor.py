@@ -1,6 +1,8 @@
 """Ground-floor walls: the yaml-ifc sample builds, and the voids that have a height are cut."""
 
 from pathlib import Path
+import json
+import math
 import sys
 
 import pytest
@@ -93,6 +95,25 @@ def test_ground_floor_builds_and_cuts_openings():
 
     labels = {child.label for child in shape.children}
     assert {"masonry", "glazing", "door"} <= labels
+    motions = {item["id"]: item for item in meta["door_motions"]}
+    assert set(motions) == {door["id"] for door in doc["doors"]}
+    # Wider than a single leaf: one slab, not a hinged swing. The file has
+    # no hinge side, so every narrower leaf uses the start jamb and +Y.
+    assert {item_id for item_id, item in motions.items() if item["kind"] == "sliding"} == {
+        "D-OP03",
+        "D-OP49",
+        "D-OP50",
+    }
+    for item in motions.values():
+        if item["kind"] != "hinged":
+            continue
+        assert item["sign"] == 1
+        assert item["axis"] == [0.0, 1.0, 0.0]
+        assert item["hinge"][1] == pytest.approx(item["center"][1], abs=1e-6)
+        span = math.hypot(item["hinge"][0] - item["center"][0], item["hinge"][2] - item["center"][2])
+        assert 0.25 < span < 0.7
+    committed = json.loads((ROOT / "docs" / "models" / "ground_floor.doors.json").read_text())
+    assert committed == meta["door_motions"]
     assert derived["furnishings"] == len(furnishing_records())
     host = next(wall for wall in walls if wall["id"] == OPENING_VIEW_WALL)
     hosted = [item["id"] for item in openings if item["VoidsElement"] == host["id"]]
@@ -117,6 +138,41 @@ def _intersection_mm3(parts_a, parts_b) -> float:
                 continue
             total += sum(float(solid.volume) for solid in common)
     return total
+
+
+def test_hinge_rotation_sign_follows_side_and_swing():
+    from ground_floor import hinge_rotation_sign
+
+    assert hinge_rotation_sign("start", 1) == 1
+    assert hinge_rotation_sign("end", 1) == -1
+    assert hinge_rotation_sign("start", -1) == -1
+    assert hinge_rotation_sign("end", -1) == 1
+
+
+def test_start_hinge_is_the_leaf_edge_on_a_turned_wall():
+    """Pivot is the mid-thickness edge, not the panel centre. Wall runs +Y."""
+    from ground_floor import LABEL_DOOR, _door_motion, _leaf, _place, _solids
+
+    filler = {"id": "D-TEST", "OverallWidth": 0.8, "OverallHeight": 2.1}
+    leaf = _leaf("door", 200.0, 800.0, 0.0, 2100.0, 200.0, filler)
+    part = _place(_solids(leaf)[0], (5000.0, 1000.0, 0.0), 90.0, LABEL_DOOR)
+    motion = _door_motion(part, filler)
+    # The leaf is inset 15 mm from the opening, so the start edge is at
+    # CAD y=1215, not the jamb at 1200. Mid-height of the 2085 mm leaf is
+    # 1042.5. glTF is (x, z, −y) in metres.
+    assert motion["kind"] == "hinged"
+    assert motion["sign"] == 1
+    assert motion["hinge"] == pytest.approx([5.0, 1.0425, -1.215], abs=1e-4)
+    assert motion["center"][0] == pytest.approx(5.0, abs=1e-4)
+    assert motion["center"][2] == pytest.approx(-1.6, abs=1e-4)
+
+    end = _door_motion(part, {**filler, "HingeSide": "R", "Swing": 1})
+    assert end["sign"] == -1
+    assert end["hinge"] == pytest.approx([5.0, 1.0425, -1.985], abs=1e-4)
+
+    wide = _door_motion(part, {**filler, "OverallWidth": 5.15})
+    assert wide["kind"] == "sliding"
+    assert "hinge" not in wide
 
 
 def test_butt_corners_do_not_overlap():

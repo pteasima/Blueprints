@@ -45,6 +45,7 @@ import {
 } from "./edges.js";
 import { createDepthPeelRenderer } from "./depthPeel.js";
 import { createMeasureTool } from "./measure.js";
+import { createDoorController } from "./doors.js";
 import { cadMmToGltf, createAnnotations } from "./annotations.js";
 import { DRAW_H, DRAW_W, downloadBlob, plateFromCanvas } from "./drawing.js";
 
@@ -84,13 +85,15 @@ function writeSceneQuery(sceneId) {
 /**
  * @param {HTMLCanvasElement} canvas
  * @param {ArrayBuffer} glbBuffer
- * @param {{ scenes?: object[], scene?: string, partGroups?: object[] }} [options]
+ * @param {{ scenes?: object[], scene?: string, partGroups?: object[], doors?: object[] }} [options]
  */
 export function mountViewer(canvas, glbBuffer, options = {}) {
   /** Custom named scenes (model-specific); shown alongside Iso/Front/Side/Top. */
   const customScenes = Array.isArray(options.scenes) ? options.scenes : [];
   /** Model-owned Parts tree (ids only); empty → leftovers under Other. */
   const partGroups = Array.isArray(options.partGroups) ? options.partGroups : [];
+  /** Hinged leaves: centre, hinge, sign. Empty for models without doors. */
+  const doorRecords = Array.isArray(options.doors) ? options.doors : [];
   /** Prefer explicit option; otherwise `?scene=` from the current URL. */
   const initialSceneId = String(
     options.scene != null ? options.scene : readSceneQuery(),
@@ -200,6 +203,14 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   const controls = new OrbitControls(camera, canvas);
   controls.enableDamping = false;
   controls.screenSpacePanning = true;
+  /** Measure owns taps while it is on; set once that tool exists. */
+  let doorInputBlocked = () => false;
+  const doorCtrl = createDoorController({
+    canvas,
+    getCamera: () => camera,
+    records: doorRecords,
+    isBlocked: () => doorInputBlocked(),
+  });
 
   const annotations = createAnnotations({
     scene,
@@ -267,6 +278,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     (gltf) => {
       root = gltf.scene;
       zScaleGroup.add(root);
+      doorCtrl.bind(root);
       root.traverse((obj) => {
         if (!obj.isMesh) return;
         const raw = obj.name || obj.parent?.name || "part";
@@ -2114,6 +2126,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       measureTool.setActive(!measureTool.isActive());
     });
   }
+  doorInputBlocked = () => Boolean(measureTool?.isActive());
 
   function buildArExportScene() {
     if (!root) return null;
@@ -2342,6 +2355,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   function tick() {
     if (pauseTick) return;
     const now = performance.now();
+    if (doorCtrl.step(now)) viewDirty = true;
     stepFrameAnim(now);
     controls.update();
     // Keep near/far tight as orbit distance changes.
