@@ -114,27 +114,36 @@
 # 850, 50 mm above the low base, top 2450. Three shelf boards, oak
 # lamella on the back. Sides, top and shelves are 20. Slats are 40 wide,
 # 20 apart, 12 thick. Those thicknesses are not on the plan.
-# Sofa, Livom Harvey. Outer box x 25.52–29.90, y 11.37–15.15, top 760.
-# Seat height is the catalog 395 (the plan's ~420). Back cushions sit on
-# the seat and stop at 760, so they are 365 above the seat and 200 deep
-# (the plan's arm width). Catalog backs are 300 deep and 655–755 tall;
-# stacked on a 395 seat they would pass 760, so the plan height wins.
-# West leg, north to south, sums to 3780 with no remainder:
-#   S4 corner 1160 × 1160, y 13.99–15.15, x 25.52–26.68
-#   S4        1160 × 1160, y 12.83–13.99, same x
-#   S3 chaise 860 × 1460,  y 11.37–12.83, x 25.52–26.38
-# The chaise end is west-aligned. Its east face steps in 300.
-# North run, east of the corner. S2 modules are 1160 along the wall and
-# 860 deep, backs on y=15.15 (front y=14.29). The corner is the deep one.
-#   S2  x 26.68–27.84
-#   S2  x 27.84–29.00
-# Catalog modules along this run are 1160×3 = 3480, which ends at x=29.00.
-# The plan is 4380. The last 900 is a 700 seat, not a catalog module,
-# plus a 200 arm against the east wall. The arm is the full 860 seat
-# depth so the east face meets the wall. It covers the north 80 mm of
-# the TV, from z 650 to 760. That clash is left in the model.
-# West backs, 200 deep, on the corner and the middle S4. The chaise end
-# is open. North backs on every north-run seat, including the corner.
+# Sofa, Livom Harvey. livom.cz returned HTTP 500; the same catalogue is
+# livom.de (Livom Möbel AG). Seats: S4 1160×1160×395, S2 1160×860×395,
+# S3 1460×860×395. Seat height 395. Backs and arms are the Lehne/Armlehne
+# cushions: depth 300, height 755 for the 75.5 cm pieces (L1 860, L2 1160,
+# L3 1460) and 655 for L5. The plan's 760 is 5 mm above 755; the model
+# uses 755. Backs stand on the floor, outside the seats. Arms stand at
+# the two free ends, also outside, 300 wide.
+# Outer box x 25.52–29.90 (4380, along the cabinets to the TV wall) by
+# y 11.37–15.15 (3780, south toward the terrace). Arithmetic, seats plus
+# the 300 pads:
+#   east-west seats 1160+1160+1460 = 3780, plus west back 300 and east
+#   arm 300 = 4380.
+#   north-south seats 1160+860+1160 = 3180, plus north back 300 and south
+#   arm 300 = 3780.
+# That is the only way these five modules and four 300 pads total both
+# plan sizes. The 1460 chaise is the east free end, 860 deep. The two
+# 1160 squares project 300 mm further south than the chaise. A reading
+# of the configurator where the chaise is the piece that sticks into
+# the room does not also total 4380×3780.
+# Seats, solver millimetres from the seat's north-west corner, then world:
+#   S4  x 0–1160,    y 0–1160     world x 25.82–26.98, y 13.69–14.85
+#   S4  x 1160–2320, y 0–1160     world x 26.98–28.14, y 13.69–14.85
+#   S3  x 2320–3780, y 0–860      world x 28.14–29.60, y 13.99–14.85
+#   S2  x 0–1160,    y 1160–2020  world x 25.82–26.98, y 12.83–13.69
+#   S2  x 0–860,     y 2020–3180  world x 25.82–26.68, y 11.67–12.83
+# North backs on the three north seats, y 14.85–15.15. West backs on the
+# three west seats, x 25.52–25.82. East arm x 29.60–29.90, y 13.99–14.85
+# (860, matching the chaise). South arm x 25.82–26.68, y 11.37–11.67
+# (860, matching the foot). The east arm's south face is y=13.99. The
+# recentred TV reaches y=14.040, so they still overlap by 50 mm.
 # Gatta, Kaplan 1934. 1100 × 2400, catalog height 760 (the plan's ~750).
 # Long axis north-south, y 11.35–13.75. Centred in the island-to-sofa
 # gap: island east face x=21.754, sofa west x=25.52, centre x=23.637,
@@ -146,10 +155,12 @@
 # from the table. Legs 40, seat board 36, back board 20.
 # Rug 2800 × 3780 × 10, x 26.65–29.45, y 11.37–15.15. Furniture is not
 # lifted, so the rug and the seats overlap by the rug thickness.
-# TV 100 inch 16:9, 2214 × 1245, on the east wall, y 12.15–14.37.
-# IfcAudioVisualAppliance is not in this yaml-ifc pin, so it is an
-# electric appliance, PredefinedType USERDEFINED, ObjectType Television.
-# Panel 60 thick, bottom at 650 (centre 1272). No cabinet under it.
+# TV. Room inner width y 10.25–15.60, centre y=12.925, under the false
+# gable ridge. Visible 16:9 screen of a 100 inch set is 2214 × 1245.
+# Overall without the stand, a typical 2025/2026 set (LG 100QNED86):
+# 2230 × 1277 × 49.9. Modeled 2230 × 1277 × 50, centred on y=12.925, so
+# y 11.810–14.040. Bottom stays 650. IfcAudioVisualAppliance is not in
+# this yaml-ifc pin, so it is USERDEFINED / Television. No cabinet under it.
 # Subwoofer is the same kind of appliance, ObjectType Subwoofer. No
 # catalog size: a 350 cube, 300 clear of the east wall and of the cabinet
 # front (east face x=29.60, north face y=14.85). That sits inside the
@@ -547,16 +558,16 @@ electricAppliances:
     Height: 0.865
   - id: EA-TV
     Name: "Televize 100"
-    Description: "100 inch 16:9, 2214 × 1245, on the east wall, y 12.15–14.37. Panel 60 thick. Bottom 650, centre 1272. No cabinet under it. USERDEFINED because this schema has no television type. The east sofa arm covers its north 80 mm, up to z 760."
+    Description: "100 inch 16:9. Visible screen 2214 × 1245. Overall without stand 2230 × 1277 × 50, the LG 100QNED86 size (published depth 49.9). Centred on the room, y 11.810–14.040, centre y=12.925. Bottom 650. The east arm still overlaps the north 50 mm, up to z 755."
     PredefinedType: USERDEFINED
     ObjectType: Television
     ContainedInStructure: SP-1.02
-    Origin: [29.9, 12.15]
+    Origin: [29.9, 11.81]
     Elevation: 0.65
     RefDirection: [0, 1]
-    Width: 2.214
-    Depth: 0.06
-    Height: 1.245
+    Width: 2.23
+    Depth: 0.05
+    Height: 1.277
   - id: EA-SUB
     Name: "Subwoofer"
     Description: "NE corner box. No catalog size: 350 cube. East face 300 off the east wall (x=29.60), north face 300 off the cabinet front (y=14.85). Sits inside the east sofa seat. USERDEFINED, same reason as the television."
@@ -570,140 +581,134 @@ electricAppliances:
 furniture:
   - id: FN-S4A
     Name: "Harvey S4 roh"
-    Description: "Livom Harvey corner seat, 1160 × 1160 × 395. x 25.52–26.68, y 13.99–15.15. Back on the cabinet front."
+    Description: "Corner seat S4, 1160 × 1160 × 395. x 25.82–26.98, y 13.69–14.85. The north back is outside it."
     PredefinedType: SOFA
     ObjectType: SofaSeat
     ContainedInStructure: SP-1.02
-    Origin: [25.52, 13.99]
+    Origin: [25.82, 13.69]
     Width: 1.16
     Depth: 1.16
     Height: 0.395
   - id: FN-S4B
     Name: "Harvey S4"
-    Description: "Second 1160 × 1160 seat, south of the corner. x 25.52–26.68, y 12.83–13.99."
+    Description: "Second S4, east of the corner. 1160 × 1160 × 395. x 26.98–28.14, y 13.69–14.85. Projects 300 mm further south than the chaise."
     PredefinedType: SOFA
     ObjectType: SofaSeat
     ContainedInStructure: SP-1.02
-    Origin: [25.52, 12.83]
+    Origin: [26.98, 13.69]
     Width: 1.16
     Depth: 1.16
     Height: 0.395
   - id: FN-S3
     Name: "Harvey S3 chaise"
-    Description: "Chaise end, 860 east-west by 1460 north-south. y 11.37–12.83, west-aligned x 25.52–26.38. East face steps in 300 from the 1160 modules."
+    Description: "Chaise S3, the east free end. 1460 along the wall, 860 deep, 395 high. x 28.14–29.60, y 13.99–14.85."
     PredefinedType: SOFA
     ObjectType: SofaSeat
     ContainedInStructure: SP-1.02
-    Origin: [25.52, 11.37]
-    Width: 0.86
-    Depth: 1.46
+    Origin: [28.14, 13.99]
+    Width: 1.46
+    Depth: 0.86
     Height: 0.395
   - id: FN-S2A
     Name: "Harvey S2"
-    Description: "1160 × 860 seat east of the corner. x 26.68–27.84, y 14.29–15.15. Back on the cabinet front."
+    Description: "S2 south of the corner. 1160 east-west, 860 north-south, 395 high. x 25.82–26.98, y 12.83–13.69."
     PredefinedType: SOFA
     ObjectType: SofaSeat
     ContainedInStructure: SP-1.02
-    Origin: [26.68, 14.29]
+    Origin: [25.82, 12.83]
     Width: 1.16
     Depth: 0.86
     Height: 0.395
   - id: FN-S2B
     Name: "Harvey S2"
-    Description: "Second 1160 × 860 seat. x 27.84–29.00, y 14.29–15.15."
+    Description: "S2 foot. 860 east-west, 1160 north-south, 395 high. x 25.82–26.68, y 11.67–12.83. East face steps in 300 from the module above."
     PredefinedType: SOFA
     ObjectType: SofaSeat
     ContainedInStructure: SP-1.02
-    Origin: [27.84, 14.29]
-    Width: 1.16
-    Depth: 0.86
-    Height: 0.395
-  - id: FN-S700
-    Name: "Harvey zbytek 700"
-    Description: "Not a Livom module. Catalog seats along the north run end at x=29.00 (3 × 1160). The plan is 4380, so this 700 continues the 860-deep seat to the 200 arm. x 29.00–29.70, y 14.29–15.15."
-    PredefinedType: SOFA
-    ObjectType: SofaSeat
-    ContainedInStructure: SP-1.02
-    Origin: [29.0, 14.29]
-    Width: 0.7
-    Depth: 0.86
-    Height: 0.395
-  - id: FN-BNC
-    Name: "Opěradlo roh"
-    Description: "Low back on the corner seat, north edge. 200 deep, from the 395 seat to the 760 top."
-    PredefinedType: SOFA
-    ObjectType: SofaBack
-    ContainedInStructure: SP-1.02
-    Origin: [25.52, 14.95]
-    Elevation: 0.395
-    Width: 1.16
-    Depth: 0.2
-    Height: 0.365
-  - id: FN-BNA
-    Name: "Opěradlo S2"
-    Description: "Low back on the first S2. 200 deep, top 760."
-    PredefinedType: SOFA
-    ObjectType: SofaBack
-    ContainedInStructure: SP-1.02
-    Origin: [26.68, 14.95]
-    Elevation: 0.395
-    Width: 1.16
-    Depth: 0.2
-    Height: 0.365
-  - id: FN-BNB
-    Name: "Opěradlo S2"
-    Description: "Low back on the second S2. 200 deep, top 760."
-    PredefinedType: SOFA
-    ObjectType: SofaBack
-    ContainedInStructure: SP-1.02
-    Origin: [27.84, 14.95]
-    Elevation: 0.395
-    Width: 1.16
-    Depth: 0.2
-    Height: 0.365
-  - id: FN-BNR
-    Name: "Opěradlo zbytek"
-    Description: "Low back on the 700 remainder. 200 deep, top 760."
-    PredefinedType: SOFA
-    ObjectType: SofaBack
-    ContainedInStructure: SP-1.02
-    Origin: [29.0, 14.95]
-    Elevation: 0.395
-    Width: 0.7
-    Depth: 0.2
-    Height: 0.365
-  - id: FN-BWC
-    Name: "Opěradlo západ roh"
-    Description: "Low back on the west face of the corner, toward the dining table. 200 deep, top 760."
-    PredefinedType: SOFA
-    ObjectType: SofaBack
-    ContainedInStructure: SP-1.02
-    Origin: [25.52, 13.99]
-    Elevation: 0.395
-    Width: 0.2
+    Origin: [25.82, 11.67]
+    Width: 0.86
     Depth: 1.16
-    Height: 0.365
-  - id: FN-BWB
+    Height: 0.395
+  - id: FN-BN1
+    Name: "Opěradlo S4"
+    Description: "North back on the corner, L2. 1160 × 300 × 755. y 14.85–15.15, against the cabinet front."
+    PredefinedType: SOFA
+    ObjectType: SofaBack
+    ContainedInStructure: SP-1.02
+    Origin: [25.82, 14.85]
+    Width: 1.16
+    Depth: 0.3
+    Height: 0.755
+  - id: FN-BN2
+    Name: "Opěradlo S4"
+    Description: "North back on the second S4, L2. 1160 × 300 × 755."
+    PredefinedType: SOFA
+    ObjectType: SofaBack
+    ContainedInStructure: SP-1.02
+    Origin: [26.98, 14.85]
+    Width: 1.16
+    Depth: 0.3
+    Height: 0.755
+  - id: FN-BN3
+    Name: "Opěradlo S3"
+    Description: "North back on the chaise, L3. 1460 × 300 × 755."
+    PredefinedType: SOFA
+    ObjectType: SofaBack
+    ContainedInStructure: SP-1.02
+    Origin: [28.14, 14.85]
+    Width: 1.46
+    Depth: 0.3
+    Height: 0.755
+  - id: FN-BW1
     Name: "Opěradlo západ S4"
-    Description: "Low back on the west face of the middle S4. The chaise end has none. 200 deep, top 760."
+    Description: "West back on the corner, L2. 300 × 1160 × 755. x 25.52–25.82."
+    PredefinedType: SOFA
+    ObjectType: SofaBack
+    ContainedInStructure: SP-1.02
+    Origin: [25.52, 13.69]
+    Width: 0.3
+    Depth: 1.16
+    Height: 0.755
+  - id: FN-BW2
+    Name: "Opěradlo západ S2"
+    Description: "West back on the first S2, L1. 300 × 860 × 755."
     PredefinedType: SOFA
     ObjectType: SofaBack
     ContainedInStructure: SP-1.02
     Origin: [25.52, 12.83]
-    Elevation: 0.395
-    Width: 0.2
+    Width: 0.3
+    Depth: 0.86
+    Height: 0.755
+  - id: FN-BW3
+    Name: "Opěradlo západ S2"
+    Description: "West back on the foot, L2. 300 × 1160 × 755."
+    PredefinedType: SOFA
+    ObjectType: SofaBack
+    ContainedInStructure: SP-1.02
+    Origin: [25.52, 11.67]
+    Width: 0.3
     Depth: 1.16
-    Height: 0.365
+    Height: 0.755
   - id: FN-ARME
     Name: "Područka východ"
-    Description: "East armrest, 200 wide, the tall cabinet's width. x 29.70–29.90, full 860 seat depth, height 760, against the east wall. Covers the north 80 mm of the TV."
+    Description: "East arm, L1, on the chaise. 300 wide, 860 along the seat, 755 high. x 29.60–29.90, y 13.99–14.85, against the TV wall. Overlaps the TV by 50 mm."
     PredefinedType: SOFA
     ObjectType: SofaArm
     ContainedInStructure: SP-1.02
-    Origin: [29.7, 14.29]
-    Width: 0.2
+    Origin: [29.6, 13.99]
+    Width: 0.3
     Depth: 0.86
-    Height: 0.76
+    Height: 0.755
+  - id: FN-ARMS
+    Name: "Područka jih"
+    Description: "South arm, L1, on the foot. 860 wide, 300 deep, 755 high. x 25.82–26.68, y 11.37–11.67."
+    PredefinedType: SOFA
+    ObjectType: SofaArm
+    ContainedInStructure: SP-1.02
+    Origin: [25.82, 11.37]
+    Width: 0.86
+    Depth: 0.3
+    Height: 0.755
   - id: FN-BK
     Name: "Knihovna"
     Description: "Open bookshelf above the sofa, x 25.52–29.70. Depth 250, bottom 850, top 2450. Three shelves. Oak lamella back, slats 40 / gap 20 / thick 12. Sides, top and shelves 20."

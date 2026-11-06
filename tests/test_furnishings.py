@@ -395,14 +395,14 @@ SOFA_IDS = (
     "FN-S3",
     "FN-S2A",
     "FN-S2B",
-    "FN-S700",
-    "FN-BNC",
-    "FN-BNA",
-    "FN-BNB",
-    "FN-BNR",
-    "FN-BWC",
-    "FN-BWB",
+    "FN-BN1",
+    "FN-BN2",
+    "FN-BN3",
+    "FN-BW1",
+    "FN-BW2",
+    "FN-BW3",
     "FN-ARME",
+    "FN-ARMS",
 )
 
 
@@ -443,6 +443,13 @@ def test_living_room_boxes_follow_plan_v3():
     assert sy0 == pytest.approx(11370.0 + half, abs=0.2)
     assert sx1 == pytest.approx(29900.0 - half, abs=0.2)
     assert sy1 == pytest.approx(15150.0 - half, abs=0.2)
+
+    ids = {row["id"] for row in furnishing_records()}
+    assert "FN-S700" not in ids
+    tv = _world_box(next(row for row in furnishing_records() if row["id"] == "EA-TV"))
+    assert (tv[1] + tv[4]) / 2.0 == pytest.approx(12.925, abs=1e-6)
+    assert tv[4] - tv[1] == pytest.approx(2.23, abs=1e-6)
+    assert tv[5] - tv[2] == pytest.approx(1.277, abs=1e-6)
 
     table = _world_box(next(row for row in furnishing_records() if row["id"] == "FN-GATTA"))
     assert table[0] - 21.754 == pytest.approx(1.333, abs=1e-6)
