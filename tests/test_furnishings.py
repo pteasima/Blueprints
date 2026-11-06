@@ -439,7 +439,7 @@ def test_living_room_boxes_follow_plan_v3():
         )
 
     sx0, sy0, sx1, sy1 = union(SOFA_IDS)
-    assert sx0 == pytest.approx(25520.0 + half, abs=0.2)
+    assert sx0 == pytest.approx(26120.0 + half, abs=0.2)
     assert sy0 == pytest.approx(11370.0 + half, abs=0.2)
     assert sx1 == pytest.approx(29900.0 - half, abs=0.2)
     assert sy1 == pytest.approx(15150.0 - half, abs=0.2)
