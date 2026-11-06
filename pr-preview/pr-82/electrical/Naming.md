@@ -50,11 +50,12 @@ An exterior device is named from the room where its cable comes through the wall
 | C8-S | 1.11-L7 | ceiling | ceiling |
 | C32-V-1 | 1.11-B2 | wall | 1350 |
 | C9-R | 1.11-P1 | wall | in box |
-| C10-V | 1.11-B1 | wall | 1350+80 |
-| SOCK-N | 1.11-Z1 | wall | 300 |
-| C13-E | 1.11-D1 | wall | 380 |
 | C32-M | 1.11-K1 | frame | frame |
 | C32-V-2 | 1.11-B3 | corridor | 1350 |
+| C10-V | 1.11-B1 | wall | 1350 |
+| SOCK-N | 1.11-Z1 | wall | 300 |
+| SOCK-N2 | 1.11-Z4 | wall | 371 |
+| C13-E | 1.11-D1 | wall | 442 |
 | C4-2V | 1.11-B4 | wall | 1350 |
 | SOCK-EN | 1.11-Z2 | wall | 300 |
 | C1-2V | 1.11-B5 | wall | 1350 |
@@ -64,7 +65,7 @@ An exterior device is named from the room where its cable comes through the wall
 | C18-B | 1.11-XR2 | exterior | facade |
 | C16-B | 1.11-XR3 | exterior | facade |
 | C6-2V | 1.11-XB1 | exterior | 1350 |
-| C6-V | 1.11-XB2 | exterior | 1350+80 |
+| C6-V | 1.11-XB2 | exterior | 1350+71 |
 | SOCK-X | 1.11-XZ1 | exterior | 300 |
 | LAMP-X-W | 1.11-XL1 | exterior | unused |
 | LAMP-X-S | 1.11-XL2 | exterior | unused |
