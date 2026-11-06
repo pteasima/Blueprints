@@ -129,15 +129,13 @@
 # corner's 860 side plus the 300 return that caps that corner. The chaise
 # back is 1460, flush with the chaise (x 28.14–29.60). The south-end west
 # back is 1160, flush with that seat (y 11.67–12.83).
-# Arms are 300 thick and 660 high. Each starts at the outer face of the
-# back and runs forward to the midpoint of its end seat, so the arm
-# closes the corner. East arm 730: y 14.42–15.15 (300 back plus half of
-# the 860 chaise). South arm 880: x 25.52–26.40 (300 back plus half of
-# the 1160 end). 
+# Arms are the Livom low armrest: 860 long, 660 high, 300 thick. Each
+# starts at the outer face of the back and closes the corner. East arm
+# y 14.29–15.15. South arm x 25.52–26.38.
 # East-west is 300 + 1160 + 1160 + 1460 + 300 = 4380. North-south is
 # 300 + 860 + 1160 + 1160 + 300 = 3780. East face x=29.90 on the TV wall,
 # west face x=25.52. The TV spans y 11.585–13.815. The east arm ends at
-# y=14.42, 605 mm north of the TV. No overlap.
+# y=14.29, 475 mm north of the TV. No overlap.
 # Gatta, Kaplan 1934. 1100 × 2400, catalog height 760 (the plan's ~750).
 # Long axis north-south, y 11.35–13.75. Centred in the island-to-sofa
 # gap: island east face x=21.754, sofa west x=25.52, centre x=23.637,
@@ -616,7 +614,7 @@ furniture:
     Height: 0.395
   - id: FN-S4B
     Name: "Harvey S4"
-    Description: "Second 116×116, the south free-end seat. x 25.82–26.98, y 11.67–12.83. The south arm covers from the outer west face to the midpoint of this seat."
+    Description: "Second 116×116, the south free-end seat. x 25.82–26.98, y 11.67–12.83."
     PredefinedType: SOFA
     ObjectType: SofaSeat
     ContainedInStructure: SP-1.02
@@ -686,22 +684,22 @@ furniture:
     Height: 0.76
   - id: FN-ARME
     Name: "Područka východ"
-    Description: "East arm, 300 thick, 730 long, 660 high. From the outer face of the back, y=15.15, forward to the midpoint of the 860 chaise, y=14.42. x 29.60–29.90. Closes the outer corner. The TV ends at y=13.815, 605 mm south of this arm. No overlap."
+    Description: "Livom low armrest, 860 long, 660 high, 300 thick. From the outer face of the back, y=15.15, forward to y=14.29. x 29.60–29.90. Closes the outer corner. The TV ends at y=13.815, 475 mm south of this arm. No overlap."
     PredefinedType: SOFA
     ObjectType: SofaArm
     ContainedInStructure: SP-1.02
-    Origin: [29.6, 14.42]
+    Origin: [29.6, 14.29]
     Width: 0.3
-    Depth: 0.73
+    Depth: 0.86
     Height: 0.66
   - id: FN-ARMS
     Name: "Područka jih"
-    Description: "South arm, 300 thick, 880 long, 660 high. From the outer face of the west back, x=25.52, inward to the midpoint of the 1160 end seat, x=26.40. y 11.37–11.67. Closes the outer corner."
+    Description: "Livom low armrest, 860 long, 660 high, 300 thick. From the outer face of the west back, x=25.52, inward to x=26.38. y 11.37–11.67. Closes the outer corner."
     PredefinedType: SOFA
     ObjectType: SofaArm
     ContainedInStructure: SP-1.02
     Origin: [25.52, 11.37]
-    Width: 0.88
+    Width: 0.86
     Depth: 0.3
     Height: 0.66
   - id: FN-BK

@@ -458,11 +458,13 @@ def test_living_room_boxes_follow_plan_v3():
     assert (south_back[1], south_back[4]) == pytest.approx((south_seat[1], south_seat[4]), abs=1e-6)
     east_arm = _world_box(by_id["FN-ARME"])
     assert east_arm[4] == pytest.approx(15.15, abs=1e-6)
-    assert east_arm[1] == pytest.approx(14.42, abs=1e-6)
+    assert east_arm[1] == pytest.approx(14.29, abs=1e-6)
+    assert east_arm[4] - east_arm[1] == pytest.approx(0.86, abs=1e-6)
     assert east_arm[5] - east_arm[2] == pytest.approx(0.66, abs=1e-6)
     south_arm = _world_box(by_id["FN-ARMS"])
     assert south_arm[0] == pytest.approx(25.52, abs=1e-6)
-    assert south_arm[3] == pytest.approx(26.40, abs=1e-6)
+    assert south_arm[3] == pytest.approx(26.38, abs=1e-6)
+    assert south_arm[3] - south_arm[0] == pytest.approx(0.86, abs=1e-6)
     assert south_arm[5] - south_arm[2] == pytest.approx(0.66, abs=1e-6)
 
     ids = {row["id"] for row in furnishing_records()}
