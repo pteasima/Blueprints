@@ -264,3 +264,8 @@ jobs:
             await new Promise((resolve) => setTimeout(resolve, 20000))
       - id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          # The whole site (GLBs included) can sit in syncing_files past the
+          # action's 10 minute default. PR 85 hit that and was cancelled
+          # while Pages was still copying files.
+          timeout: 1800000
