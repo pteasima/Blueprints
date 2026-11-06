@@ -11,8 +11,10 @@
     "id": "interior",
     "children": [
       "cabinet",
+      "oak",
       "appliance",
       "sink",
+      "upholstery",
       "furniture",
       "rug",
       "light"
