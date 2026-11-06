@@ -447,7 +447,7 @@ def test_living_room_boxes_follow_plan_v3():
     ids = {row["id"] for row in furnishing_records()}
     assert "FN-S700" not in ids
     tv = _world_box(next(row for row in furnishing_records() if row["id"] == "EA-TV"))
-    assert (tv[1] + tv[4]) / 2.0 == pytest.approx(12.925, abs=1e-6)
+    assert (tv[1] + tv[4]) / 2.0 == pytest.approx(12.700, abs=1e-6)
     assert tv[4] - tv[1] == pytest.approx(2.23, abs=1e-6)
     assert tv[5] - tv[2] == pytest.approx(1.277, abs=1e-6)
 

@@ -136,8 +136,8 @@
 # short of 4380. North-south is still 300 + 860 + 1160 + 1160 + 300
 # = 3780. The east face stays on the TV wall, so the west face is
 # x=26.12 instead of 25.52. East arm y 13.99–14.85, z 0–660. The TV
-# north edge is y=14.040 and its bottom is z=650, so they still overlap:
-# 50 mm in plan and 10 mm in height.
+# spans y 11.585–13.815, so its north edge is 175 mm south of the arm.
+# No overlap.
 # Gatta, Kaplan 1934. 1100 × 2400, catalog height 760 (the plan's ~750).
 # Long axis north-south, y 11.35–13.75. Centred in the island-to-sofa
 # gap: island east face x=21.754, sofa west x=25.52, centre x=23.637,
@@ -149,11 +149,12 @@
 # from the table. Legs 40, seat board 36, back board 20.
 # Rug 2800 × 3780 × 10, x 26.65–29.45, y 11.37–15.15. Furniture is not
 # lifted, so the rug and the seats overlap by the rug thickness.
-# TV. Room inner width y 10.25–15.60, centre y=12.925, under the false
-# gable ridge. Visible 16:9 screen of a 100 inch set is 2214 × 1245.
+# TV. Visible 16:9 screen of a 100 inch set is 2214 × 1245.
 # Overall without the stand, a typical 2025/2026 set (LG 100QNED86):
-# 2230 × 1277 × 49.9. Modeled 2230 × 1277 × 50, centred on y=12.925, so
-# y 11.810–14.040. Bottom stays 650. IfcAudioVisualAppliance is not in
+# 2230 × 1277 × 49.9. Modeled 2230 × 1277 × 50, centred on y=12.700
+# (centre of y 10.25–15.15, the room below the 450 cabinet), so
+# y 11.585–13.815, 225 mm south of the full-room centre. Bottom stays
+# 650. IfcAudioVisualAppliance is not in
 # this yaml-ifc pin, so it is USERDEFINED / Television. No cabinet under it.
 # Subwoofer is the same kind of appliance, ObjectType Subwoofer. No
 # catalog size: a 350 cube, 300 clear of the east wall and of the cabinet
@@ -552,11 +553,11 @@ electricAppliances:
     Height: 0.865
   - id: EA-TV
     Name: "Televize 100"
-    Description: "100 inch 16:9. Visible screen 2214 × 1245. Overall without stand 2230 × 1277 × 50, the LG 100QNED86 size (published depth 49.9). Centred on the room, y 11.810–14.040, centre y=12.925. Bottom 650. The east arm is y 13.99–14.85 and only 660 high, so the overlap is 50 mm in plan and 10 mm in height (z 650–660)."
+    Description: "100 inch 16:9. Visible screen 2214 × 1245. Overall without stand 2230 × 1277 × 50, the LG 100QNED86 size (published depth 49.9). Centred at y=12.700, midway from y=10.25 to the cabinet front y=15.15, so y 11.585–13.815. Bottom 650. The east arm starts at y=13.99, 175 mm north of the TV. No overlap."
     PredefinedType: USERDEFINED
     ObjectType: Television
     ContainedInStructure: SP-1.02
-    Origin: [29.9, 11.81]
+    Origin: [29.9, 11.585]
     Elevation: 0.65
     RefDirection: [0, 1]
     Width: 2.23
@@ -685,7 +686,7 @@ furniture:
     Height: 0.76
   - id: FN-ARME
     Name: "Područka východ"
-    Description: "Lower east arm, 300 thick, 860 long, 660 high. y 13.99–14.85, the back portion of the chaise end. The chaise continues to y=13.39, 600 mm past the arm. Does not reach the outer north corner. x 29.60–29.90. Overlaps the TV by 50 mm in plan and 10 mm in height (z 650–660)."
+    Description: "Lower east arm, 300 thick, 860 long, 660 high. y 13.99–14.85, the back portion of the chaise end. The chaise continues to y=13.39, 600 mm past the arm. Does not reach the outer north corner. x 29.60–29.90. The TV ends at y=13.815, 175 mm south of this arm. No overlap."
     PredefinedType: SOFA
     ObjectType: SofaArm
     ContainedInStructure: SP-1.02
