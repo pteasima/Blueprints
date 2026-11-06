@@ -38,6 +38,9 @@
 # 908×716×1876, packed against T1. T2 and T3 are 600, T4 is 500.
 # Tall carcasses are 600 deep. The fridge is 716 deep and projects 116 mm
 # past the cabinet faces; the run is not deepened to match it.
+# The soffit band is 450 mm, and so are the dining and living-area cabinets.
+# These 600 mm kitchen tall cabinets stick out beyond that line on purpose.
+# Petr, 2026-11-06. See docs/design/obyvak.md.
 # Fronts face south: Origin is the south-west corner, Width runs east,
 # Depth runs north (RefDirection omitted, the default [1, 0]).
 # yaml-ifc has no hinge field. 60L and 60R are PropertySets named

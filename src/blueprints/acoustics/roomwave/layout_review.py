@@ -321,7 +321,10 @@ def _mesh_3d(shape: Shape, path: Path) -> Path:
 
 # Measured on docs/acoustics/reference.jpg. Interior corner where the kitchen
 # gable meets the cabinet wall, the corner where the TV gable meets it, and the
-# floor line. The eave (3151 mm) then lands on the drawing's ceiling line.
+# floor line. The eave used for this registration was 3151 mm, the ceiling
+# before PR #77, and it lands on the drawing's ceiling line. The current
+# section eave is 3019.97 mm. This pixel registration was not redone.
+# docs/acoustics/LAYOUT.md is that older run.
 _X_LEFT = 262
 _X_RIGHT = 2206
 _Y_FLOOR = 1077

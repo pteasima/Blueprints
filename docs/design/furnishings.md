@@ -28,7 +28,7 @@ Counter 930 mm. Tall cabinets 2450 mm, the height Petr wrote. Product cards othe
 
 ### Tall run, north wall
 
-Backs on the north inner face y = 15.60. Fronts face south. Carcass depth 600 mm. The run is not deepened to the fridge.
+Backs on the north inner face y = 15.60. Fronts face south. Carcass depth 600 mm. The run is not deepened to the fridge. The soffit band, and the dining and living-area cabinets, are 450 mm. These tall cabinets stick out past that line on purpose. Source: Petr, 2026-11-06. See [obyvak.md](obyvak.md).
 
 | Id | Width | Note on the plan | Hinge |
 | --- | ---: | --- | --- |
@@ -74,7 +74,7 @@ The kitchen boxes stay as they are.
 
 ### North run
 
-North inner face y = 15.60, east inner face x = 29.90. The base run is x 22.15–29.90, front y = 15.15, depth 450, so the back sits on the north face. That 450 mm is the cabinet depth in [obyvak.md](obyvak.md), and y = 15.15 is the cabinet front used to find the false ridge.
+North inner face y = 15.60, east inner face x = 29.90. The base run is x 22.15–29.90, front y = 15.15, depth 450, so the back sits on the north face. That 450 mm is the soffit band, and the depth of these dining and living-area cabinets (Petr, 2026-11-06). y = 15.15 is the cabinet front used to find the false ridge. The 600 mm kitchen tall cabinets, further west on the same wall, stick out past it on purpose.
 
 Piers W-052 (x 22.15–22.45) and W-053 (x 25.15–25.45) project to y = 15.35. In front of each pier the box is 300 wide and 200 deep, front flush with the 450 run. The 450 run stops at the pier and starts again on the other side. W-053’s east face is x = 25.45 and the sofa’s west face was drawn at x = 25.52, so a 70 mm piece fills that gap. Both piers are west of the sofa, so the fillers and that sliver are at the kitchen counter, 930. Behind the sofa the base is 800 high, 40 mm above the 760 back.
 
@@ -90,15 +90,13 @@ The bookshelf is above the sofa, x 25.52–29.70, depth 250 (front y = 15.35, th
 
 Livom Harvey, matching the configurator screenshot 4.38 × 3.78 × 0.76. Catalogue seats (livom.de, as cited on the branch): S4 1160×1160×395, S2 1160×860×395, S3 1460×860×395. Arm and back cushions are 300 thick. The 75.5 cm catalogue cushion is 755 mm; the screenshot says 0.76, so the model uses 760 (5 mm over the catalogue). Seat height stays 395.
 
-The north leg is the 860-deep run, free end at the TV wall. From the east: arm, chaise, 116×86, corner 116×86. The chaise is 860 along the wall and 1460 deep, so it sticks 600 mm further south than the 860-deep seats, and 600 mm past the arm. The other leg is two 116×116 squares running south, then an arm.
+The north leg is the 860-deep run, free end at the TV wall. From the east: arm, chaise 1460 along by 860 deep, 116×86, corner 116×86. The chaise is in line with the other 860-deep seats (y 13.99–14.85). The other leg is two 116×116 squares running south, then an arm.
 
-Backs are 300 thick and 760 high, outside the seats. The two that meet at the outer corner are each 1160. The north one is the corner seat’s 1160 edge. The west one is the corner’s 860 side plus the 300 return that caps the corner. Their union fills the corner. There is no empty 300 mm square. Source: PR #83 body, “Corner”.
+Backs are 300 thick and 760 high, outside the seats. The two that meet at the inner corner are each 1160. The north one is the corner seat’s 1160 edge. The west one is the corner’s 860 side plus the 300 return that caps the corner. The same return closes each free end: the chaise back continues 300 past the seat so it meets the east arm, and the south-end west back continues 300 past the seat so it meets the south arm. There is no empty corner square.
 
-Arms are the lower catalogue pieces: 300 thick, 660 high, 860 long. They cover only the back 860 of the end seat. They do not reach the outer corner. On the chaise end the arm is y 13.99–14.85 and the chaise continues to y = 13.39.
+Arms are the lower pieces: 300 thick, 660 high, 860 long. Each sits on the end seat, against the back. The east arm covers the whole 860 chaise depth. The south arm covers the back 860 of the 1160 end, so that seat continues 300 mm past the arm.
 
-East-west along the TV wall is 300 + 1160 + 1160 + 860 + 300 = 3780, which is 600 mm short of the configurator’s 4380, because the chaise’s 1460 is its depth, not its length along the wall. North-south is 300 + 860 + 1160 + 1160 + 300 = 3780. The east face stays on the TV wall, so the west face is x = 26.12, not the 25.52 of the earlier “4380” placement. Source: PR #83 body, “Totals”. The west backs in the file (`FN-BW1` and the two south of it) are at x = 26.12.
-
-**The same file still places the low base, the bookshelf and the table gap on x = 25.52.** `SF-LB` and `FN-BK` start at 25.52. The header still says the sofa’s west face is x = 25.52 so that a 70 mm piece can fill the gap to pier W-053. That 70 mm piece (`Jídelna 70`) meets the low base, not the sofa. The table description says 1333 mm to the sofa; 24.187 to 25.52 is 1333 mm, and 24.187 to the sofa at 26.12 is 1933 mm. The island side of that sentence is the 1333 mm that is still true (23.087 − 21.754).
+East-west is 300 + 1160 + 1160 + 1460 + 300 = 4380. North-south is 300 + 860 + 1160 + 1160 + 300 = 3780. The east face is x = 29.90, on the TV wall. The west face is x = 25.52. The low base (`SF-LB`) and the bookshelf (`FN-BK`) start at that same x. The 70 mm piece between pier W-053 (x = 25.45) and this face is real. Source: the living-room header of `furnishings.yaml` on `cursor/living-room-sp102-8b74` at `bc4fe87`.
 
 ### Television
 
@@ -110,7 +108,7 @@ The east arm occupies y 13.99–14.85 and z 0–660. The panel’s north edge is
 
 ### Table, chairs, rug, subwoofer
 
-Gatta, Kaplan 1934. 1100 × 2400. Catalogue height 760; the plan’s figure is about 750, and the model uses 760. Long axis north-south, y 11.35–13.75. Placed at x 23.087–24.187. The description centres it on the island-to-sofa gap using a sofa west face of x = 25.52 (centre x = 23.637, 1333 mm each side). The sofa in the same file is at x = 26.12, so the east gap is 1933 mm. Lacquered natural oak.
+Gatta, Kaplan 1934. 1100 × 2400. Catalogue height 760; the plan’s figure is about 750, and the model uses 760. Long axis north-south, y 11.35–13.75. Centred in the island-to-sofa gap: island east face x = 21.754, sofa west face x = 25.52, centre x = 23.637, top x 23.087–24.187. Each side gap is 1333 mm. Lacquered natural oak.
 
 `guess:` top 30, apron 60 high by 20 thick set in 40, legs 50 square set in 80. Stated as assumed in `living_geometry.py`, not measured off the plan.
 
@@ -124,4 +122,4 @@ Rug 2800 × 3780 × 10, x 26.65–29.45, y 11.37–15.15. Furniture is not lifte
 
 ## What not to copy from the other layout
 
-**PR #83 keeps the island, the fridge and a dining table. The wave study deletes all three and uses a 4.0 × 4.0 m sofa.** Do not “correct” one file to match the other without the owner saying which room is current. Sources: `furnishings.yaml` on main, the PR #83 header, and the furniture comment in `src/blueprints/acoustics/roomwave/geometry.py`.
+**open:** PR #83 keeps the island, the fridge and a dining table. The wave study deletes all three and uses a 4.0 × 4.0 m sofa. Which room is current is not settled. Sources: `furnishings.yaml` on main, the PR #83 header, and the furniture comment in `src/blueprints/acoustics/roomwave/geometry.py`.

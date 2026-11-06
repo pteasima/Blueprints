@@ -13,7 +13,7 @@ Code: `src/blueprints/acoustics/roomwave/`. The air volume is built from `Obyvak
 
 ## Ceiling the pages describe
 
-**`LAYOUT.md` and `obyvak-wave.md` describe the ceiling from before PR #77.** Interior eave 3151 mm, false ridge height 5206 mm, kastlík from Z = 3.15 m down to Z = 2.47 m at X = 4.90 m. The current section measures 3019.97 mm and 5075.77 mm ([obyvak.md](obyvak.md)). A new run of `load_shape` would pick up the current section, because it calls `ObyvakLayout`. The published tables would not. They were not recomputed in this documentation pass.
+`LAYOUT.md` and `obyvak-wave.md` are labeled as the ceiling from before PR #77. Interior eave 3151 mm, false ridge height 5206 mm, kastlík from Z = 3.15 m down to Z = 2.47 m at X = 4.90 m. The current section measures 3019.97 mm and 5075.77 mm ([obyvak.md](obyvak.md)). A new run of `load_shape` would pick up the current section, because it calls `ObyvakLayout`. The published tables would not. They were not recomputed.
 
 Figures that still match the current section: false ridge at X = 2450 mm, soffit face at X = 4900 mm, soffit underside 2470 mm, traps above Z = 2450 mm, living trap 450 mm, kitchen trap 190 mm. Source: `LAYOUT.md` shell table, checked against `ObyvakLayout`.
 
@@ -23,7 +23,7 @@ Slope impedance is StoSilent (2 + 2 mm) on NaturHeld 140, rigid-backed, normal i
 
 An opaque box where the room is open was rejected. Omitted on purpose: hood (open frame), the open hanging shelf, dining chairs, plants, pendants, downlights, the person, the low bench under the TV, cabinet-wall uppers over the white kitchen, the rug pattern (a plain rug patch stays), the island, the dining table, the fridge, the oven, and every other dark box. The TV mark and the sub dot stay. Source: `LAYOUT.md`, “Omitted”, and the comment in `geometry.py`.
 
-**That omission contradicts the kitchen file and PR #83, which keep the island and the fridge, and add a dining table.** The study comment says Petr removed the island, the dining table, the fridge and the oven for this model. The furnishing file was not edited to match. See [furnishings.md](furnishings.md).
+**open:** that omission contradicts the kitchen file and PR #83, which keep the island and the fridge, and add a dining table. The study comment says Petr removed the island, the dining table, the fridge and the oven for this model. The furnishing file was not edited to match. See [furnishings.md](furnishings.md). Which layout is the room is not settled.
 
 ## Furniture the study did keep
 
@@ -41,11 +41,11 @@ Coordinates here are the study frame: X from the window wall, Y from the living 
 | Ears | Z = 1.15. Sofa at X = wall − 0.75, Y = 1.30 / 2.50 / 3.60. Former dining (3.00, 5.40). Former island (2.40, 8.55). | Kept after the furniture was deleted, so the seats can be compared. |
 | Talker | (3.00, 5.425), mouth at 1.50. On the old table footprint (X 2.30–3.70, Y 4.80–6.05). | `geometry.py` |
 
-**The study television is not on the false ridge.** Its centre is X = 3.50 m. The false ridge is X = 2.45 m. The wall-to-wall middle is X = 2.675 m. PR #83’s television is on the east wall, centred at the false ridge (storey y = 12.700), overall 2230 × 1277, bottom at 650 mm. These are different sets. Source: `tv_x0, tv_x1` in `geometry.py`, [obyvak.md](obyvak.md), PR #83.
+**open:** the study television is not on the false ridge. Its centre is X = 3.50 m. The false ridge is X = 2.45 m. The wall-to-wall middle is X = 2.675 m. PR #83’s television is on the east wall, centred at the false ridge (storey y = 12.700), overall 2230 × 1277, bottom at 650 mm. These are different sets. Source: `tv_x0, tv_x1` in `geometry.py`, [obyvak.md](obyvak.md), PR #83.
 
-**The study sofa is not the Livom Harvey on PR #83.** 4.0 × 4.0 m against the cabinet wall, versus a 3.78 × 3.78 m module build with its east face on the TV wall. The study sub sits outside the sofa. PR #83’s cube sits inside the east seat, and that PR flags the clash.
+**open:** the study sofa is not the Livom Harvey on PR #83. 4.0 × 4.0 m against the cabinet wall, versus the Harvey at 4.38 m east-west by 3.78 m north-south, east face on the TV wall and west face at x = 25.52. The study sub sits outside the sofa. PR #83’s cube sits inside the east seat, and that PR flags the clash.
 
-**The study counter is 900 mm. The kitchen file is 930 mm.** `LAYOUT.md` also records the drawing’s worktop at about 990 mm, 90 mm above the study box.
+**open:** the study counter is 900 mm. The kitchen file is 930 mm. `LAYOUT.md` also records the drawing’s worktop at about 990 mm, 90 mm above the study box.
 
 Absorption used after the tune, not as a product specification: domestic sofa α = 0.15 at 63 Hz and 0.68 at 500 Hz, checked against the Offecct Lucy 2-seater (SP report 18-106-M8, 12 April 2018) and then held to architectural fabric-seat tables at the mids, because the Lucy is an acoustic product. Books follow Cox and D’Antonio, 2nd ed., 2009, held at 0.54 at 4 kHz so the lamella gap does not collapse the top band. Rug is 12 mm at 20 000 Pa·s/m², Miki. Source: `obyvak-tune.md`, “Furniture absorption”.
 

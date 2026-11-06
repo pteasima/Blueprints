@@ -16,9 +16,12 @@ These are **building assemblies**, not decorative meshes. Before coding solids, 
 - Acoustic faces (e.g. NaturHeld + StoSilent on šikminy) are continuous room-facing layers with stated thickness — not paint on a zero-thickness shell.
 - When transferring from a řez/detail sheet: if clearances, hangers, vapour order, or bearing are inconsistent, **push back** and say what must change in the structure before modelling. If the sheet is coherent, transfer the stack and tweak later.
 - Prefer labelled solids that match contractor language (`NaturHeld 140`,
-  `NaturHeld Flex 50`, `dreveny_rost`, `cd`, `zaves`, `paska`, `sdk`, `vata`, `krov`)
-  over anonymous blobs. On šikminy: latě // krokvím (⊥ CD); CD ⊥ krokvím; hangers
-  CD→krokve; pásky on rafter faces. Keep `krov` separate from `dreveny_rost`.
-  Soffit bay: GKF breaks to horizontal at X_FURN; horizontal CD + Nonius from
-  krokve; the kastlík CD/UD rost hangs from that CD and braces to the eave wall — not from
-  furniture or pozednice.
+  `cd`, `zaves`, `paska`, `sdk`, `vata`, `krov`)
+  over anonymous blobs. On šikminy: no slope latě and no NaturHeld Flex; CD ⊥ krokvím;
+  hangers CD→krokve; pásky on rafter faces. Roofing latě stay above the rafters.
+  Keep `krov` separate from the ceiling steel.
+  Soffit bay: 40 mm NaturHeld on the side face, plain GKB on the underside. The lid
+  sits on the wall plate and widens until the slope GKF, cut level, lands on it.
+  That joint is floating (no angle, no UD). The kastlík CD/UD rost hangs from the
+  lid CD and braces to the eave wall — not from furniture or the wall plate.
+  Facts: `docs/design/obyvak.md`.

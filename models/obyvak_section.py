@@ -5,12 +5,12 @@ Design facts and reasons: docs/design/obyvak.md.
 Every drawn face is a section (or a seen-beyond section) of a solid in
 `models/obyvak.py` — the same solids as the GLB. Only notes are overlaid.
 
-Šikminy: NaturHeld 140 (80) screwed through GKF into CD ⊥ krokvím, závěsy,
+Šikminy: NaturHeld 140, 100 mm, screwed through GKF into CD ⊥ krokvím, závěsy,
 pásky (3D: 45° X; zde jen průřez). No slope latě and no Flex. Soffit: 40 mm
-NaturHeld on the side and bottom, mineral wool in the cavity, GKF lid on the
-pozednice above three Ø160 ducts; CD/UD rost under the pipes, hung from the
-front CD and braced to the wall. The hidden gypsum butt is a light-gauge
-angle on that same CD. 3D: `models/obyvak.py`.
+NaturHeld on the side, plain GKB on the bottom, mineral wool in the cavity,
+GKF lid on the pozednice above three Ø160 ducts. The slope GKF lands on that
+lid. The joint is floating: no angle and no UD. CD/UD rost under the pipes,
+hung from the lid CD and braced to the wall. 3D: `models/obyvak.py`.
 
     python -m blueprints.export obyvak_section
 """

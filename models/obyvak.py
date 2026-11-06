@@ -1134,7 +1134,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         band = _shrink_closed_band(pts, gap)
         return _extrude_y(xz_face(band, label), y_ceil0, y_ceil1, label)
 
-    # 1) NaturHeld 140, 80 mm, screwed through the GKF into the CD. No latě, no Flex.
+    # 1) NaturHeld 140, 100 mm, screwed through the GKF into the CD. No latě, no Flex.
     # Two boards per slope run: they butt at the false ridge (vertical cut).
     parts.extend(
         _split_x(
@@ -1144,7 +1144,7 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
         )
     )
 
-    # Triangle under the lid, above the slope board, out to the vertical lať.
+    # Triangle under the lid, above the slope board, out to the vertical soffit face.
     # Only the soffit bay has that lid. Same mineral wool as the soffit cavity.
     wedge_pts = g.soffit_wool_wedge_pts()
     wedge_solid = None
@@ -1196,7 +1196,8 @@ def _parts(p: ObyvakParams, g: ObyvakLayout) -> list:
             and min(hzs) < plate_z1
         ):
             continue
-        # Window slope stays parallel to the rafters (140 mm plenum). Direct hanger 200.
+        # Window slope stays parallel to the rafters. Direct hanger on that slope.
+        # Catalogue lengths are open: docs/design/obyvak.md.
         # Cabinet slope opens toward the furniture line — Nonius from the false
         # ridge onward (pack peak at x_false, left of the roof ridge).
         # Direct hanger on the left plane, including the short run past the

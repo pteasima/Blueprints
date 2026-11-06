@@ -6,9 +6,10 @@ changes the absorption. A loose sheet with the bending stiffness removed is
 kept as the limit check: a very large bay returns to that curve.
 
 The soffit outline, roof pitch, and both predstěna depths stay fixed. The
-slopes stay on the one-dimensional stack: 80 mm NaturHeld 140 on the GKF, no
-Flex, no slope latě. The soffit cavity is mineral wool behind a 40 mm
-NaturHeld 140 side face and a plain 12.5 mm GKB underside.
+slopes stay on the one-dimensional stack: NaturHeld 140 at the thickness in
+ObyvakParams (100 mm on both slopes) on the GKF, no Flex, no slope latě. The
+soffit cavity is mineral wool behind a 40 mm NaturHeld 140 side face and a
+plain 12.5 mm GKB underside.
 
 On the kitchen gable the air gap includes the front CD: 27 mm of profile plus
 20 mm clear of that CD, so the leaf can move. Wool never eats that clearance.
