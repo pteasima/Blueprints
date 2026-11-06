@@ -1,5 +1,7 @@
 """Obývák 1.02 — 3D massing from the transverse section + gable elevation.
 
+Design facts and reasons: docs/design/obyvak.md.
+
 World: X eave↔eave (5350), Y living gable↔kitchen gable (11100), Z up.
 Living is Y=0 (one sliding door, 450 mm trap). Kitchen is Y=L (two sliding
 doors, 190 mm trap).

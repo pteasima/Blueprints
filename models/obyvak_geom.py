@@ -1,5 +1,8 @@
 """Shared Obývák 1.02 parameters and 2D sketch helpers (mm).
 
+Design facts and reasons: docs/design/obyvak.md.
+The false ridge (x_false) is the visual centre of the clear width, not x_ridge.
+
 World:
   X = eave ↔ eave (room_width), Y = living gable ↔ kitchen gable (room_length), Z up.
   The living gable is Y=0 (one sliding door, 450 mm trap). The kitchen gable

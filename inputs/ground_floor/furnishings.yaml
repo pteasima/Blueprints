@@ -1,4 +1,9 @@
 # Room 1.02 (obývák) furnishings. Written for yaml-ifc at commit 34e1597.
+# Design facts and reasons: docs/design/furnishings.md.
+# The visual centre of this room is the false ridge (middle of the clear
+# width under the 450 mm north cabinets), not the wall-to-wall middle.
+# See docs/design/obyvak.md. Living-room pieces beyond this kitchen are the
+# history of PR #83; they are not in this file.
 # The vendored package is now 0f96c26. Upstream's furnishings sample at that
 # commit is a generic kitchen and is not this file.
 #

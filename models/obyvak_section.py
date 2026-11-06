@@ -1,5 +1,7 @@
 """Obývák 1.02 — příčný řez (panel A), cut from the 3D model solids.
 
+Design facts and reasons: docs/design/obyvak.md.
+
 Every drawn face is a section (or a seen-beyond section) of a solid in
 `models/obyvak.py` — the same solids as the GLB. Only notes are overlaid.
 

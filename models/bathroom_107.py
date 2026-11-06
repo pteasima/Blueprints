@@ -1,5 +1,7 @@
 """Bathroom 1.07 — level floor, shower fall to a north wall drain.
 
+Design facts: docs/design/bathrooms.md. The YAML header is the placement source.
+
 Source: ``inputs/ground_floor/bathroom-1.07.yaml``. Layout is yaml-ifc's
 (``floor_layout``, ``wall_layout``). The shower falls 1.25% from the south
 entry toward the wall drain in the north pre-wall. Wall tiles start at

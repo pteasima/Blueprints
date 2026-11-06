@@ -1,6 +1,6 @@
 # Obývák layout for the wave model
 
-Furniture Petr approved for the wave study.
+Furniture Petr approved for the wave study. The ceiling heights in this file are that study's ceiling. The current section, and the rule that the visual centre is the false ridge, are in [docs/design/obyvak.md](../design/obyvak.md). How this layout disagrees with the furnishing files is in [docs/design/acoustics.md](../design/acoustics.md).
 
 The comparison is an orthographic elevation of the cabinet wall, cut at the window wall. Kitchen gable is on the left, TV gable on the right, same handedness as Petr's drawing. The pitch runs across the width, so the ridge, the eave, and the soffit are level lines. The drawing's ceiling line is the eave.
 

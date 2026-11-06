@@ -16,6 +16,12 @@ When a pull request branch is behind `main`, rebase that feature branch onto `ma
 
 The 3D model is the source: 2D drawings and any derived outputs (exports, quantities, labels, tests) are cut, projected or computed from it, and get updated in the same PR when the model changes.
 
+## Document the real world
+
+Model code hides reasons. Every real-world fact the model uses (dimensions, clearances, product specs, design intent such as "the room's visual centre is the false ridge") lives in `docs/` in words, with its source, and code that uses it links to it. Read the relevant docs before building. If the prompt contradicts a documented fact, raise it in bold in the PR and stop rather than follow the prompt. When you notice stale or duplicated docs, or code that should be refactored, propose it in the PR.
+
+Design facts, one file per area: [docs/design/README.md](docs/design/README.md).
+
 ## Measure first
 
 Prefer building the model and measuring it over hand calculation. Use code and tests to get numbers, and use reasoning to decide what to try next. Do not derive millimetre values by hand when the model can report them. Example: start tiling from the reference corner at level zero, build, measure the far corner, then shift.
