@@ -245,7 +245,8 @@ def test_build_extrudes_walls_and_the_kitchen_boxes():
     labels = {child.label for child in shape.children}
     assert {LABEL_MASONRY, LABEL_GLAZING, LABEL_DOOR, LABEL_CABINET, "appliance", "sink"} <= labels
     assert {"upholstery", "oak", "rug"} <= labels
-    assert "light" not in labels
+    # Bedroom 1.11 adds light boxes on the same build.
+    assert "light" in labels
     # World plan of the placed solids, before the 1 mm inset. z0 is the base, z1 the top.
     expected_mm = {
         "SF-T1": (18800, 19550, 15000, 15600, 0, 2450),

@@ -149,6 +149,7 @@ _HUB_HTML = """<!DOCTYPE html>
   <div class="models">
 %%BUTTONS%%
   </div>
+%%PLANS%%
 </main>
 </body>
 </html>
@@ -227,7 +228,17 @@ def write_preview_hub(entries: list[dict[str, str]] | None = None) -> Path:
             continue
         buttons.append(_web_button_html(model_id, label))
     body = "\n".join(buttons) if buttons else '    <p class="empty">No models yet</p>'
-    page = _HUB_HTML.replace("%%BUTTONS%%", body)
+    plans = ""
+    if (PREVIEW_SITE_DIR / "electrical" / "1.11.html").is_file():
+        plans = (
+            '  <div class="models">\n'
+            '    <a class="web" href="electrical/1.11.html">\n'
+            "      <span>1.11 Ložnice — půdorys</span>\n"
+            '      <span class="chevron" aria-hidden="true">›</span>\n'
+            "    </a>\n"
+            "  </div>"
+        )
+    page = _HUB_HTML.replace("%%BUTTONS%%", body).replace("%%PLANS%%", plans)
     PREVIEW_SITE_DIR.mkdir(parents=True, exist_ok=True)
     (PREVIEW_SITE_DIR / ".nojekyll").write_text("", encoding="utf-8")
     index_path = PREVIEW_SITE_DIR / "index.html"

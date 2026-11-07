@@ -33,5 +33,14 @@
       "profile",
       "vanity"
     ]
+  },
+  {
+    "id": "electrical",
+    "children": [
+      "switch",
+      "sensor",
+      "outlet",
+      "actuator"
+    ]
   }
 ]
