@@ -88,6 +88,7 @@ from bathroom_107 import (
     scenes as bathroom_107_scenes,
 )
 from bedroom_111 import (
+    fixture_motions,
     parts as bedroom_111_parts,
     scenes as bedroom_111_scenes,
 )
@@ -415,8 +416,8 @@ def _leaf(kind: str, along, width, sill, oheight, thickness, filler: dict):
 
 
 # A single swing leaf. Wider panels are garage / double leaves modelled as one
-# slab; pocket and sliding leaves (obývák gable pockets, D5/D6) are not swung.
-# TODO: slide those instead of leaving them shut.
+# slab. Those, and windows wider than this with no operation, slide along the
+# wall instead of swinging. The file does not name which windows are sliders.
 HINGED_LEAF_MAX_M = 1.4
 _SLIDING_OPS = frozenset(
     {
@@ -441,6 +442,17 @@ _SWING_OPS = {
     "SINGLE_SWING_RIGHT": ("end", 1),
     "DOUBLE_SWING_RIGHT": ("end", 1),
 }
+# Windows have no OperationType in the ground-floor file. An explicit sliding
+# operation wins; an explicit fixed operation stays shut; otherwise a leaf
+# wider than one swing door slides. Openings will name the real sliders later.
+_WINDOW_SLIDING_OPS = frozenset(
+    {
+        "SLIDING",
+        "SLIDING_TO_LEFT",
+        "SLIDING_TO_RIGHT",
+    }
+)
+_WINDOW_FIXED_OPS = frozenset({"FIXED", "FIXED_WINDOW"})
 
 
 def _door_field(filler: dict, name: str):
@@ -516,6 +528,32 @@ def _point_cad(location, x: float, y: float, z: float) -> tuple[float, float, fl
     return (float(v.X), float(v.Y), float(v.Z))
 
 
+def _opening_operation(filler: dict):
+    return filler.get("OperationType") or filler.get("PartitioningType")
+
+
+def is_sliding_window(filler: dict) -> bool:
+    """True when the leaf should slide along the wall instead of staying fixed."""
+    op = _opening_operation(filler)
+    if op in _WINDOW_FIXED_OPS:
+        return False
+    if op in _WINDOW_SLIDING_OPS:
+        return True
+    width = filler.get("OverallWidth")
+    return width is not None and float(width) > HINGED_LEAF_MAX_M
+
+
+def _slide_vector(part, sign: int = -1) -> list[float]:
+    """glTF metres along the leaf's local +X (the wall), by its own width."""
+    local = part.moved(part.location.inverse())
+    bounds = local.bounding_box()
+    span = float(bounds.max.X - bounds.min.X)
+    origin = _point_cad(part.location, 0.0, 0.0, 0.0)
+    moved = _point_cad(part.location, span * sign, 0.0, 0.0)
+    delta = (moved[0] - origin[0], moved[1] - origin[1], moved[2] - origin[2])
+    return [round(value, 6) for value in cad_mm_to_gltf_m(delta)]
+
+
 def _door_motion(part, filler: dict) -> dict | None:
     """glTF-metre hinge for one placed leaf. None when the solid is not a panel.
 
@@ -542,12 +580,27 @@ def _door_motion(part, filler: dict) -> dict | None:
         "center": [round(v, 6) for v in center],
     }
     if spec["kind"] != "hinged":
+        record["slide"] = _slide_vector(part, -1)
         return record
     hinge = cad_mm_to_gltf_m(_point_cad(part.location, *hinge_local))
     record["hinge"] = [round(v, 6) for v in hinge]
     record["axis"] = [0.0, 1.0, 0.0]
     record["sign"] = spec["sign"]
     return record
+
+
+def _window_motion(part, filler: dict) -> dict | None:
+    """Same slide record as a pocket door, for a glazing leaf.
+
+    The probe width only forces ``kind: sliding``. The distance is the
+    panel's own local X, from ``_slide_vector``.
+    """
+    if not is_sliding_window(filler):
+        return None
+    return _door_motion(
+        part,
+        {"id": filler.get("id"), "OverallWidth": HINGED_LEAF_MAX_M + 1.0},
+    )
 
 
 def _solids(shape):
@@ -665,7 +718,7 @@ def build(
         uncut_mm3 += float(body.volume)
         y0, y1 = _span_y(body, thickness)
         label = _wall_label(wall["id"])
-        leaves = []
+        window_leaves = []
         door_leaves = []
 
         for opening in by_wall.get(wall["id"], []):
@@ -708,11 +761,10 @@ def build(
                 if leaf is not None:
                     door_leaves.append((leaf, filler))
             elif opening["id"] in windows:
-                leaf = _leaf(
-                    "window", along, width, sill, oheight, thickness, windows[opening["id"]]
-                )
+                filler = windows[opening["id"]]
+                leaf = _leaf("window", along, width, sill, oheight, thickness, filler)
                 if leaf is not None:
-                    leaves.append((leaf, LABEL_GLAZING))
+                    window_leaves.append((leaf, filler))
 
         cut_mm3 += float(body.volume)
         angle = math.degrees(math.atan2(ey - sy, ex - sx))
@@ -721,9 +773,13 @@ def build(
             placed = _place(solid, origin, angle, label)
             placed.wall_id = wall["id"]
             parts.append(placed)
-        for leaf, leaf_label in leaves:
+        for leaf, filler in window_leaves:
             for solid in _solids(leaf):
-                parts.append(_place(solid, origin, angle, leaf_label))
+                part = _place(solid, origin, angle, LABEL_GLAZING)
+                parts.append(part)
+                motion = _window_motion(part, filler)
+                if motion is not None:
+                    door_motions.append(motion)
         for leaf, filler in door_leaves:
             for solid in _solids(leaf):
                 part = _place(solid, origin, angle, LABEL_DOOR)
@@ -742,6 +798,7 @@ def build(
         electrical_path = Path(path).with_name("bedroom-1.11.yaml")
     bed_parts = bedroom_111_parts(electrical_path)
     parts.extend(bed_parts)
+    fixture_records = fixture_motions(bed_parts)
     bath107 = bathroom_107_figures()
 
     assembly = Compound(obj=parts, children=parts, label=MODEL_NAME)
@@ -781,6 +838,7 @@ def build(
         "doors": len(doors),
         "door_motions": door_motions,
         "windows": len(windows),
+        "fixture_motions": fixture_records,
     }
     return assembly, meta
 
@@ -1124,11 +1182,16 @@ if __name__ == "__main__":
         part_groups=part_groups(),
         label=MODEL_LABEL,
     )
-    from blueprints.scenes import write_doors_json
+    from blueprints.scenes import write_doors_json, write_fixtures_json
 
     motions = meta.get("door_motions") or []
     repo = Path(__file__).resolve().parents[1]
     write_doors_json(MODEL_NAME, motions, repo / "docs" / "models" / f"{MODEL_NAME}.doors.json")
+    write_fixtures_json(
+        MODEL_NAME,
+        meta.get("fixture_motions") or [],
+        repo / "docs" / "models" / f"{MODEL_NAME}.fixtures.json",
+    )
     print(f"Built {MODEL_NAME}: {summarize_params(meta['derived'])}")
     if meta["openings_skipped"]:
         print("  not cut:", ", ".join(item["id"] for item in meta["openings_skipped"]))

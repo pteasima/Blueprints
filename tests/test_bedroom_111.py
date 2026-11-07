@@ -12,6 +12,7 @@ from bedroom_111 import (  # noqa: E402
     PLAN_CUT_Z_M,
     SOURCE_PATH,
     device_records,
+    fixture_role,
     load_document,
     parts,
     room_faces,
@@ -78,6 +79,40 @@ def _same(left, right, path=""):
         return
     if left != right:
         raise AssertionError(f"{path} {left!r} != {right!r}")
+
+
+def test_fixture_role_follows_the_type_not_the_id():
+    assert fixture_role({"list": "lightFixtures", "PredefinedType": "POINTSOURCE"}) == "light"
+    assert fixture_role(
+        {"list": "lightFixtures", "PredefinedType": "USERDEFINED", "ObjectType": "LedStrip"}
+    ) == "light"
+    assert fixture_role({"list": "switchingDevices", "PredefinedType": "MOMENTARYSWITCH"}) == "switch"
+    assert fixture_role({"list": "sensors", "PredefinedType": "CONTACTSENSOR"}) == "sensor"
+    assert fixture_role(
+        {"list": "sensors", "PredefinedType": "MOVEMENTSENSOR", "ObjectType": "MmWavePresence"}
+    ) == "sensor"
+    assert fixture_role({"list": "outlets", "PredefinedType": "POWEROUTLET", "ObjectType": "Socket"}) == "power"
+    assert fixture_role({"list": "outlets", "PredefinedType": "DATAOUTLET", "ObjectType": "Ethernet"}) == "data"
+    assert fixture_role(
+        {"list": "outlets", "PredefinedType": "COMMUNICATIONSOUTLET", "ObjectType": "WifiAccessPoint"}
+    ) == "data"
+    assert fixture_role(
+        {"list": "actuators", "PredefinedType": "ELECTRICACTUATOR", "ObjectType": "BlindActuator"}
+    ) == "blind"
+    assert fixture_role(
+        {
+            "list": "actuators",
+            "PredefinedType": "ELECTRICACTUATOR",
+            "ObjectType": "Motor",
+            "PropertySets": [{"Properties": {"Application": "SUNBLINDACTUATOR"}}],
+        }
+    ) == "blind"
+    assert fixture_role(
+        {"list": "actuators", "PredefinedType": "ELECTRICACTUATOR", "ObjectType": "Motor"}
+    ) is None
+    assert fixture_role({"list": "furniture", "PredefinedType": "BED"}) is None
+    # A power outlet keeps the power colour even if its id looks like data.
+    assert fixture_role({"id": "C13-E", "list": "outlets", "PredefinedType": "POWEROUTLET"}) == "power"
 
 
 def test_room_faces_are_the_wall_model():
@@ -181,6 +216,16 @@ def test_boxes_sit_in_the_bay_and_round_trip(tmp_path):
     assert labels["C13-E"] == "outlet"
     assert labels["C46-B"] == "actuator"
     assert labels["BED-1.11"] == "furniture"
+    roles = {part.device_id: part.fixture_role for part in placed}
+    assert roles["C13-E"] == "data"
+    assert roles["C14-W"] == "data"
+    assert roles["SOCK-N"] == "power"
+    assert roles["C1-2V"] == "switch"
+    assert roles["C32-M"] == "sensor"
+    assert roles["C16-B"] == "blind"
+    assert roles["C2-S"] == "light"
+    assert roles["BED-1.11"] is None
+    assert all(part.fixture_role == "light" for part in strips)
     assert labels["RAIL-W"] == "furniture"
     assert "C9-R" not in labels
 

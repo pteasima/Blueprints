@@ -96,16 +96,32 @@ def test_ground_floor_builds_and_cuts_openings():
     labels = {child.label for child in shape.children}
     assert {"masonry", "glazing", "door"} <= labels
     motions = {item["id"]: item for item in meta["door_motions"]}
-    assert set(motions) == {door["id"] for door in doc["doors"]}
+    from ground_floor import is_sliding_window
+
+    door_ids = {door["id"] for door in doc["doors"]}
+    assert door_ids <= set(motions)
+    cut = set(meta["openings_cut"])
+    sliding_windows = {
+        window["id"]
+        for window in doc["windows"]
+        if is_sliding_window(window) and window["FillsOpening"] in cut
+    }
+    assert {item_id for item_id in motions if str(item_id).startswith("WIN-")} == sliding_windows
+    assert sliding_windows
+    fixed_windows = {window["id"] for window in doc["windows"] if not is_sliding_window(window)}
+    assert fixed_windows.isdisjoint(motions)
     # Wider than a single leaf: one slab, not a hinged swing. The file has
     # no hinge side, so every narrower leaf uses the start jamb and +Y.
-    assert {item_id for item_id, item in motions.items() if item["kind"] == "sliding"} == {
-        "D-OP03",
-        "D-OP49",
-        "D-OP50",
-    }
+    assert {
+        item_id
+        for item_id, item in motions.items()
+        if item["kind"] == "sliding" and item_id in door_ids
+    } == {"D-OP03", "D-OP49", "D-OP50"}
     for item in motions.values():
-        if item["kind"] != "hinged":
+        if item["kind"] == "sliding":
+            assert "hinge" not in item
+            distance = math.hypot(*item["slide"])
+            assert 0.2 < distance < 6.0
             continue
         assert item["sign"] == 1
         assert item["axis"] == [0.0, 1.0, 0.0]
@@ -114,6 +130,24 @@ def test_ground_floor_builds_and_cuts_openings():
         assert 0.25 < span < 0.7
     committed = json.loads((ROOT / "docs" / "models" / "ground_floor.doors.json").read_text())
     assert committed == meta["door_motions"]
+    fixtures = json.loads((ROOT / "docs" / "models" / "ground_floor.fixtures.json").read_text())
+    assert fixtures == meta["fixture_motions"]
+    roles: dict[str, int] = {}
+    for item in fixtures:
+        roles[item["role"]] = roles.get(item["role"], 0) + 1
+        assert len(item["center"]) == 3
+    # Boxed devices only. Cable 3 is three segments; the mmWave has no solid.
+    assert roles == {
+        "power": 4,
+        "data": 2,
+        "sensor": 2,
+        "switch": 5,
+        "blind": 3,
+        "light": 8,
+    }
+    assert sum(1 for item in fixtures if item["id"] == "C3-S") == 3
+    assert "BED-1.11" not in {item["id"] for item in fixtures}
+    assert "C9-R" not in {item["id"] for item in fixtures}
     assert derived["furnishings"] == len(furnishing_records())
     host = next(wall for wall in walls if wall["id"] == OPENING_VIEW_WALL)
     hosted = [item["id"] for item in openings if item["VoidsElement"] == host["id"]]
@@ -173,6 +207,36 @@ def test_start_hinge_is_the_leaf_edge_on_a_turned_wall():
     wide = _door_motion(part, {**filler, "OverallWidth": 5.15})
     assert wide["kind"] == "sliding"
     assert "hinge" not in wide
+    # The solid is still the 0.8 m leaf (inset by the gap). Slide that far.
+    assert math.hypot(*wide["slide"]) == pytest.approx(0.77, abs=0.02)
+
+
+def test_sliding_window_follows_width_unless_the_operation_says_otherwise():
+    from ground_floor import (
+        LABEL_GLAZING,
+        _leaf,
+        _place,
+        _solids,
+        _window_motion,
+        is_sliding_window,
+    )
+
+    assert is_sliding_window({"OverallWidth": 2.4}) is True
+    assert is_sliding_window({"OverallWidth": 0.9}) is False
+    assert is_sliding_window({"OverallWidth": 3.0, "OperationType": "FIXED"}) is False
+    assert is_sliding_window({"OverallWidth": 0.6, "PartitioningType": "SLIDING_TO_LEFT"}) is True
+    filler = {"id": "WIN-TEST", "OverallWidth": 2.4, "OverallHeight": 2.5}
+    leaf = _leaf("window", 0.0, 2400.0, 0.0, 2500.0, 300.0, filler)
+    part = _place(_solids(leaf)[0], (1000.0, 2000.0, 0.0), 0.0, LABEL_GLAZING)
+    motion = _window_motion(part, filler)
+    assert motion["kind"] == "sliding"
+    assert motion["id"] == "WIN-TEST"
+    assert "hinge" not in motion
+    distance = math.hypot(*motion["slide"])
+    assert 2.0 < distance < 2.4
+    assert motion["slide"][0] < 0
+    assert abs(motion["slide"][0]) == pytest.approx(distance, abs=1e-6)
+    assert _window_motion(part, {"id": "WIN-N", "OverallWidth": 0.9, "OverallHeight": 2.5}) is None
 
 
 def test_butt_corners_do_not_overlap():

@@ -13,8 +13,11 @@
  * Several openings on one ray close the farthest, so a door seen through
  * another opening can be shut again.
  *
- * Pocket and sliding leaves are not records with kind "hinged".
- * TODO: slide those (obývák gable pockets, garage D5/D6) instead of ignoring them.
+ * Pocket doors and sliding windows are records with kind "sliding" and a
+ * `slide` vector (glTF metres, closed → open, along the wall). A tap moves
+ * the leaf by that vector. The direction is the panel width toward the start
+ * of the leaf; which side the pocket is on will be refined later. Garage
+ * leaves use the same record, so they slide too.
  */
 import * as THREE from "three";
 import { createTapRegistry, isHitProxy } from "./interactions.js";
@@ -188,16 +191,17 @@ export function splitDisconnectedMesh(mesh) {
 
 /**
  * @param {THREE.Object3D} root
+ * @param {string} [label] mesh name, without a trailing `_2` uniquifier
  * @returns {THREE.Object3D[]}
  */
-export function collectDoorHosts(root) {
+export function collectDoorHosts(root, label = "door") {
   /** @type {THREE.Object3D[]} */
   const named = [];
   root.traverse((obj) => {
     const raw = obj.name || "";
-    if (raw.replace(/_\d+$/, "") !== "door") return;
+    if (raw.replace(/_\d+$/, "") !== label) return;
     const parentName = obj.parent?.name || "";
-    if (parentName.replace(/_\d+$/, "") === "door") return;
+    if (parentName.replace(/_\d+$/, "") === label) return;
     named.push(obj);
   });
   /** @type {THREE.Object3D[]} */
@@ -234,7 +238,9 @@ export function matchDoorHosts(entries, records, tolerance = DOOR_MATCH_M) {
   const candidates = [];
   for (const entry of entries) {
     for (const record of records) {
-      if (!record || record.kind !== "hinged" || !record.hinge) continue;
+      const hinged = record && record.kind === "hinged" && record.hinge;
+      const sliding = record && record.kind === "sliding" && Array.isArray(record.slide);
+      if (!hinged && !sliding) continue;
       const c = record.center;
       if (!Array.isArray(c) || c.length < 3) continue;
       const dx = entry.center.x - Number(c[0]);
@@ -262,7 +268,7 @@ export function matchDoorHosts(entries, records, tolerance = DOOR_MATCH_M) {
  * @param {THREE.Object3D} host
  * @returns {THREE.Vector3}
  */
-function worldCenter(host) {
+export function worldCenter(host) {
   host.updateWorldMatrix(true, true);
   const box = new THREE.Box3().setFromObject(host);
   return box.getCenter(new THREE.Vector3());
@@ -351,6 +357,55 @@ export function applyDoorSwing(binding, now) {
   const amount = sampleDoor(binding, now);
   setPivotSwing(binding.pivot, swingAngle(amount, binding.sign));
   return amount;
+}
+
+/**
+ * Translate the leaf by `record.slide` (world glTF metres) as it opens.
+ * The closed pose is the host position at bind time.
+ * @param {THREE.Object3D} host
+ * @param {object} record
+ */
+export function bindSlide(host, record) {
+  const parent = host.parent;
+  if (!parent || !Array.isArray(record.slide) || record.slide.length < 3) return null;
+  parent.updateWorldMatrix(true, false);
+  const origin = parent.worldToLocal(new THREE.Vector3(0, 0, 0));
+  const end = parent.worldToLocal(
+    new THREE.Vector3(Number(record.slide[0]), Number(record.slide[1]), Number(record.slide[2])),
+  );
+  const binding = {
+    id: record.id,
+    kind: "sliding",
+    host,
+    base: host.position.clone(),
+    localSlide: end.sub(origin),
+    goal: 0,
+    anim: null,
+  };
+  const tag = (obj) => {
+    obj.userData.bpDoor = binding;
+  };
+  host.traverse(tag);
+  return binding;
+}
+
+/**
+ * @param {{ host: THREE.Object3D, base: THREE.Vector3, localSlide: THREE.Vector3, goal: number, anim: object | null }} binding
+ * @param {number} now
+ */
+export function applyDoorSlide(binding, now) {
+  const amount = sampleDoor(binding, now);
+  binding.host.position.copy(binding.base).addScaledVector(binding.localSlide, amount);
+  return amount;
+}
+
+/**
+ * @param {{ kind?: string }} binding
+ * @param {number} now
+ */
+export function applyDoorMotion(binding, now) {
+  if (binding.kind === "sliding") return applyDoorSlide(binding, now);
+  return applyDoorSwing(binding, now);
 }
 
 /**
@@ -576,6 +631,8 @@ export function createDoorController(opts) {
   const isBlocked = opts.isBlocked || (() => false);
   /** @type {ReturnType<typeof bindHinge>[]} */
   const bindings = [];
+  /** @type {THREE.Object3D | null} */
+  let modelRoot = null;
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
   /** @type {{ id: number, x: number, y: number, moved: number, pointers: number } | null} */
@@ -618,12 +675,19 @@ export function createDoorController(opts) {
   function bind(root) {
     for (const binding of bindings) releaseProxy(binding);
     bindings.length = 0;
+    modelRoot = root || null;
     if (!root || !records.length) return 0;
     root.updateWorldMatrix(true, true);
-    const hosts = collectDoorHosts(root);
+    const hosts = [
+      ...collectDoorHosts(root, "door"),
+      ...collectDoorHosts(root, "glazing"),
+    ];
     const entries = hosts.map((host) => ({ host, center: worldCenter(host) }));
     for (const pair of matchDoorHosts(entries, records)) {
-      const binding = bindHinge(pair.entry.host, pair.record);
+      const binding =
+        pair.record.kind === "sliding"
+          ? bindSlide(pair.entry.host, pair.record)
+          : bindHinge(pair.entry.host, pair.record);
       if (!binding) continue;
       const obb = hostClosedObb(binding.host);
       binding.obb = obb;
@@ -642,7 +706,7 @@ export function createDoorController(opts) {
     for (const binding of bindings) {
       const wasMoving = Boolean(binding.anim);
       if (!wasMoving && binding.shown === binding.goal) continue;
-      applyDoorSwing(binding, now);
+      applyDoorMotion(binding, now);
       binding.shown = binding.anim ? null : binding.goal;
       if (wasMoving) moving = true;
     }
@@ -708,18 +772,15 @@ export function createDoorController(opts) {
    */
   function pick(ev) {
     const camera = opts.getCamera();
-    if (!camera || !bindings.length) return;
+    if (!camera || !modelRoot) return;
     const rect = canvas.getBoundingClientRect();
     const w = rect.width || canvas.clientWidth || 1;
     const h = rect.height || canvas.clientHeight || 1;
     pointer.x = ((ev.clientX - rect.left) / w) * 2 - 1;
     pointer.y = -((ev.clientY - rect.top) / h) * 2 + 1;
     raycaster.setFromCamera(pointer, camera);
-    const sceneRoot = bindings[0]?.pivot?.parent;
-    // Raycast the whole loaded model, not only the pivot parent (a door may
-    // sit behind another part). The pivot's parent is the glTF root.
-    // Opening proxies are not in this graph.
-    let top = sceneRoot;
+    // Raycast the whole loaded model. Opening proxies are not in this graph.
+    let top = modelRoot;
     while (top?.parent) top = top.parent;
     if (!top) return;
     const hits = raycaster.intersectObject(top, true);

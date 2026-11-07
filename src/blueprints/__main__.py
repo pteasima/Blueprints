@@ -48,11 +48,18 @@ def main(argv: list[str] | None = None) -> int:
     parts_fn = getattr(mod, "part_groups", None)
     part_groups = parts_fn() if callable(parts_fn) else None
     motions = meta.get("door_motions")
+    repo = Path(__file__).resolve().parents[2]
     if isinstance(motions, list):
         from blueprints.scenes import write_doors_json
 
-        repo = Path(__file__).resolve().parents[2]
         write_doors_json(model_name, motions, repo / "docs" / "models" / f"{model_name}.doors.json")
+    fixtures = meta.get("fixture_motions")
+    if isinstance(fixtures, list):
+        from blueprints.scenes import write_fixtures_json
+
+        write_fixtures_json(
+            model_name, fixtures, repo / "docs" / "models" / f"{model_name}.fixtures.json"
+        )
     if kind == "section":
         paths = export_section(shape, model_name)
         annot = getattr(mod, "annotate", None)
