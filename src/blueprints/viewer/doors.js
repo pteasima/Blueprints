@@ -20,7 +20,11 @@
  * leaves use the same record, so they slide too.
  */
 import * as THREE from "three";
-import { createTapRegistry, isHitProxy } from "./interactions.js";
+import {
+  createTapRegistry,
+  isHitProxy,
+  projectObjectToClientRect,
+} from "./interactions.js";
 
 /** Movement past this is a camera drag, not a tap. */
 export const TAP_PX = 12;
@@ -625,6 +629,18 @@ function releaseProxy(binding) {
  *   isBlocked?: () => boolean,
  * }} opts
  */
+/**
+ * The ray is inside this leaf's closed opening. The leaf's 44px pad must not
+ * steal that tap from the doorway close, or from a switch the pad overlaps.
+ * @param {{ obb?: object, host?: object }} binding
+ * @param {{ raycaster?: { ray: THREE.Ray }, now?: number }} [ctx]
+ */
+function rayCrossesOpening(binding, ctx) {
+  if (!binding?.obb || !ctx?.raycaster) return false;
+  if (sampleDoor(binding, ctx.now ?? 0) <= OPENING_LIVE) return false;
+  return Boolean(rayObb(ctx.raycaster.ray, binding.obb));
+}
+
 export function createDoorController(opts) {
   const records = Array.isArray(opts.records) ? opts.records : [];
   const canvas = opts.canvas;
@@ -652,6 +668,17 @@ export function createDoorController(opts) {
           toggleDoor(binding, ctx.now);
         },
       };
+    },
+    targets(ctx) {
+      return bindings
+        .filter((binding) => binding.host && !rayCrossesOpening(binding, ctx))
+        .map((binding) => ({
+          object: binding.host,
+          priority: 100,
+          onTap() {
+            toggleDoor(binding, ctx.now);
+          },
+        }));
     },
   });
   taps.register({
@@ -784,7 +811,17 @@ export function createDoorController(opts) {
     while (top?.parent) top = top.parent;
     if (!top) return;
     const hits = raycaster.intersectObject(top, true);
-    taps.dispatch(hits, { raycaster, now: performance.now() }, isDoorPickSolid);
+    taps.dispatch(
+      hits,
+      {
+        raycaster,
+        now: performance.now(),
+        clientX: ev.clientX,
+        clientY: ev.clientY,
+        project: (object) => projectObjectToClientRect(object, camera, rect),
+      },
+      isDoorPickSolid,
+    );
   }
 
   canvas.addEventListener("pointerdown", onPointerDown, true);

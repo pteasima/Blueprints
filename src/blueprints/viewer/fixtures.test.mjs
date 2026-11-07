@@ -4,7 +4,6 @@
  */
 import assert from "node:assert/strict";
 import * as THREE from "three";
-import { cappedPixelRatio, MAX_DRAWING_BUFFER_SIDE } from "./chrome.js";
 import { createTapRegistry } from "./interactions.js";
 import { SOLID_COLORS } from "./materials.js";
 import {
@@ -21,7 +20,12 @@ assert.equal(FIXTURE_ROLES.power.tap, null);
 assert.equal(FIXTURE_ROLES.data.tap, null);
 assert.equal(FIXTURE_ROLES.sensor.tap, null);
 assert.equal(FIXTURE_ROLES.switch.tap, "flash");
-assert.equal(FIXTURE_ROLES.switch.glow, true);
+assert.equal(FIXTURE_ROLES.switch.glow, undefined);
+assert.ok(FIXTURE_ROLES.switch.on[0] < 100, "active switch is dark grey");
+assert.ok(
+  Math.abs(FIXTURE_ROLES.switch.on[0] - FIXTURE_ROLES.switch.on[1]) < 12 &&
+    Math.abs(FIXTURE_ROLES.switch.on[1] - FIXTURE_ROLES.switch.on[2]) < 12,
+);
 assert.equal(FIXTURE_ROLES.light.tap, "toggle");
 assert.equal(FIXTURE_ROLES.blind.tap, "toggle");
 assert.equal(SWITCH_FLASH_MS, 250);
@@ -30,11 +34,14 @@ const paleLight = paleTint(FIXTURE_ROLES.light.on);
 assert.ok(paleLight[1] > FIXTURE_ROLES.light.on[1], "off yellow is paler");
 assert.ok(paleLight[2] > FIXTURE_ROLES.light.on[2]);
 assert.ok(paleLight.every((channel, i) => channel >= FIXTURE_ROLES.light.on[i]));
-const paleWhite = paleTint([255, 255, 255]);
-assert.ok(paleWhite.every((channel) => channel < 250 && channel > 200));
 const paleRed = paleTint(FIXTURE_ROLES.power.on);
-assert.ok(paleRed[0] > FIXTURE_ROLES.power.on[0]);
-assert.ok(paleRed[1] > 180 && paleRed[2] > 180);
+const washedRed = paleTint(FIXTURE_ROLES.power.on, 0.22);
+function fromWhite(rgb) {
+  return Math.hypot(255 - rgb[0], 255 - rgb[1], 255 - rgb[2]);
+}
+assert.ok(fromWhite(paleRed) > fromWhite(washedRed), "off red carries more of its colour");
+assert.ok(paleRed[0] > FIXTURE_ROLES.power.on[0], "off red is still lighter than on");
+assert.ok(paleRed[1] < 180 && paleRed[2] < 180);
 
 function box(name, x) {
   const mesh = new THREE.Mesh(
@@ -132,7 +139,7 @@ function centerOf(mesh) {
   assert.equal(taps.dispatch([{ object: sw }], { now: 2000 }), true);
   assert.equal(sw.userData.bpFixture.on, true);
   assert.equal(stripA.userData.bpFixture.on, true, "a switch does not change a light");
-  assert.deepEqual(rgb(sw), FIXTURE_ROLES.switch.on, "active switch is solid white");
+  assert.deepEqual(rgb(sw), FIXTURE_ROLES.switch.on, "active switch is dark grey");
   assert.equal(sw.material.emissive, undefined, "solid mode does not add a lit shader");
   assert.equal(ctrl.step(2000 + SWITCH_FLASH_MS - 1), true);
   assert.equal(sw.userData.bpFixture.on, true);
@@ -206,11 +213,5 @@ function centerOf(mesh) {
   assert.equal(mesh.material.customProgramCacheKey, base.customProgramCacheKey);
   assert.notEqual(mesh.material, base);
 }
-
-// iPad Pro landscape at DPR 2 is a 2732px buffer. The iPhone stays under 2048.
-assert.equal(MAX_DRAWING_BUFFER_SIDE, 2048);
-assert.equal(cappedPixelRatio(393, 852, 3), 2);
-assert.ok(cappedPixelRatio(1366, 1024, 2) * 1366 <= 2048 + 1e-6);
-assert.ok(cappedPixelRatio(1366, 1024, 2) < 2);
 
 console.log("fixtures.test.mjs ok");

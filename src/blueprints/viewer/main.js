@@ -10,7 +10,7 @@ import { USDZExporter } from "three/addons/exporters/USDZExporter.js";
 import { meshToClippedExportMesh } from "./clipGeometry.js";
 import { isSectionCap, syncSectionCaps } from "./sectionCaps.js";
 import { applyArPlacement, computeArPlacement } from "./arPlacement.js";
-import { BG_DARK, BG_LIGHT, cappedPixelRatio, initSheetChrome } from "./chrome.js";
+import { BG_DARK, BG_LIGHT, initSheetChrome } from "./chrome.js";
 import { createCooperativeRange } from "./coopRange.js";
 import {
   MODE_REALISTIC,
@@ -162,9 +162,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     // 24-bit buffer — coplanar CAD faces otherwise flicker while orbiting.
     logarithmicDepthBuffer: true,
   });
-  renderer.setPixelRatio(
-    cappedPixelRatio(canvas.clientWidth, canvas.clientHeight, window.devicePixelRatio),
-  );
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
@@ -1785,7 +1783,6 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   function resize() {
     const w = Math.max(1, canvas.clientWidth);
     const h = Math.max(1, canvas.clientHeight);
-    renderer.setPixelRatio(cappedPixelRatio(w, h, window.devicePixelRatio));
     renderer.setSize(w, h, false);
     if (projection === "perspective") {
       applyPerspFovFromState();

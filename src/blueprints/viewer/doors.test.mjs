@@ -28,6 +28,7 @@ import {
   bindHinge,
   bindSlide,
 } from "./doors.js";
+import { projectObjectToClientRect } from "./interactions.js";
 import { pickSurface } from "./pivotNav.js";
 
 assert.equal(easeInOutCubic(0), 0);
@@ -532,6 +533,46 @@ function hasDoor(hits) {
   binding.anim = null;
   applyDoorMotion(binding, 0);
   assert.ok(Math.abs(binding.host.position.x - binding.base.x - binding.localSlide.x) < 1e-6);
+}
+
+// A plate smaller than 44px accepts a tap beside it. A tap farther away does not.
+{
+  const canvas = fakeCanvas();
+  const camera = new THREE.PerspectiveCamera(50, 1, 0.01, 100);
+  camera.position.set(0, 0, 2);
+  camera.lookAt(0, 0, 0);
+  camera.updateMatrixWorld(true);
+  const scene = new THREE.Scene();
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.01));
+  plate.name = "door";
+  scene.add(plate);
+  scene.updateWorldMatrix(true, true);
+  const center = new THREE.Box3().setFromObject(plate).getCenter(new THREE.Vector3());
+  const ctrl = createDoorController({
+    canvas,
+    getCamera: () => camera,
+    records: [
+      {
+        id: "TINY",
+        kind: "hinged",
+        center: [center.x, center.y, center.z],
+        hinge: [center.x - 0.02, center.y, center.z],
+        axis: [0, 1, 0],
+        sign: 1,
+      },
+    ],
+  });
+  assert.equal(ctrl.bind(scene), 1);
+  const binding = ctrl.bindings[0];
+  const bounds = projectObjectToClientRect(binding.host, camera, canvas.getBoundingClientRect());
+  assert.ok(bounds);
+  tapAt(canvas, bounds.maxX + 12, bounds.cy);
+  assert.equal(binding.goal, 1, "a tap inside the 44px pad opens the plate");
+  binding.goal = 0;
+  binding.anim = null;
+  binding.shown = 0;
+  tapAt(canvas, bounds.maxX + 80, bounds.cy);
+  assert.equal(binding.goal, 0, "a tap outside the pad does not");
 }
 
 console.log("doors.test.mjs ok");

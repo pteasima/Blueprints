@@ -5,27 +5,6 @@
 export const BG_LIGHT = 0xe8e8ed;
 export const BG_DARK = 0x1c1c1e;
 
-/**
- * Longest drawing-buffer side to ask of Safari. An M2 iPad Pro in desktop
- * mode is about 1366×1024 CSS at DPR 2, which is a 2732px buffer. The iPhone
- * 14 Pro stays under 2048. Past that, MSAA plus the log-depth framebuffer
- * kills the WebKit GPU process ("a problem repeatedly occurred") or never
- * presents the model. The cap keeps the iPad on the size the phone survives.
- */
-export const MAX_DRAWING_BUFFER_SIDE = 2048;
-
-/**
- * @param {number} cssWidth
- * @param {number} cssHeight
- * @param {number} deviceRatio
- * @returns {number}
- */
-export function cappedPixelRatio(cssWidth, cssHeight, deviceRatio) {
-  const dpr = Math.min(Math.max(Number(deviceRatio) || 1, 1), 2);
-  const longSide = Math.max(Number(cssWidth) || 1, Number(cssHeight) || 1);
-  return Math.min(dpr, MAX_DRAWING_BUFFER_SIDE / longSide);
-}
-
 const CHROME_CSS = /* css */ `
 :root {
   color-scheme: light dark;

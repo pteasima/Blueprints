@@ -21,8 +21,12 @@ import { SOLID_COLORS } from "./materials.js";
 export const FIXTURE_MATCH_M = 0.03;
 /** How long a switch stays bright. */
 export const SWITCH_FLASH_MS = 250;
-/** Fraction of the on colour in the off tint. The rest is white. */
-export const PALE_MIX = 0.22;
+/**
+ * Fraction of the on colour in the off tint. The rest is white.
+ * High enough that a red socket and a green data plate still read apart,
+ * and still lighter than the on colour.
+ */
+export const PALE_MIX = 0.55;
 /** Placeholder glow. Tuned later. */
 export const SWITCH_GLOW = 0.55;
 
@@ -38,7 +42,7 @@ export const FIXTURE_ROLES = {
   power: { on: [214, 36, 36], tap: null },
   data: { on: [32, 168, 72], tap: null },
   sensor: { on: [36, 112, 230], tap: null },
-  switch: { on: [255, 255, 255], tap: "flash", glow: true },
+  switch: { on: [68, 68, 74], tap: "flash" },
   blind: { on: [150, 48, 210], tap: "toggle" },
   light: { on: SOLID_COLORS.light, tap: "toggle" },
 };
@@ -295,6 +299,24 @@ export function createFixtureController(opts = {}) {
             else setGroup(binding, !binding.on);
           },
         };
+      },
+      targets(ctx) {
+        /** @type {{ object: THREE.Object3D, priority: number, onTap: Function }[]} */
+        const found = [];
+        for (const binding of bindings) {
+          const tap = FIXTURE_ROLES[binding.role]?.tap;
+          if (!tap || !binding.host) continue;
+          found.push({
+            object: binding.host,
+            priority: 90,
+            onTap() {
+              const now = ctx?.now ?? performance.now();
+              if (tap === "flash") flash(binding, now);
+              else setGroup(binding, !binding.on);
+            },
+          });
+        }
+        return found;
       },
     });
   }
