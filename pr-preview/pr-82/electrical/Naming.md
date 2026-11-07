@@ -17,7 +17,7 @@ The id is `C<cable>-<code>`. The cable number is also the property `CableNumber`
 | W | Wi-Fi access point |
 | B | blind motor |
 
-Power sockets (`SOCK-`) have a current id and no cable number: the schedule has no row, and wiring is skipped. The two outdoor lamps (`LAMP-X-`) are kept and marked UNUSED. They are not wired, not on a panel, and not counted. The bed `BED-1.11` is UNFINISHED placeholder furniture, not a device id.
+Power sockets (`SOCK-`) have a current id and no cable number: the schedule has no row, and wiring is skipped. Cable 6 and cable 11 are off the plan for now. The bed `BED-1.11` is 2000×1800 and is not a device id.
 
 ## Proposed scheme
 
@@ -42,15 +42,15 @@ An exterior device is named from the room where its cable comes through the wall
 | --- | --- | --- | --- |
 | C12-S | 1.11-L2 | ceiling | ceiling |
 | C3-S | 1.11-L4 | bed | bed-edge |
-| C14-W | 1.11-AP1 | wall | 513 |
+| C14-W | 1.11-AP1 | ceiling | ceiling |
 | SOCK-EN | 1.11-Z2 | wall | 750 |
 | C4-2V | 1.11-B4 | wall | 821 |
 | C5-S | 1.11-L3 | wall | 892 |
 | SOCK-ES | 1.11-Z3 | wall | 750 |
 | C1-2V | 1.11-B5 | wall | 821 |
 | C2-S | 1.11-L5 | wall | 892 |
-| C7-S | 1.11-L6 | strip | west-strip |
-| C8-S | 1.11-L7 | strip | west-strip |
+| C7-S | 1.11-L6 | strip | west-rail |
+| C8-S | 1.11-L7 | strip | south-rail |
 | C32-V-1 | 1.11-B2 | wall | 1350 |
 | C9-R | 1.11-P1 | wall | in box |
 | C32-M | 1.11-K1 | frame | frame |

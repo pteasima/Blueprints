@@ -111,11 +111,11 @@ The drawing cites the short name.
 
 ## Room 1.11, as answered
 
-Cable 12 is the 120 W pendant above the bed. Cable 3 is the LED strip under the bed, all around the 2000×1800 outline. Cable 32 is the contact and the two switches of OP09. Cable 16 stays the blind for the narrow west window. Cable 6 and cable 11 are off the plan for now. The bed is 2000 mm by 1800 mm with the headboard on the east wall. Each bedside stack is a socket at 750, a switch at 821, and a lamp at 892. C7 and C8 are LED strips on the inner west wall. The access point is on the north wall at 513 mm. The bedroom outline is the L in `rooms/1.11-geometry.md`, 22.98 m².
+Cable 12 is the 120 W pendant above the bed. Cable 3 is the LED strip on the foot and the two long sides of the bed, not the headboard. Cable 32 is the contact and the two switches of OP09. Cable 16 stays the blind for the narrow west window. Cable 6 and cable 11 are off the plan for now. The bed is 2000 mm by 1800 mm with the headboard on the east wall. Each bedside stack is a socket at 750, a switch at 821, and a lamp at 892. C7 is the curtain-rail strip above the west window. C8 is the curtain-rail strip above the south window. The access point is centred on the 2.50 m ceiling north of y=7.950. The bedroom outline is the L in `rooms/1.11-geometry.md`, 22.98 m².
 
 Power sockets have no cable number and no circuit. They are positions only. The two outdoor lamps stay where they were and are marked UNUSED. The west lamp's cable number is still a TODO.
 
-The bed outline stays, because the strip needs it. In the plan and in `BED-1.11` it is marked UNFINISHED placeholder furniture. It is not a solid.
+The bed is 2000×1800 with the headboard on the east wall. Cable 3 runs the foot and the two long sides.
 
 The room table's 22.98 m² is the area to follow. The wall model closes 15.43 m². The drawing extends the room north to W-018 and hatches the part the model does not close. That rectangle is 20.54 m². The other 2.44 m² is not drawn.
 
