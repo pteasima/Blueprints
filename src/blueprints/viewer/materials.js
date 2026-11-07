@@ -324,7 +324,7 @@ export function applyOpacityToMeshes(meshes, opacity, opts = {}) {
   const edgeMode = opts.edgeMode ?? "transparent";
   for (const mesh of meshes) {
     if (!mesh) continue;
-    if (o <= 0) {
+    if (o <= 0 || mesh.userData?.bpIfcHidden) {
       mesh.visible = false;
       continue;
     }

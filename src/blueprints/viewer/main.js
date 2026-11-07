@@ -46,6 +46,12 @@ import {
 import { createDepthPeelRenderer } from "./depthPeel.js";
 import { createMeasureTool } from "./measure.js";
 import { createDoorController } from "./doors.js";
+import { registerElementActions } from "./elementActions.js";
+import { mountIfcInspector } from "./ifcInspector.js";
+import { createVisibility } from "./ifcHide.js";
+import { normalizeIndex, subtreeIds } from "./ifcTree.js";
+import { isSceneSolid } from "./interactions.js";
+import { meshIdentity } from "./meshIdentity.js";
 import { attachPivotNav } from "./pivotNav.js";
 import { cadMmToGltf, createAnnotations } from "./annotations.js";
 import { DRAW_H, DRAW_W, downloadBlob, plateFromCanvas } from "./drawing.js";
@@ -86,7 +92,7 @@ function writeSceneQuery(sceneId) {
 /**
  * @param {HTMLCanvasElement} canvas
  * @param {ArrayBuffer} glbBuffer
- * @param {{ scenes?: object[], scene?: string, partGroups?: object[], doors?: object[] }} [options]
+ * @param {{ scenes?: object[], scene?: string, partGroups?: object[], doors?: object[], ifc?: object }} [options]
  */
 export function mountViewer(canvas, glbBuffer, options = {}) {
   /** Custom named scenes (model-specific); shown alongside Iso/Front/Side/Top. */
@@ -95,6 +101,11 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   const partGroups = Array.isArray(options.partGroups) ? options.partGroups : [];
   /** Hinged leaves: centre, hinge, sign. Empty for models without doors. */
   const doorRecords = Array.isArray(options.doors) ? options.doors : [];
+  const ifcIndex = normalizeIndex(options.ifc);
+  /** yaml id → meshes. Filled when the GLB arrives. */
+  const meshesByKey = new Map();
+  /** @type {(pt: { clientX: number, clientY: number }) => void} */
+  let inspectAt = () => {};
   /** Prefer explicit option; otherwise `?scene=` from the current URL. */
   const initialSceneId = String(
     options.scene != null ? options.scene : readSceneQuery(),
@@ -211,6 +222,17 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     getCamera: () => camera,
     records: doorRecords,
     isBlocked: () => doorInputBlocked(),
+    onLongPress: (pt) => inspectAt(pt),
+  });
+  const lightOn = new Map();
+  const windowOpen = new Map();
+  registerElementActions(doorCtrl.taps, {
+    elementOf: (obj) => elementFromMesh(obj),
+    isOn: (el) => Boolean(lightOn.get(el.globalId)),
+    isOpen: (el) => Boolean(windowOpen.get(el.globalId)),
+    onLight: (el) => toggleLight(el),
+    onSwitch: (el) => pressSwitch(el),
+    onWindow: (el) => toggleWindow(el),
   });
 
   const annotations = createAnnotations({
@@ -293,7 +315,15 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         if (!obj.isMesh) return;
         const raw = obj.name || obj.parent?.name || "part";
         // OCCT/Three may uniquify duplicate labels (krov, krov_1, …); group for toggles.
-        const name = raw.replace(/_\d+$/, "") || raw;
+        // `part__yamlId__` keeps the part group and names the IFC element.
+        const ident = meshIdentity(raw);
+        obj.userData.bpPart = ident.part;
+        obj.userData.bpElementKey = ident.element;
+        if (ident.element) {
+          if (!meshesByKey.has(ident.element)) meshesByKey.set(ident.element, []);
+          meshesByKey.get(ident.element).push(obj);
+        }
+        const name = ident.part;
         if (!parts.has(name)) parts.set(name, []);
         parts.get(name).push(obj);
         if (obj.material) {
@@ -2266,6 +2296,266 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   let prevUsedPeel = false;
   /** Force a redraw (measure cursor, anything the stamps miss). */
   let viewDirty = true;
+  /** @type {{ meshes: object[], clones: object[], t0: number } | null} */
+  let pulse = null;
+
+  const ifcVisibility = createVisibility(ifcIndex);
+  const ifcRaycaster = new THREE.Raycaster();
+  const ifcPointer = new THREE.Vector2();
+  const ifcUi = mountIfcInspector({
+    index: ifcIndex,
+    visibility: ifcVisibility,
+    t: tr,
+    openSheet() {
+      const wide = window.matchMedia("(min-width: 768px)").matches;
+      chromeApi?.setDetent(wide ? "open" : "full");
+    },
+    onFrame: (id) => frameElement(id),
+    onVisibility: () => applyInspectorVisibility(),
+    actionsFor: () => [],
+  });
+
+  function elementFromMesh(obj) {
+    let node = obj;
+    while (node) {
+      const key = node.userData?.bpElementKey || meshIdentity(node.name || "").element;
+      if (key) {
+        for (const element of Object.values(ifcIndex.elements)) {
+          if (element.id === key) return element;
+        }
+      }
+      node = node.parent;
+    }
+    return null;
+  }
+
+  function meshesForKey(key) {
+    return key ? meshesByKey.get(key) || [] : [];
+  }
+
+  function meshesForElement(element) {
+    if (!element) return [];
+    const own = meshesForKey(element.id);
+    if (own.length) return own;
+    const found = [];
+    for (const id of subtreeIds(ifcIndex, element.globalId)) {
+      const child = ifcIndex.elements[id];
+      if (child && child !== element) found.push(...meshesForKey(child.id));
+    }
+    return found;
+  }
+
+  /**
+   * @param {object[]} meshes
+   */
+  function worldBoxOf(meshes) {
+    const box3 = new THREE.Box3();
+    const corner = new THREE.Vector3();
+    for (const mesh of meshes) {
+      const geom = mesh.geometry;
+      if (!geom) continue;
+      if (!geom.boundingBox) geom.computeBoundingBox();
+      const bb = geom.boundingBox;
+      if (!bb) continue;
+      mesh.updateWorldMatrix(true, false);
+      for (const x of [bb.min.x, bb.max.x]) {
+        for (const y of [bb.min.y, bb.max.y]) {
+          for (const z of [bb.min.z, bb.max.z]) {
+            corner.set(x, y, z).applyMatrix4(mesh.matrixWorld);
+            box3.expandByPoint(corner);
+          }
+        }
+      }
+    }
+    return box3;
+  }
+
+  function frameElement(id) {
+    const element = ifcIndex.elements[id];
+    const meshes = meshesForElement(element);
+    if (!meshes.length) return;
+    const box3 = worldBoxOf(meshes);
+    if (box3.isEmpty()) return;
+    const fit = box3.getSize(_corner);
+    const span = Math.max(fit.x, fit.y, fit.z, 0.2);
+    withSuppressedCameraChange(() => {
+      box3.getCenter(controls.target);
+      if (camera.isOrthographicCamera) {
+        sizeOrthoToContent(span * 0.62, span * 0.62);
+        const dist = Math.max(camera.position.distanceTo(controls.target), span * 1.4);
+        setCameraDistance(dist);
+      } else {
+        const vFov = ((camera.fov || 45) * Math.PI) / 180;
+        const dist = Math.max((span * 0.62) / Math.max(Math.tan(vFov / 2), 1e-3), span * 1.25);
+        setCameraDistance(dist);
+      }
+      updateBox();
+      updateCameraClipPlanes();
+      controls.update();
+    });
+    startPulse(meshes);
+    viewDirty = true;
+  }
+
+  function startPulse(meshes) {
+    if (pulse) finishPulse();
+    const clones = [];
+    for (const mesh of meshes) {
+      if (!mesh.isMesh || !mesh.material) continue;
+      const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      const next = list.map((mat) => {
+        const clone = mat.clone();
+        if (clone.emissive) {
+          clone.emissive.setHex(0xffb020);
+          clone.emissiveIntensity = 0;
+        } else if (clone.color) {
+          clone.userData.bpPulseBase = clone.color.getHex();
+        }
+        clones.push(clone);
+        return clone;
+      });
+      mesh.userData.bpPulseMaterial = list;
+      mesh.material = next.length === 1 ? next[0] : next;
+    }
+    pulse = { meshes, clones, t0: performance.now() };
+  }
+
+  function finishPulse() {
+    if (!pulse) return;
+    for (const mesh of pulse.meshes) {
+      const saved = mesh.userData.bpPulseMaterial;
+      if (saved) mesh.material = saved.length === 1 ? saved[0] : saved;
+      delete mesh.userData.bpPulseMaterial;
+    }
+    for (const mat of pulse.clones) mat.dispose?.();
+    pulse = null;
+  }
+
+  function stepPulse(now) {
+    if (!pulse) return;
+    const u = (now - pulse.t0) / 900;
+    if (u >= 1) {
+      finishPulse();
+      viewDirty = true;
+      return;
+    }
+    const mag = Math.sin(Math.min(u, 1) * Math.PI);
+    for (const mat of pulse.clones) {
+      if (mat.emissive) mat.emissiveIntensity = 0.85 * mag;
+      else if (mat.color && mat.userData.bpPulseBase != null) {
+        mat.color.setHex(mat.userData.bpPulseBase).offsetHSL(0.08, 0.2, 0.18 * mag);
+      }
+    }
+    viewDirty = true;
+  }
+
+  function applyInspectorVisibility() {
+    const hiddenKeys = new Set();
+    for (const element of Object.values(ifcIndex.elements)) {
+      if (ifcVisibility.isHidden(element.globalId) && element.id) hiddenKeys.add(element.id);
+    }
+    for (const [key, meshes] of meshesByKey) {
+      const hidden = hiddenKeys.has(key);
+      for (const mesh of meshes) mesh.userData.bpIfcHidden = hidden;
+    }
+    for (const binding of doorCtrl.bindings) {
+      const key = meshIdentity(binding.host?.name || "").element;
+      const hidden = Boolean(key && hiddenKeys.has(key));
+      if (binding.host) binding.host.userData.bpIfcHidden = hidden;
+    }
+    for (const [name, meshes] of parts) {
+      applyOpacityToMeshes(meshes, partOpacity.get(name) ?? 1, { edgeMode });
+    }
+    viewDirty = true;
+  }
+
+  function eachMaterial(mesh, fn) {
+    const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    const next = list.map((mat) => {
+      if (!mat) return mat;
+      if (mat.userData.bpOwned) return fn(mat);
+      const clone = mat.clone();
+      clone.userData.bpOwned = true;
+      return fn(clone);
+    });
+    mesh.material = next.length === 1 ? next[0] : next;
+  }
+
+  function toggleLight(element) {
+    const on = !lightOn.get(element.globalId);
+    lightOn.set(element.globalId, on);
+    for (const mesh of meshesForElement(element)) {
+      eachMaterial(mesh, (mat) => {
+        if (mat.emissive) {
+          mat.emissive.setHex(on ? 0xfff1c2 : 0x000000);
+          mat.emissiveIntensity = on ? 0.9 : 0;
+        } else if (mat.color) {
+          if (mat.userData.bpLightBase == null) mat.userData.bpLightBase = mat.color.getHex();
+          mat.color.setHex(on ? 0xfff3bf : mat.userData.bpLightBase);
+        }
+        return mat;
+      });
+    }
+    viewDirty = true;
+  }
+
+  function pressSwitch(element) {
+    for (const mesh of meshesForElement(element)) {
+      if (mesh.userData.bpPressing) continue;
+      mesh.userData.bpPressing = true;
+      const origin = mesh.position.y;
+      mesh.position.y = origin - 0.004;
+      window.setTimeout(() => {
+        mesh.position.y = origin;
+        mesh.userData.bpPressing = false;
+        viewDirty = true;
+      }, 160);
+    }
+    viewDirty = true;
+  }
+
+  function toggleWindow(element) {
+    const open = !windowOpen.get(element.globalId);
+    windowOpen.set(element.globalId, open);
+    for (const mesh of meshesForElement(element)) {
+      if (!mesh.userData.bpSlideOrigin) mesh.userData.bpSlideOrigin = mesh.position.clone();
+      const geom = mesh.geometry;
+      if (geom && !geom.boundingBox) geom.computeBoundingBox();
+      const width = geom?.boundingBox ? geom.boundingBox.max.x - geom.boundingBox.min.x : 0.4;
+      mesh.position.copy(mesh.userData.bpSlideOrigin);
+      if (open) mesh.position.x += width * 0.8;
+    }
+    viewDirty = true;
+  }
+
+  function inspectAtPointer(pt) {
+    if (doorInputBlocked()) return;
+    const cameraNow = camera;
+    if (!cameraNow || !root) return;
+    const rect = canvas.getBoundingClientRect();
+    const w = rect.width || canvas.clientWidth || 1;
+    const h = rect.height || canvas.clientHeight || 1;
+    ifcPointer.x = ((pt.clientX - rect.left) / w) * 2 - 1;
+    ifcPointer.y = -((pt.clientY - rect.top) / h) * 2 + 1;
+    ifcRaycaster.setFromCamera(ifcPointer, cameraNow);
+    const hits = ifcRaycaster.intersectObject(root, true).filter((hit) => isSceneSolid(hit.object));
+    const hit = hits[0];
+    if (!hit) {
+      ifcUi.closePopover();
+      return;
+    }
+    const element = elementFromMesh(hit.object);
+    const partName = hit.object.userData?.bpPart || meshIdentity(hit.object.name || "").part;
+    const actions = doorCtrl.taps.actionsFor(
+      hits,
+      { raycaster: ifcRaycaster, now: performance.now() },
+      (item) => isSceneSolid(item.object),
+    );
+    ifcUi.openPopover(element, partName, actions, pt.clientX, pt.clientY);
+  }
+  inspectAt = inspectAtPointer;
+
+  onLocaleChange(() => ifcUi.refresh());
   /** @type {number[] | null} */
   let camSig = null;
   /** @type {string | null} */
@@ -2366,6 +2656,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     if (pauseTick) return;
     const now = performance.now();
     if (doorCtrl.step(now)) viewDirty = true;
+    stepPulse(now);
     stepFrameAnim(now);
     controls.update();
     // Keep near/far tight as orbit distance changes.

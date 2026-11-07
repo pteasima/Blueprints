@@ -162,6 +162,7 @@ def _solid_from_product(product, label: str, list_key: str):
     painted = _paint(plane * box, label)
     painted.device_id = _yaml_id(product)
     painted.device_list = list_key
+    painted.element_id = painted.device_id
     return painted
 
 
@@ -184,6 +185,7 @@ def _axis_box(origin, x_dir, size, device_id: str, label: str = "light"):
     painted = _paint(plane * box, label)
     painted.device_id = device_id
     painted.device_list = "lightFixtures"
+    painted.element_id = device_id
     return painted
 
 

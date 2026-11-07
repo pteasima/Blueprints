@@ -1,0 +1,52 @@
+/**
+ * Session-only visibility. Not written to the URL.
+ * Hiding a row hides that element and everything aggregated or contained
+ * under it. "All others" is every element outside that subtree.
+ */
+
+import { subtreeIds } from "./ifcTree.js";
+
+/**
+ * @param {object} index
+ */
+export function createVisibility(index) {
+  /** @type {Set<string>} */
+  const hidden = new Set();
+
+  function everyId() {
+    return Object.keys(index.elements);
+  }
+
+  return {
+    isHidden(id) {
+      return hidden.has(id);
+    },
+    anyHidden() {
+      return hidden.size > 0;
+    },
+    hiddenIds() {
+      return [...hidden];
+    },
+    hide(id) {
+      for (const item of subtreeIds(index, id)) hidden.add(item);
+    },
+    unhide(id) {
+      for (const item of subtreeIds(index, id)) hidden.delete(item);
+    },
+    hideOthers(id) {
+      const keep = new Set(subtreeIds(index, id));
+      for (const item of everyId()) {
+        if (!keep.has(item)) hidden.add(item);
+      }
+    },
+    unhideOthers(id) {
+      const keep = new Set(subtreeIds(index, id));
+      for (const item of everyId()) {
+        if (!keep.has(item)) hidden.delete(item);
+      }
+    },
+    showAll() {
+      hidden.clear();
+    },
+  };
+}
