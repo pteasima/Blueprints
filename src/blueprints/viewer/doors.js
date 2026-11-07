@@ -17,7 +17,9 @@
  * TODO: slide those (obývák gable pockets, garage D5/D6) instead of ignoring them.
  */
 import * as THREE from "three";
-import { createTapRegistry, isHitProxy } from "./interactions.js";
+import { LONG_PRESS_MS, classifyHold } from "./gesture.js";
+import { createTapRegistry, isHitProxy, isSceneSolid } from "./interactions.js";
+import { meshIdentity } from "./meshIdentity.js";
 
 /** Movement past this is a camera drag, not a tap. */
 export const TAP_PX = 12;
@@ -195,9 +197,9 @@ export function collectDoorHosts(root) {
   const named = [];
   root.traverse((obj) => {
     const raw = obj.name || "";
-    if (raw.replace(/_\d+$/, "") !== "door") return;
+    if (meshIdentity(raw).part !== "door") return;
     const parentName = obj.parent?.name || "";
-    if (parentName.replace(/_\d+$/, "") === "door") return;
+    if (meshIdentity(parentName).part === "door") return;
     named.push(obj);
   });
   /** @type {THREE.Object3D[]} */
@@ -545,11 +547,7 @@ function bindingOf(obj) {
  * @param {{ object?: THREE.Object3D }} hit
  */
 function isDoorPickSolid(hit) {
-  const obj = hit.object;
-  if (!obj || !obj.visible || isHitProxy(obj)) return false;
-  const ud = obj.userData;
-  if (ud && (ud.isEdgeOverlay || ud.isSectionCap)) return false;
-  return true;
+  return isSceneSolid(hit.object);
 }
 
 /**
@@ -578,9 +576,16 @@ export function createDoorController(opts) {
   const bindings = [];
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
-  /** @type {{ id: number, x: number, y: number, moved: number, pointers: number } | null} */
+  /** @type {{ id: number, x: number, y: number, moved: number, pointers: number, modifiers: boolean, consumed: boolean } | null} */
   let gesture = null;
   let pointersDown = 0;
+  /** @type {ReturnType<typeof setTimeout> | null} */
+  let pressTimer = null;
+
+  function clearPress() {
+    if (pressTimer) clearTimeout(pressTimer);
+    pressTimer = null;
+  }
   const taps = createTapRegistry();
   // Leaf claims beat the opening fallback. A later switch registers a claim
   // of its own; the nearest claimed solid wins, wherever it sits on the ray.
@@ -589,11 +594,13 @@ export function createDoorController(opts) {
     priority: 100,
     claim(hit, ctx) {
       const binding = bindingOf(hit.object);
-      if (!binding) return null;
+      if (!binding || binding.host?.userData?.bpIfcHidden) return null;
+      const now = ctx.now ?? performance.now();
+      const open = sampleDoor(binding, now) > OPENING_LIVE;
+      const run = () => toggleDoor(binding, ctx.now ?? performance.now());
       return {
-        onTap() {
-          toggleDoor(binding, ctx.now);
-        },
+        onTap: run,
+        actions: [{ id: "door", labelKey: open ? "ui.close" : "ui.open", run }],
       };
     },
   });
@@ -604,7 +611,8 @@ export function createDoorController(opts) {
       /** @type {{ binding: object, tEnter: number }[]} */
       const crossed = [];
       for (const door of bindings) {
-        if (!door.obb || sampleDoor(door, ctx.now) <= OPENING_LIVE) continue;
+        if (!door.obb || door.host?.userData?.bpIfcHidden) continue;
+        if (sampleDoor(door, ctx.now) <= OPENING_LIVE) continue;
         const span = rayObb(ctx.raycaster.ray, door.obb);
         if (!span) continue;
         crossed.push({ binding: door, tEnter: span.tEnter });
@@ -665,7 +673,31 @@ export function createDoorController(opts) {
       y: ev.clientY,
       moved: 0,
       pointers: 1,
+      modifiers: ev.altKey || ev.ctrlKey || ev.metaKey || ev.shiftKey,
+      consumed: false,
     };
+    clearPress();
+    pressTimer = setTimeout(() => {
+      pressTimer = null;
+      if (!gesture || gesture.consumed) return;
+      const kind = classifyHold({
+        dt: LONG_PRESS_MS,
+        dx: gesture.moved,
+        dy: 0,
+        pointers: pointersDown,
+        button: 0,
+        blocked: isBlocked(),
+        modifiers: gesture.modifiers,
+        released: false,
+      });
+      if (kind !== "longpress") return;
+      gesture.consumed = true;
+      opts.onLongPress?.({
+        clientX: gesture.x,
+        clientY: gesture.y,
+        pointerId: gesture.id,
+      });
+    }, LONG_PRESS_MS);
   }
 
   /**
@@ -675,6 +707,7 @@ export function createDoorController(opts) {
     if (!gesture || ev.pointerId !== gesture.id) return;
     const dist = Math.hypot(ev.clientX - gesture.x, ev.clientY - gesture.y);
     if (dist > gesture.moved) gesture.moved = dist;
+    if (gesture.moved > TAP_PX) clearPress();
   }
 
   /**
@@ -682,9 +715,11 @@ export function createDoorController(opts) {
    */
   function onPointerUp(ev) {
     pointersDown = Math.max(0, pointersDown - 1);
+    clearPress();
     if (!gesture || ev.pointerId !== gesture.id) return;
     const g = gesture;
     gesture = null;
+    if (g.consumed) return;
     const dist = Math.max(g.moved, Math.hypot(ev.clientX - g.x, ev.clientY - g.y));
     const kind = classifyPointerGesture({
       dx: dist,
@@ -730,6 +765,7 @@ export function createDoorController(opts) {
   canvas.addEventListener("pointermove", onPointerMove, true);
   canvas.addEventListener("pointerup", onPointerUp, true);
   canvas.addEventListener("pointercancel", onPointerCancel, true);
+  canvas.addEventListener("contextmenu", (ev) => ev.preventDefault());
 
   return { bind, step, bindings, taps };
 }

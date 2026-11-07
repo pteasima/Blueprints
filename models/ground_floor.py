@@ -262,6 +262,7 @@ def _solid_from_product(product, label: str, list_key: str, element: dict | None
     painted = _paint(plane * detail, label)
     painted.furnishing_id = _yaml_id(product)
     painted.furnishing_list = list_key
+    painted.element_id = painted.furnishing_id
     return painted
 
 
@@ -669,7 +670,7 @@ def build(
         uncut_mm3 += float(body.volume)
         y0, y1 = _span_y(body, thickness)
         label = _wall_label(wall["id"])
-        leaves = []
+        window_leaves = []
         door_leaves = []
 
         for opening in by_wall.get(wall["id"], []):
@@ -716,7 +717,7 @@ def build(
                     "window", along, width, sill, oheight, thickness, windows[opening["id"]]
                 )
                 if leaf is not None:
-                    leaves.append((leaf, LABEL_GLAZING))
+                    window_leaves.append((leaf, windows[opening["id"]]["id"]))
 
         cut_mm3 += float(body.volume)
         angle = math.degrees(math.atan2(ey - sy, ex - sx))
@@ -724,13 +725,17 @@ def build(
         for solid in _solids(body):
             placed = _place(solid, origin, angle, label)
             placed.wall_id = wall["id"]
+            placed.element_id = wall["id"]
             parts.append(placed)
-        for leaf, leaf_label in leaves:
+        for leaf, window_id in window_leaves:
             for solid in _solids(leaf):
-                parts.append(_place(solid, origin, angle, leaf_label))
+                placed = _place(solid, origin, angle, LABEL_GLAZING)
+                placed.element_id = window_id
+                parts.append(placed)
         for leaf, filler in door_leaves:
             for solid in _solids(leaf):
                 part = _place(solid, origin, angle, LABEL_DOOR)
+                part.element_id = filler["id"]
                 parts.append(part)
                 motion = _door_motion(part, filler)
                 if motion is not None:
@@ -1117,6 +1122,20 @@ def part_groups() -> list[dict]:
     ]
 
 
+def ifc_index() -> dict:
+    """Spatial index for the viewer inspector. One row per yaml-ifc product."""
+    from bathroom_107 import SOURCE_PATH as BATH_107
+    from bathroom_120 import SOURCE_PATH as BATH_120
+    from bedroom_111 import SOURCE_PATH as BEDROOM
+    from blueprints.ifc_index import index_documents
+
+    docs = []
+    for path in (SOURCE_PATH, FURNISHINGS_PATH, BEDROOM, BATH_120, BATH_107):
+        if path.is_file():
+            docs.append(load_yaml_ifc(path))
+    return index_documents(docs)
+
+
 if __name__ == "__main__":
     from blueprints.export_utils import export_shape, summarize_params
 
@@ -1127,6 +1146,7 @@ if __name__ == "__main__":
         scenes=scenes(),
         part_groups=part_groups(),
         label=MODEL_LABEL,
+        ifc_index=ifc_index(),
     )
     from blueprints.scenes import write_doors_json
 

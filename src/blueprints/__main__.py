@@ -53,6 +53,8 @@ def main(argv: list[str] | None = None) -> int:
 
         repo = Path(__file__).resolve().parents[2]
         write_doors_json(model_name, motions, repo / "docs" / "models" / f"{model_name}.doors.json")
+    ifc_fn = getattr(mod, "ifc_index", None)
+    ifc_index = ifc_fn() if callable(ifc_fn) else None
     if kind == "section":
         paths = export_section(shape, model_name)
         annot = getattr(mod, "annotate", None)
@@ -65,6 +67,7 @@ def main(argv: list[str] | None = None) -> int:
             scenes=scenes,
             part_groups=part_groups,
             label=getattr(mod, "MODEL_LABEL", None),
+            ifc_index=ifc_index,
         )
 
     params = meta.get("derived") or getattr(mod, "PARAMS", meta.get("params", {}))
