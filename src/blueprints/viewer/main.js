@@ -46,6 +46,7 @@ import {
 import { createDepthPeelRenderer } from "./depthPeel.js";
 import { createMeasureTool } from "./measure.js";
 import { createDoorController } from "./doors.js";
+import { attachPivotNav } from "./pivotNav.js";
 import { cadMmToGltf, createAnnotations } from "./annotations.js";
 import { DRAW_H, DRAW_W, downloadBlob, plateFromCanvas } from "./drawing.js";
 
@@ -245,6 +246,15 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
 
   /** @type {THREE.Object3D | null} */
   let root = null;
+  // Surface-anchored zoom / pan / close-up orbit. Installed after `root` exists
+  // in the closure; the GLB is assigned later, and taps still reach the doors.
+  attachPivotNav({
+    canvas,
+    controls,
+    getCamera: () => camera,
+    getRoot: () => root,
+    isBlocked: () => doorInputBlocked() || controls.enabled === false,
+  });
   const box = new THREE.Box3();
   const size = new THREE.Vector3();
   const center = new THREE.Vector3();
