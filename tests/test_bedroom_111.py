@@ -30,12 +30,11 @@ SCHEDULE = {
     3: ["S"],
     4: ["2V"],
     5: ["S"],
-    6: ["2V", "V"],
+    # Cable 6 and cable 11 are off the plan until they are added back.
     7: ["S"],
     8: ["S"],
     9: ["R", "M"],
     10: ["V"],
-    11: ["S"],
     12: ["S"],
     13: ["E"],
     14: ["W"],
@@ -98,8 +97,8 @@ def test_room_faces_are_the_wall_model():
     assert width * depth < 22.0
 
 
-_POSITION_ONLY = {"SOCK-N", "SOCK-N2", "SOCK-EN", "SOCK-ES", "SOCK-X", "LAMP-X-W", "LAMP-X-S"}
-_NO_BOX = {"C3-S", "C9-R", *_POSITION_ONLY}
+_POSITION_ONLY = {"SOCK-N", "SOCK-N2", "SOCK-EN", "SOCK-ES"}
+_NO_BOX = {"C3-S", "C7-S", "C8-S", "C9-R", *_POSITION_ONLY}
 
 
 def _boxed(record) -> bool:
@@ -108,7 +107,7 @@ def _boxed(record) -> bool:
 
 def test_schedule_codes_cable_numbers_and_panels():
     text = SOURCE_PATH.read_text(encoding="utf-8")
-    for phrase in ("SCHUKO", "cable 12", "cable 3", "cable 6", "cable 32", "22.98"):
+    for phrase in ("SCHUKO", "cable 12", "cable 3", "cable 6", "cable 11", "cable 32", "22.98"):
         assert phrase in text
     records = device_records()
     by_cable: dict[int, list[str]] = {}
@@ -145,16 +144,16 @@ def test_schedule_codes_cable_numbers_and_panels():
     radar = next(record for record in records if record["id"] == "C9-R")
     assert _pset(radar)["InSwitchBox"] == "C32-V-1"
     assert not _boxed(radar)
-    for lamp_id in ("LAMP-X-W", "LAMP-X-S"):
-        lamp = next(record for record in records if record["id"] == lamp_id)
-        assert _pset(lamp)["Unused"] is True
-        assert not _boxed(lamp)
+    for strip_id in ("C7-S", "C8-S"):
+        led = next(record for record in records if record["id"] == strip_id)
+        assert led["ObjectType"] == "LedStrip"
+        assert not _boxed(led)
     bed = next(item for item in load_document()["furniture"] if item["id"] == "BED-1.11")
     bed_props = _pset(bed)
-    assert bed_props["Status"] == "UNFINISHED"
-    assert bed_props["Placeholder"] is True
-    assert "UNFINISHED" in bed["Description"]
-    assert "placeholder" in bed["Description"]
+    assert bed_props["Status"] == "PLACED"
+    assert bed_props["Headboard"] == "east"
+    assert bed_props["Length"] == pytest.approx(2.0)
+    assert bed_props["Width"] == pytest.approx(1.8)
 
 
 def test_boxes_sit_in_the_bay_and_round_trip(tmp_path):

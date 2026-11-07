@@ -38,7 +38,8 @@
 #   SCHUKO sockets are position only. No cable number, no circuit, wiring skipped.
 #   cable 12 is the pendant above the bed (CYKY 2x1.5).
 #   cable 3 is the LED strip under the bed, around the unfinished outline. No box.
-#   cable 6 is one 8-core cable: the double and the single, one outdoor stack.
+#   cable 6 (the outdoor buttons) and cable 11 (the entry ceiling light) are
+#   removed from the plan for now and will be added later.
 #   cable 32 is the door contact plus the bedroom switch and the hallway switch
 #   of OP09, 150 mm from the latch.
 #   cable 16 is the blind for the narrow west window OP02.
@@ -74,25 +75,6 @@ openings: []
 doors: []
 windows: []
 lightFixtures:
-  - id: C11-S
-    Name: "Světlo 11"
-    Description: "Ceiling near the door. Plan mark 2(011). The 3D origin is the first pass."
-    PredefinedType: POINTSOURCE
-    ObjectType: Lamp
-    ContainedInStructure: SP-1.11
-    Origin: [0.72, 7.57]
-    Elevation: 2.4
-    Width: 0.16
-    Depth: 0.16
-    Height: 0.05
-    PropertySets:
-      - Name: Pset_YamlIfc
-        Properties:
-          CableNumber: 11
-          Panel: 2
-          DeviceCode: S
-          CableSpec: "CYKY 4x1.5"
-          CableLength: 8
   - id: C12-S
     Name: "Lustr 12"
     Description: "Pendant above the bed. Cable 12, the 2-core light. Plan text zaveseny lustr cca 120W."
@@ -115,7 +97,7 @@ lightFixtures:
           CableLength: 16
   - id: C2-S
     Name: "Světlo 2"
-    Description: "East side, lower lamp. Plan mark 2(002)."
+    Description: "South bedside lamp, above the switch. Centre 892. The 3D origin is the first pass."
     PredefinedType: POINTSOURCE
     ObjectType: Lamp
     ContainedInStructure: SP-1.11
@@ -134,7 +116,7 @@ lightFixtures:
           CableLength: 12
   - id: C3-S
     Name: "Pásek 3"
-    Description: "LED strip under the bed, all around the unfinished bed outline. No box. Cable 3."
+    Description: "LED strip under the bed, all around the 2000×1800 outline. No box. Cable 3."
     PredefinedType: USERDEFINED
     ObjectType: LedStrip
     ContainedInStructure: SP-1.11
@@ -148,7 +130,7 @@ lightFixtures:
           CableLength: 12
   - id: C5-S
     Name: "Světlo 5"
-    Description: "East side, upper lamp. Plan mark 2(005) on the bulb."
+    Description: "North bedside lamp, above the switch. Centre 892. The 3D origin is the first pass."
     PredefinedType: POINTSOURCE
     ObjectType: Lamp
     ContainedInStructure: SP-1.11
@@ -166,16 +148,11 @@ lightFixtures:
           CableSpec: "CYKY 4x1.5"
           CableLength: 10
   - id: C7-S
-    Name: "Světlo 7"
-    Description: "Southwest interior. 2(007) and 2(008) share one corner note; this is the west one."
-    PredefinedType: POINTSOURCE
-    ObjectType: Lamp
+    Name: "Pásek 7"
+    Description: "LED strip on the inner west wall, the upper half of the marked run. No box. Cable 7."
+    PredefinedType: USERDEFINED
+    ObjectType: LedStrip
     ContainedInStructure: SP-1.11
-    Origin: [0.92, 3.62]
-    Elevation: 2.4
-    Width: 0.16
-    Depth: 0.16
-    Height: 0.05
     PropertySets:
       - Name: Pset_YamlIfc
         Properties:
@@ -184,17 +161,15 @@ lightFixtures:
           DeviceCode: S
           CableSpec: "CYKY 4x1.5"
           CableLength: 15
+          X: 0.45
+          Y0: 5.2
+          Y1: 6.95
   - id: C8-S
-    Name: "Světlo 8"
-    Description: "Southwest interior, east of cable 7. Same shared corner note."
-    PredefinedType: POINTSOURCE
-    ObjectType: Lamp
+    Name: "Pásek 8"
+    Description: "LED strip on the inner west wall, the lower half of the marked run. No box. Cable 8."
+    PredefinedType: USERDEFINED
+    ObjectType: LedStrip
     ContainedInStructure: SP-1.11
-    Origin: [1.47, 3.62]
-    Elevation: 2.4
-    Width: 0.16
-    Depth: 0.16
-    Height: 0.05
     PropertySets:
       - Name: Pset_YamlIfc
         Properties:
@@ -203,29 +178,9 @@ lightFixtures:
           DeviceCode: S
           CableSpec: "CYKY 4x1.5"
           CableLength: 15
-  - id: LAMP-X-W
-    Name: "Venkovní lampa západ"
-    Description: "UNUSED. Parked. Not wired, not on a panel, not counted. TODO: cable number is unresolved."
-    PredefinedType: POINTSOURCE
-    ObjectType: OutdoorLamp
-    ContainedInStructure: SP-1.11
-    PropertySets:
-      - Name: Pset_YamlIfc
-        Properties:
-          Unused: true
-          PositionOnly: true
-          Todo: "cable number unresolved"
-  - id: LAMP-X-S
-    Name: "Venkovní lampa jih"
-    Description: "UNUSED. Parked. Not wired, not on a panel, not counted."
-    PredefinedType: POINTSOURCE
-    ObjectType: OutdoorLamp
-    ContainedInStructure: SP-1.11
-    PropertySets:
-      - Name: Pset_YamlIfc
-        Properties:
-          Unused: true
-          PositionOnly: true
+          X: 0.45
+          Y0: 3.45
+          Y1: 5.2
 switchingDevices:
   - id: C1-2V
     Name: "Dvojvypínač 1"
@@ -327,46 +282,6 @@ switchingDevices:
           DeviceCode: 2V
           CableSpec: "UTP Cat6a"
           CableLength: 10
-  - id: C6-2V
-    Name: "Dvojvypínač 6"
-    Description: "Double button. Cable 6 is one 8-core UTP with the single button, same stack, outside the southwest corner."
-    PredefinedType: MOMENTARYSWITCH
-    ObjectType: DoublePushButton
-    ContainedInStructure: SP-1.11
-    Origin: [0.68, 3.275]
-    Elevation: 1.01
-    RefDirection: [1, 0]
-    Width: 0.14
-    Depth: 0.02
-    Height: 0.08
-    PropertySets:
-      - Name: Pset_YamlIfc
-        Properties:
-          CableNumber: 6
-          Panel: 2
-          DeviceCode: 2V
-          CableSpec: "UTP Cat6a"
-          CableLength: 15
-  - id: C6-V
-    Name: "Vypínač 6"
-    Description: "Single button on the same 8-core cable 6, stacked above the double."
-    PredefinedType: MOMENTARYSWITCH
-    ObjectType: PushButton
-    ContainedInStructure: SP-1.11
-    Origin: [1.06, 3.275]
-    Elevation: 1.01
-    RefDirection: [1, 0]
-    Width: 0.08
-    Depth: 0.02
-    Height: 0.08
-    PropertySets:
-      - Name: Pset_YamlIfc
-        Properties:
-          CableNumber: 6
-          Panel: 2
-          DeviceCode: V
-          CableSpec: "UTP Cat6a"
-          CableLength: 15
 sensors:
   - id: C32-M
     Name: "Kontakt dveří 32"
@@ -446,7 +361,7 @@ outlets:
           CableLength: 25
   - id: C14-W
     Name: "Wi-Fi 14"
-    Description: "U7 Pro on the bedroom ceiling. Panel 1. The 3D origin is the first pass."
+    Description: "U7 Pro on the north wall at the old socket corner. Centre 513, one 71 mm pitch above the ethernet height. Panel 1. The 3D origin is the first pass."
     PredefinedType: COMMUNICATIONSOUTLET
     ObjectType: WifiAccessPoint
     ContainedInStructure: SP-1.11
@@ -465,7 +380,7 @@ outlets:
           CableLength: 23
   - id: SOCK-N
     Name: "Zásuvka sever"
-    Description: "First power module at the north-west corner. Centre 300. Position only. No cable. The second module is SOCK-N2."
+    Description: "First power module on the west wall, just under the narrow window. Centre 300. Position only. No cable."
     PredefinedType: POWEROUTLET
     ObjectType: Socket
     ContainedInStructure: SP-1.11
@@ -476,7 +391,7 @@ outlets:
           Wiring: skipped
   - id: SOCK-N2
     Name: "Zásuvka sever 2"
-    Description: "Second power module, one Jung LS 990 pitch (71 mm) above SOCK-N. Centre 371. Position only. No cable. Ethernet is the module above this one."
+    Description: "Second power module, 71 mm above SOCK-N, same west-wall place. Centre 371. Position only. No cable."
     PredefinedType: POWEROUTLET
     ObjectType: Socket
     ContainedInStructure: SP-1.11
@@ -487,7 +402,7 @@ outlets:
           Wiring: skipped
   - id: SOCK-EN
     Name: "Zásuvka východ sever"
-    Description: "Dumb power socket. Position only. No cable number and no circuit. Main panel. Wiring skipped."
+    Description: "North bedside socket. Centre 750. Position only. No cable."
     PredefinedType: POWEROUTLET
     ObjectType: Socket
     ContainedInStructure: SP-1.11
@@ -498,18 +413,7 @@ outlets:
           Wiring: skipped
   - id: SOCK-ES
     Name: "Zásuvka východ jih"
-    Description: "Dumb power socket. Position only. No cable number and no circuit. Main panel. Wiring skipped."
-    PredefinedType: POWEROUTLET
-    ObjectType: Socket
-    ContainedInStructure: SP-1.11
-    PropertySets:
-      - Name: Pset_YamlIfc
-        Properties:
-          PositionOnly: true
-          Wiring: skipped
-  - id: SOCK-X
-    Name: "Zásuvka exteriér"
-    Description: "Dumb power socket outside the southwest corner. Position only. No cable number and no circuit. Wiring skipped."
+    Description: "South bedside socket. Centre 750. Position only. No cable."
     PredefinedType: POWEROUTLET
     ObjectType: Socket
     ContainedInStructure: SP-1.11
@@ -600,15 +504,17 @@ actuators:
 furniture:
   - id: BED-1.11
     Name: "Postel"
-    Description: "UNFINISHED placeholder furniture. Outline traced from the floor-plan screenshot so the cable-3 strip has an edge. Not a model solid."
+    Description: "Bed 2000 mm long by 1800 mm wide. Headboard on the east wall, between the two bedside stacks. Not a 3D solid yet."
     PredefinedType: BED
     ContainedInStructure: SP-1.11
     PropertySets:
       - Name: Pset_YamlIfc
         Properties:
-          Status: UNFINISHED
-          Placeholder: true
-          X0: 1.803
-          Y0: 4.642
-          X1: 3.504
-          Y1: 6.252
+          Status: PLACED
+          Headboard: east
+          Length: 2.0
+          Width: 1.8
+          X0: 1.75
+          Y0: 4.8
+          X1: 3.75
+          Y1: 6.6
