@@ -167,7 +167,7 @@ assert.equal(
     { binding: "far", tEnter: 6 },
     { binding: "near", tEnter: 1.5 },
   ]),
-  "near",
+  "far",
 );
 assert.equal(chooseOpeningAction([]), null);
 
@@ -413,8 +413,8 @@ function hasDoor(hits) {
   swingOpen(near);
   swingOpen(far);
   tapAt(canvas);
-  assert.equal(near.goal, 0);
-  assert.equal(far.goal, 1, "only the nearest opening closes");
+  assert.equal(near.goal, 1, "the nearer opening stays open");
+  assert.equal(far.goal, 0, "the farthest opening closes");
 }
 
 {

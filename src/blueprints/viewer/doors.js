@@ -10,6 +10,8 @@
  * proxy kept out of the scene: a tap through it closes the door, unless the
  * same ray hits any registered interactive (the leaf, or a later switch).
  * Walls and other non-interactive geometry never block that close.
+ * Several openings on one ray close the farthest, so a door seen through
+ * another opening can be shut again.
  *
  * Pocket and sliding leaves are not records with kind "hinged".
  * TODO: slide those (obývák gable pockets, garage D5/D6) instead of ignoring them.
@@ -514,14 +516,15 @@ export function rayObb(ray, obb) {
 }
 
 /**
- * Nearest open doorway the ray already crossed.
+ * Farthest open doorway the ray crosses. A nearer opening must not steal the
+ * tap from a door seen through it.
  * @param {{ binding: object, tEnter: number }[]} crossed
  */
 export function chooseOpeningAction(crossed) {
   if (!crossed.length) return null;
   let best = crossed[0];
   for (const item of crossed) {
-    if (item.tEnter < best.tEnter) best = item;
+    if (item.tEnter > best.tEnter) best = item;
   }
   return best.binding;
 }
