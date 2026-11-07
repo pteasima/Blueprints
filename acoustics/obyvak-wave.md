@@ -1,5 +1,7 @@
 # Obývák wave acoustics
 
+> **Status:** this run used the ceiling from before PR #77. The kastlík step below starts at Z = 3.15 m, the interior eave of 3151 mm, with the false ridge at 5206 mm. The current section is an eave of 3019.97 mm and a false ridge of 5075.77 mm ([docs/design/obyvak.md](../design/obyvak.md)). Volumes, modes and decay times on this page were not recomputed for that ceiling.
+
 How thick should the NaturHeld 140 on the šikminy be, once the kastlík in the
 slope/wall corner is allowed to move the room modes and not only the absorbing area?
 

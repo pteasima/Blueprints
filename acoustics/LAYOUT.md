@@ -1,5 +1,7 @@
 # Obývák layout for the wave model
 
+> **Status:** this page describes the ceiling from before PR #77. Interior eave 3151 mm, false ridge height 5206 mm. The pixel alignment below was made at that eave. The tables were not recomputed. The current section, measured from `ObyvakLayout`, is an eave of 3019.97 mm and a false ridge of 5075.77 mm. False ridge X = 2450 mm is unchanged. Current facts: [docs/design/obyvak.md](../design/obyvak.md). How this furniture disagrees with the furnishing files is [docs/design/acoustics.md](../design/acoustics.md).
+
 Furniture Petr approved for the wave study.
 
 The comparison is an orthographic elevation of the cabinet wall, cut at the window wall. Kitchen gable is on the left, TV gable on the right, same handedness as Petr's drawing. The pitch runs across the width, so the ridge, the eave, and the soffit are level lines. The drawing's ceiling line is the eave.
