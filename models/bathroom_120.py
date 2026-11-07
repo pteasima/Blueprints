@@ -1,5 +1,7 @@
 """Bathroom 1.20 — sloped floor, ceramic tiles, grout, and the point drain.
 
+Design facts: docs/design/bathrooms.md. The YAML header is the placement source.
+
 Source: ``inputs/ground_floor/bathroom-1.20.yaml``. The layout is yaml-ifc's
 (``floor_layout``, ``wall_layout``, ``floor_joint_widths``). Solids are
 millimetres, placed in the ground-floor storey so they sit in the room.

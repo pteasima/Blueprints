@@ -1,5 +1,9 @@
 """RD Šíma ground floor — walls and the openings cut through them.
 
+Design facts: docs/design/ground-floor.md, bathrooms in
+docs/design/bathrooms.md, room 1.02 furniture in docs/design/furnishings.md.
+The visual centre of 1.02 is the false ridge, not the wall-to-wall middle.
+
 Source: ``inputs/ground_floor/ground-floor.yaml``, vendored from
 pteasima/yaml-ifc @ 0f96c26. Lengths in that file are metres. Solids are
 millimetres, the same as the other build123d models, so the existing viewer

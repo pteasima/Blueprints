@@ -1,5 +1,8 @@
 """Shared Obývák 1.02 parameters and 2D sketch helpers (mm).
 
+Design facts and reasons: docs/design/obyvak.md.
+The false ridge (x_false) is the visual centre of the clear width, not x_ridge.
+
 World:
   X = eave ↔ eave (room_width), Y = living gable ↔ kitchen gable (room_length), Z up.
   The living gable is Y=0 (one sliding door, 450 mm trap). The kitchen gable
@@ -12,7 +15,7 @@ World:
 
 Šikminy stack (interior → attic; thicknesses ⊥ to the face unless noted):
 
-  StoSilent Top Finish + Top Basic + NaturHeld 140 (80)     → `slope_naturheld_140`
+  StoSilent Top Finish + Top Basic + NaturHeld 140 (100)    → `slope_naturheld_140`
   Internal StoSilent corners (slope-to-slope false ridge, slope-to-gable,
   slope-to-soffit where the face is plastered) are a tape-cut separation
   joint, not acrylic on the finish. Plaster the first side into the corner
@@ -29,8 +32,11 @@ World:
   GKF/RF 12.5                                               → `slope_gkf`
   CD Rigips 60×27 @ 500 ⊥ krokvím                          → `slope_cd`
   Jutafol N AL 170 Speciál vapour barrier (~1)               → `slope_foil`
-  přímý závěs 200 on the window slope (void 140)            → `slope_direct_hanger`
-  Nonius horní 440 on the cabinet slope (gap ~429)          → `slope_nonius`
+  přímý závěs on the window slope                           → `slope_direct_hanger`
+  Nonius on the cabinet slope                               → `slope_nonius`
+  Hanger catalogue lengths are open (440 mm and 540 mm both
+  appear). See docs/design/obyvak.md. Do not copy a length
+  from this note.
   Minerální vata λ 0,039: void below krokve + bays between them  → `plenum_wool`
   krokve 100/160 @ ~875                                     → `rafters`
   6× táhlo ø14 mezi pozednicemi, každé druhé pole,
@@ -39,23 +45,23 @@ World:
   zavětrovací pásky 40×2 @ 45° X across krokve (racking)    → `racking_strap`
   (střešní latě / kontralatě above rafters stay in roofing)
 
-The 80 mm board is screwed through the GKF into the CD. Foil sits on the
+The 100 mm board is screwed through the GKF into the CD. Foil sits on the
 attic side of the CD (below the mineral wool), matching the rest of the
 house (Jutafol N AL 170 Speciál — not a variable membrane). There is no slope lať
 and no NaturHeld Flex. CD spacing is 500 mm: Knauf D112 for 12.5 mm GKF
 in one or two layers, boards across the CDs. 2000, 2500 and 3000 mm boards
 then end on a CD. The first axis stays within 100 mm of the eave.
 
-Right eave soffit box: 40 mm NaturHeld 140 + StoSilent on the side and the
-bottom, mineral wool in the cavity, a CD/UD rost (@500) hanging the box.
+Right eave soffit box: 40 mm NaturHeld 140 + StoSilent on the side face.
+The underside is plain GKB, because the furniture covers it. Mineral wool
+in the cavity, a CD/UD rost (@500) hanging the box.
 The wool stops short of the ducts. Three Ø160 spiral ducts (HRV supply, HRV
 extract, AC) sit in a 2-over-1 pack against the cabinet eave, below the lid
 and above the column heads. They are already anchored to the wall; this box
 does not hang them. The GKF lid is raised so its top is flush with the
 pozednice and its cut end meets the plate cheek — above the wall head, not
 on the plaster. The lid widens until the slope GKF, cut level, lands on it.
-The nearest slope CD carries that slope edge. An angle on the end of that CD
-holds a horizontal UD, and the lid edge screws into the UD. The lid CD is
+That meeting is a floating joint: no angle and no UD. The lid CD is
 the only horizontal rail and the only Nonius row.
 No vertical riser. Furniture and the wall plate do
 not carry the box (the plate only fixes the board edge). The soffit CD
@@ -207,6 +213,9 @@ class ObyvakParams:
     # Ring-beam course under pozednice (drawn as masonry); columns stop below it.
     venec_h: float = 250.0
     roof_angle_deg: float = 40.0
+    # Soffit band. Dining and living-area cabinets are this deep too.
+    # The 600 mm kitchen tall cabinets stick out past this line on purpose.
+    # Petr, 2026-11-06. See docs/design/obyvak.md.
     furniture_width: float = 450.0
     furniture_height: float = 2450.0
     furniture_gap: float = 20.0
@@ -389,8 +398,9 @@ class ObyvakLayout:
         self.x_ridge = p.room_width / 2.0
         self.x_furn = p.room_width - p.furniture_width
         self.x_false = (p.room_width - p.furniture_width) / 2.0
-        # Thicker right NaturHeld: the attic-side planes meet this far past the
-        # false ridge. Room faces still meet at x_false. Same shift for GKF, CD, foil.
+        # Both NaturHeld boards are the same thickness, so this joint is on the
+        # false ridge. Room faces meet at x_false. A thicker right board would
+        # move the attic-side planes past x_false.
         self.x_stack_joint = self.x_false + (self.t_nh_right - self.t_nh_left) / (2.0 * self.sin)
         # The CD, foil and wool planes meet further right: the right side also
         # carries the second GKF layer. The outer layer is bevelled to this line.

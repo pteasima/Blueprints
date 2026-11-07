@@ -1,5 +1,7 @@
 """Right eave detail: the widened soffit lid meets the lowered slope.
 
+Design facts: docs/design/obyvak.md. The edge finish is still open.
+
 The lid stays at the plate and widens until the slope GKF, cut level, lands
 on it. That meeting is a floating joint: no angle and no UD. The right CD
 grid stops short of the board end.

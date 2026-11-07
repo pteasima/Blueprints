@@ -1,5 +1,7 @@
 # Obývák fill and slope
 
+> **Status:** “the current 80 mm build” below is the baseline of this search, not the section as built now. The section is 100 mm NaturHeld on both slopes, and the ceiling is the lowered one (eave 3019.97 mm, false ridge 5075.77 mm). These tables were not recomputed. See [docs/design/obyvak.md](../design/obyvak.md).
+
 The outlines stay as drawn. StoSilent on the slopes and on the soffit face stays. The slope board is 60, 80 or 100 mm of NaturHeld 140. Inside the soffit (774 mm of wool plus air) and inside the two traps (kitchen cavity 178 mm with at least 47 mm of air, living cavity 438 mm with at least 20 mm of air) the wool thickness and the wool type can change. Wool is mineral wool at 12 000 Pa·s/m² or wood-fibre flex at 8 000 Pa·s/m².
 
 Decay times from 50 Hz to 4 kHz are Eyring on the mesh areas, with air absorption. The sofa is a domestic upholstery curve, not a porous block: α = 0.15 at 63 Hz and 0.68 at 500 Hz, rising to about 0.75 near 1 kHz. See the citation under Furniture. The rug is the thin-carpet Miki layer already in the model. Books are a shelf curve that keeps the transfer-matrix bass and does not collapse at 4 kHz.
