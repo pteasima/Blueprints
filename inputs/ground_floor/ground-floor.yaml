@@ -1,4 +1,5 @@
 # yaml-ifc sample: ground floor of RD Šíma (walls and openings only).
+# Design facts and the known gaps: docs/design/ground-floor.md.
 # Coordinates are metres in the local plan from samples/source/ground-floor.json
 # (origin at the min corner of the kept silná edges; model-space origin
 # 4698.8019 m, -615.0793 m). X to the right, Y up the sheet, Z up.

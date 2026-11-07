@@ -1,5 +1,11 @@
 """Air volume, furniture, sources, and receivers for the obývák wave model.
 
+Design facts: docs/design/acoustics.md and docs/design/obyvak.md.
+This file's furniture is the wave-study layout, duplicated in
+docs/acoustics/LAYOUT.md, not the furnishing document. Which of the three
+layouts is the room is open: docs/design/acoustics.md.
+The visual centre is the false ridge (x_false), not the wall-to-wall middle.
+
 Coordinates are metres. X runs from the window eave to the cabinet wall,
 Y from the living gable (TV) to the kitchen gable, Z up. The numbers come
 from ``ObyvakParams`` / ``ObyvakLayout``; the furniture positions are the

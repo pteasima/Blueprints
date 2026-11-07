@@ -1,4 +1,9 @@
 # Room 1.02 (obývák) furnishings. Written for yaml-ifc at commit 34e1597.
+# Design facts and reasons: docs/design/furnishings.md.
+# The visual centre of this room is the false ridge (middle of the clear
+# width under the 450 mm north cabinets), not the wall-to-wall middle.
+# See docs/design/obyvak.md. Living-room pieces beyond this kitchen are the
+# history of PR #83; they are not in this file.
 # The vendored package is now 0f96c26. Upstream's furnishings sample at that
 # commit is a generic kitchen and is not this file.
 #
@@ -33,6 +38,9 @@
 # 908×716×1876, packed against T1. T2 and T3 are 600, T4 is 500.
 # Tall carcasses are 600 deep. The fridge is 716 deep and projects 116 mm
 # past the cabinet faces; the run is not deepened to match it.
+# The soffit band is 450 mm, and so are the dining and living-area cabinets.
+# These 600 mm kitchen tall cabinets stick out beyond that line on purpose.
+# Petr, 2026-11-06. See docs/design/obyvak.md.
 # Fronts face south: Origin is the south-west corner, Width runs east,
 # Depth runs north (RefDirection omitted, the default [1, 0]).
 # yaml-ifc has no hinge field. 60L and 60R are PropertySets named

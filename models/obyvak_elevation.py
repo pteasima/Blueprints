@@ -1,4 +1,7 @@
 """Obývák 1.02 — bokorys od oken (štít–štít), cut from the 3D model solids
+
+Design facts and reasons: docs/design/obyvak.md.
+The two 450 mm depths are different facts; see that file.
 through the pocket doors (drawing X = world Y).
 
 X v tomto výkrese = světlá délka obývák↔kuchyň (v 3D to bude Y).

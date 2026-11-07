@@ -1,5 +1,7 @@
 # Ground floor source
 
+Design facts: `docs/design/ground-floor.md`, `docs/design/bathrooms.md`, `docs/design/furnishings.md`.
+
 `ground-floor.yaml` is vendored from [pteasima/yaml-ifc](https://github.com/pteasima/yaml-ifc) at commit `0f96c26` (`samples/ground-floor.yaml`). The walls text is the same as the previous pin `34e1597`: butt joints in `connections`, axes snapped onto those joints. The Python package is vendored at `0f96c26` under `vendor/yaml-ifc/`.
 
 It is the walls-and-openings sample for RD Šíma, 1.NP. Lengths are metres. The schema is that repo's `docs/spec.md`. The Blueprints solid is `models/ground_floor.py`.
