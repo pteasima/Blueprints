@@ -104,7 +104,7 @@ def test_published_plan_matches_the_renderer_and_names_both_schemes():
     assert "C11-S" not in page
     # The 3D file still carries the first-pass origins. This drawing must not be that pass.
     yaml_text = SOURCE_PATH.read_text(encoding="utf-8")
-    assert "Origin: [2.11, 5.24]" in yaml_text
+    assert "Origin: [2.57, 5.52]" in yaml_text
     assert "C12-S" in yaml_text
 
 

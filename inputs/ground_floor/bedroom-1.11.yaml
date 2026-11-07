@@ -1,6 +1,6 @@
 # Room 1.11 (Ložnice) field devices. yaml-ifc electrical schema
 # The 2D plan (docs/previews/bedroom-1.11/) is what Petr is reviewing.
-# These Origins are the first 3D pass and are not the approved positions.
+# Origins match the approved 2D plan.
 # (pteasima/yaml-ifc PR #7, vendored at 0f96c26). Lengths are metres.
 # Boxes sit in the room. No back boxes, no wall host, no panels, no routes.
 #
@@ -20,30 +20,23 @@
 # x 3.750–5.625, y 8.200–9.500. Area 22.98 m².
 # Doors: OP03 double pocket into 1.10, OP06 hinged north into 1.09,
 # OP09 hinged into the corridor (cable 32).
-# The 2D plan is the position. Origins below are the first 3D pass.
-#
-# Bed outline, screenshot pixels registered to the model bay. Image y is down.
-#   west inner px 118, east inner px 279, north py 462 = y 7.950.
-#   world_x = 0.450 + (px - 118) / 161 * 3.300
-#   world_y = 7.950 - (py - 462) / 212 * 4.675
-# Corners (184, 539) and (267, 612), rounded to 1 mm, are on BED-1.11.
-# That bed is UNFINISHED placeholder furniture, not a solid.
+# The 2D plan is the position. The boxes below use those centres.
 #
 # House centres, millimetres, on the 2D plan (see PlanNotes.md):
 #   sockets 300 and 371, ethernet 442 (Jung LS 990 pitch 71 mm)
 #   button 1350, next button one pitch above
+#   bedside socket 750, switch 821, lamp 892
 #   150 from a door edge, 300 from an inner corner, 300 from an outer corner outdoors
 #
-# Decisions recorded from the review, still not a moved 3D box:
+# Decisions:
 #   SCHUKO sockets are position only. No cable number, no circuit, wiring skipped.
 #   cable 12 is the pendant above the bed (CYKY 2x1.5).
-#   cable 3 is the LED strip under the bed, around the unfinished outline. No box.
+#   cable 3 is the LED strip under the bed, on the foot and the two long sides.
 #   cable 6 (the outdoor buttons) and cable 11 (the entry ceiling light) are
 #   removed from the plan for now and will be added later.
 #   cable 32 is the door contact plus the bedroom switch and the hallway switch
 #   of OP09, 150 mm from the latch.
 #   cable 16 is the blind for the narrow west window OP02.
-#   The two outdoor lamps stay, marked UNUSED, and are not wired or counted.
 #   The mmWave (cable 9) is inside the bedroom door switch, not its own dot.
 schema: IFC4 ADD2 TC1
 units:
@@ -81,8 +74,8 @@ lightFixtures:
     PredefinedType: POINTSOURCE
     ObjectType: Pendant
     ContainedInStructure: SP-1.11
-    Origin: [2.11, 5.24]
-    Elevation: 2.05
+    Origin: [2.57, 5.52]
+    Elevation: 2.1
     Width: 0.36
     Depth: 0.36
     Height: 0.3
@@ -97,15 +90,16 @@ lightFixtures:
           CableLength: 16
   - id: C2-S
     Name: "Světlo 2"
-    Description: "South bedside lamp, above the switch. Centre 892. The 3D origin is the first pass."
+    Description: "South bedside lamp, above the switch. Centre 892."
     PredefinedType: POINTSOURCE
     ObjectType: Lamp
     ContainedInStructure: SP-1.11
-    Origin: [3.47, 4.42]
-    Elevation: 2.4
-    Width: 0.16
-    Depth: 0.16
-    Height: 0.05
+    Origin: [3.75, 4.5]
+    Elevation: 0.8565
+    RefDirection: [0, 1]
+    Width: 0.1
+    Depth: 0.04
+    Height: 0.071
     PropertySets:
       - Name: Pset_YamlIfc
         Properties:
@@ -116,7 +110,7 @@ lightFixtures:
           CableLength: 12
   - id: C3-S
     Name: "Pásek 3"
-    Description: "LED strip under the bed on the foot and the two long sides. Not along the headboard. No box. Cable 3."
+    Description: "LED strip under the bed on the foot and the two long sides. Not along the headboard. Cable 3. The viewer draws three segments from the bed outline; one box cannot be a U."
     PredefinedType: USERDEFINED
     ObjectType: LedStrip
     ContainedInStructure: SP-1.11
@@ -130,15 +124,16 @@ lightFixtures:
           CableLength: 12
   - id: C5-S
     Name: "Světlo 5"
-    Description: "North bedside lamp, above the switch. Centre 892. The 3D origin is the first pass."
+    Description: "North bedside lamp, above the switch. Centre 892."
     PredefinedType: POINTSOURCE
     ObjectType: Lamp
     ContainedInStructure: SP-1.11
-    Origin: [3.47, 6.42]
-    Elevation: 2.4
-    Width: 0.16
-    Depth: 0.16
-    Height: 0.05
+    Origin: [3.75, 6.8]
+    Elevation: 0.8565
+    RefDirection: [0, 1]
+    Width: 0.1
+    Depth: 0.04
+    Height: 0.071
     PropertySets:
       - Name: Pset_YamlIfc
         Properties:
@@ -165,6 +160,12 @@ lightFixtures:
           Y0: 3.275
           X1: 0.45
           Y1: 6.875
+    Origin: [0.47, 6.875]
+    Elevation: 2.488
+    RefDirection: [0, -1]
+    Width: 3.568
+    Depth: 0.012
+    Height: 0.012
   - id: C8-S
     Name: "Pásek 8"
     Description: "Curtain-rail LED strip. From the south-west corner along the south wall to 50 mm past the east jamb of OP05. No box. Cable 8."
@@ -183,19 +184,25 @@ lightFixtures:
           Y0: 3.275
           X1: 3.75
           Y1: 3.275
+    Origin: [0.482, 3.295]
+    Elevation: 2.488
+    RefDirection: [1, 0]
+    Width: 3.268
+    Depth: 0.012
+    Height: 0.012
 switchingDevices:
   - id: C1-2V
     Name: "Dvojvypínač 1"
-    Description: "East wall, lower. 532-4U. Plan mark (001) at that plate."
+    Description: "East wall, lower bedside. Double switch, centre 821."
     PredefinedType: MOMENTARYSWITCH
     ObjectType: DoublePushButton
     ContainedInStructure: SP-1.11
-    Origin: [3.75, 4.43]
-    Elevation: 1.01
+    Origin: [3.75, 4.479]
+    Elevation: 0.7855
     RefDirection: [0, 1]
-    Width: 0.14
-    Depth: 0.02
-    Height: 0.08
+    Width: 0.142
+    Depth: 0.015
+    Height: 0.071
     PropertySets:
       - Name: Pset_YamlIfc
         Properties:
@@ -206,16 +213,16 @@ switchingDevices:
           CableLength: 12
   - id: C10-V
     Name: "Vypínač 10"
-    Description: "Bedroom side of the door, stacked above the bedroom light switch. The 3D origin is the first pass."
+    Description: "West wall, 150 mm south of the OP02 south jamb. Switch centre 1350."
     PredefinedType: MOMENTARYSWITCH
     ObjectType: PushButton
     ContainedInStructure: SP-1.11
-    Origin: [0.99, 7.95]
-    Elevation: 1.01
-    RefDirection: [-1, 0]
-    Width: 0.08
-    Depth: 0.02
-    Height: 0.08
+    Origin: [0.45, 8.3355]
+    Elevation: 1.3145
+    RefDirection: [0, -1]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
     PropertySets:
       - Name: Pset_YamlIfc
         Properties:
@@ -226,16 +233,16 @@ switchingDevices:
           CableLength: 8
   - id: C32-V-1
     Name: "Vypínač 32 ložnice"
-    Description: "Bedroom light switch on OP09, 150 mm from the latch. The mmWave C9-R is inside this box. The 3D origin is the first pass."
+    Description: "Bedroom light switch on OP09, 150 mm from the latch. The mmWave C9-R is inside this box."
     PredefinedType: MOMENTARYSWITCH
     ObjectType: PushButton
     ContainedInStructure: SP-1.11
-    Origin: [1.74, 7.95]
-    Elevation: 1.01
-    RefDirection: [-1, 0]
-    Width: 0.08
-    Depth: 0.02
-    Height: 0.08
+    Origin: [5.625, 9.3645]
+    Elevation: 1.3145
+    RefDirection: [0, 1]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
     PropertySets:
       - Name: Pset_YamlIfc
         Properties:
@@ -246,16 +253,16 @@ switchingDevices:
           CableLength: 2
   - id: C32-V-2
     Name: "Vypínač 32 chodba"
-    Description: "Hallway light switch on the corridor face of OP09. Same cable 32. The 3D origin is the first pass."
+    Description: "Hallway light switch on the corridor face of OP09. Same cable 32."
     PredefinedType: MOMENTARYSWITCH
     ObjectType: PushButton
     ContainedInStructure: SP-1.11
-    Origin: [1.66, 8.05]
-    Elevation: 1.01
-    RefDirection: [1, 0]
-    Width: 0.08
-    Depth: 0.02
-    Height: 0.08
+    Origin: [5.75, 9.4355]
+    Elevation: 1.3145
+    RefDirection: [0, -1]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
     PropertySets:
       - Name: Pset_YamlIfc
         Properties:
@@ -266,16 +273,16 @@ switchingDevices:
           CableLength: 2
   - id: C4-2V
     Name: "Dvojvypínač 4"
-    Description: "East wall, upper. 532-4U. Plan mark (004) in that cluster."
+    Description: "East wall, north bedside. Double switch, centre 821."
     PredefinedType: MOMENTARYSWITCH
     ObjectType: DoublePushButton
     ContainedInStructure: SP-1.11
-    Origin: [3.75, 6.43]
-    Elevation: 1.01
+    Origin: [3.75, 6.779]
+    Elevation: 0.7855
     RefDirection: [0, 1]
-    Width: 0.14
-    Depth: 0.02
-    Height: 0.08
+    Width: 0.142
+    Depth: 0.015
+    Height: 0.071
     PropertySets:
       - Name: Pset_YamlIfc
         Properties:
@@ -287,15 +294,15 @@ switchingDevices:
 sensors:
   - id: C32-M
     Name: "Kontakt dveří 32"
-    Description: "Door contact, cable 32, in the latch jamb of OP09. The 3D origin is the first pass."
+    Description: "Door contact, cable 32, at the OP09 latch. Centre height 1.00 m (not on the plan)."
     PredefinedType: CONTACTSENSOR
     ObjectType: DoorContact
     ContainedInStructure: SP-1.11
-    Origin: [1.47, 7.95]
-    Elevation: 1.0
-    RefDirection: [-1, 0]
-    Width: 0.04
-    Depth: 0.02
+    Origin: [5.625, 9.24]
+    Elevation: 0.99
+    RefDirection: [0, 1]
+    Width: 0.02
+    Depth: 0.015
     Height: 0.02
     PropertySets:
       - Name: Pset_YamlIfc
@@ -307,15 +314,15 @@ sensors:
           CableLength: 2
   - id: C9-M
     Name: "Kontakt okna 9"
-    Description: "Window contact, cable 9, in the south window frame. The mmWave on this cable sits in a switch box, not here."
+    Description: "Window contact, cable 9, on the west jamb of the south window OP05. Centre height 1.00 m (not on the plan)."
     PredefinedType: CONTACTSENSOR
     ObjectType: WindowContact
     ContainedInStructure: SP-1.11
-    Origin: [1.73, 3.275]
-    Elevation: 1.0
+    Origin: [1.44, 3.275]
+    Elevation: 0.99
     RefDirection: [1, 0]
-    Width: 0.04
-    Depth: 0.02
+    Width: 0.02
+    Depth: 0.015
     Height: 0.02
     PropertySets:
       - Name: Pset_YamlIfc
@@ -347,12 +354,12 @@ outlets:
     PredefinedType: DATAOUTLET
     ObjectType: Ethernet
     ContainedInStructure: SP-1.11
-    Origin: [1.24, 7.95]
-    Elevation: 0.26
-    RefDirection: [-1, 0]
-    Width: 0.08
-    Depth: 0.02
-    Height: 0.08
+    Origin: [0.45, 8.3955]
+    Elevation: 0.4065
+    RefDirection: [0, -1]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
     PropertySets:
       - Name: Pset_YamlIfc
         Properties:
@@ -363,15 +370,15 @@ outlets:
           CableLength: 25
   - id: C14-W
     Name: "Wi-Fi 14"
-    Description: "U7 Pro on the 2.50 m ceiling, x=1.100, y=8.725. Panel 1. The 3D origin is the first pass."
+    Description: "U7 Pro on the 2.50 m ceiling, x=1.100, y=8.725. Panel 1."
     PredefinedType: COMMUNICATIONSOUTLET
     ObjectType: WifiAccessPoint
     ContainedInStructure: SP-1.11
-    Origin: [1.07, 7.32]
-    Elevation: 2.42
-    Width: 0.16
-    Depth: 0.16
-    Height: 0.04
+    Origin: [1.0, 8.625]
+    Elevation: 2.465
+    Width: 0.2
+    Depth: 0.2
+    Height: 0.035
     PropertySets:
       - Name: Pset_YamlIfc
         Properties:
@@ -386,6 +393,12 @@ outlets:
     PredefinedType: POWEROUTLET
     ObjectType: Socket
     ContainedInStructure: SP-1.11
+    Origin: [0.45, 8.3955]
+    Elevation: 0.2645
+    RefDirection: [0, -1]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
     PropertySets:
       - Name: Pset_YamlIfc
         Properties:
@@ -397,6 +410,12 @@ outlets:
     PredefinedType: POWEROUTLET
     ObjectType: Socket
     ContainedInStructure: SP-1.11
+    Origin: [0.45, 8.3955]
+    Elevation: 0.3355
+    RefDirection: [0, -1]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
     PropertySets:
       - Name: Pset_YamlIfc
         Properties:
@@ -408,6 +427,12 @@ outlets:
     PredefinedType: POWEROUTLET
     ObjectType: Socket
     ContainedInStructure: SP-1.11
+    Origin: [3.75, 6.8145]
+    Elevation: 0.7145
+    RefDirection: [0, 1]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
     PropertySets:
       - Name: Pset_YamlIfc
         Properties:
@@ -419,6 +444,12 @@ outlets:
     PredefinedType: POWEROUTLET
     ObjectType: Socket
     ContainedInStructure: SP-1.11
+    Origin: [3.75, 4.5145]
+    Elevation: 0.7145
+    RefDirection: [0, 1]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
     PropertySets:
       - Name: Pset_YamlIfc
         Properties:
@@ -431,11 +462,11 @@ actuators:
     PredefinedType: ELECTRICACTUATOR
     ObjectType: BlindActuator
     ContainedInStructure: SP-1.11
-    Origin: [0.45, 7.26]
+    Origin: [0.0, 9.365]
     Elevation: 2.32
-    RefDirection: [0, -1]
+    RefDirection: [0, 1]
     Width: 0.12
-    Depth: 0.06
+    Depth: 0.05
     Height: 0.06
     PropertySets:
       - Name: Pset_ActuatorTypeCommon
@@ -453,15 +484,15 @@ actuators:
           CableLength: 10
   - id: C18-B
     Name: "Žaluzie 18"
-    Description: "West window OP01, upper part. Plan mark (18) on the blind icon."
+    Description: "West window OP01, 150 mm north of the north jamb, on the outside face."
     PredefinedType: ELECTRICACTUATOR
     ObjectType: BlindActuator
     ContainedInStructure: SP-1.11
-    Origin: [0.45, 6.26]
+    Origin: [0.0, 6.915]
     Elevation: 2.32
-    RefDirection: [0, -1]
+    RefDirection: [0, 1]
     Width: 0.12
-    Depth: 0.06
+    Depth: 0.05
     Height: 0.06
     PropertySets:
       - Name: Pset_ActuatorTypeCommon
@@ -479,15 +510,15 @@ actuators:
           CableLength: 11
   - id: C46-B
     Name: "Žaluzie 46"
-    Description: "South window OP05. Plan mark (46) on the blind icon."
+    Description: "South window OP05, 150 mm west of the west jamb, on the outside face."
     PredefinedType: ELECTRICACTUATOR
     ObjectType: BlindActuator
     ContainedInStructure: SP-1.11
-    Origin: [1.84, 3.275]
+    Origin: [1.36, 2.9]
     Elevation: 2.32
-    RefDirection: [1, 0]
+    RefDirection: [-1, 0]
     Width: 0.12
-    Depth: 0.06
+    Depth: 0.05
     Height: 0.06
     PropertySets:
       - Name: Pset_ActuatorTypeCommon
@@ -506,9 +537,15 @@ actuators:
 furniture:
   - id: BED-1.11
     Name: "Postel"
-    Description: "Bed 2000 mm long by 1800 mm wide. Headboard on the east wall, between the two bedside stacks. Not a 3D solid yet."
+    Description: "Bed 2000 mm long by 1800 mm wide. Headboard on the east wall, between the two bedside stacks. Mattress height is an assumption."
     PredefinedType: BED
     ContainedInStructure: SP-1.11
+    Origin: [1.75, 4.8]
+    Elevation: 0.15
+    RefDirection: [1, 0]
+    Width: 2.0
+    Depth: 1.8
+    Height: 0.4
     PropertySets:
       - Name: Pset_YamlIfc
         Properties:
@@ -520,3 +557,27 @@ furniture:
           Y0: 4.8
           X1: 3.75
           Y1: 6.6
+  - id: RAIL-W
+    Name: "Garnýž západ"
+    Description: "West curtain rail, same extent as C7-S. Not a cabled device."
+    PredefinedType: USERDEFINED
+    ObjectType: CurtainRail
+    ContainedInStructure: SP-1.11
+    Origin: [0.45, 6.875]
+    Elevation: 2.48
+    RefDirection: [0, -1]
+    Width: 3.58
+    Depth: 0.02
+    Height: 0.02
+  - id: RAIL-S
+    Name: "Garnýž jih"
+    Description: "South curtain rail, same extent as C8-S. Not a cabled device."
+    PredefinedType: USERDEFINED
+    ObjectType: CurtainRail
+    ContainedInStructure: SP-1.11
+    Origin: [0.47, 3.275]
+    Elevation: 2.48
+    RefDirection: [1, 0]
+    Width: 3.28
+    Depth: 0.02
+    Height: 0.02

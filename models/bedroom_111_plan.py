@@ -1,4 +1,4 @@
-"""2D plan of room 1.11. The drawing is the deliverable; the 3D origins are not moved.
+"""2D plan of room 1.11. The drawing is the approved plan; the 3D model follows it.
 
 Devices and the unfinished bed come from ``bedroom-1.11.yaml``.
 Rules are the short names in ``docs/electrical/PlanNotes.md``.
@@ -502,7 +502,7 @@ def _html(svg: str) -> str:
 <body>
 <main>
   <h1>1.11 Ložnice — půdorys</h1>
-  <p class="lead">2D review drawing. The 3D boxes are the first pass and are not being moved. The bed is 2000×1800, headboard on the east wall. North is up. <a href="PlanNotes.md">Plan notes</a> · <a href="Naming.md">Naming</a></p>
+  <p class="lead">2D plan of room 1.11, as approved. The bed is 2000×1800, headboard on the east wall. North is up. <a href="PlanNotes.md">Plan notes</a> · <a href="Naming.md">Naming</a></p>
   <div class="plan">
 {svg}
   </div>

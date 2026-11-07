@@ -44,8 +44,6 @@ SCHEDULE = {
     46: ["B"],
 }
 PANEL_1 = {13, 14}
-# The corridor half of cable 32 sits north of the bedroom face.
-OUTSIDE = {"C32-V-2"}
 
 
 def _pset(element) -> dict:
@@ -98,7 +96,8 @@ def test_room_faces_are_the_wall_model():
 
 
 _POSITION_ONLY = {"SOCK-N", "SOCK-N2", "SOCK-EN", "SOCK-ES"}
-_NO_BOX = {"C3-S", "C7-S", "C8-S", "C9-R", *_POSITION_ONLY}
+# C3-S is three viewer segments, not one yaml box. C9-R lives in the door switch.
+_NO_BOX = {"C3-S", "C9-R"}
 
 
 def _boxed(record) -> bool:
@@ -147,7 +146,7 @@ def test_schedule_codes_cable_numbers_and_panels():
     for strip_id in ("C7-S", "C8-S"):
         led = next(record for record in records if record["id"] == strip_id)
         assert led["ObjectType"] == "LedStrip"
-        assert not _boxed(led)
+        assert _boxed(led)
     bed = next(item for item in load_document()["furniture"] if item["id"] == "BED-1.11")
     bed_props = _pset(bed)
     assert bed_props["Status"] == "PLACED"
@@ -156,33 +155,56 @@ def test_schedule_codes_cable_numbers_and_panels():
     assert bed_props["Width"] == pytest.approx(1.8)
 
 
+def _centre(part) -> tuple[float, float, float]:
+    box = part.bounding_box()
+    return (
+        (box.min.X + box.max.X) / 2.0,
+        (box.min.Y + box.max.Y) / 2.0,
+        (box.min.Z + box.max.Z) / 2.0,
+    )
+
+
 def test_boxes_sit_in_the_bay_and_round_trip(tmp_path):
-    faces = room_faces()
     placed = parts()
     records = device_records()
     boxed = {record["id"] for record in records if _boxed(record)}
+    furniture = {item["id"] for item in load_document()["furniture"] if _boxed(item)}
     assert boxed.isdisjoint(_NO_BOX)
-    assert len(placed) == len(boxed)
-    assert {part.device_id for part in placed} == boxed
+    strips = [part for part in placed if part.device_id == "C3-S"]
+    assert len(strips) == 3
+    assert {part.device_id for part in placed} == boxed | furniture | {"C3-S"}
+    assert len(placed) == len(boxed) + len(furniture) + len(strips)
     labels = {part.device_id: part.label for part in placed}
     assert labels["C2-S"] == "light"
+    assert labels["C7-S"] == "light"
     assert labels["C1-2V"] == "switch"
     assert labels["C13-E"] == "outlet"
     assert labels["C46-B"] == "actuator"
+    assert labels["BED-1.11"] == "furniture"
+    assert labels["RAIL-W"] == "furniture"
     assert "C9-R" not in labels
-    assert "C3-S" not in labels
 
+    # Facade motors and the hallway switch sit just outside the inner faces.
     for part in placed:
         box = part.bounding_box()
         assert box.min.Z > 0
-        assert box.max.Z <= 2.50 * 1000.0
-        assert faces["west"] * 1000.0 - 1 <= box.min.X
-        assert box.max.X <= faces["east"] * 1000.0 + 1
-        if part.device_id in OUTSIDE:
-            assert box.min.Y > faces["north"] * 1000.0
-        else:
-            assert faces["south"] * 1000.0 - 1 <= box.min.Y
-            assert box.max.Y <= faces["north"] * 1000.0 + 1
+        assert box.max.Z <= 2.50 * 1000.0 + 1.0
+        assert -80.0 <= box.min.X and box.max.X <= 5820.0
+        assert 2820.0 <= box.min.Y and box.max.Y <= 9550.0
+
+    centres = {part.device_id: _centre(part) for part in placed if part.device_id != "C3-S"}
+    assert centres["C12-S"][0] == pytest.approx(2750.0, abs=1.0)
+    assert centres["C12-S"][1] == pytest.approx(5700.0, abs=1.0)
+    assert centres["C14-W"][0] == pytest.approx(1100.0, abs=1.0)
+    assert centres["C14-W"][1] == pytest.approx(8725.0, abs=1.0)
+    assert centres["C14-W"][2] == pytest.approx(2482.5, abs=1.0)
+    assert centres["C10-V"][0] == pytest.approx(457.5, abs=1.0)
+    assert centres["C10-V"][1] == pytest.approx(8300.0, abs=1.0)
+    assert centres["C10-V"][2] == pytest.approx(1350.0, abs=1.0)
+    assert centres["BED-1.11"][0] == pytest.approx(2750.0, abs=1.0)
+    assert centres["BED-1.11"][1] == pytest.approx(5700.0, abs=1.0)
+    assert centres["C32-V-2"][1] == pytest.approx(9400.0, abs=1.0)
+    assert centres["C32-V-2"][0] > 5750.0
 
     for index, left in enumerate(placed):
         for right in placed[index + 1 :]:
@@ -201,9 +223,11 @@ def test_boxes_sit_in_the_bay_and_round_trip(tmp_path):
 
 def test_ground_floor_carries_the_bedroom_plan():
     _shape, meta = build()
-    boxed = sum(1 for record in device_records() if _boxed(record))
-    assert meta["derived"]["bedroom_111"] == boxed
-    assert boxed < sum(len(codes) for codes in SCHEDULE.values())
+    assert meta["derived"]["bedroom_111"] == len(parts())
+    unboxed = {record["id"] for record in device_records() if not _boxed(record)}
+    assert unboxed == _NO_BOX
+    glance = next(scene for scene in scenes() if scene["id"] == "bedroom-1.11")
+    assert glance["camera"]["up"] == [0.0, 1.0, 0.0]
     plan = next(scene for scene in scenes() if scene["id"] == "plan-1.11")
     assert plan["projection"] == "ortho"
     assert plan["cuts"][0]["anchor"][2] == pytest.approx(PLAN_CUT_Z_M * 1000.0)

@@ -32,7 +32,7 @@ WALLS_PATH = SOURCE_PATH.with_name("ground-floor.yaml")
 
 MM = 1000.0
 MESH_GAP_MM = 1.0
-# Top of the plan cut sits above the ceiling boxes (base 2.42, height 0.05).
+# Top of the plan cut sits above the ceiling access point (top at 2.50 m).
 PLAN_CUT_Z_M = 2.55
 
 # Viewer label per YAML list. lightFixtures is a furnishing list; the rest
@@ -165,8 +165,61 @@ def _solid_from_product(product, label: str, list_key: str):
     return painted
 
 
+def _axis_box(origin, x_dir, size, device_id: str, label: str = "light"):
+    """A box from its minimum corner. ``x_dir`` is local +X in plan; local +Y is +90° about Z."""
+    width, depth, height = (float(value) * MM for value in size)
+    gap = min(MESH_GAP_MM, width * 0.25, depth * 0.25, height * 0.25)
+    ux, uy = x_dir
+    plane = Plane(
+        origin=tuple(float(value) * MM for value in origin),
+        x_dir=(ux, uy, 0.0),
+        z_dir=(0.0, 0.0, 1.0),
+    )
+    box = Pos(gap / 2.0, gap / 2.0, gap / 2.0) * Box(
+        width - gap,
+        depth - gap,
+        height - gap,
+        align=(Align.MIN, Align.MIN, Align.MIN),
+    )
+    painted = _paint(plane * box, label)
+    painted.device_id = device_id
+    painted.device_list = "lightFixtures"
+    return painted
+
+
+def _pset_props(element) -> dict:
+    found = {}
+    for group in element.get("PropertySets") or []:
+        if group.get("Name") == "Pset_YamlIfc":
+            found.update(group.get("Properties") or {})
+    return found
+
+
+def _under_bed_strip(doc: dict) -> list:
+    """Cable 3 is a U: the foot and the two long sides, not the headboard.
+
+    One yaml-ifc box cannot be that U, so the viewer gets three segments
+    read from the bed outline. They sit under the mattress.
+    """
+    bed = next((item for item in doc.get("furniture") or [] if item.get("id") == "BED-1.11"), None)
+    if bed is None:
+        return []
+    props = _pset_props(bed)
+    x0, y0 = float(props["X0"]), float(props["Y0"])
+    x1, y1 = float(props["X1"]), float(props["Y1"])
+    inset = 0.02
+    foot = (y1 - y0) - 2.0 * inset
+    side = (x1 - x0) - inset
+    elev = 0.02
+    return [
+        _axis_box((x0, y1 - inset, elev), (0.0, -1.0), (foot, inset, inset), "C3-S"),
+        _axis_box((x0 + inset, y1 - inset, elev), (1.0, 0.0), (side, inset, inset), "C3-S"),
+        _axis_box((x0 + inset, y0, elev), (1.0, 0.0), (side, inset, inset), "C3-S"),
+    ]
+
+
 def parts(path: Path | None = None) -> list:
-    """One solid per device that has Width, Depth, and Height."""
+    """One solid per boxed device, plus the bed, the rails, and the under-bed U."""
     doc = load_document(path)
     if not doc or not any(doc.get(key) for key, _label in DEVICE_LISTS):
         return []
@@ -178,23 +231,40 @@ def parts(path: Path | None = None) -> list:
     if errors:
         raise ValueError("yaml-ifc bedroom devices failed validation: " + "; ".join(errors))
     found = []
-    for key, label in DEVICE_LISTS:
+    for key, label in (*DEVICE_LISTS, ("furniture", "furniture")):
         ifc_class = _LIST_CLASS[key]
         for product in model.by_type(ifc_class):
             part = _solid_from_product(product, label, key)
             if part is not None:
                 found.append(part)
+    found.extend(_under_bed_strip(doc))
     return found
 
 
 def scenes() -> list[dict]:
-    """Top view of 1.11. The cut is above the ceiling boxes."""
-    faces = room_faces()
-    cx = (faces["west"] + faces["east"]) / 2.0
-    cy = (faces["south"] + faces["north"]) / 2.0
-    half_x = (faces["east"] - faces["west"]) / 2.0 + 0.9
-    half_y = (faces["north"] - faces["south"]) / 2.0 + 0.9
+    """A phone glance into 1.11, and a top view of the whole L."""
+    # Outer margin includes the facade blinds and the hallway face of OP09.
+    west, east = -0.2, 6.0
+    south, north = 2.65, 9.75
+    cx = (west + east) / 2.0
+    cy = (south + north) / 2.0
+    half_x = (east - west) / 2.0
+    half_y = (north - south) / 2.0
+    # Inside the south-west corner, looking toward the bed, the lamp, and the pendant.
+    eye = (1.05, 3.45, 1.65)
+    target = (2.7, 6.15, 1.35)
     return [
+        {
+            "id": "bedroom-1.11",
+            "hFovDeg": 58,
+            "title": {"en": "1.11 bedroom", "cs": "1.11 ložnice"},
+            "project": "RD Šíma 1.NP",
+            "camera": {
+                "target": cad_mm_to_gltf_m(tuple(value * MM for value in target)),
+                "position": cad_mm_to_gltf_m(tuple(value * MM for value in eye)),
+                "up": [0.0, 1.0, 0.0],
+            },
+        },
         {
             "id": "plan-1.11",
             "projection": "ortho",
@@ -212,5 +282,5 @@ def scenes() -> list[dict]:
                 "up": [0.0, 0.0, -1.0],
                 "orthoFit": [half_x, half_y],
             },
-        }
+        },
     ]
