@@ -22,6 +22,24 @@ from blueprints.export_utils import SECTION_LAYERS
 from blueprints.scenes import cad_mm_to_gltf_m
 
 
+# Viewer role from the yaml-ifc list and the IFC type fields. Ids are not consulted.
+_LIST_ROLE = {
+    "lightFixtures": "light",
+    "switchingDevices": "switch",
+    "sensors": "sensor",
+}
+_OUTLET_ROLE = {
+    "POWEROUTLET": "power",
+    "DATAOUTLET": "data",
+    "COMMUNICATIONSOUTLET": "data",
+}
+_OUTLET_OBJECT = {
+    "Socket": "power",
+    "Ethernet": "data",
+    "WifiAccessPoint": "data",
+}
+
+
 SOURCE_PATH = (
     Path(__file__).resolve().parents[1]
     / "inputs"
@@ -52,6 +70,59 @@ def load_document(path: Path | None = None) -> dict:
     if not source.is_file():
         return {}
     return load_yaml_ifc(source)
+
+
+def _application(record: dict) -> str:
+    for group in record.get("PropertySets") or []:
+        props = group.get("Properties") or {}
+        if props.get("Application"):
+            return str(props["Application"])
+    return ""
+
+
+def fixture_role(record: dict) -> str | None:
+    """``power``, ``data``, ``sensor``, ``switch``, ``light``, or ``blind``.
+
+    ``list`` is the yaml-ifc collection. Outlets and actuators then follow
+    ``PredefinedType`` / ``ObjectType`` (and ``Application`` for a blind motor).
+    Anything else is not a coloured fixture.
+    """
+    list_key = record.get("list")
+    if list_key in _LIST_ROLE:
+        return _LIST_ROLE[list_key]
+    predefined = str(record.get("PredefinedType") or "")
+    object_type = str(record.get("ObjectType") or "")
+    if list_key == "outlets":
+        return _OUTLET_ROLE.get(predefined) or _OUTLET_OBJECT.get(object_type)
+    if list_key == "actuators":
+        if object_type == "BlindActuator" or _application(record) == "SUNBLINDACTUATOR":
+            return "blind"
+        return None
+    return None
+
+
+def fixture_motions(parts) -> list[dict]:
+    """One viewer record per fixture solid. Shared ids toggle together."""
+    motions = []
+    for part in parts:
+        role = getattr(part, "fixture_role", None)
+        device_id = getattr(part, "device_id", None)
+        if not role or not device_id:
+            continue
+        box = part.bounding_box()
+        center = (
+            (float(box.min.X) + float(box.max.X)) / 2.0,
+            (float(box.min.Y) + float(box.max.Y)) / 2.0,
+            (float(box.min.Z) + float(box.max.Z)) / 2.0,
+        )
+        motions.append(
+            {
+                "id": device_id,
+                "role": role,
+                "center": [round(value, 6) for value in cad_mm_to_gltf_m(center)],
+            }
+        )
+    return motions
 
 
 def device_records(doc: dict | None = None) -> list[dict]:
@@ -238,6 +309,9 @@ def parts(path: Path | None = None) -> list:
             if part is not None:
                 found.append(part)
     found.extend(_under_bed_strip(doc))
+    role_by_id = {record["id"]: fixture_role(record) for record in device_records(doc)}
+    for part in found:
+        part.fixture_role = role_by_id.get(getattr(part, "device_id", None))
     return found
 
 

@@ -46,6 +46,7 @@ import {
 import { createDepthPeelRenderer } from "./depthPeel.js";
 import { createMeasureTool } from "./measure.js";
 import { createDoorController } from "./doors.js";
+import { createFixtureController } from "./fixtures.js";
 import { attachPivotNav } from "./pivotNav.js";
 import { cadMmToGltf, createAnnotations } from "./annotations.js";
 import { DRAW_H, DRAW_W, downloadBlob, plateFromCanvas } from "./drawing.js";
@@ -86,15 +87,17 @@ function writeSceneQuery(sceneId) {
 /**
  * @param {HTMLCanvasElement} canvas
  * @param {ArrayBuffer} glbBuffer
- * @param {{ scenes?: object[], scene?: string, partGroups?: object[], doors?: object[] }} [options]
+ * @param {{ scenes?: object[], scene?: string, partGroups?: object[], doors?: object[], fixtures?: object[] }} [options]
  */
 export function mountViewer(canvas, glbBuffer, options = {}) {
   /** Custom named scenes (model-specific); shown alongside Iso/Front/Side/Top. */
   const customScenes = Array.isArray(options.scenes) ? options.scenes : [];
   /** Model-owned Parts tree (ids only); empty → leftovers under Other. */
   const partGroups = Array.isArray(options.partGroups) ? options.partGroups : [];
-  /** Hinged leaves: centre, hinge, sign. Empty for models without doors. */
+  /** Hinged and sliding leaves. Empty for models without openings. */
   const doorRecords = Array.isArray(options.doors) ? options.doors : [];
+  /** Fixture roles and centres. Empty for models without devices. */
+  const fixtureRecords = Array.isArray(options.fixtures) ? options.fixtures : [];
   /** Prefer explicit option; otherwise `?scene=` from the current URL. */
   const initialSceneId = String(
     options.scene != null ? options.scene : readSceneQuery(),
@@ -212,6 +215,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     records: doorRecords,
     isBlocked: () => doorInputBlocked(),
   });
+  const fixtureCtrl = createFixtureController({ records: fixtureRecords });
+  fixtureCtrl.attach(doorCtrl.taps);
 
   const annotations = createAnnotations({
     scene,
@@ -289,6 +294,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       root = gltf.scene;
       zScaleGroup.add(root);
       doorCtrl.bind(root);
+      fixtureCtrl.bind(root);
       root.traverse((obj) => {
         if (!obj.isMesh) return;
         const raw = obj.name || obj.parent?.name || "part";
@@ -1002,6 +1008,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       opacityByLabel: partOpacity,
       edgeMode,
     });
+    fixtureCtrl.syncMaterials();
     // Solid uses unlit MeshBasicMaterial — skip ACES so chroma stays punchy.
     if (materialMode === MODE_REALISTIC) {
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -2365,7 +2372,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   function tick() {
     if (pauseTick) return;
     const now = performance.now();
-    if (doorCtrl.step(now)) viewDirty = true;
+    if (doorCtrl.step(now) || fixtureCtrl.step(now)) viewDirty = true;
     stepFrameAnim(now);
     controls.update();
     // Keep near/far tight as orbit distance changes.

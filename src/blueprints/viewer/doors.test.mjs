@@ -23,8 +23,12 @@ import {
   swingAngle,
   toggleDoor,
   triangleComponents,
+  applyDoorMotion,
+  applyDoorSlide,
   bindHinge,
+  bindSlide,
 } from "./doors.js";
+import { projectObjectToClientRect } from "./interactions.js";
 import { pickSurface } from "./pivotNav.js";
 
 assert.equal(easeInOutCubic(0), 0);
@@ -473,6 +477,102 @@ function hasDoor(hits) {
   const hits = raycaster.intersectObject(scene, true);
   assert.ok(hits.every((hit) => hit.object !== proxy));
   assert.equal(proxyMeshFromObb(obb).userData.bpHitProxy, true);
+}
+
+// A scaled, turned root: the slide vector is world metres along +X.
+{
+  const root = new THREE.Group();
+  root.quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+  root.scale.setScalar(0.001);
+  const door = new THREE.Mesh(new THREE.BoxGeometry(800, 40, 2100));
+  door.name = "door";
+  door.position.set(5000, 0, 1000);
+  root.add(door);
+  const scene = new THREE.Scene();
+  scene.add(root);
+  root.updateWorldMatrix(true, true);
+  const before = door.getWorldPosition(new THREE.Vector3());
+  const binding = bindSlide(door, { id: "D-SLIDE", kind: "sliding", slide: [0.8, 0, 0] });
+  assert.ok(binding);
+  applyDoorSlide(binding, 0);
+  assert.ok(door.getWorldPosition(new THREE.Vector3()).distanceTo(before) < 1e-4);
+  binding.goal = 1;
+  binding.anim = null;
+  applyDoorSlide(binding, 0);
+  const delta = door.getWorldPosition(new THREE.Vector3()).sub(before);
+  assert.ok(Math.abs(delta.x - 0.8) < 1e-3, delta.toArray().join(","));
+  assert.ok(Math.abs(delta.y) < 1e-3 && Math.abs(delta.z) < 1e-3);
+}
+
+// Tap a sliding leaf; it uses the same registry as a hinged door.
+{
+  const canvas = fakeCanvas();
+  const camera = new THREE.PerspectiveCamera(50, 1, 0.01, 100);
+  lookThrough(camera);
+  const scene = new THREE.Scene();
+  const door = leafMesh(0);
+  scene.add(door);
+  scene.updateWorldMatrix(true, true);
+  const center = new THREE.Box3().setFromObject(door).getCenter(new THREE.Vector3());
+  const ctrl = createDoorController({
+    canvas,
+    getCamera: () => camera,
+    records: [
+      {
+        id: "SL",
+        kind: "sliding",
+        center: [center.x, center.y, center.z],
+        slide: [0.5, 0, 0],
+      },
+    ],
+  });
+  assert.equal(ctrl.bind(scene), 1);
+  const binding = ctrl.bindings[0];
+  tapAt(canvas);
+  assert.equal(binding.goal, 1);
+  binding.anim = null;
+  applyDoorMotion(binding, 0);
+  assert.ok(Math.abs(binding.host.position.x - binding.base.x - binding.localSlide.x) < 1e-6);
+}
+
+// A plate smaller than 44px accepts a tap beside it. A tap farther away does not.
+{
+  const canvas = fakeCanvas();
+  const camera = new THREE.PerspectiveCamera(50, 1, 0.01, 100);
+  camera.position.set(0, 0, 2);
+  camera.lookAt(0, 0, 0);
+  camera.updateMatrixWorld(true);
+  const scene = new THREE.Scene();
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.01));
+  plate.name = "door";
+  scene.add(plate);
+  scene.updateWorldMatrix(true, true);
+  const center = new THREE.Box3().setFromObject(plate).getCenter(new THREE.Vector3());
+  const ctrl = createDoorController({
+    canvas,
+    getCamera: () => camera,
+    records: [
+      {
+        id: "TINY",
+        kind: "hinged",
+        center: [center.x, center.y, center.z],
+        hinge: [center.x - 0.02, center.y, center.z],
+        axis: [0, 1, 0],
+        sign: 1,
+      },
+    ],
+  });
+  assert.equal(ctrl.bind(scene), 1);
+  const binding = ctrl.bindings[0];
+  const bounds = projectObjectToClientRect(binding.host, camera, canvas.getBoundingClientRect());
+  assert.ok(bounds);
+  tapAt(canvas, bounds.maxX + 12, bounds.cy);
+  assert.equal(binding.goal, 1, "a tap inside the 44px pad opens the plate");
+  binding.goal = 0;
+  binding.anim = null;
+  binding.shown = 0;
+  tapAt(canvas, bounds.maxX + 80, bounds.cy);
+  assert.equal(binding.goal, 0, "a tap outside the pad does not");
 }
 
 console.log("doors.test.mjs ok");

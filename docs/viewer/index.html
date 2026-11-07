@@ -58,7 +58,7 @@
 </aside>
 <pre id="err"></pre>
 <canvas id="c"></canvas>
-<script src="viewer.iife.js?v=dcabc04f2e"></script>
+<script src="viewer.iife.js?v=c5542231ae"></script>
 <script>
 (function () {
   const errEl = document.getElementById("err");
@@ -77,6 +77,7 @@
   const scenesUrl = "../models/" + encodeURIComponent(id) + ".scenes.json";
   const partsUrl = "../models/" + encodeURIComponent(id) + ".parts.json";
   const doorsUrl = "../models/" + encodeURIComponent(id) + ".doors.json";
+  const fixturesUrl = "../models/" + encodeURIComponent(id) + ".fixtures.json";
   function loadJsonArray(url) {
     return fetch(url).then(function (r) {
       if (r.status === 404) return [];
@@ -96,12 +97,14 @@
     loadJsonArray(scenesUrl),
     loadJsonArray(partsUrl),
     loadJsonArray(doorsUrl),
+    loadJsonArray(fixturesUrl),
   ])
     .then(function (loaded) {
       BlueprintsViewerBundle.mountViewer(canvas, loaded[0], {
         scenes: loaded[1],
         partGroups: loaded[2],
         doors: loaded[3],
+        fixtures: loaded[4],
       });
     })
     .catch(function (e) {

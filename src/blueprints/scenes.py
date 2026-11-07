@@ -40,11 +40,22 @@ def write_scenes_json(model_id: str, scenes: list[dict[str, Any]], dest: Path) -
 
 
 def write_doors_json(model_id: str, doors: list[dict[str, Any]], dest: Path) -> Path:
-    """Write `docs/models/<id>.doors.json` (hinged-leaf pivots, glTF metres)."""
+    """Write `docs/models/<id>.doors.json` (hinged pivots and slides, glTF metres)."""
     dest = dest.resolve()
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(
         json.dumps(doors, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    return dest
+
+
+def write_fixtures_json(model_id: str, fixtures: list[dict[str, Any]], dest: Path) -> Path:
+    """Write `docs/models/<id>.fixtures.json` (device role and centre, glTF metres)."""
+    dest = dest.resolve()
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(
+        json.dumps(fixtures, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
     return dest
