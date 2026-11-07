@@ -30,7 +30,7 @@ The soffit band is 450 mm deep, and so are the dining and living-area cabinets. 
 
 These are not resolved here.
 
-**open:** three furniture layouts disagree about the living room. The kitchen file on this branch, the unmerged living-room file on PR #83, and the wave-study boxes in `src/blueprints/acoustics/roomwave/geometry.py` do not place the same sofa, television, island, or fridge. On the current PR #83 branch the sofa’s west face, the low base and the bookshelf are all at x = 25.52, and the table-to-sofa gap is 1333 mm. Details are in [furnishings.md](furnishings.md) and [acoustics.md](acoustics.md).
+**open:** three furniture layouts disagree about the living room. The kitchen file on this branch, the unmerged living-room file on PR #83, and the wave-study boxes in `src/blueprints/acoustics/roomwave/geometry.py` do not place the same sofa, television, island, or fridge. On the current PR #83 branch the sofa’s west face, the low base and the bookshelf are all at x = 25.52, and the table-to-sofa gap is 1333 mm. Details are in [furnishings.md](furnishings.md) and [acoustics.md](acoustics.md). Do not copy the wave-study boxes into the furnishing model to close the gap. That split, and a later single move of the authoritative model, is [../ModelPortability.md](../ModelPortability.md).
 
 **open:** the slope wool has been named as three products. PR #68’s title says Unifit 033 / NatuRoll 039. The PR #77 body says the under-rafter layer is Isover Domo Plus 038. The current bill of materials (`scripts/export_obyvak_skladba.py`, `docs/obyvak-skladba-souhrn.csv`) prices Knauf NatuRoll Pro 039, and the section comment says λ 0.039. The model has a lambda, not a product enum.
 

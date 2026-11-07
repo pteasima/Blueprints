@@ -34,7 +34,7 @@ src/blueprints/     # package: export helpers + CLI
 models/             # parametric models (one module per design)
 exports/            # generated STEP / STL / SVG / DXF / PNG (gitignored binaries OK to keep small SVGs)
 inputs/             # drop legacy DXF / notes from prior tools (next step)
-docs/               # design notes; facts and reasons in docs/design/
+docs/               # design facts in docs/design/; later model move in docs/ModelPortability.md
 scripts/            # Cloud Agent / local bootstrap
 AGENTS.md           # agent operating notes (PNG previews, env)
 .cursor/            # cloud agent environment hints

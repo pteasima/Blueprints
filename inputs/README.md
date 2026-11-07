@@ -2,7 +2,7 @@ Place legacy DXF files and prior Python (e.g. from Grok Bot) here.
 
 Reasons for the numbers live in `docs/design/` (see `docs/design/README.md`).
 
-Parametric ports live under `models/`.
+Parametric ports live under `models/`. The live `ground_floor/` YAML is part of that model. The `obyvak/` scripts below are the old generators; `models/` does not import them. What would move later, and what is not approved yet: [docs/ModelPortability.md](../docs/ModelPortability.md).
 
 - `obyvak/make_obyvak_sheet_84d0.py` — contractor sheet (řez A + bokorys B + basstrapy). Panel A is ported as `models/obyvak_section.py`.
 - `obyvak/make_stit_bokorys_8bdb.py` — gable elevation from the windows (štít–štít, předstěny 190/450). Ported as `models/obyvak_elevation.py`. Combined 3D massing: `models/obyvak.py`.

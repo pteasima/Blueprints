@@ -22,6 +22,8 @@ Model code hides reasons. Every real-world fact the model uses (dimensions, clea
 
 Design facts, one file per area: [docs/design/README.md](docs/design/README.md).
 
+A later one-time move of this model into Home, and the rule that furniture and the house stay one editable copy, is [docs/ModelPortability.md](docs/ModelPortability.md). Nothing in that move is approved. Keep editing the model here until that work starts.
+
 ## Measure first
 
 Prefer building the model and measuring it over hand calculation. Use code and tests to get numbers, and use reasoning to decide what to try next. Do not derive millimetre values by hand when the model can report them. Example: start tiling from the reference corner at level zero, build, measure the far corner, then shift.

@@ -10,4 +10,6 @@ Floor grout for a sloped tile layout is `yaml_ifc.floor_joint_widths`. The finis
 
 `inputs/ground_floor/ground-floor.yaml` is `samples/ground-floor.yaml` from this commit. It is the same walls file as the previous pin `34e1597`. `inputs/ground_floor/furnishings.yaml` is the house kitchen from `34e1597`; upstream's furnishings sample at `0f96c26` is a generic nominal kitchen and is not copied over the house file. Room 1.20 tiling is `inputs/ground_floor/bathroom-1.20.yaml`, adapted from `samples/bathroom.yaml`. Local extension on this pin: a wall `TileLayout.CourseZMin` (metres) is the shared course datum when one room has two floor planes. Room 1.07 uses it so the level floor and the shower share course lines. A future pin of `yaml_ifc/` has to keep that field.
 
+This tree moves with the house model if that model leaves Blueprints. The note is [docs/ModelPortability.md](../../docs/ModelPortability.md). Do not keep a second editable copy.
+
 License: MIT (`LICENSE`).

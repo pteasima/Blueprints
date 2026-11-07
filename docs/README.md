@@ -31,3 +31,7 @@ On the live site only (content branch `pages-site`, not in `main`): `pr-preview/
 `python -m blueprints.export <model>` updates USDZ/GLB + manifest + viewer shell. CI rebuilds the hub and publishes. Do not commit `index.html`.
 
 Hub buttons open **web viewers** only (`/viewer/?m=<id>`). Safari AR / Quick Look is available from the viewer’s **AR** control (client-generated USDZ), not from the landing page.
+
+## Other notes
+
+The Pages site is not the house model. Where that model lives, what a later move would take, and what is not approved yet: [ModelPortability.md](ModelPortability.md). Design facts for the solids are in [design/README.md](design/README.md).
