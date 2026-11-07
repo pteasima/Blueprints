@@ -149,7 +149,7 @@ lightFixtures:
           CableLength: 10
   - id: C7-S
     Name: "Pásek 7"
-    Description: "Curtain-rail LED strip above the west window OP01. No box. Cable 7."
+    Description: "Curtain-rail LED strip. From the south-west corner along the west wall to 50 mm past the north jamb of OP01. No box. Cable 7."
     PredefinedType: USERDEFINED
     ObjectType: LedStrip
     ContainedInStructure: SP-1.11
@@ -162,12 +162,12 @@ lightFixtures:
           CableSpec: "CYKY 4x1.5"
           CableLength: 15
           X0: 0.45
-          Y0: 4.425
+          Y0: 3.275
           X1: 0.45
-          Y1: 6.825
+          Y1: 6.875
   - id: C8-S
     Name: "Pásek 8"
-    Description: "Curtain-rail LED strip above the south window OP05. No box. Cable 8."
+    Description: "Curtain-rail LED strip. From the south-west corner along the south wall to 50 mm past the east jamb of OP05. No box. Cable 8."
     PredefinedType: USERDEFINED
     ObjectType: LedStrip
     ContainedInStructure: SP-1.11
@@ -179,9 +179,9 @@ lightFixtures:
           DeviceCode: S
           CableSpec: "CYKY 4x1.5"
           CableLength: 15
-          X0: 1.45
+          X0: 0.45
           Y0: 3.275
-          X1: 3.7
+          X1: 3.75
           Y1: 3.275
 switchingDevices:
   - id: C1-2V
@@ -363,7 +363,7 @@ outlets:
           CableLength: 25
   - id: C14-W
     Name: "Wi-Fi 14"
-    Description: "U7 Pro on the 2.50 m ceiling, centred across the main wing north of the step at y=7.950. Panel 1. The 3D origin is the first pass."
+    Description: "U7 Pro on the 2.50 m ceiling, x=1.100, y=8.725. Panel 1. The 3D origin is the first pass."
     PredefinedType: COMMUNICATIONSOUTLET
     ObjectType: WifiAccessPoint
     ContainedInStructure: SP-1.11

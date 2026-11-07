@@ -108,7 +108,7 @@ def marks() -> list[Mark]:
     # Lower ceiling is the 2.50 m band north of the dashed step at y=7.950.
     # It spans the main wing. The access point is centred on that width.
     low_ceiling_south = 7.950
-    ap_x = (west_in + east_in) / 2.0
+    ap_x = 1.100
     ap_y = (low_ceiling_south + north_in) / 2.0
     bed_x0, bed_y0, bed_x1, bed_y1 = bed_outline()
     c7 = _strip_span("C7-S")
@@ -116,15 +116,15 @@ def marks() -> list[Mark]:
     rows = [
         Mark("C12-S", "1.11-L2", "light", (bed_x0 + bed_x1) / 2.0, (bed_y0 + bed_y1) / 2.0, "ceiling", "", "ceiling", "Pendant above the bed. Cable 12, 120 W."),
         Mark("C3-S", "1.11-L4", "strip", bed_x0, (bed_y0 + bed_y1) / 2.0, "bed", "", "bed-edge", "LED strip on the foot and the two long sides. Not the headboard."),
-        Mark("C14-W", "1.11-AP1", "light", ap_x, ap_y, "ceiling", "", "ceiling", "Access point centred on the 2.50 m ceiling north of y=7.950."),
+        Mark("C14-W", "1.11-AP1", "light", ap_x, ap_y, "ceiling", "", "ceiling", "Access point on the 2.50 m ceiling, x=1.100, y=8.725."),
         Mark("SOCK-EN", "1.11-Z2", "socket", east_in, north_bed, "wall", "bed-n", "750", "North bedside socket. Centre 750."),
         Mark("C4-2V", "1.11-B4", "switch", east_in, north_bed, "wall", "bed-n", "821", "North bedside switch, 71 mm above the socket."),
         Mark("C5-S", "1.11-L3", "light", east_in, north_bed, "wall", "bed-n", "892", "North bedside lamp, one pitch above the switch."),
         Mark("SOCK-ES", "1.11-Z3", "socket", east_in, south_bed, "wall", "bed-s", "750", "South bedside socket. Centre 750."),
         Mark("C1-2V", "1.11-B5", "switch", east_in, south_bed, "wall", "bed-s", "821", "South bedside switch, 71 mm above the socket."),
         Mark("C2-S", "1.11-L5", "light", east_in, south_bed, "wall", "bed-s", "892", "South bedside lamp, one pitch above the switch."),
-        Mark("C7-S", "1.11-L6", "strip", (c7[0] + c7[2]) / 2.0, (c7[1] + c7[3]) / 2.0, "strip", "", "west-rail", "Curtain-rail LED strip above the west window OP01."),
-        Mark("C8-S", "1.11-L7", "strip", (c8[0] + c8[2]) / 2.0, (c8[1] + c8[3]) / 2.0, "strip", "", "south-rail", "Curtain-rail LED strip above the south window OP05."),
+        Mark("C7-S", "1.11-L6", "strip", (c7[0] + c7[2]) / 2.0, (c7[1] + c7[3]) / 2.0, "strip", "", "west-rail", "Curtain rail from the south-west corner to 50 mm past the north jamb of OP01."),
+        Mark("C8-S", "1.11-L7", "strip", (c8[0] + c8[2]) / 2.0, (c8[1] + c8[3]) / 2.0, "strip", "", "south-rail", "Curtain rail from the south-west corner to 50 mm past the east jamb of OP05."),
         Mark("C32-V-1", "1.11-B2", "switch", box["entry_east"], switch_y, "wall", "hall-door", "1350", "Bedroom light switch, 150 mm from the latch of OP09."),
         Mark("C9-R", "1.11-P1", "sensor", box["entry_east"], switch_y, "wall", "hall-door", "in box", "mmWave inside the bedroom door switch C32-V-1."),
         Mark("C32-M", "1.11-K1", "sensor", box["entry_east"], door.y1, "frame", "", "frame", "Door contact in the latch jamb of OP09."),
@@ -348,16 +348,21 @@ def render_svg() -> str:
         f'<text x="{sx(bx1) - 8:.1f}" y="{sy(by0) - 8:.1f}" text-anchor="end" '
         f'fill="#c2410c" font-size="11" font-weight="600">C3-S strip</text>'
     )
-    for strip_id in ("C7-S", "C8-S"):
+    for strip_id, into in (("C7-S", (0.025, 0.0)), ("C8-S", (0.0, 0.025))):
         x0, y0, x1, y1 = _strip_span(strip_id)
+        dx, dy = into
         parts.append(
             f'<line x1="{sx(x0):.1f}" y1="{sy(y0):.1f}" x2="{sx(x1):.1f}" y2="{sy(y1):.1f}" '
+            f'stroke="#6b5344" stroke-width="3"/>'
+        )
+        parts.append(
+            f'<line x1="{sx(x0 + dx):.1f}" y1="{sy(y0 + dy):.1f}" x2="{sx(x1 + dx):.1f}" y2="{sy(y1 + dy):.1f}" '
             f'stroke="#e07a28" stroke-width="4"/>'
         )
         parts.append(
-            f'<text x="{sx((x0 + x1) / 2) + 6:.1f}" y="{sy((y0 + y1) / 2):.1f}" font-size="11" '
-            f'fill="#c2410c">{strip_id}</text>'
-    )
+            f'<text x="{sx((x0 + x1) / 2 + dx) + 8:.1f}" y="{sy((y0 + y1) / 2 + dy):.1f}" font-size="11" '
+            f'fill="#c2410c">{strip_id} garnýž</text>'
+        )
     parts.append(
         f'<text x="{sx(box["west"] + 0.12):.1f}" y="{sy(by0 + 0.55):.1f}" '
         f'fill="#444" font-size="14" font-weight="600">1.11 Ložnice</text>'

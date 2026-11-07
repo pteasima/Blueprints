@@ -111,7 +111,7 @@ The drawing cites the short name.
 
 ## Room 1.11, as answered
 
-Cable 12 is the 120 W pendant above the bed. Cable 3 is the LED strip on the foot and the two long sides of the bed, not the headboard. Cable 32 is the contact and the two switches of OP09. Cable 16 stays the blind for the narrow west window. Cable 6 and cable 11 are off the plan for now. The bed is 2000 mm by 1800 mm with the headboard on the east wall. Each bedside stack is a socket at 750, a switch at 821, and a lamp at 892. C7 is the curtain-rail strip above the west window. C8 is the curtain-rail strip above the south window. The access point is centred on the 2.50 m ceiling north of y=7.950. The bedroom outline is the L in `rooms/1.11-geometry.md`, 22.98 m².
+Cable 12 is the 120 W pendant above the bed. Cable 3 is the LED strip on the foot and the two long sides of the bed, not the headboard. Cable 32 is the contact and the two switches of OP09. Cable 16 stays the blind for the narrow west window. Cable 6 and cable 11 are off the plan for now. The bed is 2000 mm by 1800 mm with the headboard on the east wall. Each bedside stack is a socket at 750, a switch at 821, and a lamp at 892. C7 is the west curtain rail, from the south-west corner to 50 mm past the north jamb of OP01. C8 is the south curtain rail, from that same corner to 50 mm past the east jamb of OP05. The access point is on the 2.50 m ceiling at x=1.100, y=8.725. The bedroom outline is the L in `rooms/1.11-geometry.md`, 22.98 m².
 
 Power sockets have no cable number and no circuit. They are positions only. The two outdoor lamps stay where they were and are marked UNUSED. The west lamp's cable number is still a TODO.
 
