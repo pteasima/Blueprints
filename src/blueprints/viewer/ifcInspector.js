@@ -234,7 +234,7 @@ export function mountIfcInspector(opts) {
     el.dataset.id = row.id;
     el.style.paddingLeft = `${rowIndent(row.depth) + 8}px`;
     el.style.height = `${ROW_HEIGHT}px`;
-    if (row.id === highlightId) el.classList.add("is-target");
+    if (row.id === highlightId || row.id === focusId) el.classList.add("is-target");
     if (opts.visibility.isHidden(row.id)) el.classList.add("is-hidden");
 
     if (kids.length) {
@@ -274,22 +274,45 @@ export function mountIfcInspector(opts) {
   }
 
   /**
+   * iOS Safari cancels pointerup for a tap inside a scrolling sheet and
+   * often never sends click. touchend still arrives. A long-press must not
+   * also count as that tap.
+   * @param {string} id
+   */
+  let lastSelectAt = 0;
+  function selectRow(id) {
+    const now = performance.now();
+    if (now - lastSelectAt < 450) return;
+    lastSelectAt = now;
+    focusId = id;
+    opts.onFrame(id);
+    flash(id);
+    renderCrumbs();
+  }
+
+  /**
+   * @param {EventTarget | null} target
+   */
+  function onDisclosure(target) {
+    return target instanceof Element && Boolean(target.closest(".ifc-disclosure"));
+  }
+
+  /**
    * @param {HTMLElement} el
    * @param {string} id
    */
   function wireRowGesture(el, id) {
-    /** @type {{ id: number, x: number, y: number, moved: number, consumed: boolean } | null} */
+    /** @type {{ x: number, y: number, moved: number, consumed: boolean } | null} */
     let gesture = null;
     let timer = 0;
-    const clear = () => {
+    const clearTimer = () => {
       if (timer) window.clearTimeout(timer);
       timer = 0;
     };
-    el.addEventListener("pointerdown", (ev) => {
-      if (ev.button !== undefined && ev.button !== 0) return;
-      if (ev.target instanceof Element && ev.target.closest(".ifc-disclosure")) return;
-      clear();
-      gesture = { id: ev.pointerId, x: ev.clientX, y: ev.clientY, moved: 0, consumed: false };
+    const begin = (x, y, target) => {
+      if (onDisclosure(target)) return;
+      clearTimer();
+      gesture = { x, y, moved: 0, consumed: false };
       timer = window.setTimeout(() => {
         timer = 0;
         if (!gesture || gesture.consumed) return;
@@ -303,39 +326,42 @@ export function mountIfcInspector(opts) {
         gesture.consumed = true;
         openRowMenu(id, gesture.x, gesture.y);
       }, LONG_PRESS_MS);
-    });
-    el.addEventListener("pointermove", (ev) => {
-      if (!gesture || ev.pointerId !== gesture.id) return;
-      const dist = Math.hypot(ev.clientX - gesture.x, ev.clientY - gesture.y);
+    };
+    const move = (x, y) => {
+      if (!gesture) return;
+      const dist = Math.hypot(x - gesture.x, y - gesture.y);
       if (dist > gesture.moved) gesture.moved = dist;
-      if (gesture.moved > 12) clear();
+      if (gesture.moved > 12) clearTimer();
+    };
+    const finish = (x, y, target) => {
+      clearTimer();
+      const g = gesture;
+      gesture = null;
+      if (!g || g.consumed || onDisclosure(target)) return;
+      const dist = Math.max(g.moved, Math.hypot(x - g.x, y - g.y));
+      if (dist > 12) return;
+      selectRow(id);
+    };
+    el.addEventListener("pointerdown", (ev) => {
+      if (ev.button !== undefined && ev.button !== 0) return;
+      begin(ev.clientX, ev.clientY, ev.target);
     });
+    el.addEventListener("pointermove", (ev) => move(ev.clientX, ev.clientY));
     el.addEventListener("pointerup", (ev) => {
-      if (!gesture || ev.pointerId !== gesture.id) return;
-      clear();
-      const consumed = gesture.consumed;
-      const dist = Math.max(
-        gesture.moved,
-        Math.hypot(ev.clientX - gesture.x, ev.clientY - gesture.y),
-      );
-      gesture = null;
-      const kind = classifyHold({
-        dt: 0,
-        dx: dist,
-        dy: 0,
-        released: true,
-        consumed,
-      });
-      if (kind !== "tap") return;
-      focusId = id;
-      opts.onFrame(id);
-      flash(id);
-      renderCrumbs();
+      // Mouse path. Touch selection is touchend: iOS drops pointerup here.
+      if (ev.pointerType === "touch") return;
+      finish(ev.clientX, ev.clientY, ev.target);
     });
-    el.addEventListener("pointercancel", () => {
-      clear();
-      gesture = null;
-    });
+    el.addEventListener("pointercancel", () => clearTimer());
+    el.addEventListener(
+      "touchend",
+      (ev) => {
+        const t = ev.changedTouches[0];
+        if (!t) return;
+        finish(t.clientX, t.clientY, ev.target);
+      },
+      { passive: true },
+    );
   }
 
   function flash(id) {
@@ -357,31 +383,35 @@ export function mountIfcInspector(opts) {
     renderRows();
   }
 
+  /** Finger is still down from the long-press when the menu appears. */
+  let menuReady = false;
+
   function openRowMenu(id, x, y) {
     closePopover();
     menu.replaceChildren();
     menu.hidden = false;
+    menuReady = false;
     const hidden = opts.visibility.isHidden(id);
     addMenuButton(hidden ? "ui.unhideThis" : "ui.hideThis", () => {
       if (hidden) opts.visibility.unhide(id);
       else opts.visibility.hide(id);
-      opts.onVisibility();
-      closeMenu();
-      render();
+      commitVisibility();
     });
     addMenuButton("ui.hideOthers", () => {
       opts.visibility.hideOthers(id);
-      opts.onVisibility();
-      closeMenu();
-      render();
+      commitVisibility();
     });
     addMenuButton("ui.unhideOthers", () => {
       opts.visibility.unhideOthers(id);
-      opts.onVisibility();
-      closeMenu();
-      render();
+      commitVisibility();
     });
     placeFloating(menu, x, y);
+  }
+
+  function commitVisibility() {
+    opts.onVisibility();
+    closeMenu();
+    render();
   }
 
   /**
@@ -393,10 +423,17 @@ export function mountIfcInspector(opts) {
     button.type = "button";
     button.className = "ifc-menu-btn";
     button.textContent = opts.t(key);
-    button.addEventListener("click", (ev) => {
+    let used = false;
+    const fire = (ev) => {
+      ev.preventDefault();
       ev.stopPropagation();
+      if (used) return;
+      used = true;
       run();
-    });
+    };
+    // touchend: iOS delivers this for a tap on a fixed menu. click covers mouse.
+    button.addEventListener("touchend", fire);
+    button.addEventListener("click", fire);
     menu.append(button);
   }
 
@@ -555,13 +592,28 @@ export function mountIfcInspector(opts) {
     { passive: true },
   );
 
+  const outside = (target) => {
+    if (!(target instanceof Node)) return true;
+    if (!pop.hidden && pop.contains(target)) return false;
+    if (!menu.hidden && menu.contains(target)) return false;
+    return true;
+  };
+  // The long-press finger is still down when the menu opens. Ignore that
+  // release. The next pointerdown outside dismisses; a pointerdown on a
+  // menu button must not remove the button before touchend/click.
+  document.addEventListener(
+    "pointerup",
+    () => {
+      if (!menu.hidden) menuReady = true;
+    },
+    true,
+  );
   document.addEventListener(
     "pointerdown",
     (ev) => {
       const target = ev.target;
-      if (!(target instanceof Node)) return;
-      if (!pop.hidden && !pop.contains(target)) closePopover();
-      if (!menu.hidden && !menu.contains(target)) closeMenu();
+      if (!pop.hidden && outside(target)) closePopover();
+      if (!menu.hidden && menuReady && outside(target)) closeMenu();
     },
     true,
   );

@@ -16,3 +16,26 @@ export function meshIdentity(raw) {
   }
   return { part: trimmed || "part", element: null };
 }
+
+/**
+ * glTF puts the node name (`masonry__W-001__`) on the group. The mesh under
+ * it is only `masonry` or `masonry_1`. Walk ancestors until an element id
+ * shows up. Edge shells are named `masonry__edges` and are not an element.
+ * @param {{ name?: string, parent?: object | null, userData?: object } | null | undefined} obj
+ * @returns {{ part: string, element: string | null }}
+ */
+export function identityOf(obj) {
+  let part = "part";
+  let node = obj;
+  while (node) {
+    const name = node.name || "";
+    const edges = name.endsWith("__edges") || Boolean(node.userData?.isEdgeOverlay);
+    if (!edges && name) {
+      const ident = meshIdentity(name);
+      if (ident.part) part = ident.part;
+      if (ident.element) return { part: ident.part, element: ident.element };
+    }
+    node = node.parent || null;
+  }
+  return { part, element: null };
+}

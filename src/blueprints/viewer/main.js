@@ -51,7 +51,7 @@ import { mountIfcInspector } from "./ifcInspector.js";
 import { createVisibility } from "./ifcHide.js";
 import { normalizeIndex, subtreeIds } from "./ifcTree.js";
 import { isSceneSolid } from "./interactions.js";
-import { meshIdentity } from "./meshIdentity.js";
+import { identityOf, meshIdentity } from "./meshIdentity.js";
 import { attachPivotNav } from "./pivotNav.js";
 import { cadMmToGltf, createAnnotations } from "./annotations.js";
 import { DRAW_H, DRAW_W, downloadBlob, plateFromCanvas } from "./drawing.js";
@@ -313,10 +313,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       doorCtrl.bind(root);
       root.traverse((obj) => {
         if (!obj.isMesh) return;
-        const raw = obj.name || obj.parent?.name || "part";
-        // OCCT/Three may uniquify duplicate labels (krov, krov_1, …); group for toggles.
-        // `part__yamlId__` keeps the part group and names the IFC element.
-        const ident = meshIdentity(raw);
+        // The node is `masonry__W-001__`; the mesh under it is just `masonry`.
+        const ident = identityOf(obj);
         obj.userData.bpPart = ident.part;
         obj.userData.bpElementKey = ident.element;
         if (ident.element) {
@@ -2308,7 +2306,9 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     t: tr,
     openSheet() {
       const wide = window.matchMedia("(min-width: 768px)").matches;
-      chromeApi?.setDetent(wide ? "open" : "full");
+      // Phone: half-height detent, so the framed element stays in the
+      // visible band above the sheet. Wide layout has only an open pane.
+      chromeApi?.setDetent(wide ? "open" : "partial");
     },
     onFrame: (id) => frameElement(id),
     onVisibility: () => applyInspectorVisibility(),
@@ -2456,7 +2456,14 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     }
     for (const [key, meshes] of meshesByKey) {
       const hidden = hiddenKeys.has(key);
-      for (const mesh of meshes) mesh.userData.bpIfcHidden = hidden;
+      for (const mesh of meshes) {
+        mesh.userData.bpIfcHidden = hidden;
+        for (const child of mesh.children || []) {
+          if (child?.userData?.isEdgeOverlay || child?.userData?.isSectionCap) {
+            child.visible = !hidden;
+          }
+        }
+      }
     }
     for (const binding of doorCtrl.bindings) {
       const key = meshIdentity(binding.host?.name || "").element;
@@ -2649,6 +2656,10 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     for (const c of cuts) {
       bits.push(String(c.id), c.locked ? "1" : "0", Number(c.t).toFixed(4));
     }
+    // The settled frame is a merged peel. Its cache key has to change when
+    // a session hide flips mesh visibility, or the old triangles stay drawn.
+    const hidden = ifcVisibility.hiddenIds();
+    bits.push(hidden.length ? hidden.slice().sort().join(",") : "-");
     return bits.join("|");
   }
 

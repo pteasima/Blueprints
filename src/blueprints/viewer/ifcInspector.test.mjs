@@ -7,7 +7,7 @@ import { createTapRegistry } from "./interactions.js";
 import { registerElementActions } from "./elementActions.js";
 import { classifyHold, LONG_PRESS_MS } from "./gesture.js";
 import { createVisibility } from "./ifcHide.js";
-import { meshIdentity } from "./meshIdentity.js";
+import { identityOf, meshIdentity } from "./meshIdentity.js";
 import {
   INDENT_CAP,
   INDENT_PX,
@@ -158,6 +158,16 @@ assert.deepEqual(meshIdentity("masonry__W-001__"), { part: "masonry", element: "
 assert.deepEqual(meshIdentity("masonry__W-001___1"), { part: "masonry", element: "W-001" });
 assert.deepEqual(meshIdentity("switch__C9-1__"), { part: "switch", element: "C9-1" });
 assert.deepEqual(meshIdentity("door"), { part: "door", element: null });
+
+const wallNode = { name: "masonry__W-001__" };
+const wallMesh = { name: "masonry_2", parent: wallNode };
+const edgeMesh = { name: "masonry__edges", parent: wallNode };
+assert.deepEqual(identityOf(wallMesh), { part: "masonry", element: "W-001" });
+assert.deepEqual(identityOf(edgeMesh), { part: "masonry", element: "W-001" });
+assert.deepEqual(identityOf({ name: "door", parent: { name: "door__D-OP40__", parent: { name: "ground_floor" } } }), {
+  part: "door",
+  element: "D-OP40",
+});
 
 const taps = [];
 const registry = createTapRegistry();

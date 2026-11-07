@@ -826,13 +826,17 @@ canvas {
   gap: 0.2rem;
   box-sizing: border-box;
   border-bottom: 1px solid var(--hairline);
-  touch-action: pan-y;
+  touch-action: manipulation;
   -webkit-user-select: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
 }
-.ifc-row.is-target { background: rgba(10, 132, 255, 0.22); }
-.ifc-row.is-hidden .ifc-row-name { opacity: 0.45; }
+.ifc-row.is-target { background: rgba(10, 132, 255, 0.28); }
+.ifc-row.is-hidden .ifc-row-name {
+  opacity: 0.4;
+  text-decoration: line-through;
+}
 .ifc-disclosure, .ifc-disclosure-spacer {
   flex: 0 0 1.7rem;
   width: 1.7rem;
@@ -925,7 +929,8 @@ canvas {
   text-align: center;
 }
 .ifc-action:active, .ifc-menu-btn:active, .ifc-reveal:active { background: var(--fill-active); }
-.ifc-menu { padding: 0.45rem; }
+.ifc-menu { z-index: 8; padding: 0.45rem; touch-action: manipulation; }
+.ifc-popover { z-index: 8; }
 `;
 
 let stylesInjected = false;
