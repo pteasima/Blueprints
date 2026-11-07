@@ -78,14 +78,14 @@ def _opening_span(opening_id: str) -> tuple[float, float]:
     return near, near + float(opening["Width"])
 
 
-def _strip_span(device_id: str) -> tuple[float, float, float]:
+def _strip_span(device_id: str) -> tuple[float, float, float, float]:
     doc = load_yaml(SOURCE_PATH)
     record = next(item for item in doc["lightFixtures"] if item["id"] == device_id)
     props: dict = {}
     for group in record.get("PropertySets") or []:
         if group.get("Name") == "Pset_YamlIfc":
             props.update(group.get("Properties") or {})
-    return float(props["X"]), float(props["Y0"]), float(props["Y1"])
+    return float(props["X0"]), float(props["Y0"]), float(props["X1"]), float(props["Y1"])
 
 
 def marks() -> list[Mark]:
@@ -95,38 +95,41 @@ def marks() -> list[Mark]:
     north_in = box["north"]
     west_out, south_out = box["west_out"], box["south_out"]
     door = opening("OP09")
-    pocket = opening("OP03")
     wide = opening("OP01")
     narrow = opening("OP02")
     south_win = opening("OP05")
     outside = 0.06
     switch_y = door.y1 + FROM_DOOR_MM / 1000.0
-    button_x = pocket.x0 - FROM_DOOR_MM / 1000.0
     # Arrow tips: north bedside y=6.85, south bedside y=4.55, both on the east wall.
     north_bed = 6.85
     south_bed = 4.55
     # Arrow from the north-west stack ends on the west wall just under OP02.
     west_stack_y = 8.36
+    # Lower ceiling is the 2.50 m band north of the dashed step at y=7.950.
+    # It spans the main wing. The access point is centred on that width.
+    low_ceiling_south = 7.950
+    ap_x = (west_in + east_in) / 2.0
+    ap_y = (low_ceiling_south + north_in) / 2.0
     bed_x0, bed_y0, bed_x1, bed_y1 = bed_outline()
-    c7x, c7y0, c7y1 = _strip_span("C7-S")
-    c8x, c8y0, c8y1 = _strip_span("C8-S")
+    c7 = _strip_span("C7-S")
+    c8 = _strip_span("C8-S")
     rows = [
         Mark("C12-S", "1.11-L2", "light", (bed_x0 + bed_x1) / 2.0, (bed_y0 + bed_y1) / 2.0, "ceiling", "", "ceiling", "Pendant above the bed. Cable 12, 120 W."),
-        Mark("C3-S", "1.11-L4", "strip", bed_x0, bed_y0, "bed", "", "bed-edge", "LED strip under the bed, all around the outline. Cable 3."),
-        Mark("C14-W", "1.11-AP1", "light", west_in + 0.30, north_in, "wall", "ap", "513", "Access point on the north wall. Centre 513, one pitch above 442."),
+        Mark("C3-S", "1.11-L4", "strip", bed_x0, (bed_y0 + bed_y1) / 2.0, "bed", "", "bed-edge", "LED strip on the foot and the two long sides. Not the headboard."),
+        Mark("C14-W", "1.11-AP1", "light", ap_x, ap_y, "ceiling", "", "ceiling", "Access point centred on the 2.50 m ceiling north of y=7.950."),
         Mark("SOCK-EN", "1.11-Z2", "socket", east_in, north_bed, "wall", "bed-n", "750", "North bedside socket. Centre 750."),
         Mark("C4-2V", "1.11-B4", "switch", east_in, north_bed, "wall", "bed-n", "821", "North bedside switch, 71 mm above the socket."),
         Mark("C5-S", "1.11-L3", "light", east_in, north_bed, "wall", "bed-n", "892", "North bedside lamp, one pitch above the switch."),
         Mark("SOCK-ES", "1.11-Z3", "socket", east_in, south_bed, "wall", "bed-s", "750", "South bedside socket. Centre 750."),
         Mark("C1-2V", "1.11-B5", "switch", east_in, south_bed, "wall", "bed-s", "821", "South bedside switch, 71 mm above the socket."),
         Mark("C2-S", "1.11-L5", "light", east_in, south_bed, "wall", "bed-s", "892", "South bedside lamp, one pitch above the switch."),
-        Mark("C7-S", "1.11-L6", "strip", c7x, (c7y0 + c7y1) / 2.0, "strip", "", "west-strip", "LED strip, upper run on the inner west wall."),
-        Mark("C8-S", "1.11-L7", "strip", c8x, (c8y0 + c8y1) / 2.0, "strip", "", "west-strip", "LED strip, lower run on the inner west wall."),
+        Mark("C7-S", "1.11-L6", "strip", (c7[0] + c7[2]) / 2.0, (c7[1] + c7[3]) / 2.0, "strip", "", "west-rail", "Curtain-rail LED strip above the west window OP01."),
+        Mark("C8-S", "1.11-L7", "strip", (c8[0] + c8[2]) / 2.0, (c8[1] + c8[3]) / 2.0, "strip", "", "south-rail", "Curtain-rail LED strip above the south window OP05."),
         Mark("C32-V-1", "1.11-B2", "switch", box["entry_east"], switch_y, "wall", "hall-door", "1350", "Bedroom light switch, 150 mm from the latch of OP09."),
         Mark("C9-R", "1.11-P1", "sensor", box["entry_east"], switch_y, "wall", "hall-door", "in box", "mmWave inside the bedroom door switch C32-V-1."),
         Mark("C32-M", "1.11-K1", "sensor", box["entry_east"], door.y1, "frame", "", "frame", "Door contact in the latch jamb of OP09."),
         Mark("C32-V-2", "1.11-B3", "switch", box["entry_east_out"], switch_y, "corridor", "", "1350", "Hallway switch on the east face of OP09."),
-        Mark("C10-V", "1.11-B1", "switch", button_x, north_in, "wall", "pocket", "1350", "Button 150 mm from the pocket door. Not marked, left in place."),
+        Mark("C10-V", "1.11-B1", "switch", west_in, narrow.y0 - FROM_DOOR_MM / 1000.0, "wall", "west-switch", "1350", "West wall, 150 mm south of the south jamb of OP02. Centre 1350."),
         Mark("SOCK-N", "1.11-Z1", "socket", west_in, west_stack_y, "wall", "west-stack", "300", "Moved to the west wall under OP02. Centre 300."),
         Mark("SOCK-N2", "1.11-Z4", "socket", west_in, west_stack_y, "wall", "west-stack", "371", "Same place, 71 mm above SOCK-N."),
         Mark("C13-E", "1.11-D1", "outlet", west_in, west_stack_y, "wall", "west-stack", "442", "Same place, 71 mm above SOCK-N2."),
@@ -211,7 +214,9 @@ def _label_offset(mark: Mark, box: dict[str, float]) -> tuple[str, float, float]
     if mark.stack in {"bed-n", "bed-s"}:
         return "end", -14, -6
     if mark.stack == "west-stack":
-        return "start", 14, 4
+        return "start", 14, -8
+    if mark.stack == "west-switch":
+        return "start", 14, 36
     if mark.stack == "ap":
         return "start", 12, 22
     if mark.stack == "pocket":
@@ -323,10 +328,13 @@ def render_svg() -> str:
         f'<line x1="{sx(bx1):.1f}" y1="{sy(by0):.1f}" x2="{sx(bx1):.1f}" y2="{sy(by1):.1f}" '
         f'stroke="#8a5a2a" stroke-width="5"/>'
     )
+    # Foot and the two long sides. The headboard edge is bare.
     parts.append(
-        f'<rect x="{sx(bx0 + inset):.1f}" y="{sy(by1 - inset):.1f}" '
-        f'width="{(bx1 - bx0 - 2 * inset) * scale:.1f}" '
-        f'height="{(by1 - by0 - 2 * inset) * scale:.1f}" fill="none" stroke="#e07a28" stroke-width="3"/>'
+        f'<polyline points="{sx(bx1 - inset):.1f},{sy(by1 - inset):.1f} '
+        f'{sx(bx0 + inset):.1f},{sy(by1 - inset):.1f} '
+        f'{sx(bx0 + inset):.1f},{sy(by0 + inset):.1f} '
+        f'{sx(bx1 - inset):.1f},{sy(by0 + inset):.1f}" '
+        f'fill="none" stroke="#e07a28" stroke-width="3"/>'
     )
     parts.append(
         f'<text x="{sx((bx0 + bx1) / 2):.1f}" y="{sy((by0 + by1) / 2):.1f}" text-anchor="middle" '
@@ -341,13 +349,13 @@ def render_svg() -> str:
         f'fill="#c2410c" font-size="11" font-weight="600">C3-S strip</text>'
     )
     for strip_id in ("C7-S", "C8-S"):
-        sx0, y0, y1 = _strip_span(strip_id)
+        x0, y0, x1, y1 = _strip_span(strip_id)
         parts.append(
-            f'<line x1="{sx(sx0):.1f}" y1="{sy(y0):.1f}" x2="{sx(sx0):.1f}" y2="{sy(y1):.1f}" '
+            f'<line x1="{sx(x0):.1f}" y1="{sy(y0):.1f}" x2="{sx(x1):.1f}" y2="{sy(y1):.1f}" '
             f'stroke="#e07a28" stroke-width="4"/>'
         )
         parts.append(
-            f'<text x="{sx(sx0) + 6:.1f}" y="{sy((y0 + y1) / 2):.1f}" font-size="11" '
+            f'<text x="{sx((x0 + x1) / 2) + 6:.1f}" y="{sy((y0 + y1) / 2):.1f}" font-size="11" '
             f'fill="#c2410c">{strip_id}</text>'
     )
     parts.append(
@@ -489,7 +497,7 @@ def _html(svg: str) -> str:
 <body>
 <main>
   <h1>1.11 Ložnice — půdorys</h1>
-  <p class="lead">2D review drawing. The 3D boxes are the first pass and are not being moved. The bed outline is UNFINISHED placeholder furniture. North is up. <a href="PlanNotes.md">Plan notes</a> · <a href="Naming.md">Naming</a></p>
+  <p class="lead">2D review drawing. The 3D boxes are the first pass and are not being moved. The bed is 2000×1800, headboard on the east wall. North is up. <a href="PlanNotes.md">Plan notes</a> · <a href="Naming.md">Naming</a></p>
   <div class="plan">
 {svg}
   </div>
@@ -549,7 +557,7 @@ def _naming_md() -> str:
         "| W | Wi-Fi access point |",
         "| B | blind motor |",
         "",
-        "Power sockets (`SOCK-`) have a current id and no cable number: the schedule has no row, and wiring is skipped. The two outdoor lamps (`LAMP-X-`) are kept and marked UNUSED. They are not wired, not on a panel, and not counted. The bed `BED-1.11` is UNFINISHED placeholder furniture, not a device id.",
+        "Power sockets (`SOCK-`) have a current id and no cable number: the schedule has no row, and wiring is skipped. Cable 6 and cable 11 are off the plan for now. The bed `BED-1.11` is 2000×1800 and is not a device id.",
         "",
         "## Proposed scheme",
         "",

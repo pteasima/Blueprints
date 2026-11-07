@@ -116,7 +116,7 @@ lightFixtures:
           CableLength: 12
   - id: C3-S
     Name: "Pásek 3"
-    Description: "LED strip under the bed, all around the 2000×1800 outline. No box. Cable 3."
+    Description: "LED strip under the bed on the foot and the two long sides. Not along the headboard. No box. Cable 3."
     PredefinedType: USERDEFINED
     ObjectType: LedStrip
     ContainedInStructure: SP-1.11
@@ -149,7 +149,7 @@ lightFixtures:
           CableLength: 10
   - id: C7-S
     Name: "Pásek 7"
-    Description: "LED strip on the inner west wall, the upper half of the marked run. No box. Cable 7."
+    Description: "Curtain-rail LED strip above the west window OP01. No box. Cable 7."
     PredefinedType: USERDEFINED
     ObjectType: LedStrip
     ContainedInStructure: SP-1.11
@@ -161,12 +161,13 @@ lightFixtures:
           DeviceCode: S
           CableSpec: "CYKY 4x1.5"
           CableLength: 15
-          X: 0.45
-          Y0: 5.2
-          Y1: 6.95
+          X0: 0.45
+          Y0: 4.425
+          X1: 0.45
+          Y1: 6.825
   - id: C8-S
     Name: "Pásek 8"
-    Description: "LED strip on the inner west wall, the lower half of the marked run. No box. Cable 8."
+    Description: "Curtain-rail LED strip above the south window OP05. No box. Cable 8."
     PredefinedType: USERDEFINED
     ObjectType: LedStrip
     ContainedInStructure: SP-1.11
@@ -178,9 +179,10 @@ lightFixtures:
           DeviceCode: S
           CableSpec: "CYKY 4x1.5"
           CableLength: 15
-          X: 0.45
-          Y0: 3.45
-          Y1: 5.2
+          X0: 1.45
+          Y0: 3.275
+          X1: 3.7
+          Y1: 3.275
 switchingDevices:
   - id: C1-2V
     Name: "Dvojvypínač 1"
@@ -361,7 +363,7 @@ outlets:
           CableLength: 25
   - id: C14-W
     Name: "Wi-Fi 14"
-    Description: "U7 Pro on the north wall at the old socket corner. Centre 513, one 71 mm pitch above the ethernet height. Panel 1. The 3D origin is the first pass."
+    Description: "U7 Pro on the 2.50 m ceiling, centred across the main wing north of the step at y=7.950. Panel 1. The 3D origin is the first pass."
     PredefinedType: COMMUNICATIONSOUTLET
     ObjectType: WifiAccessPoint
     ContainedInStructure: SP-1.11
