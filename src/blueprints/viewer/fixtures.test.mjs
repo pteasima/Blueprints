@@ -4,13 +4,12 @@
  */
 import assert from "node:assert/strict";
 import * as THREE from "three";
+import { cappedPixelRatio, MAX_DRAWING_BUFFER_SIDE } from "./chrome.js";
 import { createTapRegistry } from "./interactions.js";
 import { SOLID_COLORS } from "./materials.js";
 import {
   FIXTURE_ROLES,
-  PALE_MIX,
   SWITCH_FLASH_MS,
-  SWITCH_GLOW,
   createFixtureController,
   matchFixtureHosts,
   paleTint,
@@ -93,6 +92,7 @@ function centerOf(mesh) {
   }
   const off = paleTint(FIXTURE_ROLES.light.on);
   assert.deepEqual(rgb(stripA), off);
+  assert.equal(stripA.material, stripB.material, "one material per role and state");
   // A device exported as a group of faces (one mesh per side) all take the tint.
   {
     const group = new THREE.Group();
@@ -132,9 +132,8 @@ function centerOf(mesh) {
   assert.equal(taps.dispatch([{ object: sw }], { now: 2000 }), true);
   assert.equal(sw.userData.bpFixture.on, true);
   assert.equal(stripA.userData.bpFixture.on, true, "a switch does not change a light");
-  const glow = sw.material;
-  assert.equal(glow.emissiveIntensity, SWITCH_GLOW);
-  assert.ok(glow.emissive && glow.emissive.r > 0.9, "active switch glows");
+  assert.deepEqual(rgb(sw), FIXTURE_ROLES.switch.on, "active switch is solid white");
+  assert.equal(sw.material.emissive, undefined, "solid mode does not add a lit shader");
   assert.equal(ctrl.step(2000 + SWITCH_FLASH_MS - 1), true);
   assert.equal(sw.userData.bpFixture.on, true);
   assert.equal(ctrl.step(2000 + SWITCH_FLASH_MS), true);
@@ -185,5 +184,33 @@ function centerOf(mesh) {
   assert.equal(host.userData.bpFixture.on, true, "the switch, not the door, took the tap");
   assert.equal(door.object.userData.bpDoor.goal, 0);
 }
+
+// Cloned colours keep the viewer's frag-depth program instead of a stock one.
+{
+  const scene = new THREE.Scene();
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.02));
+  mesh.name = "light";
+  mesh.position.set(1, 1, 0);
+  const base = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+  base.onBeforeCompile = function bpPatched() {};
+  base.customProgramCacheKey = () => "bp-patched";
+  mesh.material = base;
+  scene.add(mesh);
+  const center = new THREE.Box3().setFromObject(mesh).getCenter(new THREE.Vector3());
+  const ctrl = createFixtureController({
+    records: [{ id: "L", role: "light", center: center.toArray() }],
+  });
+  assert.equal(ctrl.bind(scene), 1);
+  ctrl.syncMaterials();
+  assert.equal(mesh.material.onBeforeCompile, base.onBeforeCompile);
+  assert.equal(mesh.material.customProgramCacheKey, base.customProgramCacheKey);
+  assert.notEqual(mesh.material, base);
+}
+
+// iPad Pro landscape at DPR 2 is a 2732px buffer. The iPhone stays under 2048.
+assert.equal(MAX_DRAWING_BUFFER_SIDE, 2048);
+assert.equal(cappedPixelRatio(393, 852, 3), 2);
+assert.ok(cappedPixelRatio(1366, 1024, 2) * 1366 <= 2048 + 1e-6);
+assert.ok(cappedPixelRatio(1366, 1024, 2) < 2);
 
 console.log("fixtures.test.mjs ok");

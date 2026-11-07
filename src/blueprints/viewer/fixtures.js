@@ -15,8 +15,7 @@
  */
 import * as THREE from "three";
 import { collectDoorHosts, worldCenter } from "./doors.js";
-import { patchMaterialForDepthPeel } from "./depthPeel.js";
-import { applyLayerDepthBias, SOLID_COLORS } from "./materials.js";
+import { SOLID_COLORS } from "./materials.js";
 
 /** Match a device centre to a record, metres. Stacked plates are 71 mm apart. */
 export const FIXTURE_MATCH_M = 0.03;
@@ -98,43 +97,26 @@ function setByteColor(color, rgb) {
 }
 
 /**
- * @param {THREE.Material} dst
- * @param {THREE.Material} src
- */
-function copyDrawState(dst, src) {
-  dst.opacity = typeof src.opacity === "number" ? src.opacity : 1;
-  dst.transparent = Boolean(src.transparent);
-  dst.depthWrite = src.depthWrite !== false;
-  dst.depthTest = src.depthTest !== false;
-  dst.clippingPlanes = src.clippingPlanes || [];
-  dst.clipIntersection = Boolean(src.clipIntersection);
-  dst.side = src.side;
-  dst.polygonOffset = Boolean(src.polygonOffset);
-  dst.polygonOffsetFactor = src.polygonOffsetFactor || 0;
-  dst.polygonOffsetUnits = src.polygonOffsetUnits || 0;
-}
-
-/**
- * Solid white plus a soft emissive, for the switch flash in unlit Solid mode.
- * Realistic mode already has `emissive` on the cloned standard material.
+ * `Material.clone` does not copy `onBeforeCompile`. Copying only the colour
+ * left every fixture face on a stock log-depth program while the rest of the
+ * model kept the frag-depth patch. That second program, on a full iPad
+ * framebuffer, is what WebKit lost. One variant per role and on/off state
+ * keeps the patched program and the colour uniform.
  * @param {THREE.Material} base
+ * @param {number[]} rgb
+ * @param {boolean} glow
  */
-function makeGlow(base) {
-  const mat = new THREE.MeshStandardMaterial({
-    color: new THREE.Color(1, 1, 1),
-    emissive: new THREE.Color(1, 1, 1),
-    emissiveIntensity: SWITCH_GLOW,
-    roughness: 0.35,
-    metalness: 0,
-    side: base.side ?? THREE.DoubleSide,
-    toneMapped: false,
-  });
+function variantFrom(base, rgb, glow) {
+  const mat = base.clone();
+  mat.onBeforeCompile = base.onBeforeCompile;
+  mat.customProgramCacheKey = base.customProgramCacheKey;
   mat.userData.bpFixtureOwned = true;
-  copyDrawState(mat, base);
-  mat.toneMapped = false;
-  const bias = base.userData?.layerDepthBias || 0;
-  applyLayerDepthBias(mat, bias);
-  patchMaterialForDepthPeel(mat);
+  if (mat.color) setByteColor(mat.color, rgb);
+  if (glow && mat.emissive) {
+    mat.emissive.setRGB(1, 1, 1);
+    mat.emissiveIntensity = SWITCH_GLOW;
+    mat.toneMapped = false;
+  }
   return mat;
 }
 
@@ -145,7 +127,32 @@ export function createFixtureController(opts = {}) {
   const records = Array.isArray(opts.records) ? opts.records : [];
   /** @type {object[]} */
   const bindings = [];
+  /** @type {Map<string, THREE.Material>} */
+  const variants = new Map();
   let paintDirty = false;
+
+  function disposeVariants() {
+    for (const mat of variants.values()) mat.dispose?.();
+    variants.clear();
+  }
+
+  /**
+   * @param {THREE.Material} base
+   * @param {string} roleName
+   * @param {boolean} on
+   */
+  function variantFor(base, roleName, on) {
+    const role = FIXTURE_ROLES[roleName];
+    const shader = base.customProgramCacheKey ? base.customProgramCacheKey() : base.type;
+    const key = `${base.type}|${shader}|${roleName}|${on ? 1 : 0}`;
+    let mat = variants.get(key);
+    if (!mat) {
+      const rgb = on ? role.on : paleTint(role.on);
+      mat = variantFrom(base, rgb, Boolean(on && role.glow));
+      variants.set(key, mat);
+    }
+    return mat;
+  }
 
   /**
    * @param {THREE.Object3D | null | undefined} obj
@@ -190,48 +197,8 @@ export function createFixtureController(opts = {}) {
     const role = FIXTURE_ROLES[binding.role];
     if (!binding.meshes?.length) binding.meshes = meshesOf(binding.host);
     const meshes = binding.meshes || [];
-    if (!role || !meshes.length) return;
-    const sample = meshes.find((mesh) => mesh.material) || meshes[0];
-    const current = sample.material;
-    if (current && !current.userData?.bpFixtureOwned) {
-      binding.base = current;
-      binding.owned = null;
-      if (binding.glow) {
-        binding.glow.dispose?.();
-        binding.glow = null;
-      }
-    }
-    const base = binding.base || current;
-    if (!base) return;
-    const rgb = binding.on ? role.on : paleTint(role.on);
-    const wantGlow = Boolean(binding.on && role.glow);
-    if (wantGlow && !base.emissive) {
-      if (!binding.glow) binding.glow = makeGlow(base);
-      copyDrawState(binding.glow, base);
-      binding.glow.toneMapped = false;
-      binding.glow.emissiveIntensity = SWITCH_GLOW;
-      assign(binding, binding.glow);
-      return;
-    }
-    if (!binding.owned || binding.ownedSource !== base) {
-      binding.owned = base.clone();
-      binding.owned.userData.bpFixtureOwned = true;
-      binding.ownedSource = base;
-    }
-    const mat = binding.owned;
-    if (mat.color) setByteColor(mat.color, rgb);
-    if (mat.emissive) {
-      if (wantGlow) {
-        mat.emissive.setRGB(1, 1, 1);
-        mat.emissiveIntensity = SWITCH_GLOW;
-        mat.toneMapped = false;
-      } else {
-        mat.emissive.setRGB(0, 0, 0);
-        mat.emissiveIntensity = 1;
-        mat.toneMapped = base.toneMapped !== false;
-      }
-    }
-    assign(binding, mat);
+    if (!role || !meshes.length || !binding.base) return;
+    assign(binding, variantFor(binding.base, binding.role, Boolean(binding.on)));
   }
 
   /**
@@ -285,9 +252,6 @@ export function createFixtureController(opts = {}) {
         on: false,
         until: null,
         base: null,
-        owned: null,
-        ownedSource: null,
-        glow: null,
       };
       const tag = (obj) => {
         obj.userData.bpFixture = binding;
@@ -302,6 +266,13 @@ export function createFixtureController(opts = {}) {
    * Re-apply colours after a material-mode rebuild. Call after `applyMaterialMode`.
    */
   function syncMaterials() {
+    disposeVariants();
+    for (const binding of bindings) {
+      const sample = binding.meshes?.find(
+        (mesh) => mesh.material && !mesh.material.userData?.bpFixtureOwned,
+      );
+      if (sample) binding.base = sample.material;
+    }
     for (const binding of bindings) paint(binding);
   }
 
