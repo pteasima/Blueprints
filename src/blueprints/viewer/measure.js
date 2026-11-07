@@ -12,6 +12,7 @@
  * foot onto the opposite edge and shows a right-angle mark.
  */
 import * as THREE from "three";
+import { isHitProxy } from "./interactions.js";
 
 const DRAG_PX = 8;
 const TOUCH_OFFSET_PX = 56;
@@ -417,7 +418,7 @@ export function createMeasureTool(opts) {
     /** @type {THREE.Intersection | null} */
     let hit = null;
     for (const h of hits) {
-      if (!h.object.visible) continue;
+      if (!h.object.visible || isHitProxy(h.object)) continue;
       if (!passesClip(h.point)) continue;
       hit = h;
       break;

@@ -6,10 +6,16 @@
  * is a right-handed 90° turn about glTF +Y (CAD +Z). Width, hinge side, and
  * swing direction are resolved in the model; this file only plays them.
  *
+ * An open leaf leaves its closed rectangle empty. That rectangle is a hit
+ * proxy kept out of the scene: a tap through it closes the door, unless the
+ * same ray hits any registered interactive (the leaf, or a later switch).
+ * Walls and other non-interactive geometry never block that close.
+ *
  * Pocket and sliding leaves are not records with kind "hinged".
  * TODO: slide those (obývák gable pockets, garage D5/D6) instead of ignoring them.
  */
 import * as THREE from "three";
+import { createTapRegistry, isHitProxy } from "./interactions.js";
 
 /** Movement past this is a camera drag, not a tap. */
 export const TAP_PX = 12;
@@ -19,6 +25,11 @@ export const DOOR_SWING_MS = 500;
 export const DOOR_SWING_RAD = Math.PI / 2;
 /** Match a leaf centre to a record, metres. */
 export const DOOR_MATCH_M = 0.03;
+/**
+ * Swing fraction above which the closed-leaf proxy can close the door.
+ * A settled shut leaf stays on the mesh raycast and toggles open instead.
+ */
+export const OPENING_LIVE = 1e-3;
 
 /**
  * @param {number} t 0–1
@@ -352,6 +363,202 @@ export function toggleDoor(binding, now) {
 }
 
 /**
+ * Swing shut. A door that is already closing stays on that animation.
+ * @param {{ goal: number, anim: { from: number, to: number, t0: number } | null }} binding
+ * @param {number} now
+ * @returns {boolean}
+ */
+export function closeDoor(binding, now) {
+  const current = sampleDoor(binding, now);
+  if (current <= 1e-3) return false;
+  if (binding.goal > 0.5) {
+    binding.goal = 0;
+    binding.anim = { from: current, to: 0, t0: now };
+  }
+  return true;
+}
+
+const _corner = new THREE.Vector3();
+const proxyMaterial = new THREE.MeshBasicMaterial({
+  side: THREE.DoubleSide,
+  transparent: true,
+  opacity: 0,
+  depthWrite: false,
+});
+
+/**
+ * Closed-leaf box in world space. Captured while the leaf is shut; the proxy
+ * stays there after the leaf swings.
+ * @param {THREE.Object3D} host
+ * @returns {{ center: THREE.Vector3, axes: THREE.Vector3[], half: number[] } | null}
+ */
+export function hostClosedObb(host) {
+  /** @type {THREE.Mesh[]} */
+  const meshes = [];
+  host.updateWorldMatrix(true, true);
+  host.traverse((obj) => {
+    if (obj.isMesh && obj.geometry?.getAttribute?.("position")) meshes.push(obj);
+  });
+  if (!meshes.length) return null;
+  const x = new THREE.Vector3();
+  const y = new THREE.Vector3();
+  const z = new THREE.Vector3();
+  meshes[0].updateWorldMatrix(true, false);
+  meshes[0].matrixWorld.extractBasis(x, y, z);
+  if (x.lengthSq() < 1e-12 || y.lengthSq() < 1e-12 || z.lengthSq() < 1e-12) return null;
+  x.normalize();
+  y.normalize();
+  z.normalize();
+  let minX = Infinity;
+  let minY = Infinity;
+  let minZ = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  let maxZ = -Infinity;
+  for (const mesh of meshes) {
+    const geom = mesh.geometry;
+    if (!geom.boundingBox) geom.computeBoundingBox();
+    const bb = geom.boundingBox;
+    const xs = [bb.min.x, bb.max.x];
+    const ys = [bb.min.y, bb.max.y];
+    const zs = [bb.min.z, bb.max.z];
+    for (const cx of xs) {
+      for (const cy of ys) {
+        for (const cz of zs) {
+          _corner.set(cx, cy, cz).applyMatrix4(mesh.matrixWorld);
+          const lx = _corner.dot(x);
+          const ly = _corner.dot(y);
+          const lz = _corner.dot(z);
+          if (lx < minX) minX = lx;
+          if (ly < minY) minY = ly;
+          if (lz < minZ) minZ = lz;
+          if (lx > maxX) maxX = lx;
+          if (ly > maxY) maxY = ly;
+          if (lz > maxZ) maxZ = lz;
+        }
+      }
+    }
+  }
+  const half = [(maxX - minX) / 2, (maxY - minY) / 2, (maxZ - minZ) / 2];
+  if (half.some((h) => !(h > 1e-6))) return null;
+  const cx = (minX + maxX) / 2;
+  const cy = (minY + maxY) / 2;
+  const cz = (minZ + maxZ) / 2;
+  const center = new THREE.Vector3(
+    x.x * cx + y.x * cy + z.x * cz,
+    x.y * cx + y.y * cy + z.y * cz,
+    x.z * cx + y.z * cy + z.z * cz,
+  );
+  return { center, axes: [x, y, z], half };
+}
+
+/**
+ * Invisible box for the closed leaf. Not parented. `raycast` is a no-op so a
+ * scene raycast (orbit pivot, Measure) cannot hit it; the tap path uses
+ * {@link rayObb} on the stored box instead.
+ * @param {{ center: THREE.Vector3, axes: THREE.Vector3[], half: number[] }} obb
+ * @param {string} [name]
+ */
+export function proxyMeshFromObb(obb, name) {
+  const geom = new THREE.BoxGeometry(obb.half[0] * 2, obb.half[1] * 2, obb.half[2] * 2);
+  const mesh = new THREE.Mesh(geom, proxyMaterial);
+  mesh.name = name || "opening";
+  mesh.matrix.makeBasis(obb.axes[0], obb.axes[1], obb.axes[2]);
+  mesh.matrix.setPosition(obb.center);
+  mesh.matrixAutoUpdate = false;
+  mesh.matrixWorld.copy(mesh.matrix);
+  mesh.matrixWorldNeedsUpdate = false;
+  mesh.visible = false;
+  mesh.frustumCulled = false;
+  mesh.userData.bpHitProxy = true;
+  mesh.raycast = () => {};
+  return mesh;
+}
+
+/**
+ * Slab test. `tEnter` may be negative when the ray starts inside the box.
+ * @param {THREE.Ray} ray
+ * @param {{ center: THREE.Vector3, axes: THREE.Vector3[], half: number[] }} obb
+ * @returns {{ tEnter: number, tExit: number } | null}
+ */
+export function rayObb(ray, obb) {
+  const origin = ray.origin;
+  const dir = ray.direction;
+  let tMin = 0;
+  let tMax = Infinity;
+  for (let i = 0; i < 3; i++) {
+    const axis = obb.axes[i];
+    const e =
+      axis.x * (obb.center.x - origin.x) +
+      axis.y * (obb.center.y - origin.y) +
+      axis.z * (obb.center.z - origin.z);
+    const f = axis.x * dir.x + axis.y * dir.y + axis.z * dir.z;
+    const h = obb.half[i];
+    if (Math.abs(f) > 1e-8) {
+      let t1 = (e + h) / f;
+      let t2 = (e - h) / f;
+      if (t1 > t2) {
+        const swap = t1;
+        t1 = t2;
+        t2 = swap;
+      }
+      if (t1 > tMin) tMin = t1;
+      if (t2 < tMax) tMax = t2;
+      if (tMin > tMax) return null;
+    } else if (-e - h > 0 || -e + h < 0) {
+      return null;
+    }
+  }
+  if (tMax < 0) return null;
+  return { tEnter: tMin, tExit: tMax };
+}
+
+/**
+ * Nearest open doorway the ray already crossed.
+ * @param {{ binding: object, tEnter: number }[]} crossed
+ */
+export function chooseOpeningAction(crossed) {
+  if (!crossed.length) return null;
+  let best = crossed[0];
+  for (const item of crossed) {
+    if (item.tEnter < best.tEnter) best = item;
+  }
+  return best.binding;
+}
+
+/**
+ * @param {THREE.Object3D | null | undefined} obj
+ */
+function bindingOf(obj) {
+  let node = obj;
+  while (node) {
+    if (node.userData?.bpDoor && !isHitProxy(node)) return node.userData.bpDoor;
+    node = node.parent;
+  }
+  return null;
+}
+
+/**
+ * @param {{ object?: THREE.Object3D }} hit
+ */
+function isDoorPickSolid(hit) {
+  const obj = hit.object;
+  if (!obj || !obj.visible || isHitProxy(obj)) return false;
+  const ud = obj.userData;
+  if (ud && (ud.isEdgeOverlay || ud.isSectionCap)) return false;
+  return true;
+}
+
+/**
+ * @param {object} binding
+ */
+function releaseProxy(binding) {
+  binding.proxy?.geometry?.dispose?.();
+  binding.proxy = null;
+  binding.obb = null;
+}
+
+/**
  * Pointer handling plus hinge pivots. Call `bind` after the GLB is in the scene.
  * @param {{
  *   canvas: HTMLCanvasElement,
@@ -371,8 +578,42 @@ export function createDoorController(opts) {
   /** @type {{ id: number, x: number, y: number, moved: number, pointers: number } | null} */
   let gesture = null;
   let pointersDown = 0;
+  const taps = createTapRegistry();
+  // Leaf claims beat the opening fallback. A later switch registers a claim
+  // of its own; the nearest claimed solid wins, wherever it sits on the ray.
+  taps.register({
+    id: "door",
+    priority: 100,
+    claim(hit, ctx) {
+      const binding = bindingOf(hit.object);
+      if (!binding) return null;
+      return {
+        onTap() {
+          toggleDoor(binding, ctx.now);
+        },
+      };
+    },
+  });
+  taps.register({
+    id: "opening",
+    priority: 10,
+    fallback(_solids, ctx) {
+      /** @type {{ binding: object, tEnter: number }[]} */
+      const crossed = [];
+      for (const door of bindings) {
+        if (!door.obb || sampleDoor(door, ctx.now) <= OPENING_LIVE) continue;
+        const span = rayObb(ctx.raycaster.ray, door.obb);
+        if (!span) continue;
+        crossed.push({ binding: door, tEnter: span.tEnter });
+      }
+      const binding = chooseOpeningAction(crossed);
+      if (!binding) return false;
+      return closeDoor(binding, ctx.now);
+    },
+  });
 
   function bind(root) {
+    for (const binding of bindings) releaseProxy(binding);
     bindings.length = 0;
     if (!root || !records.length) return 0;
     root.updateWorldMatrix(true, true);
@@ -380,7 +621,11 @@ export function createDoorController(opts) {
     const entries = hosts.map((host) => ({ host, center: worldCenter(host) }));
     for (const pair of matchDoorHosts(entries, records)) {
       const binding = bindHinge(pair.entry.host, pair.record);
-      if (binding) bindings.push(binding);
+      if (!binding) continue;
+      const obb = hostClosedObb(binding.host);
+      binding.obb = obb;
+      binding.proxy = obb ? proxyMeshFromObb(obb, `opening:${binding.id}`) : null;
+      bindings.push(binding);
     }
     return bindings.length;
   }
@@ -470,26 +715,12 @@ export function createDoorController(opts) {
     const sceneRoot = bindings[0]?.pivot?.parent;
     // Raycast the whole loaded model, not only the pivot parent (a door may
     // sit behind another part). The pivot's parent is the glTF root.
+    // Opening proxies are not in this graph.
     let top = sceneRoot;
     while (top?.parent) top = top.parent;
     if (!top) return;
     const hits = raycaster.intersectObject(top, true);
-    for (const hit of hits) {
-      const obj = hit.object;
-      if (!obj.visible) continue;
-      if (obj.userData?.isEdgeOverlay || obj.userData?.isSectionCap) continue;
-      let node = obj;
-      let binding = null;
-      while (node) {
-        if (node.userData?.bpDoor) {
-          binding = node.userData.bpDoor;
-          break;
-        }
-        node = node.parent;
-      }
-      if (binding) toggleDoor(binding, performance.now());
-      return;
-    }
+    taps.dispatch(hits, { raycaster, now: performance.now() }, isDoorPickSolid);
   }
 
   canvas.addEventListener("pointerdown", onPointerDown, true);
@@ -497,5 +728,5 @@ export function createDoorController(opts) {
   canvas.addEventListener("pointerup", onPointerUp, true);
   canvas.addEventListener("pointercancel", onPointerCancel, true);
 
-  return { bind, step, bindings };
+  return { bind, step, bindings, taps };
 }

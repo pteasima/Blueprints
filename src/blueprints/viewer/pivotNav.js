@@ -20,6 +20,7 @@
  */
 import * as THREE from "three";
 import { TAP_PX } from "./doors.js";
+import { isHitProxy } from "./interactions.js";
 
 /** Closer than this, a 5% zoom step is only millimetres. Metres. */
 export const PIVOT_STALL_M = 0.3;
@@ -208,7 +209,7 @@ export function pickSurface(canvas, camera, root, clientX, clientY) {
   camera.getWorldDirection(_viewDir);
   for (const hit of hits) {
     const obj = hit.object;
-    if (!obj.visible) continue;
+    if (!obj.visible || isHitProxy(obj)) continue;
     const ud = obj.userData;
     if (ud && (ud.isEdgeOverlay || ud.isSectionCap || ud.isPeeledEdgeBatch)) continue;
     if (!pointKept(obj, hit.point)) continue;
