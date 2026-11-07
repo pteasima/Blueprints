@@ -111,7 +111,7 @@ The drawing cites the short name.
 
 ## Room 1.11, as answered
 
-Cable 12 is the pendant above the bed. Cable 3 is the LED strip under the bed, all around that outline. Cable 6 is one 8-core cable for the single button and the double button in the same outdoor stack. Cable 32 is the contact and the two switches of OP09, the hinged door between the entry and the corridor. Cable 16 is the blind for the narrow west window. The access point is on the bedroom ceiling. The mmWave is inside the bedroom light-switch box. The bedroom is the L in `rooms/1.11-geometry.md`, 22.98 m².
+Cable 12 is the 120 W pendant above the bed. Cable 3 is the LED strip under the bed, all around the 2000×1800 outline. Cable 32 is the contact and the two switches of OP09. Cable 16 stays the blind for the narrow west window. Cable 6 and cable 11 are off the plan for now. The bed is 2000 mm by 1800 mm with the headboard on the east wall. Each bedside stack is a socket at 750, a switch at 821, and a lamp at 892. C7 and C8 are LED strips on the inner west wall. The access point is on the north wall at 513 mm. The bedroom outline is the L in `rooms/1.11-geometry.md`, 22.98 m².
 
 Power sockets have no cable number and no circuit. They are positions only. The two outdoor lamps stay where they were and are marked UNUSED. The west lamp's cable number is still a TODO.
 

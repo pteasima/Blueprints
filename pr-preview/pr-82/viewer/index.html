@@ -58,7 +58,7 @@
 </aside>
 <pre id="err"></pre>
 <canvas id="c"></canvas>
-<script src="viewer.iife.js?v=fcdd926765"></script>
+<script src="viewer.iife.js?v=dcabc04f2e"></script>
 <script>
 (function () {
   const errEl = document.getElementById("err");
@@ -76,34 +76,32 @@
   const canvas = document.getElementById("c");
   const scenesUrl = "../models/" + encodeURIComponent(id) + ".scenes.json";
   const partsUrl = "../models/" + encodeURIComponent(id) + ".parts.json";
+  const doorsUrl = "../models/" + encodeURIComponent(id) + ".doors.json";
+  function loadJsonArray(url) {
+    return fetch(url).then(function (r) {
+      if (r.status === 404) return [];
+      if (!r.ok) throw new Error(url + " HTTP " + r.status);
+      return r.json().then(function (data) {
+        return Array.isArray(data) ? data : [];
+      });
+    }).catch(function () {
+      return [];
+    });
+  }
   Promise.all([
     fetch("../models/" + encodeURIComponent(id) + ".glb").then(function (r) {
       if (!r.ok) throw new Error("GLB HTTP " + r.status);
       return r.arrayBuffer();
     }),
-    fetch(scenesUrl).then(function (r) {
-      if (r.status === 404) return [];
-      if (!r.ok) throw new Error("scenes HTTP " + r.status);
-      return r.json().then(function (data) {
-        return Array.isArray(data) ? data : [];
-      });
-    }).catch(function () {
-      return [];
-    }),
-    fetch(partsUrl).then(function (r) {
-      if (r.status === 404) return [];
-      if (!r.ok) throw new Error("parts HTTP " + r.status);
-      return r.json().then(function (data) {
-        return Array.isArray(data) ? data : [];
-      });
-    }).catch(function () {
-      return [];
-    }),
+    loadJsonArray(scenesUrl),
+    loadJsonArray(partsUrl),
+    loadJsonArray(doorsUrl),
   ])
-    .then(function (triple) {
-      BlueprintsViewerBundle.mountViewer(canvas, triple[0], {
-        scenes: triple[1],
-        partGroups: triple[2],
+    .then(function (loaded) {
+      BlueprintsViewerBundle.mountViewer(canvas, loaded[0], {
+        scenes: loaded[1],
+        partGroups: loaded[2],
+        doors: loaded[3],
       });
     })
     .catch(function (e) {
