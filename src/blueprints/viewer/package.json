@@ -7,9 +7,9 @@
     "build": "esbuild main.js --bundle --format=iife --global-name=BlueprintsViewerBundle --outfile=viewer.iife.js --minify"
   },
   "dependencies": {
-    "three": "0.172.0"
+    "three": "0.187.0"
   },
   "devDependencies": {
-    "esbuild": "0.25.0"
+    "esbuild": "0.28.2"
   }
 }

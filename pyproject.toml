@@ -5,30 +5,32 @@ description = "Parametric 2D/3D house models (build123d) for the pteasima Bluepr
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "build123d>=0.9",
-    "cairosvg>=2.7",
-    "usd-core>=24.8",
-    "openpyxl>=3.1",
-    "PyYAML>=6.0",
-    # yaml-ifc (vendored under vendor/yaml-ifc) at 0f96c26. 0.8.5 is what
-    # that commit tests against. shapely 2.2.0 is what its tiling code imports.
-    "ifcopenshell==0.8.5",
+    "build123d>=0.13.0",
+    "cairosvg>=2.9.1",
+    "usd-core>=26.11",
+    "openpyxl>=3.1.5",
+    "PyYAML>=6.0.3",
+    # yaml-ifc is vendored under vendor/yaml-ifc at 0f96c26. Upstream is
+    # private, so that tree is not bumped here. shapely 2.2.0 is current
+    # stable and what its tiling code imports. ifcopenshell tracks the
+    # current stable wheel; the test suite is the check against that copy.
+    "ifcopenshell==0.9.0.post1",
     "shapely==2.2.0",
     # Room-wave acoustics. Gmsh's wheel still needs libglu1-mesa on the system.
-    "gmsh>=4.12",
-    "matplotlib>=3.8",
+    "gmsh>=4.15.2",
+    "matplotlib>=3.11.2",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.0",
+    "pytest>=9.2.0",
 ]
 
 [project.scripts]
 bp-export = "blueprints.cli:main"
 
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=84.2"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]

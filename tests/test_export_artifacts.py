@@ -130,6 +130,13 @@ def test_build_preview_hub_script(tmp_path, monkeypatch):
     assert 'href="viewer/?m=demo"' in html
     assert 'rel="ar"' not in html
     assert "data:model/vnd.usdz+zip;base64," not in html
+    # iPadOS blanks the hub when GPU DOM rendering is off if these are present.
+    lowered = html.lower()
+    assert "backdrop-filter" not in lowered
+    assert "radial-gradient" not in lowered
+    assert "background-attachment" not in lowered
+    assert "box-shadow" not in lowered
+    assert "prefers-color-scheme: dark" in lowered
 
 
 def test_ensure_viewer_shell_cache_busts_iife(tmp_path, monkeypatch):
