@@ -19,6 +19,7 @@ import {
   noteLines,
   pathTo,
   rowIndent,
+  rowTapEffect,
   subtreeIds,
   visibleRange,
 } from "./ifcTree.js";
@@ -157,6 +158,10 @@ assert.deepEqual(meshIdentity("masonry_3"), { part: "masonry", element: null });
 assert.deepEqual(meshIdentity("masonry__W-001__"), { part: "masonry", element: "W-001" });
 assert.deepEqual(meshIdentity("masonry__W-001___1"), { part: "masonry", element: "W-001" });
 assert.deepEqual(meshIdentity("switch__C9-1__"), { part: "switch", element: "C9-1" });
+assert.equal(rowTapEffect(null, "w"), "pulse");
+assert.equal(rowTapEffect("sp", "w"), "pulse");
+assert.equal(rowTapEffect("w", "w"), "frame");
+
 assert.deepEqual(meshIdentity("door"), { part: "door", element: null });
 
 const wallNode = { name: "masonry__W-001__" };

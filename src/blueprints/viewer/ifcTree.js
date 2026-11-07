@@ -198,6 +198,17 @@ export function formatValue(value) {
 /**
  * @param {object | null | undefined} element
  */
+/**
+ * First tap on a row pulses. A second tap on the row that is already
+ * selected moves the camera.
+ * @param {string | null | undefined} focusedId
+ * @param {string} tappedId
+ * @returns {"pulse" | "frame"}
+ */
+export function rowTapEffect(focusedId, tappedId) {
+  return focusedId && focusedId === tappedId ? "frame" : "pulse";
+}
+
 export function dimensionLines(element) {
   if (!element) return [];
   return (element.dimensions || [])

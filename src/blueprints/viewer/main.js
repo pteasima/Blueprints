@@ -2310,7 +2310,10 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       // visible band above the sheet. Wide layout has only an open pane.
       chromeApi?.setDetent(wide ? "open" : "partial");
     },
-    onFrame: (id) => frameElement(id),
+    onFrame: (id, detail) => {
+      if (detail?.move) frameElement(id);
+      else pulseElement(id);
+    },
     onVisibility: () => applyInspectorVisibility(),
     actionsFor: () => [],
   });
@@ -2370,29 +2373,84 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     return box3;
   }
 
+  const CAM_FLY_MS = 480;
+  /** @type {{ t0: number, fromPos: THREE.Vector3, toPos: THREE.Vector3, fromTarget: THREE.Vector3, toTarget: THREE.Vector3, span: number } | null} */
+  let camFly = null;
+
+  function easeInOutCubic(t) {
+    const x = Math.min(1, Math.max(0, t));
+    return x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2;
+  }
+
+  /**
+   * End pose for framing `box3`, keeping the current view direction.
+   * @param {THREE.Box3} box3
+   */
+  function framePose(box3) {
+    const fit = box3.getSize(_corner);
+    const span = Math.max(fit.x, fit.y, fit.z, 0.2);
+    const center = box3.getCenter(new THREE.Vector3());
+    const dir = camera.position.clone().sub(controls.target);
+    if (dir.lengthSq() < 1e-8) dir.set(0.75, 0.55, 0.75);
+    else dir.normalize();
+    let dist;
+    if (camera.isOrthographicCamera) {
+      dist = Math.max(camera.position.distanceTo(controls.target), span * 1.4);
+    } else {
+      const vFov = ((camera.fov || 45) * Math.PI) / 180;
+      dist = Math.max((span * 0.62) / Math.max(Math.tan(vFov / 2), 1e-3), span * 1.25);
+    }
+    return { center, position: center.clone().addScaledVector(dir, dist), span };
+  }
+
+  /**
+   * @param {ReturnType<typeof framePose>} pose
+   */
+  function flyCamera(pose) {
+    camFly = {
+      t0: performance.now(),
+      fromPos: camera.position.clone(),
+      toPos: pose.position,
+      fromTarget: controls.target.clone(),
+      toTarget: pose.center,
+      span: pose.span,
+    };
+    viewDirty = true;
+  }
+
+  function stepCamFly(now) {
+    if (!camFly) return;
+    const t = Math.min(1, (now - camFly.t0) / CAM_FLY_MS);
+    const e = easeInOutCubic(t);
+    camera.position.lerpVectors(camFly.fromPos, camFly.toPos, e);
+    controls.target.lerpVectors(camFly.fromTarget, camFly.toTarget, e);
+    if (camera.isOrthographicCamera) sizeOrthoToContent(camFly.span * 0.62, camFly.span * 0.62);
+    suppressCameraChange = true;
+    controls.update();
+    updateBox();
+    updateCameraClipPlanes();
+    viewDirty = true;
+    if (t >= 1) {
+      camFly = null;
+      requestAnimationFrame(() => {
+        suppressCameraChange = false;
+      });
+    }
+  }
+
+  function pulseElement(id) {
+    const meshes = meshesForElement(ifcIndex.elements[id]);
+    if (meshes.length) startPulse(meshes);
+    viewDirty = true;
+  }
+
   function frameElement(id) {
     const element = ifcIndex.elements[id];
     const meshes = meshesForElement(element);
     if (!meshes.length) return;
     const box3 = worldBoxOf(meshes);
     if (box3.isEmpty()) return;
-    const fit = box3.getSize(_corner);
-    const span = Math.max(fit.x, fit.y, fit.z, 0.2);
-    withSuppressedCameraChange(() => {
-      box3.getCenter(controls.target);
-      if (camera.isOrthographicCamera) {
-        sizeOrthoToContent(span * 0.62, span * 0.62);
-        const dist = Math.max(camera.position.distanceTo(controls.target), span * 1.4);
-        setCameraDistance(dist);
-      } else {
-        const vFov = ((camera.fov || 45) * Math.PI) / 180;
-        const dist = Math.max((span * 0.62) / Math.max(Math.tan(vFov / 2), 1e-3), span * 1.25);
-        setCameraDistance(dist);
-      }
-      updateBox();
-      updateCameraClipPlanes();
-      controls.update();
-    });
+    flyCamera(framePose(box3));
     startPulse(meshes);
     viewDirty = true;
   }
@@ -2668,6 +2726,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     const now = performance.now();
     if (doorCtrl.step(now)) viewDirty = true;
     stepPulse(now);
+    stepCamFly(now);
     stepFrameAnim(now);
     controls.update();
     // Keep near/far tight as orbit distance changes.

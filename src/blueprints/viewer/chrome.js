@@ -890,7 +890,27 @@ canvas {
 }
 .ifc-popover[hidden], .ifc-menu[hidden] { display: none; }
 .ifc-pop-id { display: flex; align-items: flex-start; gap: 0.4rem; }
-.ifc-pop-gid { min-width: 0; flex: 1; }
+.ifc-pop-title {
+  appearance: none;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.ifc-name {
+  margin-top: 0.05rem;
+  font-size: 1.05rem;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
 .ifc-kicker {
   color: var(--fg-secondary);
   font-size: 0.68rem;

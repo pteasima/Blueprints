@@ -15,6 +15,7 @@ import {
   noteLines,
   pathTo,
   rowIndent,
+  rowTapEffect,
   visibleRange,
 } from "./ifcTree.js";
 import { LONG_PRESS_MS, classifyHold } from "./gesture.js";
@@ -282,10 +283,11 @@ export function mountIfcInspector(opts) {
   let lastSelectAt = 0;
   function selectRow(id) {
     const now = performance.now();
-    if (now - lastSelectAt < 450) return;
+    if (now - lastSelectAt < 40) return;
     lastSelectAt = now;
+    const effect = rowTapEffect(focusId, id);
     focusId = id;
-    opts.onFrame(id);
+    opts.onFrame(id, { move: effect === "frame" });
     flash(id);
     renderCrumbs();
   }
@@ -484,15 +486,37 @@ export function mountIfcInspector(opts) {
     } else {
       const idRow = document.createElement("div");
       idRow.className = "ifc-pop-id";
-      const idText = document.createElement("div");
-      idText.className = "ifc-pop-gid";
+      const title = document.createElement("button");
+      title.type = "button";
+      title.className = "ifc-pop-title";
       const kicker = document.createElement("div");
       kicker.className = "ifc-kicker";
-      kicker.textContent = opts.t("ui.globalId");
       const value = document.createElement("div");
-      value.className = "ifc-gid";
-      value.textContent = element.globalId || "";
-      idText.append(kicker, value);
+      value.className = "ifc-name";
+      const name = element.name || element.id || "";
+      const gid = element.globalId || "";
+      let showId = false;
+      let titleAt = 0;
+      const paintTitle = () => {
+        kicker.hidden = !showId;
+        kicker.textContent = showId ? opts.t("ui.globalId") : "";
+        value.textContent = showId ? gid : name;
+        value.className = showId ? "ifc-gid" : "ifc-name";
+        title.setAttribute("aria-label", showId ? name : opts.t("ui.globalId"));
+      };
+      const swapTitle = (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const now = performance.now();
+        if (now - titleAt < 80) return;
+        titleAt = now;
+        showId = !showId;
+        paintTitle();
+      };
+      paintTitle();
+      title.append(kicker, value);
+      title.addEventListener("touchend", swapTitle);
+      title.addEventListener("click", swapTitle);
       const reveal = document.createElement("button");
       reveal.type = "button";
       reveal.className = "ifc-reveal";
@@ -504,10 +528,9 @@ export function mountIfcInspector(opts) {
         closePopover();
         revealElement(element.globalId);
       });
-      idRow.append(idText, reveal);
+      idRow.append(title, reveal);
       pop.append(idRow);
       addLine(opts.t("ui.type"), element.type || "");
-      addLine(opts.t("ui.name"), element.name || element.id || "");
       const where = containmentOf(opts.index, element.globalId);
       if (where.storey) addLine(opts.t("ui.storey"), where.storey.name || where.storey.id);
       if (where.space) addLine(opts.t("ui.space"), where.space.name || where.space.id);
