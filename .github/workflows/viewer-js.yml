@@ -1,0 +1,55 @@
+# Viewer JS tests (`src/blueprints/viewer/*.test.mjs`). Node only, no apt
+# packages, so this keeps running while the pytest workflow is paused
+# (AGENTS.md, Tests). First part of docs/TestSuitePlan.md item 2.
+name: viewer-js
+
+on:
+  pull_request:
+    paths:
+      - "src/blueprints/viewer/**"
+      - ".github/workflows/viewer-js.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/blueprints/viewer/**"
+      - ".github/workflows/viewer-js.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/blueprints/viewer
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Install viewer dependencies
+        run: npm ci
+
+      # layerDepthBias.test.mjs imports EDGE_FRAG_DEPTH_BIAS, which edges.js no
+      # longer exports; docs/TestSuitePlan.md item 2 says fix or delete it.
+      - name: Run viewer tests
+        run: |
+          set -euo pipefail
+          for f in *.test.mjs; do
+            if [[ "$f" == "layerDepthBias.test.mjs" ]]; then
+              echo "skip $f (known broken, docs/TestSuitePlan.md)"
+              continue
+            fi
+            echo "::group::$f"
+            node "$f"
+            echo "::endgroup::"
+          done
+
+      - name: Committed bundle matches the sources
+        run: |
+          set -euo pipefail
+          npm run build
+          git diff --exit-code -- viewer.iife.js

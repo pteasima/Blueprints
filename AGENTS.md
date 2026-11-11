@@ -146,6 +146,8 @@ GitHub Actions runs this suite on pull requests and on pushes to `main`, with a 
 
 **Tests paused: temporary exception (Petr, 2026-11-11).** The `tests` workflow is disabled in GitHub (`gh workflow disable tests.yml`) after the Ubuntu package mirrors kept failing its "Install Cairo" step. Petr: "I don't want local test runs. Just disable tests." While paused, don't run the suite locally and don't wait for CI; mark a pull request ready once you have reviewed the diff. To undo: `gh workflow enable tests.yml` and delete this paragraph.
 
+The viewer's JS tests (`src/blueprints/viewer/*.test.mjs`) run in the separate `viewer-js` workflow, which needs only Node and is not paused. It also rebuilds `viewer.iife.js` and fails if the committed bundle is stale. Wait for it on pull requests that touch the viewer.
+
 Planned improvements to the suite (faster shared builds, all JS tests in CI, invariants instead of copied numbers): [docs/TestSuitePlan.md](docs/TestSuitePlan.md).
 
 Default to **asking the human to test UI changes manually** (especially phone / Safari / Quick Look). Do **not** start `computerUse` / GUI walkthroughs unless the human asks for that, or a non-UI bug needs interactive reproduction after automated checks fail. Prefer `pytest`, export smoke, and the live Pages URL for verification. The agent desktop cannot stand in for a phone, Safari, or Quick Look.
