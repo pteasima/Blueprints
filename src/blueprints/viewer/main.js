@@ -47,6 +47,16 @@ import { createDepthPeelRenderer } from "./depthPeel.js";
 import { createMeasureTool } from "./measure.js";
 import { createDoorController } from "./doors.js";
 import { registerElementActions } from "./elementActions.js";
+import {
+  createHomeClient,
+  deviceLines,
+  indexHasHomeDevices,
+  lightLook,
+  pressTarget,
+  resolveHomeConfig,
+  rockersOf,
+  saveHomeMode,
+} from "./homeLive.js";
 import { mountIfcInspector } from "./ifcInspector.js";
 import { createVisibility } from "./ifcHide.js";
 import { normalizeIndex, subtreeIds } from "./ifcTree.js";
@@ -226,12 +236,36 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   });
   const lightOn = new Map();
   const windowOpen = new Map();
+  /**
+   * Offline look: the warm white the viewer always used (emissive glow in
+   * Realistic, `solid` base colour in unlit Solid mode).
+   */
+  const OFFLINE_LIGHT = { on: true, level: 1, color: 0xfff1c2, solid: 0xfff3bf };
+  /** globalId → look applied, so material rebuilds can re-light. */
+  const lightLooks = new Map();
+
+  /** Set once the Home client exists (after the inspector mounts). */
+  /** @type {ReturnType<typeof createHomeClient> | null} */
+  let home = null;
+  /** Live record for an element, only while connected. */
+  const liveDevice = (el) => (el && home ? home.device(el.globalId) : undefined);
   registerElementActions(doorCtrl.taps, {
     elementOf: (obj) => elementFromMesh(obj),
     isOn: (el) => Boolean(lightOn.get(el.globalId)),
-    isOpen: (el) => Boolean(windowOpen.get(el.globalId)),
-    onLight: (el) => toggleLight(el),
-    onSwitch: (el) => pressSwitch(el),
+    isOpen: (el) => {
+      const cover = liveDevice(el);
+      if (cover?.deviceType === "WindowCovering") {
+        const pos = cover.state?.windowCovering?.targetPositionLiftPercent100ths;
+        return pos != null && pos < 5000;
+      }
+      return Boolean(windowOpen.get(el.globalId));
+    },
+    isLive: (el) => Boolean(liveDevice(el)),
+    onLight: (el) => liveLightTap(el),
+    onSwitch: (el, hit) => liveSwitchTap(el, hit),
+    switchActions: (el) => liveSwitchActions(el),
+    onCover: (el) => liveCoverTap(el),
+    coverActions: (el) => liveCoverActions(el),
     onWindow: (el) => toggleWindow(el),
   });
 
@@ -1040,6 +1074,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     }
     refreshEdges();
     syncSectionCaps(parts, lockedClipPlanes());
+    reapplyLightLooks();
   }
 
   function buildMaterialToggle() {
@@ -1862,6 +1897,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       buildPartToggles();
       buildCutUI();
       buildLocaleToggle();
+      buildHomeSection();
     } catch (err) {
       console.error("relocalizeUi", err);
       // Still refresh the locale control if an earlier rebuild failed.
@@ -2316,6 +2352,10 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     },
     onVisibility: () => applyInspectorVisibility(),
     actionsFor: () => [],
+    liveLines: (element) => {
+      const device = home?.lastKnown(element.globalId);
+      return device ? deviceLines(device, tr) : [];
+    },
   });
 
   function elementFromMesh(obj) {
@@ -2546,22 +2586,150 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     mesh.material = next.length === 1 ? next[0] : next;
   }
 
-  function toggleLight(element) {
-    const on = !lightOn.get(element.globalId);
+  /**
+   * @param {object} element
+   * @param {{ on: boolean, level: number, color: number, solid?: number }} look
+   */
+  function setLightLook(element, look) {
+    const on = Boolean(look.on);
     lightOn.set(element.globalId, on);
+    if (on) lightLooks.set(element.globalId, look);
+    else lightLooks.delete(element.globalId);
+    const glow = new THREE.Color(look.color ?? OFFLINE_LIGHT.color);
+    // Unlit Solid mode has no emissive: tint the base colour toward the glow.
+    const tint = new THREE.Color();
     for (const mesh of meshesForElement(element)) {
       eachMaterial(mesh, (mat) => {
         if (mat.emissive) {
-          mat.emissive.setHex(on ? 0xfff1c2 : 0x000000);
-          mat.emissiveIntensity = on ? 0.9 : 0;
+          mat.emissive.copy(on ? glow : tint.setHex(0x000000));
+          mat.emissiveIntensity = on ? 0.35 + 0.55 * (look.level ?? 1) : 0;
         } else if (mat.color) {
           if (mat.userData.bpLightBase == null) mat.userData.bpLightBase = mat.color.getHex();
-          mat.color.setHex(on ? 0xfff3bf : mat.userData.bpLightBase);
+          if (on && look.solid != null) {
+            mat.color.setHex(look.solid);
+          } else if (on) {
+            // Live: the light's colour temperature lifted toward white, so
+            // it reads as lit; a lower level stays closer to the base colour.
+            const lit = glow.clone().lerp(new THREE.Color(0xffffff), 0.5);
+            tint.setHex(mat.userData.bpLightBase).lerp(lit, 0.35 + 0.65 * (look.level ?? 1));
+            mat.color.copy(tint);
+          } else {
+            mat.color.setHex(mat.userData.bpLightBase);
+          }
         }
         return mat;
       });
     }
     viewDirty = true;
+  }
+
+  function toggleLight(element) {
+    const on = !lightOn.get(element.globalId);
+    setLightLook(element, on ? OFFLINE_LIGHT : { ...OFFLINE_LIGHT, on: false });
+  }
+
+  /** Material mode swaps materials; put the glow back on lit fixtures. */
+  function reapplyLightLooks() {
+    for (const [gid, look] of [...lightLooks]) {
+      const element = ifcIndex.elements[gid];
+      if (element) setLightLook(element, look);
+    }
+  }
+
+  // --- Live Home (homeLive.js). Offline behaviour is the fallback. ---
+
+  function reportHomeFailure(res) {
+    if (res?.ok) return;
+    console.warn("Home command failed", res);
+    homeFlash = `${tr("home.failed")}${res?.status ? ` (${res.status})` : ""}${res?.error ? `: ${res.error}` : ""}`;
+    syncHomeStatus();
+    window.setTimeout(() => {
+      homeFlash = "";
+      syncHomeStatus();
+    }, 4000);
+  }
+
+  function liveLightTap(element) {
+    const device = liveDevice(element);
+    if (device?.deviceType !== "ColorTemperatureLight") {
+      toggleLight(element);
+      return;
+    }
+    // Light state changes only when Home says so (WebSocket `state`).
+    home.command(element.globalId, { type: "toggle" }).then(reportHomeFailure);
+  }
+
+  /**
+   * Where a tap landed on a switch: up/down from the vertical offset, and
+   * left/right as seen from the camera (for double rockers).
+   */
+  function switchHitOffsets(element, hit) {
+    const meshes = meshesForElement(element);
+    if (!hit?.point || !meshes.length) return { dy: 1, side: -1 };
+    const b = worldBoxOf(meshes);
+    const c = b.getCenter(new THREE.Vector3());
+    const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
+    const d = hit.point.clone().sub(c);
+    return { dy: d.y, side: d.dot(right) };
+  }
+
+  /** globalId → time of our own press, so Home's echo does not animate twice. */
+  const localPressAt = new Map();
+
+  function sendPress(element, target) {
+    pressSwitch(element);
+    localPressAt.set(element.globalId, performance.now());
+    home.press(element.globalId, target).then(reportHomeFailure);
+  }
+
+  function liveSwitchTap(element, hit) {
+    const device = liveDevice(element);
+    if (device?.deviceType !== "GenericSwitch" || !home.simulation()) {
+      pressSwitch(element);
+      return;
+    }
+    sendPress(element, pressTarget(element, switchHitOffsets(element, hit)));
+  }
+
+  function liveSwitchActions(element) {
+    const device = liveDevice(element);
+    if (device?.deviceType !== "GenericSwitch" || !home.simulation()) return null;
+    const rockers = rockersOf(element);
+    const actions = [];
+    rockers.forEach((rocker, i) => {
+      for (const position of /** @type {const} */ (["up", "down"])) {
+        const word = tr(position === "up" ? "home.up" : "home.down");
+        actions.push({
+          id: `switch-${rocker}-${position}`,
+          labelKey: position === "up" ? "home.up" : "home.down",
+          label: rockers.length > 1 ? `${i + 1} ${word}` : word,
+          run: () => sendPress(element, { rocker, position, kind: "short" }),
+        });
+      }
+    });
+    return actions;
+  }
+
+  function liveCoverTap(element) {
+    const device = liveDevice(element);
+    if (device?.deviceType !== "WindowCovering") return;
+    const pos = device.state?.windowCovering?.targetPositionLiftPercent100ths;
+    const open = pos != null && pos < 5000;
+    home.command(element.globalId, { type: open ? "coverClose" : "coverOpen" }).then(reportHomeFailure);
+  }
+
+  function liveCoverActions(element) {
+    const device = liveDevice(element);
+    if (device?.deviceType !== "WindowCovering") return null;
+    return [
+      ["coverOpen", "ui.open"],
+      ["coverClose", "ui.close"],
+      ["coverStop", "home.stop"],
+    ].map(([type, labelKey]) => ({
+      id: type,
+      labelKey,
+      run: () => home.command(element.globalId, { type }).then(reportHomeFailure),
+    }));
   }
 
   function pressSwitch(element) {
@@ -2619,6 +2787,127 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     ifcUi.openPopover(element, partName, actions, pt.clientX, pt.clientY);
   }
   inspectAt = inspectAtPointer;
+
+  // --- Home section and client lifecycle ---
+  const homeConfig = resolveHomeConfig({
+    search: typeof location !== "undefined" ? location.search : "",
+    storage: typeof localStorage !== "undefined" ? localStorage : null,
+  });
+  const homeCapable = indexHasHomeDevices(ifcIndex);
+  let homeMode = homeConfig.mode;
+  let homeFlash = "";
+  /** @type {HTMLElement | null} */
+  let homeStatusEl = null;
+
+  function applyLiveDevice(device) {
+    const element = ifcIndex.elements[device.globalId];
+    if (!element) return;
+    if (device.deviceType === "ColorTemperatureLight") setLightLook(element, lightLook(device));
+  }
+
+  /** Back to today's offline view: every light off, as on load. */
+  function resetToOffline() {
+    for (const gid of [...lightOn.keys()]) {
+      const element = ifcIndex.elements[gid];
+      if (element) setLightLook(element, { ...OFFLINE_LIGHT, on: false });
+    }
+  }
+
+  function syncHomeStatus() {
+    if (!homeStatusEl) return;
+    const status = home ? home.status() : "off";
+    const key =
+      status === "live"
+        ? home.simulation()
+          ? "home.statusLive"
+          : "home.statusLiveNoSim"
+        : status === "connecting"
+          ? "home.statusConnecting"
+          : status === "unreachable"
+            ? "home.statusUnreachable"
+            : "home.statusOff";
+    homeStatusEl.textContent = homeFlash || tr(key);
+    homeStatusEl.dataset.status = status;
+    homeStatusEl.title = status === "off" ? "" : homeConfig.baseUrl;
+  }
+
+  function buildHomeSection() {
+    if (!homeCapable) return;
+    let section = document.getElementById("section-home");
+    if (!section) {
+      const anchor = document.getElementById("section-locale");
+      if (!anchor?.parentNode) return;
+      section = document.createElement("section");
+      section.className = "sheet-section";
+      section.id = "section-home";
+      anchor.parentNode.insertBefore(section, anchor);
+    }
+    section.replaceChildren();
+    const title = document.createElement("h2");
+    title.className = "sheet-title";
+    title.textContent = tr("home.title");
+    const seg = document.createElement("div");
+    seg.className = "seg";
+    seg.id = "home-mode";
+    seg.setAttribute("role", "group");
+    seg.setAttribute("aria-label", tr("home.title"));
+    for (const [id, labelKey] of [
+      ["live", "home.live"],
+      ["off", "home.off"],
+    ]) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.dataset.homeMode = id;
+      btn.textContent = tr(labelKey);
+      if (id === homeMode) btn.classList.add("is-active");
+      btn.addEventListener("click", () => setHomeMode(/** @type {"live"|"off"} */ (id)));
+      seg.append(btn);
+    }
+    homeStatusEl = document.createElement("p");
+    homeStatusEl.className = "home-status";
+    homeStatusEl.setAttribute("aria-live", "polite");
+    homeStatusEl.style.cssText =
+      "margin:0.5rem 0 0;font-size:0.76rem;line-height:1.35;color:var(--fg-secondary)";
+    section.append(title, seg, homeStatusEl);
+    syncHomeStatus();
+  }
+
+  /** @param {"live" | "off"} mode */
+  function setHomeMode(mode) {
+    homeMode = mode;
+    saveHomeMode(typeof localStorage !== "undefined" ? localStorage : null, mode);
+    document.querySelectorAll("#home-mode button").forEach((el) => {
+      el.classList.toggle("is-active", /** @type {HTMLElement} */ (el).dataset.homeMode === mode);
+    });
+    if (!home) return;
+    if (mode === "live") home.start();
+    else {
+      home.stop();
+      resetToOffline();
+    }
+    syncHomeStatus();
+  }
+
+  if (homeCapable) {
+    home = createHomeClient({
+      baseUrl: homeConfig.baseUrl,
+      onStatus: () => {
+        syncHomeStatus();
+        viewDirty = true;
+      },
+      onDevice: (device) => applyLiveDevice(device),
+      onSwitch: (event) => {
+        if (event.event !== "initialPress") return;
+        const element = ifcIndex.elements[event.globalId];
+        const ours = performance.now() - (localPressAt.get(event.globalId) ?? -Infinity) < 3000;
+        localPressAt.delete(event.globalId);
+        if (element && !ours) pressSwitch(element);
+      },
+    });
+    buildHomeSection();
+    if (homeMode === "live") home.start();
+    window.blueprintsHome = home;
+  }
 
   onLocaleChange(() => ifcUi.refresh());
   /** @type {number[] | null} */

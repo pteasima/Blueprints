@@ -36,6 +36,15 @@ Checked in this repo on 2026-11-11. Only items found here are marked existing.
 | Electrical field devices in IFC | Room 1.11 only (`inputs/ground_floor/bedroom-1.11.yaml`): lights, buttons, sensors, outlets, blinds. No back boxes, wall hosts, or cable routes. |
 | Electrical panels in IFC | The schema supports `IfcElectricDistributionBoard`. No `distributionBoards` in the house files. |
 | Circuits in IFC | The schema supports `IfcDistributionCircuit`. No `circuits` in the house files. Room 1.11 devices have `CableNumber` and `Panel` properties only. |
-| Client for the Home API | Does not exist. The viewer has no Home connection. |
-| Home API schema | Does not belong in this repo. Home does not have a schema yet either. |
+| Client for the Home API | Exists since 2026-11-12: the viewer's live mode, `src/blueprints/viewer/homeLive.js` (see the viewer README, "Live Home"). Home Plan.md step 7. |
+| Home API schema | Does not belong in this repo. Home owns it: `api/openapi.yaml` and `api/schemas/` in Home. The client was written against Home `81f5b6a` (2026-11-11). |
 | Offline viewer | Exists. It must stay usable with no Home running. |
+
+## Live client
+
+Added 2026-11-12 for Home Plan.md step 7 ("Live mode: lights and other devices show real state, pushed over the WebSocket. Tapping a rocker calls the simulation press. Without a reachable Home server the viewer keeps today's offline behaviour").
+
+- Server: the Home test environment, `https://home-test.tail9f879b.ts.net`, a Tailscale Funnel on Petr's VM (Home `deploy/`). No auth, by Petr's decision in Home Plan.md. CORS and the WebSocket origin check allow `https://pteasima.github.io` only, so PR previews and production work, while a local `file://` export or a localhost server falls back to offline. The server is down whenever Petr's Mac sleeps.
+- Mapping: by IFC `GlobalId` only. `blueprintsId` in Home's records is the yaml `id` and is not used for matching. This is why the stable-GlobalId rule above matters.
+- Default: Live, with offline fallback. The viewer tries Home on every load of a model with Home-capable elements and silently stays offline if it is not reachable. Off in the sheet (or `?home=off`) stops all requests. Tapping in live mode changes the shared test environment for every viewer.
+- Double rockers (`C1-2V`, `C4-2V`): Home names their halves `rocker-1` and `rocker-2` and has not decided which physical half is which. The viewer treats the left half, seen facing the switch, as `rocker-1`. Change it in `homeLive.js` (`pressTarget`) once Home decides.

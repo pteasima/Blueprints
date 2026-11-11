@@ -1,7 +1,12 @@
 /**
  * Popover buttons for element types the registry knows how to drive.
  * A wall has no entry. Doors stay on the door handler (open / close);
- * this file covers lights, switches, and windows.
+ * this file covers lights, switches, windows, and (live Home only) blinds.
+ *
+ * A kind may set `actions` to replace its single popover button with a list
+ * (a live rocker offers up and down per rocker). Returning null or an empty
+ * list keeps the single button. A kind with `liveOnly` claims nothing unless
+ * `api.isLive(el)` is true, so offline taps pass through it as before.
  */
 
 const KINDS = [
@@ -18,6 +23,16 @@ const KINDS = [
     priority: 70,
     labelKey: () => "ui.press",
     run: (el, hit, ctx, api) => api.onSwitch?.(el, hit, ctx),
+    actions: (el, hit, ctx, api) => api.switchActions?.(el, hit, ctx),
+  },
+  {
+    type: "IfcActuator",
+    id: "cover",
+    priority: 55,
+    liveOnly: true,
+    labelKey: (el, api) => (api.isOpen?.(el) ? "ui.close" : "ui.open"),
+    run: (el, hit, ctx, api) => api.onCover?.(el, hit, ctx),
+    actions: (el, hit, ctx, api) => api.coverActions?.(el, hit, ctx),
   },
   {
     type: "IfcWindow",
@@ -37,6 +52,10 @@ const KINDS = [
  *   onLight?: Function,
  *   onSwitch?: Function,
  *   onWindow?: Function,
+ *   onCover?: Function,
+ *   switchActions?: Function,
+ *   coverActions?: Function,
+ *   isLive?: (el: object) => boolean,
  * }} api
  */
 export function registerElementActions(registry, api) {
@@ -47,10 +66,15 @@ export function registerElementActions(registry, api) {
       claim(hit, ctx) {
         const element = api.elementOf?.(hit.object);
         if (!element || element.type !== kind.type) return null;
+        if (kind.liveOnly && !api.isLive?.(element)) return null;
         const run = () => kind.run(element, hit, ctx, api);
+        const custom = kind.actions?.(element, hit, ctx, api);
         return {
           onTap: run,
-          actions: [{ id: kind.id, labelKey: kind.labelKey(element, api), run }],
+          actions:
+            Array.isArray(custom) && custom.length
+              ? custom
+              : [{ id: kind.id, labelKey: kind.labelKey(element, api), run }],
         };
       },
     });

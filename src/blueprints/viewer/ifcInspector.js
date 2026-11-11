@@ -42,6 +42,7 @@ const REVEAL_ICON = `<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden
  *   onVisibility: () => void,
  *   openSheet: () => void,
  *   actionsFor: (element: object | null) => { id: string, labelKey: string, run: Function }[],
+ *   liveLines?: (element: object) => string[],
  * }} opts
  */
 export function mountIfcInspector(opts) {
@@ -473,7 +474,7 @@ export function mountIfcInspector(opts) {
   /**
    * @param {object | null} element
    * @param {string | null} partName
-   * @param {{ id: string, labelKey: string, run: Function }[]} actions
+   * @param {{ id: string, labelKey: string, label?: string, run: Function }[]} actions
    * @param {number} x
    * @param {number} y
    */
@@ -538,6 +539,8 @@ export function mountIfcInspector(opts) {
       if (dims.length) addBlock(opts.t("ui.dimensions"), dims);
       const notes = noteLines(element);
       if (notes.length) addBlock(opts.t("ui.note"), notes);
+      const live = opts.liveLines?.(element) || [];
+      if (live.length) addBlock(opts.t("home.live"), live);
     }
     if (actions.length) {
       const row = document.createElement("div");
@@ -546,7 +549,7 @@ export function mountIfcInspector(opts) {
         const button = document.createElement("button");
         button.type = "button";
         button.className = "ifc-action";
-        button.textContent = opts.t(action.labelKey);
+        button.textContent = action.label || opts.t(action.labelKey);
         button.addEventListener("click", (ev) => {
           ev.stopPropagation();
           action.run();
