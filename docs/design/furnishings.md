@@ -46,7 +46,7 @@ The fridge’s south face is y = 14.884, 66 mm south of OP25’s north jamb, so 
 
 2500 × 1200, counter 930. Centred on the drawn rectangle: west 20.554, east 21.754, north 13.800, south 11.300. Split at about x = 21.15.
 
-West row faces west. Modules north to south: 500, 600, 500, 600, 300. The rectangular sink is in the north 500. The two round bowls cross the second 500 and the second 600.
+West row faces west. Modules north to south: 500, 600, 500, 600, 300. The rectangular sink is in the north 500. The 600 south of it (SF-I600a) is the knife-drawer cabinet; its drawers are in [kitchen-cabinets.md](kitchen-cabinets.md). The two round bowls cross the second 500 and the second 600.
 
 East row faces east. It is the plinth and robot-dock side. No module lines are drawn there, so the 2500 is split 600/600/600/700 from the north, the 700 at the south.
 

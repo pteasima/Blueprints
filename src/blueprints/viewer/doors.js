@@ -13,6 +13,11 @@
  * Several openings on one ray close the farthest, so a door seen through
  * another opening can be shut again.
  *
+ * Drawers are records with kind "drawer": a centre (to match one mesh under
+ * the cabinet's element node) and a `slide` vector, glTF metres, the full
+ * extension. Tapping a drawer slides it out along that vector and back. The
+ * model derives both from the cabinet's parameters (models/kitchen_cabinet.py).
+ *
  * Pocket and sliding leaves are not records with kind "hinged".
  * TODO: slide those (obývák gable pockets, garage D5/D6) instead of ignoring them.
  */
@@ -192,7 +197,7 @@ export function splitDisconnectedMesh(mesh) {
  * @param {THREE.Object3D} root
  * @returns {THREE.Object3D[]}
  */
-export function collectDoorHosts(root) {
+export function collectDoorHosts(root, records = []) {
   /** @type {THREE.Object3D[]} */
   const named = [];
   root.traverse((obj) => {
@@ -202,6 +207,17 @@ export function collectDoorHosts(root) {
     if (meshIdentity(parentName).part === "door") return;
     named.push(obj);
   });
+  const drawerElements = new Set(
+    (records || []).filter((r) => r && r.kind === "drawer" && r.element).map((r) => String(r.element)),
+  );
+  if (drawerElements.size) {
+    root.traverse((obj) => {
+      const ident = meshIdentity(obj.name || "");
+      if (!ident.element || !drawerElements.has(ident.element)) return;
+      if (meshIdentity(obj.parent?.name || "").element === ident.element) return;
+      named.push(obj);
+    });
+  }
   /** @type {THREE.Object3D[]} */
   const hosts = [];
   for (const host of named) {
@@ -236,7 +252,9 @@ export function matchDoorHosts(entries, records, tolerance = DOOR_MATCH_M) {
   const candidates = [];
   for (const entry of entries) {
     for (const record of records) {
-      if (!record || record.kind !== "hinged" || !record.hinge) continue;
+      if (!record) continue;
+      const drawer = record.kind === "drawer" && Array.isArray(record.slide);
+      if (!drawer && (record.kind !== "hinged" || !record.hinge)) continue;
       const c = record.center;
       if (!Array.isArray(c) || c.length < 3) continue;
       const dx = entry.center.x - Number(c[0]);
@@ -277,6 +295,7 @@ function worldCenter(host) {
 export function bindHinge(host, record) {
   const parent = host.parent;
   if (!parent) return null;
+  if (record.kind === "drawer") return bindDrawer(host, record);
   const pivot = new THREE.Group();
   pivot.name = `hinge:${record.id}`;
   parent.add(pivot);
@@ -294,6 +313,43 @@ export function bindHinge(host, record) {
     pivot,
     host,
     sign: Number(record.sign) >= 0 ? 1 : -1,
+    goal: 0,
+    anim: null,
+  };
+  const tag = (obj) => {
+    obj.userData.bpDoor = binding;
+  };
+  tag(pivot);
+  host.traverse(tag);
+  return binding;
+}
+
+/**
+ * Drawer: a group at the parent origin holds the mesh; sliding moves the
+ * group along the record's world vector, converted to the parent's frame.
+ * @param {THREE.Object3D} host
+ * @param {object} record
+ */
+export function bindDrawer(host, record) {
+  const parent = host.parent;
+  if (!parent) return null;
+  const pivot = new THREE.Group();
+  pivot.name = `drawer:${record.id}`;
+  parent.add(pivot);
+  parent.updateWorldMatrix(true, false);
+  const c = record.center.map(Number);
+  const s = record.slide.map(Number);
+  const a = parent.worldToLocal(new THREE.Vector3(c[0], c[1], c[2]));
+  const b = parent.worldToLocal(new THREE.Vector3(c[0] + s[0], c[1] + s[1], c[2] + s[2]));
+  pivot.updateWorldMatrix(true, false);
+  pivot.attach(host);
+  const binding = {
+    id: record.id,
+    kind: "drawer",
+    pivot,
+    host,
+    slideLocal: b.sub(a),
+    sign: 1,
     goal: 0,
     anim: null,
   };
@@ -351,6 +407,10 @@ export function setPivotSwing(pivot, angle) {
  */
 export function applyDoorSwing(binding, now) {
   const amount = sampleDoor(binding, now);
+  if (binding.slideLocal) {
+    binding.pivot.position.copy(binding.slideLocal).multiplyScalar(amount);
+    return amount;
+  }
   setPivotSwing(binding.pivot, swingAngle(amount, binding.sign));
   return amount;
 }
@@ -628,12 +688,13 @@ export function createDoorController(opts) {
     bindings.length = 0;
     if (!root || !records.length) return 0;
     root.updateWorldMatrix(true, true);
-    const hosts = collectDoorHosts(root);
+    const hosts = collectDoorHosts(root, records);
     const entries = hosts.map((host) => ({ host, center: worldCenter(host) }));
     for (const pair of matchDoorHosts(entries, records)) {
       const binding = bindHinge(pair.entry.host, pair.record);
       if (!binding) continue;
-      const obb = hostClosedObb(binding.host);
+      // A drawer has no empty doorway to tap; it is tapped on itself.
+      const obb = binding.kind === "drawer" ? null : hostClosedObb(binding.host);
       binding.obb = obb;
       binding.proxy = obb ? proxyMeshFromObb(obb, `opening:${binding.id}`) : null;
       bindings.push(binding);

@@ -105,6 +105,7 @@ from bathroom_120 import (
     scenes as bathroom_scenes,
 )
 from living_geometry import OAK_TYPES, living_detail
+import kitchen_cabinet
 from blueprints.export_utils import SECTION_LAYERS
 from blueprints.scenes import cad_mm_to_gltf_m
 
@@ -239,11 +240,16 @@ def _corner_size(product, solid) -> tuple[float, float, float]:
     return width, depth, float(solid.Depth)
 
 
-def _solid_from_product(product, label: str, list_key: str, element: dict | None):
-    """build123d solid from the converter's extrusion, in millimetres."""
+def _solid_from_product(product, label: str, list_key: str, element: dict | None, motions=None):
+    """build123d solids from the converter's extrusion, in millimetres.
+
+    Usually one solid. A drawer cabinet (``Pset_Drawers``, see
+    docs/design/kitchen-cabinets.md) is its carcass plus one solid per
+    drawer, and each drawer gets a slide record appended to ``motions``.
+    """
     solid = _body_extrusion(product)
     if solid is None:
-        return None
+        return []
     width, depth, height = (_mm(value) for value in _corner_size(product, solid))
     matrix = get_local_placement(product.ObjectPlacement)
     origin = tuple(float(matrix[index, 3]) * MM for index in range(3))
@@ -251,6 +257,9 @@ def _solid_from_product(product, label: str, list_key: str, element: dict | None
     z_dir = tuple(float(matrix[index, 2]) for index in range(3))
     gap = min(MESH_GAP_MM, width * 0.25, depth * 0.25, height * 0.25)
     plane = Plane(origin=origin, x_dir=x_dir, z_dir=z_dir)
+    yaml_id = _yaml_id(product)
+    if kitchen_cabinet.has_drawers(element):
+        return _drawer_cabinet_parts(plane, element, yaml_id, label, list_key, width, depth, height, gap, motions)
     detail = living_detail(element, width, depth, height, gap) if element else None
     if detail is None:
         detail = Pos(gap / 2.0, gap / 2.0, gap / 2.0) * Box(
@@ -259,14 +268,47 @@ def _solid_from_product(product, label: str, list_key: str, element: dict | None
             height - gap,
             align=(Align.MIN, Align.MIN, Align.MIN),
         )
-    painted = _paint(plane * detail, label)
-    painted.furnishing_id = _yaml_id(product)
+    return [_tag(_paint(plane * detail, label), yaml_id, list_key)]
+
+
+def _tag(painted, yaml_id: str, list_key: str):
+    painted.furnishing_id = yaml_id
     painted.furnishing_list = list_key
-    painted.element_id = painted.furnishing_id
+    painted.element_id = yaml_id
     return painted
 
 
-def _furnishing_parts(doc: dict) -> list:
+def _drawer_cabinet_parts(plane, element, yaml_id, label, list_key, width, depth, height, gap, motions):
+    """Carcass, then one solid per drawer. All sizes from kitchen_cabinet.layout."""
+    lay = kitchen_cabinet.layout(element, width, depth, height)
+    static = Compound(obj=kitchen_cabinet.carcass_solids(lay, gap))
+    parts = [_tag(_paint(plane * static, label), yaml_id, list_key)]
+    out_dir = plane.y_dir * -1.0
+    for dr in lay.drawers:
+        # Front face inset like every other solid, so it does not share the box face.
+        inset = Pos(0.0, gap / 2.0, 0.0)
+        part = _tag(_paint(plane * (inset * kitchen_cabinet.drawer_solid(dr, lay)), label), yaml_id, list_key)
+        parts.append(part)
+        if motions is None:
+            continue
+        cx, cy, cz = kitchen_cabinet.drawer_center_local(dr)
+        centre = plane.from_local_coords(Vector(cx, cy + gap / 2.0, cz))
+        moved = centre + out_dir * dr.extension
+        c = cad_mm_to_gltf_m((centre.X, centre.Y, centre.Z))
+        m = cad_mm_to_gltf_m((moved.X, moved.Y, moved.Z))
+        motions.append(
+            {
+                "id": f"{yaml_id}-D{dr.index}",
+                "kind": "drawer",
+                "element": yaml_id,
+                "center": [round(v, 6) for v in c],
+                "slide": [round(b - a, 6) for a, b in zip(c, m)],
+            }
+        )
+    return parts
+
+
+def _furnishing_parts(doc: dict, motions: list | None = None) -> list:
     """Boxes the converter writes. A partial size has no solid."""
     if not doc or not any(doc.get(key) for key in FURNISHING_LISTS):
         return []
@@ -291,9 +333,7 @@ def _furnishing_parts(doc: dict) -> list:
                 label = LABEL_OAK
             elif object_type in SOFA_TYPES:
                 label = LABEL_UPHOLSTERY
-            part = _solid_from_product(product, label, key, element)
-            if part is not None:
-                parts.append(part)
+            parts.extend(_solid_from_product(product, label, key, element, motions))
     return parts
 
 
@@ -741,7 +781,7 @@ def build(
                 if motion is not None:
                     door_motions.append(motion)
 
-    furnishing_parts = _furnishing_parts(furnishings)
+    furnishing_parts = _furnishing_parts(furnishings, door_motions)
     parts.extend(furnishing_parts)
     bath_parts = bathroom_parts()
     parts.extend(bath_parts)
@@ -765,7 +805,7 @@ def build(
             "wall_height_m": DEFAULT_WALL_HEIGHT_M,
             "w017_thickness_m": MISSING_THICKNESS_M,
             "footprints": len(rings),
-            "furnishings": len(furnishing_parts),
+            "furnishings": len({part.furnishing_id for part in furnishing_parts}),
             "furnishings_commit": SOURCE_COMMIT,
             "bathroom_tiles": sum(
                 1 for part in bath_parts if part.label in {LABEL_FLOOR, LABEL_WALL}

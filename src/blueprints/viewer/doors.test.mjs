@@ -24,6 +24,8 @@ import {
   toggleDoor,
   triangleComponents,
   bindHinge,
+  applyDoorSwing,
+  collectDoorHosts,
 } from "./doors.js";
 import { pickSurface } from "./pivotNav.js";
 
@@ -473,6 +475,38 @@ function hasDoor(hits) {
   const hits = raycaster.intersectObject(scene, true);
   assert.ok(hits.every((hit) => hit.object !== proxy));
   assert.equal(proxyMeshFromObb(obb).userData.bpHitProxy, true);
+}
+
+// Drawer: found under its cabinet element node, matched by centre, slides
+// along the record vector even under the Z-up glTF root rotation.
+{
+  const scene = new THREE.Scene();
+  const root = new THREE.Group();
+  root.rotation.x = -Math.PI / 2;
+  scene.add(root);
+  const mat = new THREE.MeshBasicMaterial();
+  const carcass = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.8), mat);
+  carcass.name = "cabinet__SF-X__";
+  const drawer = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.55, 0.2), mat);
+  drawer.name = "cabinet__SF-X__";
+  drawer.position.set(0, 0, 0.3);
+  root.add(carcass, drawer);
+  scene.updateMatrixWorld(true);
+  const c = new THREE.Box3().setFromObject(drawer).getCenter(new THREE.Vector3());
+  const record = { id: "SF-X-D1", kind: "drawer", element: "SF-X", center: c.toArray(), slide: [-0.55, 0, 0] };
+  const hosts = collectDoorHosts(root, [record]);
+  assert.equal(hosts.length, 2);
+  const entries = hosts.map((host) => ({ host, center: new THREE.Box3().setFromObject(host).getCenter(new THREE.Vector3()) }));
+  const pairs = matchDoorHosts(entries, [record]);
+  assert.equal(pairs.length, 1);
+  assert.equal(pairs[0].entry.host, drawer);
+  const binding = bindHinge(drawer, record);
+  toggleDoor(binding, 0);
+  applyDoorSwing(binding, DOOR_SWING_MS + 1);
+  scene.updateMatrixWorld(true);
+  const moved = new THREE.Box3().setFromObject(drawer).getCenter(new THREE.Vector3());
+  assert.ok(Math.abs(moved.x - (c.x - 0.55)) < 1e-6, `drawer x ${moved.x}`);
+  assert.ok(Math.abs(moved.y - c.y) < 1e-6 && Math.abs(moved.z - c.z) < 1e-6);
 }
 
 console.log("doors.test.mjs ok");

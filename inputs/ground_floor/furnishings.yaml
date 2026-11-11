@@ -259,7 +259,7 @@ systemFurniture:
     Height: 0.93
   - id: SF-I600a
     Name: "Ostrov západ 600"
-    Description: "Island, west row. First red 600, south of the rectangular sink. Faces west."
+    Description: "Island, west row. First red 600, south of the rectangular sink. Faces west. Three drawers, top to bottom: nože; nářadí (lis na česnek, hmoždíř, váha); dole nevím. See docs/design/kitchen-cabinets.md."
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
@@ -268,6 +268,23 @@ systemFurniture:
     Width: 0.6
     Depth: 0.6
     Height: 0.93
+    PropertySets:
+      # Petr's sticky note next to this 600: "noze / naradi (lis na cesnek,
+      # hmozdir, vaha, ..) / dole nevim". Heights are IKEA METOD grid
+      # nominals in metres, top to bottom; "*" is the rest of the carcass.
+      - Name: Pset_Drawers
+        Properties:
+          NominalHeights: "0.2 0.2 *"
+          Contents: "nože; nářadí; dole nevím"
+      # Petr: finished counter 930 (the box Height). The rest are IKEA
+      # METOD defaults, metres. kitchen_cabinet.IKEA_DEFAULTS_MM has the
+      # full list; these are the ones the carcass height depends on.
+      - Name: Pset_KitchenCabinet
+        Properties:
+          WorktopThickness: 0.038
+          PlinthHeight: 0.092
+          BoardThickness: 0.018
+          FrontGap: 0.003
   - id: SF-I500b
     Name: "Ostrov západ 500"
     Description: "Island, west row. Red 500. North of the two round bowls, which cross into SF-I600b. Faces west."

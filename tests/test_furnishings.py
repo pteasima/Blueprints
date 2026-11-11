@@ -240,7 +240,8 @@ def test_build_extrudes_walls_and_the_kitchen_boxes():
     assert meta["derived"]["furnishings_commit"] == "0f96c26"
     placed = [child for child in shape.children if getattr(child, "furnishing_id", None)]
     kitchen_ids = [row[0] for row in KITCHEN]
-    assert [child.furnishing_id for child in placed if child.furnishing_id in set(kitchen_ids)] == kitchen_ids
+    order = dict.fromkeys(child.furnishing_id for child in placed if child.furnishing_id in set(kitchen_ids))
+    assert list(order) == kitchen_ids
     assert {child.furnishing_id for child in placed} == {item["id"] for item in records}
     labels = {child.label for child in shape.children}
     assert {LABEL_MASONRY, LABEL_GLAZING, LABEL_DOOR, LABEL_CABINET, "appliance", "sink"} <= labels
@@ -272,10 +273,16 @@ def test_build_extrudes_walls_and_the_kitchen_boxes():
         "EA-WQ9I": (19550, 20458, 14884, 15600, 0, 1876),
         "EA-SBD6ECX": (18800, 19350, 13251, 13849, 0, 865),
     }
+    # A drawer cabinet is several solids (carcass, drawers); check their union.
+    by_element = {}
     for child in placed:
-        bb = child.bounding_box()
-        if child.furnishing_id in expected_mm:
-            x0, x1, y0, y1, z0, z1 = expected_mm[child.furnishing_id]
+        by_element.setdefault(child.furnishing_id, []).append(child)
+    for furnishing_id, children in by_element.items():
+        bb = children[0].bounding_box()
+        for extra in children[1:]:
+            bb = bb.add(extra.bounding_box())
+        if furnishing_id in expected_mm:
+            x0, x1, y0, y1, z0, z1 = expected_mm[furnishing_id]
             assert bb.min.X == pytest.approx(x0 + 0.5, abs=0.1)
             assert bb.max.X == pytest.approx(x1 - 0.5, abs=0.1)
             assert bb.min.Y == pytest.approx(y0 + 0.5, abs=0.1)
