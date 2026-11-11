@@ -25,9 +25,12 @@ The agent waits for `pages-content` to finish, checks that the preview URL loads
 | `.nojekyll` | Keep Pages from running Jekyll |
 | `previews/` | Small PNG/SVG review stills for chat |
 | `electrical/` | Fixture-plan notes and the 1.11 floor-plan page |
+| `Home.md` | Split with the Home repo: this repo keeps the model and IFC, and will consume Home's API as a client |
 
 On the live site only (content branch `pages-site`, not in `main`): `pr-preview/pr-<N>/` holds isolated copies of the hub for open PRs.
 
 `python -m blueprints.export <model>` updates USDZ/GLB + manifest + viewer shell. CI rebuilds the hub and publishes. Do not commit `index.html`.
 
 Hub buttons open **web viewers** only (`/viewer/?m=<id>`). Safari AR / Quick Look is available from the viewer’s **AR** control (client-generated USDZ), not from the landing page.
+
+The Pages site is not the house model. Where the model lives, how this repo will talk to Home, and what does not exist yet: [Home.md](Home.md). Design facts for the solids are in [design/README.md](design/README.md).
