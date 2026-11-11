@@ -12,7 +12,8 @@
 # whose first digit did not read as that panel is named below.
 #
 # Id is C<cable>-<device code>, plus -1/-2 when one cable has two of the
-# same code. CableNumber and Panel are Pset_YamlIfc. Home joins on those.
+# same code. CableNumber and Panel are Pset_YamlIfc. Home will join on the
+# IFC GlobalId derived from this id (see docs/Home.md), not on CableNumber.
 # DeviceCode, CableSpec, and CableLength repeat the Soupis row.
 #
 # The clear room is the L in docs/electrical/rooms/1.11-geometry.md.

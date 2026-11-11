@@ -22,6 +22,8 @@ Model code hides reasons. Every real-world fact the model uses (dimensions, clea
 
 Design facts, one file per area: [docs/design/README.md](docs/design/README.md).
 
+The house model and the ifc-yaml documents stay in this repo. Home loads the IFC from here; this repo talks to Home's API only as a client. The split, the stable-GlobalId rule, and what does not exist yet: [docs/Home.md](docs/Home.md).
+
 ## Measure first
 
 Prefer building the model and measuring it over hand calculation. Use code and tests to get numbers, and use reasoning to decide what to try next. Do not derive millimetre values by hand when the model can report them. Example: start tiling from the reference corner at level zero, build, measure the far corner, then shift.
