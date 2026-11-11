@@ -35,8 +35,8 @@
 #   cable 12 is the pendant above the bed. It is a 24 V CCT light on a
 #   4-core cable, like every indoor light (Petr, Cody chat, 2026-11-11; see
 #   docs/electrical/PlanNotes.md, Indoor lights are CCT on 4-core cable).
-#   The Soupis row says CYKY 2x1.5; that row is wrong. CableSpec 4x1.5 takes
-#   the cross-section of the other 1.11 light cables; Petr has not confirmed it.
+#   The Soupis row says CYKY 2x1.5; that row is wrong. CableSpec is CYKY 4x2.5
+#   (Petr, Cody chat, 2026-11-12: "C12 is 2.5mm").
 #   cable 3 is the LED strip under the bed, on the foot and the two long sides.
 #   cable 6 (the outdoor buttons) and cable 11 (the entry ceiling light) are
 #   removed from the plan for now and will be added later.
@@ -92,7 +92,7 @@ lightFixtures:
           CableNumber: 12
           Panel: 2
           DeviceCode: S
-          CableSpec: "CYKY 4x1.5"
+          CableSpec: "CYKY 4x2.5"
           CableLength: 16
   - id: C2-S
     Name: "Světlo 2"
