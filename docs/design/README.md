@@ -8,6 +8,7 @@ Read the file for the area before changing a model. Each fact names a source. `g
 | --- | --- |
 | Living-room roof, section, gables | [obyvak.md](obyvak.md) |
 | Room 1.02 kitchen and living-room furniture | [furnishings.md](furnishings.md) |
+| Kitchen cabinet drawers (SF-I600a) | [kitchen-cabinets.md](kitchen-cabinets.md) |
 | Ground-floor walls and the floor take-off | [ground-floor.md](ground-floor.md) |
 | Bathrooms 1.07 and 1.20 | [bathrooms.md](bathrooms.md) |
 | Wave-study layout and what it assumes | [acoustics.md](acoustics.md) |

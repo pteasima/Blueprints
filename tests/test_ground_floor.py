@@ -95,7 +95,7 @@ def test_ground_floor_builds_and_cuts_openings():
 
     labels = {child.label for child in shape.children}
     assert {"masonry", "glazing", "door"} <= labels
-    motions = {item["id"]: item for item in meta["door_motions"]}
+    motions = {item["id"]: item for item in meta["door_motions"] if item["kind"] != "drawer"}
     assert set(motions) == {door["id"] for door in doc["doors"]}
     # Wider than a single leaf: one slab, not a hinged swing. The file has
     # no hinge side, so every narrower leaf uses the start jamb and +Y.
