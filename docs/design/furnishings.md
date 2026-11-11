@@ -8,7 +8,7 @@ The wave study uses a third layout. See [acoustics.md](acoustics.md).
 
 ## Frame the kitchen was traced in
 
-`KitchenPlan.jpg` (2448×1809), registered on the two “1100” door labels, not on the red handwriting.
+[`KitchenPlan.jpg`](../../inputs/ground_floor/KitchenPlan.jpg) (2448×1809), registered on the two “1100” door labels, not on the red handwriting.
 
 | | |
 | --- | --- |

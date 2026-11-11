@@ -8,7 +8,7 @@ Labels: **Petr** is a fact Petr gave, with the date or document. **IKEA** is an 
 
 ## Which cabinet, and what the drawers hold
 
-Petr’s sticky-note plan, `KitchenPlan.jpg`: the yellow note beside the island’s red “600” (the second module from the north on the west row, south of the sink) reads:
+Petr’s sticky-note plan, [`KitchenPlan.jpg`](../../inputs/ground_floor/KitchenPlan.jpg): the yellow note beside the island’s red “600” (the second module from the north on the west row, south of the sink) reads:
 
 > noze · naradi (lis na cesnek, hmozdir, vaha, ..) · dole nevim 🤷
 
