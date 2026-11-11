@@ -12,8 +12,10 @@ import {
   deviceLines,
   eventsUrl,
   indexHasHomeDevices,
+  LIGHT_OFF_HEX,
   kelvinToHex,
   lightLook,
+  lightOnHex,
   pressTarget,
   pressUrl,
   resolveHomeConfig,
@@ -72,6 +74,23 @@ assert.ok(Math.abs(look.level - 0.5) < 0.01);
 assert.equal(look.kelvin, 4000);
 assert.equal(lightLook(light(true, { online: false })).on, false, "offline device draws as off");
 assert.equal(lightLook(light(null)).on, false);
+// Off is dull grey; on is bright, saturated when warm (Petr read pale as off).
+const rgb = (c) => [(c >> 16) & 255, (c >> 8) & 255, c & 255];
+const luma = (c) => { const [r, g, b] = rgb(c); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+const chroma = (c) => Math.max(...rgb(c)) - Math.min(...rgb(c));
+assert.equal(lightLook(light(false)).color, LIGHT_OFF_HEX);
+assert.equal(lightLook(light(true, { online: false })).color, LIGHT_OFF_HEX);
+assert.equal(lightLook(light(true)).color, lightOnHex(4000));
+assert.ok(chroma(LIGHT_OFF_HEX) === 0 && luma(LIGHT_OFF_HEX) < 100, "off is a dark neutral grey");
+for (const k of [2200, 2700, 3000, 3817, 4000, 5000, 6500, null]) {
+  assert.ok(luma(lightOnHex(k)) > 2 * luma(LIGHT_OFF_HEX), `on at ${k} K is much brighter than off`);
+}
+for (const k of [2200, 3000, 3817]) {
+  assert.ok(chroma(lightOnHex(k)) > 120, `warm light at ${k} K is a saturated glow, not pale`);
+}
+assert.ok(chroma(lightOnHex(2700)) > chroma(lightOnHex(6500)), "cool light is whiter");
+assert.equal(lightOnHex(1000), lightOnHex(2200), "clamped");
+assert.equal(lightOnHex(null), lightOnHex(3000));
 const warm = kelvinToHex(2700);
 const cool = kelvinToHex(6500);
 assert.ok((warm & 0xff) < (cool & 0xff), "warmer light has less blue");
