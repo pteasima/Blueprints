@@ -14,7 +14,8 @@
 # Id is C<cable>-<device code>, plus -1/-2 when one cable has two of the
 # same code. CableNumber and Panel are Pset_YamlIfc. Home will join on the
 # IFC GlobalId derived from this id (see docs/Home.md), not on CableNumber.
-# DeviceCode, CableSpec, and CableLength repeat the Soupis row.
+# DeviceCode, CableSpec, and CableLength repeat the Soupis row, except
+# the CableSpec of cable 12 (see Decisions).
 #
 # The clear room is the L in docs/electrical/rooms/1.11-geometry.md.
 # Main wing x 0.450–3.750, y 3.275–9.500, plus the entry
@@ -31,7 +32,11 @@
 #
 # Decisions:
 #   SCHUKO sockets are position only. No cable number, no circuit, wiring skipped.
-#   cable 12 is the pendant above the bed (CYKY 2x1.5).
+#   cable 12 is the pendant above the bed. It is a 24 V CCT light on a
+#   4-core cable, like every indoor light (Petr, Cody chat, 2026-11-11; see
+#   docs/electrical/PlanNotes.md, Indoor lights are CCT on 4-core cable).
+#   The Soupis row says CYKY 2x1.5; that row is wrong. CableSpec 4x1.5 takes
+#   the cross-section of the other 1.11 light cables; Petr has not confirmed it.
 #   cable 3 is the LED strip under the bed, on the foot and the two long sides.
 #   cable 6 (the outdoor buttons) and cable 11 (the entry ceiling light) are
 #   removed from the plan for now and will be added later.
@@ -71,7 +76,7 @@ windows: []
 lightFixtures:
   - id: C12-S
     Name: "Lustr 12"
-    Description: "Pendant above the bed. Cable 12, the 2-core light. Plan text zaveseny lustr cca 120W."
+    Description: "Pendant above the bed. Cable 12. 24 V CCT on a 4-core cable (Petr, 2026-11-11). Plan text zaveseny lustr cca 120W."
     PredefinedType: POINTSOURCE
     ObjectType: Pendant
     ContainedInStructure: SP-1.11
@@ -87,7 +92,7 @@ lightFixtures:
           CableNumber: 12
           Panel: 2
           DeviceCode: S
-          CableSpec: "CYKY 2x1.5"
+          CableSpec: "CYKY 4x1.5"
           CableLength: 16
   - id: C2-S
     Name: "Světlo 2"

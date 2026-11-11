@@ -49,6 +49,27 @@ These letters are the device column of the cable schedule, not printed as a bloc
 
 `A` is used on a few rows of the schedule and has no legend line in that column.
 
+## Indoor lights are CCT on 4-core cable
+
+Source: Petr, Cody chat, 2026-11-11: "Surely there's no indoor light on a 2 core cable, all indoor lights are CCT and have 4 core cables (two cores used for V+, one for cool white, one for warm white)."
+
+Every indoor light is a 24 V CCT (dual-white) light on a 4-core cable: two cores for V+, one for cool white, one for warm white. The 2-core rule above is for exterior lights only.
+
+The Soupis row for cable 12 (room 1.11, `S`, `CYKY 2x1.5`, 16 m) contradicts this and is wrong. `C12-S` in `inputs/ground_floor/bedroom-1.11.yaml` is a 4-core CCT light. Its stored `CableSpec` is `CYKY 4x1.5`. The core count is Petr's. The 1.5 mm² cross-section follows the other 1.11 light cables and is not confirmed.
+
+Other light rows in Soupis with a 2-core cable. Soupis labels an outdoor cable with the room of its wall penetration (note on cable 66), so some of these are exterior lights. None is modelled in IFC yet. Check each one before it is modelled:
+
+| Cable | Room | Spec | Soupis note |
+| --- | --- | --- | --- |
+| 25, 26 | 1.10 | CYKY 2x1.5 | |
+| 139 | 1.03 | CYKY 2x1.5 | |
+| 156 | 1.22 | CYKY 2x1.5 | |
+| 152 | 1.16 | CYKY 2x2.5 | (40 is connected to 152) |
+| 154 | 1.22 | CYKY 2x2.5 | (155 is connected to 154) |
+| 140 | 1.12 | CYKY 2x2.5 | to the attic, out above the wall plate (141, 142 connected) |
+| 143 | 1.15 | CYKY 2x2.5 | to the attic, out above the wall plate (144, 145 connected) |
+| 159 | 1.22 | CYKY 2x2.5 | outside under the insulation or through the attic (160 connected) |
+
 ## Heights and distances
 
 Original, the yellow note under Poznámky:
@@ -111,7 +132,7 @@ The drawing cites the short name.
 
 ## Room 1.11, as answered
 
-Cable 12 is the 120 W pendant above the bed. Cable 3 is the LED strip on the foot and the two long sides of the bed, not the headboard. Cable 32 is the contact and the two switches of OP09. Cable 16 stays the blind for the narrow west window. Cable 6 and cable 11 are off the plan for now. The bed is 2000 mm by 1800 mm with the headboard on the east wall. Each bedside stack is a socket at 750, a switch at 821, and a lamp at 892. C7 is the west curtain rail, from the south-west corner to 50 mm past the north jamb of OP01. C8 is the south curtain rail, from that same corner to 50 mm past the east jamb of OP05. The access point is on the 2.50 m ceiling at x=1.100, y=8.725. The bedroom outline is the L in `rooms/1.11-geometry.md`, 22.98 m².
+Cable 12 is the 120 W pendant above the bed, a 4-core CCT light (see Indoor lights are CCT on 4-core cable). Cable 3 is the LED strip on the foot and the two long sides of the bed, not the headboard. Cable 32 is the contact and the two switches of OP09. Cable 16 stays the blind for the narrow west window. Cable 6 and cable 11 are off the plan for now. The bed is 2000 mm by 1800 mm with the headboard on the east wall. Each bedside stack is a socket at 750, a switch at 821, and a lamp at 892. C7 is the west curtain rail, from the south-west corner to 50 mm past the north jamb of OP01. C8 is the south curtain rail, from that same corner to 50 mm past the east jamb of OP05. The access point is on the 2.50 m ceiling at x=1.100, y=8.725. The bedroom outline is the L in `rooms/1.11-geometry.md`, 22.98 m².
 
 Power sockets have no cable number and no circuit. They are positions only. The two outdoor lamps stay where they were and are marked UNUSED. The west lamp's cable number is still a TODO.
 
