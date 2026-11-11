@@ -49,6 +49,25 @@ Contents are not modelled yet (Petr, 2026-11-11).
 
 The worktop is modelled only on top of this cabinet, inside its own 930 box. The other island boxes are still plain 930 boxes that include their worktop. `open:` a continuous island worktop.
 
+## Induction hob
+
+The hob is the **Miele KM 8665 FL** ([product page](https://www.miele.cz/product/12911610/indukcni-varna-deska-km-8665-fl), [installation manual](https://media.miele.com/downloads/02/8d/02_C7F1383814AE1FD185F64AE5A947028D.pdf)). Source: **Petr**, 2026-11-11. It is not modelled yet (Petr, 2026-11-11, “we'll model it soon enough, but not yet”).
+
+Numbers from the installation manual (pages 23 and 29):
+
+| Item | Value (mm) |
+| --- | ---: |
+| Glass top (W × D × thickness) | 620 × 520 × 4 |
+| Installation height, with the connection box | 51 |
+| Housing under the glass (W × D), approx. | 533 × 427 |
+| Cut-out, surface-mounted | 600 × 500 (+3) |
+| Cut-out, flush-fit | inner 600 × 500, rebate 624 × 524, 5.5 deep, 12 wide |
+| Cut-out to the worktop's back edge | ≥ 50 |
+| Underside of the hob or base panel to a drawer's top edge | ≥ 8 (KM 8xxx-2: ≥ 8; KM 8xxx: ≥ 5) |
+| Fan holes in an air-intake base panel | Ø 60–80, 78 and 210 from the cut-out centre, 138 deep |
+
+It fits a 600 cabinet: the housing is about 533 wide against 564 clear inside 18 mm sides. The 600 cut-out is as wide as the cabinet, so the neighbouring cabinets carry the worktop. `open:` which cabinet it sits on, surface-mounted or flush-fit, and the top drawer height under it (the ≥ 8 mm gap and fan airflow cut into it).
+
 ## Parametric rule
 
 Everything above is computed in `kitchen_cabinet.layout` from the box (`Width`, `Depth`, `Height`), `Pset_KitchenCabinet` (worktop, plinth, board, gap; any other `IKEA_DEFAULTS_MM` key can be overridden there, in metres) and `Pset_Drawers` (`NominalHeights` in metres top to bottom, one `*` for the rest; `Contents` separated by `;`). Fronts, boxes, the slide length, and the viewer’s slide records (`docs/models/ground_floor.doors.json`, `kind: drawer`) all follow. `tests/test_kitchen_cabinet.py` changes width, height and depth and checks that the drawers follow.
