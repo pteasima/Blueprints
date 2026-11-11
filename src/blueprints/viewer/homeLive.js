@@ -140,6 +140,39 @@ export function kelvinToHex(kelvin) {
   return (c(r) << 16) | (c(g) << 8) | c(b);
 }
 
+/** A switched-off light: dull neutral grey, no glow (Petr, 2026-11-12). */
+export const LIGHT_OFF_HEX = 0x4a4a4a;
+
+/**
+ * Colour of a lit light: an obvious bright glow tinted by its colour
+ * temperature. Plain black-body colours at 3000 to 4000 K are a pale peach
+ * that read as "off" next to the yellow fixture colour (Petr on his phone,
+ * 2026-11-12), so warm light is pushed to a saturated amber and only cool
+ * light approaches white.
+ * Anchors: 2200 K amber, 3000 K warm yellow, 4000 K light gold, 5000 K
+ * warm white, 6500 K cool white.
+ * @param {number | null | undefined} kelvin null means a warm default (3000 K)
+ * @returns {number} 0xRRGGBB
+ */
+export function lightOnHex(kelvin) {
+  const stops = [
+    [2200, 0xff9a1f],
+    [3000, 0xffb833],
+    [4000, 0xffd75e],
+    [5000, 0xfff2b8],
+    [6500, 0xe8f1ff],
+  ];
+  const k = Number.isFinite(kelvin) ? Math.min(Math.max(kelvin, stops[0][0]), stops.at(-1)[0]) : 3000;
+  let i = 0;
+  while (i < stops.length - 2 && k > stops[i + 1][0]) i += 1;
+  const [k0, c0] = stops[i];
+  const [k1, c1] = stops[i + 1];
+  const u = (k - k0) / (k1 - k0);
+  const ch = (c, sh) => (c >> sh) & 0xff;
+  const mix = (sh) => Math.round(ch(c0, sh) + (ch(c1, sh) - ch(c0, sh)) * u);
+  return (mix(16) << 16) | (mix(8) << 8) | mix(0);
+}
+
 /**
  * How a ColorTemperatureLight record should look.
  * `on` is false unless OnOff is true and the device is online.
@@ -153,7 +186,7 @@ export function lightLook(device) {
   const level = Number.isFinite(raw) ? Math.min(Math.max(raw / 254, 0), 1) : 1;
   const mireds = st.colorControl?.colorTemperatureMireds;
   const kelvin = Number.isFinite(mireds) && mireds > 0 ? Math.round(1e6 / mireds) : null;
-  const color = kelvin ? kelvinToHex(kelvin) : 0xfff1c2;
+  const color = on ? lightOnHex(kelvin) : LIGHT_OFF_HEX;
   return { on, level, kelvin, color };
 }
 

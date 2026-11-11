@@ -51,7 +51,9 @@ import {
   createHomeClient,
   deviceLines,
   indexHasHomeDevices,
+  LIGHT_OFF_HEX,
   lightLook,
+  lightOnHex,
   pressTarget,
   resolveHomeConfig,
   rockersOf,
@@ -237,11 +239,12 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   const lightOn = new Map();
   const windowOpen = new Map();
   /**
-   * Offline look: the warm white the viewer always used (emissive glow in
-   * Realistic, `solid` base colour in unlit Solid mode).
+   * Offline tap toggles between these. On is a warm 3000 K glow, off a dull
+   * grey, the same looks live mode uses (homeLive.js lightOnHex).
    */
-  const OFFLINE_LIGHT = { on: true, level: 1, color: 0xfff1c2, solid: 0xfff3bf };
-  /** globalId → look applied, so material rebuilds can re-light. */
+  const OFFLINE_LIGHT = { on: true, level: 1, color: lightOnHex(3000) };
+  const OFFLINE_LIGHT_OFF = { on: false, level: 1, color: LIGHT_OFF_HEX };
+  /** globalId → look applied, so material rebuilds can re-apply it. */
   const lightLooks = new Map();
 
   /** Set once the Home client exists (after the inspector mounts). */
@@ -2587,34 +2590,41 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   }
 
   /**
+   * Draws a light on or off. Off is a dull grey with no glow; on is the
+   * look's colour at full strength, as the base colour (so unlit Solid mode
+   * shows it) and as emissive in Realistic. `restore` puts the model's own
+   * fixture colour back (offline, as on load).
    * @param {object} element
-   * @param {{ on: boolean, level: number, color: number, solid?: number }} look
+   * @param {{ on: boolean, level?: number, color: number } | { restore: true }} look
    */
   function setLightLook(element, look) {
-    const on = Boolean(look.on);
+    const restore = "restore" in look && look.restore;
+    const on = !restore && Boolean(look.on);
     lightOn.set(element.globalId, on);
-    if (on) lightLooks.set(element.globalId, look);
-    else lightLooks.delete(element.globalId);
-    const glow = new THREE.Color(look.color ?? OFFLINE_LIGHT.color);
-    // Unlit Solid mode has no emissive: tint the base colour toward the glow.
-    const tint = new THREE.Color();
+    if (restore) lightLooks.delete(element.globalId);
+    else lightLooks.set(element.globalId, look);
+    const level = restore ? 1 : Math.min(Math.max(look.level ?? 1, 0), 1);
+    const target = new THREE.Color(restore ? 0 : look.color);
+    if (on) {
+      // A dimmed light stays clearly lit; only the glow strength drops.
+      target.lerp(new THREE.Color(LIGHT_OFF_HEX), 0.35 * (1 - level));
+    }
     for (const mesh of meshesForElement(element)) {
       eachMaterial(mesh, (mat) => {
-        if (mat.emissive) {
-          mat.emissive.copy(on ? glow : tint.setHex(0x000000));
-          mat.emissiveIntensity = on ? 0.35 + 0.55 * (look.level ?? 1) : 0;
-        } else if (mat.color) {
+        if (mat.color) {
           if (mat.userData.bpLightBase == null) mat.userData.bpLightBase = mat.color.getHex();
-          if (on && look.solid != null) {
-            mat.color.setHex(look.solid);
-          } else if (on) {
-            // Live: the light's colour temperature lifted toward white, so
-            // it reads as lit; a lower level stays closer to the base colour.
-            const lit = glow.clone().lerp(new THREE.Color(0xffffff), 0.5);
-            tint.setHex(mat.userData.bpLightBase).lerp(lit, 0.35 + 0.65 * (look.level ?? 1));
-            mat.color.copy(tint);
+          if (restore) mat.color.setHex(mat.userData.bpLightBase);
+          else mat.color.copy(target);
+        }
+        if (mat.emissive) {
+          if (on) {
+            // Kept below 1: ACES tone mapping bleaches a stronger glow to
+            // pale cream, which reads as "off" (Petr, 2026-11-12).
+            mat.emissive.copy(target);
+            mat.emissiveIntensity = 0.3 + 0.35 * level;
           } else {
-            mat.color.setHex(mat.userData.bpLightBase);
+            mat.emissive.setHex(0x000000);
+            mat.emissiveIntensity = 0;
           }
         }
         return mat;
@@ -2625,7 +2635,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
 
   function toggleLight(element) {
     const on = !lightOn.get(element.globalId);
-    setLightLook(element, on ? OFFLINE_LIGHT : { ...OFFLINE_LIGHT, on: false });
+    setLightLook(element, on ? OFFLINE_LIGHT : OFFLINE_LIGHT_OFF);
   }
 
   /** Material mode swaps materials; put the glow back on lit fixtures. */
@@ -2805,11 +2815,11 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     if (device.deviceType === "ColorTemperatureLight") setLightLook(element, lightLook(device));
   }
 
-  /** Back to today's offline view: every light off, as on load. */
+  /** Back to the offline view: every light in its model colour, as on load. */
   function resetToOffline() {
     for (const gid of [...lightOn.keys()]) {
       const element = ifcIndex.elements[gid];
-      if (element) setLightLook(element, { ...OFFLINE_LIGHT, on: false });
+      if (element) setLightLook(element, { restore: true });
     }
   }
 
