@@ -23,6 +23,8 @@ Power sockets (`SOCK-`) have a current id and no cable number: the schedule has 
 
 `<room>-<type><n>`, counted inside the room. The cable number is only a property, because one cable can feed several devices.
 
+This proposal is not accepted. A rename of a YAML `id` would change that element's IFC `GlobalId`, which Home will use as its join key. See [Home.md](../Home.md). Do not rename without preserving the `GlobalId`.
+
 | Letter | Device |
 | --- | --- |
 | L | light |
