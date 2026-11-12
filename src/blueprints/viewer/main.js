@@ -63,6 +63,7 @@ import { mountIfcInspector } from "./ifcInspector.js";
 import { createVisibility } from "./ifcHide.js";
 import { normalizeIndex, subtreeIds } from "./ifcTree.js";
 import { isSceneSolid } from "./interactions.js";
+import { switchTargetCenters } from "./tapTargets.js";
 import { identityOf, meshIdentity } from "./meshIdentity.js";
 import { attachPivotNav } from "./pivotNav.js";
 import { cadMmToGltf, createAnnotations } from "./annotations.js";
@@ -270,6 +271,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     onCover: (el) => liveCoverTap(el),
     coverActions: (el) => liveCoverActions(el),
     onWindow: (el) => toggleWindow(el),
+    targetsFor: (type, ctx) => tapTargetsFor(type, ctx),
   });
 
   const annotations = createAnnotations({
@@ -2683,6 +2685,54 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     return { dy: d.y, side: d.dot(right) };
   }
 
+  /** @type {Map<string, object[]>} IFC elements by type, built on first use. */
+  const elementsByType = new Map();
+  function elementsOfType(type) {
+    let list = elementsByType.get(type);
+    if (!list) {
+      list = Object.values(ifcIndex.elements).filter((el) => el.type === type);
+      elementsByType.set(type, list);
+    }
+    return list;
+  }
+
+  /**
+   * Extended tap targets (tapTargets.js) for one IFC type: the centre of each
+   * shown element's world box, or of each rocker half for a switch.
+   * @param {string} type
+   * @param {{ camera?: THREE.Camera }} ctx
+   */
+  function tapTargetsFor(type, ctx) {
+    const cam = ctx?.camera || camera;
+    const right = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 0);
+    const out = [];
+    for (const element of elementsOfType(type)) {
+      if (ifcVisibility.isHidden(element.globalId)) continue;
+      const meshes = meshesForElement(element).filter((m) => {
+        if (!isSceneSolid(m)) return false;
+        for (let n = m; n; n = n.parent) if (!n.visible) return false;
+        return true;
+      });
+      if (!meshes.length) continue;
+      const box = worldBoxOf(meshes);
+      if (box.isEmpty()) continue;
+      const own = new Set(meshes);
+      const owns = (obj) => {
+        for (let n = obj; n; n = n.parent) if (own.has(n)) return true;
+        return elementFromMesh(obj) === element;
+      };
+      const object = meshes[0];
+      const centers =
+        type === "IfcSwitchingDevice"
+          ? switchTargetCenters(box, rockersOf(element), right).map((half) => half.center)
+          : [box.getCenter(new THREE.Vector3())];
+      for (const center of centers) {
+        out.push({ element, center, group: element.globalId, hit: { object, point: center }, owns });
+      }
+    }
+    return out;
+  }
+
   /** globalId → time of our own press, so Home's echo does not animate twice. */
   const localPressAt = new Map();
 
@@ -2782,6 +2832,26 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     ifcPointer.y = -((pt.clientY - rect.top) / h) * 2 + 1;
     ifcRaycaster.setFromCamera(ifcPointer, cameraNow);
     const hits = ifcRaycaster.intersectObject(root, true).filter((hit) => isSceneSolid(hit.object));
+    let top = root;
+    while (top.parent) top = top.parent;
+    const ctx = {
+      raycaster: ifcRaycaster,
+      now: performance.now(),
+      camera: cameraNow,
+      root: top,
+      tap: { x: pt.clientX - rect.left, y: pt.clientY - rect.top },
+      size: { w, h },
+    };
+    // Same rule as a tap: a direct or extended (44 pt) target wins; else the
+    // front solid's info with whatever the ray reaches (walls have none).
+    const found = doorCtrl.taps.resolve(hits, ctx, (item) => isSceneSolid(item.object));
+    if (found && (found.kind === "direct" || found.kind === "extended") && found.hit?.object) {
+      const obj = found.hit.object;
+      const actions = Array.isArray(found.claim?.actions) ? found.claim.actions.slice() : [];
+      const partName = obj.userData?.bpPart || meshIdentity(obj.name || "").part;
+      ifcUi.openPopover(elementFromMesh(obj), partName, actions, pt.clientX, pt.clientY);
+      return;
+    }
     const hit = hits[0];
     if (!hit) {
       ifcUi.closePopover();
@@ -2789,11 +2859,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     }
     const element = elementFromMesh(hit.object);
     const partName = hit.object.userData?.bpPart || meshIdentity(hit.object.name || "").part;
-    const actions = doorCtrl.taps.actionsFor(
-      hits,
-      { raycaster: ifcRaycaster, now: performance.now() },
-      (item) => isSceneSolid(item.object),
-    );
+    const actions = found?.kind === "legacy" && Array.isArray(found.claim?.actions) ? found.claim.actions.slice() : [];
     ifcUi.openPopover(element, partName, actions, pt.clientX, pt.clientY);
   }
   inspectAt = inspectAtPointer;
