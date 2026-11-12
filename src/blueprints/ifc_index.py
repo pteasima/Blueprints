@@ -309,9 +309,29 @@ def _layer_thickness(product) -> float | None:
     return None
 
 
+# Membership can arrive from more than one yaml-ifc document (furnishings,
+# bedroom, bathroom each assign their own pieces to Furniture). A later
+# non-empty list must union with the one already kept, not be dropped.
+_LIST_UNION_KEYS = frozenset({
+    "memberIds",
+    "childGroupIds",
+    "parentGroupIds",
+    "groups",
+    "circuits",
+    "cables",
+})
+
+
 def _fill_missing(kept: dict, extra: dict) -> None:
     for key, value in extra.items():
         current = kept.get(key)
+        if key in _LIST_UNION_KEYS and isinstance(current, list) and isinstance(value, list):
+            seen = set(current)
+            for item in value:
+                if item not in seen:
+                    current.append(item)
+                    seen.add(item)
+            continue
         if current in (None, "", [], {}):
             kept[key] = value
 

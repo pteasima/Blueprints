@@ -211,7 +211,10 @@ export function mountIfcInspector(opts) {
     if (tab === next) return;
     if (!infoId) scrollPos[tab] = scroll.scrollTop;
     tab = next;
-    if (!animate) track.classList.add("is-instant");
+    // The picker is hidden on info; jump the underlying track so Back
+    // lands on the right root without a leftover slide.
+    const slide = animate && !infoId;
+    if (!slide) track.classList.add("is-instant");
     if (!infoId) {
       render();
       if (!keepScroll) scroll.scrollTop = scrollPos[next] || 0;
@@ -219,7 +222,7 @@ export function mountIfcInspector(opts) {
     } else {
       track.classList.toggle("is-groups", tab === "groups");
     }
-    if (!animate) {
+    if (!slide) {
       requestAnimationFrame(() => track.classList.remove("is-instant"));
     }
   }

@@ -889,6 +889,12 @@ canvas {
   -webkit-overflow-scrolling: touch;
 }
 .ifc-menu[hidden] { display: none; }
+/* .seg { display: flex } and .ifc-crumbs { display: flex } beat the HTML
+   hidden attribute on their own; force the picker and path bar off when
+   JS sets hidden (info screens, and the Groups tab has no path bar). */
+.seg[hidden],
+.ifc-tabs[hidden],
+.ifc-crumbs[hidden] { display: none; }
 .ifc-info-swap {
   appearance: none;
   display: block;

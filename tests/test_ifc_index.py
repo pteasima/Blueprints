@@ -110,6 +110,44 @@ def test_merge_keeps_one_spatial_root():
     assert {"SP", "SP-2", "C12-S", "W-1"} <= ids
 
 
+def test_merge_unions_group_membership():
+    """Furniture members from later documents are not dropped."""
+    left = {
+        "elements": {
+            "G": {
+                "globalId": "G",
+                "id": "GRP-FURNITURE",
+                "memberIds": ["A"],
+                "childGroupIds": ["B"],
+                "groups": [],
+            },
+            "A": {"globalId": "A", "id": "FN-GATTA", "groups": ["G"]},
+            "B": {"globalId": "B", "id": "SF-I600a", "parentGroupIds": ["G"]},
+        },
+        "roots": ["R"],
+        "groups": ["G", "B"],
+    }
+    right = {
+        "elements": {
+            "G": {
+                "globalId": "G",
+                "id": "GRP-FURNITURE",
+                "memberIds": ["C"],
+                "childGroupIds": [],
+                "groups": [],
+            },
+            "C": {"globalId": "C", "id": "BED-1.11", "groups": ["G"]},
+        },
+        "roots": ["R"],
+        "groups": ["G"],
+    }
+    merged = merge_indexes([left, right])
+    furn = merged["elements"]["G"]
+    assert furn["memberIds"] == ["A", "C"]
+    assert furn["childGroupIds"] == ["B"]
+    assert merged["elements"]["C"]["groups"] == ["G"]
+
+
 def test_groups_are_not_in_the_spatial_tree():
     """IfcGroup and IfcSystem sit in the groups list, with no display parent.
 
