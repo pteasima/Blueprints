@@ -97,7 +97,7 @@ def test_room_faces_are_the_wall_model():
 
 _POSITION_ONLY = {"SOCK-N", "SOCK-N2", "SOCK-EN", "SOCK-ES"}
 # C3-S is three viewer segments, not one yaml box. C9-R lives in the door switch.
-_NO_BOX = {"C3-S", "C9-R"}
+_NO_BOX = {"C3-S", "C7-S", "C8-S", "C9-R"}
 
 
 def _boxed(record) -> bool:
@@ -143,10 +143,18 @@ def test_schedule_codes_cable_numbers_and_panels():
     radar = next(record for record in records if record["id"] == "C9-R")
     assert _pset(radar)["InSwitchBox"] == "C32-V-1"
     assert not _boxed(radar)
+    emits = {}
     for strip_id in ("C7-S", "C8-S"):
         led = next(record for record in records if record["id"] == strip_id)
         assert led["ObjectType"] == "LedStrip"
-        assert _boxed(led)
+        assert not _boxed(led)
+        props = _pset(led)
+        # One continuous L along the west and south walls (Petr, 2026-11-12).
+        assert (props["X0"], props["Y0"]) == pytest.approx((0.45, 6.875))
+        assert (props["XC"], props["YC"]) == pytest.approx((0.45, 3.275))
+        assert (props["X1"], props["Y1"]) == pytest.approx((3.75, 3.275))
+        emits[strip_id] = props["Emits"]
+    assert sorted(emits.values()) == ["down", "up"]
     bed = next(item for item in load_document()["furniture"] if item["id"] == "BED-1.11")
     bed_props = _pset(bed)
     assert bed_props["Status"] == "PLACED"
@@ -170,9 +178,9 @@ def test_boxes_sit_in_the_bay_and_round_trip(tmp_path):
     boxed = {record["id"] for record in records if _boxed(record)}
     furniture = {item["id"] for item in load_document()["furniture"] if _boxed(item)}
     assert boxed.isdisjoint(_NO_BOX)
-    strips = [part for part in placed if part.device_id == "C3-S"]
-    assert len(strips) == 3
-    assert {part.device_id for part in placed} == boxed | furniture | {"C3-S"}
+    strips = [part for part in placed if part.device_id in {"C3-S", "C7-S", "C8-S"}]
+    assert len(strips) == 3 + 2 + 2
+    assert {part.device_id for part in placed} == boxed | furniture | {"C3-S", "C7-S", "C8-S"}
     assert len(placed) == len(boxed) + len(furniture) + len(strips)
     labels = {part.device_id: part.label for part in placed}
     assert labels["C2-S"] == "light"
@@ -183,6 +191,7 @@ def test_boxes_sit_in_the_bay_and_round_trip(tmp_path):
     assert labels["BED-1.11"] == "furniture"
     assert labels["RAIL-W"] == "furniture"
     assert "C9-R" not in labels
+    _check_rail_strips(placed)
 
     # Facade motors and the hallway switch sit just outside the inner faces.
     for part in placed:
@@ -219,6 +228,31 @@ def test_boxes_sit_in_the_bay_and_round_trip(tmp_path):
     restored, skipped = read_ifc(ifc_path)
     assert skipped == {}
     _same(original, restored)
+
+
+
+def _check_rail_strips(placed):
+    """Each rail strip is an L on the garnýž: uplight on top, downlight under."""
+    rails = {part.device_id: part.bounding_box() for part in placed if part.device_id in {"RAIL-W", "RAIL-S"}}
+    rail_top = max(box.max.Z for box in rails.values())
+    rail_bottom = min(box.min.Z for box in rails.values())
+    by_id = {}
+    for part in placed:
+        if part.device_id in {"C7-S", "C8-S"}:
+            by_id.setdefault(part.device_id, []).append(part.bounding_box())
+    for strip_id, legs in by_id.items():
+        assert len(legs) == 2
+        west = next(box for box in legs if box.size.Y > box.size.X)
+        south = next(box for box in legs if box.size.X > box.size.Y)
+        assert west.max.X < 485.0 and west.min.X > 450.0
+        assert west.max.Y == pytest.approx(6875.0, abs=1.0)
+        assert south.min.Y > 3275.0 and south.max.Y < 3310.0
+        assert south.min.Y - 3275.0 == pytest.approx(west.min.X - 450.0, abs=0.5)
+        assert south.max.X == pytest.approx(3750.0, abs=1.0)
+        assert south.min.X <= west.max.X + 1.0
+    assert max(box.max.Z for box in by_id["C7-S"]) == pytest.approx(rail_top, abs=1.0)
+    assert min(box.min.Z for box in by_id["C7-S"]) > rail_bottom
+    assert max(box.max.Z for box in by_id["C8-S"]) <= rail_bottom + 0.5
 
 
 def test_ground_floor_carries_the_bedroom_plan():

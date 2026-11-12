@@ -38,6 +38,11 @@
 #   The Soupis row says CYKY 2x1.5; that row is wrong. CableSpec is CYKY 4x2.5
 #   (Petr, Cody chat, 2026-11-12: "C12 is 2.5mm").
 #   cable 3 is the LED strip under the bed, on the foot and the two long sides.
+#   cables 7 and 8 are the two curtain-rail (garnýž) strips. Each runs
+#   continuously along the west and the south wall (an L). One shines up, one
+#   down (Petr, Cody chat, 2026-11-12: "Theyre continuous west and south, but
+#   one is shining upward, other one downward"). Which cable is up is not
+#   stated; C7 up and C8 down is an assumption.
 #   cable 6 (the outdoor buttons) and cable 11 (the entry ceiling light) are
 #   removed from the plan for now and will be added later.
 #   cable 32 is the door contact plus the bedroom switch and the hallway switch
@@ -150,7 +155,7 @@ lightFixtures:
           CableLength: 10
   - id: C7-S
     Name: "Pásek 7"
-    Description: "Curtain-rail LED strip. From the south-west corner along the west wall to 50 mm past the north jamb of OP01. No box. Cable 7."
+    Description: "Curtain-rail LED uplight on the room side of the garnýž, its top flush with the rail top (the 2.50 m bay ceiling leaves no room above), shining up. One continuous L: from 50 mm past the north jamb of OP01 along the west wall to the south-west corner, then along the south wall to 50 mm past the east jamb of OP05. No box; the viewer draws the two legs from X0/Y0 → XC/YC → X1/Y1. Cable 7."
     PredefinedType: USERDEFINED
     ObjectType: LedStrip
     ContainedInStructure: SP-1.11
@@ -162,19 +167,17 @@ lightFixtures:
           DeviceCode: S
           CableSpec: "CYKY 4x1.5"
           CableLength: 15
+          Emits: up
           X0: 0.45
-          Y0: 3.275
-          X1: 0.45
-          Y1: 6.875
-    Origin: [0.47, 6.875]
-    Elevation: 2.488
-    RefDirection: [0, -1]
-    Width: 3.568
-    Depth: 0.012
-    Height: 0.012
+          Y0: 6.875
+          XC: 0.45
+          YC: 3.275
+          X1: 3.75
+          Y1: 3.275
+          Z: 2.488
   - id: C8-S
     Name: "Pásek 8"
-    Description: "Curtain-rail LED strip. From the south-west corner along the south wall to 50 mm past the east jamb of OP05. No box. Cable 8."
+    Description: "Curtain-rail LED downlight under the garnýž, shining down. The same continuous L as C7-S: along the west wall and the south wall. No box; the viewer draws the two legs from X0/Y0 → XC/YC → X1/Y1. Cable 8."
     PredefinedType: USERDEFINED
     ObjectType: LedStrip
     ContainedInStructure: SP-1.11
@@ -186,16 +189,14 @@ lightFixtures:
           DeviceCode: S
           CableSpec: "CYKY 4x1.5"
           CableLength: 15
+          Emits: down
           X0: 0.45
-          Y0: 3.275
+          Y0: 6.875
+          XC: 0.45
+          YC: 3.275
           X1: 3.75
           Y1: 3.275
-    Origin: [0.482, 3.295]
-    Elevation: 2.488
-    RefDirection: [1, 0]
-    Width: 3.268
-    Depth: 0.012
-    Height: 0.012
+          Z: 2.468
 switchingDevices:
   - id: C1-2V
     Name: "Dvojvypínač 1"
@@ -565,7 +566,7 @@ furniture:
           Y1: 6.6
   - id: RAIL-W
     Name: "Garnýž západ"
-    Description: "West curtain rail, same extent as C7-S. Not a cabled device."
+    Description: "West curtain rail. The L strips C7-S (up) and C8-S (down) run along it and on along RAIL-S. Not a cabled device."
     PredefinedType: USERDEFINED
     ObjectType: CurtainRail
     ContainedInStructure: SP-1.11
@@ -577,7 +578,7 @@ furniture:
     Height: 0.02
   - id: RAIL-S
     Name: "Garnýž jih"
-    Description: "South curtain rail, same extent as C8-S. Not a cabled device."
+    Description: "South curtain rail. The L strips C7-S (up) and C8-S (down) run along it from RAIL-W. Not a cabled device."
     PredefinedType: USERDEFINED
     ObjectType: CurtainRail
     ContainedInStructure: SP-1.11

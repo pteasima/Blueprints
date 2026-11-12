@@ -78,14 +78,20 @@ def _opening_span(opening_id: str) -> tuple[float, float]:
     return near, near + float(opening["Width"])
 
 
-def _strip_span(device_id: str) -> tuple[float, float, float, float]:
+def _strip_path(device_id: str) -> tuple[tuple[float, float], tuple[float, float], tuple[float, float], str]:
+    """North end, corner, east end, and ``up``/``down`` of a curtain-rail L strip."""
     doc = load_yaml(SOURCE_PATH)
     record = next(item for item in doc["lightFixtures"] if item["id"] == device_id)
     props: dict = {}
     for group in record.get("PropertySets") or []:
         if group.get("Name") == "Pset_YamlIfc":
             props.update(group.get("Properties") or {})
-    return float(props["X0"]), float(props["Y0"]), float(props["X1"]), float(props["Y1"])
+    return (
+        (float(props["X0"]), float(props["Y0"])),
+        (float(props["XC"]), float(props["YC"])),
+        (float(props["X1"]), float(props["Y1"])),
+        str(props["Emits"]),
+    )
 
 
 def marks() -> list[Mark]:
@@ -111,8 +117,8 @@ def marks() -> list[Mark]:
     ap_x = 1.100
     ap_y = (low_ceiling_south + north_in) / 2.0
     bed_x0, bed_y0, bed_x1, bed_y1 = bed_outline()
-    c7 = _strip_span("C7-S")
-    c8 = _strip_span("C8-S")
+    c7 = _strip_path("C7-S")
+    c8 = _strip_path("C8-S")
     rows = [
         Mark("C12-S", "1.11-L2", "light", (bed_x0 + bed_x1) / 2.0, (bed_y0 + bed_y1) / 2.0, "ceiling", "", "ceiling", "Pendant above the bed. Cable 12, 120 W."),
         Mark("C3-S", "1.11-L4", "strip", bed_x0, (bed_y0 + bed_y1) / 2.0, "bed", "", "bed-edge", "LED strip on the foot and the two long sides. Not the headboard."),
@@ -123,8 +129,8 @@ def marks() -> list[Mark]:
         Mark("SOCK-ES", "1.11-Z3", "socket", east_in, south_bed, "wall", "bed-s", "750", "South bedside socket. Centre 750."),
         Mark("C1-2V", "1.11-B5", "switch", east_in, south_bed, "wall", "bed-s", "821", "South bedside switch, 71 mm above the socket."),
         Mark("C2-S", "1.11-L5", "light", east_in, south_bed, "wall", "bed-s", "892", "South bedside lamp, one pitch above the switch."),
-        Mark("C7-S", "1.11-L6", "strip", (c7[0] + c7[2]) / 2.0, (c7[1] + c7[3]) / 2.0, "strip", "", "west-rail", "Curtain rail from the south-west corner to 50 mm past the north jamb of OP01."),
-        Mark("C8-S", "1.11-L7", "strip", (c8[0] + c8[2]) / 2.0, (c8[1] + c8[3]) / 2.0, "strip", "", "south-rail", "Curtain rail from the south-west corner to 50 mm past the east jamb of OP05."),
+        Mark("C7-S", "1.11-L6", "strip", c7[1][0], c7[1][1], "strip", "", "rail-up", "Curtain-rail uplight on top of the garnýž. One L from 50 mm past the north jamb of OP01, along the west and south walls, to 50 mm past the east jamb of OP05."),
+        Mark("C8-S", "1.11-L7", "strip", c8[1][0], c8[1][1], "strip", "", "rail-down", "Curtain-rail downlight under the garnýž. The same L as C7-S, along the west and south walls."),
         Mark("C32-V-1", "1.11-B2", "switch", box["entry_east"], switch_y, "wall", "hall-door", "1350", "Bedroom light switch, 150 mm from the latch of OP09."),
         Mark("C9-R", "1.11-P1", "sensor", box["entry_east"], switch_y, "wall", "hall-door", "in box", "mmWave inside the bedroom door switch C32-V-1."),
         Mark("C32-M", "1.11-K1", "sensor", box["entry_east"], door.y1, "frame", "", "frame", "Door contact in the latch jamb of OP09."),
@@ -348,20 +354,23 @@ def render_svg() -> str:
         f'<text x="{sx(bx1) - 8:.1f}" y="{sy(by0) - 8:.1f}" text-anchor="end" '
         f'fill="#c2410c" font-size="11" font-weight="600">C3-S strip</text>'
     )
-    for strip_id, into in (("C7-S", (0.025, 0.0)), ("C8-S", (0.0, 0.025))):
-        x0, y0, x1, y1 = _strip_span(strip_id)
-        dx, dy = into
+    # Both rail strips are the same L; draw them side by side, uplight nearer the wall.
+    for strip_id, off, colour in (("C7-S", 0.06, "#e07a28"), ("C8-S", 0.14, "#b45309")):
+        (nx, ny), (cx, cy), (ex, ey), emits = _strip_path(strip_id)
+        if strip_id == "C7-S":
+            parts.append(
+                f'<polyline points="{sx(nx):.1f},{sy(ny):.1f} {sx(cx):.1f},{sy(cy):.1f} {sx(ex):.1f},{sy(ey):.1f}" '
+                f'fill="none" stroke="#6b5344" stroke-width="3"/>'
+            )
+        dash = "" if emits == "up" else ' stroke-dasharray="8 4"'
         parts.append(
-            f'<line x1="{sx(x0):.1f}" y1="{sy(y0):.1f}" x2="{sx(x1):.1f}" y2="{sy(y1):.1f}" '
-            f'stroke="#6b5344" stroke-width="3"/>'
+            f'<polyline points="{sx(nx + off):.1f},{sy(ny):.1f} {sx(cx + off):.1f},{sy(cy + off):.1f} '
+            f'{sx(ex):.1f},{sy(ey + off):.1f}" fill="none" stroke="{colour}" stroke-width="3"{dash}/>'
         )
+        word = "svítí nahoru" if emits == "up" else "svítí dolů"
         parts.append(
-            f'<line x1="{sx(x0 + dx):.1f}" y1="{sy(y0 + dy):.1f}" x2="{sx(x1 + dx):.1f}" y2="{sy(y1 + dy):.1f}" '
-            f'stroke="#e07a28" stroke-width="4"/>'
-        )
-        parts.append(
-            f'<text x="{sx((x0 + x1) / 2 + dx) + 8:.1f}" y="{sy((y0 + y1) / 2 + dy):.1f}" font-size="11" '
-            f'fill="#c2410c">{strip_id} garnýž</text>'
+            f'<text x="{sx(cx + 0.14) + 10:.1f}" y="{sy(cy + 0.75) + (0 if emits == "up" else 14):.1f}" font-size="11" '
+            f'fill="{colour}">{strip_id} garnýž, {word}</text>'
         )
     parts.append(
         f'<text x="{sx(box["west"] + 0.12):.1f}" y="{sy(by0 + 0.55):.1f}" '
@@ -567,6 +576,8 @@ def _naming_md() -> str:
         "## Proposed scheme",
         "",
         "`<room>-<type><n>`, counted inside the room. The cable number is only a property, because one cable can feed several devices.",
+        "",
+        "This proposal is not accepted. A rename of a YAML `id` would change that element's IFC `GlobalId`, which Home will use as its join key. See [Home.md](../Home.md). Do not rename without preserving the `GlobalId`.",
         "",
         "| Letter | Device |",
         "| --- | --- |",
