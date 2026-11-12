@@ -10,6 +10,11 @@ The structure agreed with Petr (2026-11-11, docs/design/kitchen-cabinets.md):
   lists its own parts plus the shared ones it touches; a divider is in two
   groups. The bay keeps its property sets (``Pset_Drawers`` …);
 - parts are never duplicated, so a quantity take-off counts each board once;
+- fronts, doors, shelves and pull-outs carry ``Pset_KitchenFront`` (band,
+  hinge side, contents …). Built-in appliances and sink fittings
+  (``Pset_BuiltIn`` in the yaml: the ovens, disposers, taps) keep their own
+  yaml product and room containment, get the laid-out body and
+  ``Pset_KitchenBuiltIn``, and join their bay's group, like the hob;
 - two root groups hang off to the side of the spatial tree: ``Furniture``
   (``GRP-FURNITURE``) lists every bay group as a child and every loose
   furniture piece (sofa, table, chairs, and other furnishings that are
@@ -42,12 +47,17 @@ PART_CLASS = {
     "Cladding": ("IfcCovering", "CLADDING"),
     "Backsplash": ("IfcCovering", "CLADDING"),
     "Drawer": ("IfcSystemFurnitureElement", "USERDEFINED"),
+    "PullOut": ("IfcSystemFurnitureElement", "USERDEFINED"),
+    # Door, Shelf, Board, Filler, Packer: PANEL (DEFAULT_CLASS).
     "Body": ("IfcSystemFurnitureElement", "USERDEFINED"),  # a whole box bay (Carcass: Box)
     # The hob is an appliance, not a piece of the carcass: it is contained in
     # the room like the dishwasher and only joins its bay's group.
     "Hob": ("IfcElectricAppliance", "ELECTRICCOOKER"),
 }
 NOT_AGGREGATED = frozenset({"Hob"})
+PSET_FRONT = "Pset_KitchenFront"
+PSET_BUILTIN_LAYOUT = "Pset_KitchenBuiltIn"
+FRONT_ROLES = frozenset({"Front", "Door", "Drawer", "PullOut", "Filler", "Shelf", "Board", "Packer"})
 FURNITURE_GROUP_ID = "GRP-FURNITURE"
 ELECTRICAL_GROUP_ID = "GRP-ELECTRICAL"
 # yaml-ifc types these as IfcFurniture, but they are construction or the
@@ -337,6 +347,26 @@ def apply(model, doc: dict, runs: list | None = None) -> dict:
         loose = []  # contained in the room, not aggregated (the hob)
         products = {}
         for part in run.parts:
+            if part.builtin is not None:
+                # A yaml appliance or sink fitting (Pset_BuiltIn) with no box
+                # of its own: keep yaml-ifc's product, its class and its room
+                # containment, and give it the laid-out body. Not a run part.
+                product = by_id[part.id]
+                old = product.ObjectPlacement
+                product.ObjectPlacement = w.placement(run_product, run.frame)
+                if old is not None and not model.get_inverse(old):
+                    model.remove(old)
+                product.Representation = w.shape(part)
+                length, depth, height = _bbox(part)
+                w.pset(product, PSET_PART, {"Role": part.role, "Run": run.id,
+                                            "Width": round(length / 1000.0, 6),
+                                            "Depth": round(depth / 1000.0, 6),
+                                            "Height": round(height / 1000.0, 6)}, part.id)
+                if part.props:
+                    w.pset(product, PSET_BUILTIN_LAYOUT, part.props, part.id)
+                products[part.id] = product
+                written[part.id] = product.GlobalId
+                continue
             ifc_class, predefined = PART_CLASS.get(part.role, DEFAULT_CLASS)
             values = dict(
                 GlobalId=global_id(part.id),
@@ -369,6 +399,8 @@ def apply(model, doc: dict, runs: list | None = None) -> dict:
                     RelatedObjects=[product],
                     RelatingMaterial=w.material(part.material),
                 )
+            if part.props and part.role in FRONT_ROLES:
+                w.pset(product, PSET_FRONT, part.props, part.id)
             if part.role == "Hob":
                 hob = next(h for h in run.hobs.values() if h.id == part.id)
                 w.pset(product, kc.PSET_HOB, {"Model": part.name, "Mounting": hob.mounting,

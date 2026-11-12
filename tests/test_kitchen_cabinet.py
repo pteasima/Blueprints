@@ -23,10 +23,124 @@ def _runs(doc=None):
     return {r.id: r for r in kc.runs(doc or load_furnishings())}
 
 
-def test_knife_bay_is_the_only_drawer_bay():
+def test_drawer_and_pullout_bays():
+    # KitchenPlan.jpg: three-bullet notes on the island 600 / 500 / 600 are
+    # three drawers each; the west run's "suplik uklid", "kos / kompost"
+    # and "trideny odpad" are pull-outs (docs/design/kitchen-cabinets.md).
     doc = load_furnishings()
     ids = [e["id"] for e in doc["systemFurniture"] if kc.has_drawers(e)]
-    assert ids == ["SF-I600a"]
+    assert ids == ["SF-I600a", "SF-I500b", "SF-I600b", "SF-A250", "SF-B800", "SF-C850"]
+
+
+def test_zone_spec_grammar():
+    bay = {"id": "X", "PropertySets": [{"Name": kc.PSET_FRONTS, "Properties": {
+        "Layout": "door * hinge=R shelves=4 racks=4 | front 0.81"}}]}
+    assert kc.zone_spec(bay) == [("door", "*", {"hinge": "R", "shelves": "4", "racks": "4"}),
+                                 ("front", "0.81", {})]
+    with pytest.raises(ValueError, match="unknown band kind"):
+        kc.zone_spec({"id": "X", "PropertySets": [{"Name": kc.PSET_FRONTS, "Properties": {"Layout": "drawr *"}}]})
+
+
+def test_island_drawer_bays_follow_the_notes():
+    run = _runs()["KR-ISL"]
+    for bay_id, contents in (
+        ("SF-I500b", ["koření", "oleje, octy, mouky, cukry, dochucovadla", "hrnce"]),
+        ("SF-I600b", ["příbory", "vařečky, stěrky, naběračky", "pánve"]),
+    ):
+        drawers = [run.part(f"{bay_id}-D{i}").drawer for i in (1, 2, 3)]
+        assert [d.nominal for d in drawers] == [200.0, 200.0, 400.0]
+        assert [d.content for d in drawers] == contents
+        assert [round(d.front[5] - d.front[4]) for d in drawers] == [197, 197, 407]
+    # The slab-front bays the plan does not give a front type for stay slabs.
+    for bay_id in ("SF-I500a", "SF-I300", "SF-E600a", "SF-E600b", "SF-E600c", "SF-E700"):
+        assert run.part(f"{bay_id}-FRONT").role == "Front"
+
+
+def test_tall_doors_hinge_as_the_notes_say():
+    runs = _runs()
+    t1 = runs["KR-TALL-W"].part("SF-T1-DOOR1")
+    t2 = runs["KR-TALL"].part("SF-T2-DOOR1")
+    assert t1.door.hinge == "L" and t2.door.hinge == "R"
+    assert round(t1.boxes[0][1] - t1.boxes[0][0]) == 597  # 600 grid door
+    # The rest of the 750 is a filler on the hinge (wall) side.
+    filler = runs["KR-TALL-W"].part("SF-T1-FILLER1").boxes[0]
+    assert filler[1] <= t1.boxes[0][0]
+    assert t1.door.hinge_a == pytest.approx(t1.boxes[0][0])
+    # T2: door racks ("police na dverich") and the hinge on the T3 side.
+    assert len(t2.boxes) == 1 + 4
+    assert t2.door.hinge_a == pytest.approx(t2.boxes[0][1])
+    shelves = [p for p in runs["KR-TALL"].parts if p.id.startswith("SF-T2-SH1-")]
+    assert len(shelves) == 4
+    t1_shelves = sorted(p.boxes[0][4] for p in runs["KR-TALL-W"].parts if p.id.startswith("SF-T1-SH1-"))
+    assert t1_shelves[0] == pytest.approx(118.0 + 400.0)
+
+
+def test_oven_column_niches_fit_miele():
+    run = _runs()["KR-TALL"]
+    oven = run.part("EA-DGC7465")
+    micro = run.part("EA-M2230")
+    assert oven.props["NicheClearHeight"] == pytest.approx(0.593)
+    assert micro.props["NicheClearHeight"] == pytest.approx(0.356)
+    for part in (oven, micro):
+        assert part.props["NicheClearWidth"] == pytest.approx(0.564)
+        assert part.role == "Appliance" and part.id in run.bay("SF-T3").members
+    # The oven stands on the counter-line board; the microwave over it.
+    assert oven.props["Elevation"] == pytest.approx(0.928)
+    assert micro.props["Elevation"] > oven.props["Elevation"] + 0.59
+    # Fascias do not touch the slab fronts above and below.
+    front1 = run.part("SF-T3-FRONT1").boxes[0]
+    assert front1[4] >= micro.boxes[0][5]
+
+
+def test_niche_outside_the_makers_range_is_rejected():
+    doc = copy.deepcopy(load_furnishings())
+    bay = next(e for e in doc["systemFurniture"] if e["id"] == "SF-T3")
+    for pset in bay["PropertySets"]:
+        if pset["Name"] == kc.PSET_FRONTS:
+            pset["Properties"]["Layout"] = "front * | niche 0.33 clear=0.564 | niche 0.593 clear=0.564 | front 0.81"
+    with pytest.raises(ValueError, match="EA-M2230"):
+        kc.runs(doc)
+
+
+def test_disposers_and_taps_hang_on_their_sinks():
+    runs = _runs()
+    for run_id, bay_id, disposer, tap, sink in (
+        ("KR-WEST", "SF-B800", "EA-EVO3-W", "SN-TAP-W", "SN-RS15"),
+        ("KR-ISL", "SF-I500a", "EA-EVO3-I", "SN-TAP-I", "SN-RS1840"),
+    ):
+        run = runs[run_id]
+        bay = run.bay(bay_id)
+        assert disposer in bay.members and tap in bay.members and sink in bay.external
+        box = run.part(disposer).boxes[0]
+        assert box[5] - box[4] == pytest.approx(368.0)
+        assert box[1] - box[0] == pytest.approx(145.0)
+    # The west bins stop 10 under the disposer.
+    west = runs["KR-WEST"]
+    pull = west.part("SF-B800-D1").drawer
+    assert pull.box[5] <= west.part("EA-EVO3-W").boxes[0][4] - 10.0 + 1e-6
+    assert len(pull.items) == 2
+
+
+def test_wall_cabinets_and_over_fridge_have_pairs_of_doors():
+    runs = _runs()
+    for run_id, bay_id in (("KR-WEST-H", "SF-AH850"), ("KR-WEST-H", "SF-BH800"),
+                           ("KR-WEST-H", "SF-CH850"), ("KR-TALL-F", "SF-TF")):
+        run = runs[run_id]
+        leaves = [run.part(f"{bay_id}-DOOR{i}").door for i in (1, 2)]
+        assert sorted(leaf.hinge for leaf in leaves) == ["L", "R"]
+    tf = runs["KR-TALL-F"]
+    fridge_top = 1876.0
+    assert tf.bays[0].z_base >= fridge_top
+
+
+def test_fronts_layout_is_parametric():
+    doc = copy.deepcopy(load_furnishings())
+    bay = next(e for e in doc["systemFurniture"] if e["id"] == "SF-I500b")
+    for pset in bay["PropertySets"]:
+        if pset["Name"] == "Pset_Drawers":
+            pset["Properties"]["NominalHeights"] = "0.15 0.15 0.2 *"
+    run = _runs(doc)["KR-ISL"]
+    assert [round(run.part(f"SF-I500b-D{i}").drawer.nominal) for i in (1, 2, 3, 4)] == [150, 150, 200, 310]
 
 
 def test_island_clear_widths():
@@ -124,18 +238,48 @@ def test_ifc_groups_and_assembly():
         if r.RelatingGroup and r.RelatingGroup.GlobalId == electrical.GlobalId
     ]
     island = [r for r in model.by_type("IfcRelAggregates") if r.RelatingObject.Name == "Ostrov"]
-    aggregated = [p for p in _runs()["KR-ISL"].parts if p.role not in kitchen_ifc.NOT_AGGREGATED]
+    aggregated = [p for p in _runs()["KR-ISL"].parts
+                  if p.role not in kitchen_ifc.NOT_AGGREGATED and p.builtin is None]
     assert len(island) == 1 and len(island[0].RelatedObjects) == len(aggregated)
+    # Built-ins keep their yaml product and room, gain a body, join the bay.
+    by_id = kitchen_ifc._products_by_yaml_id(model)
+    oven = by_id["EA-DGC7465"]
+    assert oven.is_a("IfcElectricAppliance") and oven.PredefinedType == "ELECTRICCOOKER"
+    assert oven.Representation is not None
+    assert [r.RelatingStructure.Name for r in oven.ContainedInStructure] == ["1.02 Obývák"]
+    t3 = groups["Vysoká 600 trouba"]
+    t3_members = {kitchen_ifc._yaml_id(o) for r in t3.IsGroupedBy for o in r.RelatedObjects}
+    assert {"EA-DGC7465", "EA-M2230", "SF-T3-FRONT1", "SF-T3-PACK3L"} <= t3_members
+    tap = by_id["SN-TAP-I"]
+    assert tap.is_a("IfcSanitaryTerminal") and not tap.Decomposes
+    # The bay over the fridge is a new group under Furniture.
+    assert "Nad lednicí 908" in child_names
 
 
 def test_drawer_motions_in_model():
     _shape, meta = build()
     drawers = [m for m in meta["door_motions"] if m["kind"] == "drawer"]
-    assert [m["id"] for m in drawers] == ["SF-I600a-D1", "SF-I600a-D2", "SF-I600a-D3"]
+    island = [m for m in drawers if m["id"].startswith("SF-I")]
+    assert [m["id"] for m in island] == [f"{b}-D{i}" for b in ("SF-I600a", "SF-I500b", "SF-I600b") for i in (1, 2, 3)]
     for m in drawers:
         assert m["element"] == m["id"]
+    for m in island:
         assert m["slide"] == pytest.approx([-0.55, 0.0, 0.0])
-        assert m["center"][2] == pytest.approx(-13.0, abs=1e-6)
+    assert [m["center"][2] for m in island[:3]] == pytest.approx([-13.0] * 3, abs=1e-6)
+    west = [m for m in drawers if m["id"] in ("SF-A250-D1", "SF-B800-D1", "SF-C850-D1")]
+    assert len(west) == 3 and all(m["slide"] == pytest.approx([0.55, 0.0, 0.0]) for m in west)
+
+
+def test_cabinet_door_motions_swing_outward():
+    _shape, meta = build()
+    doors = {m["id"]: m for m in meta["door_motions"] if m["kind"] == "hinged" and m["id"].startswith("SF-")}
+    assert {"SF-T1-DOOR1", "SF-T2-DOOR1", "SF-TF-DOOR1", "SF-TF-DOOR2", "SF-AH850-DOOR1"} <= set(doors)
+    # T1 hinges on its west edge and opens toward the room (south, glTF +z).
+    t1 = doors["SF-T1-DOOR1"]
+    assert t1["element"] == "SF-T1-DOOR1" and t1["axis"] == [0, 1, 0]
+    assert t1["hinge"][0] < t1["center"][0] and t1["sign"] == -1
+    t2 = doors["SF-T2-DOOR1"]
+    assert t2["hinge"][0] > t2["center"][0] and t2["sign"] == 1
 
 
 def test_sink_cutouts_are_teka_undermount():
@@ -171,10 +315,7 @@ def test_hob_flush_fit_in_sf_i600b():
 
 
 def test_drawers_under_the_hob_clear_it():
-    doc = copy.deepcopy(load_furnishings())
-    bay = next(e for e in doc["systemFurniture"] if e["id"] == "SF-I600b")
-    bay["PropertySets"].append({"Name": "Pset_Drawers", "Properties": {"NominalHeights": "0.2 0.2 *"}})
-    run = _runs(doc)["KR-ISL"]
+    run = _runs()["KR-ISL"]
     hob = run.hobs["SF-I600b"]
     top = run.part("SF-I600b-D1").drawer
     assert top.box[5] <= hob.underside - 8.0 + 1e-6

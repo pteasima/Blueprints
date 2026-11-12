@@ -500,8 +500,19 @@ def test_living_room_boxes_follow_plan_v3():
         assert placed[item].bounding_box().max.Y == pytest.approx(15350.0 - half, abs=0.2)
 
     chair = placed["FN-CHW1"]
-    full = 500.0 * 450.0 * 800.0
+    full = 540.0 * 480.0 * 860.0  # Kaplan Ancora (KitchenPlan.jpg card)
     assert chair.volume < full * 0.6
+    by_id = {row["id"]: row for row in furnishing_records()}
+    for cid in ("FN-CHW1", "FN-CHW2", "FN-CHW3", "FN-CHE1", "FN-CHE2", "FN-CHE3"):
+        row = by_id[cid]
+        assert (row["Width"], row["Depth"], row["Height"]) == (0.54, 0.48, 0.86)
+    # Front edges on the table's long edges, centres 400 / 1200 / 2000 from its south end.
+    assert by_id["FN-CHW1"]["Origin"][0] + 0.54 == pytest.approx(table[0], abs=1e-6)
+    assert by_id["FN-CHE1"]["Origin"][0] == pytest.approx(table[3], abs=1e-6)
+    assert [by_id[f"FN-CHW{i}"]["Origin"][1] + 0.24 - table[1] for i in (1, 2, 3)] == pytest.approx([0.4, 1.2, 2.0])
+    # "v cele u kavovaru detska zidlicka, v cele u okna nic": one child's chair, north end.
+    child = by_id["FN-CHN"]
+    assert child["Origin"][1] == pytest.approx(table[4], abs=1e-6)
     assert placed["FN-GATTA"].volume < 1100.0 * 2400.0 * 760.0 * 0.5
     assert placed["FN-BK"].volume < 4180.0 * 250.0 * 1600.0 * 0.7
 

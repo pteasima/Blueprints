@@ -340,6 +340,12 @@ def _kitchen_run_parts(run, motions=None) -> list:
                 solid = solid + _run_box(box, 0.0)
             inward = -dr.out * half
             solid = Pos(0.0, inward, 0.0) * solid
+        elif part.door is not None:
+            # A cabinet door leaf and its door racks: fused unshrunk into one
+            # connected mesh the viewer swings about its hinge.
+            solid = _run_box(part.boxes[0], 0.0)
+            for box in part.boxes[1:]:
+                solid = solid + _run_box(box, 0.0)
         elif part.shape == "cylinder":
             a0, a1, c0, c1, z0, z1 = part.boxes[0]
             solid = Pos((a0 + a1) / 2.0, (c0 + c1) / 2.0, z0 + half) * Cylinder(
@@ -352,9 +358,16 @@ def _kitchen_run_parts(run, motions=None) -> list:
             for void in part.voids:
                 bottom = z0 - 1.0 if not void.depth else z1 - void.depth
                 solid = solid - _void_solid(void, bottom, z1 + 1.0)
-        label = {"worktop": LABEL_WORKTOP, "hob": LABEL_HOB}.get(part.label, LABEL_CABINET)
-        out.append(_tag(_paint(plane * solid, label), part.id, "systemFurniture"))
-        if part.drawer is None or motions is None:
+        label = {"worktop": LABEL_WORKTOP, "hob": LABEL_HOB, "appliance": LABEL_APPLIANCE,
+                 "sink": LABEL_SINK}.get(part.label, LABEL_CABINET)
+        list_key = {"appliance": "electricAppliances", "sink": "sanitaryTerminals"}.get(part.label, "systemFurniture")
+        out.append(_tag(_paint(plane * solid, label), part.id, list_key))
+        if motions is None:
+            continue
+        if part.door is not None:
+            motions.append(_cabinet_door_motion(frame, part))
+            continue
+        if part.drawer is None:
             continue
         dr = part.drawer
         a = (min(b[0] for b in part.boxes) + max(b[1] for b in part.boxes)) / 2.0
@@ -374,6 +387,41 @@ def _kitchen_run_parts(run, motions=None) -> list:
             }
         )
     return out
+
+
+def _cabinet_door_motion(frame, part) -> dict:
+    """A hinged record for a cabinet door (the viewer's doors.js).
+
+    The hinge line is the leaf's hinge edge on its outer face; the leaf
+    swings outward, away from the carcass. The sign is the rotation about
+    glTF +Y that takes the leaf's direction (hinge to free edge) towards
+    its outward normal.
+    """
+    leaf = part.door
+    a0, a1, c0, c1, z0, z1 = part.boxes[0]
+    # The mesh is the leaf and its racks; the viewer finds it by its bbox centre.
+    boxes = part.boxes
+    a = (min(b[0] for b in boxes) + max(b[1] for b in boxes)) / 2.0
+    c = (min(b[2] for b in boxes) + max(b[3] for b in boxes)) / 2.0
+    z = (min(b[4] for b in boxes) + max(b[5] for b in boxes)) / 2.0
+    centre = cad_mm_to_gltf_m(frame.world(a, c, z))
+    hinge = cad_mm_to_gltf_m(frame.world(leaf.hinge_a, leaf.face_c, z))
+    free_a = a1 if abs(leaf.hinge_a - a0) < abs(leaf.hinge_a - a1) else a0
+    free = cad_mm_to_gltf_m(frame.world(free_a, leaf.face_c, z))
+    out = cad_mm_to_gltf_m(frame.world(leaf.hinge_a, leaf.face_c + leaf.out * 100.0, z))
+    vx, vz = free[0] - hinge[0], free[2] - hinge[2]
+    nx, nz = out[0] - hinge[0], out[2] - hinge[2]
+    # A +90° turn about +Y maps (vx, vz) to (vz, -vx).
+    sign = 1 if (vz * nx + -vx * nz) > 0 else -1
+    return {
+        "id": part.id,
+        "kind": "hinged",
+        "element": part.id,
+        "center": [round(v, 6) for v in centre],
+        "hinge": [round(v, 6) for v in hinge],
+        "axis": [0, 1, 0],
+        "sign": sign,
+    }
 
 
 def _furnishing_parts(doc: dict, motions: list | None = None) -> list:

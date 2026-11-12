@@ -1,10 +1,11 @@
 """PNG previews of one kitchen run, straight from models/kitchen_cabinet.py.
 
-    python scripts/render_kitchen_run.py KR-ISL [--bay SF-I600a] [--open SF-I600a-D1,SF-I600a-D3] [--out DIR]
+    python scripts/render_kitchen_run.py KR-ISL [--bay SF-I600a] [--open SF-I600a-D1,SF-T2-DOOR1] [--out DIR]
 
 Writes ``<run>-iso.png`` (the whole monoblock, worktop see-through),
 ``<run>-plan.png`` (a plan cut at mid carcass height with every bay's clear
-width) and, with ``--bay``, ``<bay>-isolated.png``: only that bay's group
+width), ``<run>-front.png`` (the fronts as you face them: every drawer,
+door with its hinge side, filler and appliance, labelled) and, with ``--bay``, ``<bay>-isolated.png``: only that bay's group
 members, which is what the viewer's "Hide all others" keeps. Every number
 comes from ``kitchen_cabinet.runs``; nothing here is a typed-in size.
 """
@@ -38,11 +39,21 @@ COLORS = {
     "Top": "#b88a4a",
     "Front": "#e9c46a",
     "Drawer": "#f2d27a",
+    "PullOut": "#f4b860",
+    "Door": "#9ecae1",
+    "Filler": "#c7b299",
+    "Shelf": "#a0785a",
+    "Board": "#a0785a",
+    "Packer": "#6b4f3a",
+    "Appliance": "#3a3a3a",
+    "Leg": "#444444",
+    "Hob": "#111111",
     "Plinth": "#555555",
     "Worktop": "#ece9e2",
     "Cladding": "#d9d5cc",
 }
-ALPHA = {"Worktop": 0.35, "Cladding": 0.45, "Front": 0.55}
+ALPHA = {"Worktop": 0.35, "Cladding": 0.45, "Front": 0.55, "Door": 0.6}
+FRONT_ROLES = ("Front", "Drawer", "PullOut", "Door", "Filler", "Appliance")
 
 
 def _box_faces(box, offset):
@@ -52,6 +63,21 @@ def _box_faces(box, offset):
     ) + np.array(offset)
     idx = [(0, 1, 2, 3), (4, 5, 6, 7), (0, 1, 5, 4), (2, 3, 7, 6), (1, 2, 6, 5), (0, 3, 7, 4)]
     return [p[list(i)] for i in idx]
+
+
+def _swing(face, part, angle=np.pi / 2):
+    """A door leaf opened ``angle`` about its hinge edge, outward."""
+    leaf = part.door
+    a0, a1 = part.boxes[0][0], part.boxes[0][1]
+    free = 1.0 if abs(leaf.hinge_a - a0) < abs(leaf.hinge_a - a1) else -1.0
+    # Turn the free-edge direction (free, 0) towards the outward normal (0, out).
+    t = angle * (1.0 if free * leaf.out > 0 else -1.0)
+    ca, sa = np.cos(t), np.sin(t)
+    out = face.copy()
+    da, dc = face[:, 0] - leaf.hinge_a, face[:, 1] - leaf.face_c
+    out[:, 0] = leaf.hinge_a + ca * da - sa * dc
+    out[:, 1] = leaf.face_c + sa * da + ca * dc
+    return out
 
 
 def iso(run, parts, open_ids, path: Path, title: str, elev=26, azim=-62):
@@ -66,6 +92,8 @@ def iso(run, parts, open_ids, path: Path, title: str, elev=26, azim=-62):
         if part.drawer is not None and part.id in open_ids:
             off = (0.0, part.drawer.out * part.drawer.extension, 0.0)
         faces = [f for box in part.boxes for f in _box_faces(box, off)]
+        if part.door is not None and part.id in open_ids:
+            faces = [_swing(f, part) for f in faces]
         base = np.array(matplotlib.colors.to_rgb(COLORS.get(part.role, "#999999")))
         cols = []
         for f in faces:
@@ -95,8 +123,8 @@ def plan(run, path: Path):
         for a0, a1, c0, c1, z0, z1 in part.boxes:
             if part.role == "Worktop":
                 ax.add_patch(plt.Rectangle((a0, c0), a1 - a0, c1 - c0, fc="none", ec="#777", lw=0.8, ls="--"))
-                for va0, va1, vc0, vc1 in part.voids:
-                    ax.add_patch(plt.Rectangle((va0, vc0), va1 - va0, vc1 - vc0, fc="none", ec="#2a9", lw=0.8))
+                for v in part.voids:
+                    ax.add_patch(plt.Rectangle((v.a0, v.c0), v.a1 - v.a0, v.c1 - v.c0, fc="none", ec="#2a9", lw=0.8))
                 continue
             if not (z0 <= z <= z1) or part.drawer is not None:
                 continue
@@ -118,6 +146,56 @@ def plan(run, path: Path):
     plt.close(fig)
 
 
+def front(run, path: Path):
+    """The fronts as you face them (run frame a flipped when the front is
+    at c1, so your left is the image's left), labelled with their id, size,
+    hinge side and contents."""
+    owner_ids = {m for b in run.bays for m in b.members}
+    if not any(p.role in FRONT_ROLES and p.id in owner_ids for p in run.parts):
+        return  # box bodies only (the dining run): nothing to draw
+    fig, ax = plt.subplots(figsize=(14, 8), dpi=150)
+    flips = {b.id: not b.front_low for b in run.bays}
+    owner = {m: b for b in run.bays for m in b.members}
+    for part in run.parts:
+        bay = owner.get(part.id)
+        if part.role not in FRONT_ROLES or bay is None:
+            continue
+        if part.role == "Appliance" and "Zone" not in part.props:
+            continue  # disposers and taps are not on the fronts' plane
+        a0, a1, _c0, _c1, z0, z1 = part.boxes[0]
+        x0, x1 = (-a1, -a0) if flips[bay.id] else (a0, a1)
+        ax.add_patch(plt.Rectangle((x0, z0), x1 - x0, z1 - z0, fc=COLORS.get(part.role, "#999"), ec="k", lw=0.5,
+                                   alpha=0.9))
+        bits = [part.id.replace(bay.id + "-", "") if part.role != "Appliance" else part.name,
+                f"{a1 - a0:.0f}×{z1 - z0:.0f}"]
+        if part.door is not None:
+            bits.append(f"hinge {part.door.hinge}")
+            hx = x0 if (part.door.hinge == "L") else x1
+            ax.plot([hx, hx], [z0 + 40, z1 - 40], color="#c00", lw=2.0)
+        if part.drawer is not None and part.drawer.items:
+            bits.append(f"{len(part.drawer.items)} {part.props.get('ItemKind') or ''}".strip())
+        if part.drawer is not None and part.drawer.trimmed:
+            bits.append(f"box −{part.drawer.trimmed:.0f}")
+        content = part.props.get("Contents")
+        if content:
+            bits.append(str(content)[:38])
+        ax.text((x0 + x1) / 2, (z0 + z1) / 2, "\n".join(bits), ha="center", va="center", fontsize=5.5,
+                color="w" if part.role == "Appliance" else "k")
+    for bay in run.bays:
+        x0, x1 = (-bay.a1, -bay.a0) if not bay.front_low else (bay.a0, bay.a1)
+        top = bay.z_base + bay.height if bay.z_base else run.carcass_z1
+        ax.text((x0 + x1) / 2, top + 60, f"{bay.id} {bay.width:.0f}", ha="center", va="bottom", fontsize=7,
+                weight="bold")
+    ax.autoscale_view()
+    ax.set_aspect("equal")
+    ax.margins(0.05)
+    ax.set_axis_off()
+    ax.set_title(f"{run.id} — fronts as you face them (red bar = hinge side; mm)", fontsize=9)
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("run_id")
@@ -132,9 +210,10 @@ def main() -> None:
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     opened = {v.strip() for v in args.open.split(",") if v.strip()}
-    paths = [out / f"{run.id}-iso.png", out / f"{run.id}-plan.png"]
+    paths = [out / f"{run.id}-iso.png", out / f"{run.id}-plan.png", out / f"{run.id}-front.png"]
     iso(run, run.parts, opened, paths[0], f"{run.id} {run.element.get('Name', '')} — monoblock, {len(run.parts)} parts")
     plan(run, paths[1])
+    front(run, paths[2])
     if args.bay:
         bay = run.bay(args.bay)
         members = [run.part(m) for m in bay.members]

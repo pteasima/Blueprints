@@ -95,7 +95,10 @@
 # counter), top at 2450. Elevation 1.55.
 # The Teka bowl is an IfcSanitaryTerminal, 750×440×200, centred in the 800,
 # undermount: rim under the 20 mm stone at 910, cut-out 706×396 R13 (Teka).
-# The disposer and the tap are not modelled.
+# The EcoMaster EVO3 disposer and the Hansgrohe M71 tap hang on the bowl
+# (Pset_BuiltIn, laid out in models/kitchen_cabinet.py). Fronts, drawers,
+# doors and shelves from the plan's notes: Pset_Fronts on each bay, see
+# docs/design/kitchen-cabinets.md "Fronts and interiors".
 #
 # One whole element per box. The list key is the IFC class:
 #   furniture, systemFurniture, sanitaryTerminals, electricAppliances,
@@ -155,10 +158,11 @@
 # gap: island east face x=21.754, sofa west x=25.52, centre x=23.637,
 # so the top is x 23.087–24.187. Each side gap is 1333. Top 30, apron
 # 60×20 set in 40, legs 50 square set in 80. Lacquered natural oak.
-# The plan's "Ancona x6" is not a modeled product. Six simple oak chairs,
-# 500 deep (east-west) by 450 wide, seat top 450, back top 800. Three on
-# each long side, centres 400/1200/2000 along the 2400. Backs face away
-# from the table. Legs 40, seat board 36, back board 20.
+# Chairs: Kaplan 1934 Ancora (the plan's card), 540 deep (east-west) by
+# 480 wide, 860 high, seat top 460. Three on each long side, centres
+# 400/1200/2000 along the 2400. Backs face away from the table. Legs 40,
+# seat board 36, back board 20 (generic shape). A child's chair at the
+# north head. Was 500 × 450 × 800, seat 450, until 2026-11-12.
 # Rug 2800 × 3780 × 10, x 26.65–29.45, y 11.37–15.15. Furniture is not
 # lifted, so the rug and the seats overlap by the rug thickness.
 # TV. Visible 16:9 screen of a 100 inch set is 2214 × 1245.
@@ -216,6 +220,15 @@ systemFurniture:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-TALL-W
+      # Note: "dvere 60L, sirka skrine az ke zdi (~75) / dole napoje, basy
+      # od piva / nahore plechovky, vyvary, trvanlive potraviny". One 600
+      # door hinged L, the rest of the 750 a fixed filler on the hinge
+      # (wall) side (side guess:). Shelves: the first 400 over the floor
+      # for beer crates, then evenly (guess:).
+      - Name: Pset_Fronts
+        Properties:
+          Layout: "door * hinge=L width=0.6 shelves=4 first=0.4"
+          Contents: "dole nápoje, basy od piva / nahoře plechovky, vývary, trvanlivé potraviny"
       - Name: Pset_CabinetDoor
         Properties:
           HingeSide: "L"
@@ -234,13 +247,21 @@ systemFurniture:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-TALL
+      # Note: "nahore dvere 60R / police na dverich / nahore ryze,
+      # testoviny, tortilly, asie, peceni". The door is the upper band,
+      # hinged R, with door racks. The lower band (0.81, level with the
+      # base carcasses, guess:) is not described: open:, one slab.
+      - Name: Pset_Fronts
+        Properties:
+          Layout: "door * hinge=R shelves=4 racks=4 | front 0.81"
+          Contents: "rýže, těstoviny, tortilly, asie, pečení; "
       - Name: Pset_CabinetDoor
         Properties:
           HingeSide: "R"
           DoorWidth: 0.6
   - id: SF-T3
     Name: "Vysoká 600 trouba"
-    Description: "Oven column, 600. Miele DGC 7465 and M 2230. Box only."
+    Description: "Oven column, 600. Miele M 2230 SC microwave over the Miele DGC 7465 HCX Pro steam oven, in niches; slab fronts above and below (not described on the plan)."
     PredefinedType: USERDEFINED
     ObjectType: TallCabinet
     ContainedInStructure: SP-1.02
@@ -252,7 +273,15 @@ systemFurniture:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-TALL
-          Front: "none"
+      # Miele DGC 7465 HCX Pro (60 cm, niche 590–595) at the counter line
+      # and the M 2230 SC (niche 350–362) above it, both from the plan's
+      # cards. Niche heights inside the maker's ranges, positions guess:.
+      # Top and bottom bands are not described: open:, plain slabs.
+      - Name: Pset_Fronts
+        Properties:
+          # The shared dividers leave 582 clear; both makers want 560–568
+          # (562–568), so each niche gets 9 mm packers: clear 564.
+          Layout: "front * | niche 0.356 clear=0.564 | niche 0.593 clear=0.564 | front 0.81"
   - id: SF-T4
     Name: "Vysoká 500"
     Description: "Tall run, east end. Note: zbyva sirka cca 50. Modelled 500. The same note allows 600 if a drinks fridge goes underneath. East face nicks pier W-052 by 8 mm."
@@ -267,6 +296,34 @@ systemFurniture:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-TALL
+      # Note: "zbyva sirka cca 50 / otvirani nevim (dreame link), mozna
+      # suplik? / sladkosti, brambury, orisky / musi byt sirka 60 pokud ma
+      # dole byt lednicka na sudy". Opening not decided: open:, slab.
+      - Name: Pset_Fronts
+        Properties:
+          Layout: "front *"
+          Contents: "sladkosti, brambůrky, oříšky"
+  - id: SF-TF
+    Name: "Nad lednicí 908"
+    Description: "Cabinet over the Whirlpool fridge, between SF-T1 and SF-T2 (x 19.55–20.458). Fronts flush with the tall run, top 2450. Bottom 1926: the fridge top 1876 + 50 clearance (guess:). Note: nahore prislusenstvi od robota, ryzovar."
+    PredefinedType: USERDEFINED
+    ObjectType: WallCabinet
+    ContainedInStructure: SP-1.02
+    Origin: [19.55, 15.0]
+    Elevation: 1.926
+    Width: 0.908
+    Depth: 0.6
+    Height: 0.524
+    PropertySets:
+      - Name: Pset_KitchenBay
+        Properties:
+          Run: KR-TALL-F
+      # The fridge note's last bullet: "nahore prislusenstvi od robota,
+      # ryzovar". Two doors, no shelf (a rice cooker is tall): guess:.
+      - Name: Pset_Fronts
+        Properties:
+          Layout: "doors *"
+          Contents: "příslušenství od robota, rýžovar"
   - id: SF-I500a
     Name: "Ostrov západ 500 dřez"
     Description: "Island, west row, north module. Red 500. Green rectangular single sink, the Teka BE LINEA RS15 18.40 X (SN-RS1840). Faces west."
@@ -282,6 +339,14 @@ systemFurniture:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-ISL
+      # KitchenPlan.jpg, the note on this 500: "vlevo prkynka / vpravo
+      # cednik do drezu (a drtic) / madlo na uterku / SBox by mel trcet
+      # doprava ... musi se vyhnout drtici". Interior wishes, no front
+      # type: open:, the slab front stays (kitchen-cabinets.md).
+      - Name: Pset_Fronts
+        Properties:
+          Layout: "front *"
+          Contents: "vlevo prkýnka, vpravo cedník do dřezu (a drtič) / madlo na utěrku"
   - id: SF-I600a
     Name: "Ostrov západ 600"
     Description: "Island, west row. First red 600, south of the rectangular sink. Faces west. Three drawers, top to bottom: nože; nářadí (lis na česnek, hmoždíř, váha); dole nevím. See docs/design/kitchen-cabinets.md."
@@ -319,6 +384,14 @@ systemFurniture:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-ISL
+      # Note on this 500: "koreni / oleje, octy, mouky, cukry,
+      # dochucovadla / hrnce": three bullets, three drawers, like SF-I600a.
+      # Heights: IKEA METOD 20 + 20 + rest (guess:). open: oil bottles
+      # need more than a 20 cm front (kitchen-cabinets.md).
+      - Name: Pset_Drawers
+        Properties:
+          NominalHeights: "0.2 0.2 *"
+          Contents: "koření; oleje, octy, mouky, cukry, dochucovadla; hrnce"
   - id: SF-I600b
     Name: "Ostrov západ 600 varná deska"
     Description: "Island, west row. Second red 600, under the hob (the green rectangle with two circles on KitchenPlan.jpg). Note: příbory, vařečky, stěrky, naběračky, pánve. Faces west."
@@ -334,6 +407,13 @@ systemFurniture:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-ISL
+      # Note on this 600 (the hob): "pribory / varecky, sterky, naberacky /
+      # panve": three drawers under the hob, METOD 20 + 20 + rest (guess:).
+      # The top box keeps Miele's 8 mm under the hob (Pset_Hob).
+      - Name: Pset_Drawers
+        Properties:
+          NominalHeights: "0.2 0.2 *"
+          Contents: "příbory; vařečky, stěrky, naběračky; pánve"
       # Miele KM 8665 FL (Petr, 2026-11-11). Sizes: Miele installation
       # manual pp. 23, 29, see kitchen-cabinets.md "Induction hob".
       # Mounting: Petr has not chosen; flush-fit is guess:. FrontOffset is
@@ -373,6 +453,12 @@ systemFurniture:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-ISL
+      # Note: "alobal, folie, spejle, pytliky". One bullet, no front type:
+      # open:, the slab front stays.
+      - Name: Pset_Fronts
+        Properties:
+          Layout: "front *"
+          Contents: "alobal, fólie, špejle, pytlíky"
   - id: SF-E600a
     Name: "Ostrov východ 600"
     Description: "Island, east row, north module. No module line is drawn on this side. 600 of 600/600/600/700, north to south. Plinth and robot-dock side. Faces east."
@@ -448,6 +534,13 @@ systemFurniture:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-WEST
+      # Note A: "dole vlevo suplik uklid (mycka, jar, odmastovac, houbicky)".
+      # A full-height pull-out (the yaml's "cleaning pull-out") with three
+      # baskets (count guess:).
+      - Name: Pset_Fronts
+        Properties:
+          Layout: "pullout * items=shelves n=3"
+          Contents: "úklid (do myčky, jar, odmašťovač, houbičky)"
   - id: SF-A600
     Name: "Západ 600 myčka"
     Description: "Section A, north side. The 600 dishwasher slot of the 850 section, y 13.25–13.85. No carcass of its own: the worktop runs over it and SF-A250's end side is its south wall. The Bosch SBD6ECX12E stands in it. Right when facing the west wall."
@@ -480,6 +573,12 @@ systemFurniture:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-WEST-H
+      # Note A: "nahore sklenice". Two doors (a METOD door is at most 600
+      # wide), two shelves: guess:.
+      - Name: Pset_Fronts
+        Properties:
+          Layout: "doors * shelves=2"
+          Contents: "sklenice"
   - id: SF-B800
     Name: "Západ 800 dřez"
     Description: "Section B. One 800 sink base for the Teka BE LINEA RS15 71.40. Bin on the south, compost on the north."
@@ -495,6 +594,14 @@ systemFurniture:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-WEST
+      # Note B: "dole vlevo kos, vpravo kompost / kose se musi vyhnout
+      # drtici, to se proste bude resit az skrinky budou". One full-height
+      # pull-out with two bins (guess:); its box stops 10 under the
+      # disposer, which shows how little room is left (open:).
+      - Name: Pset_Fronts
+        Properties:
+          Layout: "pullout * items=bins n=2"
+          Contents: "vlevo koš, vpravo kompost"
       - Name: Pset_BaseContents
         Properties:
           South: "kos"
@@ -515,6 +622,12 @@ systemFurniture:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-WEST-H
+      # Note B: "nahore talire". Two doors (a METOD door is at most 600
+      # wide), two shelves: guess:.
+      - Name: Pset_Fronts
+        Properties:
+          Layout: "doors * shelves=2"
+          Contents: "talíře"
   - id: SF-C850
     Name: "Západ 850 odpad"
     Description: "Section C. Sorted waste, 850."
@@ -530,6 +643,12 @@ systemFurniture:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-WEST
+      # Note C: "dole tridene odpad". A full-height pull-out with bins;
+      # three bins is guess: (the note gives no count).
+      - Name: Pset_Fronts
+        Properties:
+          Layout: "pullout * items=bins n=3"
+          Contents: "tříděný odpad"
   - id: SF-CH850
     Name: "Západ horní 850"
     Description: "Section C wall cabinet, 850. Stick blender, bowls, measuring cups. Depth 350, bottom 1550, height 900, top 2450."
@@ -546,6 +665,12 @@ systemFurniture:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-WEST-H
+      # Note C: "nahore tycovy mixer, velke misky, odmerky". Two doors (a METOD door is at most 600
+      # wide), two shelves: guess:.
+      - Name: Pset_Fronts
+        Properties:
+          Layout: "doors * shelves=2"
+          Contents: "tyčový mixér, velké mísy, odměrky"
   - id: SF-F052
     Name: "Výplň W-052"
     Description: "Shallow filler in front of pier W-052. 300 wide, 200 deep, front flush at y=15.15. Dining side, counter 930. Natural oak."
@@ -712,6 +837,49 @@ sanitaryTerminals:
           CutoutWidth: 0.396
           CutoutDepth: 0.176
           CutoutRadius: 0.013
+  # Taps from the plan's cards, laid out behind their sink's bowl by
+  # models/kitchen_cabinet.py (Pset_BuiltIn). Body 50 round, arm 30,
+  # positions guess:; heights in docs/design/kitchen-cabinets.md.
+  - id: SN-TAP-W
+    Name: "Hansgrohe M71 M7117-H320"
+    Description: "Kitchen mixer 320 with pull-out spray and sBox, on the west sink SN-RS15 (card on KitchenPlan.jpg). ComfortZone 320 (Hansgrohe 73816000)."
+    PredefinedType: USERDEFINED
+    ObjectType: KitchenTap
+    ContainedInStructure: SP-1.02
+    PropertySets:
+      - Name: Pset_ManufacturerTypeInformation
+        Properties:
+          Manufacturer: "Hansgrohe"
+          ModelLabel: "M71 M7117-H320, sBox"
+          ArticleNumber: "73816000"
+      - Name: Pset_BuiltIn
+        Properties:
+          Kind: Tap
+          Sink: SN-RS15
+          Height: 0.43
+          SpoutHeight: 0.32
+          SpoutReach: 0.22
+          HoleOffset: 0.04
+  - id: SN-TAP-I
+    Name: "Hansgrohe Aquno Select M81"
+    Description: "Kitchen mixer 170 with pull-out spray and sBox, on the island sink SN-RS1840 (card on KitchenPlan.jpg). 390 high, spout 165 high, 220 reach (Hansgrohe 73831000)."
+    PredefinedType: USERDEFINED
+    ObjectType: KitchenTap
+    ContainedInStructure: SP-1.02
+    PropertySets:
+      - Name: Pset_ManufacturerTypeInformation
+        Properties:
+          Manufacturer: "Hansgrohe"
+          ModelLabel: "Aquno Select M81 170, sBox"
+          ArticleNumber: "73831000"
+      - Name: Pset_BuiltIn
+        Properties:
+          Kind: Tap
+          Sink: SN-RS1840
+          Height: 0.39
+          SpoutHeight: 0.165
+          SpoutReach: 0.22
+          HoleOffset: 0.04
 electricAppliances:
   - id: EA-WQ9I
     Name: "Whirlpool WQ9I MO2L EF"
@@ -732,6 +900,127 @@ electricAppliances:
     Width: 0.598
     Depth: 0.55
     Height: 0.865
+  # Built-in appliances and sink fittings with no box: models/kitchen_cabinet.py
+  # lays each one out from its Pset_BuiltIn (the bay band or the sink it
+  # belongs to) and models/kitchen_ifc.py gives it its body. Maker's numbers
+  # and URLs: docs/design/kitchen-cabinets.md "Appliances".
+  - id: EA-DGC7465
+    Name: "Miele DGC 7465 HCX Pro"
+    Description: "Combi steam oven with fresh and waste water connection, 60 cm. In the SF-T3 niche at the counter line. 595 × 596 × 567, niche 560–568 × 590–595 × 550 (Miele)."
+    PredefinedType: ELECTRICCOOKER
+    ContainedInStructure: SP-1.02
+    PropertySets:
+      - Name: Pset_ManufacturerTypeInformation
+        Properties:
+          Manufacturer: "Miele"
+          ModelLabel: "DGC 7465 HCX Pro"
+          ArticleNumber: "12100360"
+      - Name: Pset_BuiltIn
+        Properties:
+          Kind: Niche
+          Bay: SF-T3
+          Zone: 3
+          Width: 0.595
+          Height: 0.596
+          Depth: 0.567
+          NicheWidthMin: 0.56
+          NicheWidthMax: 0.568
+          NicheHeightMin: 0.59
+          NicheHeightMax: 0.595
+          NicheDepth: 0.55
+  - id: EA-M2230
+    Name: "Miele M 2230 SC"
+    Description: "Built-in microwave, Obsidian black. In the SF-T3 niche over the steam oven. 595 × 372 × 310, niche 562–568 × 350–362 × 310 (Miele)."
+    PredefinedType: MICROWAVE
+    ContainedInStructure: SP-1.02
+    PropertySets:
+      - Name: Pset_ManufacturerTypeInformation
+        Properties:
+          Manufacturer: "Miele"
+          ModelLabel: "M 2230 SC"
+          ArticleNumber: "11103410"
+      - Name: Pset_BuiltIn
+        Properties:
+          Kind: Niche
+          Bay: SF-T3
+          Zone: 2
+          Width: 0.595
+          Height: 0.372
+          Depth: 0.31
+          NicheWidthMin: 0.562
+          NicheWidthMax: 0.568
+          NicheHeightMin: 0.35
+          NicheHeightMax: 0.362
+          NicheDepth: 0.31
+  - id: EA-EVO3-W
+    Name: "EcoMaster STANDARD EVO3"
+    Description: "Food waste disposer under the west sink SN-RS15 (card on KitchenPlan.jpg). 368 high, 145 diameter (EcoMaster). Hangs from the bowl's drain, centred on the bowl: guess:."
+    PredefinedType: USERDEFINED
+    ObjectType: FoodWasteDisposer
+    ContainedInStructure: SP-1.02
+    PropertySets:
+      - Name: Pset_ManufacturerTypeInformation
+        Properties:
+          Manufacturer: "EcoMaster"
+          ModelLabel: "STANDARD EVO3"
+      - Name: Pset_BuiltIn
+        Properties:
+          Kind: Disposer
+          Sink: SN-RS15
+          Width: 0.145
+          Height: 0.368
+  - id: EA-EVO3-I
+    Name: "EcoMaster STANDARD EVO3"
+    Description: "Food waste disposer under the island sink SN-RS1840 (card on KitchenPlan.jpg). 368 high, 145 diameter (EcoMaster). Centred on the bowl: guess:."
+    PredefinedType: USERDEFINED
+    ObjectType: FoodWasteDisposer
+    ContainedInStructure: SP-1.02
+    PropertySets:
+      - Name: Pset_ManufacturerTypeInformation
+        Properties:
+          Manufacturer: "EcoMaster"
+          ModelLabel: "STANDARD EVO3"
+      - Name: Pset_BuiltIn
+        Properties:
+          Kind: Disposer
+          Sink: SN-RS1840
+          Width: 0.145
+          Height: 0.368
+  # Countertop pieces from the plan's cards, on the dining run. Positions
+  # are the cards' places on KitchenPlan.jpg (guess:), backs 50 off the
+  # backsplash.
+  - id: EA-KT200
+    Name: "Ninja KT200EU"
+    Description: "Kettle, card on KitchenPlan.jpg over the dining run's west end. 235 × 135 × 210 (multitronic.fi listing). On SF-DN's counter, x 22.44–22.675, the card's place (pixel x 1123–1241): guess:."
+    PredefinedType: USERDEFINED
+    ObjectType: Kettle
+    ContainedInStructure: SP-1.02
+    Origin: [22.44, 15.403]
+    Elevation: 0.93
+    Width: 0.235
+    Depth: 0.135
+    Height: 0.21
+    PropertySets:
+      - Name: Pset_ManufacturerTypeInformation
+        Properties:
+          Manufacturer: "Ninja"
+          ModelLabel: "KT200EU"
+  - id: EA-LIBRA
+    Name: "Eureka Mignon Libra"
+    Description: "Coffee grinder, card on KitchenPlan.jpg over SF-DN. 124 × 192 × 390 (Eureka). The note says 2 or 3 grinders: one is modelled, open:."
+    PredefinedType: USERDEFINED
+    ObjectType: CoffeeGrinder
+    ContainedInStructure: SP-1.02
+    Origin: [23.82, 15.346]
+    Elevation: 0.93
+    Width: 0.124
+    Depth: 0.192
+    Height: 0.39
+    PropertySets:
+      - Name: Pset_ManufacturerTypeInformation
+        Properties:
+          Manufacturer: "Eureka"
+          ModelLabel: "Mignon Libra"
   - id: EA-TV
     Name: "Televize 100"
     Description: "100 inch 16:9. Visible screen 2214 × 1245. Overall without stand 2230 × 1277 × 50, the LG 100QNED86 size (published depth 49.9). Centred at y=12.700, midway from y=10.25 to the cabinet front y=15.15, so y 11.585–13.815. Bottom 650. The east arm starts at y=13.99, 175 mm north of the TV. No overlap."
@@ -852,6 +1141,17 @@ furniture:
           WorktopThickness: 0.0
           # 100 like the bases (Petr, 2026-11-12); total stays 2450, carcass 2350.
           PlinthHeight: 0.10
+  - id: KR-TALL-F
+    Name: "Nad lednicí"
+    Description: "The cabinet over the fridge (SF-TF), a monoblock of one between KR-TALL-W and KR-TALL."
+    PredefinedType: USERDEFINED
+    ObjectType: KitchenRun
+    ContainedInStructure: SP-1.02
+    PropertySets:
+      - Name: Pset_KitchenRun
+        Properties:
+          WorktopThickness: 0.0
+          PlinthHeight: 0.0
   - id: FN-S2B
     Name: "Harvey S2 roh"
     Description: "Corner of the 86 run. 1160 along the cabinets, 860 deep, 395 high. x 25.82–26.98, y 13.99–14.85."
@@ -1001,6 +1301,10 @@ furniture:
       - Name: Pset_Bookshelf
         Properties:
           ShelfCount: 3
+  # The table stays the Gatta. open: the plan's card says "STUL LIBRA"
+  # (kaplan1934.cz) and its note "Spravne je: 120x240, s prodlouzenim na
+  # 340", against this 1100 × 2400 Gatta. Not changed here; see
+  # docs/design/furnishings.md "Table note on KitchenPlan.jpg".
   - id: FN-GATTA
     Name: "Stůl Gatta"
     Description: "Kaplan 1934 Gatta, lacquered natural oak. 1100 × 2400, catalog height 760. y 11.35–13.75, x 23.087–24.187, centred, 1333 to the island and to the sofa. Top 30, apron 60×20 set in 40, legs 50 square set in 80."
@@ -1017,114 +1321,174 @@ furniture:
           Material: "natural oak"
           Form: "solid"
           Finish: "lacquer"
+  # Dining chairs. The plan's card is "ZIDLE ANCORA CELODREVENA"
+  # (kaplan1934.cz) and the table note says "6 zidli (3 a 3), v cele u
+  # kavovaru detska zidlicka, v cele u okna nic". Ancora sizes from the
+  # maker: 860 high, seat 460, 540 deep, 480 wide (Tauer catalogue). The
+  # chairs keep their old centres; only the box grew (was 500 × 450 × 800).
   - id: FN-CHW1
     Name: "Židle západ 1"
-    Description: "Simple oak chair, south of the west three. 500 deep, 450 wide, seat 450, back 800. Back faces west."
+    Description: "Kaplan 1934 Ancora celodřevěná (card on KitchenPlan.jpg), south of the west three, centred 400 / 1200 / 2000 from the table's south end. 540 deep × 480 wide × 860, seat 460 (maker). Front edge on the table edge, back faces west."
     PredefinedType: CHAIR
     ObjectType: DiningChair
     ContainedInStructure: SP-1.02
-    Origin: [22.587, 11.525]
-    Width: 0.5
-    Depth: 0.45
-    Height: 0.8
+    Origin: [22.547, 11.51]
+    Width: 0.54
+    Depth: 0.48
+    Height: 0.86
     PropertySets:
       - Name: Pset_Finish
         Properties:
           Material: "natural oak"
-          Form: "solid or veneer"
+          Form: "solid"
+          Finish: "lacquer"
+      - Name: Pset_ManufacturerTypeInformation
+        Properties:
+          Manufacturer: "Kaplan 1934"
+          ModelLabel: "Ancora celodřevěná"
       - Name: Pset_Chair
         Properties:
           Facing: "W"
+          SeatHeight: 0.46
   - id: FN-CHW2
     Name: "Židle západ 2"
-    Description: "Middle west chair. Same size. Back faces west."
+    Description: "Kaplan 1934 Ancora celodřevěná (card on KitchenPlan.jpg), middle of the west three, centred 400 / 1200 / 2000 from the table's south end. 540 deep × 480 wide × 860, seat 460 (maker). Front edge on the table edge, back faces west."
     PredefinedType: CHAIR
     ObjectType: DiningChair
     ContainedInStructure: SP-1.02
-    Origin: [22.587, 12.325]
-    Width: 0.5
-    Depth: 0.45
-    Height: 0.8
+    Origin: [22.547, 12.31]
+    Width: 0.54
+    Depth: 0.48
+    Height: 0.86
     PropertySets:
       - Name: Pset_Finish
         Properties:
           Material: "natural oak"
-          Form: "solid or veneer"
+          Form: "solid"
+          Finish: "lacquer"
+      - Name: Pset_ManufacturerTypeInformation
+        Properties:
+          Manufacturer: "Kaplan 1934"
+          ModelLabel: "Ancora celodřevěná"
       - Name: Pset_Chair
         Properties:
           Facing: "W"
+          SeatHeight: 0.46
   - id: FN-CHW3
     Name: "Židle západ 3"
-    Description: "North west chair. Same size. Back faces west."
+    Description: "Kaplan 1934 Ancora celodřevěná (card on KitchenPlan.jpg), north of the west three, centred 400 / 1200 / 2000 from the table's south end. 540 deep × 480 wide × 860, seat 460 (maker). Front edge on the table edge, back faces west."
     PredefinedType: CHAIR
     ObjectType: DiningChair
     ContainedInStructure: SP-1.02
-    Origin: [22.587, 13.125]
-    Width: 0.5
-    Depth: 0.45
-    Height: 0.8
+    Origin: [22.547, 13.11]
+    Width: 0.54
+    Depth: 0.48
+    Height: 0.86
     PropertySets:
       - Name: Pset_Finish
         Properties:
           Material: "natural oak"
-          Form: "solid or veneer"
+          Form: "solid"
+          Finish: "lacquer"
+      - Name: Pset_ManufacturerTypeInformation
+        Properties:
+          Manufacturer: "Kaplan 1934"
+          ModelLabel: "Ancora celodřevěná"
       - Name: Pset_Chair
         Properties:
           Facing: "W"
+          SeatHeight: 0.46
   - id: FN-CHE1
     Name: "Židle východ 1"
-    Description: "South east chair. Same size. Back faces east."
+    Description: "Kaplan 1934 Ancora celodřevěná (card on KitchenPlan.jpg), south of the east three, centred 400 / 1200 / 2000 from the table's south end. 540 deep × 480 wide × 860, seat 460 (maker). Front edge on the table edge, back faces east."
     PredefinedType: CHAIR
     ObjectType: DiningChair
     ContainedInStructure: SP-1.02
-    Origin: [24.187, 11.525]
-    Width: 0.5
-    Depth: 0.45
-    Height: 0.8
+    Origin: [24.187, 11.51]
+    Width: 0.54
+    Depth: 0.48
+    Height: 0.86
     PropertySets:
       - Name: Pset_Finish
         Properties:
           Material: "natural oak"
-          Form: "solid or veneer"
+          Form: "solid"
+          Finish: "lacquer"
+      - Name: Pset_ManufacturerTypeInformation
+        Properties:
+          Manufacturer: "Kaplan 1934"
+          ModelLabel: "Ancora celodřevěná"
       - Name: Pset_Chair
         Properties:
           Facing: "E"
+          SeatHeight: 0.46
   - id: FN-CHE2
     Name: "Židle východ 2"
-    Description: "Middle east chair. Same size. Back faces east."
+    Description: "Kaplan 1934 Ancora celodřevěná (card on KitchenPlan.jpg), middle of the east three, centred 400 / 1200 / 2000 from the table's south end. 540 deep × 480 wide × 860, seat 460 (maker). Front edge on the table edge, back faces east."
     PredefinedType: CHAIR
     ObjectType: DiningChair
     ContainedInStructure: SP-1.02
-    Origin: [24.187, 12.325]
-    Width: 0.5
-    Depth: 0.45
-    Height: 0.8
+    Origin: [24.187, 12.31]
+    Width: 0.54
+    Depth: 0.48
+    Height: 0.86
     PropertySets:
       - Name: Pset_Finish
         Properties:
           Material: "natural oak"
-          Form: "solid or veneer"
+          Form: "solid"
+          Finish: "lacquer"
+      - Name: Pset_ManufacturerTypeInformation
+        Properties:
+          Manufacturer: "Kaplan 1934"
+          ModelLabel: "Ancora celodřevěná"
       - Name: Pset_Chair
         Properties:
           Facing: "E"
+          SeatHeight: 0.46
   - id: FN-CHE3
     Name: "Židle východ 3"
-    Description: "North east chair. Same size. Back faces east."
+    Description: "Kaplan 1934 Ancora celodřevěná (card on KitchenPlan.jpg), north of the east three, centred 400 / 1200 / 2000 from the table's south end. 540 deep × 480 wide × 860, seat 460 (maker). Front edge on the table edge, back faces east."
     PredefinedType: CHAIR
     ObjectType: DiningChair
     ContainedInStructure: SP-1.02
-    Origin: [24.187, 13.125]
-    Width: 0.5
-    Depth: 0.45
-    Height: 0.8
+    Origin: [24.187, 13.11]
+    Width: 0.54
+    Depth: 0.48
+    Height: 0.86
     PropertySets:
       - Name: Pset_Finish
         Properties:
           Material: "natural oak"
-          Form: "solid or veneer"
+          Form: "solid"
+          Finish: "lacquer"
+      - Name: Pset_ManufacturerTypeInformation
+        Properties:
+          Manufacturer: "Kaplan 1934"
+          ModelLabel: "Ancora celodřevěná"
       - Name: Pset_Chair
         Properties:
           Facing: "E"
+          SeatHeight: 0.46
+  # "v cele u kavovaru detska zidlicka": a child's high chair at the north
+  # end, by the coffee machine on the dining run. No model is named: a
+  # generic box, 460 wide × 490 deep × 790, seat 600 (guess:, a
+  # Tripp Trapp-like chair). Back faces north.
+  - id: FN-CHN
+    Name: "Dětská židlička"
+    Description: "Child's high chair at the table's north end (coffee machine end), per the table note. Model not named; generic 460 × 490 × 790, seat 600: guess:."
+    PredefinedType: CHAIR
+    ObjectType: DiningChair
+    ContainedInStructure: SP-1.02
+    Origin: [23.407, 13.75]
+    Width: 0.46
+    Depth: 0.49
+    Height: 0.79
+    PropertySets:
+      - Name: Pset_Chair
+        Properties:
+          Facing: "N"
+          SeatHeight: 0.6
 coverings:
   # North backsplash. Petr, 2026-11-12: "back wall for both west and
   # north". 12 mm Silestone Blanco Maple (thickness from the brief), from
