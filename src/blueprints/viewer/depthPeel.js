@@ -936,11 +936,16 @@ export function createDepthPeelRenderer(renderer) {
     const prevBg = scene.background;
     const prevAutoClear = renderer.autoClear;
     root.visible = false;
+    // The Realistic staging floor is scene content, not an overlay. Drawn
+    // here (after clearDepth) it would cover the whole model.
+    const stage = scene.children.filter((c) => c.userData?.bpStage && c.visible);
+    for (const c of stage) c.visible = false;
     scene.background = null;
     renderer.autoClear = false;
     forceBufferMasks();
     renderer.clearDepth();
     renderer.render(scene, camera);
+    for (const c of stage) c.visible = true;
     root.visible = prevRoot;
     scene.background = prevBg;
     renderer.autoClear = prevAutoClear;
@@ -1157,6 +1162,8 @@ export function createDepthPeelRenderer(renderer) {
     for (const child of scene.children) {
       if (child === root) continue;
       if (child.isLight) continue;
+      // Realistic staging floor (realistic.js) is opaque scene content.
+      if (child.userData?.bpStage) continue;
       extraBackup.push({ obj: child, visible: child.visible });
       child.visible = false;
     }

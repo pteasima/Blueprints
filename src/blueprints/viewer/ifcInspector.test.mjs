@@ -174,6 +174,12 @@ assert.deepEqual(identityOf({ name: "door", parent: { name: "door__D-OP40__", pa
   element: "D-OP40",
 });
 
+// An id-less mesh keeps its own label, not the outermost group's name.
+assert.deepEqual(
+  identityOf({ name: "grout_12", parent: { name: "ground_floor", parent: { name: "VerticalExaggeration" } } }),
+  { part: "grout", element: null },
+);
+
 const taps = [];
 const registry = createTapRegistry();
 const state = { on: false, open: false, pressed: 0 };

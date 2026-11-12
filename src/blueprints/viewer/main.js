@@ -14,6 +14,7 @@ import { BG_DARK, BG_LIGHT, initSheetChrome } from "./chrome.js";
 import { createCooperativeRange } from "./coopRange.js";
 import {
   MODE_REALISTIC,
+  MODE_SHADED,
   MODE_SOLID,
   applyMaterialMode,
   applyOpacityToMeshes,
@@ -44,6 +45,7 @@ import {
   syncEdgeOverlays,
 } from "./edges.js";
 import { createDepthPeelRenderer } from "./depthPeel.js";
+import { createRealistic } from "./realistic.js";
 import { createMeasureTool } from "./measure.js";
 import { createDoorController, swingAngle } from "./doors.js";
 import { createWindowSlides } from "./windows.js";
@@ -107,7 +109,7 @@ function writeSceneQuery(sceneId) {
 /**
  * @param {HTMLCanvasElement} canvas
  * @param {ArrayBuffer} glbBuffer
- * @param {{ scenes?: object[], scene?: string, partGroups?: object[], doors?: object[], windows?: object[], ifc?: object }} [options]
+ * @param {{ scenes?: object[], scene?: string, partGroups?: object[], doors?: object[], windows?: object[], ifc?: object, modelId?: string, materialsUrl?: string, materialsText?: string, fixtureAssets?: object[] }} [options]
  */
 export function mountViewer(canvas, glbBuffer, options = {}) {
   /** Custom named scenes (model-specific); shown alongside Iso/Front/Side/Top. */
@@ -306,7 +308,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   /** @type {HTMLElement | null} */
   let fovValueEl = null;
 
-  scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+  const ambient = new THREE.AmbientLight(0xffffff, 0.45);
+  scene.add(ambient);
   const key = new THREE.DirectionalLight(0xffffff, 1.15);
   key.position.set(0.6, 1.0, 0.4);
   scene.add(key);
@@ -317,6 +320,58 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   const pmrem = new THREE.PMREMGenerator(renderer);
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
   pmrem.dispose();
+
+  /**
+   * Realistic mode (realistic.js). Created on first use, so the catalogue,
+   * textures, sun and shadow map cost nothing until the mode is chosen.
+   * @type {ReturnType<typeof createRealistic> | null}
+   */
+  let realisticCtl = null;
+  function ensureRealistic() {
+    if (realisticCtl) return realisticCtl;
+    realisticCtl = createRealistic({
+      renderer,
+      scene,
+      baseLights: [ambient, key, fill],
+      catalogueUrl: options.materialsUrl || null,
+      catalogueText: options.materialsText || null,
+      assetSlots: Array.isArray(options.fixtureAssets) ? options.fixtureAssets : [],
+      onChange: () => {
+        // A texture arrived. Lit lights wear clones (eachMaterial); give
+        // them the texture too, then redraw.
+        root?.traverse((obj) => {
+          if (!obj.isMesh) return;
+          const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+          for (const m of mats) {
+            if (m?.userData?.bpOwned && m.userData.bpCatalogueId) realisticCtl?.registry.bind(m);
+          }
+        });
+        viewDirty = true;
+      },
+    });
+    return realisticCtl;
+  }
+  /** Debugging and checks: `blueprintsRealistic.report()` lists catalogue gaps. */
+  window.blueprintsRealistic = {
+    report: () => (realisticCtl ? realisticCtl.report(parts) : null),
+    renderer,
+    /** Light elements in the model: `[{ globalId, name }]`. */
+    lights: () =>
+      Object.values(ifcIndex.elements)
+        .filter((el) => {
+          const meshes = el ? meshesForElement(el) : [];
+          return meshes.length > 0 && meshes.every((m) => m.userData.bpPart === "light");
+        })
+        .map((el) => ({ globalId: el.globalId, name: el.name })),
+    /** Toggle one light as a tap would offline. */
+    toggleLight: (globalId) => {
+      const element = ifcIndex.elements[globalId];
+      if (element) toggleLight(element);
+    },
+    get controller() {
+      return realisticCtl;
+    },
+  };
 
   /** @type {THREE.Object3D | null} */
   let root = null;
@@ -1074,25 +1129,53 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     });
   }
 
+  /** Bumped per refresh so a slow catalogue fetch cannot paint a stale mode. */
+  let materialsRequest = 0;
+
   function refreshMaterials() {
     if (!parts.size) return;
+    const request = ++materialsRequest;
+    if (materialMode === MODE_REALISTIC) {
+      const ctl = ensureRealistic();
+      ctl.load().then(() => {
+        if (request !== materialsRequest || materialMode !== MODE_REALISTIC || !root) return;
+        ctl.apply(parts, root, {
+          clippingPlanes: lockedClipPlanes(),
+          opacityByLabel: partOpacity,
+          edgeMode,
+        });
+        finishMaterialRefresh();
+      });
+      return;
+    }
+    if (realisticCtl?.stage.enabled) realisticCtl.leave(parts);
     applyMaterialMode(parts, materialMode, {
       isDark: isDarkTheme,
       clippingPlanes: lockedClipPlanes(),
       opacityByLabel: partOpacity,
       edgeMode,
     });
-    // Solid uses unlit MeshBasicMaterial — skip ACES so chroma stays punchy.
+    finishMaterialRefresh();
+  }
+
+  function finishMaterialRefresh() {
     if (materialMode === MODE_REALISTIC) {
+      // Filmic curve for PBR; exposure tuned against the staged sun + IBL.
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.0;
+    } else if (materialMode === MODE_SHADED) {
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.toneMappingExposure = 1.05;
     } else {
+      // Solid uses unlit MeshBasicMaterial — skip ACES so chroma stays punchy.
       renderer.toneMapping = THREE.NoToneMapping;
       renderer.toneMappingExposure = 1;
     }
     refreshEdges();
     syncSectionCaps(parts, lockedClipPlanes());
+    if (materialMode === MODE_REALISTIC) realisticCtl?.afterRefresh();
     reapplyLightLooks();
+    viewDirty = true;
   }
 
   function buildMaterialToggle() {
@@ -1101,6 +1184,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     host.replaceChildren();
     for (const [id, labelKey] of [
       [MODE_SOLID, "ui.solid"],
+      [MODE_SHADED, "ui.shaded"],
       [MODE_REALISTIC, "ui.realistic"],
     ]) {
       const btn = document.createElement("button");
@@ -3209,8 +3293,14 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   function tick() {
     if (pauseTick) return;
     const now = performance.now();
-    if (doorCtrl.step(now)) viewDirty = true;
-    if (windowSlides.step(now)) viewDirty = true;
+    if (doorCtrl.step(now)) {
+      viewDirty = true;
+      realisticCtl?.stage.markDirty();
+    }
+    if (windowSlides.step(now)) {
+      viewDirty = true;
+      realisticCtl?.stage.markDirty();
+    }
     stepPulse(now);
     stepCamFly(now);
     stepFrameAnim(now);
@@ -3231,6 +3321,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
 
     const contentNow = readContentSig();
     const contentChanged = contentNow !== contentSig;
+    // Cuts and hides change what casts a shadow.
+    if (contentChanged) realisticCtl?.stage.markDirty();
     const camChanged = cameraSigChanged();
     // Still frame, after the first picture: correct transparency. Anything
     // in motion stays on one sorted-alpha draw.

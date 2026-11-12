@@ -25,17 +25,21 @@ export function meshIdentity(raw) {
  * @returns {{ part: string, element: string | null }}
  */
 export function identityOf(obj) {
-  let part = "part";
+  // The nearest named node is the part. Taking the outermost one put every
+  // id-less mesh (bathroom tiles, grout, fixtures in ground_floor) under the
+  // viewer's own `VerticalExaggeration` group, so they lost their colour and
+  // Parts row (found with the Realistic catalogue, 2026-11-12).
+  let part = "";
   let node = obj;
   while (node) {
     const name = node.name || "";
     const edges = name.endsWith("__edges") || Boolean(node.userData?.isEdgeOverlay);
     if (!edges && name) {
       const ident = meshIdentity(name);
-      if (ident.part) part = ident.part;
+      if (ident.part && !part) part = ident.part;
       if (ident.element) return { part: ident.part, element: ident.element };
     }
     node = node.parent || null;
   }
-  return { part, element: null };
+  return { part: part || "part", element: null };
 }

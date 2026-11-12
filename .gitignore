@@ -28,6 +28,8 @@ exports/**/*.usdz
 !docs/models/**/*.json
 !docs/.nojekyll
 docs/index.html
+# Realistic-mode catalogue, copied from inputs/materials by preview_hub.sync_materials_site
+docs/materials/catalogue.yaml
 
 # Local secrets / editor
 .env
