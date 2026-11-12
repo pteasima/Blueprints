@@ -61,7 +61,7 @@ Hinge sides are named by compass jamb. "Inward" means into the room the door ser
 
 ## Reverse interior doors
 
-Petr, 2026-11-12: "The hinged doors are 'reverse' door (so the sit flush with hallway wall but open inward into rooms)". The frames are "invisible": flush and plastered over, so the model has no separate frame solid on these leaves, only the 40 mm timber leaf (`DOOR_LEAF_MM`). This is the geometry change that the materials-catalogue work (PR 111, branch `materials-catalogue`) flagged as still open; that branch's `open:` note at the end of this file is left untouched here so the two PRs do not conflict.
+Petr, 2026-11-12: "The hinged doors are 'reverse' door (so the sit flush with hallway wall but open inward into rooms)". The frames are "invisible": flush and plastered over, so the model has no separate frame solid on these leaves, only the 40 mm timber leaf (`DOOR_LEAF_MM`).
 
 **Rule.** Each interior hinged leaf sits with its hallway/circulation face coplanar with that face of the wall, and swings into the room. The property is `Pset_BlueprintsDoor.FlushFace` (`+` or `−` along the host wall's local +Y, the same convention as `Swing`). The builder (`flush_leaf_offset_m` in `models/ground_floor.py`) computes the shift from the wall thickness and the leaf thickness, so a later change of either still keeps the face flush. `LeafOffset`, if set, is an absolute override: it wins over `FlushFace`.
 

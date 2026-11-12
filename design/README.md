@@ -12,6 +12,7 @@ Read the file for the area before changing a model. Each fact names a source. `g
 | Ground-floor walls and the floor take-off | [ground-floor.md](ground-floor.md) |
 | Bathrooms 1.07 and 1.20 | [bathrooms.md](bathrooms.md) |
 | Wave-study layout and what it assumes | [acoustics.md](acoustics.md) |
+| Surface materials for the realistic render (products, colours, assumptions) | [../materials/README.md](../materials/README.md) |
 
 ## Two plan frames
 
