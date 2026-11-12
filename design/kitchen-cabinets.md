@@ -81,11 +81,36 @@ yaml-ifc has no assemblies or plain groups, so `kitchen_ifc.apply` rewrites the 
 
 ### Viewer: isolate a bay
 
-The IFC index hangs each bay group under its run for the tree (display only) and lists every part's groups. Hide, “Hide all others” and framing follow group membership as well as the tree (`src/blueprints/viewer/ifcTree.js`, `subtreeIds`). So:
+Petr, 2026-11-12, after the monoblock groups landed in the spatial tree under each run and became hard to find:
+
+> Ok, ditch that rule. I want: a separate Groups tab in the inspector. a way to get into element/group info from the longpress menu in inspector. element info to show groups that element is member of (taping one reveals it in inspector). group info to show child elements and child groups (separate sections). No need for parent group as thats findable from the path bar in inspector.
+
+Then, after a critique of that plan:
+
+> 1. ok, no pathbar in groups tab, parent group in group info
+> 2. thats why theres a segmented picker for the tabs and it animates when it switches over
+> 3. noted, fwiw I dont think thats an issue, lets have a furniture group with cabinets being children, electrical group (empty for now).
+
+Then, on the info screen and the 3D long-press popover:
+
+> Sorry, that info screen should be the same as that popover when you longpress the thing in model. So it should also have actions etc. Actually, now that I think about it, ditch the popover and just go straight into inspector. That also means theres no open inspector button, as that just mean going back.
+
+Then, two tweaks once that was in a PR (2026-11-12):
+
+> the segmented picker shouldnt be visible on the info screen, only at root of the inspector. Make it make sense.
+
+> furniture group should contain not just other groups, but also other pieces of furniture that arent a group (e.g. the sofa).
+
+A long-press in the model now opens the inspector on that element's info screen (no popover, no "Show in inspector" button). Info carries the old popover's properties and actions, plus Frame, Hide / Unhide, Hide all others and Unhide all others. Back from info returns to the tree; Back from the tree returns to the menu. The Spatial / Groups segmented picker is shown only at the inspector root (the spatial tree or the groups list). It is hidden on element and group info, and on any deeper pushed screen. Tapping a group from element info, or an element from group info, still updates the underlying tab so Back lands on the right root; the picker stays off until then.
+
+The index no longer hangs a group under the parent most of its members share. Groups are not in the spatial tree. They have their own list (`groups` in `docs/models/ground_floor.ifc.json`), with member elements, child groups and parent groups from `IfcRelAssignsToGroup`. The inspector has a Spatial tab (the room tree, with a path bar) and a Groups tab (top-level groups, no path bar); a segmented picker at the root animates the switch. Long-press a row for Info. Element info lists the groups it belongs to; group info lists parent groups, child groups and child elements. Tapping a group opens it on the Groups tab; tapping an element opens it on the Spatial tab. Hide, “Hide all others” and framing follow group membership recursively, including nested groups (`src/blueprints/viewer/ifcTree.js`, `subtreeIds`). So:
 
 - selecting SF-I600a and choosing “Hide all others” keeps its bottom, rail, three drawers, both dividers and the island's central back;
 - selecting a divider selects just that board;
-- selecting `KR-ISL` and “Hide all others” keeps the whole island, worktop and cladding included.
+- selecting `KR-ISL` and “Hide all others” keeps the whole island, worktop and cladding included;
+- selecting Furniture keeps every cabinet bay, plus the loose furniture pieces that are direct members (the Livom sofa modules, the Gatta table, chairs, and the rest listed below).
+
+Two root groups are written by `kitchen_ifc.apply` on every yaml-ifc document that has bays, systems, or loose furniture (furnishings, bedroom, bathroom). The index merge unions `memberIds` and child/parent group lists across those documents, so Furniture is one group with all of them. **Furniture** (`GRP-FURNITURE`) has every kitchen bay group as a child (island, west, west wall cabinets, tall, north dining — all existing bay `IfcGroup`s), and also the furniture elements that are not already in a bay group: the Livom Harvey sofa modules and arms, the Gatta dining table and its chairs, the living-room bookshelf, the bed and curtain rails in 1.11, the bathroom vanity cabinet, top and shelf, the standalone cabinets that are not a kitchen bay (`SF-DH`, `SF-LB`, `SF-TC`), and worktops or plinths that no bay lists (so isolating Furniture still shows the counters). Kitchen-run assemblies (`KR-ISL`, `KR-WEST`, and the other `ObjectType: KitchenRun` products) are *not* direct members: their bays are already child groups, and listing the run again would duplicate them. Hobs and other appliances stay out (they are not furniture). Bathroom construction that yaml-ifc types as `IfcFurniture` (mixers, pipes, pre-walls, soffit, tiled tub front, shower screen) also stays out. **Electrical** (`GRP-ELECTRICAL`) is empty for now. If an `IfcSystem` or `IfcDistributionCircuit` appears in the same model, it is assigned under Electrical. There are none in the current furnishings export. Membership that already follows from an element's class, type or material (every window, all gypsum) stays a viewer filter, not a group.
 
 ## Which cabinet, and what the drawers hold
 
