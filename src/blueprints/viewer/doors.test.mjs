@@ -756,7 +756,7 @@ function slabFor(record, size, name) {
   const f = new THREE.Box3().setFromObject(frame).getCenter(new THREE.Vector3());
   const g = new THREE.Box3().setFromObject(glass).getCenter(new THREE.Vector3());
   near1(f.distanceTo(g), 0, "glass stays in its frame");
-  assert.ok(f.x < record.hinge[0] - 0.3, `opens west onto the terrace: ${f.x}`);
+  assert.ok(f.x > record.hinge[0] + 0.3, `opens east, into 1.01 (Petr's sketch): ${f.x}`);
 }
 
 function near1(a, b, msg) {

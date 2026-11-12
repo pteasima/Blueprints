@@ -1097,12 +1097,13 @@ doors:
     OverallWidth: 1.1
     OverallHeight: 2.45
     OperationType: SLIDING_TO_LEFT
-  # D-OP32 (1.01 Zádveří → 1.24 Terasa, west). Petr 2026-11-12: the door onto
+  # D-OP32 (1.01 Zádveří ↔ 1.24 Terasa, west). Petr 2026-11-12: the door onto
   # the terrace is a "balcony" door, a hinged door made of glass. Glazed leaf
   # from Pset_DoorCommon.GlazingAreaFraction (the frame is a 70 mm profile, so
-  # the glass is about 0.8 of the leaf). Hinge and swing per the DWG arc: hinge
-  # on the north jamb (W-055 runs south to north, so the end jamb), opening out
-  # west onto the terrace (+Y). docs/OpeningsSpec.md.
+  # the glass is about 0.8 of the leaf). Petr's 11:43 sketch: hinge on the
+  # south jamb, opening inward, east into 1.01 (W-055 runs south to north, so
+  # start jamb, local −Y). The DWG arc (north hinge, out onto the terrace) is
+  # overridden. docs/OpeningsSpec.md.
   - id: D-OP32
     FillsOpening: OP32
     OverallWidth: 1.15
@@ -1113,8 +1114,8 @@ doors:
           GlazingAreaFraction: 0.8
       - Name: Pset_BlueprintsDoor
         Properties:
-          HingeSide: end
-          Swing: "+"
+          HingeSide: start
+          Swing: "-"
   # D-OP33 (1.02 living room → 1.01 Zádveří): single pocket door. The DWG plan draws no swing
   # arc, only the leaf parked beside the opening on the living-room face of
   # the wall (y 11.05–12.20), so it slides north (toward the W-056 end jamb) into the wall.
@@ -1124,16 +1125,12 @@ doors:
     OverallWidth: 1.1
     OverallHeight: 2.45
     OperationType: SLIDING_TO_RIGHT
+  # D-OP34 (1.01 Zádveří → 1.20 Koupelna). Petr's 11:43 sketch: hinge on the
+  # east jamb, opening inward, south into 1.20. W-015 runs west to east, so the
+  # end jamb, local −Y. The model had the west jamb, opening north into 1.01.
+  # docs/OpeningsSpec.md.
   - id: D-OP34
     FillsOpening: OP34
-    OverallWidth: 0.8
-    OverallHeight: 2.1
-  # D-OP37 (1.01 Zádveří → 1.19 WC, the door next to the garage-hallway door
-  # D-OP38 on W-059. Petr 2026-11-12 (relayed as "bathroom 1.21 next to the
-  # garage-hallway door"): flip the hinge side (was south/start) and open
-  # inward. End jamb = north; −Y = east, into 1.19). docs/OpeningsSpec.md.
-  - id: D-OP37
-    FillsOpening: OP37
     OverallWidth: 0.8
     OverallHeight: 2.1
     PropertySets:
@@ -1141,14 +1138,27 @@ doors:
         Properties:
           HingeSide: end
           Swing: "-"
+  # D-OP37 (1.01 Zádveří → 1.19 WC, next to the garage-hallway door D-OP38 on
+  # W-059). Opens inward, east into 1.19 (Petr 2026-11-12). Petr's 11:43 sketch
+  # puts the hinge on the south jamb (start; W-059 runs south to north, −Y is
+  # east), as the DWG does; it replaces the earlier relayed "flip the hinge".
+  # docs/OpeningsSpec.md.
+  - id: D-OP37
+    FillsOpening: OP37
+    OverallWidth: 0.8
+    OverallHeight: 2.1
+    PropertySets:
+      - Name: Pset_BlueprintsDoor
+        Properties:
+          HingeSide: start
+          Swing: "-"
   # D-OP38 (1.01 Zádveří → 1.17 Chodba, the garage hallway, which runs on
   # into the garage 1.16 with no door; this is "the door into the garage next
   # to the main entrance"). Petr 2026-11-12: head as the window beside the
-  # main door (OP39b, 2.50 m), the hinge on the opposite jamb, and the leaf
-  # swings into the garage hallway / toward the garage (east). W-059 runs
-  # south to north, so the end jamb is the north jamb and local −Y is east,
-  # into 1.17. The 2022 DWG draws the hinge on the south jamb, swinging into
-  # 1.17; Petr's word overrides the hinge side. docs/OpeningsSpec.md.
+  # main door (OP39b, 2.50 m), and the leaf swings toward the garage (east,
+  # local −Y of W-059, which runs south to north). Petr's 11:43 sketch puts
+  # the hinge on the south jamb (start), as the DWG does; it replaces the
+  # earlier relayed "flip the hinge". docs/OpeningsSpec.md.
   - id: D-OP38
     FillsOpening: OP38
     OverallWidth: 0.9
@@ -1156,7 +1166,7 @@ doors:
     PropertySets:
       - Name: Pset_BlueprintsDoor
         Properties:
-          HingeSide: end
+          HingeSide: start
           Swing: "-"
   # D-OP39a (main entrance, 1.01 Zádveří): head at OP39b's head, 2.50 m,
   # Petr 2026-11-12 (11:17). Hinge and swing unchanged. docs/OpeningsSpec.md.

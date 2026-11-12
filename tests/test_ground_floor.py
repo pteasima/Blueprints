@@ -429,10 +429,12 @@ HINGES = {
     "D-OP17": ("west", "north"),  # bathroom 1.07, as the WC
     "D-OP20": ("south", "east"),  # pantry exterior door, inward
     "D-OP23": ("east", "north"),  # 1.05 → 1.04
-    "D-OP37": ("north", "east"),  # 1.01 → WC 1.19, inward
-    "D-OP38": ("north", "east"),  # 1.01 → 1.17 garage hallway
+    # Petr's 11:43 sketch of the entrance area (docs/OpeningsSpec.md):
+    "D-OP37": ("south", "east"),  # 1.01 → WC 1.19, inward
+    "D-OP38": ("south", "east"),  # 1.01 → 1.17 garage hallway
+    "D-OP34": ("east", "south"),  # 1.01 → bathroom 1.20, inward
     "D-OP40": ("east", "north"),  # 1.22 → 1.21
-    "D-OP32": ("north", "west"),  # 1.01 → terrace 1.24, glazed, per the DWG arc
+    "D-OP32": ("south", "east"),  # terrace door, glazed, opens into 1.01 (sketch)
 }
 
 

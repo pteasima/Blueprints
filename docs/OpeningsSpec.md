@@ -24,9 +24,10 @@ Hinge sides are named by compass jamb. "Inward" means into the room the door ser
 | D-OP24 | 1.02 living room | Pocket, single leaf (`SLIDING_TO_RIGHT`) | Slides north into the wall | 2.45 | Petr 2026-11-12 ("the three tall doors are pocket doors"); direction from the DWG's parked leaf (y 11.15–12.20) |
 | D-OP25 | 1.02 living room | Pocket, single leaf (`SLIDING_TO_LEFT`) | Slides south into the wall | 2.45 | As OP24; DWG leaf y 12.95–13.90 |
 | D-OP33 | 1.02 living room | Pocket, single leaf (`SLIDING_TO_RIGHT`) | Slides north into the wall | 2.45 | As OP24; DWG leaf y 11.05–12.20 |
-| D-OP32 | 1.01 Zádveří → 1.24 Terasa (west) | Glazed hinged "balcony" door: glass pane in a 70 mm frame (`Pset_DoorCommon.GlazingAreaFraction` 0.8) | Hinge on the north jamb; opens out, west onto the terrace | 2.50 | Petr 2026-11-12 ("a hinged door but made out of glass"); hinge and swing from the DWG arc (the model had the south jamb before) |
-| D-OP37 | 1.01 Zádveří → 1.19 WC | Hinged | Hinge flipped to the north jamb; opens inward, east into 1.19 | 2.10 | Petr 2026-11-12 ("the toilet door next to it opens inwards"). Differs from the DWG (south hinge) |
-| D-OP38 | 1.01 Zádveří → 1.17 Chodba (runs on into the garage, no door between) | Hinged | Hinge flipped to the north jamb; opens toward the garage (east, into 1.17) | 2.50 = OP39b head | Petr 2026-11-12 (the "garage entrance door" and the "door into the garage hallway" are this one door). DWG opens into 1.17 too but hinges south. A "2500" text sits beside it in the DWG |
+| D-OP32 | 1.01 Zádveří ↔ 1.24 Terasa (west) | Glazed hinged "balcony" door: glass pane in a 70 mm frame (`Pset_DoorCommon.GlazingAreaFraction` 0.8) | Hinge on the south jamb; opens inward, east into 1.01 | 2.50 | Petr 2026-11-12 ("a hinged door but made out of glass"); hinge and swing from Petr's 11:43 sketch (purple arcs on the PR 106 preview). Overrides the DWG (north hinge, out onto the terrace) |
+| D-OP34 | 1.01 Zádveří → 1.20 Koupelna | Hinged | Hinge on the east jamb; opens inward, south into 1.20 | 2.10 | Petr's 11:43 sketch (purple arcs on the PR 106 preview) (the model had the west jamb, opening north into 1.01) |
+| D-OP37 | 1.01 Zádveří → 1.19 WC | Hinged | Hinge on the south jamb; opens inward, east into 1.19 | 2.10 | Petr's 11:43 sketch (purple arcs on the PR 106 preview); the DWG agrees. Replaces the earlier relayed "flip the hinge" (north jamb) |
+| D-OP38 | 1.01 Zádveří → 1.17 Chodba (runs on into the garage, no door between) | Hinged | Hinge on the south jamb; opens toward the garage (east, into 1.17) | 2.50 = OP39b head | Head: Petr 2026-11-12 (11:17). Hinge and swing: Petr's 11:43 sketch (purple arcs on the PR 106 preview); the DWG agrees. Replaces the earlier relayed "flip the hinge" (north jamb). A "2500" text sits beside it in the DWG |
 | D-OP39a | 1.01 main entrance | Hinged | Unchanged | 2.50 = OP39b head (was 2.15) | Petr 2026-11-12 ("same as the window directly beside it") |
 | D-OP40 | 1.22 garzonka → 1.21 bathroom | Hinged | Hinge flipped to the east jamb; still opens inward, into 1.21 | 2.10 | Petr 2026-11-12; DWG agrees |
 | D-OP49 (D6) | 1.16 Garáž, east | Sectional overhead (`USERDEFINED` / `SECTIONAL_OVERHEAD`) | Rises into the garage ceiling; tap toggles, up/down arrow | 2.25 (TODO) | Petr 2026-11-12; marks D6 in DWG POHLED SEVEROVÝCHODNÍ |
@@ -58,10 +59,7 @@ Hinge sides are named by compass jamb. "Inward" means into the room the door ser
 
 ## TODO (waiting on Petr)
 
-- [ ] The four entrance-area doors Petr marked in purple on his 11:43 screenshot (2026-11-12). Not applied yet: the sketch did not reach the agent that edits this file.
-
 - [ ] Height of the garage doors D5/D6 (D-OP50, D-OP49). The model keeps the DWG's 2.25 m.
 - [ ] Sectional track: 4 sections and a 0.3 m bend are a simplified animation, not a chosen product.
 - [ ] OP27/OP29 height: assumed 2.5 m, sill 0 (same as OP28).
-- [ ] OP37 and OP38 hinge sides: Petr's flip differs from the DWG, which hinges both on the south jamb. Confirm.
 - [ ] Pocket doors OP24, OP25, OP33: the leaf runs in the wall's centre plane; the DWG draws it parked on the living-room face. Which is the real pocket?
