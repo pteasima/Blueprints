@@ -780,7 +780,7 @@ canvas {
   justify-content: space-between;
   gap: 0.5rem;
 }
-.ifc-back, .ifc-show-all, .ifc-crumb, .ifc-action, .ifc-menu-btn, .ifc-reveal {
+.ifc-back, .ifc-show-all, .ifc-crumb, .ifc-action, .ifc-menu-btn {
   appearance: none;
   border: 0;
   background: transparent;
@@ -871,7 +871,7 @@ canvas {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.ifc-popover, .ifc-menu {
+.ifc-menu {
   position: fixed;
   z-index: 6;
   box-sizing: border-box;
@@ -888,12 +888,17 @@ canvas {
   backdrop-filter: blur(var(--blur)) saturate(1.7);
   -webkit-overflow-scrolling: touch;
 }
-.ifc-popover[hidden], .ifc-menu[hidden] { display: none; }
-.ifc-pop-id { display: flex; align-items: flex-start; gap: 0.4rem; }
-.ifc-pop-title {
+.ifc-menu[hidden] { display: none; }
+/* .seg { display: flex } and .ifc-crumbs { display: flex } beat the HTML
+   hidden attribute on their own; force the picker and path bar off when
+   JS sets hidden (info screens, and the Groups tab has no path bar). */
+.seg[hidden],
+.ifc-tabs[hidden],
+.ifc-crumbs[hidden] { display: none; }
+.ifc-info-swap {
   appearance: none;
-  flex: 1;
-  min-width: 0;
+  display: block;
+  width: 100%;
   margin: 0;
   padding: 0;
   border: 0;
@@ -926,19 +931,8 @@ canvas {
 .ifc-gid { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.78rem; }
 .ifc-note { white-space: pre-wrap; }
 .ifc-line { margin-top: 0.55rem; }
-.ifc-reveal {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.75rem;
-  height: 2.75rem;
-  border-radius: 0.6rem;
-  background: var(--fill);
-  color: var(--fg);
-}
 .ifc-actions, .ifc-menu { display: flex; flex-direction: column; gap: 0.35rem; }
-.ifc-popover .ifc-actions { margin-top: 0.75rem; }
+.ifc-info .ifc-actions { margin-top: 0.75rem; }
 .ifc-action, .ifc-menu-btn {
   min-height: 2.75rem;
   padding: 0.45rem 0.7rem;
@@ -948,9 +942,65 @@ canvas {
   font-size: 1rem;
   text-align: center;
 }
-.ifc-action:active, .ifc-menu-btn:active, .ifc-reveal:active { background: var(--fill-active); }
+.ifc-action:active, .ifc-menu-btn:active { background: var(--fill-active); }
 .ifc-menu { z-index: 8; padding: 0.45rem; touch-action: manipulation; }
-.ifc-popover { z-index: 8; }
+.ifc-tabs {
+  margin: 0.15rem 0 0.35rem;
+}
+.ifc-panes {
+  position: relative;
+  overflow: hidden;
+}
+.ifc-panes-track {
+  display: flex;
+  width: 200%;
+  will-change: transform;
+  transition: transform 0.32s ease;
+}
+.ifc-panes-track.is-groups {
+  transform: translateX(-50%);
+}
+.ifc-panes-track.is-instant {
+  transition: none;
+}
+.ifc-pane {
+  box-sizing: border-box;
+  flex: 0 0 50%;
+  width: 50%;
+  min-width: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ifc-panes-track { transition: none; }
+}
+.ifc-info {
+  padding: 0.2rem 0 1.25rem;
+}
+.ifc-info-title {
+  margin: 0.15rem 0 0.7rem;
+}
+.ifc-info-section {
+  margin-top: 0.85rem;
+}
+.ifc-info-link {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.05rem;
+  width: 100%;
+  min-height: 2.75rem;
+  margin-top: 0.3rem;
+  padding: 0.4rem 0.7rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--fill);
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.ifc-info-link:active { background: var(--fill-active); }
 `;
 
 let stylesInjected = false;

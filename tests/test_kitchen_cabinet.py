@@ -99,8 +99,33 @@ def test_ifc_groups_and_assembly():
     assert validation_errors(model) == []
     groups = {g.Name: g for g in model.by_type("IfcGroup")}
     assert "Ostrov západ 600" in groups
+    assert "Furniture" in groups and "Electrical" in groups
+    furniture = groups["Furniture"]
+    electrical = groups["Electrical"]
+    rels = [
+        r for r in model.by_type("IfcRelAssignsToGroup")
+        if r.RelatingGroup and r.RelatingGroup.GlobalId == furniture.GlobalId
+    ]
+    assert {r.RelatedObjectsType for r in rels} == {"GROUP", "PRODUCT"}
+    group_rel = next(r for r in rels if r.RelatedObjectsType == "GROUP")
+    product_rel = next(r for r in rels if r.RelatedObjectsType == "PRODUCT")
+    child_names = {g.Name for g in group_rel.RelatedObjects}
+    skip = {furniture.GlobalId, electrical.GlobalId}
+    bay_names = {g.Name for g in groups.values() if g.GlobalId not in skip}
+    assert child_names == bay_names
+    member_ids = {kitchen_ifc._yaml_id(p) for p in product_rel.RelatedObjects}
+    # Loose pieces (sofa, table, standalone cabinets, worktops not in a bay).
+    assert {"FN-GATTA", "FN-S2A", "SF-DH", "SF-LB", "SF-TC", "KR-ISL-WORKTOP"} <= member_ids
+    # Kitchen-run assemblies stay out: their bays are already child groups.
+    assert "KR-ISL" not in member_ids and "KR-WEST" not in member_ids
+    # Electrical stays empty until a circuit or IfcSystem exists in the model.
+    assert not [
+        r for r in model.by_type("IfcRelAssignsToGroup")
+        if r.RelatingGroup and r.RelatingGroup.GlobalId == electrical.GlobalId
+    ]
     island = [r for r in model.by_type("IfcRelAggregates") if r.RelatingObject.Name == "Ostrov"]
-    assert len(island) == 1 and len(island[0].RelatedObjects) == len(_runs()["KR-ISL"].parts)
+    aggregated = [p for p in _runs()["KR-ISL"].parts if p.role not in kitchen_ifc.NOT_AGGREGATED]
+    assert len(island) == 1 and len(island[0].RelatedObjects) == len(aggregated)
 
 
 def test_drawer_motions_in_model():

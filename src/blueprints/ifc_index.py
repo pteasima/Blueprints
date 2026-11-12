@@ -3,12 +3,13 @@
 The viewer does not parse IFC. Export walks the IfcOpenShell model
 ``yaml_ifc`` already builds and writes ``docs/models/<id>.ifc.json``.
 Spatial containment and IfcRelAggregates / IfcRelNests are the parent
-links. A plain ``IfcGroup`` (a kitchen bay, docs/design/kitchen-cabinets.md)
-is not in that tree in IFC; the index hangs it under the aggregate parent
-most of its members share, for display only, and lists each member's
-groups in ``groups`` so the viewer can hide or isolate a whole group.
-Everything else (property sets, cable number, circuit, role) is carried on
-the element for the popover note.
+links. A plain ``IfcGroup`` or ``IfcSystem`` (a kitchen bay, Furniture,
+Electrical, a circuit; docs/design/kitchen-cabinets.md) is not in that
+tree: the index lists them under ``groups``, with member elements, child
+groups and parent groups from ``IfcRelAssignsToGroup``. Each member still
+has ``groups`` so the viewer can hide or isolate a whole group. Everything
+else (property sets, cable number, circuit, role) is carried on the
+element for the popover note.
 """
 
 from __future__ import annotations
@@ -59,6 +60,7 @@ def index_documents(docs: list[dict], transform=None) -> dict[str, Any]:
 def merge_indexes(indexes: list[dict]) -> dict[str, Any]:
     elements: dict[str, dict] = {}
     roots: list[str] = []
+    groups: list[str] = []
     for index in indexes:
         for gid, element in (index.get("elements") or {}).items():
             if gid not in elements:
@@ -68,11 +70,18 @@ def merge_indexes(indexes: list[dict]) -> dict[str, Any]:
         for root in index.get("roots") or []:
             if root not in roots:
                 roots.append(root)
-    return {"elements": elements, "roots": roots}
+        for gid in index.get("groups") or []:
+            if gid not in groups:
+                groups.append(gid)
+    return {"elements": elements, "roots": roots, "groups": groups}
 
 
 def index_model(model) -> dict[str, Any]:
-    """Flat element map plus project roots. Children are derived from the links."""
+    """Flat element map plus project roots and a groups list.
+
+    Children of the spatial tree come only from aggregates, nests and
+    spatial containment. Groups are not given a display parent.
+    """
     parent_of: dict[str, str] = {}
     parent_order: dict[str, int] = {}
     # Aggregates first, nests after, so a nested port stays under its device.
@@ -112,34 +121,31 @@ def index_model(model) -> dict[str, Any]:
             if label not in circuits[element.GlobalId]:
                 circuits[element.GlobalId].append(label)
 
-    # Plain groups (not systems such as circuits): membership for hide and
-    # isolate, and a display parent for the tree.
+    # IfcGroup and its subtypes (IfcSystem, IfcDistributionCircuit, …),
+    # including groups with no members.
     groups_of: dict[str, list[str]] = {}
-    group_members: dict[str, list[str]] = {}
+    member_ids: dict[str, list[str]] = {}
+    child_group_ids: dict[str, list[str]] = {}
+    group_products = list(model.by_type("IfcGroup"))
+    group_id_set = {group.GlobalId for group in group_products if getattr(group, "GlobalId", None)}
     for rel in model.by_type("IfcRelAssignsToGroup"):
         group = rel.RelatingGroup
-        if group is None or group.is_a("IfcSystem"):
+        if group is None or not getattr(group, "GlobalId", None):
             continue
-        for element in rel.RelatedObjects or []:
-            if element is None:
+        for obj in rel.RelatedObjects or []:
+            if obj is None or not getattr(obj, "GlobalId", None):
                 continue
-            groups_of.setdefault(element.GlobalId, [])
-            if group.GlobalId not in groups_of[element.GlobalId]:
-                groups_of[element.GlobalId].append(group.GlobalId)
-            group_members.setdefault(group.GlobalId, []).append(element.GlobalId)
-    group_rank = 0
-    for group_id, members in group_members.items():
-        if group_id in parent_of:
-            continue
-        counts: dict[str, int] = {}
-        for member in members:
-            parent = parent_of.get(member)
-            if parent:
-                counts[parent] = counts.get(parent, 0) + 1
-        if counts:
-            parent_of[group_id] = max(counts, key=lambda key: counts[key])
-            parent_order[group_id] = -100_000 + group_rank
-            group_rank += 1
+            groups_of.setdefault(obj.GlobalId, [])
+            if group.GlobalId not in groups_of[obj.GlobalId]:
+                groups_of[obj.GlobalId].append(group.GlobalId)
+            if obj.is_a("IfcGroup"):
+                child_group_ids.setdefault(group.GlobalId, [])
+                if obj.GlobalId not in child_group_ids[group.GlobalId]:
+                    child_group_ids[group.GlobalId].append(obj.GlobalId)
+            else:
+                member_ids.setdefault(group.GlobalId, [])
+                if obj.GlobalId not in member_ids[group.GlobalId]:
+                    member_ids[group.GlobalId].append(obj.GlobalId)
 
     elements: dict[str, dict] = {}
     order = 0
@@ -154,8 +160,17 @@ def index_model(model) -> dict[str, Any]:
             continue
         record = _element_record(product)
         record["order"] = parent_order.get(gid, 10_000 + order)
-        record["parentId"] = parent_of.get(gid)
-        record["containerId"] = container_of.get(gid)
+        # Groups stay out of the spatial tree even if some other
+        # relationship also named a parent.
+        if gid in group_id_set:
+            record["parentId"] = None
+            record["containerId"] = None
+            record["memberIds"] = member_ids.get(gid, [])
+            record["childGroupIds"] = child_group_ids.get(gid, [])
+            record["parentGroupIds"] = groups_of.get(gid, [])
+        else:
+            record["parentId"] = parent_of.get(gid)
+            record["containerId"] = container_of.get(gid)
         record["circuits"] = circuits.get(gid, [])
         record["groups"] = groups_of.get(gid, [])
         elements[gid] = record
@@ -167,7 +182,25 @@ def index_model(model) -> dict[str, Any]:
         if element["type"] == "IfcProject"
     ]
     roots.sort(key=lambda gid: elements[gid]["order"])
-    return {"elements": elements, "roots": roots}
+    groups = [group.GlobalId for group in group_products if getattr(group, "GlobalId", None) and group.GlobalId in elements]
+    # Stable unique order: declared rank, then name.
+    seen = set()
+    unique_groups = []
+    for gid in groups:
+        if gid in seen:
+            continue
+        seen.add(gid)
+        unique_groups.append(gid)
+    unique_groups.sort(key=lambda gid: (_group_rank(elements[gid]), elements[gid].get("name") or "", gid))
+    return {"elements": elements, "roots": roots, "groups": unique_groups}
+
+
+def _group_rank(element: dict) -> tuple:
+    yaml_id = element.get("id") or ""
+    preferred = {"GRP-FURNITURE": 0, "GRP-ELECTRICAL": 1}
+    if yaml_id in preferred:
+        return (0, preferred[yaml_id])
+    return (1, 0)
 
 
 def _element_record(product) -> dict[str, Any]:
@@ -276,9 +309,29 @@ def _layer_thickness(product) -> float | None:
     return None
 
 
+# Membership can arrive from more than one yaml-ifc document (furnishings,
+# bedroom, bathroom each assign their own pieces to Furniture). A later
+# non-empty list must union with the one already kept, not be dropped.
+_LIST_UNION_KEYS = frozenset({
+    "memberIds",
+    "childGroupIds",
+    "parentGroupIds",
+    "groups",
+    "circuits",
+    "cables",
+})
+
+
 def _fill_missing(kept: dict, extra: dict) -> None:
     for key, value in extra.items():
         current = kept.get(key)
+        if key in _LIST_UNION_KEYS and isinstance(current, list) and isinstance(value, list):
+            seen = set(current)
+            for item in value:
+                if item not in seen:
+                    current.append(item)
+                    seen.add(item)
+            continue
         if current in (None, "", [], {}):
             kept[key] = value
 

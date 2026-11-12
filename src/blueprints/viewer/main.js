@@ -2453,7 +2453,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       else pulseElement(id);
     },
     onVisibility: () => applyInspectorVisibility(),
-    actionsFor: () => [],
+    actionsFor: (element) => actionsForElement(element),
     liveLines: (element) => {
       const device = home?.lastKnown(element.globalId);
       return device ? deviceLines(device, tr) : [];
@@ -3019,6 +3019,24 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     viewDirty = true;
   }
 
+  /**
+   * Interaction buttons for the inspector info screen (open/close, light,
+   * switch, live cover). Tries each of the element's meshes until a handler
+   * claims one, so a window still gets Open from an operable pane.
+   * @param {object | null} element
+   */
+  function actionsForElement(element) {
+    if (!element) return [];
+    const ctx = { now: performance.now() };
+    const keep = (item) => isSceneSolid(item.object);
+    for (const mesh of meshesForElement(element)) {
+      const found = doorCtrl.taps.resolve([{ object: mesh }], ctx, keep);
+      const actions = found?.claim?.actions;
+      if (Array.isArray(actions) && actions.length) return actions.slice();
+    }
+    return [];
+  }
+
   function inspectAtPointer(pt) {
     if (doorInputBlocked()) return;
     const cameraNow = camera;
@@ -3041,24 +3059,19 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       size: { w, h },
     };
     // Same rule as a tap: a direct or extended (44 pt) target wins; else the
-    // front solid's info with whatever the ray reaches (walls have none).
+    // front solid. Opens the inspector on that element's info screen.
     const found = doorCtrl.taps.resolve(hits, ctx, (item) => isSceneSolid(item.object));
     if (found && (found.kind === "direct" || found.kind === "extended") && found.hit?.object) {
       const obj = found.hit.object;
-      const actions = Array.isArray(found.claim?.actions) ? found.claim.actions.slice() : [];
       const partName = obj.userData?.bpPart || meshIdentity(obj.name || "").part;
-      ifcUi.openPopover(elementFromMesh(obj), partName, actions, pt.clientX, pt.clientY);
+      ifcUi.inspect(elementFromMesh(obj), { partName });
       return;
     }
     const hit = hits[0];
-    if (!hit) {
-      ifcUi.closePopover();
-      return;
-    }
+    if (!hit) return;
     const element = elementFromMesh(hit.object);
     const partName = hit.object.userData?.bpPart || meshIdentity(hit.object.name || "").part;
-    const actions = found?.kind === "legacy" && Array.isArray(found.claim?.actions) ? found.claim.actions.slice() : [];
-    ifcUi.openPopover(element, partName, actions, pt.clientX, pt.clientY);
+    ifcUi.inspect(element, { partName });
   }
   inspectAt = inspectAtPointer;
 

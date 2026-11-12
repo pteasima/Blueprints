@@ -6,7 +6,7 @@
  * that set.
  */
 
-import { subtreeIds } from "./ifcTree.js";
+import { isGroup, subtreeIds } from "./ifcTree.js";
 
 /**
  * @param {object} index
@@ -21,6 +21,14 @@ export function createVisibility(index) {
 
   return {
     isHidden(id) {
+      const element = index.elements[id];
+      if (isGroup(element)) {
+        const members = subtreeIds(index, id).filter(
+          (item) => item !== id && !isGroup(index.elements[item]),
+        );
+        if (!members.length) return hidden.has(id);
+        return members.every((item) => hidden.has(item));
+      }
       return hidden.has(id);
     },
     anyHidden() {
@@ -30,7 +38,9 @@ export function createVisibility(index) {
       return [...hidden];
     },
     hide(id) {
-      for (const item of subtreeIds(index, id)) hidden.add(item);
+      for (const item of subtreeIds(index, id)) {
+        if (!isGroup(index.elements[item]) || item === id) hidden.add(item);
+      }
     },
     unhide(id) {
       for (const item of subtreeIds(index, id)) hidden.delete(item);
@@ -38,13 +48,15 @@ export function createVisibility(index) {
     hideOthers(id) {
       const keep = new Set(subtreeIds(index, id));
       for (const item of everyId()) {
-        if (!keep.has(item)) hidden.add(item);
+        if (keep.has(item) || isGroup(index.elements[item])) continue;
+        hidden.add(item);
       }
     },
     unhideOthers(id) {
       const keep = new Set(subtreeIds(index, id));
       for (const item of everyId()) {
-        if (!keep.has(item)) hidden.delete(item);
+        if (keep.has(item) || isGroup(index.elements[item])) continue;
+        hidden.delete(item);
       }
     },
     showAll() {
