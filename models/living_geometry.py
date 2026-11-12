@@ -61,10 +61,14 @@ def _prop(element: dict, pset_name: str, key: str, default=None):
     return default
 
 
-def _chair(width: float, depth: float, height: float, gap: float, facing: str):
+def _chair(width: float, depth: float, height: float, gap: float, facing: str, seat: float | None = None):
+    """Seat, four legs and a back. ``facing`` names the side the back is on
+    (the side of the table the chair stands at): E/W backs run along y, N/S
+    backs along x. ``seat`` is the seat-top height in mm (Pset_Chair
+    SeatHeight), else the generic 450."""
     lo = gap / 2.0
     x1, y1, z1 = width - lo, depth - lo, height - lo
-    seat_top = min(_CHAIR_SEAT_MM, z1 - _CHAIR_BACK_T)
+    seat_top = min(seat if seat else _CHAIR_SEAT_MM, z1 - _CHAIR_BACK_T)
     seat_bot = seat_top - _CHAIR_SEAT_T
     parts = [
         _box(lo, lo, seat_bot, x1, y1, seat_top),
@@ -75,6 +79,10 @@ def _chair(width: float, depth: float, height: float, gap: float, facing: str):
     ]
     if facing == "E":
         parts.append(_box(x1 - _CHAIR_BACK_T, lo, seat_top, x1, y1, z1))
+    elif facing == "N":
+        parts.append(_box(lo, y1 - _CHAIR_BACK_T, seat_top, x1, y1, z1))
+    elif facing == "S":
+        parts.append(_box(lo, lo, seat_top, x1, lo + _CHAIR_BACK_T, z1))
     else:
         parts.append(_box(lo, lo, seat_top, lo + _CHAIR_BACK_T, y1, z1))
     return [part for part in parts if part is not None]
@@ -147,7 +155,9 @@ def living_detail(element: dict, width: float, depth: float, height: float, gap:
     """
     kind = element.get("ObjectType")
     if kind == "DiningChair":
-        parts = _chair(width, depth, height, gap, str(_prop(element, "Pset_Chair", "Facing", "W")))
+        seat = _prop(element, "Pset_Chair", "SeatHeight")
+        parts = _chair(width, depth, height, gap, str(_prop(element, "Pset_Chair", "Facing", "W")),
+                       float(seat) * 1000.0 if seat is not None else None)
     elif kind == "DiningTable":
         parts = _table(width, depth, height, gap)
     elif kind == "Bookshelf":

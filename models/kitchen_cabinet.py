@@ -43,6 +43,8 @@ PSET_RUN = "Pset_KitchenRun"
 PSET_BAY = "Pset_KitchenBay"
 PSET_SINK = "Pset_Sink"
 PSET_HOB = "Pset_Hob"
+PSET_FRONTS = "Pset_Fronts"
+PSET_BUILTIN = "Pset_BuiltIn"
 RUN_OBJECT_TYPE = "KitchenRun"
 KIND_NICHE = "Niche"
 
@@ -71,6 +73,14 @@ IKEA_DEFAULTS_MM = {
     "SlideStep": 50.0,  # slide lengths come in 50 mm steps
     "BacksplashThickness": 12.0,  # Silestone backsplash (Petr, 2026-11-12, via Bob)
     "BacksplashTop": 0.0,  # 0 = up to the wall cabinets above; else a height above the floor
+    # Fronts and interiors (Pset_Fronts), all guess: unless kitchen-cabinets.md says otherwise.
+    "ShelfSetback": 20.0,  # shelf front edge behind the carcass front edge
+    "ObstacleClearance": 10.0,  # drawer box top to a sink bowl / disposer above it
+    "RackDepth": 80.0,  # door rack (police na dveřích), out from the door's back face
+    "RackHeight": 70.0,
+    "RackInset": 40.0,  # each side, from the door edge
+    "BinGap": 10.0,  # between bins in a pull-out
+    "BinWall": 3.0,  # plastic bin wall
 }
 RUN_FLAGS = ("CladEnds", "Backsplash")
 # Pset_KitchenRun.Carcass: "Monoblock" (default, the IKEA-style parts below)
@@ -94,7 +104,8 @@ def _prop(element: dict, pset_name: str, key: str, default=None):
 
 
 def has_drawers(element: dict | None) -> bool:
-    return bool(element) and _prop(element, PSET_DRAWERS, "NominalHeights") is not None
+    """True when any band of the bay is a drawer or a pull-out."""
+    return bool(element) and any(kind in DRAWER_KINDS for kind, _h, _o in zone_spec(element))
 
 
 def run_of(element: dict | None) -> str | None:
@@ -171,7 +182,35 @@ class Drawer:
     box: tuple  # outer drawer box, same order
     extension: float  # full-extension travel
     out: float  # +1 / -1: the c direction the drawer pulls out
-    trimmed: float = 0.0  # mm taken off the box height to clear a hob above
+    trimmed: float = 0.0  # mm taken off the box height to clear a hob (or a sink, a disposer) above
+    kind: str = "drawer"  # "drawer" or "pullout" (a full-height front with a frame box)
+    items: list = field(default_factory=list)  # run-frame boxes riding in the box (baskets, bins)
+    zone: int = 0  # Pset_Fronts zone, 1 = top
+
+
+@dataclass
+class Leaf:
+    """A hinged door leaf, run frame mm."""
+
+    zone: int
+    hinge: str  # "L" or "R", as you face the front
+    hinge_a: float  # run-frame a of the hinge edge
+    face_c: float  # c of the leaf's outer face
+    out: float  # +1 / -1: the c direction the leaf faces
+
+
+@dataclass
+class Zone:
+    """One horizontal band of a bay's front, top to bottom (Pset_Fronts)."""
+
+    index: int  # 1 = top
+    kind: str  # drawer | pullout | door | doors | niche | front | none
+    nominal: float  # band height, mm (a niche: its clear height plus the board under it)
+    slot_z0: float
+    slot_z1: float
+    opts: dict
+    content: str = ""
+    niche: tuple | None = None  # clear niche box (run frame) for a built-in appliance
 
 
 @dataclass(frozen=True)
@@ -215,6 +254,9 @@ class Part:
     drawer: Drawer | None = None
     material: str | None = None
     shape: str = "box"  # "cylinder": one vertical cylinder inscribed in boxes[0] (legs)
+    door: Leaf | None = None
+    props: dict = field(default_factory=dict)  # Pset_KitchenFront / Pset_BuiltIn values for IFC
+    builtin: dict | None = None  # a yaml appliance laid out here (its own IFC product)
 
 
 @dataclass
@@ -233,6 +275,8 @@ class Bay:
     clear_hi: float = 0.0
     members: list = field(default_factory=list)  # part ids
     external: list = field(default_factory=list)  # yaml ids of other products inside the bay
+    zones: list = field(default_factory=list)  # Zone, top to bottom
+    obstacles: list = field(default_factory=list)  # (box, id): sink bowls, disposers hanging in the bay
 
     @property
     def width(self) -> float:
@@ -259,6 +303,7 @@ class Run:
     carcass_z1: float = 0.0
     worktop: tuple | None = None  # run-frame box
     hobs: dict = field(default_factory=dict)  # bay id -> Hob
+    builtins: list = field(default_factory=list)  # yaml appliance elements placed in this run
     notes: list = field(default_factory=list)  # derived facts for docs ("open:" ones too)
 
     def part(self, part_id: str) -> Part:
@@ -335,10 +380,13 @@ def _segments(row: list) -> list[list]:
 
 
 class _Builder:
-    def __init__(self, run: Run, sinks: list[dict], above: list | None = None):
+    def __init__(self, run: Run, sinks: list[dict], above: list | None = None, builtins: list | None = None,
+                 sanitary: set | None = None):
         self.run = run
         self.p = run.params
         self.sinks = sinks
+        self.builtins = builtins or []  # yaml elements with Pset_BuiltIn and no box
+        self.sanitary = sanitary or set()  # of those, the sanitaryTerminals (taps)
         self.above = above or []  # (a0, a1, c0, c1, z0, id): boxes hanging over the run
         self.ids: set[str] = set()
 
@@ -393,8 +441,10 @@ class _Builder:
             for bay in cabinets:
                 if _prop(bay.element, PSET_HOB, "Model") is not None:
                     run.hobs[bay.id] = self._hob_layout(bay, z_base + height)
+        self._sink_fittings(cabinets, z_base + height)
         for bay in cabinets:
             self._bay_parts(bay, z0, z1, shared_back=any(bay in r for k, rs in blocks if k == "pair" for r in rs))
+        self._niche_appliances(cabinets)
         if wt > 0:
             self._worktop(rows, z_base + height - wt, z_base + height)
         if _prop(run.element, PSET_RUN, "CladEnds"):
@@ -581,16 +631,246 @@ class _Builder:
                     self.add(Part(f"{bay.id}-RAIL-{tag}", name, "Rail", [box]), bay)
         else:
             self.add(Part(f"{bay.id}-TOP", "Strop", "Top", [(lo, hi, c_in0, c_in1, z1 - t, z1)]), bay)
+        ceiling = None if hob is None else hob.underside - hob.min_drawer_gap
+        self._fronts(bay, p, z0, z1, back_y, ceiling)
+
+    # --- fronts and interiors (Pset_Fronts) ---------------------------------
+
+    def _fronts(self, bay: Bay, p: dict, z0: float, z1: float, back_y: float, ceiling: float | None):
+        """Every front, drawer, door, shelf and niche of one bay, from its
+        zones (``Pset_Fronts.Layout``, see ``zones``) and the parameters.
+
+        Nothing here is a typed-in coordinate: each piece comes from the bay's
+        clear opening (dividers), its carcass height and the zone heights.
+        """
+        t, tf = p["BoardThickness"], p["FrontThickness"]
         g = p["FrontGap"] / 2.0
-        if has_drawers(bay.element):
-            ceiling = None if hob is None else hob.underside - hob.min_drawer_gap
-            for dr in drawer_layout(bay, p, z0, z1, back_y, ceiling=ceiling):
-                self.add(Part(f"{bay.id}-D{dr.index}", f"Šuplík {dr.index} {dr.content}".strip(), "Drawer",
-                              drawer_boxes(dr, p), drawer=dr), bay)
-        elif str(_prop(bay.element, PSET_BAY, "Front", "slab")).lower() != "none":
-            c0, c1 = self.c_range(bay, 0.0, tf)
-            self.add(Part(f"{bay.id}-FRONT", "Dvířka", "Front",
-                          [(bay.a0 + g, bay.a1 - g, c0, c1, z0 + g, z1 - g)]), bay)
+        bay.zones = zones(bay.element, z1 - z0, t, z0)
+        fc0, fc1 = self.c_range(bay, 0.0, tf)
+        out = -1.0 if bay.front_low else 1.0
+        single = len(bay.zones) == 1
+        drawer_no = 0
+        leaf_no = 0
+        front_no = 0
+        lo, hi = bay.clear_lo, bay.clear_hi
+        for i, zone in enumerate(bay.zones):
+            below = bay.zones[i + 1] if i + 1 < len(bay.zones) else None
+            top_zone = i == 0
+            # A fixed board between two bands, except between drawers.
+            board_below = below is not None and not (zone.kind in DRAWER_KINDS and below.kind in DRAWER_KINDS)
+            if board_below:
+                bc0, bc1 = self.c_range(bay, tf, back_y)
+                self.add(Part(f"{bay.id}-BOARD{zone.index}", f"Mezidno {zone.index}", "Board",
+                              [(lo, hi, bc0, bc1, zone.slot_z0, zone.slot_z0 + t)],
+                              props={"Zone": zone.index}), bay)
+            # Clear interior of the band: above the board under it (or the
+            # carcass bottom), below the board over it (or the top/rails).
+            in_z0 = zone.slot_z0 + t
+            in_z1 = zone.slot_z1 - (t if top_zone else 0.0)
+            front_box = (bay.a0 + g, bay.a1 - g, fc0, fc1, zone.slot_z0 + g, zone.slot_z1 - g)
+            base = {"Zone": zone.index, "Kind": zone.kind, "NominalHeight": round(zone.nominal / 1000.0, 6),
+                    "Contents": zone.content or None}
+            if zone.kind in DRAWER_KINDS:
+                drawer_no += 1
+                dr = _drawer(bay, p, zone, drawer_no, back_y, ceiling, self._obstacle_ceiling(bay, p))
+                name = ("Výsuv" if zone.kind == "pullout" else "Šuplík") + f" {drawer_no} {dr.content}"
+                props = dict(base, Extension=round(dr.extension / 1000.0, 6),
+                             BoxWidth=round((dr.box[1] - dr.box[0]) / 1000.0, 6),
+                             BoxDepth=round(abs(dr.box[3] - dr.box[2]) / 1000.0, 6),
+                             BoxHeight=round((dr.box[5] - dr.box[4]) / 1000.0, 6),
+                             Trimmed=round(dr.trimmed / 1000.0, 6) if dr.trimmed else None,
+                             Items=len(dr.items) or None, ItemKind=zone.opts.get("items"))
+                self.add(Part(f"{bay.id}-D{drawer_no}", name.strip(), "Drawer" if zone.kind == "drawer" else "PullOut",
+                              drawer_boxes(dr, p), drawer=dr, props=props), bay)
+            elif zone.kind in ("door", "doors"):
+                leaves = _leaves(bay, p, zone, front_box)
+                for hinge, a0, a1 in leaves["doors"]:
+                    leaf_no += 1
+                    hinge_a = _hinge_a(bay, hinge, a0, a1)
+                    face_c = fc0 if bay.front_low else fc1
+                    boxes = [(a0, a1, fc0, fc1, front_box[4], front_box[5])]
+                    racks = int(zone.opts.get("racks", 0))
+                    boxes += _racks(bay, p, (a0, a1), front_box, racks)
+                    leaf = Leaf(zone.index, hinge, hinge_a, face_c, out)
+                    self.add(Part(f"{bay.id}-DOOR{leaf_no}", f"Dvířka {leaf_no} ({hinge})", "Door", boxes, door=leaf,
+                                  props=dict(base, Hinge=hinge, Racks=racks or None,
+                                             LeafWidth=round((a1 - a0) / 1000.0, 6),
+                                             LeafHeight=round((front_box[5] - front_box[4]) / 1000.0, 6))), bay)
+                for a0, a1 in leaves["fillers"]:
+                    self.add(Part(f"{bay.id}-FILLER{zone.index}", "Lišta", "Filler",
+                                  [(a0, a1, fc0, fc1, front_box[4], front_box[5])], props={"Zone": zone.index}), bay)
+                self._shelves(bay, p, zone, in_z0, in_z1, back_y, racks=int(zone.opts.get("racks", 0)))
+            elif zone.kind == "niche":
+                n0, n1 = lo, hi
+                clear = zone.opts.get("clear")
+                if clear is not None:
+                    # Packers on both sides narrow the opening to the maker's
+                    # niche width (a monoblock 600 bay is 582 clear).
+                    pad = (hi - lo - float(clear) * 1000.0) / 2.0
+                    if pad < -TOL:
+                        raise ValueError(f"{bay.id}: niche clear {clear} wider than the opening {hi - lo:.0f}")
+                    if pad > TOL:
+                        pc0, pc1 = self.c_range(bay, tf, back_y)
+                        for side, (x0, x1) in (("L", (lo, lo + pad)), ("R", (hi - pad, hi))):
+                            self.add(Part(f"{bay.id}-PACK{zone.index}{side}", "Lišta niky", "Packer",
+                                          [(x0, x1, pc0, pc1, in_z0, in_z1)],
+                                          props={"Zone": zone.index, "Thickness": round(pad / 1000.0, 6)}), bay)
+                        n0, n1 = lo + pad, hi - pad
+                zone.niche = (n0, n1, *self.c_range(bay, 0.0, back_y), in_z0, in_z1)
+            elif zone.kind == "front":
+                front_no += 1
+                fid = f"{bay.id}-FRONT" if single else f"{bay.id}-FRONT{zone.index}"
+                self.add(Part(fid, "Dvířka", "Front", [front_box], props=base), bay)
+                if zone.opts.get("shelves"):
+                    self._shelves(bay, p, zone, in_z0, in_z1, back_y)
+            # "none": an open band, nothing in front.
+
+    def _shelves(self, bay, p, zone, z_lo, z_hi, back_y, racks=0):
+        """Loose shelves in a door band: ``shelves=N`` evenly spaced, the
+        first one ``first=`` metres above the band's floor if given."""
+        n = int(zone.opts.get("shelves", 0))
+        if n <= 0:
+            return
+        t, tf = p["BoardThickness"], p["FrontThickness"]
+        setback = p["ShelfSetback"] + (p["RackDepth"] + p["ShelfSetback"] if racks else 0.0)
+        c0, c1 = self.c_range(bay, tf + setback, back_y)
+        first = zone.opts.get("first")
+        if first is not None:
+            z = z_lo + float(first) * 1000.0
+            levels = [z] + _even(z + t, z_hi, n - 1, t)
+        else:
+            levels = _even(z_lo, z_hi, n, t)
+        for k, z in enumerate(levels, start=1):
+            if z + t > z_hi - TOL or z < z_lo - TOL:
+                raise ValueError(f"{bay.id}: shelf {k} of zone {zone.index} does not fit")
+            self.add(Part(f"{bay.id}-SH{zone.index}-{k}", f"Police {k}", "Shelf",
+                          [(bay.clear_lo, bay.clear_hi, c0, c1, z, z + t)],
+                          props={"Zone": zone.index, "Elevation": round(z / 1000.0, 6)}), bay)
+
+    def _obstacle_ceiling(self, bay: Bay, p: dict):
+        """Things hanging into the bay from above (a sink bowl, a disposer):
+        a drawer box under them stops ``ObstacleClearance`` below the lowest."""
+        out = []
+        for box, oid in bay.obstacles:
+            out.append((box, box[4] - p["ObstacleClearance"], oid))
+        return out
+
+    # --- built-in appliances and sink fittings (Pset_BuiltIn) ----------------
+
+    def _builtin_part(self, ext: dict, bay: Bay, boxes: list, shape: str = "box", props: dict | None = None) -> Part:
+        label = "sink" if ext["id"] in self.sanitary else "appliance"
+        part = Part(ext["id"], ext.get("Name") or ext["id"], "Appliance", boxes, label=label, shape=shape,
+                    props=props or {}, builtin=ext)
+        self.run.builtins.append(ext["id"])
+        return self.add(part, bay)
+
+    def _sink_fittings(self, bays, zt):
+        """Disposers hang under a sink's bowl, taps stand behind it (guess:
+        positions, sizes from Pset_BuiltIn). A bowl and a disposer are
+        obstacles for any drawer box under them."""
+        p = self.p
+        for sink in self.sinks:
+            bay = next((b for b in bays if sink["yaml_id"] in b.external), None)
+            if bay is None:
+                continue
+            bay.obstacles.append((sink["box"], sink["yaml_id"]))
+            sa0, sa1, sc0, sc1, sz0, _sz1 = sink["box"]
+            ca = (sa0 + sa1) / 2.0
+            for ext in self.builtins:
+                if _prop(ext, PSET_BUILTIN, "Sink") != sink["yaml_id"]:
+                    continue
+                kind = str(_prop(ext, PSET_BUILTIN, "Kind", ""))
+
+                def mm(key, default=None, ext=ext):
+                    v = _prop(ext, PSET_BUILTIN, key)
+                    if v is None:
+                        if default is None:
+                            raise ValueError(f"{ext['id']}: Pset_BuiltIn needs {key}")
+                        return default
+                    return float(v) * 1000.0
+
+                bowl_c = (sc0 + sc1) / 2.0
+                if kind == "Disposer":
+                    d, h = mm("Width"), mm("Height")
+                    box = (ca - d / 2, ca + d / 2, bowl_c - d / 2, bowl_c + d / 2, sz0 - h, sz0)
+                    part = self._builtin_part(ext, bay, [box], shape="cylinder",
+                                              props={"Sink": sink["yaml_id"], "Top": round(sz0 / 1000.0, 6),
+                                                     "Bottom": round((sz0 - h) / 1000.0, 6)})
+                    bay.obstacles.append((box, part.id))
+                elif kind == "Tap":
+                    d, h = mm("BodyDiameter", 50.0), mm("Height")
+                    reach, spout = mm("SpoutReach"), mm("SpoutHeight")
+                    hole = mm("HoleOffset", 40.0)
+                    # Behind the bowl: away from the bay front.
+                    back_c = sc1 + hole if bay.front_low else sc0 - hole
+                    toward = -1.0 if bay.front_low else 1.0  # the spout points at the bowl
+                    arm = 30.0
+                    body = (ca - d / 2, ca + d / 2, back_c - d / 2, back_c + d / 2, zt, zt + h)
+                    tip = back_c + toward * reach
+                    arm_box = (ca - arm / 2, ca + arm / 2, min(back_c, tip), max(back_c, tip), zt + h - arm, zt + h)
+                    nozzle = (ca - arm / 2, ca + arm / 2, min(tip, tip - toward * arm), max(tip, tip - toward * arm),
+                              zt + spout, zt + h)
+                    self._builtin_part(ext, bay, [body, arm_box, nozzle],
+                                       props={"Sink": sink["yaml_id"], "HoleBehindBowl": round(hole / 1000.0, 6)})
+                else:
+                    raise ValueError(f"{ext['id']}: a sink fitting is Kind Disposer or Tap, got {kind!r}")
+        return p
+
+    def _niche_appliances(self, bays):
+        """Appliances in a ``niche`` band: centred along the run, standing on
+        the band's board, front face on the fronts' plane. The niche must be
+        inside the maker's min/max niche height (Pset_BuiltIn)."""
+        by_id = {b.id: b for b in bays}
+        for ext in self.builtins:
+            if str(_prop(ext, PSET_BUILTIN, "Kind", "")) != "Niche":
+                continue
+            bay = by_id.get(str(_prop(ext, PSET_BUILTIN, "Bay", "")))
+            if bay is None:
+                continue
+            zi = int(_prop(ext, PSET_BUILTIN, "Zone", 0))
+            zone = next((z for z in bay.zones if z.index == zi), None)
+            if zone is None or zone.niche is None:
+                raise ValueError(f"{ext['id']}: {bay.id} band {zi} is not a niche")
+            w, d, h = (float(_prop(ext, PSET_BUILTIN, k)) * 1000.0 for k in ("Width", "Depth", "Height"))
+            na0, na1, _nc0, _nc1, nz0, nz1 = zone.niche
+            clear_h, clear_w = nz1 - nz0, na1 - na0
+            for key, value in (("NicheHeight", clear_h), ("NicheWidth", clear_w)):
+                lo = _prop(ext, PSET_BUILTIN, key + "Min")
+                hi = _prop(ext, PSET_BUILTIN, key + "Max")
+                if lo is not None and value < float(lo) * 1000.0 - TOL:
+                    raise ValueError(f"{ext['id']}: {key} {value:.1f} below the maker's {float(lo) * 1000:.0f}")
+                if hi is not None and value > float(hi) * 1000.0 + TOL:
+                    raise ValueError(f"{ext['id']}: {key} {value:.1f} above the maker's {float(hi) * 1000:.0f}")
+            depth_min = _prop(ext, PSET_BUILTIN, "NicheDepth")
+            niche_depth = abs(_nc1 - _nc0) - self.p["FrontThickness"]
+            if depth_min is not None and niche_depth < float(depth_min) * 1000.0 - TOL:
+                raise ValueError(f"{ext['id']}: niche depth {niche_depth:.0f} under the maker's {float(depth_min) * 1000:.0f}")
+            am = (bay.a0 + bay.a1) / 2.0
+            tf = self.p["FrontThickness"]
+            # Fascia on the fronts' plane (its thickness taken as a front's,
+            # guess:), centred on the niche so it laps the boards; the body
+            # fills the clear niche behind it, 1 mm off each face.
+            zm = (nz0 + nz1) / 2.0
+            f0, f1 = self.c_range(bay, 0.0, tf)
+            b0, b1 = self.c_range(bay, tf, d)
+            fascia = (am - w / 2, am + w / 2, f0, f1, zm - h / 2, zm + h / 2)
+            body = (na0 + 1.0, na1 - 1.0, b0, b1, nz0 + 1.0, min(nz1, nz0 + h) - 1.0)
+            # The fascia laps past the niche; the fronts above and below it
+            # stop a front gap short of it.
+            g = self.p["FrontGap"] / 2.0
+            fz0, fz1 = fascia[4], fascia[5]
+            for other in self.run.parts:
+                if other.id not in bay.members or other.role not in ("Front", "Door", "Drawer", "PullOut"):
+                    continue
+                x0, x1, y0, y1, z0, z1 = other.boxes[0]
+                if z0 < fz1 + g and z1 > fz1:
+                    other.boxes[0] = (x0, x1, y0, y1, fz1 + g, z1)
+                elif z1 > fz0 - g and z0 < fz0:
+                    other.boxes[0] = (x0, x1, y0, y1, z0, fz0 - g)
+            self._builtin_part(ext, bay, [fascia, body], props={
+                "Bay": bay.id, "Zone": zi, "NicheClearWidth": round(clear_w / 1000.0, 6),
+                "NicheClearHeight": round(clear_h / 1000.0, 6), "NicheClearDepth": round(niche_depth / 1000.0, 6),
+                "Elevation": round(nz0 / 1000.0, 6)})
 
     def _worktop(self, rows, zb, zt):
         run, p = self.run, self.p
@@ -736,44 +1016,214 @@ def _boxes_meet(a, b) -> bool:
     return all(a[2 * i] < b[2 * i + 1] - TOL and b[2 * i] < a[2 * i + 1] - TOL for i in range(3))
 
 
-def drawer_layout(bay: Bay, p: dict, z0: float, z1: float, back_y: float, ceiling: float | None = None) -> list[Drawer]:
-    """Drawers of one bay, from its clear opening and the parameters (mm)."""
-    t, tf = p["BoardThickness"], p["FrontThickness"]
-    carcass_h = z1 - z0
+DRAWER_KINDS = ("drawer", "pullout")
+ZONE_KINDS = ("drawer", "pullout", "door", "doors", "niche", "front", "none")
+
+
+def zone_spec(element: dict) -> list[tuple[str, str, dict]]:
+    """A bay's bands, top to bottom: ``[(kind, height token, options)]``.
+
+    ``Pset_Fronts.Layout`` is the general form: bands separated by ``|``,
+    each ``<kind> <height> [key=value ...]``. The height is metres or ``*``
+    (the rest of the carcass, at most one). Kinds:
+
+    - ``drawer``: a drawer (front, box on full-extension slides);
+    - ``pullout``: a full-height pull-out; ``items=shelves|bins``, ``n=N``;
+    - ``door``: one hinged door, ``hinge=L|R`` as you face it, optional
+      ``width=`` (metres, the rest of the band is a fixed filler on the
+      ``filler=L|R`` side, default the hinge side), ``shelves=N``,
+      ``first=`` (metres, first shelf above the band floor), ``racks=N``
+      (door shelves);
+    - ``doors``: a pair, left leaf hinged L, right leaf R; ``shelves=N``;
+    - ``niche``: an appliance niche; the height is the *clear* niche height,
+      the band adds one board under it; ``clear=`` (metres) narrows the
+      opening with a packer on each side. The appliance names the bay and
+      the band in its ``Pset_BuiltIn``;
+    - ``front``: one plain slab, nothing decided behind it;
+    - ``none``: an open band.
+
+    Older forms still work: ``Pset_Drawers.NominalHeights`` (all drawers),
+    ``Pset_KitchenBay.Front: none`` (no front) and nothing (one slab front).
+    """
+    layout = _prop(element, PSET_FRONTS, "Layout")
+    if layout:
+        out = []
+        for raw in str(layout).split("|"):
+            tokens = raw.split()
+            if len(tokens) < 2:
+                raise ValueError(f"{element['id']}: bad Pset_Fronts band {raw!r}")
+            kind, height, *rest = tokens
+            if kind not in ZONE_KINDS:
+                raise ValueError(f"{element['id']}: unknown band kind {kind!r}")
+            opts = {}
+            for tok in rest:
+                if "=" not in tok:
+                    raise ValueError(f"{element['id']}: band option {tok!r} needs key=value")
+                k, v = tok.split("=", 1)
+                opts[k] = v
+            out.append((kind, height, opts))
+        return out
+    raw = _prop(element, PSET_DRAWERS, "NominalHeights")
+    if raw is not None:
+        return [("drawer", tok, {}) for tok in str(raw).split()]
+    if str(_prop(element, PSET_BAY, "Front", "slab")).lower() == "none":
+        return [("none", "*", {})]
+    return [("front", "*", {})]
+
+
+def zone_contents(element: dict) -> list[str]:
+    raw = _prop(element, PSET_FRONTS, "Contents")
+    if raw is None:
+        raw = _prop(element, PSET_DRAWERS, "Contents", "")
+    return [c.strip() for c in str(raw).split(";")] if str(raw).strip() else []
+
+
+def zones(element: dict, carcass_height: float, board: float, z0: float) -> list[Zone]:
+    """The bands laid out from the carcass bottom ``z0`` up (mm)."""
+    spec = zone_spec(element)
+    tokens = []
+    for kind, height, _opts in spec:
+        if height == "*":
+            tokens.append("*")
+        else:
+            extra = board / 1000.0 if kind == "niche" else 0.0
+            tokens.append(str(float(height) + extra))
+    heights = _nominals(" ".join(tokens), carcass_height)
+    contents = zone_contents(element)
+    out = []
+    top = z0 + carcass_height
+    for index, ((kind, _h, opts), nominal) in enumerate(zip(spec, heights), start=1):
+        content = contents[index - 1] if index - 1 < len(contents) else ""
+        out.append(Zone(index, kind, nominal, top - nominal, top, opts, content))
+        top -= nominal
+    return out
+
+
+def _drawer(bay: Bay, p: dict, zone: Zone, number: int, back_y: float, ceiling: float | None,
+            obstacles: list) -> Drawer:
+    """One drawer or pull-out in its band, from the clear opening (mm)."""
+    tf = p["FrontThickness"]
     usable = back_y - tf - p["BoxRearClearance"]
     slide = p["SlideStep"] * int(usable // p["SlideStep"])
-    nominals = _nominals(_prop(bay.element, PSET_DRAWERS, "NominalHeights"), carcass_h)
-    contents = [c.strip() for c in str(_prop(bay.element, PSET_DRAWERS, "Contents", "")).split(";")]
     g = p["FrontGap"] / 2.0
     out_dir = -1.0 if bay.front_low else 1.0
-    drawers = []
-    top = z1
-    for index, nominal in enumerate(nominals, start=1):
-        slot0 = top - nominal
-        fc0, fc1 = _Builder.c_range(bay, 0.0, tf)
-        front = (bay.a0 + g, bay.a1 - g, fc0, fc1, slot0 + g, top - g)
-        box_h = max(p["BoxMinHeight"], nominal - p["BoxHeightReserve"])
-        bz0 = slot0 + p["BoxBottomOffset"]
-        clr = p["SlideClearance"]
-        bc0, bc1 = _Builder.c_range(bay, tf, tf + slide)
-        box = (bay.clear_lo + clr, bay.clear_hi - clr, bc0, bc1, bz0, bz0 + box_h)
-        trimmed = 0.0
-        if ceiling is not None and box[5] > ceiling:
-            # Miele: >= 8 mm from the hob underside to a drawer's top edge.
-            trimmed = box[5] - ceiling
-            if ceiling - bz0 < p["BoxMinHeight"]:
-                raise ValueError(f"{bay.id}: drawer {index} under the hob would be under {p['BoxMinHeight']} mm")
-            box = (*box[:5], ceiling)
-        content = contents[index - 1] if index - 1 < len(contents) else ""
-        drawers.append(Drawer(index, content, nominal, slot0, front, box, slide, out_dir, trimmed))
-        top = slot0
-    if bay.clear_lo + p["SlideClearance"] < bay.clear_lo or t <= 0:
-        raise ValueError("bad drawer parameters")
-    return drawers
+    fc0, fc1 = _Builder.c_range(bay, 0.0, tf)
+    front = (bay.a0 + g, bay.a1 - g, fc0, fc1, zone.slot_z0 + g, zone.slot_z1 - g)
+    box_h = max(p["BoxMinHeight"], zone.nominal - p["BoxHeightReserve"])
+    bz0 = zone.slot_z0 + p["BoxBottomOffset"]
+    clr = p["SlideClearance"]
+    bc0, bc1 = _Builder.c_range(bay, tf, tf + slide)
+    box = (bay.clear_lo + clr, bay.clear_hi - clr, bc0, bc1, bz0, bz0 + box_h)
+    limit, why = None, ""
+    if ceiling is not None and box[5] > ceiling:
+        # Miele: >= 8 mm from the hob underside to a drawer's top edge.
+        limit, why = ceiling, "hob"
+    for obox, top, oid in obstacles:
+        if _plan_meet(box, obox) and box[5] > top and (limit is None or top < limit):
+            limit, why = top, oid
+    trimmed = 0.0
+    if limit is not None:
+        trimmed = box[5] - limit
+        if limit - bz0 < p["BoxMinHeight"]:
+            raise ValueError(f"{bay.id}: drawer {number} under the {why} would be under {p['BoxMinHeight']} mm")
+        box = (*box[:5], limit)
+    items = _items(p, zone, box, out_dir)
+    return Drawer(number, zone.content, zone.nominal, zone.slot_z0, front, box, slide, out_dir, trimmed,
+                  kind=zone.kind, items=items, zone=zone.index)
+
+
+def _items(p: dict, zone: Zone, box: tuple, out_dir: float) -> list:
+    """Baskets (shelves) or bins riding in a pull-out box, evenly (guess:)."""
+    kind = zone.opts.get("items")
+    n = int(zone.opts.get("n", 0))
+    if not kind or n <= 0:
+        return []
+    wall = p["BoxWall"]
+    a0, a1, c0, c1, z0, z1 = box
+    ia0, ia1, ic0, ic1, iz0 = a0 + wall, a1 - wall, c0 + wall, c1 - wall, z0 + wall
+    out = []
+    if kind == "shelves":
+        board = wall
+        step = (z1 - iz0 - n * board) / (n + 1)
+        for k in range(n):
+            z = iz0 + step * (k + 1) + board * k
+            out.append((ia0, ia1, ic0, ic1, z, z + board))
+        return out
+    if kind == "bins":
+        gap = p["BinGap"]
+        w = (ia1 - ia0 - (n + 1) * gap) / n
+        for k in range(n):
+            x0 = ia0 + gap + k * (w + gap)
+            out.append((x0, x0 + w, ic0 + gap, ic1 - gap, iz0, z1 - gap))
+        return out
+    raise ValueError(f"pull-out items={kind!r}: shelves or bins")
+
+
+def _even(z_lo: float, z_hi: float, n: int, t: float) -> list[float]:
+    """Bottoms of ``n`` boards ``t`` thick spaced evenly in z_lo..z_hi."""
+    if n <= 0:
+        return []
+    step = (z_hi - z_lo - n * t) / (n + 1)
+    return [z_lo + step * (k + 1) + t * k for k in range(n)]
+
+
+def _plan_meet(a, b) -> bool:
+    return a[0] < b[1] - TOL and b[0] < a[1] - TOL and a[2] < b[3] - TOL and b[2] < a[3] - TOL
+
+
+def _hinge_a(bay: Bay, hinge: str, a0: float, a1: float) -> float:
+    """The hinge edge in the run frame. Facing the front you look into the
+    carcass: along +c when the front is the c0 face, so your left is -a;
+    along -c otherwise, so your left is +a."""
+    left_is_low = bay.front_low
+    if hinge == "L":
+        return a0 if left_is_low else a1
+    return a1 if left_is_low else a0
+
+
+def _leaves(bay: Bay, p: dict, zone: Zone, front_box: tuple) -> dict:
+    """Door leaves (hinge, a0, a1) and fixed fillers (a0, a1) of a band."""
+    g = p["FrontGap"] / 2.0
+    a0, a1 = bay.a0, bay.a1
+    if zone.kind == "doors":
+        mid = (a0 + a1) / 2.0
+        lo_hinge, hi_hinge = ("L", "R") if bay.front_low else ("R", "L")
+        return {"doors": [(lo_hinge, a0 + g, mid - g), (hi_hinge, mid + g, a1 - g)], "fillers": []}
+    hinge = zone.opts.get("hinge", "")
+    if hinge not in ("L", "R"):
+        raise ValueError(f"{bay.id}: door band {zone.index} needs hinge=L or hinge=R")
+    width = zone.opts.get("width")
+    if width is None:
+        return {"doors": [(hinge, a0 + g, a1 - g)], "fillers": []}
+    w = float(width) * 1000.0
+    if w > a1 - a0 + TOL:
+        raise ValueError(f"{bay.id}: door {w} wider than the bay")
+    side = zone.opts.get("filler", hinge)
+    # The filler side as a run-frame end: L is the low-a end when the front faces -c.
+    filler_low = (side == "L") == bay.front_low
+    split = a0 + (a1 - a0 - w) if filler_low else a0 + w
+    if filler_low:
+        return {"doors": [(hinge, split + g, a1 - g)], "fillers": [(a0 + g, split - g)]}
+    return {"doors": [(hinge, a0 + g, split - g)], "fillers": [(split + g, a1 - g)]}
+
+
+def _racks(bay: Bay, p: dict, span: tuple, front_box: tuple, n: int) -> list:
+    """Door shelves on the leaf's back, evenly up the leaf (guess:). They
+    overlap the leaf by 0.5 mm so the leaf and its racks are one solid."""
+    if n <= 0:
+        return []
+    tf = p["FrontThickness"]
+    a0, a1 = span[0] + p["RackInset"], span[1] - p["RackInset"]
+    c0, c1 = _Builder.c_range(bay, tf - 0.5, tf + p["RackDepth"])
+    z_lo, z_hi = front_box[4], front_box[5]
+    step = (z_hi - z_lo) / (n + 1)
+    return [(a0, a1, c0, c1, z_lo + step * (k + 1) - p["RackHeight"] / 2.0,
+             z_lo + step * (k + 1) + p["RackHeight"] / 2.0) for k in range(n)]
 
 
 def drawer_boxes(dr: Drawer, p: dict) -> list:
-    """Front plus open box (bottom, two sides, back), run frame."""
+    """Front plus open box (bottom, two sides, back), run frame, then any
+    baskets or bins riding in it."""
     wall = p["BoxWall"]
     a0, a1, c0, c1, z0, z1 = dr.box
     back_lo = dr.out > 0  # pulls toward +c, so its back is the c0 end
@@ -784,6 +1234,7 @@ def drawer_boxes(dr: Drawer, p: dict) -> list:
         (a0, a0 + wall, c0, c1, z0, z1),
         (a1 - wall, a1, c0, c1, z0, z1),
         back,
+        *dr.items,
     ]
 
 
@@ -874,11 +1325,16 @@ def runs(doc: dict) -> list[Run]:
                 ca, cc = frame.local(cx, cy)
                 for bay in bays:
                     inside = bay.a0 < ca < bay.a1 and bay.c0 < cc < bay.c1
-                    overlaps = ez0 < bay.z_base + bay.height and ez1 > bay.z_base
+                    # Inside the bay, or standing on its counter (a kettle, a grinder).
+                    overlaps = (ez0 < bay.z_base + bay.height and ez1 > bay.z_base) or _near(ez0, bay.z_base + bay.height)
                     if inside and overlaps:
                         bay.external.append(ext["id"])
                 if ext.get("PredefinedType") == "SINK" and _prop(ext, PSET_SINK, "BowlWidth") is not None:
-                    sinks.append(_sink(ext, frame, (ca, cc), (rx, ry), ez1))
+                    sink = _sink(ext, frame, (ca, cc), (rx, ry), ez1)
+                    loc = [frame.local(x, y) for x, y in pts]
+                    sink["box"] = (min(q[0] for q in loc), max(q[0] for q in loc),
+                                   min(q[1] for q in loc), max(q[1] for q in loc), ez0, ez1)
+                    sinks.append(sink)
         above = []
         for e in elements + [x for key in EXTERNAL_LISTS for x in (doc.get(key) or [])]:
             if e is run_el or run_of(e) == run_el["id"] or not float(e.get("Elevation") or 0.0) > 0:
@@ -889,7 +1345,10 @@ def runs(doc: dict) -> list[Run]:
             loc = [frame.local(x, y) for x, y in pts]
             above.append((min(q[0] for q in loc), max(q[0] for q in loc),
                           min(q[1] for q in loc), max(q[1] for q in loc), ez0, e["id"]))
-        _Builder(run, sinks, above).build()
+        builtins = [x for key in EXTERNAL_LISTS for x in (doc.get(key) or [])
+                    if _prop(x, PSET_BUILTIN, "Kind") is not None]
+        sanitary = {x["id"] for x in (doc.get("sanitaryTerminals") or [])}
+        _Builder(run, sinks, above, builtins, sanitary).build()
         out.append(run)
     return out
 

@@ -220,8 +220,12 @@ export function collectDoorHosts(root, records = []) {
     if (meshIdentity(parentName).part === "door") return;
     named.push(obj);
   });
+  // Drawers and cabinet doors (kitchen runs) are named by their part id,
+  // not "door"; their records name that mesh in `element`.
   const drawerElements = new Set(
-    (records || []).filter((r) => r && r.kind === "drawer" && r.element).map((r) => String(r.element)),
+    (records || [])
+      .filter((r) => r && (r.kind === "drawer" || r.kind === "hinged") && r.element)
+      .map((r) => String(r.element)),
   );
   if (drawerElements.size) {
     root.traverse((obj) => {
