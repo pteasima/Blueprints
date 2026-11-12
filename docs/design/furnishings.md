@@ -48,7 +48,7 @@ The fridge’s south face is y = 14.884, 66 mm south of OP25’s north jamb, so 
 
 The island is one monoblock (`KR-ISL`, Petr 2026-11-12) with a Silestone worktop overhanging 30 past both long fronts and Silestone cladding on both ends, so at worktop level it is 2540 × 1260 (x 20.524–21.784, y 11.280–13.820). The bay boxes did not move. Structure, worktop and cladding: [kitchen-cabinets.md](kitchen-cabinets.md).
 
-West row faces west. Modules north to south: 500, 600, 500, 600, 300. The rectangular sink is in the north 500. The 600 south of it (SF-I600a) is the knife-drawer cabinet; its drawers are in [kitchen-cabinets.md](kitchen-cabinets.md). The two round bowls cross the second 500 and the second 600.
+West row faces west. Modules north to south: 500, 600, 500, 600, 300. The rectangular sink is in the north 500. The 600 south of it (SF-I600a) is the knife-drawer cabinet; its drawers are in [kitchen-cabinets.md](kitchen-cabinets.md). The rectangular sink is the Teka BE LINEA RS15 18.40 X (`SN-RS1840`). The green rectangle with two circles on the second 600 (SF-I600b) is the Miele KM 8665 FL hob, not two bowls; see [kitchen-cabinets.md](kitchen-cabinets.md).
 
 East row faces east. It is the plinth and robot-dock side. No module lines are drawn there, so the 2500 is split 600/600/600/700 from the north, the 700 at the south.
 
@@ -64,7 +64,7 @@ Wall cabinets: depth 350, height 900, bottom 1550 (620 above the 930 counter), t
 
 Bosch SBD6ECX12E, 598 × 550 × 865, centred in the north 600 of A, back on the wall, 1 mm clear of each side of the niche.
 
-Teka BE LINEA RS15 71.40, undermount, overall 750 × 440, bowl 710 × 400 × 200, centred in the 800, top flush with 930 (model elevation 0.73). The disposer and the tap are not modelled.
+Teka BE LINEA RS15 71.40, undermount, overall 750 × 440, bowl 710 × 400 × 200, centred in the 800, rim glued under the 20 mm stone at 910 (model elevation 0.71), worktop cut-out 706 × 396 R13 (Teka). The disposer and the tap are not modelled.
 
 Source for every row in this section: the header and the element `Description` fields of `furnishings.yaml`.
 

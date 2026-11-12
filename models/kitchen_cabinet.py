@@ -24,6 +24,12 @@ rails or top, back, front or drawers) plus the shared parts it touches: the
 dividers on both sides, the run's end sides, the island's central back, and
 the stone cladding at its end. A divider is listed in both neighbouring bays,
 never built twice.
+
+Sinks cut the worktop with their manufacturer's undermount cut-out
+(``Pset_Sink``); a bay with ``Pset_Hob`` gets the hob's cut-out (stepped for
+flush-fit), the hob itself (glass and housing, an appliance in IFC) and a
+top drawer kept 8 mm under it; a run with ``Backsplash`` gets stone on the
+wall from the worktop up to the boxes hanging over it.
 """
 
 from __future__ import annotations
@@ -36,6 +42,7 @@ PSET_DRAWERS = "Pset_Drawers"
 PSET_RUN = "Pset_KitchenRun"
 PSET_BAY = "Pset_KitchenBay"
 PSET_SINK = "Pset_Sink"
+PSET_HOB = "Pset_Hob"
 RUN_OBJECT_TYPE = "KitchenRun"
 KIND_NICHE = "Niche"
 
@@ -60,8 +67,13 @@ IKEA_DEFAULTS_MM = {
     "BoxWall": 16.0,  # MAXIMERA side / back (guess)
     "BoxRearClearance": 10.0,  # box back to carcass back
     "SlideStep": 50.0,  # slide lengths come in 50 mm steps
+    "BacksplashThickness": 12.0,  # Silestone backsplash (Petr, 2026-11-12, via Bob)
+    "BacksplashTop": 0.0,  # 0 = up to the wall cabinets above; else a height above the floor
 }
-RUN_FLAGS = ("CladEnds",)
+RUN_FLAGS = ("CladEnds", "Backsplash")
+# A worktop cut-out with no manufacturer size: the bowl less 2 mm a side
+# (the Teka RS15 pattern: bowl 710×400 → cut-out 706×396). guess:
+SINK_CUTOUT_INSET_MM = 2.0
 TOL = 0.5  # mm, for "these faces meet"
 
 
@@ -153,16 +165,47 @@ class Drawer:
     box: tuple  # outer drawer box, same order
     extension: float  # full-extension travel
     out: float  # +1 / -1: the c direction the drawer pulls out
+    trimmed: float = 0.0  # mm taken off the box height to clear a hob above
+
+
+@dataclass(frozen=True)
+class Void:
+    """A worktop cut-out, run frame mm. ``depth`` None: through; else a
+    pocket that deep from the top (a flush-fit hob's rebate)."""
+
+    a0: float
+    a1: float
+    c0: float
+    c1: float
+    radius: float = 0.0
+    depth: float | None = None
+    name: str = ""
+
+
+@dataclass
+class Hob:
+    """A hob in one bay, run frame mm. Numbers: the bay's Pset_Hob."""
+
+    id: str
+    name: str
+    mounting: str  # FlushFit | SurfaceMounted
+    cutout: Void
+    rebate: Void | None
+    glass: tuple  # box
+    housing: tuple  # box
+    underside: float  # z of the housing bottom
+    back_edge: float  # cut-out to the worktop's far edge
+    min_drawer_gap: float
 
 
 @dataclass
 class Part:
     id: str
     name: str
-    role: str  # EndSide, Divider, CentralBack, Back, Bottom, Rail, Top, Front, Drawer, Plinth, Worktop, Cladding
+    role: str  # EndSide, Divider, CentralBack, Back, Bottom, Rail, Top, Front, Drawer, Plinth, Worktop, Cladding, Backsplash, Hob
     boxes: list  # run-frame boxes (a0, a1, c0, c1, z0, z1)
     label: str = "cabinet"
-    voids: list = field(default_factory=list)  # (a0, a1, c0, c1) through-holes (worktop)
+    voids: list = field(default_factory=list)  # Void cut-outs (worktop)
     drawer: Drawer | None = None
     material: str | None = None
 
@@ -208,6 +251,8 @@ class Run:
     carcass_z0: float = 0.0
     carcass_z1: float = 0.0
     worktop: tuple | None = None  # run-frame box
+    hobs: dict = field(default_factory=dict)  # bay id -> Hob
+    notes: list = field(default_factory=list)  # derived facts for docs ("open:" ones too)
 
     def part(self, part_id: str) -> Part:
         return next(p for p in self.parts if p.id == part_id)
@@ -283,10 +328,11 @@ def _segments(row: list) -> list[list]:
 
 
 class _Builder:
-    def __init__(self, run: Run, sinks: list[dict]):
+    def __init__(self, run: Run, sinks: list[dict], above: list | None = None):
         self.run = run
         self.p = run.params
         self.sinks = sinks
+        self.above = above or []  # (a0, a1, c0, c1, z0, id): boxes hanging over the run
         self.ids: set[str] = set()
 
     def add(self, part: Part, *bays: Bay) -> Part:
@@ -333,12 +379,20 @@ class _Builder:
                 blocks.append(("single", (seg,)))
         for kind, rows_in in blocks:
             self._block(kind, rows_in, z0, z1)
+        if wt > 0:
+            for bay in cabinets:
+                if _prop(bay.element, PSET_HOB, "Model") is not None:
+                    run.hobs[bay.id] = self._hob_layout(bay, z_base + height)
         for bay in cabinets:
             self._bay_parts(bay, z0, z1, shared_back=any(bay in r for k, rs in blocks if k == "pair" for r in rs))
         if wt > 0:
             self._worktop(rows, z_base + height - wt, z_base + height)
         if _prop(run.element, PSET_RUN, "CladEnds"):
             self._cladding(rows, z_base, z_base + height - wt)
+        if wt > 0 and _prop(run.element, PSET_RUN, "Backsplash"):
+            self._backsplash(rows, pairs, z_base + height)
+        for bay_id, hob in run.hobs.items():
+            self.add(Part(hob.id, hob.name, "Hob", [hob.glass, hob.housing], label="hob"), run.bay(bay_id))
         # A niche (dishwasher slot) has no carcass of its own; its walls are
         # the end sides of the carcass next to it.
         for bay in run.bays:
@@ -447,18 +501,25 @@ class _Builder:
         if not shared_back:
             c0, c1 = self.c_range(bay, back_y, bay.depth)
             self.add(Part(f"{bay.id}-BACK", "Záda", "Back", [(lo, hi, c0, c1, z0 + t, z1)]), bay)
+        hob = self.run.hobs.get(bay.id)
         if p["WorktopThickness"] > 0:
             if not self._has_sink(bay):
-                c0, c1 = self.c_range(bay, tf, tf + p["RailDepth"])
-                self.add(Part(f"{bay.id}-RAIL-F", "Přední lišta", "Rail", [(lo, hi, c0, c1, z1 - t, z1)]), bay)
+                rails = [("F", "Přední lišta", self.c_range(bay, tf, tf + p["RailDepth"]))]
                 if not shared_back:
-                    c0, c1 = self.c_range(bay, back_y - p["RailDepth"], back_y)
-                    self.add(Part(f"{bay.id}-RAIL-B", "Zadní lišta", "Rail", [(lo, hi, c0, c1, z1 - t, z1)]), bay)
+                    rails.append(("B", "Zadní lišta", self.c_range(bay, back_y - p["RailDepth"], back_y)))
+                for tag, name, (c0, c1) in rails:
+                    box = (lo, hi, c0, c1, z1 - t, z1)
+                    if hob is not None and _boxes_meet(box, hob.housing):
+                        # The hob housing drops into the rail: no rail (guess:).
+                        self.run.notes.append(f"{bay.id}: rail {tag} left out, the hob housing sits there")
+                        continue
+                    self.add(Part(f"{bay.id}-RAIL-{tag}", name, "Rail", [box]), bay)
         else:
             self.add(Part(f"{bay.id}-TOP", "Strop", "Top", [(lo, hi, c_in0, c_in1, z1 - t, z1)]), bay)
         g = p["FrontGap"] / 2.0
         if has_drawers(bay.element):
-            for dr in drawer_layout(bay, p, z0, z1, back_y):
+            ceiling = None if hob is None else hob.underside - hob.min_drawer_gap
+            for dr in drawer_layout(bay, p, z0, z1, back_y, ceiling=ceiling):
                 self.add(Part(f"{bay.id}-D{dr.index}", f"Šuplík {dr.index} {dr.content}".strip(), "Drawer",
                               drawer_boxes(dr, p), drawer=dr), bay)
         elif str(_prop(bay.element, PSET_BAY, "Front", "slab")).lower() != "none":
@@ -471,22 +532,28 @@ class _Builder:
         bays = run.bays
         a0 = min(b.a0 for b in bays)
         a1 = max(b.a1 for b in bays)
-        c0 = min(b.c0 for b in bays)
-        c1 = max(b.c1 for b in bays)
-        oh = p["WorktopOverhang"]
-        if any(b.front_low and _near(b.c0, c0) for b in bays):
-            c0 -= oh
-        if any((not b.front_low) and _near(b.c1, c1) for b in bays):
-            c1 += oh
+        c0, c1 = self._worktop_c(bays)
         if _prop(run.element, PSET_RUN, "CladEnds"):
             ct = p["CladdingThickness"] or p["WorktopThickness"]
             a0 -= ct
             a1 += ct
         voids = []
         for sink in self.sinks:
-            sa0, sa1, sc0, sc1 = sink["bowl"]
-            if sa0 >= a0 and sa1 <= a1 and sc0 >= c0 and sc1 <= c1 and _near(sink["top"], zt):
-                voids.append(sink["bowl"])
+            hole = sink["cutout"]
+            if not (hole.a0 >= a0 and hole.a1 <= a1 and hole.c0 >= c0 and hole.c1 <= c1):
+                continue
+            if sink["mounting"] != "Undermount":
+                raise ValueError(f"{sink['yaml_id']}: only undermount sinks are modelled, got {sink['mounting']}")
+            if not _near(sink["top"], zb):
+                # An undermount rim is glued to the underside of the stone.
+                raise ValueError(
+                    f"{sink['yaml_id']}: undermount rim top {sink['top']} mm must be the worktop underside {zb} mm"
+                )
+            voids.append(hole)
+        for hob in self.run.hobs.values():
+            voids.append(hob.cutout)
+            if hob.rebate is not None:
+                voids.append(hob.rebate)
         run.worktop = (a0, a1, c0, c1, zb, zt)
         material = _prop(run.element, PSET_RUN, "WorktopMaterial")
         self.add(Part(f"{run.id}-WORKTOP", "Pracovní deska", "Worktop", [run.worktop],
@@ -508,8 +575,101 @@ class _Builder:
             self.add(Part(f"{run.id}-CLAD-{name}", f"Obklad boku {name}", "Cladding",
                           [(*a_range, c0, c1, zb, zt)], label="worktop", material=material), *touching)
 
+    def _hob_layout(self, bay: Bay, zt: float) -> Hob:
+        """The hob of one bay from its Pset_Hob (metres), run frame mm.
 
-def drawer_layout(bay: Bay, p: dict, z0: float, z1: float, back_y: float) -> list[Drawer]:
+        Centred on the bay along the run. The cut-out's front edge is
+        ``FrontOffset`` behind the bay's front face (default: the cut-out
+        centred on the bay depth, guess:). Flush-fit: the glass top is the
+        worktop top and the rebate is cut around the hole; surface-mounted:
+        the glass rests on the worktop.
+        """
+
+        def mm(key, default=None):
+            v = _prop(bay.element, PSET_HOB, key)
+            if v is None:
+                if default is None:
+                    raise ValueError(f"{bay.id}: Pset_Hob needs {key}")
+                return default
+            return float(v) * 1000.0
+
+        mounting = str(_prop(bay.element, PSET_HOB, "Mounting", "SurfaceMounted"))
+        if mounting not in ("FlushFit", "SurfaceMounted"):
+            raise ValueError(f"{bay.id}: Pset_Hob Mounting is FlushFit or SurfaceMounted, got {mounting}")
+        cw, cd = mm("CutoutWidth"), mm("CutoutDepth")
+        gw, gd, gt = mm("GlassWidth"), mm("GlassDepth"), mm("GlassThickness")
+        hw, hd, ih = mm("HousingWidth"), mm("HousingDepth"), mm("InstallationHeight")
+        front = mm("FrontOffset", (bay.depth - cd) / 2.0)
+        am = (bay.a0 + bay.a1) / 2.0
+        c0, c1 = self.c_range(bay, front, front + cd)
+        cm = (c0 + c1) / 2.0
+        cutout = Void(am - cw / 2, am + cw / 2, c0, c1, name="hob")
+        rebate = None
+        if mounting == "FlushFit":
+            rw, rd, rh = mm("RebateWidth"), mm("RebateDepth"), mm("RebateHeight")
+            rebate = Void(am - rw / 2, am + rw / 2, cm - rd / 2, cm + rd / 2, depth=rh, name="hob rebate")
+            glass_top = zt
+        else:
+            glass_top = zt + gt
+        glass = (am - gw / 2, am + gw / 2, cm - gd / 2, cm + gd / 2, glass_top - gt, glass_top)
+        underside = glass_top - ih
+        housing = (am - hw / 2, am + hw / 2, cm - hd / 2, cm + hd / 2, underside, glass_top - gt)
+        wt0, wt1 = self._worktop_c(self.run.bays)
+        back_edge = (wt1 - c1) if bay.front_low else (c0 - wt0)
+        need = mm("MinBackEdge", 50.0)
+        if back_edge < need - TOL:
+            raise ValueError(f"{bay.id}: hob cut-out {back_edge} mm from the worktop's back edge, needs {need}")
+        hid = str(_prop(bay.element, PSET_HOB, "Id", f"{bay.id}-HOB"))
+        name = str(_prop(bay.element, PSET_HOB, "Model"))
+        return Hob(hid, name, mounting, cutout, rebate, glass, housing, underside, back_edge,
+                   mm("MinDrawerGap", 8.0))
+
+    def _worktop_c(self, bays) -> tuple[float, float]:
+        c0 = min(b.c0 for b in bays)
+        c1 = max(b.c1 for b in bays)
+        oh = self.p["WorktopOverhang"]
+        if any(b.front_low and _near(b.c0, c0) for b in bays):
+            c0 -= oh
+        if any((not b.front_low) and _near(b.c1, c1) for b in bays):
+            c1 += oh
+        return c0, c1
+
+    def _backsplash(self, rows, pairs, zt):
+        """Stone on the wall behind a single row: worktop top up to the
+        lowest box hanging over that strip (the wall cabinets), else to
+        ``BacksplashTop`` (an ``open:`` height)."""
+        run, p = self.run, self.p
+        bt = p["BacksplashThickness"]
+        paired = {id(r) for pair in pairs for r in pair}
+        a0, a1 = run.worktop[0], run.worktop[1]
+        material = _prop(run.element, PSET_RUN, "BacksplashMaterial") or _prop(run.element, PSET_RUN, "WorktopMaterial")
+        for row in rows:
+            if id(row) in paired:
+                continue
+            c0, c1 = self.c_range(row[0], row[0].depth - bt, row[0].depth)
+            over = [
+                (z, oid) for (oa0, oa1, oc0, oc1, z, oid) in self.above
+                if z > zt + TOL and oa0 < a1 - TOL and oa1 > a0 + TOL and oc0 < c1 - TOL and oc1 > c0 + TOL
+            ]
+            if over:
+                top = min(z for z, _ in over)
+                covered = sorted({oid for z, oid in over})
+                run.notes.append(f"backsplash top {top:.0f}: underside of {', '.join(covered)}")
+            elif p["BacksplashTop"] > 0:
+                top = p["BacksplashTop"]
+                run.notes.append(f"open: backsplash top {top:.0f} (BacksplashTop, nothing hangs above)")
+            else:
+                raise ValueError(f"{run.id}: nothing above the backsplash and no BacksplashTop")
+            face = run.frame.compass(0.0, 1.0 if row[0].front_low else -1.0)
+            self.add(Part(f"{run.id}-BACKSPLASH", f"Obklad stěny {face}", "Backsplash",
+                          [(a0, a1, c0, c1, zt, top)], label="worktop", material=material), *row)
+
+
+def _boxes_meet(a, b) -> bool:
+    return all(a[2 * i] < b[2 * i + 1] - TOL and b[2 * i] < a[2 * i + 1] - TOL for i in range(3))
+
+
+def drawer_layout(bay: Bay, p: dict, z0: float, z1: float, back_y: float, ceiling: float | None = None) -> list[Drawer]:
     """Drawers of one bay, from its clear opening and the parameters (mm)."""
     t, tf = p["BoardThickness"], p["FrontThickness"]
     carcass_h = z1 - z0
@@ -530,8 +690,15 @@ def drawer_layout(bay: Bay, p: dict, z0: float, z1: float, back_y: float) -> lis
         clr = p["SlideClearance"]
         bc0, bc1 = _Builder.c_range(bay, tf, tf + slide)
         box = (bay.clear_lo + clr, bay.clear_hi - clr, bc0, bc1, bz0, bz0 + box_h)
+        trimmed = 0.0
+        if ceiling is not None and box[5] > ceiling:
+            # Miele: >= 8 mm from the hob underside to a drawer's top edge.
+            trimmed = box[5] - ceiling
+            if ceiling - bz0 < p["BoxMinHeight"]:
+                raise ValueError(f"{bay.id}: drawer {index} under the hob would be under {p['BoxMinHeight']} mm")
+            box = (*box[:5], ceiling)
         content = contents[index - 1] if index - 1 < len(contents) else ""
-        drawers.append(Drawer(index, content, nominal, slot0, front, box, slide, out_dir))
+        drawers.append(Drawer(index, content, nominal, slot0, front, box, slide, out_dir, trimmed))
         top = slot0
     if bay.clear_lo + p["SlideClearance"] < bay.clear_lo or t <= 0:
         raise ValueError("bad drawer parameters")
@@ -584,6 +751,35 @@ def _box_plan(element: dict):
     return pts, (z, z + h), (rx, ry), (w, d)
 
 
+def _sink(ext: dict, frame: Frame, centre, ref, top: float) -> dict:
+    """Worktop cut-out of a sink, centred on its box (run frame mm).
+
+    Pset_Sink ``CutoutWidth``/``CutoutDepth``/``CutoutRadius`` are the
+    manufacturer's (Width along the sink's own RefDirection). Without them
+    the cut-out is the bowl less ``SINK_CUTOUT_INSET_MM`` a side (guess:).
+    """
+    ca, cc = centre
+    rx, ry = ref
+
+    def m(key):
+        v = _prop(ext, PSET_SINK, key)
+        return None if v is None else float(v) * 1000.0
+
+    cw, cd = m("CutoutWidth"), m("CutoutDepth")
+    if cw is None or cd is None:
+        cw = m("BowlWidth") - 2 * SINK_CUTOUT_INSET_MM
+        cd = m("BowlDepth") - 2 * SINK_CUTOUT_INSET_MM
+    along_is_width = abs(rx * frame.ux + ry * frame.uy) > 0.5
+    ha = (cw if along_is_width else cd) / 2.0
+    hc = (cd if along_is_width else cw) / 2.0
+    return {
+        "yaml_id": ext["id"],
+        "cutout": Void(ca - ha, ca + ha, cc - hc, cc + hc, radius=m("CutoutRadius") or 0.0, name=ext["id"]),
+        "top": top,
+        "mounting": str(_prop(ext, PSET_SINK, "Mounting", "Undermount")),
+    }
+
+
 def runs(doc: dict) -> list[Run]:
     """Every kitchen run in a furnishings document, fully laid out."""
     elements = [e for key in BAY_LISTS for e in (doc.get(key) or [])]
@@ -614,21 +810,19 @@ def runs(doc: dict) -> list[Run]:
                     overlaps = ez0 < bay.z_base + bay.height and ez1 > bay.z_base
                     if inside and overlaps:
                         bay.external.append(ext["id"])
-                bw = _prop(ext, PSET_SINK, "BowlWidth")
-                bd = _prop(ext, PSET_SINK, "BowlDepth")
-                if ext.get("PredefinedType") == "SINK" and bw is not None and bd is not None:
-                    # Undermount: the worktop hole is the bowl, centred on the sink.
-                    loc = [frame.local(x, y) for x, y in pts]
-                    along_is_width = abs(rx * ux + ry * uy) > 0.5
-                    ha = (float(bw) if along_is_width else float(bd)) * 500.0
-                    hc = (float(bd) if along_is_width else float(bw)) * 500.0
-                    sinks.append({
-                        "yaml_id": ext["id"],
-                        "bowl": (ca - ha, ca + ha, cc - hc, cc + hc),
-                        "top": ez1,
-                        "plan": (min(p[0] for p in loc), max(p[0] for p in loc)),
-                    })
-        _Builder(run, sinks).build()
+                if ext.get("PredefinedType") == "SINK" and _prop(ext, PSET_SINK, "BowlWidth") is not None:
+                    sinks.append(_sink(ext, frame, (ca, cc), (rx, ry), ez1))
+        above = []
+        for e in elements + [x for key in EXTERNAL_LISTS for x in (doc.get(key) or [])]:
+            if e is run_el or run_of(e) == run_el["id"] or not float(e.get("Elevation") or 0.0) > 0:
+                continue
+            if not all(e.get(k) is not None for k in ("Origin", "Width", "Depth", "Height")):
+                continue
+            pts, (ez0, _ez1), _r, _wd = _box_plan(e)
+            loc = [frame.local(x, y) for x, y in pts]
+            above.append((min(q[0] for q in loc), max(q[0] for q in loc),
+                          min(q[1] for q in loc), max(q[1] for q in loc), ez0, e["id"]))
+        _Builder(run, sinks, above).build()
         out.append(run)
     return out
 

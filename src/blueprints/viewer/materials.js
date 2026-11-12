@@ -21,6 +21,7 @@ export const SOLID_COLORS = {
   furniture: [255, 150, 0],
   cabinet: [214, 148, 40],
   worktop: [236, 233, 226],
+  hob: [24, 24, 27],
   appliance: [176, 190, 205],
   sink: [40, 185, 195],
   rug: [150, 70, 175],
@@ -83,6 +84,7 @@ export const LAYER_DEPTH_BIAS = {
   furniture: 6,
   cabinet: 6,
   worktop: 6,
+  hob: 7,
   appliance: 7,
   sink: 7,
   rug: 1,
@@ -470,6 +472,15 @@ export const REALISTIC_PRESETS = {
     clearcoat: 0.4,
     clearcoatRoughness: 0.2,
     map: "plaster",
+  },
+  hob: {
+    // Miele KM 8665 FL: black ceramic glass, polished.
+    color: [24, 24, 27],
+    roughness: 0.1,
+    metalness: 0.0,
+    clearcoat: 0.8,
+    clearcoatRoughness: 0.05,
+    map: "none",
   },
   appliance: {
     color: [176, 190, 205],

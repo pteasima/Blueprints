@@ -111,3 +111,53 @@ def test_drawer_motions_in_model():
         assert m["element"] == m["id"]
         assert m["slide"] == pytest.approx([-0.55, 0.0, 0.0])
         assert m["center"][2] == pytest.approx(-13.0, abs=1e-6)
+
+
+def test_sink_cutouts_are_teka_undermount():
+    runs = _runs()
+    isl = {v.name: v for v in runs["KR-ISL"].part("KR-ISL-WORKTOP").voids}
+    west = {v.name: v for v in runs["KR-WEST"].part("KR-WEST-WORKTOP").voids}
+    rs15 = west["SN-RS15"]
+    assert (round(rs15.a1 - rs15.a0, 3), round(rs15.c1 - rs15.c0, 3), rs15.radius) == (706.0, 396.0, 13.0)
+    s18 = isl["SN-RS1840"]
+    assert (round(s18.a1 - s18.a0, 3), round(s18.c1 - s18.c0, 3)) == (176.0, 396.0)
+
+
+def test_undermount_rim_must_meet_the_stone():
+    doc = copy.deepcopy(load_furnishings())
+    sink = next(e for e in doc["sanitaryTerminals"] if e["id"] == "SN-RS15")
+    sink["Elevation"] = 0.73
+    with pytest.raises(ValueError, match="undermount"):
+        kc.runs(doc)
+
+
+def test_hob_flush_fit_in_sf_i600b():
+    run = _runs()["KR-ISL"]
+    hob = run.hobs["SF-I600b"]
+    assert hob.mounting == "FlushFit"
+    assert hob.glass[5] == pytest.approx(930.0)
+    assert hob.underside == pytest.approx(879.0)
+    assert hob.back_edge >= 50.0
+    voids = {v.name: v for v in run.part("KR-ISL-WORKTOP").voids}
+    assert voids["hob rebate"].depth == pytest.approx(5.5)
+    assert voids["hob"].a1 - voids["hob"].a0 == pytest.approx(600.0)
+    assert "EA-KM8665" in run.bay("SF-I600b").members
+    assert "SF-I600b-RAIL-F" not in [p.id for p in run.parts]
+
+
+def test_drawers_under_the_hob_clear_it():
+    doc = copy.deepcopy(load_furnishings())
+    bay = next(e for e in doc["systemFurniture"] if e["id"] == "SF-I600b")
+    bay["PropertySets"].append({"Name": "Pset_Drawers", "Properties": {"NominalHeights": "0.2 0.2 *"}})
+    run = _runs(doc)["KR-ISL"]
+    hob = run.hobs["SF-I600b"]
+    top = run.part("SF-I600b-D1").drawer
+    assert top.box[5] <= hob.underside - 8.0 + 1e-6
+
+
+def test_west_backsplash_up_to_wall_cabinets():
+    run = _runs()["KR-WEST"]
+    (box,) = run.part("KR-WEST-BACKSPLASH").boxes
+    assert box[3] - box[2] == pytest.approx(12.0)
+    assert (box[4], box[5]) == (pytest.approx(930.0), pytest.approx(1550.0))
+    assert box[1] - box[0] == pytest.approx(2500.0)

@@ -64,7 +64,12 @@
 #   West row, faces west. RefDirection [0, -1]: Origin is the north-west
 #   corner, Width runs south, Depth runs east. Modules north to south
 #   500, 600, 500, 600, 300. The green rectangular sink is in the north
-#   500. The two round bowls cross the second 500 and the second 600.
+#   500: the Teka BE LINEA RS15 18.40 X card sits on it (SN-RS1840). The
+#   green rectangle with two circles is inside the second 600 (SF-I600b),
+#   between its module lines, with the note "příbory, vařečky, stěrky,
+#   naběračky, pánve" beside it: the hob, Miele KM 8665 FL (Pset_Hob on
+#   SF-I600b). Earlier read as two round bowls; there is no second sink
+#   card on the island (Bob, 2026-11-12).
 #   East row, faces east. This is the plinth and robot-dock side. The east
 #   half has no module lines (top and bottom returns only), so the 2500 is
 #   split 600/600/600/700 from north to south, the 700 at the south.
@@ -89,7 +94,8 @@
 # Wall cabinets: depth 350, height 900, bottom at 1550 (620 above the 930
 # counter), top at 2450. Elevation 1.55.
 # The Teka bowl is an IfcSanitaryTerminal, 750×440×200, centred in the 800,
-# top flush with 930. The disposer and the tap are not modelled.
+# undermount: rim under the 20 mm stone at 910, cut-out 706×396 R13 (Teka).
+# The disposer and the tap are not modelled.
 #
 # One whole element per box. The list key is the IFC class:
 #   furniture, systemFurniture, sanitaryTerminals, electricAppliances,
@@ -263,7 +269,7 @@ systemFurniture:
           Run: KR-TALL
   - id: SF-I500a
     Name: "Ostrov západ 500 dřez"
-    Description: "Island, west row, north module. Red 500. Green rectangular single sink. Faces west."
+    Description: "Island, west row, north module. Red 500. Green rectangular single sink, the Teka BE LINEA RS15 18.40 X (SN-RS1840). Faces west."
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
@@ -300,7 +306,7 @@ systemFurniture:
           Contents: "nože; nářadí; dole nevím"
   - id: SF-I500b
     Name: "Ostrov západ 500"
-    Description: "Island, west row. Red 500. North of the two round bowls, which cross into SF-I600b. Faces west."
+    Description: "Island, west row. Red 500, between the knife-drawer 600 and the hob 600. Note: koření, oleje, octy, mouky, cukry, dochucovadla, hrnce. Faces west."
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
@@ -314,8 +320,8 @@ systemFurniture:
         Properties:
           Run: KR-ISL
   - id: SF-I600b
-    Name: "Ostrov západ 600 mísy"
-    Description: "Island, west row. Second red 600. The two green round bowls sit across this module and SF-I500b. Faces west."
+    Name: "Ostrov západ 600 varná deska"
+    Description: "Island, west row. Second red 600, under the hob (the green rectangle with two circles on KitchenPlan.jpg). Note: příbory, vařečky, stěrky, naběračky, pánve. Faces west."
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
@@ -328,6 +334,30 @@ systemFurniture:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-ISL
+      # Miele KM 8665 FL (Petr, 2026-11-11). Sizes: Miele installation
+      # manual pp. 23, 29, see kitchen-cabinets.md "Induction hob".
+      # Mounting: Petr has not chosen; flush-fit is guess:. FrontOffset is
+      # the cut-out's front edge behind the bay front face, 50 = the 500
+      # cut-out centred on the 600 bay depth (guess:).
+      - Name: Pset_Hob
+        Properties:
+          Id: EA-KM8665
+          Model: "Miele KM 8665 FL"
+          Mounting: FlushFit
+          GlassWidth: 0.62
+          GlassDepth: 0.52
+          GlassThickness: 0.004
+          HousingWidth: 0.533
+          HousingDepth: 0.427
+          InstallationHeight: 0.051
+          CutoutWidth: 0.6
+          CutoutDepth: 0.5
+          RebateWidth: 0.624
+          RebateDepth: 0.524
+          RebateHeight: 0.0055
+          FrontOffset: 0.05
+          MinBackEdge: 0.05
+          MinDrawerGap: 0.008
   - id: SF-I300
     Name: "Ostrov západ 300"
     Description: "Island, west row, south end. Red 300. Faces west."
@@ -625,22 +655,51 @@ systemFurniture:
 sanitaryTerminals:
   - id: SN-RS15
     Name: "Teka BE LINEA RS15 71.40"
-    Description: "Undermount sink in SF-B800. Overall 750×440, bowl 710×400×200. Centred in the 800. Top flush with the 930 counter."
+    Description: "Undermount sink in SF-B800. Overall 750×440, bowl 710×400×200. Centred in the 800. Rim glued under the 20 mm stone: top 910, worktop cut-out 706×396 R13 (Teka)."
     PredefinedType: SINK
     ContainedInStructure: SP-1.02
     Origin: [19.32, 12.225]
-    Elevation: 0.73
+    # 0.93 counter − 0.02 worktop − 0.2 = 0.71 (rim under the stone).
+    Elevation: 0.71
     RefDirection: [0, 1]
     Width: 0.75
     Depth: 0.44
     Height: 0.2
     PropertySets:
-      # Bowl from the Description (overall 750×440, bowl 710×400). The
-      # worktop hole is the bowl (undermount), see kitchen-cabinets.md.
+      # Teka (teka.com, product 115000004): bowl 710×400/200, overall
+      # 750×440, undermount ("Spodní montáž, výřez 706×396 mm/R13").
+      # Width is along this sink's RefDirection.
       - Name: Pset_Sink
         Properties:
+          Mounting: Undermount
           BowlWidth: 0.71
           BowlDepth: 0.4
+          CutoutWidth: 0.706
+          CutoutDepth: 0.396
+          CutoutRadius: 0.013
+  - id: SN-RS1840
+    Name: "Teka BE LINEA RS15 18.40 X"
+    Description: "Island sink in SF-I500a, the card on Petr's KitchenPlan.jpg. Undermount. Overall 440×220, bowl 400×180×140, cut-out 396×176 R13 (Teka). Long side across the island (east-west), as the plan's rectangle is drawn, guess:. Centred on the 500 bay and on its 600 depth, guess:. Rim top 910 under the 20 mm stone."
+    PredefinedType: SINK
+    ContainedInStructure: SP-1.02
+    # Centre x = 20.554 + 0.300, y = 13.800 − 0.250 (SF-I500a centre).
+    # Elevation 0.93 − 0.02 − 0.14 = 0.77.
+    Origin: [20.634, 13.44]
+    Elevation: 0.77
+    Width: 0.44
+    Depth: 0.22
+    Height: 0.14
+    PropertySets:
+      # Teka (teka.com, product 115000010): "Vana 180x400/140 mm, Rozměr
+      # 220x440 mm, Spodní montáž (výřez 176x396 mm/R13)".
+      - Name: Pset_Sink
+        Properties:
+          Mounting: Undermount
+          BowlWidth: 0.4
+          BowlDepth: 0.18
+          CutoutWidth: 0.396
+          CutoutDepth: 0.176
+          CutoutRadius: 0.013
 electricAppliances:
   - id: EA-WQ9I
     Name: "Whirlpool WQ9I MO2L EF"
@@ -715,6 +774,11 @@ furniture:
           WorktopOverhang: 0.03
           WorktopMaterial: "Silestone Blanco Maple"
           PlinthHeight: 0.11
+          # Petr, 2026-11-12: "back wall for both west and north". 12 mm
+          # Silestone from the brief; up to the wall cabinets (derived).
+          Backsplash: true
+          BacksplashThickness: 0.012
+          BacksplashMaterial: "Silestone Blanco Maple"
   - id: KR-WEST-H
     Name: "Západní horní"
     Description: "West-wall wall-cabinet monoblock: CH850, BH800, AH850."
@@ -1022,6 +1086,118 @@ furniture:
         Properties:
           Facing: "E"
 coverings:
+  # North backsplash. Petr, 2026-11-12: "back wall for both west and
+  # north". 12 mm Silestone Blanco Maple (thickness from the brief), from
+  # the 930 counter (the oak bases' top) to 1550, the underside of SF-DH.
+  # North wall inner face y=15.60, pier faces y=15.35, piers W-052
+  # x 22.15–22.45 and W-053 x 25.15–25.45. Pieces with no wall cabinet
+  # above stop at the same 1550: open:. SF-LB behind the sofa gets none,
+  # the bookshelf's oak lamella back is there from 850.
+  - id: CV-BS-DN
+    Name: "Obklad stěny jídelna"
+    Description: "Main panel on the north wall behind SF-DN, between the piers. Up to the underside of SF-DH (1550)."
+    PredefinedType: CLADDING
+    ObjectType: Backsplash
+    ContainedInStructure: SP-1.02
+    Origin: [22.45, 15.588]
+    Elevation: 0.93
+    Width: 2.7
+    Depth: 0.012
+    Height: 0.62
+    PropertySets:
+      - Name: Pset_Finish
+        Properties:
+          Material: "Silestone Blanco Maple"
+  - id: CV-BS-R052
+    Name: "Obklad boku pilíře W-052"
+    Description: "Return on W-052's east face, between the pier front and the main panel, under SF-DH. guess: the stone wraps the pier."
+    PredefinedType: CLADDING
+    ObjectType: Backsplash
+    ContainedInStructure: SP-1.02
+    Origin: [22.45, 15.35]
+    Elevation: 0.93
+    Width: 0.012
+    Depth: 0.238
+    Height: 0.62
+    PropertySets:
+      - Name: Pset_Finish
+        Properties:
+          Material: "Silestone Blanco Maple"
+  - id: CV-BS-R053W
+    Name: "Obklad boku pilíře W-053 západ"
+    Description: "Return on W-053's west face, under SF-DH. guess: the stone wraps the pier."
+    PredefinedType: CLADDING
+    ObjectType: Backsplash
+    ContainedInStructure: SP-1.02
+    Origin: [25.138, 15.35]
+    Elevation: 0.93
+    Width: 0.012
+    Depth: 0.238
+    Height: 0.62
+    PropertySets:
+      - Name: Pset_Finish
+        Properties:
+          Material: "Silestone Blanco Maple"
+  - id: CV-BS-P052
+    Name: "Obklad čela pilíře W-052"
+    Description: "On W-052's front face above filler SF-F052, from SF-T4's east face (x=22.158) to the return's face (x=22.462). No wall cabinet above: open: top height, 1550 like the rest. guess: the stone wraps the pier."
+    PredefinedType: CLADDING
+    ObjectType: Backsplash
+    ContainedInStructure: SP-1.02
+    Origin: [22.158, 15.338]
+    Elevation: 0.93
+    Width: 0.304
+    Depth: 0.012
+    Height: 0.62
+    PropertySets:
+      - Name: Pset_Finish
+        Properties:
+          Material: "Silestone Blanco Maple"
+  - id: CV-BS-P053
+    Name: "Obklad čela pilíře W-053"
+    Description: "On W-053's front face above filler SF-F053, x 25.138–25.462. No wall cabinet above: open: top height, 1550. guess: the stone wraps the pier."
+    PredefinedType: CLADDING
+    ObjectType: Backsplash
+    ContainedInStructure: SP-1.02
+    Origin: [25.138, 15.338]
+    Elevation: 0.93
+    Width: 0.324
+    Depth: 0.012
+    Height: 0.62
+    PropertySets:
+      - Name: Pset_Finish
+        Properties:
+          Material: "Silestone Blanco Maple"
+  - id: CV-BS-R053E
+    Name: "Obklad boku pilíře W-053 východ"
+    Description: "Return on W-053's east face above SF-DN70. No wall cabinet above: open: top height, 1550. guess: the stone wraps the pier."
+    PredefinedType: CLADDING
+    ObjectType: Backsplash
+    ContainedInStructure: SP-1.02
+    Origin: [25.45, 15.35]
+    Elevation: 0.93
+    Width: 0.012
+    Depth: 0.238
+    Height: 0.62
+    PropertySets:
+      - Name: Pset_Finish
+        Properties:
+          Material: "Silestone Blanco Maple"
+  - id: CV-BS-DN70
+    Name: "Obklad stěny nad DN70"
+    Description: "Strip on the north wall above SF-DN70, from the return to the bookshelf (x 25.462–25.52). No wall cabinet above: open: top height, 1550."
+    PredefinedType: CLADDING
+    ObjectType: Backsplash
+    ContainedInStructure: SP-1.02
+    Origin: [25.462, 15.588]
+    Elevation: 0.93
+    Width: 0.058
+    Depth: 0.012
+    Height: 0.62
+    PropertySets:
+      - Name: Pset_Finish
+        Properties:
+          Material: "Silestone Blanco Maple"
   - id: CV-RUG
     Name: "Koberec"
     Description: "Rug 2800 × 3780 × 10. x 26.65–29.45, y 11.37–15.15, from Petr's markup. Seats are not lifted onto it."
