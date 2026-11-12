@@ -245,4 +245,31 @@ function actionsAfter(reg, hit) {
   return reg.actionsFor([hit], {});
 }
 
+
+// Kitchen monoblock: a bay is an IfcGroup; a shared divider is aggregated
+// into the run and assigned to both neighbouring bays.
+{
+  const kitchen = {
+    roots: ["run"],
+    elements: {
+      run: { globalId: "run", id: "KR-ISL", type: "IfcFurniture", order: 0 },
+      bayA: { globalId: "bayA", id: "SF-A", type: "IfcGroup", parentId: "run", order: -2 },
+      bayB: { globalId: "bayB", id: "SF-B", type: "IfcGroup", parentId: "run", order: -1 },
+      endA: { globalId: "endA", id: "END-N", parentId: "run", groups: ["bayA"], order: 1 },
+      div: { globalId: "div", id: "DIV", parentId: "run", groups: ["bayA", "bayB"], order: 2 },
+      endB: { globalId: "endB", id: "END-S", parentId: "run", groups: ["bayB"], order: 3 },
+      back: { globalId: "back", id: "BACK", parentId: "run", groups: ["bayA", "bayB"], order: 4 },
+      top: { globalId: "top", id: "WORKTOP", parentId: "run", order: 5 },
+    },
+  };
+  assert.deepEqual(new Set(subtreeIds(kitchen, "bayB")), new Set(["bayB", "div", "endB", "back"]));
+  const vis = createVisibility(kitchen);
+  vis.hideOthers("bayB");
+  for (const id of ["div", "endB", "back"]) assert.equal(vis.isHidden(id), false, id);
+  for (const id of ["endA", "top", "bayA"]) assert.equal(vis.isHidden(id), true, id);
+  vis.showAll();
+  vis.hideOthers("run");
+  assert.equal(vis.anyHidden(), false);
+}
+
 console.log("ifcInspector.test.mjs ok");

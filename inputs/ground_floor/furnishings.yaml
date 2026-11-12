@@ -207,6 +207,9 @@ systemFurniture:
     Depth: 0.6
     Height: 2.45
     PropertySets:
+      - Name: Pset_KitchenBay
+        Properties:
+          Run: KR-TALL-W
       - Name: Pset_CabinetDoor
         Properties:
           HingeSide: "L"
@@ -222,6 +225,9 @@ systemFurniture:
     Depth: 0.6
     Height: 2.45
     PropertySets:
+      - Name: Pset_KitchenBay
+        Properties:
+          Run: KR-TALL
       - Name: Pset_CabinetDoor
         Properties:
           HingeSide: "R"
@@ -236,6 +242,11 @@ systemFurniture:
     Width: 0.6
     Depth: 0.6
     Height: 2.45
+    PropertySets:
+      - Name: Pset_KitchenBay
+        Properties:
+          Run: KR-TALL
+          Front: "none"
   - id: SF-T4
     Name: "Vysoká 500"
     Description: "Tall run, east end. Note: zbyva sirka cca 50. Modelled 500. The same note allows 600 if a drinks fridge goes underneath. East face nicks pier W-052 by 8 mm."
@@ -246,6 +257,10 @@ systemFurniture:
     Width: 0.5
     Depth: 0.6
     Height: 2.45
+    PropertySets:
+      - Name: Pset_KitchenBay
+        Properties:
+          Run: KR-TALL
   - id: SF-I500a
     Name: "Ostrov západ 500 dřez"
     Description: "Island, west row, north module. Red 500. Green rectangular single sink. Faces west."
@@ -257,6 +272,10 @@ systemFurniture:
     Width: 0.5
     Depth: 0.6
     Height: 0.93
+    PropertySets:
+      - Name: Pset_KitchenBay
+        Properties:
+          Run: KR-ISL
   - id: SF-I600a
     Name: "Ostrov západ 600"
     Description: "Island, west row. First red 600, south of the rectangular sink. Faces west. Three drawers, top to bottom: nože; nářadí (lis na česnek, hmoždíř, váha); dole nevím. See docs/design/kitchen-cabinets.md."
@@ -269,6 +288,9 @@ systemFurniture:
     Depth: 0.6
     Height: 0.93
     PropertySets:
+      - Name: Pset_KitchenBay
+        Properties:
+          Run: KR-ISL
       # Petr's sticky note next to this 600: "noze / naradi (lis na cesnek,
       # hmozdir, vaha, ..) / dole nevim". Heights are IKEA METOD grid
       # nominals in metres, top to bottom; "*" is the rest of the carcass.
@@ -276,15 +298,6 @@ systemFurniture:
         Properties:
           NominalHeights: "0.2 0.2 *"
           Contents: "nože; nářadí; dole nevím"
-      # Petr: finished counter 930 (the box Height). The rest are IKEA
-      # METOD defaults, metres. kitchen_cabinet.IKEA_DEFAULTS_MM has the
-      # full list; these are the ones the carcass height depends on.
-      - Name: Pset_KitchenCabinet
-        Properties:
-          WorktopThickness: 0.038
-          PlinthHeight: 0.092
-          BoardThickness: 0.018
-          FrontGap: 0.003
   - id: SF-I500b
     Name: "Ostrov západ 500"
     Description: "Island, west row. Red 500. North of the two round bowls, which cross into SF-I600b. Faces west."
@@ -296,6 +309,10 @@ systemFurniture:
     Width: 0.5
     Depth: 0.6
     Height: 0.93
+    PropertySets:
+      - Name: Pset_KitchenBay
+        Properties:
+          Run: KR-ISL
   - id: SF-I600b
     Name: "Ostrov západ 600 mísy"
     Description: "Island, west row. Second red 600. The two green round bowls sit across this module and SF-I500b. Faces west."
@@ -307,6 +324,10 @@ systemFurniture:
     Width: 0.6
     Depth: 0.6
     Height: 0.93
+    PropertySets:
+      - Name: Pset_KitchenBay
+        Properties:
+          Run: KR-ISL
   - id: SF-I300
     Name: "Ostrov západ 300"
     Description: "Island, west row, south end. Red 300. Faces west."
@@ -318,6 +339,10 @@ systemFurniture:
     Width: 0.3
     Depth: 0.6
     Height: 0.93
+    PropertySets:
+      - Name: Pset_KitchenBay
+        Properties:
+          Run: KR-ISL
   - id: SF-E600a
     Name: "Ostrov východ 600"
     Description: "Island, east row, north module. No module line is drawn on this side. 600 of 600/600/600/700, north to south. Plinth and robot-dock side. Faces east."
@@ -329,6 +354,10 @@ systemFurniture:
     Width: 0.6
     Depth: 0.6
     Height: 0.93
+    PropertySets:
+      - Name: Pset_KitchenBay
+        Properties:
+          Run: KR-ISL
   - id: SF-E600b
     Name: "Ostrov východ 600"
     Description: "Island, east row. Second 600. Faces east."
@@ -340,6 +369,10 @@ systemFurniture:
     Width: 0.6
     Depth: 0.6
     Height: 0.93
+    PropertySets:
+      - Name: Pset_KitchenBay
+        Properties:
+          Run: KR-ISL
   - id: SF-E600c
     Name: "Ostrov východ 600"
     Description: "Island, east row. Third 600. Faces east."
@@ -351,6 +384,10 @@ systemFurniture:
     Width: 0.6
     Depth: 0.6
     Height: 0.93
+    PropertySets:
+      - Name: Pset_KitchenBay
+        Properties:
+          Run: KR-ISL
   - id: SF-E700
     Name: "Ostrov východ 700"
     Description: "Island, east row, south end. The remaining 700. Faces east."
@@ -362,6 +399,10 @@ systemFurniture:
     Width: 0.7
     Depth: 0.6
     Height: 0.93
+    PropertySets:
+      - Name: Pset_KitchenBay
+        Properties:
+          Run: KR-ISL
   - id: SF-A250
     Name: "Západ 250 úklid"
     Description: "Section A, south side. Cleaning pull-out, 250. Left when facing the west wall."
@@ -373,6 +414,26 @@ systemFurniture:
     Width: 0.25
     Depth: 0.6
     Height: 0.93
+    PropertySets:
+      - Name: Pset_KitchenBay
+        Properties:
+          Run: KR-WEST
+  - id: SF-A600
+    Name: "Západ 600 myčka"
+    Description: "Section A, north side. The 600 dishwasher slot of the 850 section, y 13.25–13.85. No carcass of its own: the worktop runs over it and SF-A250's end side is its south wall. The Bosch SBD6ECX12E stands in it. Right when facing the west wall."
+    PredefinedType: USERDEFINED
+    ObjectType: ApplianceNiche
+    ContainedInStructure: SP-1.02
+    Origin: [19.4, 13.25]
+    RefDirection: [0, 1]
+    Width: 0.6
+    Depth: 0.6
+    Height: 0.93
+    PropertySets:
+      - Name: Pset_KitchenBay
+        Properties:
+          Run: KR-WEST
+          Kind: "Niche"
   - id: SF-AH850
     Name: "Západ horní 850 sklenice"
     Description: "Section A wall cabinet, glasses, 850. Depth 350, bottom 1550, height 900, top 2450."
@@ -385,6 +446,10 @@ systemFurniture:
     Width: 0.85
     Depth: 0.35
     Height: 0.9
+    PropertySets:
+      - Name: Pset_KitchenBay
+        Properties:
+          Run: KR-WEST-H
   - id: SF-B800
     Name: "Západ 800 dřez"
     Description: "Section B. One 800 sink base for the Teka BE LINEA RS15 71.40. Bin on the south, compost on the north."
@@ -397,6 +462,9 @@ systemFurniture:
     Depth: 0.6
     Height: 0.93
     PropertySets:
+      - Name: Pset_KitchenBay
+        Properties:
+          Run: KR-WEST
       - Name: Pset_BaseContents
         Properties:
           South: "kos"
@@ -413,6 +481,10 @@ systemFurniture:
     Width: 0.8
     Depth: 0.35
     Height: 0.9
+    PropertySets:
+      - Name: Pset_KitchenBay
+        Properties:
+          Run: KR-WEST-H
   - id: SF-C850
     Name: "Západ 850 odpad"
     Description: "Section C. Sorted waste, 850."
@@ -424,6 +496,10 @@ systemFurniture:
     Width: 0.85
     Depth: 0.6
     Height: 0.93
+    PropertySets:
+      - Name: Pset_KitchenBay
+        Properties:
+          Run: KR-WEST
   - id: SF-CH850
     Name: "Západ horní 850"
     Description: "Section C wall cabinet, 850. Stick blender, bowls, measuring cups. Depth 350, bottom 1550, height 900, top 2450."
@@ -436,6 +512,10 @@ systemFurniture:
     Width: 0.85
     Depth: 0.35
     Height: 0.9
+    PropertySets:
+      - Name: Pset_KitchenBay
+        Properties:
+          Run: KR-WEST-H
   - id: SF-F052
     Name: "Výplň W-052"
     Description: "Shallow filler in front of pier W-052. 300 wide, 200 deep, front flush at y=15.15. Dining side, counter 930. Natural oak."
@@ -554,6 +634,13 @@ sanitaryTerminals:
     Width: 0.75
     Depth: 0.44
     Height: 0.2
+    PropertySets:
+      # Bowl from the Description (overall 750×440, bowl 710×400). The
+      # worktop hole is the bowl (undermount), see kitchen-cabinets.md.
+      - Name: Pset_Sink
+        Properties:
+          BowlWidth: 0.71
+          BowlDepth: 0.4
 electricAppliances:
   - id: EA-WQ9I
     Name: "Whirlpool WQ9I MO2L EF"
@@ -597,6 +684,70 @@ electricAppliances:
     Depth: 0.35
     Height: 0.35
 furniture:
+  # Kitchen runs: one monoblock body each (Petr, 2026-11-12). No box: the
+  # parts are laid out from the bays (Pset_KitchenBay.Run) by
+  # models/kitchen_cabinet.py. Lengths in metres. Sources:
+  # docs/design/kitchen-cabinets.md.
+  - id: KR-ISL
+    Name: "Ostrov"
+    Description: "Island monoblock: west row (5 bays) and east row (4 bays) back to back on one shared central back. Silestone Blanco Maple worktop, 30 mm overhang on both long fronts, Silestone cladding on both ends."
+    PredefinedType: USERDEFINED
+    ObjectType: KitchenRun
+    ContainedInStructure: SP-1.02
+    PropertySets:
+      - Name: Pset_KitchenRun
+        Properties:
+          WorktopThickness: 0.02
+          WorktopOverhang: 0.03
+          WorktopMaterial: "Silestone Blanco Maple"
+          CladEnds: true
+          PlinthHeight: 0.11
+  - id: KR-WEST
+    Name: "Západní linka"
+    Description: "West-wall base monoblock between OP24 and OP25: C850, B800, A250 and the dishwasher slot. Silestone worktop, 30 mm overhang at the front."
+    PredefinedType: USERDEFINED
+    ObjectType: KitchenRun
+    ContainedInStructure: SP-1.02
+    PropertySets:
+      - Name: Pset_KitchenRun
+        Properties:
+          WorktopThickness: 0.02
+          WorktopOverhang: 0.03
+          WorktopMaterial: "Silestone Blanco Maple"
+          PlinthHeight: 0.11
+  - id: KR-WEST-H
+    Name: "Západní horní"
+    Description: "West-wall wall-cabinet monoblock: CH850, BH800, AH850."
+    PredefinedType: USERDEFINED
+    ObjectType: KitchenRun
+    ContainedInStructure: SP-1.02
+    PropertySets:
+      - Name: Pset_KitchenRun
+        Properties:
+          WorktopThickness: 0.0
+          PlinthHeight: 0.0
+  - id: KR-TALL-W
+    Name: "Vysoká u zdi"
+    Description: "Tall cabinet T1 between the west wall and the fridge, a monoblock of one."
+    PredefinedType: USERDEFINED
+    ObjectType: KitchenRun
+    ContainedInStructure: SP-1.02
+    PropertySets:
+      - Name: Pset_KitchenRun
+        Properties:
+          WorktopThickness: 0.0
+          PlinthHeight: 0.11
+  - id: KR-TALL
+    Name: "Vysoké skříně"
+    Description: "Tall monoblock east of the fridge: T2, T3 (oven column), T4."
+    PredefinedType: USERDEFINED
+    ObjectType: KitchenRun
+    ContainedInStructure: SP-1.02
+    PropertySets:
+      - Name: Pset_KitchenRun
+        Properties:
+          WorktopThickness: 0.0
+          PlinthHeight: 0.11
   - id: FN-S2B
     Name: "Harvey S2 roh"
     Description: "Corner of the 86 run. 1160 along the cabinets, 860 deep, 395 high. x 25.82–26.98, y 13.99–14.85."
