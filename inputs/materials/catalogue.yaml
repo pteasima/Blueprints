@@ -1,0 +1,743 @@
+# Material catalogue for the viewer's photorealistic mode (ground floor model,
+# both bathroom models; not the obývák acoustic roof model).
+#
+# Human-readable version, sources and open questions: docs/materials/README.md.
+# Validation: tests/test_materials_catalogue.py (src/blueprints/materials.py).
+# Textures are rebuilt by scripts/build_material_textures.py.
+#
+# Contract, one list entry per material:
+#   id            kebab-case, stable. Geometry never carries a material, only a
+#                 label/id that `applies_to` resolves, so a later glTF fixture
+#                 can name the same id in its own material slot.
+#   name          display name
+#   applies_to    description: what it covers, in words
+#                 selectors:   which viewer meshes get it. The viewer names a
+#                              mesh `<label>__<id>__` (e.g. `cabinet__KR-ISL-END-N__`)
+#                              or just `<label>` when it has no id. A selector is
+#                              {label, ids?, id_pattern?}; `id_pattern` is a regex
+#                              searched in the id. Most specific wins:
+#                              ids > id_pattern > label only. Every label the
+#                              floor-plan models emit has exactly one label-only
+#                              selector, so nothing falls through.
+#                 pending:     (optional) surfaces this material is for that the
+#                              models do not build yet
+#   base_color    sRGB hex. The albedo when maps.color is absent or fails to load.
+#   roughness, metalness   0..1 scalars. With a roughness map, the map is the
+#                 value and the scalar is its fallback.
+#   transmission, opacity, ior   glass only
+#   maps          optional {color, normal, roughness, ao}: repo-relative paths.
+#                 They live under docs/ because only docs/ is published to Pages,
+#                 so the URL is the path without the leading `docs/`. Colour maps
+#                 are sRGB; normal (OpenGL +Y), roughness and ao are linear.
+#                 A map may point into another material's folder (shared scans).
+#   tile_size_m   [w, h]: real-world size of one texture repeat (U, V)
+#   rotation_deg  (optional) when direction matters: grain / brushing runs along
+#                 texture V at 0; the viewer aligns V with the part's longest edge
+#                 and then adds this rotation
+#   status        known (real product, matched) | assumed (our guess)
+#   source        URLs
+#   notes         known: what was matched and how sure; assumed: what and why
+
+# --------------------------------------------------------------- wood
+
+- id: oak-natural-kaplan
+  name: Natural oak, matt lacquer (Kaplan 1934, Přírodní D 02)
+  applies_to:
+    description: >-
+      Solid and veneered natural oak furniture: the Gatta dining table, the six
+      dining chairs, the bookshelf with its lamella back, the north dining run
+      bodies (KR-DN), the low base behind the sofa, the tall corner cabinet and
+      the oak-front wall cabinet over the dining run. Everything
+      `Pset_Finish.Material: natural oak` in furnishings.yaml.
+    selectors:
+      - {label: oak}
+      - {label: cabinet, id_pattern: "-BODY$"}
+      - {label: cabinet, ids: [SF-LB, SF-TC, SF-DH]}
+  base_color: "#aa7e60"
+  roughness: 0.45
+  metalness: 0.0
+  maps:
+    color: docs/materials/oak-natural-kaplan/color.jpg
+    normal: docs/materials/oak-natural-kaplan/normal.jpg
+    roughness: docs/materials/oak-natural-kaplan/roughness.jpg
+  tile_size_m: [1.83, 1.83]
+  rotation_deg: 0
+  status: known
+  source:
+    - https://www.kaplan1934.cz/produkty/stoly/stul-gatta
+    - https://www.kaplan1934.cz/kolekce-gatta/
+    - https://polyhaven.com/a/oak_veneer_01
+  notes: >-
+    The repo names the table "Kaplan 1934 Gatta, lacquered natural oak"
+    (furnishings.yaml FN-GATTA). Kaplan's oak stain "Přírodní D 02" is their
+    natural oak; their lacquer is a matt lacquer (product page). base_color is
+    the median of Kaplan's D 02 swatch (#aa7e60, centre crop). The texture is
+    Poly Haven's CC0 oak veneer scan (straight and cathedral grain, raw mean
+    #a17e57, so the re-tint is small), normal flattened to 60 % and roughness
+    centred on 0.45 for a closed matt lacquer. Confidence: colour medium-high
+    (a web swatch, unknown white balance); grain is generic oak, not Kaplan's
+    boards, which are wider glued planks on the table top.
+
+- id: oak-veneer-joinery
+  name: Oak veneer joinery (kitchen fronts, vanity), assumed to match
+  applies_to:
+    description: >-
+      Kitchen fronts and drawer fronts, visible end sides and plinth boards of
+      the kitchen runs, the integrated dishwasher's door panel, and the bathroom
+      1.07 vanity cabinet. Fallback for the furniture label.
+    selectors:
+      - {label: cabinet, id_pattern: "-(FRONT|D[0-9]+|END-[NSEW]|PLINTH-[NSEW])$"}
+      - {label: appliance, ids: [EA-SBD6ECX]}
+      - {label: vanity}
+      - {label: furniture}
+  base_color: "#aa7e60"
+  roughness: 0.45
+  metalness: 0.0
+  maps:
+    color: docs/materials/oak-natural-kaplan/color.jpg
+    normal: docs/materials/oak-natural-kaplan/normal.jpg
+    roughness: docs/materials/oak-natural-kaplan/roughness.jpg
+  tile_size_m: [1.83, 1.83]
+  rotation_deg: 0
+  status: assumed
+  source:
+    - https://polyhaven.com/a/oak_veneer_01
+  notes: >-
+    No front finish is written anywhere for the kitchen (kitchen-cabinets.md
+    only takes IKEA METOD sizes). Assumed natural oak veneer, lacquered, so
+    the kitchen reads as one piece with the oak dining run and the Kaplan
+    table; it shares that texture. The vanity cabinet is "Assumed oak
+    cabinet" in bathroom-1.07.yaml. The dishwasher (Bosch SBD6ECX12E) is fully
+    integrated, so what shows is a kitchen front.
+
+- id: kitchen-carcass-white
+  name: White melamine carcass (kitchen interiors)
+  applies_to:
+    description: >-
+      Kitchen carcass panels that are not fronts: dividers, bottoms, backs,
+      rails, top boards and the island's central back. Mostly seen with a
+      drawer or door open. Fallback for the cabinet label.
+    selectors:
+      - {label: cabinet}
+  base_color: "#eeece6"
+  roughness: 0.5
+  metalness: 0.0
+  tile_size_m: [1.0, 1.0]
+  status: assumed
+  source:
+    - https://github.com/pteasima/Blueprints/blob/main/docs/design/kitchen-cabinets.md
+  notes: >-
+    The cabinets are custom but sized on IKEA METOD (Petr, 2026-11-11, in
+    kitchen-cabinets.md). Assumed the usual white melamine chipboard interior.
+
+# --------------------------------------------------------------- stone, tile
+
+- id: silestone-blanco-maple
+  name: Silestone Blanco Maple, 20 mm
+  applies_to:
+    description: >-
+      Kitchen worktops (island, west run, north dining run), the island end
+      cladding, and the Silestone backsplashes (west and north walls).
+    selectors:
+      - {label: worktop}
+  base_color: "#ede8dd"
+  roughness: 0.12
+  metalness: 0.0
+  maps:
+    color: docs/materials/silestone-blanco-maple/color.jpg
+    roughness: docs/materials/silestone-blanco-maple/roughness.jpg
+  tile_size_m: [1.0, 1.0]
+  status: known
+  source:
+    - https://www.cosentino.com/en-ie/colours/silestone/blanco-maple
+    - https://www.stoneone.co.uk/product/silestone-blanco-maple/
+    - https://in2stone.co.uk/products/quartz/silestone-blanco-maple/
+  notes: >-
+    Petr: "silestone maple" (kitchen-cabinets.md); Blanco Maple is the only
+    Silestone colour named Maple. Cream-white base with a dense, even
+    aggregate of 0.5–3 mm crumbs: white and pale grey, fewer taupe, ochre and
+    grey flecks, no veining (Cosentino, stockists). Texture is procedural
+    (own work, CC0), calibrated by eye against a stockist slab photo
+    (median #efeadf) at the same scale. Polished finish assumed (Cosentino
+    also sells Suede, roughness ~0.4); that is an open question. Confidence:
+    colour high, speck pattern medium.
+
+- id: abk-poetry-stone-trani-beige
+  name: ABK Poetry Stone Trani Beige, natural, rectified, 8.5 mm
+  applies_to:
+    description: >-
+      All bathroom floor and wall tiles: 1.07 (floor 596×596, walls 596×1194,
+      niche, shelf, tub front) and 1.20. Assumed for the other wet rooms
+      (WC 1.06, 1.19, bathrooms 1.09, 1.21) once they are tiled.
+    selectors:
+      - {label: floor_tile}
+      - {label: wall_tile}
+    pending: >-
+      Tiles in WC 1.06, 1.19 and bathrooms 1.09, 1.21 (tiled per the floor
+      take-off in scripts/export_podlaha_eps.py; product assumed the same).
+  base_color: "#e0d1bc"
+  roughness: 0.62
+  metalness: 0.0
+  maps:
+    color: docs/materials/abk-poetry-stone-trani-beige/color.jpg
+    normal: docs/materials/abk-poetry-stone-trani-beige/normal.jpg
+    roughness: docs/materials/abk-poetry-stone-trani-beige/roughness.jpg
+  tile_size_m: [0.6, 0.6]
+  status: known
+  source:
+    - https://www.abkgroup.it/it/abk/area-download/minimali/poetry-stone/trani-beige/pf60010540-v100/
+    - https://www.ceramishop.it/abk-poetry-stone-trani-beige-nat-60x60-pf60010540.html
+  notes: >-
+    bathroom-1.07.yaml and bathroom-1.20.yaml: "ABK Poetry Stone Trani Beige".
+    Full-body porcelain, limestone look, natural (matt) finish, R10, V2 shade
+    variation (stockist). base_color is the median of ABK's 24 face renders
+    of the 60×60 (#dcceba–#e3d4c0). Texture is procedural (own work, CC0):
+    soft cloudy limestone with fine grain, sparse fossil fragments and pores;
+    one repeat ≈ one tile, so neighbouring tiles look alike unless the viewer
+    offsets UVs per tile. Confidence: colour high, pattern medium.
+
+- id: grout-sand
+  name: Tile grout, sand beige, 2 mm
+  applies_to:
+    description: The 2 mm joints between bathroom tiles.
+    selectors:
+      - {label: grout}
+  base_color: "#bbab93"
+  roughness: 0.85
+  metalness: 0.0
+  tile_size_m: [0.6, 0.6]
+  status: assumed
+  source: []
+  notes: >-
+    No grout colour is written. Assumed a cementitious sand-beige grout one
+    shade darker than Trani Beige, the usual choice for a stone-look tile so
+    the 2 mm joints almost disappear. The solid mode's dark grout is a
+    diagram colour, not a choice.
+
+# --------------------------------------------------------------- floors, walls, ceilings
+
+- id: floor-pu-living
+  name: Poured polyurethane floor, warm light grey
+  applies_to:
+    description: >-
+      Finished floor of the dry rooms: 1.01 zádveří, 1.02 living/kitchen,
+      1.03, 1.04, 1.05 hall, 1.08, 1.10, 1.11 bedroom, 1.12–1.14, 1.15 study,
+      1.22, 1.23.
+    selectors: []
+    pending: >-
+      The ground-floor model has no floor slabs yet. When it gets them, select
+      them per room (IfcSlab FLOOR / IfcCovering FLOORING in those spaces).
+  base_color: "#bdb8ae"
+  roughness: 0.38
+  metalness: 0.0
+  maps:
+    color: docs/materials/floor-pu-living/color.jpg
+    roughness: docs/materials/floor-pu-living/roughness.jpg
+  tile_size_m: [2.0, 2.0]
+  status: assumed
+  source:
+    - https://github.com/pteasima/Blueprints/blob/main/scripts/export_podlaha_eps.py
+  notes: >-
+    The system is known: the floor take-off gives these rooms "PU stěrka 4"
+    (4 mm polyurethane screed, build-up of 2026-10-14) and docs/design/
+    ground-floor.md has 1.02 as "PU floor". The colour is not: assumed a warm
+    light grey (about RAL 7044 silk grey) with satin sheen and faint
+    trowel mottling, neutral next to the oak and the cream stone.
+
+- id: floor-pu-garage
+  name: Poured polyurethane floor, garage grey
+  applies_to:
+    description: Garage 1.16 and the garage corridor 1.17.
+    selectors: []
+    pending: Garage floor slab, not modelled yet.
+  base_color: "#8f9294"
+  roughness: 0.4
+  metalness: 0.0
+  maps:
+    color: docs/materials/floor-pu-garage/color.jpg
+    roughness: docs/materials/floor-pu-garage/roughness.jpg
+  tile_size_m: [2.0, 2.0]
+  status: assumed
+  source:
+    - https://github.com/pteasima/Blueprints/blob/main/scripts/export_podlaha_eps.py
+  notes: >-
+    Take-off kind "gar": PU stěrka 4 on 100 mm concrete. Colour assumed a
+    mid grey (about RAL 7040), darker than the house so tyre marks show less.
+
+- id: paint-interior-white
+  name: Interior plaster, white paint
+  applies_to:
+    description: >-
+      Interior wall faces and ceilings: every masonry wall, the bathroom
+      pre-walls above the tiles, soffits and ceilings. Walls are single solids
+      today, so the exterior face gets this too until facade faces exist.
+    selectors:
+      - {label: masonry}
+      - {label: prewall}
+    pending: >-
+      Ceilings (CEIL-1.07, CEIL-1.20, SOFFIT-SH and the house ceilings) once
+      they are built.
+  base_color: "#f3f2ee"
+  roughness: 0.9
+  metalness: 0.0
+  maps:
+    normal: docs/materials/paint-interior-white/normal.jpg
+    roughness: docs/materials/paint-interior-white/roughness.jpg
+  tile_size_m: [2.0, 2.0]
+  status: assumed
+  source:
+    - https://ambientcg.com/view?id=Plaster001
+  notes: >-
+    No paint is specified. Assumed the Czech default: lime-cement or gypsum
+    plaster with a white matt interior paint (Primalex Polar class, close to
+    RAL 9010 but a touch cooler). No colour map, only a faint plaster normal
+    and roughness, so walls are not blotchy.
+
+- id: facade-render-white
+  name: Exterior render, off-white
+  applies_to:
+    description: Outer faces of the exterior walls.
+    selectors: []
+    pending: >-
+      Walls are one solid with one material today. Needs the exterior faces
+      split out (e.g. a facade covering) before it can apply.
+  base_color: "#eceae4"
+  roughness: 0.95
+  metalness: 0.0
+  maps:
+    normal: docs/materials/paint-interior-white/normal.jpg
+  tile_size_m: [1.0, 1.0]
+  status: assumed
+  source: []
+  notes: >-
+    Facade is not described in the repo. Assumed a fine silicone render in
+    off-white, which goes with the anthracite windows from the DWG legend.
+
+# --------------------------------------------------------------- openings
+
+- id: glass-window-triple
+  name: Window glass, insulated triple glazing
+  applies_to:
+    description: >-
+      All window panes and the glazed run W-023, the glass of the terrace door
+      OP32 and of the sliding sashes.
+    selectors:
+      - {label: glazing}
+  base_color: "#e6eeec"
+  roughness: 0.02
+  metalness: 0.0
+  transmission: 0.9
+  opacity: 0.3
+  ior: 1.52
+  tile_size_m: [1.0, 1.0]
+  status: known
+  source:
+    - https://github.com/pteasima/Blueprints/blob/main/docs/design/ground-floor.md
+  notes: >-
+    DWG legend (ground-floor.md): "Okna hliníková s izolačním trojsklem -
+    antracit". Three panes of float glass read slightly green-grey at an
+    angle; low-E coatings add a faint tint. `transmission` is for a
+    physical-transmission material; `opacity` is the fallback for a plain
+    transparent material.
+
+- id: aluminium-anthracite
+  name: Aluminium window and door frames, anthracite (RAL 7016)
+  applies_to:
+    description: >-
+      Window frames and sashes, the terrace door OP32's 70 mm frame, the main
+      entrance door OP39a.
+    selectors:
+      - {label: door, ids: [D-OP32, D-OP39a]}
+    pending: >-
+      Window frames and sash profiles; the model draws only the glass leaf
+      today.
+  base_color: "#383e42"
+  roughness: 0.45
+  metalness: 0.0
+  tile_size_m: [1.0, 1.0]
+  status: known
+  source:
+    - https://github.com/pteasima/Blueprints/blob/main/docs/design/ground-floor.md
+  notes: >-
+    "Okna hliníková … antracit" (DWG legend). Anthracite on aluminium windows
+    is almost always RAL 7016 in fine-texture powder coat, which is what this
+    is; the RAL number itself is the one assumption. Entrance door OP39a:
+    assumed to be from the same aluminium system as the window beside it.
+
+- id: door-leaf-white
+  name: Interior door leaves, white lacquer
+  applies_to:
+    description: >-
+      Interior hinged and pocket door leaves (40 mm). Fallback for the door
+      label.
+    selectors:
+      - {label: door}
+  base_color: "#f1f0ec"
+  roughness: 0.4
+  metalness: 0.0
+  tile_size_m: [1.0, 1.0]
+  status: assumed
+  source: []
+  notes: >-
+    No door product is named. Assumed flush white-lacquered leaves (the
+    common Czech choice, e.g. Sapeli or Masonite), with matching frames.
+
+- id: door-frame-white
+  name: Interior door frames, white lacquer
+  applies_to:
+    description: Interior door frames (zárubně) and architraves.
+    selectors: []
+    pending: Door frames are not modelled; the leaf sits in the bare opening.
+  base_color: "#f1f0ec"
+  roughness: 0.4
+  metalness: 0.0
+  tile_size_m: [1.0, 1.0]
+  status: assumed
+  source: []
+  notes: Assumed to match the leaves (see door-leaf-white).
+
+- id: garage-door-anthracite
+  name: Sectional garage doors, anthracite
+  applies_to:
+    description: Garage doors D5 (OP50) and D6 (OP49).
+    selectors:
+      - {label: door, ids: [D-OP49, D-OP50]}
+  base_color: "#383e42"
+  roughness: 0.5
+  metalness: 0.0
+  tile_size_m: [1.0, 1.0]
+  status: assumed
+  source: []
+  notes: >-
+    Not chosen yet ("garážová vrata" is still on Petr's house to-do list).
+    Assumed insulated steel sections in RAL 7016 to match the windows.
+
+- id: blind-anthracite
+  name: Exterior blinds and blind motors, anthracite
+  applies_to:
+    description: Exterior venetian blinds, their boxes, and the blind motors.
+    selectors:
+      - {label: actuator}
+    pending: The blinds themselves are not modelled.
+  base_color: "#383e42"
+  roughness: 0.45
+  metalness: 0.0
+  tile_size_m: [1.0, 1.0]
+  status: assumed
+  source: []
+  notes: >-
+    The electrical plan has motorised blinds (žaluzie) on the outer face
+    beside the windows; no product or colour. Assumed RAL 7016 to match the
+    frames.
+
+# --------------------------------------------------------------- electrical
+
+- id: jung-ls990-snow-white-matt
+  name: Jung LS 990, snow white matt (WWM)
+  applies_to:
+    description: >-
+      Switches, buttons, frames and sensor covers; socket frames. Every
+      switch, sensor and outlet in the model.
+    selectors:
+      - {label: switch}
+      - {label: sensor}
+      - {label: outlet}
+  base_color: "#f1f0ea"
+  roughness: 0.55
+  metalness: 0.0
+  tile_size_m: [0.1, 0.1]
+  status: known
+  source:
+    - https://www.jung-group.com/es-ES/p/Tecla-simple-blanco-alpino-mate/LS-990-WWM
+    - https://www.jung-group.com/de-DE/Produkte/Schalterprogramme/LS-990-aus-Kunststoff/
+    - https://www.jungstore.nl/designseries/ls-990/ls-990-sneeuwwit-mat/
+  notes: >-
+    PlanNotes.md: "all frames, sockets and buttons matt white, Jung code WWM,
+    plain LS 990 covers". WWM is lacquered duroplast, "schneeweiß matt";
+    Jung and its dealers give RAL 9016 as the nearest RAL. base_color is RAL
+    9016 in sRGB. Velvet matt lacquer, so roughness is moderate rather than
+    chalky. Confidence high.
+
+- id: jung-ls-alpine-white-gloss
+  name: Jung LS socket insert, alpine white gloss (LS 1520 KI WW)
+  applies_to:
+    description: Socket centre plates, once the model splits them from the frame.
+    selectors: []
+    pending: >-
+      Outlets are one box today, so they take the frame material
+      (jung-ls990-snow-white-matt).
+  base_color: "#f1f0ea"
+  roughness: 0.2
+  metalness: 0.0
+  tile_size_m: [0.1, 0.1]
+  status: known
+  source:
+    - https://www.elanto24.de/Jung-LS1520KIWW-SCHUKO-Steckdose-Safety-Serie-LS-alpinweiss
+  notes: >-
+    The plan legend names the socket "LS 1520 KI WW" (duroplast, alpine white,
+    glossy, also RAL 9016 nearest), while the general rule says WWM matt.
+    Kept as its own entry; see the open question in docs/materials/README.md.
+
+- id: light-diffuser-opal
+  name: Light fittings, white housing with opal diffuser
+  applies_to:
+    description: >-
+      Ceiling lights (24 V Dual White D100, LP 170R / LP 120R panels), the
+      bedroom pendant, and the LED strip runs. In realistic mode the viewer
+      may make the diffuser emissive (warm white) when lights are on.
+    selectors:
+      - {label: light}
+  base_color: "#f7f7f4"
+  roughness: 0.3
+  metalness: 0.0
+  tile_size_m: [0.1, 0.1]
+  status: assumed
+  source:
+    - https://github.com/pteasima/Blueprints/blob/main/docs/electrical/PlanNotes.md
+  notes: >-
+    The light products are named (PlanNotes.md) but no housing finish is.
+    Assumed white housings and opal PMMA diffusers. The 120 W bedroom
+    pendant is unchosen ("závěsný lustr cca 120 W").
+
+- id: aluminium-anodised
+  name: Anodised aluminium, natural (LED profiles, curtain rails)
+  applies_to:
+    description: >-
+      The bedroom curtain-rail L strips (RAIL-S, RAIL-W) and aluminium LED
+      profiles.
+    selectors:
+      - {label: furniture, ids: [RAIL-S, RAIL-W]}
+  base_color: "#b9bbbd"
+  roughness: 0.4
+  metalness: 1.0
+  tile_size_m: [0.3, 0.3]
+  status: assumed
+  source: []
+  notes: Assumed standard natural-anodised profiles; no product is named.
+
+# --------------------------------------------------------------- kitchen appliances, metal
+
+- id: stainless-brushed
+  name: Brushed stainless steel
+  applies_to:
+    description: >-
+      Teka BE Linea sinks, the KOV wall-drain grate and the ACO drain, the
+      shower edge profiles, the Whirlpool side-by-side fridge, and the island
+      and west-run legs. Fallback for the appliance label.
+    selectors:
+      - {label: sink}
+      - {label: drain}
+      - {label: profile}
+      - {label: appliance}
+      - {label: cabinet, id_pattern: "-LEG-"}
+  base_color: "#c4c5c6"
+  roughness: 0.32
+  metalness: 1.0
+  maps:
+    color: docs/materials/stainless-brushed/color.jpg
+    normal: docs/materials/stainless-brushed/normal.jpg
+    roughness: docs/materials/stainless-brushed/roughness.jpg
+  tile_size_m: [0.3, 0.3]
+  rotation_deg: 0
+  status: known
+  source:
+    - https://www.teka.com/cs-cz/produkt/be-linea-rs15-71-40_115000004/
+    - https://www.teka.com/cs-cz/produkt/be-linea-rs15-18-40-ss_115000010/
+    - https://www.spotrebice-kuchyne.cz/p/25492/chladnicka-whirlpool-wq9i-mo2l-ef
+    - https://ambientcg.com/view?id=Metal009
+  notes: >-
+    Teka "… X" sinks are stainless; the fridge WQ9I MO2L EF is "nerezový
+    vzhled" (stainless look); the shower profiles are "stainless" in
+    bathroom-1.07.yaml. Brushing runs along texture V. Legs are assumed
+    (kitchen-cabinets.md only says "IKEA-like" Ø40).
+
+- id: chrome-polished
+  name: Polished chrome (Paffoni Tango mixers)
+  applies_to:
+    description: Wall-mounted basin and shower mixers in bathroom 1.07.
+    selectors:
+      - {label: fixture, ids: [MIX-SH, MIX-B-W, MIX-B-E]}
+  base_color: "#e6e7e8"
+  roughness: 0.05
+  metalness: 1.0
+  tile_size_m: [0.1, 0.1]
+  status: assumed
+  source:
+    - https://www.sanitino.cz/paffoni-tango-vanova-podomitkova-baterie-s-prepinacem-chrom-ta001cr
+  notes: >-
+    The product is known (Paffoni Tango, bathrooms.md), the finish is not:
+    Tango also comes in black and steel. Assumed the standard chrome (CR).
+    The bathroom models merge fixtures without ids today, so this applies
+    once the mixers get their own meshes.
+
+- id: glass-ceramic-black
+  name: Black glass-ceramic (Miele KM 8665 FL hob)
+  applies_to:
+    description: The island induction hob.
+    selectors:
+      - {label: hob}
+  base_color: "#18181b"
+  roughness: 0.06
+  metalness: 0.0
+  tile_size_m: [0.6, 0.6]
+  status: known
+  source:
+    - https://www.miele.cz/product/12911610/indukcni-varna-deska-km-8665-fl
+  notes: >-
+    Flush-fit black ceramic glass (kitchen-cabinets.md). Near-black, mirror
+    glossy; the printed zone markings are not reproduced.
+
+- id: tv-panel-black
+  name: Television, black panel
+  applies_to:
+    description: The 100-inch television on the living-room east wall.
+    selectors:
+      - {label: appliance, ids: [EA-TV]}
+  base_color: "#0e0f11"
+  roughness: 0.15
+  metalness: 0.0
+  tile_size_m: [1.0, 1.0]
+  status: assumed
+  source: []
+  notes: >-
+    Sized from the LG 100QNED86 as a typical set (furnishings.md); the actual
+    model is not chosen. Black screen and dark back.
+
+- id: subwoofer-black
+  name: Subwoofer, black
+  applies_to:
+    description: The living-room subwoofer cube.
+    selectors:
+      - {label: appliance, ids: [EA-SUB]}
+  base_color: "#1c1c1e"
+  roughness: 0.8
+  metalness: 0.0
+  tile_size_m: [0.35, 0.35]
+  status: assumed
+  source: []
+  notes: No product; assumed a matt black cabinet.
+
+# --------------------------------------------------------------- bathroom
+
+- id: sanitary-white-gloss
+  name: Glossy white sanitaryware
+  applies_to:
+    description: >-
+      The Cersanit Zen 190 bathtub and the two washbasins in 1.07. Fallback
+      for the fixture label.
+    selectors:
+      - {label: fixture}
+  base_color: "#f5f5f2"
+  roughness: 0.08
+  metalness: 0.0
+  tile_size_m: [1.0, 1.0]
+  status: known
+  source:
+    - https://www.sanitino.sk/vane-prislusenstvo/cersanit
+  notes: >-
+    Cersanit Zen S301-223 is a white acrylic tub (bathroom-1.07.yaml).
+    The basins have no product ("Assumed 400×340 mm bowl"), so their white
+    glazed ceramic is assumed; it looks the same at this level.
+
+- id: vanity-top-white
+  name: Vanity top, white
+  applies_to:
+    description: The 20 mm shared vanity top in 1.07 (VANITY-TOP).
+    selectors:
+      - {label: vanity, ids: [VANITY-TOP]}
+  base_color: "#f2f1ec"
+  roughness: 0.35
+  metalness: 0.0
+  tile_size_m: [1.0, 1.0]
+  status: assumed
+  source: []
+  notes: >-
+    bathroom-1.07.yaml says "One white top, 20 mm"; the material is not
+    named. Assumed a satin white solid surface or compact. The model merges
+    the vanity into one mesh today, which takes oak-veneer-joinery.
+
+- id: glass-shower-clear
+  name: Shower screen glass, 8 mm clear
+  applies_to:
+    description: The fixed shower screen in 1.07.
+    selectors:
+      - {label: screen}
+  base_color: "#eef3f2"
+  roughness: 0.01
+  metalness: 0.0
+  transmission: 0.95
+  opacity: 0.2
+  ior: 1.52
+  tile_size_m: [1.0, 1.0]
+  status: known
+  source:
+    - https://github.com/pteasima/Blueprints/blob/main/docs/design/bathrooms.md
+  notes: >-
+    8 mm glass to the 2230 mm soffit (bathroom-1.07.yaml). Clear float glass
+    assumed over low-iron; at 8 mm the green edge tint is slight.
+
+# --------------------------------------------------------------- textiles
+
+- id: fabric-sofa-livom-harvey
+  name: Sofa fabric (Livom Harvey), warm light grey weave
+  applies_to:
+    description: Seats, backs and arms of the Livom Harvey corner sofa.
+    selectors:
+      - {label: upholstery}
+  base_color: "#a8a398"
+  roughness: 0.9
+  metalness: 0.0
+  maps:
+    color: docs/materials/fabric-sofa-livom-harvey/color.jpg
+    normal: docs/materials/fabric-sofa-livom-harvey/normal.jpg
+    roughness: docs/materials/fabric-sofa-livom-harvey/roughness.jpg
+    ao: docs/materials/fabric-sofa-livom-harvey/ao.jpg
+  tile_size_m: [0.4, 0.4]
+  status: assumed
+  source:
+    - https://livom.de/collections/harvey_kollektion
+    - https://livom.de/collections/stoffmuster
+    - https://ambientcg.com/view?id=Fabric062
+  notes: >-
+    The sofa is known (Livom Harvey, furnishings.md); the cover is not.
+    Livom offers Harvey in Cord, Bouclé, Linea, Fuego and Veluno. Assumed a
+    warm light grey woven cover; ambientCG Fabric062 re-tinted.
+
+- id: fabric-bed-linen
+  name: Bed, natural linen
+  applies_to:
+    description: "The 1800×2000 bed in 1.11 (one box: frame, mattress, bedding)."
+    selectors:
+      - {label: furniture, ids: [BED-1.11]}
+  base_color: "#e6e1d6"
+  roughness: 0.9
+  metalness: 0.0
+  maps:
+    normal: docs/materials/fabric-sofa-livom-harvey/normal.jpg
+  tile_size_m: [0.4, 0.4]
+  status: assumed
+  source: []
+  notes: >-
+    No bed product. Assumed off-white linen bedding, which is what the box
+    mostly shows; reuses the sofa weave normal with no colour map.
+
+- id: rug-wool-oatmeal
+  name: Living-room rug, oatmeal wool
+  applies_to:
+    description: The 2800×3780 rug under the sofa.
+    selectors:
+      - {label: rug}
+  base_color: "#cbbfac"
+  roughness: 0.95
+  metalness: 0.0
+  maps:
+    color: docs/materials/rug-wool-oatmeal/color.jpg
+    normal: docs/materials/rug-wool-oatmeal/normal.jpg
+    roughness: docs/materials/rug-wool-oatmeal/roughness.jpg
+  tile_size_m: [0.5, 0.5]
+  status: assumed
+  source:
+    - https://ambientcg.com/view?id=Carpet014
+  notes: >-
+    No rug product. Assumed a flat-woven wool rug in oatmeal, a step darker
+    than the floor; ambientCG Carpet014 re-tinted.
