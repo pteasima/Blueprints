@@ -420,6 +420,7 @@ def test_living_room_pocket_doors_slide_into_the_wall():
 # opens into, given as the plan direction from the wall.
 HINGES = {
     "D-OP06": ("east", "north"),  # bedroom → en-suite 1.09
+    "D-OP09": ("south", "west"),  # bedroom → hallway 1.05, into the bedroom
     "D-OP10": ("east", "south"),  # 1.05 → 1.12
     "D-OP14": ("east", "south"),  # 1.05 → 1.13
     "D-OP18": ("east", "south"),  # 1.05 → 1.14
@@ -465,10 +466,123 @@ def test_hinge_sides_and_swings():
 
 
 def test_hallway_doors_hang_flush_like_the_wc():
+    """OP11, OP17 and OP19 share the hallway face line (W-017, y 9.475).
+
+    The leaf's south face, not its midplane, sits on that line, so the
+    centre is 20 mm north of it (half of DOOR_LEAF_MM).
+    """
+    from ground_floor import DOOR_LEAF_MM
+
     records = _door_records()
     wc = records["D-OP19"]["center"][2]
     for door_id in ("D-OP11", "D-OP17"):
         assert records[door_id]["center"][2] == pytest.approx(wc, abs=1e-6), door_id
+    # glTF −Z is plan Y; the hallway face of each leaf is at y 9.475.
+    half = DOOR_LEAF_MM / 1000.0 / 2.0
+    face_y = -wc - half
+    assert face_y == pytest.approx(9.475, abs=1e-6)
+
+
+def test_flush_leaf_offset_math():
+    from ground_floor import DOOR_LEAF_MM, flush_leaf_offset_m
+
+    leaf = DOOR_LEAF_MM / 1000.0
+    # 250 mm wall, flush to +Y: midplane 105 mm toward +Y.
+    assert flush_leaf_offset_m(1, 0.25, leaf) == pytest.approx(0.105)
+    assert flush_leaf_offset_m(-1, 0.25, leaf) == pytest.approx(-0.105)
+    # 125 mm wall, flush to −Y: midplane 42.5 mm toward −Y.
+    assert flush_leaf_offset_m(-1, 0.125, leaf) == pytest.approx(-0.0425)
+    # Axis is the face (W-017): leaf sits on the room side, midplane 20 mm off the axis.
+    assert flush_leaf_offset_m(-1, 0.05, leaf, axis_is_face=True) == pytest.approx(0.020)
+    assert flush_leaf_offset_m(1, 0.05, leaf, axis_is_face=True) == pytest.approx(-0.020)
+
+
+# Interior hinged doors that follow the reverse-door rule, and the local-Y
+# face they sit flush with. docs/OpeningsSpec.md, Reverse interior doors.
+REVERSE_FLUSH = {
+    "D-OP06": -1,
+    "D-OP09": -1,
+    "D-OP10": 1,
+    "D-OP14": 1,
+    "D-OP18": 1,
+    "D-OP22": 1,
+    "D-OP19": -1,
+    "D-OP11": -1,  # flush plane is the W-017 line, via LeafOffset
+    "D-OP17": -1,
+    "D-OP23": -1,
+    "D-OP34": 1,
+    "D-OP37": 1,
+    "D-OP38": 1,
+    "D-OP40": -1,
+}
+# Exterior / non-reverse hinged leaves stay in the wall centre plane.
+CENTRED_HINGED = ("D-OP20", "D-OP32", "D-OP39a", "D-OP41")
+
+
+def _plan_xy(v):
+    return v[0], -v[2]
+
+
+def test_reverse_interior_doors_sit_flush():
+    """Each reverse leaf's circulation face is coplanar with the flush plane."""
+    from ground_floor import (
+        DOOR_LEAF_MM,
+        _axis,
+        _door_field,
+        _thickness_m,
+        flush_leaf_offset_m,
+        load_document,
+    )
+
+    doc = load_document()
+    doors = {item["id"]: item for item in doc["doors"]}
+    openings = {item["id"]: item for item in doc["openings"]}
+    walls = {item["id"]: item for item in doc["walls"]}
+    records = _door_records()
+    half = DOOR_LEAF_MM / 1000.0 / 2.0
+
+    for door_id, flush in REVERSE_FLUSH.items():
+        door = doors[door_id]
+        opening = openings[door["FillsOpening"]]
+        wall = walls[opening["VoidsElement"]]
+        (sx, sy), (ex, ey), length = _axis(wall)
+        ux, uy = (ex - sx) / length, (ey - sy) / length
+        lx, ly = -uy, ux  # local +Y
+        mid = opening["AlongAxis"] + opening["Width"] / 2.0
+        ax, ay = sx + ux * mid, sy + uy * mid
+        cx, cy = _plan_xy(records[door_id]["center"])
+        off = (cx - ax) * lx + (cy - ay) * ly
+        thick, missing = _thickness_m(wall)
+        expected = _door_field(door, "LeafOffset")
+        if expected is None:
+            expected = flush_leaf_offset_m(
+                flush, thick, DOOR_LEAF_MM / 1000.0, axis_is_face=missing
+            )
+        else:
+            expected = float(expected)
+        assert off == pytest.approx(expected, abs=1e-6), door_id
+        # The flush-side face of the 40 mm leaf is on the intended plane.
+        face = off + flush * half
+        if expected is not None and _door_field(door, "LeafOffset") is not None:
+            # OP11/OP17: the plane is y 9.475, W-017's axis, along local −Y.
+            assert ay + face * ly + 0 * lx == pytest.approx(9.475, abs=1e-6), door_id
+        elif missing:
+            assert face == pytest.approx(0.0, abs=1e-6), door_id
+        else:
+            assert face == pytest.approx(flush * thick / 2.0, abs=1e-6), door_id
+
+    for door_id in CENTRED_HINGED:
+        door = doors[door_id]
+        opening = openings[door["FillsOpening"]]
+        wall = walls[opening["VoidsElement"]]
+        (sx, sy), (ex, ey), length = _axis(wall)
+        ux, uy = (ex - sx) / length, (ey - sy) / length
+        lx, ly = -uy, ux
+        mid = opening["AlongAxis"] + opening["Width"] / 2.0
+        ax, ay = sx + ux * mid, sy + uy * mid
+        cx, cy = _plan_xy(records[door_id]["center"])
+        off = (cx - ax) * lx + (cy - ay) * ly
+        assert off == pytest.approx(0.0, abs=1e-6), door_id
 
 
 def test_head_heights_match_the_window_head():
