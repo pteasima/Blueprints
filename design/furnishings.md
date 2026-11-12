@@ -2,7 +2,7 @@
 
 Two documents, and they are not the same generation.
 
-The kitchen on `main` is `inputs/ground_floor/furnishings.yaml`. The living-room sofa, table, television and north run were added on PR #83 (`cursor/living-room-sp102-8b74`, not merged). That branch rewrites the same file. This page records both. Placing a new piece from the wall-to-wall middle will miss the false ridge; that rule is in [obyvak.md](obyvak.md).
+The kitchen and the living room are both in `inputs/ground_floor/furnishings.yaml`. The living-room sofa, table, television and north run came from PR #83 (`cursor/living-room-sp102-8b74`); the history below keeps that branch's sources. Placing a new piece from the wall-to-wall middle will miss the false ridge; that rule is in [obyvak.md](obyvak.md).
 
 The wave study uses a third layout. See [acoustics.md](acoustics.md).
 
@@ -24,7 +24,7 @@ Solids are the boxes yaml-ifc writes, inset 1 mm so flush faces do not coincide.
 
 ## Kitchen, on main
 
-Counter 930 mm. Tall cabinets 2450 mm, the height Petr wrote. Product cards other than the fridge, and the card “STŮL LIBRA”, are not cabinets. The Ninja KT200EU card is a kettle and is not modelled. Source: `furnishings.yaml` header.
+Counter 930 mm. Tall cabinets 2450 mm, the height Petr wrote. Product cards other than the fridge, and the card “STŮL LIBRA”, are not cabinets. Since 2026-11-12 the carded appliances are modelled: the Miele oven and microwave in SF-T3, the EcoMaster disposers, the Hansgrohe taps, and the Ninja KT200EU kettle and one Eureka Mignon Libra grinder on the dining counter. Every front, drawer, door and shelf the notes describe is modelled too; see “Fronts and interiors” in [kitchen-cabinets.md](kitchen-cabinets.md). Source: `furnishings.yaml` header and KitchenPlan.jpg.
 
 ### Tall run, north wall
 
@@ -35,7 +35,8 @@ Backs on the north inner face y = 15.60. Fronts face south. Carcass depth 600 mm
 | SF-T1 | 750 | “dvere 60L, sirka skrine az ke zdi (~75)”. From the west inner face to the fridge. | L, door 600 |
 | fridge | 908 × 716 × 1876 | “naproti pruchodu (ne v rohu)”. Whirlpool WQ9I MO2L EF. Not a cabinet. | — |
 | SF-T2 | 600 | “nahore dvere 60R” | R, door 600 |
-| SF-T3 | 600 | The card gap. Miele DGC 7465 and M 2230. Box only. | not stated |
+| SF-T3 | 600 | The card gap. Miele DGC 7465 HCX Pro steam oven at the counter line, M 2230 SC microwave over it, in niches. | not stated |
+| SF-TF | 908 | Over the fridge, 1926–2450: the fridge note's „nahore prislusenstvi od robota, ryzovar“. New 2026-11-12. | two doors |
 | SF-T4 | 500 | “zbyva sirka cca 50” | not stated |
 
 The fridge’s south face is y = 14.884, 66 mm south of OP25’s north jamb, so it stands in the line of that doorway and T1 keeps it out of the north-west corner. It projects 116 mm past the 600 mm cabinet faces. T4’s east face (x = 22.158) nicks pier W-052 (x 22.15–22.45, projecting to y = 15.35) by 8 mm. The pier is not cut out of the box.
@@ -64,13 +65,13 @@ Wall cabinets: depth 350, height 900, bottom 1550 (620 above the 930 counter), t
 
 Bosch SBD6ECX12E, 598 × 550 × 865, centred in the north 600 of A, back on the wall, 1 mm clear of each side of the niche.
 
-Teka BE LINEA RS15 71.40, undermount, overall 750 × 440, bowl 710 × 400 × 200, centred in the 800, rim glued under the 20 mm stone at 910 (model elevation 0.71), worktop cut-out 706 × 396 R13 (Teka). The disposer and the tap are not modelled.
+Teka BE LINEA RS15 71.40, undermount, overall 750 × 440, bowl 710 × 400 × 200, centred in the 800, rim glued under the 20 mm stone at 910 (model elevation 0.71), worktop cut-out 706 × 396 R13 (Teka). The EcoMaster EVO3 disposer and the Hansgrohe M71 tap are modelled ([kitchen-cabinets.md](kitchen-cabinets.md)).
 
 Source for every row in this section: the header and the element `Description` fields of `furnishings.yaml`.
 
-## Living room, PR #83 only
+## Living room
 
-Not on `main`. Source, unless another line says so: the living-room header added to `furnishings.yaml` on `cursor/living-room-sp102-8b74` (commits `0801dd5` through `bf214ac`) and the PR #83 body. Detail part sizes that the plan does not give are in `models/living_geometry.py` on that branch, and are marked `guess:` there as “Assumed part sizes”.
+Source, unless another line says so: the living-room header added to `furnishings.yaml` on `cursor/living-room-sp102-8b74` (commits `0801dd5` through `bf214ac`) and the PR #83 body. Detail part sizes that the plan does not give are in `models/living_geometry.py` on that branch, and are marked `guess:` there as “Assumed part sizes”.
 
 The kitchen boxes stay as they are.
 
@@ -114,9 +115,37 @@ Gatta, Kaplan 1934. 1100 × 2400. Catalogue height 760; the plan’s figure is a
 
 `guess:` top 30, apron 60 high by 20 thick set in 40, legs 50 square set in 80. Stated as assumed in `living_geometry.py`, not measured off the plan.
 
-The plan’s “Ancona x6” is not a modelled product. Six oak chairs, 500 deep (east-west) by 450 wide, seat top 450, back top 800. Three on each long side, centres 400 / 1200 / 2000 along the 2400. Backs face away from the table.
+The plan's chair card is „ŽIDLE ANCORA CELODŘEVĚNÁ“ (kaplan1934.cz). Since 2026-11-12 the six chairs (`FN-CHW1–3`, `FN-CHE1–3`) are Kaplan 1934 Ancora boxes: 540 deep (east-west) by 480 wide by 860 high, seat top 460 (`Pset_Chair.SeatHeight`). Sources: [Tauer catalogue](https://www.tauergroup.cz/files/files/94sfwgz257.pdf) (V 86, H 54, Š 48) and [amazingthings.cz](https://amazingthings.cz/zidle-ancora-celodrevena/) (seat 46). There are three on each long side, centres 400 / 1200 / 2000 along the 2400 (unchanged), front edge on the table edge. Backs face away from the table. Lacquered oak („Urcite lakovanej stul i zidle“).
 
-`guess:` chair legs 40 square, seat board 36, back board 20. Same “assumed” note.
+**Changed 2026-11-12:**
+- The chairs were 500 × 450 × 800 with the seat at 450.
+- West Origins moved x 22.587 → 22.547 and y 11.525 / 12.325 / 13.125 → 11.51 / 12.31 / 13.11. East Origins moved y the same way; x stays 24.187.
+- The centres did not move.
+
+The child's high chair `FN-CHN` follows „v cele u kavovaru detska zidlicka, v cele u okna nic“ (a child's chair at the head by the coffee machine, nothing at the window end). It stands at the north end, back to the north, Origin [23.407, 13.75]. No model is named, so it is a generic 460 × 490 × 790 with the seat at 600: `guess:`.
+
+`guess:` chair legs 40 square, seat board 36, back board 20. Same “assumed” note. The Ancora's real shape (curved back, no apron) is not modelled; only its box and seat height.
+
+### Table note on KitchenPlan.jpg (black card “STŮL LIBRA”)
+
+**The card says “STŮL LIBRA” (kaplan1934.cz), and its note says the table should be 120 × 240, extending to 340. The model has the Gatta, 1100 × 2400, not extending. The table was not changed (`open:`).** The Tauer catalogue shows the Libra extending with two 50 cm leaves, which matches 240 → 340.
+
+The note in full:
+
+> Ten divnostul ve studii je blbost. Spravne je: 120x240, s prodlouzenim na 340. / 6 zidli (3 a 3), v cele u kavovaru detska zidlicka, v cele u okna nic. / Stul zarovnan s ostrovem a gaucem. Velkej prostor u kavovaru je dobre. Pristupnost stolu u okna kde se chodi kolem (napr. na odlozeni veci co se nemaj zapomenout nekam vzit) je taky dobre. / Az nebude detska zidlicka, nahradi ji normalni zidle, tedy celkem vzdy 7 zidli (5 domacich + nejcastejsi navsteva jsou 2 lidi). / Pri vetsi navsteve bud brat zidle zvenku, nebo naky levny stohovatelny/skladaci zidle. Skladaci by sly davat za gauc, jinak asi do skrine v chodbe. / Porad mi prijde skoda takovej velkej stul natirat na bilo, chtel bych videt v modelu variantu s drevem v barve drevenyho nabytku. At je klidne co nejvic nenapadnej, ale at pusobi prijemne zblizka kdyz se u nej sedi, coz podle me bilej lak nesplnuje. / Urcite lakovanej stul i zidle. Olej by byl fajn, ale vzhledem k cene se Zuzka po prvni skvrne pude zabit. / Tydle predrazeny zidle sem tam dal, protoze sem v ni sedel, a je super. A stul protoze patri k tydle zidli. Muzem hledat levnejsi variantu a jinej design, ale je potreba zacit od zidli. 50% zidli vyloucim hned podle obrazku, dalsich 30% az si sednu. / Pokud mozno, at dou vnirni zidle pouzit venku, a venkovni zase vevnitr (mozna nak podlepit nohy proti poskrabani?). Mame velkej rozdil v poctu lidi pri beznym provozu a pri navsteve, tak at se nemusi furt zidle vyndavat a uklizet, ale taky at nejsou stoly trvale prervany zbytecnejma zidlema.
+
+Translation:
+
+> That odd table in the study is nonsense. Correct is: 120 × 240, extending to 340. / 6 chairs (3 and 3), a child's chair at the head by the coffee machine, nothing at the window head. / Table aligned with the island and the sofa. The big space by the coffee machine is good. Access to the table at the window, where people walk past (e.g. to put down things that must not be forgotten), is good too. / When there is no child's chair, a normal chair replaces it, so always 7 chairs in total (5 at home + the most frequent visit is 2 people). / For a bigger visit, either bring chairs in from outside, or some cheap stacking/folding chairs. Folding ones could go behind the sofa, otherwise probably in the hall wardrobe. / I still find it a pity to paint such a big table white; I'd like to see a variant in the model with wood in the colour of the wooden furniture. It can be as unobtrusive as possible, but it should feel pleasant up close when you sit at it, which white lacquer does not, in my view. / Definitely a lacquered table and chairs. Oil would be nice, but given the price Zuzka will kill herself after the first stain. / I put these overpriced chairs here because I sat in one and it's great. And the table because it belongs with this chair. We can look for a cheaper variant and another design, but we need to start from the chairs. I'll rule out 50% of chairs from the picture straight away, another 30% once I sit on them. / If possible, indoor chairs should be usable outside and outdoor ones inside (maybe pad the legs against scratching?). We have a big difference in the number of people in normal use and with visitors, so chairs shouldn't have to be taken out and put away all the time, but the tables shouldn't be permanently cluttered with surplus chairs either.
+
+What was modelled from it, and what is still open:
+- Modelled: the 3 + 3 chairs and the child's chair at the coffee-machine end, with nothing at the window end. Both table and chairs are lacquered.
+- `open:` the table type and size. Libra 1200 × 2400 extending to 3400 against the modelled Gatta 1100 × 2400.
+- `open:` „Stul zarovnan s ostrovem a gaucem“, the table aligned with the island and the sofa. The Gatta is centred between them (1333 each side). If it meant end-aligned, that is a move.
+- `open:` the wood-coloured table variant Petr wants to see. The Gatta is already natural oak in the model, and white was never modelled. Nothing changed.
+- `open:` folding or stacking chairs for visits, and the 7th chair once the child's chair goes.
+
+The right edge of KitchenPlan.jpg has a note cut off by the image edge: „podle studie je behoun/koberec umistenej tak ze stolky ke gauci s[tojí] napul na koberci napul na podlaze. Kejvaly by se.“ It says: per the study, the runner/rug is placed so that the sofa side tables stand half on the rug and half on the floor; they would wobble. The text past the image edge could not be read. `open:` the side tables are not in the model, and the rug was not moved.
 
 Rug 2800 × 3780 × 10, x 26.65–29.45, y 11.37–15.15. Furniture is not lifted, so the rug and the seats overlap by the rug thickness.
 
