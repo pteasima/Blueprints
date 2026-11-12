@@ -9,7 +9,11 @@ The structure agreed with Petr (2026-11-11, docs/design/kitchen-cabinets.md):
   yaml-ifc box had, so Home's references survive. ``IfcRelAssignsToGroup``
   lists its own parts plus the shared ones it touches; a divider is in two
   groups. The bay keeps its property sets (``Pset_Drawers`` …);
-- parts are never duplicated, so a quantity take-off counts each board once.
+- parts are never duplicated, so a quantity take-off counts each board once;
+- two root groups hang off to the side of the spatial tree: ``Furniture``
+  (``GRP-FURNITURE``) lists every bay group as a child, and ``Electrical``
+  (``GRP-ELECTRICAL``) is empty until circuits exist, then those systems
+  are assigned under it (Petr, 2026-11-12).
 
 yaml-ifc (vendored, not edited) has no assemblies or plain groups, so this
 runs on the model it builds. ``apply`` is idempotent per model build.
@@ -41,6 +45,8 @@ PART_CLASS = {
     "Hob": ("IfcElectricAppliance", "ELECTRICCOOKER"),
 }
 NOT_AGGREGATED = frozenset({"Hob"})
+FURNITURE_GROUP_ID = "GRP-FURNITURE"
+ELECTRICAL_GROUP_ID = "GRP-ELECTRICAL"
 ARC_SEGMENTS = 6  # per rounded cut-out corner
 DEFAULT_CLASS = ("IfcSystemFurnitureElement", "PANEL")
 
@@ -305,10 +311,12 @@ def apply(model, doc: dict, runs: list | None = None) -> dict:
     """
     runs = kc.runs(doc) if runs is None else runs
     if not runs:
+        _ensure_root_groups(model, [])
         return {}
     w = _Writer(model)
     by_id = _products_by_yaml_id(model)
     written = {}
+    bay_groups = []
     for run in runs:
         run_product = by_id[run.id]
         children = []
@@ -375,6 +383,7 @@ def apply(model, doc: dict, runs: list | None = None) -> dict:
         parts_by_id = products
         for bay in run.bays:
             group = _bay_to_group(model, by_id[bay.id], w)
+            bay_groups.append(group)
             members = [parts_by_id[m] for m in bay.members]
             members += [by_id[e] for e in bay.external if e in by_id]
             if not members:
@@ -385,4 +394,90 @@ def apply(model, doc: dict, runs: list | None = None) -> dict:
                 RelatedObjects=members,
                 RelatingGroup=group,
             )
+    _ensure_root_groups(model, bay_groups)
     return written
+
+
+def _id_pset(model, product, yaml_id: str) -> None:
+    values = [
+        model.create_entity(
+            "IfcPropertySingleValue",
+            Name="id",
+            NominalValue=model.create_entity("IfcLabel", yaml_id),
+        )
+    ]
+    pset = model.create_entity(
+        "IfcPropertySet",
+        GlobalId=global_id(f"pset:{PSET_NAME}:{yaml_id}"),
+        Name=PSET_NAME,
+        HasProperties=values,
+    )
+    model.create_entity(
+        "IfcRelDefinesByProperties",
+        GlobalId=global_id(f"rel:defines:{PSET_NAME}:{yaml_id}"),
+        RelatedObjects=[product],
+        RelatingPropertyDefinition=pset,
+    )
+
+
+def _plain_group(model, yaml_id: str, name: str, object_type: str, description: str = ""):
+    group = model.create_entity(
+        "IfcGroup",
+        GlobalId=global_id(yaml_id),
+        Name=name,
+        Description=description or None,
+        ObjectType=object_type,
+    )
+    _id_pset(model, group, yaml_id)
+    return group
+
+
+def _assign_to_group(model, group, members, key: str, objects_type: str | None = None) -> None:
+    if not members:
+        return
+    values = dict(
+        GlobalId=global_id(f"rel:group:{key}"),
+        RelatedObjects=list(members),
+        RelatingGroup=group,
+    )
+    if objects_type:
+        values["RelatedObjectsType"] = objects_type
+    model.create_entity("IfcRelAssignsToGroup", **values)
+
+
+def _ensure_root_groups(model, bay_groups) -> None:
+    """Furniture holds every kitchen bay; Electrical holds systems, or stays empty.
+
+    Petr, 2026-11-12: "lets have a furniture group with cabinets being
+    children, electrical group (empty for now)."
+    """
+    # IfcSystem includes IfcDistributionCircuit; not plain IfcGroup bays.
+    systems = list(model.by_type("IfcSystem"))
+    if not bay_groups and not systems:
+        return
+    by_id = _products_by_yaml_id(model)
+    furniture = by_id.get(FURNITURE_GROUP_ID)
+    if furniture is None:
+        furniture = _plain_group(
+            model,
+            FURNITURE_GROUP_ID,
+            "Furniture",
+            "Furniture",
+            "Kitchen cabinet bays",
+        )
+    electrical = by_id.get(ELECTRICAL_GROUP_ID)
+    if electrical is None:
+        electrical = _plain_group(
+            model,
+            ELECTRICAL_GROUP_ID,
+            "Electrical",
+            "Electrical",
+            "Electrical systems and circuits",
+        )
+    _assign_to_group(model, furniture, bay_groups, FURNITURE_GROUP_ID, "GROUP")
+    extra = [
+        item
+        for item in systems
+        if item.GlobalId not in {furniture.GlobalId, electrical.GlobalId}
+    ]
+    _assign_to_group(model, electrical, extra, ELECTRICAL_GROUP_ID, "GROUP")

@@ -15,12 +15,16 @@ import {
   childIds,
   containmentOf,
   dimensionLines,
+  flattenGroupTree,
   flattenTree,
+  groupAncestorIds,
+  isGroup,
   noteLines,
   pathTo,
   rowIndent,
   rowTapEffect,
   subtreeIds,
+  topLevelGroupIds,
   visibleRange,
 } from "./ifcTree.js";
 
@@ -253,14 +257,54 @@ function actionsAfter(reg, hit) {
 
 
 // Kitchen monoblock: a bay is an IfcGroup; a shared divider is aggregated
-// into the run and assigned to both neighbouring bays.
+// into the run and assigned to both neighbouring bays. Groups are not in
+// the spatial tree; Furniture holds the bays, Electrical is empty.
 {
   const kitchen = {
     roots: ["run"],
+    groups: ["furn", "elec", "bayA", "bayB"],
     elements: {
       run: { globalId: "run", id: "KR-ISL", type: "IfcFurniture", order: 0 },
-      bayA: { globalId: "bayA", id: "SF-A", type: "IfcGroup", parentId: "run", order: -2 },
-      bayB: { globalId: "bayB", id: "SF-B", type: "IfcGroup", parentId: "run", order: -1 },
+      furn: {
+        globalId: "furn",
+        id: "GRP-FURNITURE",
+        type: "IfcGroup",
+        name: "Furniture",
+        childGroupIds: ["bayA", "bayB"],
+        memberIds: [],
+        parentGroupIds: [],
+        order: 0,
+      },
+      elec: {
+        globalId: "elec",
+        id: "GRP-ELECTRICAL",
+        type: "IfcGroup",
+        name: "Electrical",
+        childGroupIds: [],
+        memberIds: [],
+        parentGroupIds: [],
+        order: 1,
+      },
+      bayA: {
+        globalId: "bayA",
+        id: "SF-A",
+        type: "IfcGroup",
+        groups: ["furn"],
+        parentGroupIds: ["furn"],
+        childGroupIds: [],
+        memberIds: ["endA", "div", "back"],
+        order: 2,
+      },
+      bayB: {
+        globalId: "bayB",
+        id: "SF-B",
+        type: "IfcGroup",
+        groups: ["furn"],
+        parentGroupIds: ["furn"],
+        childGroupIds: [],
+        memberIds: ["div", "endB", "back"],
+        order: 3,
+      },
       endA: { globalId: "endA", id: "END-N", parentId: "run", groups: ["bayA"], order: 1 },
       div: { globalId: "div", id: "DIV", parentId: "run", groups: ["bayA", "bayB"], order: 2 },
       endB: { globalId: "endB", id: "END-S", parentId: "run", groups: ["bayB"], order: 3 },
@@ -268,14 +312,86 @@ function actionsAfter(reg, hit) {
       top: { globalId: "top", id: "WORKTOP", parentId: "run", order: 5 },
     },
   };
+  assert.equal(isGroup(kitchen.elements.bayB), true);
+  assert.equal(isGroup(kitchen.elements.run), false);
+  assert.deepEqual(childIds(kitchen, "run"), ["endA", "div", "endB", "back", "top"]);
+  assert.ok(!childIds(kitchen, "run").includes("bayA"), "groups stay out of the spatial tree");
+  assert.deepEqual(topLevelGroupIds(kitchen), ["furn", "elec"]);
+  assert.deepEqual(flattenGroupTree(kitchen, new Set(["furn"])).map((row) => row.id), [
+    "furn",
+    "bayA",
+    "bayB",
+    "elec",
+  ]);
+  assert.deepEqual(groupAncestorIds(kitchen, "bayB"), ["furn"]);
   assert.deepEqual(new Set(subtreeIds(kitchen, "bayB")), new Set(["bayB", "div", "endB", "back"]));
+  assert.ok(subtreeIds(kitchen, "furn").includes("endA"));
+  assert.ok(subtreeIds(kitchen, "furn").includes("bayB"));
   const vis = createVisibility(kitchen);
   vis.hideOthers("bayB");
   for (const id of ["div", "endB", "back"]) assert.equal(vis.isHidden(id), false, id);
-  for (const id of ["endA", "top", "bayA"]) assert.equal(vis.isHidden(id), true, id);
+  for (const id of ["endA", "top"]) assert.equal(vis.isHidden(id), true, id);
+  // Isolating a bay does not strike through Furniture, and hides bayA
+  // only once all of its unique members are hidden (the shared divider remains).
+  assert.equal(vis.isHidden("furn"), false);
+  assert.equal(vis.isHidden("bayA"), false);
   vis.showAll();
   vis.hideOthers("run");
   assert.equal(vis.anyHidden(), false);
+  vis.hideOthers("furn");
+  assert.equal(vis.isHidden("top"), true);
+  assert.equal(vis.isHidden("endA"), false);
+  vis.showAll();
+  vis.hide("elec");
+  assert.equal(vis.isHidden("elec"), true);
+  vis.showAll();
+}
+
+// A circuit is a group; an empty parent still appears; windows stay a filter.
+{
+  const model = {
+    roots: ["p"],
+    groups: ["windowsWouldBeAFilter", "elec", "cir"],
+    elements: {
+      p: { globalId: "p", id: "PRJ", type: "IfcProject", order: 0 },
+      elec: {
+        globalId: "elec",
+        id: "GRP-ELECTRICAL",
+        type: "IfcGroup",
+        childGroupIds: ["cir"],
+        memberIds: [],
+        parentGroupIds: [],
+        order: 0,
+      },
+      cir: {
+        globalId: "cir",
+        id: "CIR-1",
+        type: "IfcDistributionCircuit",
+        name: "Lights",
+        groups: ["elec"],
+        parentGroupIds: ["elec"],
+        childGroupIds: [],
+        memberIds: ["lamp"],
+        order: 1,
+      },
+      lamp: {
+        globalId: "lamp",
+        id: "C12-S",
+        type: "IfcLightFixture",
+        parentId: "p",
+        groups: ["cir"],
+        order: 2,
+      },
+    },
+  };
+  assert.equal(isGroup(model.elements.cir), true);
+  assert.deepEqual(topLevelGroupIds(model), ["elec"]);
+  assert.deepEqual(new Set(subtreeIds(model, "elec")), new Set(["elec", "cir", "lamp"]));
+  assert.deepEqual(flattenGroupTree(model, new Set(["elec"])).map((row) => row.id), [
+    "elec",
+    "cir",
+  ]);
+  assert.ok(!childIds(model, "p").includes("elec"));
 }
 
 console.log("ifcInspector.test.mjs ok");

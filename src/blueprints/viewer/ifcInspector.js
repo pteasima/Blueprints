@@ -2,16 +2,26 @@
  * IFC popover and the inspector page inside the existing sheet.
  * The sheet's detents and drag handle stay put; this only swaps the scroll
  * page and pushes a back button, the way Settings pushes a subscreen.
+ *
+ * Two tabs (Spatial and Groups) share a segmented picker; switching
+ * animates the panes. Long-press a row for hide / isolate and Info.
+ * Element info lists the groups it belongs to; group info lists parent
+ * groups, child groups and child elements (Petr, 2026-11-12).
  */
 
 import {
   INDENT_PX,
   ROW_HEIGHT,
   ancestorIds,
+  childGroupIds,
   childIds,
   containmentOf,
   dimensionLines,
+  flattenGroupTree,
   flattenTree,
+  groupAncestorIds,
+  isGroup,
+  isGroupId,
   noteLines,
   pathTo,
   rowIndent,
@@ -27,7 +37,7 @@ const REVEAL_ICON = `<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden
 
 /**
  * @param {{
- *   index: { elements: Record<string, object>, roots: string[] },
+ *   index: { elements: Record<string, object>, roots: string[], groups?: string[] },
  *   visibility: {
  *     isHidden: (id: string) => boolean,
  *     anyHidden: () => boolean,
@@ -85,22 +95,39 @@ export function mountIfcInspector(opts) {
   showAll.dataset.noSheetDrag = "true";
   toolbar.append(back, showAll);
 
+  const tabs = document.createElement("div");
+  tabs.className = "seg ifc-tabs";
+  tabs.dataset.noSheetDrag = "true";
+  const spatialTab = document.createElement("button");
+  spatialTab.type = "button";
+  const groupsTab = document.createElement("button");
+  groupsTab.type = "button";
+  tabs.append(spatialTab, groupsTab);
+
   const crumbs = document.createElement("div");
   crumbs.className = "ifc-crumbs";
   crumbs.dataset.noSheetDrag = "true";
 
-  const list = document.createElement("div");
-  list.className = "ifc-list";
-  const spacer = document.createElement("div");
-  spacer.className = "ifc-list-spacer";
-  const windowEl = document.createElement("div");
-  windowEl.className = "ifc-list-window";
-  list.append(spacer, windowEl);
+  const tree = document.createElement("div");
+  tree.className = "ifc-tree";
+  const panes = document.createElement("div");
+  panes.className = "ifc-panes";
+  const track = document.createElement("div");
+  track.className = "ifc-panes-track";
+  const spatialPane = makePane();
+  const groupsPane = makePane();
+  track.append(spatialPane.root, groupsPane.root);
+  panes.append(track);
+  tree.append(panes);
+
+  const info = document.createElement("div");
+  info.className = "ifc-info";
+  info.hidden = true;
 
   const head = document.createElement("div");
   head.className = "ifc-head";
-  head.append(toolbar, crumbs);
-  page.append(head, list);
+  head.append(toolbar, tabs, crumbs);
+  page.append(head, tree, info);
   scroll.append(main, page);
 
   const pop = document.createElement("div");
@@ -116,17 +143,43 @@ export function mountIfcInspector(opts) {
   document.body.append(menu);
 
   /** @type {Set<string>} */
-  const expanded = new Set();
+  const expandedSpatial = new Set();
+  /** @type {Set<string>} */
+  const expandedGroups = new Set();
+  /** @type {"spatial" | "groups"} */
+  let tab = "spatial";
   /** @type {string | null} */
-  let focusId = null;
+  let focusSpatial = null;
+  /** @type {string | null} */
+  let focusGroups = null;
   /** @type {string | null} */
   let highlightId = null;
   let highlightTimer = 0;
+  /** @type {string | null} */
+  let infoId = null;
+  /** @type {string[]} */
+  let infoStack = [];
+  const scrollPos = { spatial: 0, groups: 0 };
+
+  function makePane() {
+    const root = document.createElement("div");
+    root.className = "ifc-pane";
+    const list = document.createElement("div");
+    list.className = "ifc-list";
+    const spacer = document.createElement("div");
+    spacer.className = "ifc-list-spacer";
+    const windowEl = document.createElement("div");
+    windowEl.className = "ifc-list-window";
+    list.append(spacer, windowEl);
+    root.append(list);
+    return { root, list, spacer, windowEl };
+  }
 
   function showMain() {
     page.hidden = true;
     main.hidden = false;
     closeMenu();
+    closeInfo();
   }
 
   function showInspector() {
@@ -144,6 +197,10 @@ export function mountIfcInspector(opts) {
 
   entry.addEventListener("click", () => openInspector());
   back.addEventListener("click", () => {
+    if (infoId) {
+      goBackFromInfo();
+      return;
+    }
     showMain();
     scroll.scrollTop = 0;
   });
@@ -152,6 +209,26 @@ export function mountIfcInspector(opts) {
     opts.onVisibility();
     render();
   });
+  spatialTab.addEventListener("click", () => setTab("spatial"));
+  groupsTab.addEventListener("click", () => setTab("groups"));
+
+  function setTab(next, { animate = true, keepScroll = false } = {}) {
+    if (next !== "spatial" && next !== "groups") return;
+    if (tab === next) return;
+    if (!infoId) scrollPos[tab] = scroll.scrollTop;
+    tab = next;
+    if (!animate) track.classList.add("is-instant");
+    if (!infoId) {
+      render();
+      if (!keepScroll) scroll.scrollTop = scrollPos[next] || 0;
+      renderRows();
+    } else {
+      track.classList.toggle("is-groups", tab === "groups");
+    }
+    if (!animate) {
+      requestAnimationFrame(() => track.classList.remove("is-instant"));
+    }
+  }
 
   function labelOf(id) {
     const element = opts.index.elements[id];
@@ -159,9 +236,22 @@ export function mountIfcInspector(opts) {
     return element.name || element.id || element.type || id;
   }
 
+  function focusId() {
+    return tab === "groups" ? focusGroups : focusSpatial;
+  }
+
+  function setFocus(id) {
+    if (tab === "groups") focusGroups = id;
+    else focusSpatial = id;
+  }
+
   function renderCrumbs() {
     crumbs.replaceChildren();
-    const path = focusId ? pathTo(opts.index, focusId) : [];
+    if (tab !== "spatial" || infoId) {
+      crumbs.hidden = true;
+      return;
+    }
+    const path = focusSpatial ? pathTo(opts.index, focusSpatial) : [];
     if (!path.length) {
       crumbs.hidden = true;
       return;
@@ -179,8 +269,8 @@ export function mountIfcInspector(opts) {
       button.className = "ifc-crumb";
       button.textContent = labelOf(id);
       button.addEventListener("click", () => {
-        focusId = id;
-        for (const ancestor of ancestorIds(opts.index, id)) expanded.add(ancestor);
+        focusSpatial = id;
+        for (const ancestor of ancestorIds(opts.index, id)) expandedSpatial.add(ancestor);
         render();
         scrollRowIntoView(id);
       });
@@ -189,15 +279,30 @@ export function mountIfcInspector(opts) {
   }
 
   function render() {
-    back.textContent = `‹ ${opts.t("ui.menu")}`;
+    const inInfo = Boolean(infoId);
+    if (inInfo) {
+      const previous = infoStack.length ? infoStack[infoStack.length - 1] : null;
+      back.textContent = previous ? `‹ ${labelOf(previous)}` : `‹ ${opts.t("ui.inspector")}`;
+    } else {
+      back.textContent = `‹ ${opts.t("ui.menu")}`;
+    }
     showAll.textContent = opts.t("ui.showAll");
     showAll.hidden = !opts.visibility.anyHidden();
     entryLabel.textContent = opts.t("ui.inspector");
+    spatialTab.textContent = opts.t("ui.spatial");
+    groupsTab.textContent = opts.t("ui.groups");
+    spatialTab.classList.toggle("is-active", tab === "spatial");
+    groupsTab.classList.toggle("is-active", tab === "groups");
+    tabs.hidden = inInfo;
+    tree.hidden = inInfo;
+    info.hidden = !inInfo;
+    track.classList.toggle("is-groups", tab === "groups");
     renderCrumbs();
-    renderRows();
+    if (inInfo) renderInfo();
+    else renderRows();
   }
 
-  function listContentTop() {
+  function listContentTop(list) {
     const scrollRect = scroll.getBoundingClientRect();
     const listRect = list.getBoundingClientRect();
     return listRect.top - scrollRect.top + scroll.scrollTop;
@@ -208,21 +313,47 @@ export function mountIfcInspector(opts) {
     return head.getBoundingClientRect().bottom - scrollRect.top + 6;
   }
 
-  function renderRows() {
-    const rows = flattenTree(opts.index, expanded);
-    spacer.style.height = `${rows.length * ROW_HEIGHT}px`;
+  function activePane() {
+    return tab === "groups" ? groupsPane : spatialPane;
+  }
+
+  function flattenActive() {
+    return tab === "groups"
+      ? flattenGroupTree(opts.index, expandedGroups)
+      : flattenTree(opts.index, expandedSpatial);
+  }
+
+  function rowKids(id) {
+    return tab === "groups" ? childGroupIds(opts.index, id) : childIds(opts.index, id);
+  }
+
+  function renderPane(pane, rows, active) {
+    pane.spacer.style.height = `${rows.length * ROW_HEIGHT}px`;
+    if (!active) {
+      pane.windowEl.replaceChildren();
+      return;
+    }
     const range = visibleRange(
       scroll.scrollTop,
       scroll.clientHeight || 320,
-      listContentTop(),
+      listContentTop(pane.list),
       rows.length,
       ROW_HEIGHT,
     );
-    windowEl.replaceChildren();
-    windowEl.style.transform = `translateY(${range.start * ROW_HEIGHT}px)`;
+    pane.windowEl.replaceChildren();
+    pane.windowEl.style.transform = `translateY(${range.start * ROW_HEIGHT}px)`;
     for (let i = range.start; i < range.end; i++) {
-      windowEl.append(renderRow(rows[i]));
+      pane.windowEl.append(renderRow(rows[i]));
     }
+  }
+
+  function renderRows() {
+    const spatialRows = flattenTree(opts.index, expandedSpatial);
+    const groupRows = flattenGroupTree(opts.index, expandedGroups);
+    const activeRows = tab === "groups" ? groupRows : spatialRows;
+    panes.style.height = `${activeRows.length * ROW_HEIGHT}px`;
+    renderPane(spatialPane, spatialRows, tab === "spatial");
+    renderPane(groupsPane, groupRows, tab === "groups");
   }
 
   /**
@@ -230,27 +361,28 @@ export function mountIfcInspector(opts) {
    */
   function renderRow(row) {
     const element = opts.index.elements[row.id];
-    const kids = childIds(opts.index, row.id);
+    const kids = rowKids(row.id);
     const el = document.createElement("div");
     el.className = "ifc-row";
     el.dataset.id = row.id;
     el.style.paddingLeft = `${rowIndent(row.depth) + 8}px`;
     el.style.height = `${ROW_HEIGHT}px`;
-    if (row.id === highlightId || row.id === focusId) el.classList.add("is-target");
+    if (row.id === highlightId || row.id === focusId()) el.classList.add("is-target");
     if (opts.visibility.isHidden(row.id)) el.classList.add("is-hidden");
 
     if (kids.length) {
       const chevron = document.createElement("button");
       chevron.type = "button";
       chevron.className = "ifc-disclosure";
-      const open = expanded.has(row.id);
+      const open = (tab === "groups" ? expandedGroups : expandedSpatial).has(row.id);
       chevron.textContent = open ? "▾" : "›";
       chevron.setAttribute("aria-expanded", open ? "true" : "false");
       chevron.setAttribute("aria-label", open ? opts.t("ui.collapse") : opts.t("ui.expand"));
       chevron.addEventListener("click", (ev) => {
         ev.stopPropagation();
-        if (expanded.has(row.id)) expanded.delete(row.id);
-        else expanded.add(row.id);
+        const set = tab === "groups" ? expandedGroups : expandedSpatial;
+        if (set.has(row.id)) set.delete(row.id);
+        else set.add(row.id);
         render();
       });
       el.append(chevron);
@@ -286,11 +418,12 @@ export function mountIfcInspector(opts) {
     const now = performance.now();
     if (now - lastSelectAt < 40) return;
     lastSelectAt = now;
-    const effect = rowTapEffect(focusId, id);
-    focusId = id;
+    const effect = rowTapEffect(focusId(), id);
+    setFocus(id);
     opts.onFrame(id, { move: effect === "frame" });
     flash(id);
     renderCrumbs();
+    renderRows();
   }
 
   /**
@@ -372,16 +505,16 @@ export function mountIfcInspector(opts) {
     if (highlightTimer) window.clearTimeout(highlightTimer);
     highlightTimer = window.setTimeout(() => {
       if (highlightId === id) highlightId = null;
-      renderRows();
+      if (!infoId) renderRows();
     }, 1600);
-    renderRows();
+    if (!infoId) renderRows();
   }
 
   function scrollRowIntoView(id) {
-    const rows = flattenTree(opts.index, expanded);
+    const rows = flattenActive();
     const index = rows.findIndex((row) => row.id === id);
     if (index < 0) return;
-    const rowTop = listContentTop() + index * ROW_HEIGHT;
+    const rowTop = listContentTop(activePane().list) + index * ROW_HEIGHT;
     scroll.scrollTop = Math.max(0, rowTop - stickyChrome());
     renderRows();
   }
@@ -394,6 +527,7 @@ export function mountIfcInspector(opts) {
     menu.replaceChildren();
     menu.hidden = false;
     menuReady = false;
+    addMenuButton("ui.info", () => openInfo(id, { fromMenu: true }));
     const hidden = opts.visibility.isHidden(id);
     addMenuButton(hidden ? "ui.unhideThis" : "ui.hideThis", () => {
       if (hidden) opts.visibility.unhide(id);
@@ -448,6 +582,167 @@ export function mountIfcInspector(opts) {
   function closePopover() {
     pop.hidden = true;
     pop.replaceChildren();
+  }
+
+  function closeInfo() {
+    infoId = null;
+    infoStack = [];
+    info.replaceChildren();
+  }
+
+  function goBackFromInfo() {
+    if (infoStack.length) {
+      infoId = infoStack.pop();
+      revealInTree(infoId, { switchTab: true, openInfo: false, animate: true });
+      render();
+      return;
+    }
+    closeInfo();
+    render();
+    requestAnimationFrame(() => {
+      const id = focusId();
+      if (id) scrollRowIntoView(id);
+    });
+  }
+
+  /**
+   * @param {string} id
+   * @param {{ fromMenu?: boolean, push?: boolean }} [detail]
+   */
+  function openInfo(id, detail = {}) {
+    if (!opts.index.elements[id]) return;
+    closeMenu();
+    closePopover();
+    if (detail.push && infoId && infoId !== id) infoStack.push(infoId);
+    else if (detail.fromMenu) infoStack = [];
+    infoId = id;
+    revealInTree(id, { switchTab: true, openInfo: false, animate: true });
+    opts.openSheet();
+    showInspector();
+    render();
+  }
+
+  /**
+   * @param {string} id
+   * @param {{ switchTab?: boolean, openInfo?: boolean, animate?: boolean }} [detail]
+   */
+  function revealInTree(id, detail = {}) {
+    if (!opts.index.elements[id]) return;
+    const asGroup = isGroupId(opts.index, id);
+    const nextTab = asGroup ? "groups" : "spatial";
+    if (detail.switchTab !== false && tab !== nextTab) {
+      setTab(nextTab, { animate: detail.animate !== false, keepScroll: true });
+    }
+    if (asGroup) {
+      for (const ancestor of groupAncestorIds(opts.index, id)) expandedGroups.add(ancestor);
+      focusGroups = id;
+    } else {
+      for (const ancestor of ancestorIds(opts.index, id)) expandedSpatial.add(ancestor);
+      focusSpatial = id;
+    }
+    highlightId = id;
+    if (detail.openInfo) {
+      openInfo(id, { push: true });
+      return;
+    }
+    if (!infoId) {
+      render();
+      requestAnimationFrame(() => scrollRowIntoView(id));
+    }
+  }
+
+  function renderInfo() {
+    const element = opts.index.elements[infoId];
+    info.replaceChildren();
+    if (!element) return;
+    const title = document.createElement("div");
+    title.className = "ifc-info-title";
+    const kicker = document.createElement("div");
+    kicker.className = "ifc-kicker";
+    kicker.textContent = element.type || "";
+    const name = document.createElement("div");
+    name.className = "ifc-name";
+    name.textContent = element.name || element.id || infoId;
+    title.append(kicker, name);
+    info.append(title);
+
+    const where = containmentOf(opts.index, element.globalId);
+    if (where.storey) addInfoLine(opts.t("ui.storey"), where.storey.name || where.storey.id);
+    if (where.space) addInfoLine(opts.t("ui.space"), where.space.name || where.space.id);
+    const dims = dimensionLines(element);
+    if (dims.length) addInfoBlock(opts.t("ui.dimensions"), dims);
+    const notes = noteLines(element);
+    if (notes.length) addInfoBlock(opts.t("ui.note"), notes);
+    const live = opts.liveLines?.(element) || [];
+    if (live.length) addInfoBlock(opts.t("home.live"), live);
+
+    if (isGroup(element)) {
+      addInfoLinks(opts.t("ui.parentGroups"), element.parentGroupIds || element.groups || []);
+      addInfoLinks(opts.t("ui.childGroups"), element.childGroupIds || childGroupIds(opts.index, element.globalId));
+      addInfoLinks(opts.t("ui.childElements"), element.memberIds || []);
+    } else {
+      addInfoLinks(opts.t("ui.groups"), element.groups || []);
+    }
+  }
+
+  function addInfoLine(kicker, value) {
+    const block = document.createElement("div");
+    block.className = "ifc-line";
+    const k = document.createElement("div");
+    k.className = "ifc-kicker";
+    k.textContent = kicker;
+    const v = document.createElement("div");
+    v.className = "ifc-value";
+    v.textContent = value;
+    block.append(k, v);
+    info.append(block);
+  }
+
+  function addInfoBlock(title, lines) {
+    const block = document.createElement("div");
+    block.className = "ifc-line";
+    const k = document.createElement("div");
+    k.className = "ifc-kicker";
+    k.textContent = title;
+    const v = document.createElement("div");
+    v.className = "ifc-note";
+    v.textContent = lines.join("\n");
+    block.append(k, v);
+    info.append(block);
+  }
+
+  /**
+   * @param {string} title
+   * @param {string[]} ids
+   */
+  function addInfoLinks(title, ids) {
+    const present = (ids || []).filter((id) => opts.index.elements[id]);
+    if (!present.length) return;
+    const block = document.createElement("div");
+    block.className = "ifc-info-section";
+    const k = document.createElement("div");
+    k.className = "ifc-kicker";
+    k.textContent = title;
+    block.append(k);
+    for (const id of present) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "ifc-info-link";
+      const name = document.createElement("span");
+      name.className = "ifc-row-name";
+      name.textContent = labelOf(id);
+      const meta = document.createElement("span");
+      meta.className = "ifc-row-meta";
+      meta.textContent = opts.index.elements[id]?.type || "";
+      button.append(name, meta);
+      button.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        revealInTree(id, { switchTab: true, openInfo: true, animate: true });
+      });
+      block.append(button);
+    }
+    info.append(block);
   }
 
   /**
@@ -601,19 +896,16 @@ export function mountIfcInspector(opts) {
    */
   function revealElement(id) {
     if (!opts.index.elements[id]) return;
-    for (const ancestor of ancestorIds(opts.index, id)) expanded.add(ancestor);
-    focusId = id;
-    highlightId = id;
+    closeInfo();
     opts.openSheet();
     showInspector();
-    render();
-    requestAnimationFrame(() => scrollRowIntoView(id));
+    revealInTree(id, { switchTab: true, openInfo: false, animate: false });
   }
 
   scroll.addEventListener(
     "scroll",
     () => {
-      if (!page.hidden) renderRows();
+      if (!page.hidden && !infoId) renderRows();
     },
     { passive: true },
   );

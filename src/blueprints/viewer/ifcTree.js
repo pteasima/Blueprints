@@ -12,11 +12,46 @@ export const ROW_HEIGHT = 44;
 /**
  * @param {object | null | undefined} index
  */
+/** IFC classes that are groups, not spatial or product elements.
+ *  Do not use a prefix match: IfcSystemFurnitureElement is a product.
+ */
+const GROUP_TYPES = new Set([
+  "IfcGroup",
+  "IfcSystem",
+  "IfcZone",
+  "IfcDistributionSystem",
+  "IfcDistributionCircuit",
+  "IfcBuildingSystem",
+  "IfcStructuralAnalysisModel",
+]);
+
+/**
+ * @param {object | null | undefined} element
+ */
+export function isGroup(element) {
+  return GROUP_TYPES.has(element?.type);
+}
+
+/**
+ * @param {object} index
+ * @param {string | null | undefined} id
+ */
+export function isGroupId(index, id) {
+  if (!id) return false;
+  if (Array.isArray(index.groups)) return index.groups.includes(id);
+  return isGroup(index.elements?.[id]);
+}
+
 export function normalizeIndex(index) {
   const elements =
     index && index.elements && typeof index.elements === "object" ? index.elements : {};
   const roots = Array.isArray(index?.roots) ? index.roots.filter((id) => elements[id]) : [];
-  return { elements, roots };
+  const groups = Array.isArray(index?.groups)
+    ? index.groups.filter((id) => elements[id])
+    : Object.values(elements)
+        .filter(isGroup)
+        .map((element) => element.globalId);
+  return { elements, roots, groups };
 }
 
 /**
@@ -92,6 +127,131 @@ export function flattenTree(index, expanded) {
 }
 
 /**
+ * Child groups of a group (not element members).
+ * @param {object} index
+ * @param {string} id
+ * @returns {string[]}
+ */
+export function childGroupIds(index, id) {
+  const element = index.elements[id];
+  if (element && Array.isArray(element.childGroupIds)) {
+    return sortGroupIds(index, element.childGroupIds.filter((gid) => index.elements[gid]));
+  }
+  const found = [];
+  for (const other of Object.values(index.elements)) {
+    if (!isGroup(other)) continue;
+    const parents = other.parentGroupIds || other.groups || [];
+    if (parents.includes(id)) found.push(other);
+  }
+  found.sort(compareElements);
+  return found.map((item) => item.globalId);
+}
+
+/**
+ * Groups with no parent group.
+ * @param {object} index
+ * @returns {string[]}
+ */
+export function topLevelGroupIds(index) {
+  const ids = Array.isArray(index.groups)
+    ? index.groups.filter((id) => index.elements[id])
+    : Object.values(index.elements)
+        .filter(isGroup)
+        .map((element) => element.globalId);
+  const top = ids.filter((id) => {
+    const element = index.elements[id];
+    const parents = element.parentGroupIds || element.groups || [];
+    return !parents.some((parent) => isGroupId(index, parent));
+  });
+  return sortGroupIds(index, top);
+}
+
+/**
+ * @param {object} index
+ * @param {string | null | undefined} id
+ * @returns {string[]} root group → id
+ */
+export function groupPathTo(index, id) {
+  /** @type {string[]} */
+  const path = [];
+  const seen = new Set();
+  let cur = id || null;
+  while (cur && index.elements[cur] && !seen.has(cur)) {
+    seen.add(cur);
+    path.push(cur);
+    const element = index.elements[cur];
+    const parents = element.parentGroupIds || element.groups || [];
+    cur = parents.find((parent) => isGroupId(index, parent)) || null;
+  }
+  path.reverse();
+  return path;
+}
+
+/**
+ * @param {object} index
+ * @param {string} id
+ * @returns {string[]}
+ */
+export function groupAncestorIds(index, id) {
+  const path = groupPathTo(index, id);
+  return path.slice(0, -1);
+}
+
+/**
+ * @param {object} index
+ * @param {Set<string>} expanded
+ * @returns {{ id: string, depth: number }[]}
+ */
+export function flattenGroupTree(index, expanded) {
+  /** @type {{ id: string, depth: number }[]} */
+  const rows = [];
+  const seen = new Set();
+  const walk = (id, depth) => {
+    if (!id || seen.has(id) || !index.elements[id]) return;
+    seen.add(id);
+    rows.push({ id, depth });
+    if (!expanded.has(id)) return;
+    for (const child of childGroupIds(index, id)) walk(child, depth + 1);
+  };
+  for (const root of topLevelGroupIds(index)) walk(root, 0);
+  return rows;
+}
+
+/**
+ * @param {object} a
+ * @param {object} b
+ */
+function compareElements(a, b) {
+  const rank = (element) => {
+    const yamlId = element?.id || "";
+    if (yamlId === "GRP-FURNITURE") return 0;
+    if (yamlId === "GRP-ELECTRICAL") return 1;
+    return 10;
+  };
+  const byRank = rank(a) - rank(b);
+  if (byRank) return byRank;
+  const order = (a.order ?? 0) - (b.order ?? 0);
+  if (order) return order;
+  return String(a.name || "").localeCompare(String(b.name || ""));
+}
+
+/**
+ * @param {object} index
+ * @param {string[]} ids
+ */
+function sortGroupIds(index, ids) {
+  const unique = [];
+  const seen = new Set();
+  for (const id of ids) {
+    if (!id || seen.has(id) || !index.elements[id]) continue;
+    seen.add(id);
+    unique.push(id);
+  }
+  unique.sort((a, b) => compareElements(index.elements[a], index.elements[b]));
+  return unique;
+}
+
+/**
  * @param {number} depth
  */
 export function rowIndent(depth) {
@@ -126,13 +286,18 @@ const membersCache = new WeakMap();
  * @returns {string[]}
  */
 export function groupMemberIds(index, id) {
+  const element = index.elements[id];
+  if (element && (Array.isArray(element.memberIds) || Array.isArray(element.childGroupIds))) {
+    const ids = [...(element.childGroupIds || []), ...(element.memberIds || [])];
+    return ids.filter((item) => item && index.elements[item]);
+  }
   let map = membersCache.get(index.elements);
   if (!map) {
     map = new Map();
-    for (const element of Object.values(index.elements)) {
-      for (const group of element?.groups || []) {
+    for (const item of Object.values(index.elements)) {
+      for (const group of item?.groups || []) {
         if (!map.has(group)) map.set(group, []);
-        map.get(group).push(element.globalId);
+        map.get(group).push(item.globalId);
       }
     }
     membersCache.set(index.elements, map);
@@ -142,9 +307,10 @@ export function groupMemberIds(index, id) {
 
 /**
  * The element, everything aggregated or contained under it, and the members
- * of any group in that set. Hide / "Hide all others" and framing use this, so
- * isolating a bay keeps both its side dividers even though a divider's
- * aggregate parent is the whole run.
+ * of any group in that set, including nested child groups. Hide /
+ * "Hide all others" and framing use this, so isolating a bay keeps both
+ * its side dividers even though a divider's aggregate parent is the whole
+ * run, and isolating Furniture keeps every cabinet bay.
  * @param {object} index
  * @param {string} id
  */

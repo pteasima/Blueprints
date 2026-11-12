@@ -951,6 +951,63 @@ canvas {
 .ifc-action:active, .ifc-menu-btn:active, .ifc-reveal:active { background: var(--fill-active); }
 .ifc-menu { z-index: 8; padding: 0.45rem; touch-action: manipulation; }
 .ifc-popover { z-index: 8; }
+.ifc-tabs {
+  margin: 0.15rem 0 0.35rem;
+}
+.ifc-panes {
+  position: relative;
+  overflow: hidden;
+}
+.ifc-panes-track {
+  display: flex;
+  width: 200%;
+  will-change: transform;
+  transition: transform 0.32s ease;
+}
+.ifc-panes-track.is-groups {
+  transform: translateX(-50%);
+}
+.ifc-panes-track.is-instant {
+  transition: none;
+}
+.ifc-pane {
+  box-sizing: border-box;
+  flex: 0 0 50%;
+  width: 50%;
+  min-width: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ifc-panes-track { transition: none; }
+}
+.ifc-info {
+  padding: 0.2rem 0 1.25rem;
+}
+.ifc-info-title {
+  margin: 0.15rem 0 0.7rem;
+}
+.ifc-info-section {
+  margin-top: 0.85rem;
+}
+.ifc-info-link {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.05rem;
+  width: 100%;
+  min-height: 2.75rem;
+  margin-top: 0.3rem;
+  padding: 0.4rem 0.7rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--fill);
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.ifc-info-link:active { background: var(--fill-active); }
 `;
 
 let stylesInjected = false;

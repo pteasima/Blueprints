@@ -99,8 +99,26 @@ def test_ifc_groups_and_assembly():
     assert validation_errors(model) == []
     groups = {g.Name: g for g in model.by_type("IfcGroup")}
     assert "Ostrov západ 600" in groups
+    assert "Furniture" in groups and "Electrical" in groups
+    furniture = groups["Furniture"]
+    electrical = groups["Electrical"]
+    rels = [
+        r for r in model.by_type("IfcRelAssignsToGroup")
+        if r.RelatingGroup and r.RelatingGroup.GlobalId == furniture.GlobalId
+    ]
+    assert len(rels) == 1
+    child_names = {g.Name for g in rels[0].RelatedObjects}
+    skip = {furniture.GlobalId, electrical.GlobalId}
+    bay_names = {g.Name for g in groups.values() if g.GlobalId not in skip}
+    assert child_names == bay_names
+    # Electrical stays empty until a circuit or IfcSystem exists in the model.
+    assert not [
+        r for r in model.by_type("IfcRelAssignsToGroup")
+        if r.RelatingGroup and r.RelatingGroup.GlobalId == electrical.GlobalId
+    ]
     island = [r for r in model.by_type("IfcRelAggregates") if r.RelatingObject.Name == "Ostrov"]
-    assert len(island) == 1 and len(island[0].RelatedObjects) == len(_runs()["KR-ISL"].parts)
+    aggregated = [p for p in _runs()["KR-ISL"].parts if p.role not in kitchen_ifc.NOT_AGGREGATED]
+    assert len(island) == 1 and len(island[0].RelatedObjects) == len(aggregated)
 
 
 def test_drawer_motions_in_model():
