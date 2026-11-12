@@ -59,7 +59,7 @@
 </aside>
 <pre id="err"></pre>
 <canvas id="c"></canvas>
-<script src="viewer.iife.js?v=77446527cd"></script>
+<script src="viewer.iife.js?v=c865623fac"></script>
 <script>
 (function () {
   const errEl = document.getElementById("err");
@@ -120,6 +120,9 @@
         doors: loaded[3],
         ifc: loaded[4],
         windows: loaded[5],
+        modelId: id,
+        // Realistic mode fetches this (and its textures) only when chosen.
+        materialsUrl: "../materials/catalogue.yaml?v=62c22a9153",
       });
     })
     .catch(function (e) {
