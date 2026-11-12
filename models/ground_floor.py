@@ -459,9 +459,9 @@ def _leaf(kind: str, along, width, sill, oheight, thickness, filler: dict):
     )
 
 
-# A single swing leaf. Wider panels are garage / double leaves modelled as one
-# slab; pocket and sliding leaves (obývák gable pockets, D5/D6) are not swung.
-# TODO: slide those instead of leaving them shut.
+# A single swing leaf. Wider panels are pocket or sliding leaves modelled as
+# one slab (bedroom OP03, terrace D5/D6). They slide instead of swinging; see
+# _sliding_panels for how the slab splits into panels.
 HINGED_LEAF_MAX_M = 1.4
 _SLIDING_OPS = frozenset(
     {
@@ -586,6 +586,13 @@ def _door_motion(part, filler: dict) -> dict | None:
         "kind": spec["kind"],
         "center": [round(v, 6) for v in center],
     }
+    if spec["kind"] == "sliding":
+        start = cad_mm_to_gltf_m(_point_cad(part.location, x0, y0 + t / 2.0, z0 + h / 2.0))
+        end = cad_mm_to_gltf_m(_point_cad(part.location, x0 + w, y0 + t / 2.0, z0 + h / 2.0))
+        record["start"] = [round(v, 6) for v in start]
+        record["end"] = [round(v, 6) for v in end]
+        record["panels"] = _sliding_panels(filler.get("OperationType"), start, end)
+        return record
     if spec["kind"] != "hinged":
         return record
     hinge = cad_mm_to_gltf_m(_point_cad(part.location, *hinge_local))
@@ -593,6 +600,33 @@ def _door_motion(part, filler: dict) -> dict | None:
     record["axis"] = [0.0, 1.0, 0.0]
     record["sign"] = spec["sign"]
     return record
+
+
+def _sliding_panels(operation, start, end) -> list[dict]:
+    """Panels of a sliding slab for the viewer, glTF metres.
+
+    The model keeps a sliding door as one slab from ``start`` to ``end`` (the
+    jamb ends of the leaf, mid-height, mid-thickness). Each panel is a
+    fraction ``span`` of that slab and ``slide`` is its full opening move.
+    ``SLIDING_TO_LEFT`` / ``SLIDING_TO_RIGHT`` slide the whole slab its own
+    width toward the start or end jamb (start is the left jamb, as for
+    hinges). Anything else, including no ``OperationType``, is bi-parting:
+    two halves, each sliding half the width over its own jamb. That is
+    bedroom OP03's double pocket (docs/electrical/rooms/1.11-geometry.md).
+    """
+    along = [b - a for a, b in zip(start, end)]
+
+    def scaled(factor: float) -> list[float]:
+        return [round(v * factor, 6) + 0.0 for v in along]
+
+    if operation == "SLIDING_TO_LEFT":
+        return [{"span": [0.0, 1.0], "slide": scaled(-1.0)}]
+    if operation == "SLIDING_TO_RIGHT":
+        return [{"span": [0.0, 1.0], "slide": scaled(1.0)}]
+    return [
+        {"span": [0.0, 0.5], "slide": scaled(-0.5)},
+        {"span": [0.5, 1.0], "slide": scaled(0.5)},
+    ]
 
 
 def _solids(shape):

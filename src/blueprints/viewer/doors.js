@@ -18,8 +18,11 @@
  * extension. Tapping a drawer slides it out along that vector and back. The
  * model derives both from the cabinet's parameters (models/kitchen_cabinet.py).
  *
- * Pocket and sliding leaves are not records with kind "hinged".
- * TODO: slide those (obývák gable pockets, garage D5/D6) instead of ignoring them.
+ * Sliding and pocket doors are records with kind "sliding": the leaf's jamb
+ * ends `start` and `end` (glTF metres) and `panels`, each a fraction `span`
+ * of the slab and its full opening move `slide`. The model keeps the leaf as
+ * one slab, so a two-panel (bi-parting) door is drawn as two scaled copies of
+ * it that slide apart (models/ground_floor.py `_sliding_panels`).
  */
 import * as THREE from "three";
 import { LONG_PRESS_MS, classifyHold } from "./gesture.js";
@@ -254,7 +257,8 @@ export function matchDoorHosts(entries, records, tolerance = DOOR_MATCH_M) {
     for (const record of records) {
       if (!record) continue;
       const drawer = record.kind === "drawer" && Array.isArray(record.slide);
-      if (!drawer && (record.kind !== "hinged" || !record.hinge)) continue;
+      const sliding = isSlidingRecord(record);
+      if (!drawer && !sliding && (record.kind !== "hinged" || !record.hinge)) continue;
       const c = record.center;
       if (!Array.isArray(c) || c.length < 3) continue;
       const dx = entry.center.x - Number(c[0]);
@@ -296,6 +300,7 @@ export function bindHinge(host, record) {
   const parent = host.parent;
   if (!parent) return null;
   if (record.kind === "drawer") return bindDrawer(host, record);
+  if (isSlidingRecord(record)) return bindSliding(host, record);
   const pivot = new THREE.Group();
   pivot.name = `hinge:${record.id}`;
   parent.add(pivot);
@@ -362,6 +367,94 @@ export function bindDrawer(host, record) {
 }
 
 /**
+ * @param {object | null | undefined} record
+ * @returns {boolean}
+ */
+export function isSlidingRecord(record) {
+  return Boolean(
+    record &&
+      record.kind === "sliding" &&
+      Array.isArray(record.start) &&
+      Array.isArray(record.end) &&
+      Array.isArray(record.panels) &&
+      record.panels.length > 0,
+  );
+}
+
+const _xAxis = new THREE.Vector3(1, 0, 0);
+
+/**
+ * Sliding or pocket leaf. A group at the parent origin (named like the host,
+ * so session hide finds it) holds one slide group per panel. Inside each, a
+ * scale group sits on the `start` jamb with +X along the leaf and squeezes
+ * its copy of the slab to the panel's share. The slide group then carries
+ * the panel to its place and, when open, along its `slide`.
+ * @param {THREE.Object3D} host
+ * @param {object} record
+ */
+export function bindSliding(host, record) {
+  const parent = host.parent;
+  if (!parent) return null;
+  parent.updateWorldMatrix(true, false);
+  host.updateWorldMatrix(true, true);
+  const toLocal = (v) => parent.worldToLocal(new THREE.Vector3(Number(v[0]), Number(v[1]), Number(v[2])));
+  const start = toLocal(record.start);
+  const end = toLocal(record.end);
+  const along = end.clone().sub(start);
+  if (along.lengthSq() < 1e-12) return null;
+  const dir = along.clone().normalize();
+  const turn = new THREE.Quaternion().setFromUnitVectors(_xAxis, dir);
+  const container = new THREE.Group();
+  container.name = host.name;
+  parent.add(container);
+  // Copy the closed slab for every extra panel before the host moves.
+  const leaves = record.panels.map((_, i) => (i === 0 ? host : host.clone(true)));
+  /** @type {{ pivot: THREE.Object3D, base: THREE.Vector3, slideLocal: THREE.Vector3, span: number[] }[]} */
+  const panels = [];
+  record.panels.forEach((panel, i) => {
+    const span = Array.isArray(panel.span) ? panel.span.map(Number) : [0, 1];
+    const s = Array.isArray(panel.slide) ? panel.slide : [0, 0, 0];
+    const slideLocal = toLocal([
+      Number(record.start[0]) + Number(s[0]),
+      Number(record.start[1]) + Number(s[1]),
+      Number(record.start[2]) + Number(s[2]),
+    ]).sub(start);
+    const pivot = new THREE.Group();
+    pivot.name = `slide:${record.id}:${i}`;
+    container.add(pivot);
+    const scaler = new THREE.Group();
+    scaler.position.copy(start);
+    scaler.quaternion.copy(turn);
+    pivot.add(scaler);
+    pivot.updateWorldMatrix(true, true);
+    const leaf = leaves[i];
+    if (leaf !== host) {
+      parent.add(leaf);
+      leaf.updateWorldMatrix(true, true);
+    }
+    scaler.attach(leaf);
+    scaler.scale.x = Math.max(1e-3, span[1] - span[0]);
+    const base = along.clone().multiplyScalar(span[0]);
+    pivot.position.copy(base);
+    panels.push({ pivot, base, slideLocal, span });
+  });
+  const binding = {
+    id: record.id,
+    kind: "sliding",
+    pivot: container,
+    host: container,
+    panels,
+    sign: 1,
+    goal: 0,
+    anim: null,
+  };
+  container.traverse((obj) => {
+    obj.userData.bpDoor = binding;
+  });
+  return binding;
+}
+
+/**
  * @param {{ goal: number, anim: { from: number, to: number, t0: number } | null }} binding
  * @param {number} now
  */
@@ -407,6 +500,12 @@ export function setPivotSwing(pivot, angle) {
  */
 export function applyDoorSwing(binding, now) {
   const amount = sampleDoor(binding, now);
+  if (binding.panels) {
+    for (const panel of binding.panels) {
+      panel.pivot.position.copy(panel.base).addScaledVector(panel.slideLocal, amount);
+    }
+    return amount;
+  }
   if (binding.slideLocal) {
     binding.pivot.position.copy(binding.slideLocal).multiplyScalar(amount);
     return amount;
