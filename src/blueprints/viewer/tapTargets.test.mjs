@@ -5,6 +5,9 @@
  */
 import assert from "node:assert/strict";
 import * as THREE from "three";
+import { LineSegments2 } from "three/addons/lines/LineSegments2.js";
+import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js";
+import { LineMaterial } from "three/addons/lines/LineMaterial.js";
 import { createTapRegistry, isSceneSolid } from "./interactions.js";
 import { pressTarget } from "./homeLive.js";
 import {
@@ -256,6 +259,33 @@ const SIZE = { w: 400, h: 400 };
   assert.equal(found.kind, "extended");
   assert.equal(found.hit.object, sw);
   assert.deepEqual(found.claim.actions.map((a) => a.id), ["switch"]);
+}
+
+// --- centerOccluded with fat edge lines on the ray ------------------------
+// LineSegments2 reads raycaster.camera; the perspective occlusion ray used to
+// leave it unset and the tap threw (garzonka window, 2026-11-12).
+{
+  const scene = new THREE.Scene();
+  const geom = new LineSegmentsGeometry().setPositions([-1, 0, -2, 1, 0, -2]);
+  const line = new LineSegments2(geom, new LineMaterial({ linewidth: 2 }));
+  line.computeLineDistances();
+  scene.add(line);
+  const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 100);
+  camera.position.set(0, 0, 0);
+  camera.lookAt(0, 0, -5);
+  camera.updateMatrixWorld(true);
+  scene.updateMatrixWorld(true);
+  const said = [];
+  const real = { error: console.error, warn: console.warn };
+  console.error = (...a) => said.push(a.join(" "));
+  console.warn = (...a) => said.push(a.join(" "));
+  try {
+    centerOccluded(new THREE.Vector3(0, 0, -5), camera, scene, () => false);
+  } finally {
+    console.error = real.error;
+    console.warn = real.warn;
+  }
+  assert.deepEqual(said.filter((m) => m.includes("Raycaster.camera")), [], "occlusion ray carries the camera");
 }
 
 console.log("tapTargets.test.mjs ok");

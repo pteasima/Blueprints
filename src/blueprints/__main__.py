@@ -53,6 +53,14 @@ def main(argv: list[str] | None = None) -> int:
 
         repo = Path(__file__).resolve().parents[2]
         write_doors_json(model_name, motions, repo / "docs" / "models" / f"{model_name}.doors.json")
+    window_motions = meta.get("window_motions")
+    if isinstance(window_motions, list):
+        from blueprints.scenes import write_doors_json
+
+        repo = Path(__file__).resolve().parents[2]
+        write_doors_json(
+            model_name, window_motions, repo / "docs" / "models" / f"{model_name}.windows.json"
+        )
     ifc_fn = getattr(mod, "ifc_index", None)
     ifc_index = ifc_fn() if callable(ifc_fn) else None
     if kind == "section":

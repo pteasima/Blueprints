@@ -107,7 +107,7 @@ function writeSceneQuery(sceneId) {
 /**
  * @param {HTMLCanvasElement} canvas
  * @param {ArrayBuffer} glbBuffer
- * @param {{ scenes?: object[], scene?: string, partGroups?: object[], doors?: object[], ifc?: object }} [options]
+ * @param {{ scenes?: object[], scene?: string, partGroups?: object[], doors?: object[], windows?: object[], ifc?: object }} [options]
  */
 export function mountViewer(canvas, glbBuffer, options = {}) {
   /** Custom named scenes (model-specific); shown alongside Iso/Front/Side/Top. */
@@ -116,6 +116,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   const partGroups = Array.isArray(options.partGroups) ? options.partGroups : [];
   /** Hinged leaves: centre, hinge, sign. Empty for models without doors. */
   const doorRecords = Array.isArray(options.doors) ? options.doors : [];
+  /** Window panes: which open and how (`<id>.windows.json`, windows.js). */
+  const windowRecords = Array.isArray(options.windows) ? options.windows : [];
   const ifcIndex = normalizeIndex(options.ifc);
   /** yaml id → meshes. Filled when the GLB arrives. */
   const meshesByKey = new Map();
@@ -246,7 +248,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   const lightOn = new Map();
   const windowOpen = new Map();
   /** Pane slide animation per window (windows.js). */
-  const windowSlides = createWindowSlides();
+  const windowSlides = createWindowSlides(windowRecords);
   /**
    * Offline tap toggles between these. On is a warm 3000 K glow, off a dull
    * grey, the same looks live mode uses (homeLive.js lightOnHex).
@@ -279,6 +281,9 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     onCover: (el) => liveCoverTap(el),
     coverActions: (el) => liveCoverActions(el),
     onWindow: (el) => toggleWindow(el),
+    // Fixed glazing (and the fixed pane of a part-opening window) claims no
+    // tap; only a pane that opens does (windows.js).
+    windowAccepts: (el, hit) => windowPaneOperable(el, hit?.object),
     targetsFor: (type, ctx) => tapTargetsFor(type, ctx),
   });
 
@@ -2722,6 +2727,11 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         for (let n = m; n; n = n.parent) if (!n.visible) return false;
         return true;
       });
+      if (type === "IfcWindow") {
+        // Only panes that open are targets; fixed glazing has none.
+        const opens = new Set(windowSlides.operableMeshes(element.id, meshesForElement(element)));
+        for (let i = meshes.length - 1; i >= 0; i--) if (!opens.has(meshes[i])) meshes.splice(i, 1);
+      }
       if (!meshes.length) continue;
       const box = worldBoxOf(meshes);
       if (box.isEmpty()) continue;
@@ -2816,12 +2826,26 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   }
 
   function windowFeedback(element, open) {
-    const meshes = meshesForElement(element);
+    const all = meshesForElement(element);
+    const meshes = windowSlides.operableMeshes(element.id, all);
     const mesh = meshes[0];
     if (!mesh?.parent) return;
-    mesh.parent.updateWorldMatrix(true, false);
-    const dir = new THREE.Vector3(open ? 1 : -1, 0, 0).transformDirection(mesh.parent.matrixWorld);
+    const slide = windowSlides.slideOf(element.id);
+    let dir;
+    if (slide) {
+      dir = new THREE.Vector3(slide[0], slide[1], slide[2]).normalize();
+      if (!open) dir.negate();
+    } else {
+      mesh.parent.updateWorldMatrix(true, false);
+      dir = new THREE.Vector3(open ? 1 : -1, 0, 0).transformDirection(mesh.parent.matrixWorld);
+    }
     feedback.showFeedback({ worldPos: worldBoxOf(meshes).getCenter(new THREE.Vector3()), kind: "slide", worldDir: dir });
+  }
+
+  /** True when `obj` is (inside) a pane of `element` that opens. */
+  function windowPaneOperable(element, obj) {
+    if (!element) return false;
+    return windowSlides.acceptsHit(element.id, meshesForElement(element), obj);
   }
 
   function sendPress(element, target) {
@@ -2900,9 +2924,9 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
 
   function toggleWindow(element) {
     const open = !windowOpen.get(element.globalId);
+    if (!windowSlides.slide(element.id, meshesForElement(element), open, performance.now())) return;
     windowFeedback(element, open);
     windowOpen.set(element.globalId, open);
-    windowSlides.slide(element.globalId, meshesForElement(element), open, performance.now());
     viewDirty = true;
   }
 

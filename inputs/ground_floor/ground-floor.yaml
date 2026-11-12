@@ -1043,61 +1043,123 @@ doors:
     OverallHeight: 2.25
     Tag: D5
 windows:
+  # WIN-OP01 (O3, bedroom 1.11 west, wide): fixed glazing. Petr 2026-11-12:
+  # "the two windows that are facing west in the bedroom, they are just fixed
+  # glass. Both the narrow one and the wide one." The 2022 DWG elevation
+  # (POHLED JIHOZÁPADNÍ) draws O3 as a sliding sash plus a fixed pane; Petr's
+  # word overrides it. docs/design/ground-floor.md, Windows.
   - id: WIN-OP01
     FillsOpening: OP01
     OverallWidth: 2.4
     OverallHeight: 2.5
     Tag: O3
+    PartitioningType: SINGLE_PANEL
+    PropertySets:
+      - Name: Pset_BlueprintsWindow
+        Properties:
+          PanelOperations: FIXEDCASEMENT
+  # WIN-OP02 (O4, bedroom 1.11 west, narrow): fixed glazing, Petr 2026-11-12
+  # (see WIN-OP01). The DWG elevation draws O4 tilt-and-turn; Petr overrides it.
   - id: WIN-OP02
     FillsOpening: OP02
     OverallWidth: 0.9
     OverallHeight: 2.5
     Tag: O4
+    PartitioningType: SINGLE_PANEL
+    PropertySets:
+      - Name: Pset_BlueprintsWindow
+        Properties:
+          PanelOperations: FIXEDCASEMENT
   - id: WIN-OP04
     FillsOpening: OP04
     OverallWidth: 1.6
     OverallHeight: 0.75
     Tag: O5
+  # WIN-OP05 (O2, bedroom 1.11 south): two equal panes. The west pane is a sliding sash that
+  # runs eastward over the fixed east pane. DWG elevation POHLED JIHOVÝCHODNÍ:
+  # arrow in the west pane, "+" (fixed) in the east pane. Panels run along the
+  # host wall axis, start (west) to end (east).
   - id: WIN-OP05
     FillsOpening: OP05
     OverallWidth: 2.25
     OverallHeight: 2.5
     Tag: O2
+    PartitioningType: DOUBLE_PANEL_VERTICAL
+    PropertySets:
+      - Name: Pset_BlueprintsWindow
+        Properties:
+          PanelOperations: SLIDINGHORIZONTAL FIXEDCASEMENT
   - id: WIN-OP07
     FillsOpening: OP07
     OverallWidth: 1.6
     OverallHeight: 0.75
     Tag: O5
+  # WIN-OP08 (O2, room 1.12 south): two equal panes. The west pane is a sliding sash that
+  # runs eastward over the fixed east pane. DWG elevation POHLED JIHOVÝCHODNÍ:
+  # arrow in the west pane, "+" (fixed) in the east pane. Panels run along the
+  # host wall axis, start (west) to end (east).
   - id: WIN-OP08
     FillsOpening: OP08
     OverallWidth: 2.15
     OverallHeight: 2.5
     Tag: O2
+    PartitioningType: DOUBLE_PANEL_VERTICAL
+    PropertySets:
+      - Name: Pset_BlueprintsWindow
+        Properties:
+          PanelOperations: SLIDINGHORIZONTAL FIXEDCASEMENT
   - id: WIN-OP12
     FillsOpening: OP12
     OverallWidth: 0.9
     OverallHeight: 0.75
     Tag: O6
+  # WIN-OP13 (O2, room 1.13 south): two equal panes. The west pane is a sliding sash that
+  # runs eastward over the fixed east pane. DWG elevation POHLED JIHOVÝCHODNÍ:
+  # arrow in the west pane, "+" (fixed) in the east pane. Panels run along the
+  # host wall axis, start (west) to end (east).
   - id: WIN-OP13
     FillsOpening: OP13
     OverallWidth: 2.15
     OverallHeight: 2.5
     Tag: O2
+    PartitioningType: DOUBLE_PANEL_VERTICAL
+    PropertySets:
+      - Name: Pset_BlueprintsWindow
+        Properties:
+          PanelOperations: SLIDINGHORIZONTAL FIXEDCASEMENT
   - id: WIN-OP15
     FillsOpening: OP15
     OverallWidth: 2.9
     OverallHeight: 0.75
     Tag: O7
+  # WIN-OP16 (O2, room 1.14 south): two equal panes. The west pane is a sliding sash that
+  # runs eastward over the fixed east pane. DWG elevation POHLED JIHOVÝCHODNÍ:
+  # arrow in the west pane, "+" (fixed) in the east pane. Panels run along the
+  # host wall axis, start (west) to end (east).
   - id: WIN-OP16
     FillsOpening: OP16
     OverallWidth: 2.15
     OverallHeight: 2.5
     Tag: O2
+    PartitioningType: DOUBLE_PANEL_VERTICAL
+    PropertySets:
+      - Name: Pset_BlueprintsWindow
+        Properties:
+          PanelOperations: SLIDINGHORIZONTAL FIXEDCASEMENT
+  # WIN-OP21 (O1, office 1.15 south): two equal panes. The east pane is a sliding sash that
+  # runs westward over the fixed west pane. DWG elevation POHLED JIHOVÝCHODNÍ:
+  # arrow in the east pane, "+" (fixed) in the west pane. Panels run along the
+  # host wall axis, start (west) to end (east).
   - id: WIN-OP21
     FillsOpening: OP21
     OverallWidth: 3.55
     OverallHeight: 2.5
     Tag: O1
+    PartitioningType: DOUBLE_PANEL_VERTICAL
+    PropertySets:
+      - Name: Pset_BlueprintsWindow
+        Properties:
+          PanelOperations: FIXEDCASEMENT SLIDINGHORIZONTAL
   - id: WIN-OP26
     FillsOpening: OP26
     OverallWidth: 1.15
@@ -1121,11 +1183,20 @@ windows:
     FillsOpening: OP31
     OverallWidth: 0.9
     OverallHeight: 0.75
+  # WIN-OP35 (O10, garzonka 1.23 south): two equal panes. The west pane is a sliding sash that
+  # runs eastward over the fixed east pane. DWG elevation POHLED JIHOVÝCHODNÍ:
+  # arrow in the west pane, "+" (fixed) in the east pane. Panels run along the
+  # host wall axis, start (west) to end (east).
   - id: WIN-OP35
     FillsOpening: OP35
     OverallWidth: 3.1
     OverallHeight: 2.5
     Tag: O10
+    PartitioningType: DOUBLE_PANEL_VERTICAL
+    PropertySets:
+      - Name: Pset_BlueprintsWindow
+        Properties:
+          PanelOperations: SLIDINGHORIZONTAL FIXEDCASEMENT
   - id: WIN-OP39b
     FillsOpening: OP39b
     OverallWidth: 1.1
