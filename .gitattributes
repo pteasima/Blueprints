@@ -1,2 +1,4 @@
 docs/models/*.usdz filter=lfs diff=lfs merge=lfs -text
 docs/models/*.glb filter=lfs diff=lfs merge=lfs -text
+docs/materials/**/*.jpg filter=lfs diff=lfs merge=lfs -text
+docs/materials/**/*.png filter=lfs diff=lfs merge=lfs -text

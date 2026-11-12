@@ -1,0 +1,2 @@
+Source: ambientCG "Carpet014", https://ambientcg.com/view?id=Carpet014 (CC0 1.0). Physical size assumed 0.5 m.
+Modified: colour re-tinted to the assumed oatmeal #cbbfac.
