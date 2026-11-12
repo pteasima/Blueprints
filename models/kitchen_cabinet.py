@@ -55,6 +55,8 @@ IKEA_DEFAULTS_MM = {
     "CladdingThickness": 0.0,  # 0 = same as the worktop
     "PlinthHeight": 92.0,  # METOD legs 80–100
     "PlinthSetback": 50.0,  # plinth board behind the front face (guess)
+    "LegDiameter": 40.0,  # adjustable leg, IKEA-like (guess)
+    "LegInset": 50.0,  # leg centre behind the carcass front / before its back (guess)
     "BoardThickness": 18.0,  # METOD carcass board; also every shared divider
     "FrontThickness": 18.0,  # METOD fronts
     "BackThickness": 8.0,  # single-row back panel (guess)
@@ -212,6 +214,7 @@ class Part:
     voids: list = field(default_factory=list)  # Void cut-outs (worktop)
     drawer: Drawer | None = None
     material: str | None = None
+    shape: str = "box"  # "cylinder": one vertical cylinder inscribed in boxes[0] (legs)
 
 
 @dataclass
@@ -495,7 +498,7 @@ class _Builder:
                 for bay in row:
                     bay.members.append(back.id)
                 self._dividers(row, z0, z1, back_y=row[0].depth - t / 2, tag=tag)
-                self._plinth(row, a_lo, a_hi)
+                self._plinth(row, a_lo, a_hi, back_y=row[0].depth - t / 2)
             return
         (row,) = rows_in
         for end, a_range, bay in (("lo", (a_lo, a_lo + t), row[0]), ("hi", (a_hi - t, a_hi), row[-1])):
@@ -504,7 +507,7 @@ class _Builder:
             self.add(Part(f"{run.id}-END-{name}{tag}", f"Bok {name}", "EndSide",
                           [(*a_range, c0, c1, z0, z1)]), bay)
         self._dividers(row, z0, z1, back_y=row[0].depth, tag=tag)
-        self._plinth(row, a_lo, a_hi)
+        self._plinth(row, a_lo, a_hi, back_y=row[0].depth - p["BackThickness"])
 
     def _dividers(self, row, z0, z1, back_y, tag):
         t, tf = self.p["BoardThickness"], self.p["FrontThickness"]
@@ -518,15 +521,36 @@ class _Builder:
             bay.clear_lo = bay.a0 + (t if i == 0 else t / 2)
             bay.clear_hi = bay.a1 - (t if i == len(row) - 1 else t / 2)
 
-    def _plinth(self, row, a_lo, a_hi):
+    def _plinth(self, row, a_lo, a_hi, back_y):
         p = self.p
         if p["PlinthHeight"] <= 0:
+            return
+        if str(_prop(self.run.element, PSET_RUN, "PlinthKind", "Board")) == "Legs":
+            self._legs(row, back_y)
             return
         bay = row[0]
         c0, c1 = self.c_range(bay, p["PlinthSetback"], p["PlinthSetback"] + p["BoardThickness"])
         face = self.run.frame.compass(0.0, -1.0 if bay.front_low else 1.0)
         self.add(Part(f"{self.run.id}-PLINTH-{face}", f"Sokl {face}", "Plinth",
                       [(a_lo, a_hi, c0, c1, bay.z_base, bay.z_base + p["PlinthHeight"])]))
+
+    def _legs(self, row, back_y):
+        """Open legs, no kick board (Petr, 2026-11-12: the robot vacuum
+        drives under). One front and one back leg on every wall line of the
+        row: under each end side and each shared divider, so a divider's
+        legs are shared like the divider (guess: IKEA puts 4 per cabinet)."""
+        p, run = self.p, self.run
+        t, tf = p["BoardThickness"], p["FrontThickness"]
+        d, inset = p["LegDiameter"], p["LegInset"]
+        z0, z1 = row[0].z_base, row[0].z_base + p["PlinthHeight"]
+        lines = [(row[0].a0 + t / 2, (row[0],), f"{row[0].id}-{run.frame.compass(-1.0, 0.0)}")]
+        lines += [(l.a1, (l, r), f"{l.id}-{r.id}") for l, r in zip(row, row[1:])]
+        lines.append((row[-1].a1 - t / 2, (row[-1],), f"{row[-1].id}-{run.frame.compass(1.0, 0.0)}"))
+        for a, bays, tag in lines:
+            for end, y in (("F", tf + inset), ("B", back_y - inset)):
+                c = sum(self.c_range(row[0], y, y)) / 2.0
+                self.add(Part(f"{run.id}-LEG-{tag}-{end}", "Nožka", "Leg",
+                              [(a - d / 2, a + d / 2, c - d / 2, c + d / 2, z0, z1)], shape="cylinder"), *bays)
 
     def _has_sink(self, bay: Bay) -> bool:
         return any(s["yaml_id"] in bay.external for s in self.sinks)

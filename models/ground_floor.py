@@ -75,6 +75,7 @@ from build123d import (
     Box,
     Color,
     Compound,
+    Cylinder,
     Face,
     Plane,
     Pos,
@@ -339,6 +340,11 @@ def _kitchen_run_parts(run, motions=None) -> list:
                 solid = solid + _run_box(box, 0.0)
             inward = -dr.out * half
             solid = Pos(0.0, inward, 0.0) * solid
+        elif part.shape == "cylinder":
+            a0, a1, c0, c1, z0, z1 = part.boxes[0]
+            solid = Pos((a0 + a1) / 2.0, (c0 + c1) / 2.0, z0 + half) * Cylinder(
+                (a1 - a0) / 2.0 - half, z1 - z0 - 2 * half, align=(Align.CENTER, Align.CENTER, Align.MIN)
+            )
         else:
             pieces = [_run_box(box, half) for box in part.boxes]
             solid = pieces[0] if len(pieces) == 1 else Compound(obj=pieces)

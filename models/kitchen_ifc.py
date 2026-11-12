@@ -143,7 +143,38 @@ class _Writer:
             Depth=z1 - z0,
         )
 
+    def cylinder(self, box):
+        a0, a1, c0, c1, z0, z1 = (v / 1000.0 for v in box)
+        profile = self.m.create_entity(
+            "IfcCircleProfileDef",
+            ProfileType="AREA",
+            Position=self.m.create_entity(
+                "IfcAxis2Placement2D",
+                Location=self.m.create_entity("IfcCartesianPoint", Coordinates=(0.0, 0.0)),
+            ),
+            Radius=(a1 - a0) / 2.0,
+        )
+        return self.m.create_entity(
+            "IfcExtrudedAreaSolid",
+            SweptArea=profile,
+            Position=self.m.create_entity(
+                "IfcAxis2Placement3D", Location=self.point((a0 + a1) / 2.0, (c0 + c1) / 2.0, z0)
+            ),
+            ExtrudedDirection=self.direction(0.0, 0.0, 1.0),
+            Depth=z1 - z0,
+        )
+
     def shape(self, part: kc.Part):
+        if part.shape == "cylinder":
+            items = [self.cylinder(part.boxes[0])]
+            rep = self.m.create_entity(
+                "IfcShapeRepresentation",
+                ContextOfItems=self.body,
+                RepresentationIdentifier="Body",
+                RepresentationType="SweptSolid",
+                Items=items,
+            )
+            return self.m.create_entity("IfcProductDefinitionShape", Representations=[rep])
         items = [self.extrusion(b, v) for b, v in _layers(part.boxes[0], part.voids)]
         items += [self.extrusion(b) for b in part.boxes[1:]]
         rep = self.m.create_entity(

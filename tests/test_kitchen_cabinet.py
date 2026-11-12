@@ -53,10 +53,10 @@ def test_sf_i600a_drawers():
     assert [d.nominal for d in drawers] == [200.0, 200.0, 400.0]
     assert [d.content for d in drawers] == ["nože", "nářadí", "dole nevím"]
     assert [(round(d.front[1] - d.front[0]), round(d.front[5] - d.front[4])) for d in drawers] == [
-        (597, 197), (597, 197), (597, 397)]
+        (597, 197), (597, 197), (597, 407)]
     assert all(round(d.box[1] - d.box[0]) == 556 for d in drawers)
     assert all(d.extension == 550.0 for d in drawers)
-    assert run.carcass_z1 - run.carcass_z0 == pytest.approx(800.0)
+    assert run.carcass_z1 - run.carcass_z0 == pytest.approx(810.0)
 
 
 def test_island_worktop_and_cladding():
@@ -177,3 +177,13 @@ def test_dining_run_box_bodies_under_stone():
     slabs = run.part("KR-DN-WORKTOP").boxes
     assert len(slabs) == 4 and all(s[5] == pytest.approx(930.0) and s[2] == pytest.approx(-30.0) for s in slabs)
     assert not [p for p in run.parts if p.role == "Cladding"]
+
+
+def test_open_legs_no_kick_board():
+    runs = _runs()
+    for rid, legs in (("KR-ISL", 22), ("KR-WEST", 8)):
+        run = runs[rid]
+        assert not [p for p in run.parts if p.role == "Plinth"]
+        found = [p for p in run.parts if p.role == "Leg"]
+        assert len(found) == legs and all(p.boxes[0][5] == pytest.approx(100.0) for p in found)
+    assert runs["KR-TALL"].carcass_z1 == pytest.approx(2450.0)

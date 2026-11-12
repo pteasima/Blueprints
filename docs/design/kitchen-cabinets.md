@@ -35,7 +35,8 @@ The living-room oak pieces (SF-F052, SF-DN, SF-LB …) are not kitchen runs and 
 | Island central back | 18 | Every island bay, both rows | **Petr** (“including the back wall in the island cabinets”). 18 instead of a thin back because it is the island's spine: `guess:` |
 | Back, single-row runs | 8 | Its own bay only (between the dividers) | `guess:` (METOD back is a thin fibreboard) |
 | Bottom, front and back rails, top board | 18 | Its own bay only (between the dividers) | **IKEA** board; rails 80 deep `guess:` |
-| Plinth board | 18, set back 50 | The run (one board per front) | setback `guess:` |
+| Legs (island, west run) | Ø40, 100 high, front and back under every end side and divider | The run; a divider's legs are in both bays' groups | positions `guess:`; see “Plinth: open legs” |
+| Plinth board (tall runs only) | 18, set back 50 | The run (one board per front) | setback `guess:` |
 
 End sides and dividers run the full carcass height, and bottoms and rails sit between them (the usual frameless monoblock joint, `guess:`).
 
@@ -67,7 +68,7 @@ Measured from the layout, not by hand: `kitchen_cabinet.bay_summary(run)` return
 
 Agreed with Petr on 2026-11-11 and built here:
 
-- **The run is the assembly.** `KR-ISL` and the other runs are `IfcFurniture` (`ObjectType: KitchenRun`) contained in `SP-1.02`. Every physical part is its child through one `IfcRelAggregates`: end sides, dividers, central back, bottoms, rails, backs, top boards, fronts, drawers, plinth boards (`IfcSystemFurnitureElement`, `PANEL`; drawers `USERDEFINED` / `Drawer`), the worktop (`IfcSystemFurnitureElement`, `WORKSURFACE`), the stone cladding and the west backsplash (`IfcCovering`, `CLADDING`).
+- **The run is the assembly.** `KR-ISL` and the other runs are `IfcFurniture` (`ObjectType: KitchenRun`) contained in `SP-1.02`. Every physical part is its child through one `IfcRelAggregates`: end sides, dividers, central back, bottoms, rails, backs, top boards, fronts, drawers, legs (`PANEL`, `ObjectType: Leg`, a circular extrusion), the tall runs' plinth boards (`IfcSystemFurnitureElement`, `PANEL`; drawers `USERDEFINED` / `Drawer`), the worktop (`IfcSystemFurnitureElement`, `WORKSURFACE`), the stone cladding and the west backsplash (`IfcCovering`, `CLADDING`).
 - **Box runs.** `KR-DN` (`Carcass: Box`) has one oak `Body` part per bay plus the worktop, instead of the panel set.
 - **The hob is an appliance, not a run part.** `EA-KM8665` is an `IfcElectricAppliance`, `ELECTRICCOOKER`, contained in `SP-1.02` like the dishwasher (not in the run's `IfcRelAggregates`), with `Pset_Hob` (Model, Mounting, CutoutToBackEdge). It is a member of the SF-I600b group. Selecting `KR-ISL` and “Hide all others” therefore hides the hob; isolating SF-I600b keeps it.
 - **The bay is a group.** Each bay (`SF-I600a` …) is an `IfcGroup` with the same GlobalId its yaml box had, so references by GlobalId survive. It keeps its property sets (`Pset_Drawers`, `Pset_KitchenBay`). One `IfcRelAssignsToGroup` per bay lists its own parts plus the shared parts it touches: both dividers (or an end side), the island's central back, the cladding at its end, and any appliance or sink standing in it (the dishwasher is in SF-A600, the Teka RS15 71.40 in SF-B800, the Teka RS15 18.40 in SF-I500a, the hob on SF-I600b). Every bay of the west run also lists the west backsplash.
@@ -102,13 +103,30 @@ Contents are not modelled yet (Petr, 2026-11-11).
 | --- | ---: | --- |
 | Finished counter height (top of worktop) | 930 | **Petr**, 2026-11-11; the bay box `Height` |
 | Worktop thickness | 20 | Silestone comes in 12, 20 and 30 (**Cosentino**). Petr gave no thickness: `guess:` 20 |
-| Plinth (sokl) height | 110 | Chosen so the carcass stays exactly the METOD 800: 930 − 20 − 800. `guess:` (was 92 with the 38 IKEA worktop) |
-| Carcass height | 800 | **IKEA** METOD base carcass |
+| Plinth (sokl) height | **100**, open legs, no kick board | **Petr**, 2026-11-12: “Ok, 100mm it is.” (was 110; 92 before that) |
+| Carcass height | **810** | derived: 930 − 20 − 100. METOD's carcass is 800; the extra 10 goes into the `*` drawer |
 | Drawer grid, D1 nože | 200 | **IKEA** METOD 80-grid, “low” front 20 cm |
 | Drawer grid, D2 nářadí | 200 | **IKEA** METOD 80-grid, “low” front 20 cm |
-| Drawer grid, D3 dole nevím | 400 (rest) | **IKEA** METOD 80-grid, “high” front 40 cm. Written `*`, the rest of the carcass, so a carcass change lands here |
-| Tall run carcass | 2340 | 2450 (**Petr**, tall height) − the same 110 plinth, so the tall plinth lines up with the bases |
+| Drawer grid, D3 dole nevím | **410** (rest; was 400) | **IKEA** METOD 80-grid, “high” front 40 cm. Written `*`, the rest of the carcass, so a carcass change lands here |
+| Tall run carcass | **2350** | 2450 (**Petr**, tall height, unchanged) − the same 100 plinth, so the tall plinth lines up with the bases. The tall runs keep a kick board (`PlinthKind` is `Board` by default) |
 | Wall-cabinet carcass | 900 | the box height, bottom 1550, top 2450 (furnishings.md) |
+
+## Plinth: open legs
+
+Petr, 2026-11-12: “Ok, 100mm it is.” He wants the lowest plinth his robot vacuum fits under, so it can clean under the cabinets.
+
+| Robot | Height (mm) | Source |
+| --- | --- | --- |
+| Dreame X60 Pro Master (Petr's), lidar retracted | 89 | [Dreame](https://global.dreametech.com/products/x60-pro-master) |
+| Roborock Saros 10 / 10R / Z70 | 79.8 | [Roborock](https://support.roborock.com/hc/en-us/articles/48039533143321) |
+
+- The island and the west run stand on **open legs, 100 high, with no kick board** (`PlinthKind: Legs`), so the robot drives under. The carcass bottom is at 100, which leaves 11 mm over the Dreame.
+- Legs: Ø40, adjustable, IKEA-like. Each row has a front and a back leg on every wall line, under each end side and each shared divider. The front leg centre is 50 behind the carcass front (68 behind the front face) and the back one is 50 before the back. `guess:` IKEA puts 4 legs under each cabinet; a monoblock shares them at the dividers. Island: 22 legs. West run: 8 legs.
+- The stone end cladding (island and west run) still runs from the floor to the worktop underside, so the robot gets in from the long sides only.
+- The dishwasher slot (SF-A600) has no carcass: floor to worktop underside is **910**, unchanged by the plinth. The Bosch SBD6ECX12E is the XXL model (865 high) and takes a 865–925 niche ([Bosch spec sheet](https://media3.bosch-home.com/Documents/specsheet/de-DE/SBD6ECX12E.pdf)), so 910 fits. The usual 815–875 niche is the 815-high SMD model, not this one. The robot does not get under the dishwasher.
+- The hob is unchanged: carcass top 910, hob underside 879. SF-I600b has no drawers.
+- The north dining run (`KR-DN`) has no plinth parameter: its oak bodies stand on the floor (`Carcass: Box`). `open:` should they get legs too?
+- `open:` the drawer and door fronts stop 1.5 above the carcass bottom (101.5), with no kick board behind. Check the look and toe space with Petr.
 
 ## Fronts, boxes, slides (SF-I600a)
 
@@ -116,12 +134,12 @@ Contents are not modelled yet (Petr, 2026-11-11).
 | --- | ---: | --- |
 | Front thickness | 18 | **IKEA** METOD fronts |
 | Gap between fronts (and to the sides, 1.5 each) | 3 | **IKEA**: a 600×200 grid front is 597×197 |
-| Front sizes | 597×197, 597×197, 597×397 | derived: grid − 3. Unchanged by the monoblock |
+| Front sizes | 597×197, 597×197, **597×407** | derived: grid − 3. D3 was 597×397 before the 100 plinth |
 | Clear opening | 582 | derived: 600 − 9 − 9 (two shared dividers). Was 564 |
 | Drawer box side clearance, each side | 13 | **IKEA**/Blum-style runner clearance, approx. |
 | Drawer box outer width | 556 | derived: 582 − 2 × 13. Was 538 |
 | Drawer box wall | 16 | `guess:` MAXIMERA-like side |
-| Drawer box side height | front grid − 110, at least 60 → 90, 90, 290 | `guess:` approximates MAXIMERA low/high sides |
+| Drawer box side height | front grid − 110, at least 60 → 90, 90, **300** (was 290) | `guess:` approximates MAXIMERA low/high sides |
 | Box bottom above its slot bottom | 25 | `guess:` |
 | Carcass depth, island rows | 573 | derived: bay depth 600 − front 18 − half the 18 central back. The bay box `Depth` stays 600 |
 | Slide / drawer box length | 550 | derived: largest 50 mm step that fits 573 − 10 rear clearance. **IKEA** MAXIMERA uses full-extension runners in a 60-deep carcass. Unchanged |
@@ -149,7 +167,7 @@ and straight after:
 | North dining run | 20 mm, top 930, 30 front overhang, one slab per base (see “North dining run”) | **Petr**; derived |
 | Slab formats | 3270 × 1590 and 3060 × 1410 | **Cosentino**. The island top fits one 3270 × 1590 slab |
 | West run end cladding | same as the island ends, both ends (see “West run end cladding”) | **Petr** (“the sides of the west run”) |
-| Island end cladding | Silestone Blanco Maple, 20 thick (same as the worktop), floor to the worktop underside (0–910), full worktop depth 1260, covering the plinth ends | **Petr** (“sides … clad in the same silestone”); thickness and floor-to-underside `guess:` |
+| Island end cladding | Silestone Blanco Maple, 20 thick (same as the worktop), floor to the worktop underside (0–910), full worktop depth 1260, covering the leg zone at the ends | **Petr** (“sides … clad in the same silestone”); thickness and floor-to-underside `guess:` |
 | Worktop–cladding joint | the cladding sits under the worktop; the worktop runs 20 past the carcass end so its end is flush with the cladding face | `guess:` |
 | Sink cut-outs | the manufacturer's undermount cut-out, centred on the sink box; see “Sinks” | **Teka** |
 | Hob cut-out | flush-fit, stepped: 600 × 500 through, rebate 624 × 524 × 5.5; see “Induction hob” | **Miele** manual |
@@ -278,7 +296,7 @@ Petr, 2026-11-12: “As well as the back wall above countertop, below top cabine
 
 ## Parametric rule
 
-Everything above is computed in `kitchen_cabinet.runs` from the bay boxes (`Origin`, `RefDirection`, `Width`, `Depth`, `Height`, `Elevation`), the run's `Pset_KitchenRun` (any `IKEA_DEFAULTS_MM` key, in metres, plus `WorktopMaterial`, `CladEnds`, `Carcass` (`Box` for whole-body bays), `BodyMaterial`, `Backsplash`, `BacksplashThickness`, `BacksplashTop`, `BacksplashMaterial`) and each bay's `Pset_Drawers` (`NominalHeights` in metres top to bottom, one `*` for the rest; `Contents` separated by `;`). A bay may override the drawer and front values in its own `Pset_KitchenCabinet`. Change a bay's width and its dividers move, both neighbours' clear widths and drawer boxes follow, and the worktop grows; change the counter height or the worktop thickness and the carcass, the `*` drawer and the cladding follow. Rows that stand back to back (same back plane, fronts facing away) share one central back; a run with `CladEnds` gets stone on both ends. A sink's cut-out comes from its `Pset_Sink` and follows the sink box. A hob follows its bay (`Pset_Hob`): move or widen the bay and the cut-out, rebate, glass and housing move with it. The model stops the export if the hob comes closer than `MinBackEdge` to the far edge. A backsplash runs the worktop's length, from the worktop top up to the lowest box hanging over it.
+Everything above is computed in `kitchen_cabinet.runs` from the bay boxes (`Origin`, `RefDirection`, `Width`, `Depth`, `Height`, `Elevation`), the run's `Pset_KitchenRun` (any `IKEA_DEFAULTS_MM` key, in metres, plus `WorktopMaterial`, `CladEnds`, `Carcass` (`Box` for whole-body bays), `BodyMaterial`, `PlinthKind` (`Legs` or `Board`), `Backsplash`, `BacksplashThickness`, `BacksplashTop`, `BacksplashMaterial`) and each bay's `Pset_Drawers` (`NominalHeights` in metres top to bottom, one `*` for the rest; `Contents` separated by `;`). A bay may override the drawer and front values in its own `Pset_KitchenCabinet`. Change a bay's width and its dividers move, both neighbours' clear widths and drawer boxes follow, and the worktop grows; change the counter height or the worktop thickness and the carcass, the `*` drawer and the cladding follow. Rows that stand back to back (same back plane, fronts facing away) share one central back; a run with `CladEnds` gets stone on both ends. A sink's cut-out comes from its `Pset_Sink` and follows the sink box. A hob follows its bay (`Pset_Hob`): move or widen the bay and the cut-out, rebate, glass and housing move with it. The model stops the export if the hob comes closer than `MinBackEdge` to the far edge. A backsplash runs the worktop's length, from the worktop top up to the lowest box hanging over it.
 
 ## Tap to open
 

@@ -772,7 +772,10 @@ furniture:
           WorktopOverhang: 0.03
           WorktopMaterial: "Silestone Blanco Maple"
           CladEnds: true
-          PlinthHeight: 0.11
+          # Petr, 2026-11-12: "Ok, 100mm it is." Lowest plinth the robot
+          # vacuum fits under (Dreame X60 Pro Master 89 mm); open legs, no kick board.
+          PlinthHeight: 0.10
+          PlinthKind: Legs
   - id: KR-WEST
     Name: "Západní linka"
     Description: "West-wall base monoblock between OP24 and OP25: C850, B800, A250 and the dishwasher slot. Silestone worktop, 30 mm overhang at the front, Silestone cladding on both ends, 12 mm Silestone backsplash."
@@ -785,7 +788,10 @@ furniture:
           WorktopThickness: 0.02
           WorktopOverhang: 0.03
           WorktopMaterial: "Silestone Blanco Maple"
-          PlinthHeight: 0.11
+          # Petr, 2026-11-12: "Ok, 100mm it is." Lowest plinth the robot
+          # vacuum fits under (Dreame X60 Pro Master 89 mm); open legs, no kick board.
+          PlinthHeight: 0.10
+          PlinthKind: Legs
           # Petr, 2026-11-12: "back wall for both west and north". 12 mm
           # Silestone from the brief; up to the wall cabinets (derived).
           Backsplash: true
@@ -832,7 +838,8 @@ furniture:
       - Name: Pset_KitchenRun
         Properties:
           WorktopThickness: 0.0
-          PlinthHeight: 0.11
+          # 100 like the bases (Petr, 2026-11-12); total stays 2450, carcass 2350.
+          PlinthHeight: 0.10
   - id: KR-TALL
     Name: "Vysoké skříně"
     Description: "Tall monoblock east of the fridge: T2, T3 (oven column), T4."
@@ -843,7 +850,8 @@ furniture:
       - Name: Pset_KitchenRun
         Properties:
           WorktopThickness: 0.0
-          PlinthHeight: 0.11
+          # 100 like the bases (Petr, 2026-11-12); total stays 2450, carcass 2350.
+          PlinthHeight: 0.10
   - id: FN-S2B
     Name: "Harvey S2 roh"
     Description: "Corner of the 86 run. 1160 along the cabinets, 860 deep, 395 high. x 25.82–26.98, y 13.99–14.85."
