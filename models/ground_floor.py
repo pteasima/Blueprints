@@ -528,7 +528,8 @@ def _leaf(kind: str, along, width, sill, oheight, thickness, filler: dict):
     if leaf_w < 20.0 or leaf_h < 20.0:
         return None
     leaf_t = DOOR_LEAF_MM if kind == "door" else WINDOW_LEAF_MM
-    leaf_t = min(leaf_t, thickness * 0.45)
+    # Keep the nominal leaf on a thin placeholder wall (W-017's 50 mm band
+    # is not a measured thickness). Only shrink when the leaf would not fit.
     if leaf_t >= thickness:
         leaf_t = thickness * 0.4
     x = along + (width - leaf_w) / 2.0
@@ -614,6 +615,49 @@ def _opens_toward_plus_y(value) -> int:
         return 1 if float(value) >= 0 else -1
     except (TypeError, ValueError):
         return 1
+
+
+def flush_leaf_offset_m(
+    flush_toward_plus_y: int,
+    thickness_m: float,
+    leaf_thickness_m: float,
+    *,
+    axis_is_face: bool = False,
+) -> float:
+    """Metres along local +Y that put the leaf flush with a wall face.
+
+    ``flush_toward_plus_y`` is +1 to sit flush on the local +Y face of the
+    wall, −1 on the −Y face. The leaf's face on that side is coplanar with
+    the wall face, and the leaf occupies the wall (it does not stick out
+    into the circulation side). When ``axis_is_face`` (a wall whose axis is
+    the drawn silná line, not a centre-line — W-017), the axis itself is
+    the face and the leaf sits entirely on the room side of it.
+
+    Source: docs/OpeningsSpec.md, Reverse interior doors. Petr 2026-11-12.
+    """
+    sign = 1 if flush_toward_plus_y >= 0 else -1
+    if axis_is_face:
+        return -sign * leaf_thickness_m / 2.0
+    return sign * (thickness_m - leaf_thickness_m) / 2.0
+
+
+def _shift_door_leaf(leaf, filler: dict, thickness_m: float, *, axis_is_face: bool):
+    """Apply LeafOffset or FlushFace to a wall-local leaf solid. Unchanged if neither is set."""
+    offset = _door_field(filler, "LeafOffset")
+    if offset is not None:
+        return Pos(0.0, _mm(float(offset)), 0.0) * leaf
+    flush = _door_field(filler, "FlushFace")
+    if flush is None:
+        return leaf
+    bb = leaf.bounding_box()
+    leaf_t_m = (float(bb.max.Y) - float(bb.min.Y)) / MM
+    off = flush_leaf_offset_m(
+        _opens_toward_plus_y(flush),
+        thickness_m,
+        leaf_t_m,
+        axis_is_face=axis_is_face,
+    )
+    return Pos(0.0, _mm(off), 0.0) * leaf
 
 
 def hinge_rotation_sign(side: str, opens_toward_plus_y: int) -> int:
@@ -1187,11 +1231,13 @@ def build(
             if opening["id"] in doors:
                 filler = doors[opening["id"]]
                 leaf = _leaf("door", along, width, sill, oheight, thickness, filler)
-                offset = _door_field(filler, "LeafOffset")
-                if leaf is not None and offset is not None:
-                    # Leaf plane off the wall axis, local +Y, metres (OP11/OP17
-                    # sit flush with the hallway face, like the WC door OP19).
-                    leaf = Pos(0.0, _mm(float(offset)), 0.0) * leaf
+                if leaf is not None:
+                    # FlushFace sits the leaf on the circulation face;
+                    # LeafOffset, if set, wins (OP11/OP17 on the W-017 line).
+                    # docs/OpeningsSpec.md, Reverse interior doors.
+                    leaf = _shift_door_leaf(
+                        leaf, filler, thick_m, axis_is_face=filled
+                    )
                 if leaf is not None and is_sectional(filler):
                     opens = _opens_toward_plus_y(_door_field(filler, "Swing"))
                     leaf = _sectional_leaf(leaf, opens, y0, y1)

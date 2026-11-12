@@ -962,7 +962,8 @@ doors:
     OverallHeight: 2.1
   # D-OP06 (bedroom 1.11 → en-suite 1.09 Koupelna. Petr 2026-11-12: flip the
   # hinge side (was the west/start jamb). Swing unchanged, into 1.09 (+Y). The
-  # DWG also hinges it on the east jamb). docs/OpeningsSpec.md.
+  # DWG also hinges it on the east jamb). No hallway: the leaf is flush with
+  # the bedroom face of W-018 (FlushFace −Y). docs/OpeningsSpec.md.
   - id: D-OP06
     FillsOpening: OP06
     OverallWidth: 0.7
@@ -972,13 +973,25 @@ doors:
         Properties:
           HingeSide: end
           Swing: "+"
+          FlushFace: "-"
+  # D-OP09 (bedroom 1.11 → chodba 1.05. Hinge on the south/start jamb, opens
+  # west into the bedroom, local +Y of W-033). Reverse door: flush with the
+  # hallway (east, FlushFace −Y). The 2D plan arc is on the bedroom side
+  # (docs/electrical/rooms/1.11-geometry.md). docs/OpeningsSpec.md.
   - id: D-OP09
     FillsOpening: OP09
     OverallWidth: 0.8
     OverallHeight: 2.1
+    PropertySets:
+      - Name: Pset_BlueprintsDoor
+        Properties:
+          HingeSide: start
+          Swing: "+"
+          FlushFace: "-"
   # D-OP10 (hallway 1.05 → room 1.12. Petr 2026-11-12: flip the hinge side and
   # open inward into the room. End jamb = east (as the DWG arc); −Y = south,
-  # into 1.12). docs/OpeningsSpec.md.
+  # into 1.12). Reverse door: flush with the hallway face of W-013 (FlushFace
+  # +Y, north). docs/OpeningsSpec.md.
   - id: D-OP10
     FillsOpening: OP10
     OverallWidth: 0.8
@@ -988,12 +1001,16 @@ doors:
         Properties:
           HingeSide: end
           Swing: "-"
+          FlushFace: "+"
   # D-OP11 (hallway 1.05 → laundry 1.08 Prádelna. Petr 2026-11-12: like the WC
   # door D-OP19 (the reference): hinge on the same (west/start) jamb, open
   # inward (+Y, north), and the leaf flush in the hallway face. The DWG draws
   # the leaf on the hallway face line y 9.475 (W-017's axis, where D-OP19
-  # hangs); the W-022 axis is y 10.0875, so LeafOffset −0.6125 m).
-  # docs/OpeningsSpec.md.
+  # hangs); the W-022 axis is y 10.0875. LeafOffset −0.5925 m puts the leaf's
+  # hallway face on that line (the midplane would be −0.6125 m; half of the
+  # 40 mm leaf is added so the face, not the centre, is flush, as with OP19).
+  # LeafOffset wins over a host-wall FlushFace because the flush plane is
+  # W-017, not W-022's south face. docs/OpeningsSpec.md.
   - id: D-OP11
     FillsOpening: OP11
     OverallWidth: 0.8
@@ -1003,8 +1020,9 @@ doors:
         Properties:
           HingeSide: start
           Swing: "+"
-          LeafOffset: -0.6125
-  # D-OP14 (hallway 1.05 → room 1.13. Petr 2026-11-12: as D-OP10).
+          LeafOffset: -0.5925
+  # D-OP14 (hallway 1.05 → room 1.13. Petr 2026-11-12: as D-OP10). Reverse
+  # door: flush with the hallway face of W-013 (FlushFace +Y).
   # docs/OpeningsSpec.md.
   - id: D-OP14
     FillsOpening: OP14
@@ -1015,8 +1033,10 @@ doors:
         Properties:
           HingeSide: end
           Swing: "-"
+          FlushFace: "+"
   # D-OP17 (hallway 1.05 → bathroom 1.07 Koupelna. Petr 2026-11-12: as
-  # D-OP11). docs/OpeningsSpec.md.
+  # D-OP11). LeafOffset −0.5925 m, same reason as D-OP11.
+  # docs/OpeningsSpec.md.
   - id: D-OP17
     FillsOpening: OP17
     OverallWidth: 0.8
@@ -1026,8 +1046,9 @@ doors:
         Properties:
           HingeSide: start
           Swing: "+"
-          LeafOffset: -0.6125
-  # D-OP18 (hallway 1.05 → room 1.14. Petr 2026-11-12: as D-OP10).
+          LeafOffset: -0.5925
+  # D-OP18 (hallway 1.05 → room 1.14. Petr 2026-11-12: as D-OP10). Reverse
+  # door: flush with the hallway face of W-013 (FlushFace +Y).
   # docs/OpeningsSpec.md.
   - id: D-OP18
     FillsOpening: OP18
@@ -1038,10 +1059,23 @@ doors:
         Properties:
           HingeSide: end
           Swing: "-"
+          FlushFace: "+"
+  # D-OP19 (hallway 1.05 → 1.06 WC). The reference reverse door: W-017 has no
+  # measured thickness, so its axis (y 9.475) is the drawn hallway face
+  # (docs/design/ground-floor.md). FlushFace −Y sits the leaf on the room
+  # side of that line, hallway face coplanar with it. Hinge is the default
+  # start (west) jamb; swing default +Y, north into the WC. Petr 2026-11-12
+  # ("the toilet is right"). docs/OpeningsSpec.md.
   - id: D-OP19
     FillsOpening: OP19
     OverallWidth: 0.8
     OverallHeight: 2.1
+    PropertySets:
+      - Name: Pset_BlueprintsDoor
+        Properties:
+          HingeSide: start
+          Swing: "+"
+          FlushFace: "-"
   # D-OP20 (pantry 1.03 Spíž ↔ outside (D2). Petr 2026-11-12: the hinge side
   # (south/start jamb) is right; open inward, into the pantry. W-047 runs
   # south to north, so −Y is east, into 1.03. The DWG arc agrees).
@@ -1057,6 +1091,7 @@ doors:
           HingeSide: start
           Swing: "-"
   # D-OP22 (hallway 1.05 → office 1.15 Pracovna. Petr 2026-11-12: as D-OP10).
+  # Reverse door: flush with the hallway face of W-013 (FlushFace +Y).
   # docs/OpeningsSpec.md.
   - id: D-OP22
     FillsOpening: OP22
@@ -1067,9 +1102,11 @@ doors:
         Properties:
           HingeSide: end
           Swing: "-"
+          FlushFace: "+"
   # D-OP23 (hallway 1.05 → 1.04 Technická místnost. Petr 2026-11-12: flip the
   # hinge side (was west/start). Swing unchanged, into 1.04 (+Y). The DWG also
-  # hinges it on the east jamb). docs/OpeningsSpec.md.
+  # hinges it on the east jamb). Reverse door: flush with the hallway face of
+  # W-024 (FlushFace −Y, south). docs/OpeningsSpec.md.
   - id: D-OP23
     FillsOpening: OP23
     OverallWidth: 0.8
@@ -1079,6 +1116,7 @@ doors:
         Properties:
           HingeSide: end
           Swing: "+"
+          FlushFace: "-"
   # D-OP24 (1.05 Chodba → 1.02 living room): single pocket door. The DWG plan draws no swing
   # arc, only the leaf parked beside the opening on the living-room face of
   # the wall (y 11.15–12.20), so it slides north (toward the W-050 end jamb) into the wall.
@@ -1128,6 +1166,7 @@ doors:
   # D-OP34 (1.01 Zádveří → 1.20 Koupelna). Petr's 11:43 sketch: hinge on the
   # east jamb, opening inward, south into 1.20. W-015 runs west to east, so the
   # end jamb, local −Y. The model had the west jamb, opening north into 1.01.
+  # Reverse door: flush with the zádveří face of W-015 (FlushFace +Y, north).
   # docs/OpeningsSpec.md.
   - id: D-OP34
     FillsOpening: OP34
@@ -1138,10 +1177,12 @@ doors:
         Properties:
           HingeSide: end
           Swing: "-"
+          FlushFace: "+"
   # D-OP37 (1.01 Zádveří → 1.19 WC, next to the garage-hallway door D-OP38 on
   # W-059). Opens inward, east into 1.19 (Petr 2026-11-12). Petr's 11:43 sketch
   # puts the hinge on the south jamb (start; W-059 runs south to north, −Y is
   # east), as the DWG does; it replaces the earlier relayed "flip the hinge".
+  # Reverse door: flush with the zádveří face of W-059 (FlushFace +Y, west).
   # docs/OpeningsSpec.md.
   - id: D-OP37
     FillsOpening: OP37
@@ -1152,13 +1193,15 @@ doors:
         Properties:
           HingeSide: start
           Swing: "-"
+          FlushFace: "+"
   # D-OP38 (1.01 Zádveří → 1.17 Chodba, the garage hallway, which runs on
   # into the garage 1.16 with no door; this is "the door into the garage next
   # to the main entrance"). Petr 2026-11-12: head as the window beside the
   # main door (OP39b, 2.50 m), and the leaf swings toward the garage (east,
   # local −Y of W-059, which runs south to north). Petr's 11:43 sketch puts
   # the hinge on the south jamb (start), as the DWG does; it replaces the
-  # earlier relayed "flip the hinge". docs/OpeningsSpec.md.
+  # earlier relayed "flip the hinge". Both sides are circulation; the leaf is
+  # flush with 1.01 (FlushFace +Y, west) and opens into 1.17. docs/OpeningsSpec.md.
   - id: D-OP38
     FillsOpening: OP38
     OverallWidth: 0.9
@@ -1168,6 +1211,7 @@ doors:
         Properties:
           HingeSide: start
           Swing: "-"
+          FlushFace: "+"
   # D-OP39a (main entrance, 1.01 Zádveří): head at OP39b's head, 2.50 m,
   # Petr 2026-11-12 (11:17). Hinge and swing unchanged. docs/OpeningsSpec.md.
   - id: D-OP39a
@@ -1176,7 +1220,8 @@ doors:
     OverallHeight: 2.5
   # D-OP40 (garzonka 1.22 → its bathroom 1.21. Petr 2026-11-12: flip the hinge
   # side (was west/start); it still opens inward, into 1.21 (+Y, north). The
-  # DWG also hinges it on the east jamb). docs/OpeningsSpec.md.
+  # DWG also hinges it on the east jamb). No hallway: the leaf is flush with
+  # the 1.22 face of W-008 (FlushFace −Y, south). docs/OpeningsSpec.md.
   - id: D-OP40
     FillsOpening: OP40
     OverallWidth: 0.8
@@ -1186,6 +1231,11 @@ doors:
         Properties:
           HingeSide: end
           Swing: "+"
+          FlushFace: "-"
+  # D-OP41 (garzonka 1.22 → 1.18 outdoor store). In the 450 mm exterior wall
+  # W-063, same thickness family as the pantry exterior door D-OP20. Not a
+  # reverse interior door (docs/OpeningsSpec.md, assumptions). Hinge and swing
+  # are still the defaults (start jamb, local +Y).
   - id: D-OP41
     FillsOpening: OP41
     OverallWidth: 0.85

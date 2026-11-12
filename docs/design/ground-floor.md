@@ -36,7 +36,7 @@ The builder extrudes every wall that has a thickness at yaml-ifc’s `DEFAULT_WA
 | W-023 | Glazed run. Thickness is the 100 mm posts at x 21.95–22.05 and 26.45–26.55. The long faces are not drawn. OP27, OP28 and OP29 void this wall. | YAML comment |
 | OP27, OP29 | The source gave `HeadHeight` only. Since 2026-11-12 they are cut at 2.5 m, sill 0, the same as OP28 beside them, so the two O11 sashes have glass. The height is taken from the head; nothing in the drawing gives it. | module note, [OpeningsSpec.md](../OpeningsSpec.md) |
 | Door sill | Where the source left the sill empty, sill is head minus height. The written head equals the leaf height, so the leaf starts at the floor. | YAML header |
-| Leaves | Timber doors 40 mm, glazing 24 mm, held 15 mm off the void. Plain openings stay empty. | `DOOR_LEAF_MM`, `WINDOW_LEAF_MM`, `LEAF_GAP_MM` |
+| Leaves | Timber doors 40 mm, glazing 24 mm, held 15 mm off the void. Interior hinged leaves sit flush with the circulation face (no separate frame solid: frames are plastered over). Plain openings stay empty. | `DOOR_LEAF_MM`, `WINDOW_LEAF_MM`, `LEAF_GAP_MM`, [OpeningsSpec.md](../OpeningsSpec.md) |
 
 `guess:` the 50 mm band on W-017 is a placeholder so the wall is a solid. It is not a measured thickness.
 
@@ -77,7 +77,8 @@ Every door Petr has specified, and its source, is listed in [OpeningsSpec.md](..
 | --- | --- |
 | `HingeSide` | `start` or `end`: the jamb, along the host wall axis, that carries the hinge |
 | `Swing` | `+` or `-`: the side of the wall the leaf opens to, along the wall's local +Y (the axis turned 90° counter-clockwise) |
-| `LeafOffset` | metres along local +Y. Moves the leaf off the wall centre. OP11 and OP17 use it so they sit flush on the hallway face, in line with the WC door OP19 |
+| `FlushFace` | `+` or `-`: sit the leaf flush with that local-Y face of the host wall (the leaf's face on that side is coplanar with the wall face). Used on reverse interior doors. On a wall whose axis is the drawn face (W-017), the leaf sits on the room side of the axis. [OpeningsSpec.md](../OpeningsSpec.md), Reverse interior doors |
+| `LeafOffset` | metres along local +Y. Absolute override of the leaf's midplane, used when the flush plane is not the host wall's own face. OP11 and OP17 use −0.5925 m so their hallway faces sit on the W-017 line (y 9.475), in line with the WC door OP19 |
 | `Pset_DoorCommon.GlazingAreaFraction` | above 0: a glazed leaf, a glass pane (glazing material) in a 70 mm frame (`GLAZED_DOOR_FRAME_MM`), one `door__<id>__` node so frame and glass swing together. The terrace door OP32 |
 | `UserDefinedOperationType` | `SECTIONAL_OVERHEAD` with `OperationType: USERDEFINED`. IFC4 has no sectional door type |
 
