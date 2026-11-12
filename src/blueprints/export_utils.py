@@ -124,6 +124,15 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "roughness": 0.3,
         "metallic": 0.0,
     },
+    "hob": {
+        # Miele KM 8665 FL: black ceramic glass (kitchen-cabinets.md).
+        "fill": (24, 24, 27),
+        "line": (0, 0, 0),
+        "dxf": ColorIndex.BLACK,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.1,
+        "metallic": 0.0,
+    },
     "oak": {
         "fill": (196, 150, 96),
         "line": (110, 72, 36),
@@ -570,6 +579,7 @@ SECTION_LAYER_ORDER = [
     "upholstery",
     "cabinet",
     "worktop",
+    "hob",
     "oak",
     "appliance",
     "sink",

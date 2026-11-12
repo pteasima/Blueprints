@@ -158,7 +158,7 @@ KITCHEN = (
     ("SF-BH800", "systemFurniture", "WallCabinet", [19.15, 12.2], [0.0, 1.0], 0.8, 0.35, 0.9, None, 1.55),
     ("SF-C850", "systemFurniture", "BaseCabinet", [19.4, 11.35], [0.0, 1.0], 0.85, 0.6, 0.93, None, None),
     ("SF-CH850", "systemFurniture", "WallCabinet", [19.15, 11.35], [0.0, 1.0], 0.85, 0.35, 0.9, None, 1.55),
-    ("SN-RS15", "sanitaryTerminals", "SINK", [19.32, 12.225], [0.0, 1.0], 0.75, 0.44, 0.2, None, 0.73),
+    ("SN-RS15", "sanitaryTerminals", "SINK", [19.32, 12.225], [0.0, 1.0], 0.75, 0.44, 0.2, None, 0.71),
     ("EA-WQ9I", "electricAppliances", "FRIDGE_FREEZER", [19.55, 14.884], None, 0.908, 0.716, 1.876, None, None),
     ("EA-SBD6ECX", "electricAppliances", "DISHWASHER", [19.35, 13.251], [0.0, 1.0], 0.598, 0.55, 0.865, None, None),
 )

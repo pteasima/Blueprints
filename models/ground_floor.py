@@ -75,13 +75,16 @@ from build123d import (
     Box,
     Color,
     Compound,
+    Cylinder,
     Face,
     Plane,
     Pos,
+    RectangleRounded,
     Rot,
     Solid,
     Vector,
     Wire,
+    extrude,
 )
 from ifcopenshell.util.placement import get_local_placement
 from yaml_ifc import footprints, validation_errors
@@ -295,6 +298,19 @@ def _tag(painted, yaml_id: str, list_key: str):
 
 
 LABEL_WORKTOP = "worktop"
+LABEL_HOB = "hob"
+# Stone on a wall behind a counter that is not a kitchen run (the dining
+# cabinets' backsplash): drawn as worktop stone.
+STONE_TYPES = frozenset({"Backsplash"})
+
+
+def _void_solid(void, z0: float, z1: float):
+    """A worktop cut-out as a solid, run frame mm (rounded corners if any)."""
+    w, d = void.a1 - void.a0, void.c1 - void.c0
+    pos = Pos((void.a0 + void.a1) / 2.0, (void.c0 + void.c1) / 2.0, z0)
+    if void.radius > 0:
+        return pos * extrude(RectangleRounded(w, d, void.radius), amount=z1 - z0)
+    return pos * Box(w, d, z1 - z0, align=(Align.CENTER, Align.CENTER, Align.MIN))
 
 
 def _run_box(box, shrink: float):
@@ -324,13 +340,19 @@ def _kitchen_run_parts(run, motions=None) -> list:
                 solid = solid + _run_box(box, 0.0)
             inward = -dr.out * half
             solid = Pos(0.0, inward, 0.0) * solid
+        elif part.shape == "cylinder":
+            a0, a1, c0, c1, z0, z1 = part.boxes[0]
+            solid = Pos((a0 + a1) / 2.0, (c0 + c1) / 2.0, z0 + half) * Cylinder(
+                (a1 - a0) / 2.0 - half, z1 - z0 - 2 * half, align=(Align.CENTER, Align.CENTER, Align.MIN)
+            )
         else:
             pieces = [_run_box(box, half) for box in part.boxes]
             solid = pieces[0] if len(pieces) == 1 else Compound(obj=pieces)
-            for a0, a1, c0, c1 in part.voids:
-                z0, z1 = part.boxes[0][4], part.boxes[0][5]
-                solid = solid - _run_box((a0, a1, c0, c1, z0 - 1.0, z1 + 1.0), 0.0)
-        label = LABEL_WORKTOP if part.label == "worktop" else LABEL_CABINET
+            z0, z1 = part.boxes[0][4], part.boxes[0][5]
+            for void in part.voids:
+                bottom = z0 - 1.0 if not void.depth else z1 - void.depth
+                solid = solid - _void_solid(void, bottom, z1 + 1.0)
+        label = {"worktop": LABEL_WORKTOP, "hob": LABEL_HOB}.get(part.label, LABEL_CABINET)
         out.append(_tag(_paint(plane * solid, label), part.id, "systemFurniture"))
         if part.drawer is None or motions is None:
             continue
@@ -387,6 +409,8 @@ def _furnishing_parts(doc: dict, motions: list | None = None) -> list:
                 label = LABEL_OAK
             elif object_type in SOFA_TYPES:
                 label = LABEL_UPHOLSTERY
+            elif object_type in STONE_TYPES:
+                label = LABEL_WORKTOP
             parts.extend(_solid_from_product(product, label, key, element, motions))
     return parts
 
@@ -1513,6 +1537,23 @@ FURNITURE_VIEWS = (
         "title": {"en": "Kitchen cabinet wall", "cs": "Kuchyňská linka"},
     },
     {
+        # Island top from the west aisle: the hob (SF-I600b) and the sink
+        # (SF-I500a) cut into the Silestone (kitchen-cabinets.md).
+        "id": "kitchen-island",
+        "eye": (19.75, 11.55, 1.85),
+        "target": (20.95, 12.75, 0.9),
+        "hFovDeg": 55,
+        "title": {"en": "Island: hob and sink", "cs": "Ostrov: varná deska a dřez"},
+    },
+    {
+        # The north dining wall: the oak bases and the Silestone backsplash.
+        "id": "dining-wall",
+        "eye": (24.0, 11.4, 1.7),
+        "target": (24.0, 15.4, 1.2),
+        "hFovDeg": 70,
+        "title": {"en": "Dining wall backsplash", "cs": "Obklad stěny u jídelny"},
+    },
+    {
         "id": "living-terrace",
         "eye": (22.9, 10.55, 1.55),
         "target": (27.0, 14.3, 1.05),
@@ -1562,6 +1603,7 @@ def part_groups() -> list[dict]:
                 LABEL_WORKTOP,
                 LABEL_OAK,
                 LABEL_APPLIANCE,
+                LABEL_HOB,
                 LABEL_SINK,
                 LABEL_UPHOLSTERY,
                 LABEL_FURNITURE,

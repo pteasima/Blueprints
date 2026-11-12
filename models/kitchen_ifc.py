@@ -33,8 +33,15 @@ PSET_PART = "Pset_KitchenPart"
 PART_CLASS = {
     "Worktop": ("IfcSystemFurnitureElement", "WORKSURFACE"),
     "Cladding": ("IfcCovering", "CLADDING"),
+    "Backsplash": ("IfcCovering", "CLADDING"),
     "Drawer": ("IfcSystemFurnitureElement", "USERDEFINED"),
+    "Body": ("IfcSystemFurnitureElement", "USERDEFINED"),  # a whole box bay (Carcass: Box)
+    # The hob is an appliance, not a piece of the carcass: it is contained in
+    # the room like the dishwasher and only joins its bay's group.
+    "Hob": ("IfcElectricAppliance", "ELECTRICCOOKER"),
 }
+NOT_AGGREGATED = frozenset({"Hob"})
+ARC_SEGMENTS = 6  # per rounded cut-out corner
 DEFAULT_CLASS = ("IfcSystemFurnitureElement", "PANEL")
 
 
@@ -91,8 +98,8 @@ class _Writer:
         )
         return self.m.create_entity("IfcLocalPlacement", PlacementRelTo=parent, RelativePlacement=axis)
 
-    def _polyline(self, a0, a1, c0, c1, reverse=False):
-        pts = [(a0, c0), (a1, c0), (a1, c1), (a0, c1)]
+    def _polyline(self, a0, a1, c0, c1, reverse=False, radius=0.0):
+        pts = _outline(a0, a1, c0, c1, radius)
         if reverse:
             pts.reverse()
         pts.append(pts[0])
@@ -107,7 +114,11 @@ class _Writer:
                 "IfcArbitraryProfileDefWithVoids",
                 ProfileType="AREA",
                 OuterCurve=self._polyline(a0, a1, c0, c1),
-                InnerCurves=[self._polyline(*(v / 1000.0 for v in hole), reverse=True) for hole in voids],
+                InnerCurves=[
+                    self._polyline(h.a0 / 1000.0, h.a1 / 1000.0, h.c0 / 1000.0, h.c1 / 1000.0,
+                                   reverse=True, radius=h.radius / 1000.0)
+                    for h in voids
+                ],
             )
             pos = self.m.create_entity("IfcAxis2Placement3D", Location=self.point(0.0, 0.0, z0))
         else:
@@ -132,8 +143,40 @@ class _Writer:
             Depth=z1 - z0,
         )
 
+    def cylinder(self, box):
+        a0, a1, c0, c1, z0, z1 = (v / 1000.0 for v in box)
+        profile = self.m.create_entity(
+            "IfcCircleProfileDef",
+            ProfileType="AREA",
+            Position=self.m.create_entity(
+                "IfcAxis2Placement2D",
+                Location=self.m.create_entity("IfcCartesianPoint", Coordinates=(0.0, 0.0)),
+            ),
+            Radius=(a1 - a0) / 2.0,
+        )
+        return self.m.create_entity(
+            "IfcExtrudedAreaSolid",
+            SweptArea=profile,
+            Position=self.m.create_entity(
+                "IfcAxis2Placement3D", Location=self.point((a0 + a1) / 2.0, (c0 + c1) / 2.0, z0)
+            ),
+            ExtrudedDirection=self.direction(0.0, 0.0, 1.0),
+            Depth=z1 - z0,
+        )
+
     def shape(self, part: kc.Part):
-        items = [self.extrusion(part.boxes[0], part.voids)] + [self.extrusion(b) for b in part.boxes[1:]]
+        if part.shape == "cylinder":
+            items = [self.cylinder(part.boxes[0])]
+            rep = self.m.create_entity(
+                "IfcShapeRepresentation",
+                ContextOfItems=self.body,
+                RepresentationIdentifier="Body",
+                RepresentationType="SweptSolid",
+                Items=items,
+            )
+            return self.m.create_entity("IfcProductDefinitionShape", Representations=[rep])
+        items = [self.extrusion(b, v) for b, v in _layers(part.boxes[0], part.voids)]
+        items += [self.extrusion(b) for b in part.boxes[1:]]
         rep = self.m.create_entity(
             "IfcShapeRepresentation",
             ContextOfItems=self.body,
@@ -166,8 +209,42 @@ class _Writer:
 
     def material(self, name: str):
         if name not in self.materials:
-            self.materials[name] = self.m.create_entity("IfcMaterial", Name=name, Category="Quartz surface")
+            category = "Quartz surface" if "silestone" in name.lower() else None
+            self.materials[name] = self.m.create_entity("IfcMaterial", Name=name, Category=category)
         return self.materials[name]
+
+
+def _outline(a0, a1, c0, c1, r=0.0):
+    """Rectangle corners, counter-clockwise; rounded corners as short chords."""
+    if r <= 0:
+        return [(a0, c0), (a1, c0), (a1, c1), (a0, c1)]
+    pts = []
+    for cx, cy, start in ((a1 - r, c0 + r, -90), (a1 - r, c1 - r, 0), (a0 + r, c1 - r, 90), (a0 + r, c0 + r, 180)):
+        for i in range(ARC_SEGMENTS + 1):
+            t = np.radians(start + 90.0 * i / ARC_SEGMENTS)
+            pts.append((float(cx + r * np.cos(t)), float(cy + r * np.sin(t))))
+    return pts
+
+
+def _inside(v, w) -> bool:
+    return v.a0 >= w.a0 and v.a1 <= w.a1 and v.c0 >= w.c0 and v.c1 <= w.c1
+
+
+def _layers(box, voids):
+    """Split a slab with pockets (a flush hob rebate) into a lower slab with
+    the through holes and a top layer with the pockets, so each stays one
+    extruded profile. Returns [(box, voids)]."""
+    pockets = [v for v in voids if v.depth]
+    through = [v for v in voids if not v.depth]
+    if not pockets:
+        return [(box, through)]
+    depths = {round(v.depth, 3) for v in pockets}
+    if len(depths) != 1:
+        raise ValueError(f"one pocket depth per worktop, got {sorted(depths)}")
+    d = pockets[0].depth
+    a0, a1, c0, c1, z0, z1 = box
+    top = pockets + [v for v in through if not any(_inside(v, w) for w in pockets)]
+    return [((a0, a1, c0, c1, z0, z1 - d), through), ((a0, a1, c0, c1, z1 - d, z1), top)]
 
 
 def _bbox(part: kc.Part) -> tuple[float, float, float]:
@@ -235,6 +312,8 @@ def apply(model, doc: dict, runs: list | None = None) -> dict:
     for run in runs:
         run_product = by_id[run.id]
         children = []
+        loose = []  # contained in the room, not aggregated (the hob)
+        products = {}
         for part in run.parts:
             ifc_class, predefined = PART_CLASS.get(part.role, DEFAULT_CLASS)
             values = dict(
@@ -268,7 +347,12 @@ def apply(model, doc: dict, runs: list | None = None) -> dict:
                     RelatedObjects=[product],
                     RelatingMaterial=w.material(part.material),
                 )
-            children.append(product)
+            if part.role == "Hob":
+                hob = next(h for h in run.hobs.values() if h.id == part.id)
+                w.pset(product, kc.PSET_HOB, {"Model": part.name, "Mounting": hob.mounting,
+                                              "CutoutToBackEdge": round(hob.back_edge / 1000.0, 6)}, part.id)
+            (loose if part.role in NOT_AGGREGATED else children).append(product)
+            products[part.id] = product
             written[part.id] = product.GlobalId
         model.create_entity(
             "IfcRelAggregates",
@@ -276,7 +360,19 @@ def apply(model, doc: dict, runs: list | None = None) -> dict:
             RelatingObject=run_product,
             RelatedObjects=children,
         )
-        parts_by_id = {p.id: c for p, c in zip(run.parts, children)}
+        if loose:
+            structure = next(
+                (r.RelatingStructure for r in (run_product.ContainedInStructure or [])), None
+            )
+            if structure is None:
+                raise ValueError(f"{run.id} is in no spatial structure; the hob needs one")
+            model.create_entity(
+                "IfcRelContainedInSpatialStructure",
+                GlobalId=global_id(f"rel:contained:{run.id}:appliances"),
+                RelatedElements=loose,
+                RelatingStructure=structure,
+            )
+        parts_by_id = products
         for bay in run.bays:
             group = _bay_to_group(model, by_id[bay.id], w)
             members = [parts_by_id[m] for m in bay.members]

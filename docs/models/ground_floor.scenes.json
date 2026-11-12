@@ -420,6 +420,58 @@
     }
   },
   {
+    "id": "kitchen-island",
+    "hFovDeg": 55,
+    "title": {
+      "en": "Island: hob and sink",
+      "cs": "Ostrov: varná deska a dřez"
+    },
+    "project": "RD Šíma 1.NP",
+    "camera": {
+      "target": [
+        20.95,
+        0.9,
+        -12.75
+      ],
+      "position": [
+        19.75,
+        1.85,
+        -11.55
+      ],
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "id": "dining-wall",
+    "hFovDeg": 70,
+    "title": {
+      "en": "Dining wall backsplash",
+      "cs": "Obklad stěny u jídelny"
+    },
+    "project": "RD Šíma 1.NP",
+    "camera": {
+      "target": [
+        24.0,
+        1.2,
+        -15.4
+      ],
+      "position": [
+        24.0,
+        1.7,
+        -11.4
+      ],
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ]
+    }
+  },
+  {
     "id": "living-terrace",
     "hFovDeg": 70,
     "title": {

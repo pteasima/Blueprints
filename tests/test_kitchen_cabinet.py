@@ -53,10 +53,10 @@ def test_sf_i600a_drawers():
     assert [d.nominal for d in drawers] == [200.0, 200.0, 400.0]
     assert [d.content for d in drawers] == ["nože", "nářadí", "dole nevím"]
     assert [(round(d.front[1] - d.front[0]), round(d.front[5] - d.front[4])) for d in drawers] == [
-        (597, 197), (597, 197), (597, 397)]
+        (597, 197), (597, 197), (597, 407)]
     assert all(round(d.box[1] - d.box[0]) == 556 for d in drawers)
     assert all(d.extension == 550.0 for d in drawers)
-    assert run.carcass_z1 - run.carcass_z0 == pytest.approx(800.0)
+    assert run.carcass_z1 - run.carcass_z0 == pytest.approx(810.0)
 
 
 def test_island_worktop_and_cladding():
@@ -111,3 +111,79 @@ def test_drawer_motions_in_model():
         assert m["element"] == m["id"]
         assert m["slide"] == pytest.approx([-0.55, 0.0, 0.0])
         assert m["center"][2] == pytest.approx(-13.0, abs=1e-6)
+
+
+def test_sink_cutouts_are_teka_undermount():
+    runs = _runs()
+    isl = {v.name: v for v in runs["KR-ISL"].part("KR-ISL-WORKTOP").voids}
+    west = {v.name: v for v in runs["KR-WEST"].part("KR-WEST-WORKTOP").voids}
+    rs15 = west["SN-RS15"]
+    assert (round(rs15.a1 - rs15.a0, 3), round(rs15.c1 - rs15.c0, 3), rs15.radius) == (706.0, 396.0, 13.0)
+    s18 = isl["SN-RS1840"]
+    assert (round(s18.a1 - s18.a0, 3), round(s18.c1 - s18.c0, 3)) == (176.0, 396.0)
+
+
+def test_undermount_rim_must_meet_the_stone():
+    doc = copy.deepcopy(load_furnishings())
+    sink = next(e for e in doc["sanitaryTerminals"] if e["id"] == "SN-RS15")
+    sink["Elevation"] = 0.73
+    with pytest.raises(ValueError, match="undermount"):
+        kc.runs(doc)
+
+
+def test_hob_flush_fit_in_sf_i600b():
+    run = _runs()["KR-ISL"]
+    hob = run.hobs["SF-I600b"]
+    assert hob.mounting == "FlushFit"
+    assert hob.glass[5] == pytest.approx(930.0)
+    assert hob.underside == pytest.approx(879.0)
+    assert hob.back_edge >= 50.0
+    voids = {v.name: v for v in run.part("KR-ISL-WORKTOP").voids}
+    assert voids["hob rebate"].depth == pytest.approx(5.5)
+    assert voids["hob"].a1 - voids["hob"].a0 == pytest.approx(600.0)
+    assert "EA-KM8665" in run.bay("SF-I600b").members
+    assert "SF-I600b-RAIL-F" not in [p.id for p in run.parts]
+
+
+def test_drawers_under_the_hob_clear_it():
+    doc = copy.deepcopy(load_furnishings())
+    bay = next(e for e in doc["systemFurniture"] if e["id"] == "SF-I600b")
+    bay["PropertySets"].append({"Name": "Pset_Drawers", "Properties": {"NominalHeights": "0.2 0.2 *"}})
+    run = _runs(doc)["KR-ISL"]
+    hob = run.hobs["SF-I600b"]
+    top = run.part("SF-I600b-D1").drawer
+    assert top.box[5] <= hob.underside - 8.0 + 1e-6
+
+
+def test_west_backsplash_up_to_wall_cabinets():
+    run = _runs()["KR-WEST"]
+    (box,) = run.part("KR-WEST-BACKSPLASH").boxes
+    assert box[3] - box[2] == pytest.approx(12.0)
+    assert (box[4], box[5]) == (pytest.approx(930.0), pytest.approx(1550.0))
+    assert box[1] - box[0] == pytest.approx(2500.0)
+
+
+def test_west_run_ends_clad():
+    run = _runs()["KR-WEST"]
+    for name in ("KR-WEST-CLAD-N", "KR-WEST-CLAD-S"):
+        (box,) = run.part(name).boxes
+        assert box[1] - box[0] == pytest.approx(20.0) and (box[4], box[5]) == (0.0, pytest.approx(910.0))
+    assert run.worktop[1] - run.worktop[0] == pytest.approx(2540.0)
+
+
+def test_dining_run_box_bodies_under_stone():
+    run = _runs()["KR-DN"]
+    assert run.part("SF-DN-BODY").boxes[0][5] == pytest.approx(910.0)
+    slabs = run.part("KR-DN-WORKTOP").boxes
+    assert len(slabs) == 4 and all(s[5] == pytest.approx(930.0) and s[2] == pytest.approx(-30.0) for s in slabs)
+    assert not [p for p in run.parts if p.role == "Cladding"]
+
+
+def test_open_legs_no_kick_board():
+    runs = _runs()
+    for rid, legs in (("KR-ISL", 22), ("KR-WEST", 8)):
+        run = runs[rid]
+        assert not [p for p in run.parts if p.role == "Plinth"]
+        found = [p for p in run.parts if p.role == "Leg"]
+        assert len(found) == legs and all(p.boxes[0][5] == pytest.approx(100.0) for p in found)
+    assert runs["KR-TALL"].carcass_z1 == pytest.approx(2450.0)
