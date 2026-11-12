@@ -51,8 +51,8 @@ An exterior device is named from the room where its cable comes through the wall
 | SOCK-ES | 1.11-Z3 | wall | 750 |
 | C1-2V | 1.11-B5 | wall | 821 |
 | C2-S | 1.11-L5 | wall | 892 |
-| C7-S | 1.11-L6 | strip | west-rail |
-| C8-S | 1.11-L7 | strip | south-rail |
+| C7-S | 1.11-L6 | strip | rail-up |
+| C8-S | 1.11-L7 | strip | rail-down |
 | C32-V-1 | 1.11-B2 | wall | 1350 |
 | C9-R | 1.11-P1 | wall | in box |
 | C32-M | 1.11-K1 | frame | frame |

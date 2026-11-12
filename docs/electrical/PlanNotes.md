@@ -127,12 +127,14 @@ The drawing cites the short name.
 | `facade` | A blind motor is outside, on the outer face, beside the window. The cloth is not drawn. |
 | `ceiling` | A light or the access point, in the room, off the wall. |
 | `bed-edge` | The LED strip follows the unfinished bed outline. |
+| `rail-up` | The LED strip runs the garnýž L along the west and south walls, on top of the rail, shining up. |
+| `rail-down` | The same L, under the rail, shining down. |
 | `unused` | The fixture is parked. It is not wired, not on a panel, and not counted. |
 | `corridor` | The hallway button is on the other face of the bedroom door. |
 
 ## Room 1.11, as answered
 
-Cable 12 is the 120 W pendant above the bed, a 4-core CCT light on `CYKY 4x2.5` (see Indoor lights are CCT on 4-core cable). Cable 3 is the LED strip on the foot and the two long sides of the bed, not the headboard. Cable 32 is the contact and the two switches of OP09. Cable 16 stays the blind for the narrow west window. Cable 6 and cable 11 are off the plan for now. The bed is 2000 mm by 1800 mm with the headboard on the east wall. Each bedside stack is a socket at 750, a switch at 821, and a lamp at 892. C7 is the west curtain rail, from the south-west corner to 50 mm past the north jamb of OP01. C8 is the south curtain rail, from that same corner to 50 mm past the east jamb of OP05. The access point is on the 2.50 m ceiling at x=1.100, y=8.725. The bedroom outline is the L in `rooms/1.11-geometry.md`, 22.98 m².
+Cable 12 is the 120 W pendant above the bed, a 4-core CCT light on `CYKY 4x2.5` (see Indoor lights are CCT on 4-core cable). Cable 3 is the LED strip on the foot and the two long sides of the bed, not the headboard. Cable 32 is the contact and the two switches of OP09. Cable 16 stays the blind for the narrow west window. Cable 6 and cable 11 are off the plan for now. The bed is 2000 mm by 1800 mm with the headboard on the east wall. Each bedside stack is a socket at 750, a switch at 821, and a lamp at 892. C7 and C8 are the two curtain-rail (garnýž) strips. Each is one continuous L along the west and the south wall: from 50 mm past the north jamb of OP01 to the south-west corner, then to 50 mm past the east jamb of OP05. One shines up from the top of the garnýž, the other down from under it (Petr, Cody chat, 2026-11-12: "Theyre continuous west and south, but one is shining upward, other one downward (from the garnyz)"; this replaces the earlier "one west, other one south"). Which cable is the uplight was not stated; the model assumes C7 up and C8 down. The access point is on the 2.50 m ceiling at x=1.100, y=8.725. The bedroom outline is the L in `rooms/1.11-geometry.md`, 22.98 m².
 
 Power sockets have no cable number and no circuit. They are positions only. The two outdoor lamps stay where they were and are marked UNUSED. The west lamp's cable number is still a TODO.
 
