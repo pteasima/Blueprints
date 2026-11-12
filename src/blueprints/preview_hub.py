@@ -261,8 +261,44 @@ def ensure_viewer_shell() -> None:
         html,
         count=1,
     )
-    if n and updated != html:
+    materials_digest = sync_materials_site()
+    if materials_digest:
+        updated = re.sub(
+            r'(materials/catalogue\.yaml)(?:\?v=[0-9a-f]*)?(["\'])',
+            rf"\1?v={materials_digest}\2",
+            updated,
+            count=1,
+        )
+    if updated != html:
         index.write_text(updated, encoding="utf-8")
+
+
+MATERIALS_CATALOGUE = REPO_ROOT / "inputs" / "materials" / "catalogue.yaml"
+
+
+def sync_materials_site() -> str | None:
+    """Publish the material catalogue as docs/materials/catalogue.yaml.
+
+    The viewer's Realistic mode fetches it from ``<site>/materials/``. The
+    textures it names already live (tracked) in docs/materials/<id>/; only
+    the YAML sits in inputs/, so this copies that one file (gitignored, like
+    docs/index.html). Stdlib only, because Pages CI runs this without the
+    project's dependencies. Returns a short hash of the catalogue and its
+    maps (cache-buster for the catalogue URL), or None without a catalogue.
+    """
+    import hashlib
+
+    if not MATERIALS_CATALOGUE.is_file():
+        return None
+    dest = PREVIEW_SITE_DIR / "materials" / "catalogue.yaml"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(MATERIALS_CATALOGUE, dest)
+    digest = hashlib.sha256(MATERIALS_CATALOGUE.read_bytes())
+    textures = PREVIEW_SITE_DIR / "materials"
+    for tex in sorted(textures.rglob("*.jpg")):
+        digest.update(str(tex.relative_to(textures)).encode())
+        digest.update(str(tex.stat().st_size).encode())
+    return digest.hexdigest()[:10]
 
 
 def publish_to_preview_site(

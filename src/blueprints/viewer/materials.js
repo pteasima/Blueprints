@@ -1,5 +1,6 @@
 /**
- * Solid vs Realistic material modes for the WebGL viewer.
+ * Solid, Shaded and Realistic material modes for the WebGL viewer.
+ * Solid and Shaded live here; Realistic (catalogue PBR) is realistic.js.
  * SOLID_COLORS must stay in sync with SECTION_LAYERS fill RGB in export_utils.py.
  * Screen edge overlays use black fat lines (see edges.js), not section line colours.
  */
@@ -8,7 +9,16 @@ import { patchMaterialForDepthPeel } from "./depthPeel.js";
 
 export const MATERIAL_MODE_KEY = "blueprints.materialMode";
 export const MODE_SOLID = "solid";
+/**
+ * The diagrammatic palette lit, with procedural maps. Called "realistic"
+ * until the catalogue-driven mode took that name (Petr, 2026-11-12). The
+ * stored value "realistic" now means the new mode, which is what the button
+ * the user picked was called.
+ */
+export const MODE_SHADED = "shaded";
+/** Catalogue PBR materials, textures, sun and shadows (realistic.js). */
 export const MODE_REALISTIC = "realistic";
+export const MATERIAL_MODES = [MODE_SOLID, MODE_SHADED, MODE_REALISTIC];
 
 /** @type {Record<string, [number, number, number]>} 0–255 RGB — near-max chroma */
 export const SOLID_COLORS = {
@@ -348,9 +358,13 @@ export function applyOpacityToMeshes(meshes, opacity, opts = {}) {
     const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
     for (const mat of list) {
       if (!mat) continue;
-      if (o < 1) {
+      // A material's own opacity (catalogue glass without transmission)
+      // scales the slider value, so a slider at 100% keeps it see-through.
+      const preset = mat.userData?.presetOpacity;
+      const om = typeof preset === "number" ? o * Math.max(0, Math.min(1, preset)) : o;
+      if (om < 1) {
         mat.transparent = true;
-        mat.opacity = o;
+        mat.opacity = om;
         // Depth writes off for sorted-alpha fallback; DoubleSide so thin CAD
         // shells (NaturHeld, Flex) do not punch holes when faded.
         mat.depthWrite = false;
@@ -407,11 +421,11 @@ export function applyOpacityToMeshes(meshes, opacity, opts = {}) {
  *   clearcoatRoughness?: number,
  *   map?: 'wood' | 'foam' | 'plaster' | 'wool' | 'metal' | 'masonry' | 'none',
  *   opacity?: number,
- * }} RealisticPreset
+ * }} ShadedPreset
  */
 
-/** @type {Record<string, RealisticPreset>} */
-export const REALISTIC_PRESETS = {
+/** Shaded-mode looks (this mode was called "Realistic" until 2026-11-12). @type {Record<string, ShadedPreset>} */
+export const SHADED_PRESETS = {
   floor: {
     color: [230, 115, 20],
     roughness: 0.68,
@@ -843,7 +857,7 @@ function colorForLabel(label) {
  * @param {THREE.Plane[] | null | undefined} planes
  * @param {number} depthBias
  */
-function finishMaterial(mat, planes, depthBias = 0) {
+export function finishMaterial(mat, planes, depthBias = 0) {
   mat.side = THREE.DoubleSide;
   // Bias nested/abutting CAD faces so one layer consistently wins in the
   // depth buffer (cuts make coplanar interfaces much more visible).
@@ -938,6 +952,26 @@ function mapForSpan(kind, spanMm) {
 }
 
 /**
+ * Dispose materials a mode switch replaced. Procedural Shaded maps from the
+ * cache and catalogue textures (`userData.bpShared`) outlive the material;
+ * per-label Shaded clones are disposed with it.
+ * @param {Iterable<THREE.Material>} materials
+ */
+export function disposeReplacedMaterials(materials) {
+  const cached = new Set(textureCache.values());
+  for (const m of materials) {
+    if (!m) continue;
+    for (const key of ["map", "normalMap", "roughnessMap", "aoMap"]) {
+      const tex = /** @type {any} */ (m)[key];
+      if (!tex) continue;
+      if (!cached.has(tex) && !tex.userData?.bpShared) tex.dispose?.();
+      /** @type {any} */ (m)[key] = null;
+    }
+    m.dispose?.();
+  }
+}
+
+/**
  * @param {Map<string, THREE.Object3D[]>} partsMap
  * @param {string} mode
  * @param {{
@@ -948,7 +982,8 @@ function mapForSpan(kind, spanMm) {
  */
 export function applyMaterialMode(partsMap, mode, opts = {}) {
   const planes = opts.clippingPlanes ?? null;
-  const realistic = mode === MODE_REALISTIC;
+  // Realistic is applied by realistic.js; anything else not Solid is Shaded.
+  const shaded = mode === MODE_SHADED;
   const opacityByLabel = opts.opacityByLabel ?? null;
   const edgeMode = opts.edgeMode ?? "transparent";
 
@@ -956,7 +991,7 @@ export function applyMaterialMode(partsMap, mode, opts = {}) {
     const rgb = colorForLabel(label);
     const depthBias = LAYER_DEPTH_BIAS[label] ?? 0;
     let spanMm = 1000;
-    if (realistic) {
+    if (shaded) {
       for (const mesh of meshes) {
         if (mesh.isMesh && mesh.geometry) {
           spanMm = Math.max(spanMm, ensureBoxUVs(mesh.geometry));
@@ -967,8 +1002,8 @@ export function applyMaterialMode(partsMap, mode, opts = {}) {
     let presetOpacity = 1;
     /** @type {THREE.Material} */
     let mat;
-    if (realistic) {
-      const preset = REALISTIC_PRESETS[label] || {
+    if (shaded) {
+      const preset = SHADED_PRESETS[label] || {
         color: rgb,
         roughness: 0.7,
         metalness: 0.0,
@@ -1021,17 +1056,8 @@ export function applyMaterialMode(partsMap, mode, opts = {}) {
       mesh.userData.opaqueRenderOrder = depthBias;
       mesh.renderOrder = depthBias;
     }
-    for (const m of previous) {
-      if (m === mat) continue;
-      if (m.map && [...textureCache.values()].includes(m.map)) {
-        m.map = null;
-      } else if (m.map) {
-        // Cloned procedural maps from mapForSpan — dispose the clone.
-        m.map.dispose?.();
-        m.map = null;
-      }
-      m.dispose?.();
-    }
+    previous.delete(mat);
+    disposeReplacedMaterials(previous);
 
     let uiOpacity = 1;
     if (opacityByLabel) {
@@ -1043,11 +1069,8 @@ export function applyMaterialMode(partsMap, mode, opts = {}) {
         uiOpacity = opacityByLabel[label];
       }
     }
-    const effective = Math.max(
-      0,
-      Math.min(1, presetOpacity * (Number(uiOpacity) || 0)),
-    );
-    applyOpacityToMeshes(meshes, effective, { edgeMode });
+    // presetOpacity is applied per material inside applyOpacityToMeshes.
+    applyOpacityToMeshes(meshes, Number(uiOpacity) || 0, { edgeMode });
   }
 }
 
@@ -1108,7 +1131,7 @@ export function toArExportMaterial(material, geometry) {
 export function loadMaterialMode() {
   try {
     const v = localStorage.getItem(MATERIAL_MODE_KEY);
-    if (v === MODE_REALISTIC || v === MODE_SOLID) return v;
+    if (v && MATERIAL_MODES.includes(v)) return v;
   } catch {
     /* ignore */
   }
