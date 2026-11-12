@@ -23,6 +23,16 @@
  * of the slab and its full opening move `slide`. The model keeps the leaf as
  * one slab, so a two-panel (bi-parting) door is drawn as two scaled copies of
  * it that slide apart (models/ground_floor.py `_sliding_panels`).
+ *
+ * Sectional overhead doors (the garage doors) are records with kind
+ * "sectional": the leaf's `bottom` and `top` edge centres and jamb ends
+ * `start`/`end` when shut, `inward` (the room side its track runs into),
+ * `sections` and `bend` (metres). The slab is drawn as `sections` scaled
+ * copies, one per horizontal section. Opening runs every section along one
+ * track: straight up the leaf plane, a quarter bend of radius `bend` at the
+ * leaf head, then level into the room under the ceiling, each section
+ * turned to the track's tangent (`sectionalTrack`). A simplification of the
+ * real hardware (models/ground_floor.py `_sectional_record`).
  */
 import * as THREE from "three";
 import { LONG_PRESS_MS, classifyHold } from "./gesture.js";
@@ -257,7 +267,7 @@ export function matchDoorHosts(entries, records, tolerance = DOOR_MATCH_M) {
     for (const record of records) {
       if (!record) continue;
       const drawer = record.kind === "drawer" && Array.isArray(record.slide);
-      const sliding = isSlidingRecord(record);
+      const sliding = isSlidingRecord(record) || isSectionalRecord(record);
       if (!drawer && !sliding && (record.kind !== "hinged" || !record.hinge)) continue;
       const c = record.center;
       if (!Array.isArray(c) || c.length < 3) continue;
@@ -301,6 +311,7 @@ export function bindHinge(host, record) {
   if (!parent) return null;
   if (record.kind === "drawer") return bindDrawer(host, record);
   if (isSlidingRecord(record)) return bindSliding(host, record);
+  if (isSectionalRecord(record)) return bindSectional(host, record);
   const pivot = new THREE.Group();
   pivot.name = `hinge:${record.id}`;
   parent.add(pivot);
@@ -382,6 +393,142 @@ export function isSlidingRecord(record) {
 }
 
 const _xAxis = new THREE.Vector3(1, 0, 0);
+
+/**
+ * @param {object | null | undefined} record
+ * @returns {boolean}
+ */
+export function isSectionalRecord(record) {
+  return Boolean(
+    record &&
+      record.kind === "sectional" &&
+      ["start", "end", "bottom", "top", "inward"].every((k) => Array.isArray(record[k])) &&
+      Number(record.sections) >= 1,
+  );
+}
+
+/**
+ * Point and tilt on a sectional door's track, in the door frame: y up the
+ * leaf plane from its bottom edge, z into the room. Straight up to `rise`,
+ * a quarter bend of radius `bend`, then level. `tilt` is the section's turn
+ * about the frame's x axis (0 upright, π/2 lying level under the ceiling).
+ * @param {number} s arc length from the bottom edge, metres
+ * @param {number} rise straight run, metres (the leaf height)
+ * @param {number} bend bend radius, metres
+ * @returns {{ y: number, z: number, tilt: number }}
+ */
+export function sectionalTrack(s, rise, bend) {
+  if (s <= rise || bend <= 0) return { y: s, z: 0, tilt: 0 };
+  const arc = (Math.PI / 2) * bend;
+  if (s <= rise + arc) {
+    const phi = (s - rise) / bend;
+    return { y: rise + bend * Math.sin(phi), z: bend * (1 - Math.cos(phi)), tilt: phi };
+  }
+  return { y: rise + bend, z: bend + (s - rise - arc), tilt: Math.PI / 2 };
+}
+
+/**
+ * Track length a sectional door travels from shut to fully open: the leaf
+ * height plus the bend, so the whole leaf lies level.
+ * @param {number} rise
+ * @param {number} bend
+ */
+export function sectionalTravel(rise, bend) {
+  return rise + (Math.PI / 2) * Math.max(0, bend);
+}
+
+/**
+ * Sectional overhead door. A frame group sits on the leaf's bottom edge with
+ * x along the leaf, y up and z inward (parent-local). Each section is a
+ * pivot on the track holding a copy of the slab squeezed to 1/n of its
+ * height and centred on the pivot.
+ * @param {THREE.Object3D} host
+ * @param {object} record
+ */
+export function bindSectional(host, record) {
+  const parent = host.parent;
+  if (!parent) return null;
+  parent.updateWorldMatrix(true, false);
+  host.updateWorldMatrix(true, true);
+  const toLocal = (v) => parent.worldToLocal(new THREE.Vector3(Number(v[0]), Number(v[1]), Number(v[2])));
+  const start = toLocal(record.start);
+  const end = toLocal(record.end);
+  const bottom = toLocal(record.bottom);
+  const top = toLocal(record.top);
+  const inwardEnd = toLocal([
+    Number(record.bottom[0]) + Number(record.inward[0]),
+    Number(record.bottom[1]) + Number(record.inward[1]),
+    Number(record.bottom[2]) + Number(record.inward[2]),
+  ]);
+  const xDir = end.clone().sub(start);
+  const yDir = top.clone().sub(bottom);
+  const rise = yDir.length();
+  if (xDir.lengthSq() < 1e-12 || rise < 1e-6) return null;
+  xDir.normalize();
+  yDir.normalize();
+  const zDir = inwardEnd.sub(bottom);
+  zDir.addScaledVector(yDir, -zDir.dot(yDir)).addScaledVector(xDir, -zDir.dot(xDir));
+  if (zDir.lengthSq() < 1e-12) return null;
+  zDir.normalize();
+  // Right-handed frame: keep z inward and y up, take x = y × z.
+  const x = new THREE.Vector3().crossVectors(yDir, zDir);
+  const basis = new THREE.Matrix4().makeBasis(x, yDir, zDir);
+  const frame = new THREE.Group();
+  frame.name = host.name;
+  frame.position.copy(bottom);
+  frame.quaternion.setFromRotationMatrix(basis);
+  parent.add(frame);
+  frame.updateWorldMatrix(true, false);
+  frame.attach(host);
+  const n = Math.max(1, Math.round(Number(record.sections)));
+  const h = rise / n;
+  const bend = Math.max(0, Number(record.bend) || 0);
+  /** @type {{ pivot: THREE.Object3D, s0: number }[]} */
+  const sections = [];
+  for (let i = 0; i < n; i++) {
+    const leaf = i === 0 ? host : host.clone(true);
+    const pivot = new THREE.Group();
+    pivot.name = `section:${record.id}:${i}`;
+    const squeeze = new THREE.Group();
+    squeeze.position.y = -h / 2;
+    squeeze.scale.y = 1 / n;
+    pivot.add(squeeze);
+    frame.add(pivot);
+    // Keep the slab's frame-local transform: it spans y 0…rise in `squeeze`.
+    squeeze.add(leaf);
+    sections.push({ pivot, s0: (i + 0.5) * h });
+  }
+  const binding = {
+    id: record.id,
+    kind: "sectional",
+    pivot: frame,
+    host: frame,
+    sections,
+    rise,
+    bend,
+    travel: sectionalTravel(rise, bend),
+    sign: 1,
+    goal: 0,
+    anim: null,
+  };
+  placeSections(binding, 0);
+  frame.traverse((obj) => {
+    obj.userData.bpDoor = binding;
+  });
+  return binding;
+}
+
+/**
+ * @param {{ sections: { pivot: THREE.Object3D, s0: number }[], rise: number, bend: number, travel: number }} binding
+ * @param {number} amount 0 shut … 1 open
+ */
+export function placeSections(binding, amount) {
+  for (const section of binding.sections) {
+    const at = sectionalTrack(section.s0 + amount * binding.travel, binding.rise, binding.bend);
+    section.pivot.position.set(0, at.y, at.z);
+    section.pivot.rotation.set(at.tilt, 0, 0);
+  }
+}
 
 /**
  * Sliding or pocket leaf. A group at the parent origin (named like the host,
@@ -500,6 +647,10 @@ export function setPivotSwing(pivot, angle) {
  */
 export function applyDoorSwing(binding, now) {
   const amount = sampleDoor(binding, now);
+  if (binding.sections) {
+    placeSections(binding, amount);
+    return amount;
+  }
   if (binding.panels) {
     for (const panel of binding.panels) {
       panel.pivot.position.copy(panel.base).addScaledVector(panel.slideLocal, amount);

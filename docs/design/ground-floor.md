@@ -34,7 +34,7 @@ The builder extrudes every wall that has a thickness at yaml-ifc’s `DEFAULT_WA
 | W-004, W-014 | 120 mm closed squares on layer silná. Kept as short walls because IfcColumn is deferred. Neither axis meets another wall. | YAML comments, module note, PR #56 |
 | W-017 | No thickness. The opposite face is not drawn, so the axis is the silná line, not a measured centre-line. `footprints` leaves it out. The builder centres a 50 mm band on that line so OP19 can be cut. | YAML comment, `MISSING_THICKNESS_M` |
 | W-023 | Glazed run. Thickness is the 100 mm posts at x 21.95–22.05 and 26.45–26.55. The long faces are not drawn. OP27, OP28 and OP29 void this wall. | YAML comment |
-| OP27, OP29 | `HeadHeight` only. Height and sill are not invented, so they are not cut. W-023 stays a 100 mm band with only OP28 removed. | module note |
+| OP27, OP29 | The source gave `HeadHeight` only. Since 2026-11-12 they are cut at 2.5 m, sill 0, the same as OP28 beside them, so the two O11 sashes have glass. The height is taken from the head; nothing in the drawing gives it. | module note, [OpeningsSpec.md](../OpeningsSpec.md) |
 | Door sill | Where the source left the sill empty, sill is head minus height. The written head equals the leaf height, so the leaf starts at the floor. | YAML header |
 | Leaves | Timber doors 40 mm, glazing 24 mm, held 15 mm off the void. Plain openings stay empty. | `DOOR_LEAF_MM`, `WINDOW_LEAF_MM`, `LEAF_GAP_MM` |
 
@@ -59,12 +59,30 @@ The data is on each `IfcWindow` in `inputs/ground_floor/ground-floor.yaml`. `Par
 
 Petr, 2026-11-12, said the bedroom and the three children's rooms share one layout, the office is the opposite, and he was unsure about the garzonka. The drawing agrees: the garzonka matches the bedroom.
 
-Not changed yet. Every other window has no panel data. The model writes it as one `NOTDEFINED` pane, and the viewer slides it along the wall, as before. The drawing says otherwise for these:
+Fixed glazing (Petr, 2026-11-12: “all the small windows are fixed”), `FIXEDCASEMENT` for every panel. They have no sash, no `motion` in `windows.json`, and no tap target in the viewer:
 
-- North high windows O5 (OP04, OP07), O9 (garage OP45–OP48) and O7/O8 (OP15, OP42, two sashes each) are drawn bottom-hung (tilt in, apex at the top). O6 (OP12) is tilt-and-turn. None of them slides.
-- O11 (OP28, living room) is drawn as the fixed middle of a three-part unit. OP27 and OP29 on either side are the sashes, sliding toward it. OP27 and OP29 have no height, so they are not cut and have no glass.
-- OP39b (entrance, POHLED SEVEROVÝCHODNÍ, D1 bay) is drawn as fixed glazing.
-- OP26 (1.05), OP30 (1.23 east) and OP31 (1.20 east) do not appear in any elevation.
+- OP04, OP07, OP12, OP30, OP31, OP45, OP46, OP47, OP48 (`SINGLE_PANEL`)
+- OP15, OP42 (`DOUBLE_PANEL_VERTICAL`, both panels fixed)
+- OP39b (entrance), OP26 (tall hall window in 1.05), OP28 (middle of O11)
+
+The DWG draws O5, O6, O7/O8 and O9 as bottom-hung or tilt-and-turn. Petr's word overrides the drawing.
+
+O11, living room 1.02 south: OP28 in the middle is fixed. OP27 slides east and OP29 slides west, each by 2.315 m, so their leading edges meet at OP28's centre (x 24.25). `Pset_BlueprintsWindow.SlideToward` (`start` or `end` of the host axis) and `SlideTravel` (metres) override the default direction and the 80 % travel. A sash with `SlideTravel` runs on the indoor face of the wall so it can pass OP28.
+
+## Doors
+
+Every door Petr has specified, and its source, is listed in [OpeningsSpec.md](../OpeningsSpec.md). The model reads these fields from `Pset_BlueprintsDoor` on each `IfcDoor`:
+
+| Field | Meaning |
+| --- | --- |
+| `HingeSide` | `start` or `end`: the jamb, along the host wall axis, that carries the hinge |
+| `Swing` | `+` or `-`: the side of the wall the leaf opens to, along the wall's local +Y (the axis turned 90° counter-clockwise) |
+| `LeafOffset` | metres along local +Y. Moves the leaf off the wall centre. OP11 and OP17 use it so they sit flush on the hallway face, in line with the WC door OP19 |
+| `UserDefinedOperationType` | `SECTIONAL_OVERHEAD` with `OperationType: USERDEFINED`. IFC4 has no sectional door type |
+
+Sliding (`SLIDING_TO_LEFT`/`SLIDING_TO_RIGHT`): D-OP03 (double pocket) and the living-room pocket doors D-OP24, D-OP25, D-OP33. The leaf slides its full width inside the wall's centre plane. The DWG draws each leaf parked beside its opening on the living-room face, which gives the direction.
+
+Sectional overhead: the garage doors D-OP49 (D6) and D-OP50 (D5). `ground_floor.doors.json` writes them as `kind: "sectional"` with the opening's start, end, bottom and top, the inward direction, 4 sections and a 0.3 m bend. The viewer runs the sections up the opening, round the bend and level under the ceiling. It is a simplified animation, not a product's track. The leaf hangs on the garage face of W-067. Their height is still waiting on Petr.
 
 ## Floor EPS take-off
 

@@ -7,6 +7,8 @@
  *   projected on screen, for open and close alike.
  * - Hinged door: a quarter-arc arrow that follows the swing on screen,
  *   bending toward the hinge.
+ * - Sectional overhead door: an up arrow when it opens, down when it shuts,
+ *   upright on screen like a rocker's.
  * - Light: a ring pulse at the fixture.
  *
  * Every glyph is a fixed 36 CSS px whatever the camera. Each call spawns its
@@ -34,7 +36,7 @@ export const FEEDBACK_MS = 700;
 export const FEEDBACK_RISE_PX = 36;
 export const FEEDBACK_SIZE_PX = 36;
 
-/** @typedef {"switch" | "slide" | "hinge" | "light"} FeedbackKind */
+/** @typedef {"switch" | "lift" | "slide" | "hinge" | "light"} FeedbackKind */
 
 /**
  * Drift and opacity at time `t` (0…1 of the lifetime).
@@ -305,7 +307,7 @@ export function createFeedbackLayer(opts) {
     let glyph = "arrow";
     let angle = -90;
     let bend = 1;
-    if (spec.kind === "switch") {
+    if (spec.kind === "switch" || spec.kind === "lift") {
       angle = switchArrowAngle(spec.direction || "up");
     } else if (spec.kind === "slide") {
       const a = spec.worldDir ? screenDirection(spec.worldPos, spec.worldDir) : null;

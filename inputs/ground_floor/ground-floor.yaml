@@ -784,12 +784,15 @@ openings:
     Width: 1.15
     Height: 2.5
     SillHeight: 0
-  # OP27: Height and sill are not in the source (text is only the head). Elevation outline was not used. Kind is window; the note says it could also be a glazed door.
+  # OP27: outer sliding part of the living-room window O11. The plan text is
+  # only the head (2500). Petr 2026-11-12 and DWG POHLED JIŽNÍ/O11: floor to
+  # head like OP28, so Height 2.5, sill 0.
   - id: OP27
     VoidsElement: W-023
     AlongAxis: 0
     Width: 2.45
-    HeadHeight: 2.5
+    Height: 2.5
+    SillHeight: 0
   - id: OP28
     VoidsElement: W-023
     AlongAxis: 2.55
@@ -797,12 +800,15 @@ openings:
     Height: 2.5
     SillHeight: 0
     Tag: O11
-  # OP29: Height and sill are not in the source (text is only the head). Elevation outline was not used. Kind is window; the note says it could also be a glazed door.
+  # OP29: outer sliding part of the living-room window O11. The plan text is
+  # only the head (2500). Petr 2026-11-12 and DWG POHLED JIŽNÍ/O11: floor to
+  # head like OP28, so Height 2.5, sill 0.
   - id: OP29
     VoidsElement: W-023
     AlongAxis: 7.05
     Width: 2.45
-    HeadHeight: 2.5
+    Height: 2.5
+    SillHeight: 0
   # OP30: Petr 2026-10-05 overrides the DWG text. Sill taken as 1.75; Petr wrote 1759.
   - id: OP30
     VoidsElement: W-054
@@ -854,18 +860,25 @@ openings:
     Width: 0.9
     Height: 2.1
     SillHeight: 0
+  # OP38: 1.01 Zádveří → 1.17 Chodba (garage hallway). Head 2.50 m, the
+  # window head height (sill + height of every window here, e.g. OP42 in
+  # 1.17: 1.75 + 0.75; OP39b next to it: 0 + 2.5), Petr 2026-11-12. The DWG
+  # text is "900 | 2400" with a companion "2500" beside the opening.
   - id: OP38
     VoidsElement: W-059
     AlongAxis: 1.85
     Width: 1.1
-    Height: 2.4
+    Height: 2.5
     SillHeight: 0
   # OP39a: Petr 2026-10-05 overrides the DWG text.
+  # Head 2.50 m since Petr 2026-11-12 (11:17): the main entrance door's head
+  # matches the window directly beside it, OP39b (sill 0, height 2.5). The
+  # DWG text was "1000 | 2150"; its two companion "2500" texts sit here too.
   - id: OP39a
     VoidsElement: W-060
     AlongAxis: 0.475
     Width: 1.1
-    Height: 2.15
+    Height: 2.5
     SillHeight: 0
   # OP39b: Petr 2026-10-05 overrides the DWG text. Elevation sheet marks the whole entrance bay D1; not stored as Tag, because this half is a window.
   - id: OP39b
@@ -947,101 +960,244 @@ doors:
     FillsOpening: OP03
     OverallWidth: 1.8
     OverallHeight: 2.1
+  # D-OP06 (bedroom 1.11 → en-suite 1.09 Koupelna. Petr 2026-11-12: flip the
+  # hinge side (was the west/start jamb). Swing unchanged, into 1.09 (+Y). The
+  # DWG also hinges it on the east jamb). docs/OpeningsSpec.md.
   - id: D-OP06
     FillsOpening: OP06
     OverallWidth: 0.7
     OverallHeight: 2.1
+    PropertySets:
+      - Name: Pset_BlueprintsDoor
+        Properties:
+          HingeSide: end
+          Swing: "+"
   - id: D-OP09
     FillsOpening: OP09
     OverallWidth: 0.8
     OverallHeight: 2.1
+  # D-OP10 (hallway 1.05 → room 1.12. Petr 2026-11-12: flip the hinge side and
+  # open inward into the room. End jamb = east (as the DWG arc); −Y = south,
+  # into 1.12). docs/OpeningsSpec.md.
   - id: D-OP10
     FillsOpening: OP10
     OverallWidth: 0.8
     OverallHeight: 2.1
+    PropertySets:
+      - Name: Pset_BlueprintsDoor
+        Properties:
+          HingeSide: end
+          Swing: "-"
+  # D-OP11 (hallway 1.05 → laundry 1.08 Prádelna. Petr 2026-11-12: like the WC
+  # door D-OP19 (the reference): hinge on the same (west/start) jamb, open
+  # inward (+Y, north), and the leaf flush in the hallway face. The DWG draws
+  # the leaf on the hallway face line y 9.475 (W-017's axis, where D-OP19
+  # hangs); the W-022 axis is y 10.0875, so LeafOffset −0.6125 m).
+  # docs/OpeningsSpec.md.
   - id: D-OP11
     FillsOpening: OP11
     OverallWidth: 0.8
     OverallHeight: 2.1
+    PropertySets:
+      - Name: Pset_BlueprintsDoor
+        Properties:
+          HingeSide: start
+          Swing: "+"
+          LeafOffset: -0.6125
+  # D-OP14 (hallway 1.05 → room 1.13. Petr 2026-11-12: as D-OP10).
+  # docs/OpeningsSpec.md.
   - id: D-OP14
     FillsOpening: OP14
     OverallWidth: 0.8
     OverallHeight: 2.1
+    PropertySets:
+      - Name: Pset_BlueprintsDoor
+        Properties:
+          HingeSide: end
+          Swing: "-"
+  # D-OP17 (hallway 1.05 → bathroom 1.07 Koupelna. Petr 2026-11-12: as
+  # D-OP11). docs/OpeningsSpec.md.
   - id: D-OP17
     FillsOpening: OP17
     OverallWidth: 0.8
     OverallHeight: 2.1
+    PropertySets:
+      - Name: Pset_BlueprintsDoor
+        Properties:
+          HingeSide: start
+          Swing: "+"
+          LeafOffset: -0.6125
+  # D-OP18 (hallway 1.05 → room 1.14. Petr 2026-11-12: as D-OP10).
+  # docs/OpeningsSpec.md.
   - id: D-OP18
     FillsOpening: OP18
     OverallWidth: 0.8
     OverallHeight: 2.1
+    PropertySets:
+      - Name: Pset_BlueprintsDoor
+        Properties:
+          HingeSide: end
+          Swing: "-"
   - id: D-OP19
     FillsOpening: OP19
     OverallWidth: 0.8
     OverallHeight: 2.1
+  # D-OP20 (pantry 1.03 Spíž ↔ outside (D2). Petr 2026-11-12: the hinge side
+  # (south/start jamb) is right; open inward, into the pantry. W-047 runs
+  # south to north, so −Y is east, into 1.03. The DWG arc agrees).
+  # docs/OpeningsSpec.md.
   - id: D-OP20
     FillsOpening: OP20
     OverallWidth: 0.85
     OverallHeight: 2.15
     Tag: D2
+    PropertySets:
+      - Name: Pset_BlueprintsDoor
+        Properties:
+          HingeSide: start
+          Swing: "-"
+  # D-OP22 (hallway 1.05 → office 1.15 Pracovna. Petr 2026-11-12: as D-OP10).
+  # docs/OpeningsSpec.md.
   - id: D-OP22
     FillsOpening: OP22
     OverallWidth: 0.8
     OverallHeight: 2.1
+    PropertySets:
+      - Name: Pset_BlueprintsDoor
+        Properties:
+          HingeSide: end
+          Swing: "-"
+  # D-OP23 (hallway 1.05 → 1.04 Technická místnost. Petr 2026-11-12: flip the
+  # hinge side (was west/start). Swing unchanged, into 1.04 (+Y). The DWG also
+  # hinges it on the east jamb). docs/OpeningsSpec.md.
   - id: D-OP23
     FillsOpening: OP23
     OverallWidth: 0.8
     OverallHeight: 2.1
+    PropertySets:
+      - Name: Pset_BlueprintsDoor
+        Properties:
+          HingeSide: end
+          Swing: "+"
+  # D-OP24 (1.05 Chodba → 1.02 living room): single pocket door. The DWG plan draws no swing
+  # arc, only the leaf parked beside the opening on the living-room face of
+  # the wall (y 11.15–12.20), so it slides north (toward the W-050 end jamb) into the wall.
+  # docs/OpeningsSpec.md.
   - id: D-OP24
     FillsOpening: OP24
     OverallWidth: 1.1
     OverallHeight: 2.45
+    OperationType: SLIDING_TO_RIGHT
+  # D-OP25 (1.03 Spíž → 1.02 living room): single pocket door. The DWG plan draws no swing
+  # arc, only the leaf parked beside the opening on the living-room face of
+  # the wall (y 12.95–13.90), so it slides south (toward the W-050 start jamb) into the wall.
+  # docs/OpeningsSpec.md.
   - id: D-OP25
     FillsOpening: OP25
     OverallWidth: 1.1
     OverallHeight: 2.45
+    OperationType: SLIDING_TO_LEFT
   - id: D-OP32
     FillsOpening: OP32
     OverallWidth: 1.15
     OverallHeight: 2.5
+  # D-OP33 (1.02 living room → 1.01 Zádveří): single pocket door. The DWG plan draws no swing
+  # arc, only the leaf parked beside the opening on the living-room face of
+  # the wall (y 11.05–12.20), so it slides north (toward the W-056 end jamb) into the wall.
+  # docs/OpeningsSpec.md.
   - id: D-OP33
     FillsOpening: OP33
     OverallWidth: 1.1
     OverallHeight: 2.45
+    OperationType: SLIDING_TO_RIGHT
   - id: D-OP34
     FillsOpening: OP34
     OverallWidth: 0.8
     OverallHeight: 2.1
+  # D-OP37 (1.01 Zádveří → 1.19 WC, the door next to the garage-hallway door
+  # D-OP38 on W-059. Petr 2026-11-12 (relayed as "bathroom 1.21 next to the
+  # garage-hallway door"): flip the hinge side (was south/start) and open
+  # inward. End jamb = north; −Y = east, into 1.19). docs/OpeningsSpec.md.
   - id: D-OP37
     FillsOpening: OP37
     OverallWidth: 0.8
     OverallHeight: 2.1
+    PropertySets:
+      - Name: Pset_BlueprintsDoor
+        Properties:
+          HingeSide: end
+          Swing: "-"
+  # D-OP38 (1.01 Zádveří → 1.17 Chodba, the garage hallway, which runs on
+  # into the garage 1.16 with no door; this is "the door into the garage next
+  # to the main entrance"). Petr 2026-11-12: head as the window beside the
+  # main door (OP39b, 2.50 m), the hinge on the opposite jamb, and the leaf
+  # swings into the garage hallway / toward the garage (east). W-059 runs
+  # south to north, so the end jamb is the north jamb and local −Y is east,
+  # into 1.17. The 2022 DWG draws the hinge on the south jamb, swinging into
+  # 1.17; Petr's word overrides the hinge side. docs/OpeningsSpec.md.
   - id: D-OP38
     FillsOpening: OP38
     OverallWidth: 0.9
-    OverallHeight: 2.4
+    OverallHeight: 2.5
+    PropertySets:
+      - Name: Pset_BlueprintsDoor
+        Properties:
+          HingeSide: end
+          Swing: "-"
+  # D-OP39a (main entrance, 1.01 Zádveří): head at OP39b's head, 2.50 m,
+  # Petr 2026-11-12 (11:17). Hinge and swing unchanged. docs/OpeningsSpec.md.
   - id: D-OP39a
     FillsOpening: OP39a
     OverallWidth: 1
-    OverallHeight: 2.15
+    OverallHeight: 2.5
+  # D-OP40 (garzonka 1.22 → its bathroom 1.21. Petr 2026-11-12: flip the hinge
+  # side (was west/start); it still opens inward, into 1.21 (+Y, north). The
+  # DWG also hinges it on the east jamb). docs/OpeningsSpec.md.
   - id: D-OP40
     FillsOpening: OP40
     OverallWidth: 0.8
     OverallHeight: 2.1
+    PropertySets:
+      - Name: Pset_BlueprintsDoor
+        Properties:
+          HingeSide: end
+          Swing: "+"
   - id: D-OP41
     FillsOpening: OP41
     OverallWidth: 0.85
     OverallHeight: 2.15
+  # D-OP49 (D6, garage 1.16 east wall): sectional overhead door, Petr
+  # 2026-11-12. IFC4 IfcDoorTypeOperationEnum has no sectional value, so it
+  # is USERDEFINED with the kind in Pset_BlueprintsDoor. The DWG draws only
+  # the frame in the wall, no swing arc and no sliding leaf. Swing "+" is
+  # local +Y, west, into the garage (W-067 runs south to north).
   - id: D-OP49
     FillsOpening: OP49
     OverallWidth: 2.1
     OverallHeight: 2.25
     Tag: D6
+    OperationType: USERDEFINED
+    PropertySets:
+      - Name: Pset_BlueprintsDoor
+        Properties:
+          UserDefinedOperationType: SECTIONAL_OVERHEAD
+          Swing: "+"
+  # D-OP50 (D5, garage 1.16 east wall): sectional overhead door, Petr
+  # 2026-11-12. IFC4 IfcDoorTypeOperationEnum has no sectional value, so it
+  # is USERDEFINED with the kind in Pset_BlueprintsDoor. The DWG draws only
+  # the frame in the wall, no swing arc and no sliding leaf. Swing "+" is
+  # local +Y, west, into the garage (W-067 runs south to north).
   - id: D-OP50
     FillsOpening: OP50
     OverallWidth: 5.15
     OverallHeight: 2.25
     Tag: D5
+    OperationType: USERDEFINED
+    PropertySets:
+      - Name: Pset_BlueprintsDoor
+        Properties:
+          UserDefinedOperationType: SECTIONAL_OVERHEAD
+          Swing: "+"
 windows:
   # WIN-OP01 (O3, bedroom 1.11 west, wide): fixed glazing. Petr 2026-11-12:
   # "the two windows that are facing west in the bedroom, they are just fixed
@@ -1070,11 +1226,18 @@ windows:
       - Name: Pset_BlueprintsWindow
         Properties:
           PanelOperations: FIXEDCASEMENT
+  # WIN-OP04 (1.10 Šatna north, small high window): fixed glazing, one fixed pane.
+  # Petr 2026-11-12: small windows do not open. docs/OpeningsSpec.md.
   - id: WIN-OP04
     FillsOpening: OP04
     OverallWidth: 1.6
     OverallHeight: 0.75
     Tag: O5
+    PartitioningType: SINGLE_PANEL
+    PropertySets:
+      - Name: Pset_BlueprintsWindow
+        Properties:
+          PanelOperations: FIXEDCASEMENT
   # WIN-OP05 (O2, bedroom 1.11 south): two equal panes. The west pane is a sliding sash that
   # runs eastward over the fixed east pane. DWG elevation POHLED JIHOVÝCHODNÍ:
   # arrow in the west pane, "+" (fixed) in the east pane. Panels run along the
@@ -1089,11 +1252,18 @@ windows:
       - Name: Pset_BlueprintsWindow
         Properties:
           PanelOperations: SLIDINGHORIZONTAL FIXEDCASEMENT
+  # WIN-OP07 (1.09 Koupelna north, small high window): fixed glazing, one fixed pane.
+  # Petr 2026-11-12: small windows do not open. docs/OpeningsSpec.md.
   - id: WIN-OP07
     FillsOpening: OP07
     OverallWidth: 1.6
     OverallHeight: 0.75
     Tag: O5
+    PartitioningType: SINGLE_PANEL
+    PropertySets:
+      - Name: Pset_BlueprintsWindow
+        Properties:
+          PanelOperations: FIXEDCASEMENT
   # WIN-OP08 (O2, room 1.12 south): two equal panes. The west pane is a sliding sash that
   # runs eastward over the fixed east pane. DWG elevation POHLED JIHOVÝCHODNÍ:
   # arrow in the west pane, "+" (fixed) in the east pane. Panels run along the
@@ -1108,11 +1278,18 @@ windows:
       - Name: Pset_BlueprintsWindow
         Properties:
           PanelOperations: SLIDINGHORIZONTAL FIXEDCASEMENT
+  # WIN-OP12 (1.08 Prádelna north, small high window): fixed glazing, one fixed pane.
+  # Petr 2026-11-12: small windows do not open. docs/OpeningsSpec.md.
   - id: WIN-OP12
     FillsOpening: OP12
     OverallWidth: 0.9
     OverallHeight: 0.75
     Tag: O6
+    PartitioningType: SINGLE_PANEL
+    PropertySets:
+      - Name: Pset_BlueprintsWindow
+        Properties:
+          PanelOperations: FIXEDCASEMENT
   # WIN-OP13 (O2, room 1.13 south): two equal panes. The west pane is a sliding sash that
   # runs eastward over the fixed east pane. DWG elevation POHLED JIHOVÝCHODNÍ:
   # arrow in the west pane, "+" (fixed) in the east pane. Panels run along the
@@ -1127,11 +1304,18 @@ windows:
       - Name: Pset_BlueprintsWindow
         Properties:
           PanelOperations: SLIDINGHORIZONTAL FIXEDCASEMENT
+  # WIN-OP15 (1.07 Koupelna north, small high window): fixed glazing, two fixed panes (the DWG elevation draws two sashes).
+  # Petr 2026-11-12: small windows do not open. docs/OpeningsSpec.md.
   - id: WIN-OP15
     FillsOpening: OP15
     OverallWidth: 2.9
     OverallHeight: 0.75
     Tag: O7
+    PartitioningType: DOUBLE_PANEL_VERTICAL
+    PropertySets:
+      - Name: Pset_BlueprintsWindow
+        Properties:
+          PanelOperations: FIXEDCASEMENT FIXEDCASEMENT
   # WIN-OP16 (O2, room 1.14 south): two equal panes. The west pane is a sliding sash that
   # runs eastward over the fixed east pane. DWG elevation POHLED JIHOVÝCHODNÍ:
   # arrow in the west pane, "+" (fixed) in the east pane. Panels run along the
@@ -1160,29 +1344,77 @@ windows:
       - Name: Pset_BlueprintsWindow
         Properties:
           PanelOperations: FIXEDCASEMENT SLIDINGHORIZONTAL
+  # WIN-OP26 (1.05 Chodba west, full height): fixed glazing, Petr
+  # 2026-10-05 ("fixed full-height window"); now written as panel data.
   - id: WIN-OP26
     FillsOpening: OP26
     OverallWidth: 1.15
     OverallHeight: 2.5
+    PartitioningType: SINGLE_PANEL
+    PropertySets:
+      - Name: Pset_BlueprintsWindow
+        Properties:
+          PanelOperations: FIXEDCASEMENT
+  # WIN-OP27 / WIN-OP28 / WIN-OP29: the living-room window O11, Petr
+  # 2026-11-12 and the DWG elevation. The middle (OP28, 4.4 m) is fixed
+  # glass; the outer parts (OP27, OP29, 2.45 m each) are sliding sashes that
+  # run toward the centre on the indoor face and meet at the middle of OP28
+  # when both are open. SlideTravel 2.315 m = from the sash's leading edge
+  # (x 21.935 / 26.565) to OP28's centre (x 24.25); tests measure it.
   - id: WIN-OP27
     FillsOpening: OP27
     OverallWidth: 2.45
+    OverallHeight: 2.5
+    PartitioningType: SINGLE_PANEL
+    PropertySets:
+      - Name: Pset_BlueprintsWindow
+        Properties:
+          PanelOperations: SLIDINGHORIZONTAL
+          SlideToward: end
+          SlideTravel: 2.315
   - id: WIN-OP28
     FillsOpening: OP28
     OverallWidth: 4.4
     OverallHeight: 2.5
     Tag: O11
+    PartitioningType: SINGLE_PANEL
+    PropertySets:
+      - Name: Pset_BlueprintsWindow
+        Properties:
+          PanelOperations: FIXEDCASEMENT
   - id: WIN-OP29
     FillsOpening: OP29
     OverallWidth: 2.45
+    OverallHeight: 2.5
+    PartitioningType: SINGLE_PANEL
+    PropertySets:
+      - Name: Pset_BlueprintsWindow
+        Properties:
+          PanelOperations: SLIDINGHORIZONTAL
+          SlideToward: start
+          SlideTravel: 2.315
+  # WIN-OP30 (1.23 east, small high window): fixed glazing, one fixed pane.
+  # Petr 2026-11-12: small windows do not open. docs/OpeningsSpec.md.
   - id: WIN-OP30
     FillsOpening: OP30
     OverallWidth: 1.9
     OverallHeight: 0.75
+    PartitioningType: SINGLE_PANEL
+    PropertySets:
+      - Name: Pset_BlueprintsWindow
+        Properties:
+          PanelOperations: FIXEDCASEMENT
+  # WIN-OP31 (1.20 east, small high window): fixed glazing, one fixed pane.
+  # Petr 2026-11-12: small windows do not open. docs/OpeningsSpec.md.
   - id: WIN-OP31
     FillsOpening: OP31
     OverallWidth: 0.9
     OverallHeight: 0.75
+    PartitioningType: SINGLE_PANEL
+    PropertySets:
+      - Name: Pset_BlueprintsWindow
+        Properties:
+          PanelOperations: FIXEDCASEMENT
   # WIN-OP35 (O10, garzonka 1.23 south): two equal panes. The west pane is a sliding sash that
   # runs eastward over the fixed east pane. DWG elevation POHLED JIHOVÝCHODNÍ:
   # arrow in the west pane, "+" (fixed) in the east pane. Panels run along the
@@ -1197,32 +1429,74 @@ windows:
       - Name: Pset_BlueprintsWindow
         Properties:
           PanelOperations: SLIDINGHORIZONTAL FIXEDCASEMENT
+  # WIN-OP39b (1.01 Zádveří, entrance bay beside the main door): fixed
+  # glazing. DWG POHLED SEVEROVÝCHODNÍ draws it fixed; Petr 2026-11-12.
   - id: WIN-OP39b
     FillsOpening: OP39b
     OverallWidth: 1.1
     OverallHeight: 2.5
+    PartitioningType: SINGLE_PANEL
+    PropertySets:
+      - Name: Pset_BlueprintsWindow
+        Properties:
+          PanelOperations: FIXEDCASEMENT
+  # WIN-OP42 (1.17 Chodba north, small high window): fixed glazing, two fixed panes (the DWG elevation draws two sashes).
+  # Petr 2026-11-12: small windows do not open. docs/OpeningsSpec.md.
   - id: WIN-OP42
     FillsOpening: OP42
     OverallWidth: 2.9
     OverallHeight: 0.75
     Tag: O8
+    PartitioningType: DOUBLE_PANEL_VERTICAL
+    PropertySets:
+      - Name: Pset_BlueprintsWindow
+        Properties:
+          PanelOperations: FIXEDCASEMENT FIXEDCASEMENT
+  # WIN-OP45 (1.16 garage south, small high window): fixed glazing, one fixed pane.
+  # Petr 2026-11-12: small windows do not open. docs/OpeningsSpec.md.
   - id: WIN-OP45
     FillsOpening: OP45
     OverallWidth: 1.6
     OverallHeight: 0.75
     Tag: O9
+    PartitioningType: SINGLE_PANEL
+    PropertySets:
+      - Name: Pset_BlueprintsWindow
+        Properties:
+          PanelOperations: FIXEDCASEMENT
+  # WIN-OP46 (1.16 garage north, small high window): fixed glazing, one fixed pane.
+  # Petr 2026-11-12: small windows do not open. docs/OpeningsSpec.md.
   - id: WIN-OP46
     FillsOpening: OP46
     OverallWidth: 1.6
     OverallHeight: 0.75
     Tag: O9
+    PartitioningType: SINGLE_PANEL
+    PropertySets:
+      - Name: Pset_BlueprintsWindow
+        Properties:
+          PanelOperations: FIXEDCASEMENT
+  # WIN-OP47 (1.16 garage south, small high window): fixed glazing, one fixed pane.
+  # Petr 2026-11-12: small windows do not open. docs/OpeningsSpec.md.
   - id: WIN-OP47
     FillsOpening: OP47
     OverallWidth: 1.6
     OverallHeight: 0.75
     Tag: O9
+    PartitioningType: SINGLE_PANEL
+    PropertySets:
+      - Name: Pset_BlueprintsWindow
+        Properties:
+          PanelOperations: FIXEDCASEMENT
+  # WIN-OP48 (1.16 garage north, small high window): fixed glazing, one fixed pane.
+  # Petr 2026-11-12: small windows do not open. docs/OpeningsSpec.md.
   - id: WIN-OP48
     FillsOpening: OP48
     OverallWidth: 1.6
     OverallHeight: 0.75
     Tag: O9
+    PartitioningType: SINGLE_PANEL
+    PropertySets:
+      - Name: Pset_BlueprintsWindow
+        Properties:
+          PanelOperations: FIXEDCASEMENT

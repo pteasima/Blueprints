@@ -109,6 +109,32 @@ const byId = new Map(committed.map((r) => [r.id, r]));
   assert.ok(office.panels[1].center[0] > office.panels[0].center[0], "office sash is the east pane");
 }
 
+// --- Petr 2026-11-12, batch 2: small windows and OP39b, OP26 are fixed ----
+{
+  const fixed = [
+    "WIN-OP04", "WIN-OP07", "WIN-OP12", "WIN-OP15", "WIN-OP42", "WIN-OP45", "WIN-OP46",
+    "WIN-OP47", "WIN-OP48", "WIN-OP30", "WIN-OP31", "WIN-OP39b", "WIN-OP26", "WIN-OP28",
+  ];
+  const slides = createWindowSlides(committed);
+  for (const id of fixed) {
+    const r = byId.get(id);
+    assert.ok(r, id);
+    assert.equal(r.operable, false, `${id} is fixed glass`);
+    assert.ok(r.panels.every((p) => !panelMoves(p)), `${id}: no pane moves`);
+    const meshes = paneMeshes(r);
+    assert.deepEqual(slides.operableMeshes(id, meshes), [], `${id}: no tap target`);
+    assert.equal(slides.acceptsHit(id, meshes, meshes[0]), false, `${id}: not pickable`);
+  }
+  // Living-room O11: the outer sashes slide toward the centre and meet there.
+  const left = byId.get("WIN-OP27");
+  const right = byId.get("WIN-OP29");
+  const mid = byId.get("WIN-OP28");
+  const centre = mid.panels[0].center[0];
+  near(left.panels[0].max[0] + left.panels[0].slide[0], centre, "OP27 open edge at the centre");
+  near(right.panels[0].min[0] + right.panels[0].slide[0], centre, "OP29 open edge at the centre");
+  assert.ok(left.panels[0].slide[0] > 0 && right.panels[0].slide[0] < 0, "toward the centre");
+}
+
 // --- Only the operable sash moves ----------------------------------------
 {
   const record = byId.get("WIN-OP05");

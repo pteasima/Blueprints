@@ -2787,7 +2787,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
 
   /**
    * Drawer: straight arrow along its slide. Sliding door: one straight arrow
-   * per panel, along that panel's slide. Hinged leaf: arc along the swing.
+   * per panel, along that panel's slide. Sectional door: up or down arrow.
+   * Hinged leaf: arc along the swing.
    */
   function doorFeedback(binding, move) {
     if (!binding?.host || move.from === move.to) return;
@@ -2795,6 +2796,10 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     if (box.isEmpty()) return;
     const center = box.getCenter(new THREE.Vector3());
     const opening = move.to > move.from;
+    if (binding.sections) {
+      feedback.showFeedback({ worldPos: center, kind: "lift", direction: opening ? "up" : "down" });
+      return;
+    }
     if (binding.panels) {
       const parent = binding.pivot.parent;
       if (!parent) return;
