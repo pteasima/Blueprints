@@ -635,6 +635,8 @@ function releaseProxy(binding) {
  *   getCamera: () => THREE.Camera,
  *   records?: object[],
  *   isBlocked?: () => boolean,
+ *   onLongPress?: (pt: { clientX: number, clientY: number, pointerId: number }) => void,
+ *   onToggle?: (binding: object, move: { from: number, to: number }) => void,
  * }} opts
  */
 export function createDoorController(opts) {
@@ -655,6 +657,14 @@ export function createDoorController(opts) {
     if (pressTimer) clearTimeout(pressTimer);
     pressTimer = null;
   }
+  /** Tell the caller a leaf was driven (interaction feedback, feedback.js). */
+  function report(binding, from, to) {
+    try {
+      opts.onToggle?.(binding, { from, to });
+    } catch (err) {
+      console.warn("door onToggle", err);
+    }
+  }
   const taps = createTapRegistry();
   // Leaf claims beat the opening fallback. A later switch registers a claim
   // of its own; the nearest claimed solid wins, wherever it sits on the ray.
@@ -666,7 +676,12 @@ export function createDoorController(opts) {
       if (!binding || binding.host?.userData?.bpIfcHidden) return null;
       const now = ctx.now ?? performance.now();
       const open = sampleDoor(binding, now) > OPENING_LIVE;
-      const run = () => toggleDoor(binding, ctx.now ?? performance.now());
+      const run = () => {
+        const t = ctx.now ?? performance.now();
+        const from = sampleDoor(binding, t);
+        toggleDoor(binding, t);
+        report(binding, from, binding.goal);
+      };
       return {
         onTap: run,
         actions: [{ id: "door", labelKey: open ? "ui.close" : "ui.open", run }],
@@ -715,7 +730,10 @@ export function createDoorController(opts) {
     fallback(_solids, ctx) {
       const binding = openingOnRay(ctx);
       if (!binding) return false;
-      return closeDoor(binding, ctx.now);
+      const from = sampleDoor(binding, ctx.now);
+      if (!closeDoor(binding, ctx.now)) return false;
+      report(binding, from, 0);
+      return true;
     },
   });
 

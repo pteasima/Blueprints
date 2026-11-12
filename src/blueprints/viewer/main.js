@@ -45,7 +45,8 @@ import {
 } from "./edges.js";
 import { createDepthPeelRenderer } from "./depthPeel.js";
 import { createMeasureTool } from "./measure.js";
-import { createDoorController } from "./doors.js";
+import { createDoorController, swingAngle } from "./doors.js";
+import { createFeedbackLayer, rotateAboutY } from "./feedback.js";
 import { registerElementActions } from "./elementActions.js";
 import {
   createHomeClient,
@@ -236,7 +237,11 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     records: doorRecords,
     isBlocked: () => doorInputBlocked(),
     onLongPress: (pt) => inspectAt(pt),
+    onToggle: (binding, move) => doorFeedback(binding, move),
   });
+  const feedback = createFeedbackLayer({ canvas, getCamera: () => camera });
+  /** Debugging: `blueprintsFeedback.showFeedback({ worldPos: [x, y, z], kind: "switch", direction: "up" })`. */
+  window.blueprintsFeedback = feedback;
   const lightOn = new Map();
   const windowOpen = new Map();
   /**
@@ -2662,6 +2667,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   }
 
   function liveLightTap(element) {
+    lightFeedback(element);
     const device = liveDevice(element);
     if (device?.deviceType !== "ColorTemperatureLight") {
       toggleLight(element);
@@ -2736,7 +2742,69 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   /** globalId → time of our own press, so Home's echo does not animate twice. */
   const localPressAt = new Map();
 
+  // --- Interaction feedback (feedback.js). Called where actions dispatch. ---
+
+  /** World anchor of the pressed rocker half: a quarter of the plate off centre. */
+  function switchFeedback(element, target, haptic = true) {
+    const meshes = meshesForElement(element);
+    if (!meshes.length) return;
+    const b = worldBoxOf(meshes);
+    const c = b.getCenter(new THREE.Vector3());
+    const size = b.getSize(new THREE.Vector3());
+    const up = target.position === "down" ? -1 : 1;
+    c.y += (up * size.y) / 4;
+    const rockers = rockersOf(element);
+    if (rockers.length > 1) {
+      const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
+      right.y = 0;
+      if (right.lengthSq() > 1e-9) {
+        right.normalize();
+        const side = target.rocker === rockers[0] ? -1 : 1;
+        c.addScaledVector(right, (side * Math.max(size.x, size.z)) / 4);
+      }
+    }
+    feedback.showFeedback({ worldPos: c, kind: "switch", direction: target.position, haptic });
+  }
+
+  function lightFeedback(element) {
+    const meshes = meshesForElement(element);
+    if (!meshes.length) return;
+    feedback.showFeedback({ worldPos: worldBoxOf(meshes).getCenter(new THREE.Vector3()), kind: "light" });
+  }
+
+  /** Drawer: straight arrow along its slide. Hinged leaf: arc along the swing. */
+  function doorFeedback(binding, move) {
+    if (!binding?.host || move.from === move.to) return;
+    const box = new THREE.Box3().setFromObject(binding.host);
+    if (box.isEmpty()) return;
+    const center = box.getCenter(new THREE.Vector3());
+    const opening = move.to > move.from;
+    if (binding.slideLocal) {
+      const parent = binding.pivot.parent;
+      if (!parent) return;
+      parent.updateWorldMatrix(true, false);
+      const dir = binding.slideLocal.clone().transformDirection(parent.matrixWorld);
+      if (!opening) dir.negate();
+      feedback.showFeedback({ worldPos: center, kind: "slide", worldDir: dir });
+      return;
+    }
+    const hinge = binding.pivot.getWorldPosition(new THREE.Vector3());
+    const delta = swingAngle(move.to, binding.sign) - swingAngle(move.from, binding.sign);
+    const to = rotateAboutY(center.toArray(), hinge.toArray(), delta);
+    feedback.showFeedback({ worldPos: center, kind: "hinge", hinge, to });
+  }
+
+  function windowFeedback(element, open) {
+    const meshes = meshesForElement(element);
+    const mesh = meshes[0];
+    if (!mesh?.parent) return;
+    mesh.parent.updateWorldMatrix(true, false);
+    const dir = new THREE.Vector3(open ? 1 : -1, 0, 0).transformDirection(mesh.parent.matrixWorld);
+    feedback.showFeedback({ worldPos: worldBoxOf(meshes).getCenter(new THREE.Vector3()), kind: "slide", worldDir: dir });
+  }
+
   function sendPress(element, target) {
+    switchFeedback(element, target);
     pressSwitch(element);
     localPressAt.set(element.globalId, performance.now());
     home.press(element.globalId, target).then(reportHomeFailure);
@@ -2744,11 +2812,13 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
 
   function liveSwitchTap(element, hit) {
     const device = liveDevice(element);
+    const target = pressTarget(element, switchHitOffsets(element, hit));
     if (device?.deviceType !== "GenericSwitch" || !home.simulation()) {
+      switchFeedback(element, target);
       pressSwitch(element);
       return;
     }
-    sendPress(element, pressTarget(element, switchHitOffsets(element, hit)));
+    sendPress(element, target);
   }
 
   function liveSwitchActions(element) {
@@ -2809,6 +2879,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
 
   function toggleWindow(element) {
     const open = !windowOpen.get(element.globalId);
+    windowFeedback(element, open);
     windowOpen.set(element.globalId, open);
     for (const mesh of meshesForElement(element)) {
       if (!mesh.userData.bpSlideOrigin) mesh.userData.bpSlideOrigin = mesh.position.clone();
@@ -2977,7 +3048,13 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         const element = ifcIndex.elements[event.globalId];
         const ours = performance.now() - (localPressAt.get(event.globalId) ?? -Infinity) < 3000;
         localPressAt.delete(event.globalId);
-        if (element && !ours) pressSwitch(element);
+        if (element && !ours) {
+          // Someone else pressed it: same arrow, no haptic.
+          if (event.position === "up" || event.position === "down") {
+            switchFeedback(element, { rocker: event.rocker, position: event.position }, false);
+          }
+          pressSwitch(element);
+        }
       },
     });
     buildHomeSection();
