@@ -604,6 +604,15 @@ function bindingOf(obj) {
 }
 
 /**
+ * Visible itself and through every ancestor.
+ * @param {THREE.Object3D | null | undefined} obj
+ */
+function isShown(obj) {
+  for (let node = obj; node; node = node.parent) if (!node.visible) return false;
+  return true;
+}
+
+/**
  * @param {{ object?: THREE.Object3D }} hit
  */
 function isDoorPickSolid(hit) {
@@ -663,21 +672,48 @@ export function createDoorController(opts) {
         actions: [{ id: "door", labelKey: open ? "ui.close" : "ui.open", run }],
       };
     },
+    // Extended tap target: the leaf's (or drawer front's) current centre.
+    targets() {
+      const out = [];
+      for (const binding of bindings) {
+        const host = binding.host;
+        if (!host || host.userData?.bpIfcHidden || !isShown(host)) continue;
+        const box = new THREE.Box3().setFromObject(host);
+        if (box.isEmpty()) continue;
+        const center = box.getCenter(new THREE.Vector3());
+        out.push({
+          center,
+          group: `door:${binding.id}`,
+          hit: { object: host, point: center },
+          owns: (obj) => bindingOf(obj) === binding,
+        });
+      }
+      return out;
+    },
   });
+  /**
+   * Farthest open doorway on the ray. With `ctx.maxT` (the registry's
+   * visible pass), only doorways the ray enters before that distance count.
+   */
+  function openingOnRay(ctx) {
+    /** @type {{ binding: object, tEnter: number }[]} */
+    const crossed = [];
+    const maxT = Number.isFinite(ctx.maxT) ? ctx.maxT : Infinity;
+    for (const door of bindings) {
+      if (!door.obb || door.host?.userData?.bpIfcHidden) continue;
+      if (sampleDoor(door, ctx.now) <= OPENING_LIVE) continue;
+      const span = rayObb(ctx.raycaster.ray, door.obb);
+      if (!span || span.tEnter > maxT) continue;
+      crossed.push({ binding: door, tEnter: span.tEnter });
+    }
+    return chooseOpeningAction(crossed);
+  }
   taps.register({
     id: "opening",
     priority: 10,
+    probe: (_solids, ctx) => Boolean(openingOnRay(ctx)),
     fallback(_solids, ctx) {
-      /** @type {{ binding: object, tEnter: number }[]} */
-      const crossed = [];
-      for (const door of bindings) {
-        if (!door.obb || door.host?.userData?.bpIfcHidden) continue;
-        if (sampleDoor(door, ctx.now) <= OPENING_LIVE) continue;
-        const span = rayObb(ctx.raycaster.ray, door.obb);
-        if (!span) continue;
-        crossed.push({ binding: door, tEnter: span.tEnter });
-      }
-      const binding = chooseOpeningAction(crossed);
+      const binding = openingOnRay(ctx);
       if (!binding) return false;
       return closeDoor(binding, ctx.now);
     },
@@ -819,7 +855,18 @@ export function createDoorController(opts) {
     while (top?.parent) top = top.parent;
     if (!top) return;
     const hits = raycaster.intersectObject(top, true);
-    taps.dispatch(hits, { raycaster, now: performance.now() }, isDoorPickSolid);
+    taps.dispatch(
+      hits,
+      {
+        raycaster,
+        now: performance.now(),
+        camera,
+        root: top,
+        tap: { x: ev.clientX - rect.left, y: ev.clientY - rect.top },
+        size: { w, h },
+      },
+      isDoorPickSolid,
+    );
   }
 
   canvas.addEventListener("pointerdown", onPointerDown, true);

@@ -56,6 +56,7 @@ const KINDS = [
  *   switchActions?: Function,
  *   coverActions?: Function,
  *   isLive?: (el: object) => boolean,
+ *   targetsFor?: (type: string, ctx: object) => { element: object, center: object, hit: object, owns: Function, group?: string }[],
  * }} api
  */
 export function registerElementActions(registry, api) {
@@ -76,6 +77,13 @@ export function registerElementActions(registry, api) {
               ? custom
               : [{ id: kind.id, labelKey: kind.labelKey(element, api), run }],
         };
+      },
+      // Extended tap targets (tapTargets.js): one centre per element, one
+      // per rocker half for a switch. `api.targetsFor` owns the geometry.
+      targets(ctx) {
+        const list = api.targetsFor?.(kind.type, ctx);
+        if (!Array.isArray(list)) return [];
+        return kind.liveOnly ? list.filter((t) => api.isLive?.(t.element)) : list;
       },
     });
   }
