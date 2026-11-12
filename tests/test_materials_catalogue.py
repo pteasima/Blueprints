@@ -9,7 +9,7 @@ def test_catalogue_is_valid():
 
 def test_specific_selectors_win():
     cat = load_catalogue()
-    assert resolve(cat, "cabinet", "SF-I600a-FRONT") == ["oak-veneer-joinery"]
+    assert resolve(cat, "cabinet", "SF-I600a-FRONT") == ["kitchen-front-cream"]
     assert resolve(cat, "cabinet", "KR-ISL-LEG-SF-E700-S-F") == ["stainless-brushed"]
     assert resolve(cat, "cabinet", "SF-DN-BODY") == ["oak-natural-kaplan"]
     assert resolve(cat, "cabinet", "SF-I600a-BOTTOM") == ["kitchen-carcass-white"]

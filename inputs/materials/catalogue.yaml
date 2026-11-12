@@ -79,15 +79,12 @@
     boards, which are wider glued planks on the table top.
 
 - id: oak-veneer-joinery
-  name: Oak veneer joinery (kitchen fronts, vanity), assumed to match
+  name: Oak veneer joinery (bathroom vanity, loose furniture), assumed
   applies_to:
     description: >-
-      Kitchen fronts and drawer fronts, visible end sides and plinth boards of
-      the kitchen runs, the integrated dishwasher's door panel, and the bathroom
-      1.07 vanity cabinet. Fallback for the furniture label.
+      The bathroom 1.07 vanity cabinet, and the fallback for the furniture
+      label. No longer the kitchen fronts (see kitchen-front-cream).
     selectors:
-      - {label: cabinet, id_pattern: "-(FRONT|D[0-9]+|END-[NSEW]|PLINTH-[NSEW])$"}
-      - {label: appliance, ids: [EA-SBD6ECX]}
       - {label: vanity}
       - {label: furniture}
   base_color: "#aa7e60"
@@ -103,12 +100,38 @@
   source:
     - https://polyhaven.com/a/oak_veneer_01
   notes: >-
-    No front finish is written anywhere for the kitchen (kitchen-cabinets.md
-    only takes IKEA METOD sizes). Assumed natural oak veneer, lacquered, so
-    the kitchen reads as one piece with the oak dining run and the Kaplan
-    table; it shares that texture. The vanity cabinet is "Assumed oak
-    cabinet" in bathroom-1.07.yaml. The dishwasher (Bosch SBD6ECX12E) is fully
-    integrated, so what shows is a kitchen front.
+    The vanity cabinet is "Assumed oak cabinet" in bathroom-1.07.yaml; it
+    shares the Kaplan oak texture. Until 2026-11-12 this entry also covered
+    the kitchen fronts as an assumption; Petr then said the fronts are cream
+    (kitchen-front-cream).
+
+- id: kitchen-front-cream
+  name: Kitchen fronts, warm cream matt (about RAL 9001)
+  applies_to:
+    description: >-
+      Kitchen door and drawer fronts, the visible end sides and plinth
+      boards of the kitchen runs (island, west run, tall runs, west wall
+      cabinets), and the integrated dishwasher's door panel.
+    selectors:
+      - {label: cabinet, id_pattern: "-(FRONT|D[0-9]+|END-[NSEW]|PLINTH-[NSEW])$"}
+      - {label: appliance, ids: [EA-SBD6ECX]}
+  base_color: "#e9e0d2"
+  roughness: 0.35
+  metalness: 0.0
+  tile_size_m: [1.0, 1.0]
+  status: known
+  source:
+    - https://github.com/pteasima/Blueprints/blob/main/docs/design/kitchen-cabinets.md
+  notes: >-
+    Petr, 2026-11-12: "kitchen front are some sort of cream color
+    (white-ish)". The colour family is his; the exact shade and the finish
+    are assumed: RAL 9001 cream (sRGB about #e9e0d2), a warm off-white that
+    sits between the cream Silestone and the oak, in a smooth matt lacquer or
+    matt laminate (roughness 0.35, no texture, fronts are flat). If the shade
+    should be whiter, RAL 9010 (#f1ece1) is the next step. The dishwasher
+    (Bosch SBD6ECX12E) is fully integrated, so its door is a front.
+    The oak furniture (Kaplan table, chairs, bookshelf, dining run) is
+    unchanged.
 
 - id: kitchen-carcass-white
   name: White melamine carcass (kitchen interiors)
@@ -156,11 +179,13 @@
     Petr: "silestone maple" (kitchen-cabinets.md); Blanco Maple is the only
     Silestone colour named Maple. Cream-white base with a dense, even
     aggregate of 0.5–3 mm crumbs: white and pale grey, fewer taupe, ochre and
-    grey flecks, no veining (Cosentino, stockists). Texture is procedural
-    (own work, CC0), calibrated by eye against a stockist slab photo
-    (median #efeadf) at the same scale. Polished finish assumed (Cosentino
-    also sells Suede, roughness ~0.4); that is an open question. Confidence:
-    colour high, speck pattern medium.
+    grey flecks, no veining (Cosentino, stockists). Finish: standard
+    polished. Petr, 2026-11-12: "cheaper basic silestone (idk which one that
+    is), or just choose one"; polished is Silestone's standard finish and
+    Suede costs extra, so polished it is. Texture is procedural (own work,
+    CC0), calibrated by eye against a stockist slab photo (median #efeadf)
+    at the same scale. Confidence: colour and finish high, speck pattern
+    medium.
 
 - id: abk-poetry-stone-trani-beige
   name: ABK Poetry Stone Trani Beige, natural, rectified, 8.5 mm
@@ -217,7 +242,7 @@
 # --------------------------------------------------------------- floors, walls, ceilings
 
 - id: floor-pu-living
-  name: Poured polyurethane floor, warm light grey
+  name: Poured polyurethane floor, light beige with colour chips
   applies_to:
     description: >-
       Finished floor of the dry rooms: 1.01 zádveří, 1.02 living/kitchen,
@@ -227,22 +252,26 @@
     pending: >-
       The ground-floor model has no floor slabs yet. When it gets them, select
       them per room (IfcSlab FLOOR / IfcCovering FLOORING in those spaces).
-  base_color: "#bdb8ae"
-  roughness: 0.38
+  base_color: "#d8cdbb"
+  roughness: 0.35
   metalness: 0.0
   maps:
     color: docs/materials/floor-pu-living/color.jpg
     roughness: docs/materials/floor-pu-living/roughness.jpg
-  tile_size_m: [2.0, 2.0]
-  status: assumed
+  tile_size_m: [1.0, 1.0]
+  status: known
   source:
     - https://github.com/pteasima/Blueprints/blob/main/scripts/export_podlaha_eps.py
   notes: >-
-    The system is known: the floor take-off gives these rooms "PU stěrka 4"
-    (4 mm polyurethane screed, build-up of 2026-10-14) and docs/design/
-    ground-floor.md has 1.02 as "PU floor". The colour is not: assumed a warm
-    light grey (about RAL 7044 silk grey) with satin sheen and faint
-    trowel mottling, neutral next to the oak and the cream stone.
+    The system is from the floor take-off: "PU stěrka 4" (4 mm polyurethane
+    screed) in these rooms. Colour, Petr, 2026-11-12: "pu floor is light
+    beige with plastic chips (not sure what color chips yet, your choice)".
+    Base light beige #d8cdbb (assumed shade). Chips are our choice, sparse
+    and subtle so the floor reads beige from standing height: warm beige
+    #c4b297, warm grey #9a948b, off-white #f3efe6 and a few taupe #8b7d6b,
+    flat irregular flakes about 2–8 mm, under a satin clear coat (one even
+    roughness, chips included). Procedural texture (own work, CC0), one
+    repeat = 1.0 m at 1 mm per pixel so single flakes stay visible.
 
 - id: floor-pu-garage
   name: Poured polyurethane floor, garage grey
@@ -261,8 +290,11 @@
   source:
     - https://github.com/pteasima/Blueprints/blob/main/scripts/export_podlaha_eps.py
   notes: >-
-    Take-off kind "gar": PU stěrka 4 on 100 mm concrete. Colour assumed a
-    mid grey (about RAL 7040), darker than the house so tyre marks show less.
+    Take-off kind "gar": PU stěrka 4 on 100 mm concrete. Petr's light beige
+    with chips (2026-11-12) was said for the house floor; the garage is not
+    in it, so it stays a separate assumption: a plain mid grey (about RAL
+    7040), which hides tyre marks and road dirt better than light beige. If
+    the garage should match the house, point it at floor-pu-living's maps.
 
 - id: paint-interior-white
   name: Interior plaster, white paint
@@ -344,13 +376,13 @@
   name: Aluminium window and door frames, anthracite (RAL 7016)
   applies_to:
     description: >-
-      Window frames and sashes, the terrace door OP32's 70 mm frame, the main
-      entrance door OP39a.
+      Every window frame and sash, inside and outside, the terrace door
+      OP32's 70 mm frame, and the main entrance door OP39a.
     selectors:
       - {label: door, ids: [D-OP32, D-OP39a]}
     pending: >-
-      Window frames and sash profiles; the model draws only the glass leaf
-      today.
+      All window frames and sash profiles, both faces; the model draws only
+      the glass leaf today. Frame meshes should resolve here.
   base_color: "#383e42"
   roughness: 0.45
   metalness: 0.0
@@ -359,13 +391,15 @@
   source:
     - https://github.com/pteasima/Blueprints/blob/main/docs/design/ground-floor.md
   notes: >-
-    "Okna hliníková … antracit" (DWG legend). Anthracite on aluminium windows
-    is almost always RAL 7016 in fine-texture powder coat, which is what this
-    is; the RAL number itself is the one assumption. Entrance door OP39a:
-    assumed to be from the same aluminium system as the window beside it.
+    DWG legend: "Okna hliníková s izolačním trojsklem - antracit"; Petr,
+    2026-11-12: "window frames all antracite aluminium", which settles the
+    inside face too (no white interior). The RAL number is the one
+    assumption: anthracite aluminium is almost always RAL 7016 in a
+    fine-texture powder coat. Entrance door OP39a: assumed to be from the
+    same aluminium system as the window beside it.
 
 - id: door-leaf-white
-  name: Interior door leaves, white lacquer
+  name: Interior door leaves, white
   applies_to:
     description: >-
       Interior hinged and pocket door leaves (40 mm). Fallback for the door
@@ -376,25 +410,16 @@
   roughness: 0.4
   metalness: 0.0
   tile_size_m: [1.0, 1.0]
-  status: assumed
-  source: []
+  status: known
+  source:
+    - https://github.com/pteasima/Blueprints/blob/main/docs/OpeningsSpec.md
   notes: >-
-    No door product is named. Assumed flush white-lacquered leaves (the
-    common Czech choice, e.g. Sapeli or Masonite), with matching frames.
-
-- id: door-frame-white
-  name: Interior door frames, white lacquer
-  applies_to:
-    description: Interior door frames (zárubně) and architraves.
-    selectors: []
-    pending: Door frames are not modelled; the leaf sits in the bare opening.
-  base_color: "#f1f0ec"
-  roughness: 0.4
-  metalness: 0.0
-  tile_size_m: [1.0, 1.0]
-  status: assumed
-  source: []
-  notes: Assumed to match the leaves (see door-leaf-white).
+    Petr, 2026-11-12: "doors are white and frames are 'invisible' (flush and
+    plastered over)". White is his; the satin lacquer finish is assumed.
+    There is no visible frame, so there is no frame material (the former
+    door-frame-white entry is retired). The hinged doors are reverse-mounted
+    (flush with the hallway wall, opening inward into the rooms); that is a
+    geometry change for a separate PR, see docs/materials/README.md.
 
 - id: garage-door-anthracite
   name: Sectional garage doors, anthracite
@@ -432,51 +457,31 @@
 
 # --------------------------------------------------------------- electrical
 
-- id: jung-ls990-snow-white-matt
-  name: Jung LS 990, snow white matt (WWM)
+- id: jung-ls-alpine-white-gloss
+  name: Jung LS, alpine white gloss (WW)
   applies_to:
     description: >-
-      Switches, buttons, frames and sensor covers; socket frames. Every
-      switch, sensor and outlet in the model.
+      All electrical fixtures: switch and button covers, frames, socket
+      inserts, sensor covers. Every switch, sensor and outlet in the model.
     selectors:
       - {label: switch}
       - {label: sensor}
       - {label: outlet}
   base_color: "#f1f0ea"
-  roughness: 0.55
-  metalness: 0.0
-  tile_size_m: [0.1, 0.1]
-  status: known
-  source:
-    - https://www.jung-group.com/es-ES/p/Tecla-simple-blanco-alpino-mate/LS-990-WWM
-    - https://www.jung-group.com/de-DE/Produkte/Schalterprogramme/LS-990-aus-Kunststoff/
-    - https://www.jungstore.nl/designseries/ls-990/ls-990-sneeuwwit-mat/
-  notes: >-
-    PlanNotes.md: "all frames, sockets and buttons matt white, Jung code WWM,
-    plain LS 990 covers". WWM is lacquered duroplast, "schneeweiß matt";
-    Jung and its dealers give RAL 9016 as the nearest RAL. base_color is RAL
-    9016 in sRGB. Velvet matt lacquer, so roughness is moderate rather than
-    chalky. Confidence high.
-
-- id: jung-ls-alpine-white-gloss
-  name: Jung LS socket insert, alpine white gloss (LS 1520 KI WW)
-  applies_to:
-    description: Socket centre plates, once the model splits them from the frame.
-    selectors: []
-    pending: >-
-      Outlets are one box today, so they take the frame material
-      (jung-ls990-snow-white-matt).
-  base_color: "#f1f0ea"
-  roughness: 0.2
+  roughness: 0.15
   metalness: 0.0
   tile_size_m: [0.1, 0.1]
   status: known
   source:
     - https://www.elanto24.de/Jung-LS1520KIWW-SCHUKO-Steckdose-Safety-Serie-LS-alpinweiss
+    - https://www.jung-group.com/de-DE/Produkte/Schalterprogramme/LS-990-aus-Kunststoff/
   notes: >-
-    The plan legend names the socket "LS 1520 KI WW" (duroplast, alpine white,
-    glossy, also RAL 9016 nearest), while the general rule says WWM matt.
-    Kept as its own entry; see the open question in docs/materials/README.md.
+    Petr, 2026-11-12: "gloss white jung electrical fixture, the matt white
+    note is obsolete". So the plan legend's socket LS 1520 KI WW (duroplast,
+    alpine white, glossy) is the finish for all of them, with LS 990 WW
+    covers and frames. Dealers give RAL 9016 as the nearest RAL for Jung
+    alpine white. Glossy duroplast, so low roughness. The former matt entry
+    (jung-ls990-snow-white-matt, WWM) is retired.
 
 - id: light-diffuser-opal
   name: Light fittings, white housing with opal diffuser

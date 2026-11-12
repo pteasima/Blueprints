@@ -102,3 +102,5 @@ The existing hinge sides, swing directions and viewer arrows are unchanged: the 
 - [ ] Sectional track: 4 sections and a 0.3 m bend are a simplified animation, not a chosen product.
 - [ ] OP27/OP29 height: assumed 2.5 m, sill 0 (same as OP28).
 - [ ] Pocket doors OP24, OP25, OP33: the leaf runs in the wall's centre plane; the DWG draws it parked on the living-room face. Which is the real pocket?
+
+`open:` Petr, 2026-11-12: "The hinged doors are 'reverse' door (so the sit flush with hallway wall but open inward into rooms)". Every hinged interior leaf should sit flush on the hallway face, as OP11 and OP17 already do with `LeafOffset`, and open into the room. The frames are flush and plastered over (no visible frame). The other hinged leaves are not moved yet; that is a separate geometry change.

@@ -235,6 +235,28 @@ def pu_floor(mid: str, hx: str, seed: int) -> None:
     license_txt(mid, CC0_PROC + "\nPoured polyurethane floor, colour assumed. One repeat = 2.0 m.")
 
 
+def pu_chips() -> None:
+    """House floor: light beige PU with sparse decorative flakes (Petr, 2026-11-12)."""
+    mid, n = "floor-pu-living", 1024  # one repeat = 1.0 m, 1 mm per pixel
+    clouds = fbm(n, 61, 2.8, lo=1)
+    fine = fbm(n, 62, 0.4, lo=60)
+    img = hex_rgb("#d8cdbb") + clouds[..., None] * 3.0 + fine[..., None] * 1.0
+    # Flat irregular flakes, ~2-8 mm, sparse; colours are our choice (Petr left it open).
+    chips = [
+        ("#c4b297", 1500, 1.0, 4.0, 63),
+        ("#9a948b", 700, 1.0, 3.6, 64),
+        ("#f3efe6", 1000, 1.0, 4.0, 65),
+        ("#8b7d6b", 250, 1.0, 3.0, 66),
+    ]
+    for hx, count, rmin, rmax, seed in chips:
+        m, _ = specks(n, seed, count, rmin, rmax, elong=1.7)
+        img = img * (1 - m[..., None] * 0.85) + hex_rgb(hx) * (m[..., None] * 0.85)
+    save(mid, "color", img, n)
+    rough = 0.35 * 255 + clouds * 5 + fine * 2  # satin clear coat over the chips
+    save(mid, "roughness", gray3(rough), n, gray=True)
+    license_txt(mid, CC0_PROC + "\nLight beige poured PU with colour chips; chip colours our choice. One repeat = 1.0 m.")
+
+
 def plaster() -> None:
     a = "Plaster001"
     save("paint-interior-white", "normal", flatten_normal(ambientcg(a, "NormalGL"), 0.35), 1024)
@@ -282,7 +304,7 @@ SETS = {
     "oak-natural-kaplan": oak,
     "silestone-blanco-maple": silestone,
     "abk-poetry-stone-trani-beige": trani,
-    "floor-pu-living": lambda: pu_floor("floor-pu-living", "#bdb8ae", 41),
+    "floor-pu-living": pu_chips,
     "floor-pu-garage": lambda: pu_floor("floor-pu-garage", "#8f9294", 51),
     "paint-interior-white": plaster,
     "fabric-sofa-livom-harvey": fabric,
@@ -291,11 +313,45 @@ SETS = {
 }
 
 
+def swatches() -> None:
+    """docs/previews/materials/swatches.png: a 0.3 m crop of each colour map, or base_color."""
+    import yaml
+    from PIL import ImageDraw, ImageFont
+
+    cat = yaml.safe_load((ROOT / "inputs" / "materials" / "catalogue.yaml").read_text(encoding="utf-8"))
+    s, cols, th = 180, 8, 44
+    rows = (len(cat) + cols - 1) // cols
+    img = Image.new("RGB", (cols * s, rows * (s + th)), "white")
+    d = ImageDraw.Draw(img)
+    try:
+        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 11)
+    except OSError:
+        font = ImageFont.load_default()
+    for k, m in enumerate(cat):
+        x, y = (k % cols) * s, (k // cols) * (s + th)
+        c = (m.get("maps") or {}).get("color")
+        if c:
+            t = Image.open(ROOT / c).convert("RGB")
+            cw = int(t.size[0] * min(1, 0.3 / m["tile_size_m"][0]))
+            t = t.crop((0, 0, cw, cw)).resize((s, s))
+        else:
+            t = Image.new("RGB", (s, s), tuple(int(v) for v in hex_rgb(m["base_color"])))
+        img.paste(t, (x, y))
+        d.rectangle([x, y, x + s - 1, y + s - 1], outline=(200, 200, 200))
+        d.text((x + 3, y + s + 2), m["id"], fill="black", font=font)
+        colour = (0, 110, 0) if m["status"] == "known" else (90, 90, 90)
+        d.text((x + 3, y + s + 16), f"{m['status']}  {m['base_color']}", fill=colour, font=font)
+    out = ROOT / "docs" / "previews" / "materials"
+    out.mkdir(parents=True, exist_ok=True)
+    img.save(out / "swatches.png", optimize=True)
+
+
 def main(argv: list[str]) -> None:
     names = argv or list(SETS)
     for name in names:
         print("building", name)
         SETS[name]()
+    swatches()
 
 
 if __name__ == "__main__":

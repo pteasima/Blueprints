@@ -30,6 +30,8 @@ Finish, original:
 
 English: Unless noted, frames, sockets, and buttons are matt white, Jung code WWM, plain LS 990 covers, no labels and no indicator lamps.
 
+**Obsolete colour (Petr, 2026-11-12):** "sorry, gloss white jung electrical fixture, the matt white note is obsolete". Frames, sockets and buttons are Jung LS alpine white gloss (code WW: socket LS 1520 KI WW, covers LS 990 WW), not WWM. The rest of the note still applies: plain covers, no labels, no indicator lamps. The quote above is the plan's original wording. Material: `jung-ls-alpine-white-gloss` in [docs/materials/README.md](../materials/README.md).
+
 ## Cable codes (Soupis)
 
 These letters are the device column of the cable schedule, not printed as a block on the PDF.
