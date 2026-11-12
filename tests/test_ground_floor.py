@@ -97,13 +97,19 @@ def test_ground_floor_builds_and_cuts_openings():
     assert {"masonry", "glazing", "door"} <= labels
     motions = {item["id"]: item for item in meta["door_motions"] if item["kind"] != "drawer"}
     assert set(motions) == {door["id"] for door in doc["doors"]}
-    # Wider than a single leaf: one slab, not a hinged swing. The file has
-    # no hinge side, so every narrower leaf uses the start jamb and +Y.
+    # Wider than a single leaf: one slab that slides, not a hinged swing. The
+    # file has no hinge side, so every narrower leaf uses the start jamb and +Y.
     assert {item_id for item_id, item in motions.items() if item["kind"] == "sliding"} == {
         "D-OP03",
         "D-OP49",
         "D-OP50",
     }
+    # Bedroom OP03, the double pocket into 1.10 Šatna: two 0.9 m halves that
+    # slide apart into W-018 (docs/electrical/rooms/1.11-geometry.md).
+    op03 = motions["D-OP03"]
+    assert [p["span"] for p in op03["panels"]] == [[0.0, 0.5], [0.5, 1.0]]
+    assert op03["panels"][0]["slide"] == pytest.approx([-0.9, 0.0, 0.0], abs=1e-6)
+    assert op03["panels"][1]["slide"] == pytest.approx([0.9, 0.0, 0.0], abs=1e-6)
     for item in motions.values():
         if item["kind"] != "hinged":
             continue
@@ -173,6 +179,18 @@ def test_start_hinge_is_the_leaf_edge_on_a_turned_wall():
     wide = _door_motion(part, {**filler, "OverallWidth": 5.15})
     assert wide["kind"] == "sliding"
     assert "hinge" not in wide
+    # No OperationType: bi-parting, two halves sliding apart over the jambs.
+    # The leaf runs along the wall from start (CAD y=1215) to end (1985).
+    assert wide["start"] == pytest.approx([5.0, 1.0425, -1.215], abs=1e-4)
+    assert wide["end"] == pytest.approx([5.0, 1.0425, -1.985], abs=1e-4)
+    assert [p["span"] for p in wide["panels"]] == [[0.0, 0.5], [0.5, 1.0]]
+    assert wide["panels"][0]["slide"] == pytest.approx([0.0, 0.0, 0.385], abs=1e-4)
+    assert wide["panels"][1]["slide"] == pytest.approx([0.0, 0.0, -0.385], abs=1e-4)
+    left = _door_motion(part, {**filler, "OverallWidth": 5.15, "OperationType": "SLIDING_TO_LEFT"})
+    assert [p["span"] for p in left["panels"]] == [[0.0, 1.0]]
+    assert left["panels"][0]["slide"] == pytest.approx([0.0, 0.0, 0.77], abs=1e-4)
+    right = _door_motion(part, {**filler, "OverallWidth": 5.15, "OperationType": "SLIDING_TO_RIGHT"})
+    assert right["panels"][0]["slide"] == pytest.approx([0.0, 0.0, -0.77], abs=1e-4)
 
 
 def test_butt_corners_do_not_overlap():

@@ -26,7 +26,9 @@ import {
   bindHinge,
   applyDoorSwing,
   collectDoorHosts,
+  isSlidingRecord,
 } from "./doors.js";
+import { readFileSync } from "node:fs";
 import { pickSurface } from "./pivotNav.js";
 
 assert.equal(easeInOutCubic(0), 0);
@@ -507,6 +509,87 @@ function hasDoor(hits) {
   const moved = new THREE.Box3().setFromObject(drawer).getCenter(new THREE.Vector3());
   assert.ok(Math.abs(moved.x - (c.x - 0.55)) < 1e-6, `drawer x ${moved.x}`);
   assert.ok(Math.abs(moved.y - c.y) < 1e-6 && Math.abs(moved.z - c.z) < 1e-6);
+}
+
+// Sliding: bedroom 1.11 OP03, the double pocket into the walk-in wardrobe
+// (Petr, 2026-11-12: "I can't open the wardrobe door in the bedroom").
+// The committed model record splits the 1.8 m slab into two halves that
+// slide 0.9 m apart into W-018. Under the Z-up glTF root, a tap on the
+// leaf opens it, it eases over DOOR_SWING_MS, and a tap through the empty
+// opening closes it again.
+{
+  const records = JSON.parse(
+    readFileSync(new URL("../../../docs/models/ground_floor.doors.json", import.meta.url), "utf8"),
+  );
+  const record = records.find((r) => r.id === "D-OP03");
+  assert.ok(isSlidingRecord(record), "D-OP03 is a sliding record with panels");
+  for (const id of ["D-OP03", "D-OP49", "D-OP50"]) {
+    assert.ok(isSlidingRecord(records.find((r) => r.id === id)), `${id} slides`);
+  }
+  const root = new THREE.Group();
+  root.rotation.x = -Math.PI / 2;
+  const scene = new THREE.Scene();
+  scene.add(root);
+  const node = new THREE.Group();
+  node.name = "door__D-OP03__";
+  // Root-local (x, y, z) is world (x, z, -y): 1.8 wide, 40 mm thick, 2.085 high.
+  const slab = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.04, 2.085), new THREE.MeshBasicMaterial());
+  slab.name = "door__D-OP03___1";
+  node.position.set(2.3, 9.5625, 1.0425);
+  node.add(slab);
+  root.add(node);
+  scene.updateMatrixWorld(true);
+  const camera = new THREE.PerspectiveCamera(50, 1, 0.05, 100);
+  camera.position.set(2.3, 1.0, -6.5);
+  camera.lookAt(2.3, 1.0, -9.5625);
+  camera.updateMatrixWorld(true);
+  const canvas = fakeCanvas();
+  const ctrl = createDoorController({ canvas, getCamera: () => camera, records: [record] });
+  assert.equal(ctrl.bind(scene), 1);
+  const binding = ctrl.bindings[0];
+  assert.equal(binding.kind, "sliding");
+  assert.equal(binding.panels.length, 2);
+  const panelX = () =>
+    binding.panels.map((panel) => {
+      panel.pivot.updateWorldMatrix(true, true);
+      const box = new THREE.Box3().setFromObject(panel.pivot);
+      return [box.min.x, box.max.x];
+    });
+  const near = (a, b, msg) => assert.ok(Math.abs(a - b) < 1e-4, `${msg}: ${a} vs ${b}`);
+  let [left, right] = panelX();
+  near(left[0], 1.4, "closed left");
+  near(left[1], 2.3, "closed seam (left)");
+  near(right[0], 2.3, "closed seam (right)");
+  near(right[1], 3.2, "closed right");
+  // Both copies keep the element id, so hide, inspect and taps still find it.
+  const names = [];
+  scene.traverse((o) => {
+    if (o.isMesh) names.push(o.name);
+  });
+  assert.deepEqual(names, ["door__D-OP03___1", "door__D-OP03___1"]);
+
+  // Tap the left panel, a little off the seam.
+  const target = new THREE.Vector3(1.85, 1.0, -9.5625).project(camera);
+  const px = ((target.x + 1) / 2) * 200;
+  const py = ((1 - target.y) / 2) * 200;
+  tapAt(canvas, px, py);
+  assert.equal(binding.goal, 1, "tap on the wardrobe leaf opens it");
+  const t0 = binding.anim.t0;
+  applyDoorSwing(binding, t0 + DOOR_SWING_MS / 2);
+  [left, right] = panelX();
+  near(left[0], 1.4 - 0.45, "half-way left");
+  near(right[1], 3.2 + 0.45, "half-way right");
+  applyDoorSwing(binding, t0 + DOOR_SWING_MS + 1);
+  [left, right] = panelX();
+  near(left[0], 0.5, "open left in its pocket");
+  near(left[1], 1.4, "open left inner edge");
+  near(right[0], 3.2, "open right inner edge");
+  near(right[1], 4.1, "open right in its pocket");
+
+  // The centre ray now passes through the empty opening: that closes it.
+  binding.shown = 1;
+  tapAt(canvas);
+  assert.equal(binding.goal, 0, "tap through the open doorway closes it");
 }
 
 console.log("doors.test.mjs ok");

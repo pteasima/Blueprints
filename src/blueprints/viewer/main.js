@@ -46,6 +46,7 @@ import {
 import { createDepthPeelRenderer } from "./depthPeel.js";
 import { createMeasureTool } from "./measure.js";
 import { createDoorController, swingAngle } from "./doors.js";
+import { createWindowSlides } from "./windows.js";
 import { createFeedbackLayer, rotateAboutY } from "./feedback.js";
 import { registerElementActions } from "./elementActions.js";
 import {
@@ -244,6 +245,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   window.blueprintsFeedback = feedback;
   const lightOn = new Map();
   const windowOpen = new Map();
+  /** Pane slide animation per window (windows.js). */
+  const windowSlides = createWindowSlides();
   /**
    * Offline tap toggles between these. On is a warm 3000 K glow, off a dull
    * grey, the same looks live mode uses (homeLive.js lightOnHex).
@@ -2772,13 +2775,31 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     feedback.showFeedback({ worldPos: worldBoxOf(meshes).getCenter(new THREE.Vector3()), kind: "light" });
   }
 
-  /** Drawer: straight arrow along its slide. Hinged leaf: arc along the swing. */
+  /**
+   * Drawer: straight arrow along its slide. Sliding door: one straight arrow
+   * per panel, along that panel's slide. Hinged leaf: arc along the swing.
+   */
   function doorFeedback(binding, move) {
     if (!binding?.host || move.from === move.to) return;
     const box = new THREE.Box3().setFromObject(binding.host);
     if (box.isEmpty()) return;
     const center = box.getCenter(new THREE.Vector3());
     const opening = move.to > move.from;
+    if (binding.panels) {
+      const parent = binding.pivot.parent;
+      if (!parent) return;
+      parent.updateWorldMatrix(true, false);
+      // One haptic tap for the whole door, not one per panel.
+      binding.panels.forEach((panel, i) => {
+        const at = new THREE.Box3().setFromObject(panel.pivot);
+        if (at.isEmpty()) return;
+        const dir = panel.slideLocal.clone().transformDirection(parent.matrixWorld);
+        if (!opening) dir.negate();
+        const worldPos = at.getCenter(new THREE.Vector3());
+        feedback.showFeedback({ worldPos, kind: "slide", worldDir: dir, haptic: i === 0 });
+      });
+      return;
+    }
     if (binding.slideLocal) {
       const parent = binding.pivot.parent;
       if (!parent) return;
@@ -2881,14 +2902,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     const open = !windowOpen.get(element.globalId);
     windowFeedback(element, open);
     windowOpen.set(element.globalId, open);
-    for (const mesh of meshesForElement(element)) {
-      if (!mesh.userData.bpSlideOrigin) mesh.userData.bpSlideOrigin = mesh.position.clone();
-      const geom = mesh.geometry;
-      if (geom && !geom.boundingBox) geom.computeBoundingBox();
-      const width = geom?.boundingBox ? geom.boundingBox.max.x - geom.boundingBox.min.x : 0.4;
-      mesh.position.copy(mesh.userData.bpSlideOrigin);
-      if (open) mesh.position.x += width * 0.8;
-    }
+    windowSlides.slide(element.globalId, meshesForElement(element), open, performance.now());
     viewDirty = true;
   }
 
@@ -3167,6 +3181,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     if (pauseTick) return;
     const now = performance.now();
     if (doorCtrl.step(now)) viewDirty = true;
+    if (windowSlides.step(now)) viewDirty = true;
     stepPulse(now);
     stepCamFly(now);
     stepFrameAnim(now);
