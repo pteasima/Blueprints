@@ -26,9 +26,9 @@ centreline. ``footprints`` leaves it out. A 50 mm band is centred on that
 line so the wall is a solid and OP19 can be cut through it. yaml-ifc would
 otherwise emit no wall body.
 
-OP27 and OP29 store ``HeadHeight`` only. Height and sill are not invented
-(yaml-ifc gives those openings no solid), so they are not cut. Their host
-W-023 stays a 100 mm glazed band with only OP28 removed.
+OP27 and OP29 (the sliding outer parts of the living-room window O11) have
+height 2.5 m and sill 0 since Petr's 2026-11-12 reading of the elevation, so
+W-023 is cut at OP27, OP28 and OP29 and keeps the two 100 mm posts.
 
 Door and window leaves are thin panels in the void: timber doors, glazing
 for windows and for the W-023 run. Plain openings stay empty.
@@ -135,6 +135,13 @@ CUT_PAD_MM = 2.0
 DOOR_LEAF_MM = 40.0
 WINDOW_LEAF_MM = 24.0
 LEAF_GAP_MM = 15.0
+# Glazed hinged door (the terrace "balcony" door OP32, Petr 2026-11-12): a
+# frame of this face width round a glass pane, same leaf thickness. Set by
+# Pset_DoorCommon.GlazingAreaFraction > 0 on the IfcDoor (a standard IFC
+# property), not by id. The frame width is a typical aluminium profile face,
+# not product data.
+GLAZED_DOOR_FRAME_MM = 70.0
+GLAZED_DOOR_GLASS_MM = 24.0
 # A sliding sash runs in its own track beside the fixed pane, so it can pass
 # over it without the two panes sharing a plane. Offset from the frame centre
 # toward local +Y, which is indoors on the west-to-east south-façade walls
@@ -486,6 +493,21 @@ _SLIDING_OPS = frozenset(
         "ROLLINGUP",
     }
 )
+# Sectional overhead door (the garage doors D5/D6, Petr 2026-11-12). IFC4's
+# IfcDoorTypeOperationEnum has no sectional value, so the door is
+# ``OperationType: USERDEFINED`` with this name in a property set
+# (``UserDefinedOperationType``, the IFC attribute yaml-ifc does not write).
+SECTIONAL_OPERATION = "SECTIONAL_OVERHEAD"
+# Simplified sectional door for the viewer (not product data): the leaf is
+# cut into this many equal horizontal sections that run up a vertical track,
+# round a quarter bend of this radius at the leaf head, and then run
+# horizontally into the room under the ceiling. 4 sections of about 0.56 m
+# for a 2.25 m opening is typical for residential garage doors.
+SECTIONAL_SECTIONS = 4
+SECTIONAL_BEND_MM = 300.0
+# The sectional leaf hangs behind the opening, on the inner wall face, so its
+# track does not cut through the lintel. Clearance from the face:
+SECTIONAL_FACE_GAP_MM = 20.0
 # Hinge side is along the host wall. Facing local +Y (looking toward −Y),
 # start/L is the left jamb. Swing +1 opens toward local +Y.
 # SINGLE_SWING_LEFT / RIGHT name that same pair; the file does not set them.
@@ -543,10 +565,26 @@ def hinge_rotation_sign(side: str, opens_toward_plus_y: int) -> int:
     return 1 if plus_rotation_opens_plus_y == want_plus else -1
 
 
+def is_sectional(filler: dict) -> bool:
+    """True for a sectional overhead door (``SECTIONAL_OPERATION``)."""
+    return (
+        filler.get("OperationType") == "USERDEFINED"
+        and _door_field(filler, "UserDefinedOperationType") == SECTIONAL_OPERATION
+    )
+
+
 def _classify_door(filler: dict) -> dict:
-    """Hinged or sliding, from width and the hinge/swing fields."""
+    """Hinged, sliding or sectional, from the operation, width and hinge/swing fields."""
     op = filler.get("OperationType")
     width = filler.get("OverallWidth")
+    if is_sectional(filler):
+        return {
+            "id": filler.get("id"),
+            "kind": "sectional",
+            "side": "start",
+            "opens": _opens_toward_plus_y(_door_field(filler, "Swing")),
+            "sign": 1,
+        }
     sliding = op in _SLIDING_OPS or (
         op not in _SWING_OPS and width is not None and float(width) > HINGED_LEAF_MAX_M
     )
@@ -568,6 +606,48 @@ def _point_cad(location, x: float, y: float, z: float) -> tuple[float, float, fl
     moved = location * Pos(x, y, z)
     v = moved.position
     return (float(v.X), float(v.Y), float(v.Z))
+
+
+def is_glazed_door(filler: dict) -> bool:
+    """True when ``Pset_DoorCommon.GlazingAreaFraction`` is above zero."""
+    value = _door_field(filler, "GlazingAreaFraction")
+    try:
+        return value is not None and float(value) > 0.0
+    except (TypeError, ValueError):
+        return False
+
+
+def _glazed_leaf(leaf, origin, angle, element_id: str):
+    """Frame (door label) plus glass pane (glazing label), as one door part.
+
+    The two solids sit in one labelled compound, so the GLB has one
+    ``door__<id>__`` node holding both meshes and the viewer swings them
+    together. ``leaf`` is the plain slab in wall-local millimetres.
+    """
+    bb = leaf.bounding_box()
+    w = float(bb.max.X - bb.min.X)
+    t = float(bb.max.Y - bb.min.Y)
+    h = float(bb.max.Z - bb.min.Z)
+    f = min(GLAZED_DOOR_FRAME_MM, w / 4.0, h / 4.0)
+    inner = Pos(float(bb.min.X) + f, float(bb.min.Y) - 1.0, float(bb.min.Z) + f) * Box(
+        w - 2.0 * f, t + 2.0, h - 2.0 * f, align=(Align.MIN, Align.MIN, Align.MIN)
+    )
+    frame = leaf - inner
+    gt = min(GLAZED_DOOR_GLASS_MM, t * 0.6)
+    yc = (float(bb.min.Y) + float(bb.max.Y)) / 2.0
+    glass = Pos(float(bb.min.X) + f, yc, float(bb.min.Z) + f) * Box(
+        w - 2.0 * f, gt, h - 2.0 * f, align=(Align.MIN, Align.CENTER, Align.MIN)
+    )
+    frame_part = _place(frame, origin, angle, LABEL_DOOR)
+    glass_part = _place(glass, origin, angle, LABEL_GLAZING)
+    # Named ``glazing__<id>__`` so the viewer gives it the glass material
+    # (identityOf stops at the first node with an element id).
+    glass_part.element_id = element_id
+    part = Compound(children=[frame_part, glass_part])
+    part.label = LABEL_DOOR
+    part.color = _color(LABEL_DOOR)
+    part.element_id = element_id
+    return part
 
 
 def _door_motion(part, filler: dict) -> dict | None:
@@ -595,6 +675,9 @@ def _door_motion(part, filler: dict) -> dict | None:
         "kind": spec["kind"],
         "center": [round(v, 6) for v in center],
     }
+    if spec["kind"] == "sectional":
+        record.update(_sectional_record(part, (x0, y0, z0, w, t, h), spec["opens"]))
+        return record
     if spec["kind"] == "sliding":
         start = cad_mm_to_gltf_m(_point_cad(part.location, x0, y0 + t / 2.0, z0 + h / 2.0))
         end = cad_mm_to_gltf_m(_point_cad(part.location, x0 + w, y0 + t / 2.0, z0 + h / 2.0))
@@ -609,6 +692,46 @@ def _door_motion(part, filler: dict) -> dict | None:
     record["axis"] = [0.0, 1.0, 0.0]
     record["sign"] = spec["sign"]
     return record
+
+
+def _sectional_record(part, box, opens: int) -> dict:
+    """Viewer fields for a sectional door, glTF metres.
+
+    ``bottom``/``top`` are the leaf's bottom and top edge centres (mid
+    thickness) when shut; ``start``/``end`` its jamb ends at mid-height;
+    ``inward`` the unit vector into the room the track runs into; and
+    ``sections``/``bend`` the viewer's simplified track
+    (``SECTIONAL_SECTIONS``, ``SECTIONAL_BEND_MM``).
+    """
+    x0, y0, z0, w, t, h = box
+    yc, xc = y0 + t / 2.0, x0 + w / 2.0
+
+    def at(x, y, z):
+        return [round(v, 6) + 0.0 for v in cad_mm_to_gltf_m(_point_cad(part.location, x, y, z))]
+
+    origin = cad_mm_to_gltf_m(_point_cad(part.location, xc, yc, z0))
+    toward = cad_mm_to_gltf_m(_point_cad(part.location, xc, yc + 1000.0 * opens, z0))
+    inward = [q - p for p, q in zip(origin, toward)]
+    norm = math.sqrt(sum(v * v for v in inward)) or 1.0
+    return {
+        "start": at(x0, yc, z0 + h / 2.0),
+        "end": at(x0 + w, yc, z0 + h / 2.0),
+        "bottom": at(xc, yc, z0),
+        "top": at(xc, yc, z0 + h),
+        "inward": [round(v / norm, 6) + 0.0 for v in inward],
+        "sections": SECTIONAL_SECTIONS,
+        "bend": round(SECTIONAL_BEND_MM / MM, 6),
+    }
+
+
+def _sectional_leaf(leaf, opens: int, y0: float, y1: float):
+    """Move a sectional leaf from the wall centre to just inside the wall face."""
+    bb = leaf.bounding_box()
+    t = float(bb.max.Y - bb.min.Y)
+    face = y1 if opens > 0 else y0
+    target = face + opens * (SECTIONAL_FACE_GAP_MM + t / 2.0)
+    centre = float(bb.min.Y + bb.max.Y) / 2.0
+    return Pos(0.0, target - centre, 0.0) * leaf
 
 
 def _sliding_panels(operation, start, end) -> list[dict]:
@@ -709,11 +832,30 @@ def window_panels(filler: dict) -> list[dict]:
     ]
 
 
-def window_slide_sign(panels: list[dict], index: int) -> int:
+def window_slide_override(filler: dict) -> tuple[int | None, float | None]:
+    """``SlideToward`` (start/end) and ``SlideTravel`` (metres) from the pset.
+
+    A lone sliding sash that runs past its own opening, over a neighbouring
+    fixed window (the living-room O11 unit, OP27/OP29 over OP28), names its
+    direction and travel; nothing else gives them. Either may be None.
+    """
+    toward = _door_field(filler, "SlideToward")
+    travel = _door_field(filler, "SlideTravel")
+    sign = None
+    if toward is not None:
+        text = str(toward).strip().lower()
+        if text not in {"start", "end"}:
+            raise ValueError(f"{filler.get('id')}: SlideToward must be start or end, got {toward}")
+        sign = 1 if text == "end" else -1
+    return sign, (float(travel) if travel is not None else None)
+
+
+def window_slide_sign(panels: list[dict], index: int, toward: int | None = None) -> int:
     """+1 slides toward the end jamb, −1 toward the start, 0 does not move.
 
     A sliding sash runs over its fixed neighbour. A lone pane (no fixed
-    neighbour, e.g. the ``NOTDEFINED`` default) slides toward the end jamb.
+    neighbour, e.g. the ``NOTDEFINED`` default) slides toward the end jamb,
+    unless ``toward`` (``window_slide_override``) says otherwise.
     """
     op = panels[index]["operation"]
     if op == WINDOW_FIXED:
@@ -721,6 +863,8 @@ def window_slide_sign(panels: list[dict], index: int) -> int:
     if op not in (WINDOW_SLIDING, WINDOW_UNKNOWN):
         # Hinged, tilting or pivoting panes are not animated yet.
         return 0
+    if toward is not None:
+        return toward
     before = index > 0 and panels[index - 1]["operation"] == WINDOW_FIXED
     after = index + 1 < len(panels) and panels[index + 1]["operation"] == WINDOW_FIXED
     if before and after:
@@ -730,13 +874,24 @@ def window_slide_sign(panels: list[dict], index: int) -> int:
     return 1
 
 
-def _window_sashes(leaf, filler: dict) -> list[tuple[dict, object]]:
+def _window_sashes(leaf, filler: dict, face_y: float | None = None) -> list[tuple[dict, object]]:
     """Split the glazing slab into one solid per panel.
 
     A moving sash steps off the frame centre by one pane plus
     ``SASH_GAP_MM`` toward local +Y so it can slide over the fixed pane.
+    A sash with ``SlideTravel`` runs past its own opening, so it sits on the
+    local +Y (indoor) wall face ``face_y`` plus ``SASH_GAP_MM``, clear of the
+    posts between the openings.
     """
     panels = window_panels(filler)
+    toward, travel = window_slide_override(filler)
+    if travel is not None and face_y is not None and len(panels) == 1:
+        if window_slide_sign(panels, 0, toward) != 0:
+            bb = leaf.bounding_box()
+            t = float(bb.max.Y - bb.min.Y)
+            yc = float(bb.min.Y + bb.max.Y) / 2.0
+            moved = Pos(0.0, face_y + SASH_GAP_MM + t / 2.0 - yc, 0.0) * leaf
+            return [(dict(panels[0], index=0), moved)]
     if len(panels) == 1:
         return [(dict(panels[0], index=0), leaf)]
     bb = leaf.bounding_box()
@@ -785,12 +940,14 @@ def _window_motion(filler: dict, placed_panels: list[tuple[dict, object]]) -> di
     half_w = sum(abs(axis[k]) * (hi[k] - lo[k]) for k in range(3)) / 2.0
     start = [mid[k] - axis[k] * half_w for k in range(3)]
     end = [mid[k] + axis[k] * half_w for k in range(3)]
+    toward, travel = window_slide_override(filler)
     out_panels = []
     for i, panel in enumerate(panels):
         lo_i, hi_i = boxes[i]
         width = sum(abs(axis[k]) * (hi_i[k] - lo_i[k]) for k in range(3))
-        sign = window_slide_sign(panels, i)
-        slide = [round(axis[k] * sign * width * WINDOW_TRAVEL, 6) + 0.0 for k in range(3)]
+        sign = window_slide_sign(panels, i, toward)
+        run = travel if travel is not None else width * WINDOW_TRAVEL
+        slide = [round(axis[k] * sign * run, 6) + 0.0 for k in range(3)]
         out_panels.append(
             {
                 "operation": panel["operation"],
@@ -805,7 +962,7 @@ def _window_motion(filler: dict, placed_panels: list[tuple[dict, object]]) -> di
         "id": filler["id"],
         "kind": "window",
         "partitioning": filler.get("PartitioningType") or "SINGLE_PANEL",
-        "operable": any(window_slide_sign(panels, i) != 0 for i in range(len(panels))),
+        "operable": any(window_slide_sign(panels, i, toward) != 0 for i in range(len(panels))),
         "start": [round(v, 6) for v in start],
         "end": [round(v, 6) for v in end],
         "panels": out_panels,
@@ -968,13 +1125,21 @@ def build(
             if opening["id"] in doors:
                 filler = doors[opening["id"]]
                 leaf = _leaf("door", along, width, sill, oheight, thickness, filler)
+                offset = _door_field(filler, "LeafOffset")
+                if leaf is not None and offset is not None:
+                    # Leaf plane off the wall axis, local +Y, metres (OP11/OP17
+                    # sit flush with the hallway face, like the WC door OP19).
+                    leaf = Pos(0.0, _mm(float(offset)), 0.0) * leaf
+                if leaf is not None and is_sectional(filler):
+                    opens = _opens_toward_plus_y(_door_field(filler, "Swing"))
+                    leaf = _sectional_leaf(leaf, opens, y0, y1)
                 if leaf is not None:
                     door_leaves.append((leaf, filler))
             elif opening["id"] in windows:
                 filler = windows[opening["id"]]
                 leaf = _leaf("window", along, width, sill, oheight, thickness, filler)
                 if leaf is not None:
-                    window_leaves.append((_window_sashes(leaf, filler), filler))
+                    window_leaves.append((_window_sashes(leaf, filler, y1), filler))
 
         cut_mm3 += float(body.volume)
         angle = math.degrees(math.atan2(ey - sy, ex - sx))
@@ -993,6 +1158,14 @@ def build(
                 placed_panels.append((panel, placed))
             window_motions.append(_window_motion(filler, placed_panels))
         for leaf, filler in door_leaves:
+            if is_glazed_door(filler) and not is_sectional(filler):
+                part = _glazed_leaf(leaf, origin, angle, filler["id"])
+                parts.append(part)
+                # Hinge from the plain slab: it carries the wall-local frame.
+                motion = _door_motion(_place(leaf, origin, angle, LABEL_DOOR), filler)
+                if motion is not None:
+                    door_motions.append(motion)
+                continue
             for solid in _solids(leaf):
                 part = _place(solid, origin, angle, LABEL_DOOR)
                 part.element_id = filler["id"]

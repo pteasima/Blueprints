@@ -27,6 +27,9 @@ import {
   applyDoorSwing,
   collectDoorHosts,
   isSlidingRecord,
+  isSectionalRecord,
+  sectionalTrack,
+  sectionalTravel,
 } from "./doors.js";
 import { readFileSync } from "node:fs";
 import { pickSurface } from "./pivotNav.js";
@@ -523,8 +526,15 @@ function hasDoor(hits) {
   );
   const record = records.find((r) => r.id === "D-OP03");
   assert.ok(isSlidingRecord(record), "D-OP03 is a sliding record with panels");
-  for (const id of ["D-OP03", "D-OP49", "D-OP50"]) {
+  // The bedroom wardrobe and the three tall living-room pocket doors slide.
+  for (const id of ["D-OP03", "D-OP24", "D-OP25", "D-OP33"]) {
     assert.ok(isSlidingRecord(records.find((r) => r.id === id)), `${id} slides`);
+  }
+  // The garage doors D5/D6 are sectional overhead doors, not sliding.
+  for (const id of ["D-OP49", "D-OP50"]) {
+    const r = records.find((x) => x.id === id);
+    assert.equal(isSlidingRecord(r), false, `${id} does not slide`);
+    assert.ok(isSectionalRecord(r), `${id} is sectional`);
   }
   const root = new THREE.Group();
   root.rotation.x = -Math.PI / 2;
@@ -590,6 +600,167 @@ function hasDoor(hits) {
   binding.shown = 1;
   tapAt(canvas);
   assert.equal(binding.goal, 0, "tap through the open doorway closes it");
+}
+
+// --- Track of a sectional door: up, a quarter bend, then level -----------
+{
+  const near = (a, b, msg) => assert.ok(Math.abs(a - b) < 1e-9, `${msg}: ${a} vs ${b}`);
+  let p = sectionalTrack(1, 2, 0.3);
+  near(p.y, 1, "straight y");
+  near(p.z, 0, "straight z");
+  near(p.tilt, 0, "upright");
+  p = sectionalTrack(2 + (Math.PI / 4) * 0.3, 2, 0.3);
+  near(p.tilt, Math.PI / 4, "half-way round the bend");
+  near(p.y, 2 + 0.3 * Math.SQRT1_2, "bend y");
+  near(p.z, 0.3 * (1 - Math.SQRT1_2), "bend z");
+  p = sectionalTrack(2 + (Math.PI / 2) * 0.3 + 1, 2, 0.3);
+  near(p.y, 2.3, "level y");
+  near(p.z, 1.3, "level z");
+  near(p.tilt, Math.PI / 2, "level");
+  near(sectionalTravel(2, 0.3), 2 + (Math.PI / 2) * 0.3, "travel");
+}
+
+/** A slab mesh under a Z-up glTF root, from a door record (root-local is CAD metres). */
+function slabFor(record, size, name) {
+  const root = new THREE.Group();
+  root.rotation.x = -Math.PI / 2;
+  const scene = new THREE.Scene();
+  scene.add(root);
+  const node = new THREE.Group();
+  node.name = name;
+  const slab = new THREE.Mesh(new THREE.BoxGeometry(...size), new THREE.MeshBasicMaterial());
+  slab.name = `${name}_1`;
+  const c = record.center;
+  node.position.set(c[0], -c[2], c[1]);
+  node.add(slab);
+  root.add(node);
+  scene.updateMatrixWorld(true);
+  return { scene, root };
+}
+
+// Sectional: garage door D6 (D-OP49), Petr 2026-11-12: "garage doors should
+// be sectional doors". From the committed record: a tap opens it; half-way
+// the sections are partly up the wall and partly round the bend; open, every
+// section lies level under the ceiling, inside the garage, above the head.
+{
+  const records = JSON.parse(
+    readFileSync(new URL("../../../docs/models/ground_floor.doors.json", import.meta.url), "utf8"),
+  );
+  const record = records.find((r) => r.id === "D-OP49");
+  const height = record.top[1] - record.bottom[1];
+  const width = Math.hypot(record.end[0] - record.start[0], record.end[2] - record.start[2]);
+  // Root-local x, y, z = CAD x, y, z: the leaf runs along CAD y on W-067.
+  const { scene } = slabFor(record, [0.04, width, height], "door__D-OP49__");
+  const camera = new THREE.PerspectiveCamera(50, 1, 0.05, 100);
+  camera.position.set(record.center[0] - 4, 1.2, record.center[2]);
+  camera.lookAt(record.center[0], 1.2, record.center[2]);
+  camera.updateMatrixWorld(true);
+  const canvas = fakeCanvas();
+  const ctrl = createDoorController({ canvas, getCamera: () => camera, records: [record] });
+  assert.equal(ctrl.bind(scene), 1);
+  const binding = ctrl.bindings[0];
+  assert.equal(binding.kind, "sectional");
+  assert.equal(binding.sections.length, record.sections);
+  const near = (a, b, tol, msg) => assert.ok(Math.abs(a - b) < tol, `${msg}: ${a} vs ${b}`);
+  const boxes = () =>
+    binding.sections.map((section) => {
+      section.pivot.updateWorldMatrix(true, true);
+      return new THREE.Box3().setFromObject(section.pivot);
+    });
+  // Shut: the sections stack into the original leaf.
+  let b = boxes();
+  near(b[0].min.y, record.bottom[1], 1e-4, "bottom section on the floor");
+  near(b[b.length - 1].max.y, record.top[1], 1e-4, "top section at the leaf head");
+  for (const box of b) near((box.min.x + box.max.x) / 2, record.center[0], 1e-4, "shut in the leaf plane");
+  tapAt(canvas);
+  assert.equal(binding.goal, 1, "tap on the garage door opens it");
+  const t0 = binding.anim.t0;
+  applyDoorSwing(binding, t0 + DOOR_SWING_MS / 2);
+  b = boxes();
+  assert.ok(b[0].min.y > record.bottom[1] + 0.3, "half-way: the bottom section has risen");
+  assert.ok(b[b.length - 1].min.x < record.center[0] - 0.1, "half-way: the top section runs inward");
+  applyDoorSwing(binding, t0 + DOOR_SWING_MS + 1);
+  b = boxes();
+  for (const box of b) {
+    const thick = box.max.y - box.min.y;
+    assert.ok(thick < 0.06, `open: each section lies level (${thick})`);
+    assert.ok(box.min.y > record.top[1], "open: above the leaf head");
+    assert.ok(box.max.x < record.center[0] + 1e-6, "open: inside the garage (inward is −x)");
+    near(box.max.z - box.min.z, width, 1e-4, "open: full width");
+  }
+  binding.shown = 1;
+  tapAt(canvas);
+  assert.equal(binding.goal, 0, "tap through the open garage doorway closes it");
+}
+
+// Pocket: living-room door OP24 (Petr 2026-11-12, the three tall living-room
+// doors are pocket doors). The single leaf slides its own width north
+// (glTF −z) into W-050, so the doorway is clear when open.
+{
+  const records = JSON.parse(
+    readFileSync(new URL("../../../docs/models/ground_floor.doors.json", import.meta.url), "utf8"),
+  );
+  for (const [id, north] of [["D-OP24", true], ["D-OP25", false], ["D-OP33", true]]) {
+    const record = records.find((r) => r.id === id);
+    assert.equal(record.panels.length, 1, `${id}: single leaf`);
+    const width = Math.abs(record.end[2] - record.start[2]);
+    near1(Math.abs(record.panels[0].slide[2]), width, `${id}: slides its full width`);
+    assert.equal(record.panels[0].slide[2] < 0, north, `${id}: slide direction`);
+    const height = 2 * record.center[1];
+    const { scene } = slabFor(record, [0.04, width, height], `door__${id}__`);
+    const ctrl = createDoorController({ canvas: fakeCanvas(), getCamera: () => null, records: [record] });
+    assert.equal(ctrl.bind(scene), 1);
+    const binding = ctrl.bindings[0];
+    toggleDoor(binding, 0);
+    applyDoorSwing(binding, DOOR_SWING_MS + 1);
+    binding.panels[0].pivot.updateWorldMatrix(true, true);
+    const box = new THREE.Box3().setFromObject(binding.panels[0].pivot);
+    const lo = Math.min(record.start[2], record.end[2]);
+    const hi = Math.max(record.start[2], record.end[2]);
+    if (north) near1(box.max.z, lo, `${id}: open leaf clears the doorway (north)`);
+    else near1(box.min.z, hi, `${id}: open leaf clears the doorway (south)`);
+  }
+}
+
+// Terrace balcony door D-OP32 (Petr, 2026-11-12: "a hinged door but made out
+// of glass"): the GLB node holds a frame mesh and a glass mesh. Both are one
+// host, matched to the hinged record, and they swing together.
+{
+  const records = JSON.parse(
+    readFileSync(new URL("../../../docs/models/ground_floor.doors.json", import.meta.url), "utf8"),
+  );
+  const record = records.find((r) => r.id === "D-OP32");
+  assert.equal(record.kind, "hinged");
+  const scene = new THREE.Scene();
+  const node = new THREE.Group();
+  node.name = "door__D-OP32__";
+  const c = new THREE.Vector3(...record.center);
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(0.04, 2.485, 1.12), new THREE.MeshBasicMaterial());
+  frame.name = "door";
+  const glass = new THREE.Mesh(new THREE.BoxGeometry(0.024, 2.345, 0.98), new THREE.MeshBasicMaterial());
+  glass.name = "glazing__D-OP32__";
+  frame.position.copy(c);
+  glass.position.copy(c);
+  node.add(frame, glass);
+  scene.add(node);
+  scene.updateMatrixWorld(true);
+  const hosts = collectDoorHosts(scene, [record]);
+  assert.equal(hosts.length, 1, "frame and glass are one door host");
+  assert.equal(hosts[0], node);
+  const ctrl = createDoorController({ canvas: fakeCanvas(), getCamera: () => null, records: [record] });
+  assert.equal(ctrl.bind(scene), 1);
+  const binding = ctrl.bindings[0];
+  toggleDoor(binding, 0);
+  applyDoorSwing(binding, DOOR_SWING_MS + 1);
+  scene.updateMatrixWorld(true);
+  const f = new THREE.Box3().setFromObject(frame).getCenter(new THREE.Vector3());
+  const g = new THREE.Box3().setFromObject(glass).getCenter(new THREE.Vector3());
+  near1(f.distanceTo(g), 0, "glass stays in its frame");
+  assert.ok(f.x > record.hinge[0] + 0.3, `opens east, into 1.01 (Petr's sketch): ${f.x}`);
+}
+
+function near1(a, b, msg) {
+  assert.ok(Math.abs(a - b) < 1e-4, `${msg}: ${a} vs ${b}`);
 }
 
 console.log("doors.test.mjs ok");

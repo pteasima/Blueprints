@@ -70,9 +70,10 @@ def test_ground_floor_builds_and_cuts_openings():
     assert meta["footprints_omitted"] == ["W-017"]
     assert derived["footprints"] == 66
 
+    # OP27/OP29 have had a height since Petr's 2026-11-12 O11 reading.
     without_height = {item["id"] for item in openings if item.get("Height") is None}
-    assert without_height == {"OP27", "OP29"}
-    assert {item["id"] for item in meta["openings_skipped"]} == without_height
+    assert without_height == set()
+    assert meta["openings_skipped"] == []
     assert meta["openings_failed"] == []
     assert derived["openings_cut"] == 50 - len(without_height)
     assert set(meta["openings_cut"]) == {item["id"] for item in openings} - without_height
@@ -100,10 +101,16 @@ def test_ground_floor_builds_and_cuts_openings():
     assert {"masonry", "glazing", "door"} <= labels
     motions = {item["id"]: item for item in meta["door_motions"] if item["kind"] != "drawer"}
     assert set(motions) == {door["id"] for door in doc["doors"]}
-    # Wider than a single leaf: one slab that slides, not a hinged swing. The
-    # file has no hinge side, so every narrower leaf uses the start jamb and +Y.
+    # Sliding: the bedroom wardrobe pocket (wider than a single leaf, no
+    # OperationType) and the three tall living-room pocket doors.
     assert {item_id for item_id, item in motions.items() if item["kind"] == "sliding"} == {
         "D-OP03",
+        "D-OP24",
+        "D-OP25",
+        "D-OP33",
+    }
+    # The garage doors D5/D6 are sectional overhead doors (Petr 2026-11-12).
+    assert {item_id for item_id, item in motions.items() if item["kind"] == "sectional"} == {
         "D-OP49",
         "D-OP50",
     }
@@ -116,7 +123,7 @@ def test_ground_floor_builds_and_cuts_openings():
     for item in motions.values():
         if item["kind"] != "hinged":
             continue
-        assert item["sign"] == 1
+        assert item["sign"] in (1, -1)
         assert item["axis"] == [0.0, 1.0, 0.0]
         assert item["hinge"][1] == pytest.approx(item["center"][1], abs=1e-6)
         span = math.hypot(item["hinge"][0] - item["center"][0], item["hinge"][2] - item["center"][2])
@@ -125,9 +132,7 @@ def test_ground_floor_builds_and_cuts_openings():
     assert committed == meta["door_motions"]
     windows_json = json.loads((ROOT / "docs" / "models" / "ground_floor.windows.json").read_text())
     assert windows_json == meta["window_motions"]
-    assert {item["id"] for item in meta["window_motions"]} == {
-        item["id"] for item in doc["windows"] if item["FillsOpening"] not in {"OP27", "OP29"}
-    }
+    assert {item["id"] for item in meta["window_motions"]} == {item["id"] for item in doc["windows"]}
     assert derived["furnishings"] == len(furnishing_records())
     host = next(wall for wall in walls if wall["id"] == OPENING_VIEW_WALL)
     hosted = [item["id"] for item in openings if item["VoidsElement"] == host["id"]]
@@ -264,6 +269,25 @@ WINDOW_PANES = {
     "WIN-OP21": ["FIXEDCASEMENT", "SLIDINGHORIZONTAL"],
     # Garzonka 1.23 (O10): as the bedroom.
     "WIN-OP35": SLIDE_THEN_FIXED,
+    # Batch 2, Petr 2026-11-12: every small high window is fixed glass.
+    "WIN-OP04": ["FIXEDCASEMENT"],  # O5, 1.10
+    "WIN-OP07": ["FIXEDCASEMENT"],  # O5, 1.09
+    "WIN-OP12": ["FIXEDCASEMENT"],  # O6, 1.08
+    "WIN-OP15": ["FIXEDCASEMENT", "FIXEDCASEMENT"],  # O7, 1.07, two panes
+    "WIN-OP42": ["FIXEDCASEMENT", "FIXEDCASEMENT"],  # O8, 1.17, two panes
+    "WIN-OP30": ["FIXEDCASEMENT"],  # 1.23 east
+    "WIN-OP31": ["FIXEDCASEMENT"],  # 1.20 east
+    "WIN-OP45": ["FIXEDCASEMENT"],  # O9, garage
+    "WIN-OP46": ["FIXEDCASEMENT"],
+    "WIN-OP47": ["FIXEDCASEMENT"],
+    "WIN-OP48": ["FIXEDCASEMENT"],
+    # Entrance OP39b (drawn fixed) and the tall hall window OP26 (Petr 2026-10-05).
+    "WIN-OP39b": ["FIXEDCASEMENT"],
+    "WIN-OP26": ["FIXEDCASEMENT"],
+    # Living-room O11: fixed middle, outer sashes slide toward it.
+    "WIN-OP27": ["SLIDINGHORIZONTAL"],
+    "WIN-OP28": ["FIXEDCASEMENT"],
+    "WIN-OP29": ["SLIDINGHORIZONTAL"],
 }
 
 
@@ -282,11 +306,8 @@ def test_window_panes_per_room():
         ]
         partition = "SINGLE_PANEL" if n == 1 else "DOUBLE_PANEL_VERTICAL"
         assert windows[window_id]["PartitioningType"] == partition
-    # Every other window has no panel data yet and keeps the old single pane.
-    for window_id, item in windows.items():
-        if window_id in WINDOW_PANES:
-            continue
-        assert [p["operation"] for p in window_panels(item)] == ["NOTDEFINED"], window_id
+    # Every window now has panel data.
+    assert set(windows) == set(WINDOW_PANES)
 
 
 def test_window_slide_direction_rules():
@@ -327,7 +348,7 @@ def test_committed_window_records():
     for window_id in ("WIN-OP01", "WIN-OP02"):
         assert records[window_id]["operable"] is False
     for window_id, expected in WINDOW_PANES.items():
-        if len(expected) != 2:
+        if len(expected) != 2 or "SLIDINGHORIZONTAL" not in expected:
             continue
         record = records[window_id]
         sash_i = expected.index("SLIDINGHORIZONTAL")
@@ -341,3 +362,142 @@ def test_committed_window_records():
         assert (toward > 0) == (window_id != "WIN-OP21"), window_id
         # The sash runs in its own track, indoors (north, glTF −Z) of the fixed pane.
         assert sash["max"][2] < fixed["min"][2] + 1e-9
+
+
+def test_living_room_o11_sashes_meet_in_the_middle():
+    """OP27/OP29 slide toward OP28 on the indoor face and meet at its centre."""
+    records = {item["id"]: item for item in build()[1]["window_motions"]}
+    centre = records["WIN-OP28"]["panels"][0]["center"][0]
+    assert records["WIN-OP28"]["operable"] is False
+    left, right = records["WIN-OP27"]["panels"][0], records["WIN-OP29"]["panels"][0]
+    assert left["max"][0] + left["slide"][0] == pytest.approx(centre, abs=1e-4)
+    assert right["min"][0] + right["slide"][0] == pytest.approx(centre, abs=1e-4)
+    # glTF −Z is north, indoors: both sashes run in front of the fixed pane.
+    fixed = records["WIN-OP28"]["panels"][0]
+    assert left["max"][2] < fixed["min"][2] and right["max"][2] < fixed["min"][2]
+
+
+def _door_records():
+    return {item["id"]: item for item in build()[1]["door_motions"] if item["kind"] != "drawer"}
+
+
+def test_garage_doors_are_sectional():
+    from ground_floor import SECTIONAL_BEND_MM, SECTIONAL_SECTIONS
+
+    records = _door_records()
+    for door_id in ("D-OP49", "D-OP50"):
+        r = records[door_id]
+        assert r["kind"] == "sectional"
+        assert r["sections"] == SECTIONAL_SECTIONS
+        assert r["bend"] == pytest.approx(SECTIONAL_BEND_MM / 1000.0)
+        # W-067 is the garage's east wall at plan x 44.875 (faces 44.70–45.05);
+        # the leaf hangs inside, west of the inner face, and its track runs west.
+        assert r["inward"] == pytest.approx([-1.0, 0.0, 0.0])
+        assert r["center"][0] < 44.70
+        assert r["bottom"][1] == pytest.approx(0.0, abs=1e-6)
+        # Head 2.25 m less the leaf gap; the track's level run stays under the
+        # 2.75 m garage ceiling.
+        assert r["top"][1] == pytest.approx(2.235, abs=1e-3)
+        assert r["top"][1] + r["bend"] < 2.75
+
+
+def test_living_room_pocket_doors_slide_into_the_wall():
+    records = _door_records()
+    # (id, slides north): leaves parked per the DWG plan, on the living-room face.
+    for door_id, north in (("D-OP24", True), ("D-OP25", False), ("D-OP33", True)):
+        r = records[door_id]
+        assert r["kind"] == "sliding"
+        assert len(r["panels"]) == 1
+        width = abs(r["end"][2] - r["start"][2])
+        slide = r["panels"][0]["slide"]
+        # Its full width along the wall (glTF −Z is north).
+        assert abs(slide[2]) == pytest.approx(width, abs=1e-6)
+        assert (slide[2] < 0) == north, door_id
+
+
+# Hinge side and swing, Petr 2026-11-12 (docs/OpeningsSpec.md). Plan
+# coordinates; the hinge is the jamb it hangs on, the swing the room it
+# opens into, given as the plan direction from the wall.
+HINGES = {
+    "D-OP06": ("east", "north"),  # bedroom → en-suite 1.09
+    "D-OP10": ("east", "south"),  # 1.05 → 1.12
+    "D-OP14": ("east", "south"),  # 1.05 → 1.13
+    "D-OP18": ("east", "south"),  # 1.05 → 1.14
+    "D-OP22": ("east", "south"),  # 1.05 → 1.15
+    "D-OP19": ("west", "north"),  # WC 1.06, the reference, unchanged
+    "D-OP11": ("west", "north"),  # laundry 1.08, as the WC
+    "D-OP17": ("west", "north"),  # bathroom 1.07, as the WC
+    "D-OP20": ("south", "east"),  # pantry exterior door, inward
+    "D-OP23": ("east", "north"),  # 1.05 → 1.04
+    # Petr's 11:43 sketch of the entrance area (docs/OpeningsSpec.md):
+    "D-OP37": ("south", "east"),  # 1.01 → WC 1.19, inward
+    "D-OP38": ("south", "east"),  # 1.01 → 1.17 garage hallway
+    "D-OP34": ("east", "south"),  # 1.01 → bathroom 1.20, inward
+    "D-OP40": ("east", "north"),  # 1.22 → 1.21
+    "D-OP32": ("south", "east"),  # terrace door, glazed, opens into 1.01 (sketch)
+}
+
+
+def _plan(v):
+    """glTF (x, y_up, −y) → plan (x, y)."""
+    return v[0], -v[2]
+
+
+def test_hinge_sides_and_swings():
+    import math as _m
+
+    records = _door_records()
+    for door_id, (side, swing) in HINGES.items():
+        r = records[door_id]
+        assert r["kind"] == "hinged", door_id
+        hx, hy = _plan(r["hinge"])
+        cx, cy = _plan(r["center"])
+        jamb = {"east": hx > cx, "west": hx < cx, "north": hy > cy, "south": hy < cy}
+        assert jamb[side], (door_id, side)
+        # Open: rotate the centre 90° about +Y (glTF) by sign, as the viewer does.
+        a = r["sign"] * _m.pi / 2
+        dx, dz = r["center"][0] - r["hinge"][0], r["center"][2] - r["hinge"][2]
+        ox = r["hinge"][0] + _m.cos(a) * dx + _m.sin(a) * dz
+        oz = r["hinge"][2] - _m.sin(a) * dx + _m.cos(a) * dz
+        px, py = ox, -oz
+        went = {"east": px > hx + 0.2, "west": px < hx - 0.2, "north": py > hy + 0.2, "south": py < hy - 0.2}
+        assert went[swing], (door_id, swing, (px, py), (hx, hy))
+
+
+def test_hallway_doors_hang_flush_like_the_wc():
+    records = _door_records()
+    wc = records["D-OP19"]["center"][2]
+    for door_id in ("D-OP11", "D-OP17"):
+        assert records[door_id]["center"][2] == pytest.approx(wc, abs=1e-6), door_id
+
+
+def test_head_heights_match_the_window_head():
+    """Main door OP39a and garage-hallway door OP38: head 2.50 m = OP39b's head."""
+    doc = _document()
+    openings = {item["id"]: item for item in doc["openings"]}
+    doors = {item["id"]: item for item in doc["doors"]}
+    window_head = openings["OP39b"]["SillHeight"] + openings["OP39b"]["Height"]
+    assert window_head == pytest.approx(2.5)
+    for oid in ("OP38", "OP39a"):
+        assert openings[oid]["SillHeight"] + openings[oid]["Height"] == pytest.approx(window_head)
+        assert doors[f"D-{oid}"]["OverallHeight"] == pytest.approx(window_head)
+
+
+def test_terrace_door_is_a_glazed_hinged_leaf():
+    """OP32 onto the terrace: hinged, glass in a frame (Petr 2026-11-12)."""
+    import struct
+
+    from ground_floor import is_glazed_door
+
+    doc = _document()
+    doors = {item["id"]: item for item in doc["doors"]}
+    glazed = [d for d, item in doors.items() if is_glazed_door(item)]
+    assert glazed == ["D-OP32"]
+    assert _door_records()["D-OP32"]["kind"] == "hinged"
+    data = (ROOT / "docs" / "models" / "ground_floor.glb").read_bytes()
+    n, _ = struct.unpack_from("<II", data, 12)
+    nodes = json.loads(data[20 : 20 + n])["nodes"]
+    host = [x for x in nodes if x.get("name") == "door__D-OP32__"]
+    assert len(host) == 1
+    kids = sorted(nodes[i].get("name") for i in host[0].get("children", []))
+    assert kids == ["door", "glazing__D-OP32__"]
