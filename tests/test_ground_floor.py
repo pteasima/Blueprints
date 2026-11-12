@@ -23,9 +23,12 @@ from ground_floor import (  # noqa: E402
     PLAN_HALF_M,
     SOURCE_COMMIT,
     SOURCE_PATH,
+    WINDOW_TRAVEL,
     build,
     furnishing_records,
     scenes,
+    window_panels,
+    window_slide_sign,
 )
 
 
@@ -120,6 +123,11 @@ def test_ground_floor_builds_and_cuts_openings():
         assert 0.25 < span < 0.7
     committed = json.loads((ROOT / "docs" / "models" / "ground_floor.doors.json").read_text())
     assert committed == meta["door_motions"]
+    windows_json = json.loads((ROOT / "docs" / "models" / "ground_floor.windows.json").read_text())
+    assert windows_json == meta["window_motions"]
+    assert {item["id"] for item in meta["window_motions"]} == {
+        item["id"] for item in doc["windows"] if item["FillsOpening"] not in {"OP27", "OP29"}
+    }
     assert derived["furnishings"] == len(furnishing_records())
     host = next(wall for wall in walls if wall["id"] == OPENING_VIEW_WALL)
     hosted = [item["id"] for item in openings if item["VoidsElement"] == host["id"]]
@@ -238,3 +246,98 @@ def test_plan_scenes_keep_the_perspective_views():
     half_x, half_y = overview["camera"]["orthoFit"]
     assert half_x > 20
     assert half_y > 8
+
+
+# Which panes open, per window (docs/design/ground-floor.md, Windows).
+# Panels run along the host wall axis; W-002 and W-001 run west to east.
+SLIDE_THEN_FIXED = ["SLIDINGHORIZONTAL", "FIXEDCASEMENT"]
+WINDOW_PANES = {
+    # Bedroom 1.11 west, wide (O3) and narrow (O4): fixed glass, Petr 2026-11-12.
+    "WIN-OP01": ["FIXEDCASEMENT"],
+    "WIN-OP02": ["FIXEDCASEMENT"],
+    # Large south windows (O2): west sash slides east over the fixed east pane.
+    "WIN-OP05": SLIDE_THEN_FIXED,  # bedroom 1.11
+    "WIN-OP08": SLIDE_THEN_FIXED,  # 1.12
+    "WIN-OP13": SLIDE_THEN_FIXED,  # 1.13
+    "WIN-OP16": SLIDE_THEN_FIXED,  # 1.14
+    # Office 1.15 (O1): mirrored, the east sash slides west.
+    "WIN-OP21": ["FIXEDCASEMENT", "SLIDINGHORIZONTAL"],
+    # Garzonka 1.23 (O10): as the bedroom.
+    "WIN-OP35": SLIDE_THEN_FIXED,
+}
+
+
+def _windows():
+    return {item["id"]: item for item in _document()["windows"]}
+
+
+def test_window_panes_per_room():
+    windows = _windows()
+    for window_id, expected in WINDOW_PANES.items():
+        panels = window_panels(windows[window_id])
+        assert [p["operation"] for p in panels] == expected, window_id
+        n = len(expected)
+        assert [p["span"] for p in panels] == [
+            [pytest.approx(i / n), pytest.approx((i + 1) / n)] for i in range(n)
+        ]
+        partition = "SINGLE_PANEL" if n == 1 else "DOUBLE_PANEL_VERTICAL"
+        assert windows[window_id]["PartitioningType"] == partition
+    # Every other window has no panel data yet and keeps the old single pane.
+    for window_id, item in windows.items():
+        if window_id in WINDOW_PANES:
+            continue
+        assert [p["operation"] for p in window_panels(item)] == ["NOTDEFINED"], window_id
+
+
+def test_window_slide_direction_rules():
+    fixed = {"operation": "FIXEDCASEMENT"}
+    slide = {"operation": "SLIDINGHORIZONTAL"}
+    assert window_slide_sign([fixed], 0) == 0
+    assert window_slide_sign([slide, fixed], 0) == 1
+    assert window_slide_sign([slide, fixed], 1) == 0
+    assert window_slide_sign([fixed, slide], 1) == -1
+    assert window_slide_sign([{"operation": "NOTDEFINED"}], 0) == 1
+    assert window_slide_sign([{"operation": "BOTTOMHUNG"}], 0) == 0
+    with pytest.raises(ValueError):
+        window_slide_sign([fixed, slide, fixed], 1)
+    with pytest.raises(ValueError):
+        window_panels({"id": "X", "PartitioningType": "DOUBLE_PANEL_VERTICAL"})
+    with pytest.raises(ValueError):
+        window_panels(
+            {
+                "id": "X",
+                "PartitioningType": "DOUBLE_PANEL_VERTICAL",
+                "PropertySets": [
+                    {"Name": "Pset_BlueprintsWindow", "Properties": {"PanelOperations": "FIXEDCASEMENT"}}
+                ],
+            }
+        )
+
+
+def test_committed_window_records():
+    records = {
+        item["id"]: item
+        for item in json.loads((ROOT / "docs" / "models" / "ground_floor.windows.json").read_text())
+    }
+    for window_id, expected in WINDOW_PANES.items():
+        record = records[window_id]
+        moving = [p for p in record["panels"] if any(abs(v) > 1e-9 for v in p["slide"])]
+        assert record["operable"] == bool(moving), window_id
+        assert [p["operation"] for p in record["panels"]] == expected
+    for window_id in ("WIN-OP01", "WIN-OP02"):
+        assert records[window_id]["operable"] is False
+    for window_id, expected in WINDOW_PANES.items():
+        if len(expected) != 2:
+            continue
+        record = records[window_id]
+        sash_i = expected.index("SLIDINGHORIZONTAL")
+        sash, fixed = record["panels"][sash_i], record["panels"][1 - sash_i]
+        assert fixed["slide"] == [0.0, 0.0, 0.0]
+        # glTF X is plan x (east). The sash slides toward the fixed pane by
+        # WINDOW_TRAVEL of its own width, along the wall.
+        width = sash["max"][0] - sash["min"][0]
+        toward = 1 if fixed["center"][0] > sash["center"][0] else -1
+        assert sash["slide"] == pytest.approx([toward * width * WINDOW_TRAVEL, 0.0, 0.0], abs=1e-5)
+        assert (toward > 0) == (window_id != "WIN-OP21"), window_id
+        # The sash runs in its own track, indoors (north, glTF −Z) of the fixed pane.
+        assert sash["max"][2] < fixed["min"][2] + 1e-9

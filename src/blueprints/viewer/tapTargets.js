@@ -150,6 +150,9 @@ export function centerOccluded(center, camera, root, owns, opts = {}) {
     if (dist < 1e-9) return false;
     _occRay.set(origin, dir.normalize());
   }
+  // Fat edge lines (LineSegments2) read the raycaster's camera; without it
+  // their raycast throws and the whole tap is lost.
+  _occRay.camera = camera;
   _occRay.near = 0;
   _occRay.far = Math.max(0, dist);
   const hits = _occRay.intersectObject(root, true);

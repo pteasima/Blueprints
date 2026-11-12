@@ -40,6 +40,32 @@ The builder extrudes every wall that has a thickness at yaml-ifc’s `DEFAULT_WA
 
 `guess:` the 50 mm band on W-017 is a placeholder so the wall is a solid. It is not a measured thickness.
 
+## Windows
+
+Which panes open. Petr, 2026-11-12, and the 2022 DWG (`RD Šíma stavba.dwg`, sheet POHLEDY, layer tenka), read on the box with LibreDWG. It is not in the repo. In the elevations an arrow in a pane is a sliding sash and its direction, and a `+` is a fixed pane. A triangle is a hinged sash, with its apex at the handle side. The legend says “Okna hliníková s izolačním trojsklem - antracit” (aluminium, triple glazing, anthracite).
+
+The data is on each `IfcWindow` in `inputs/ground_floor/ground-floor.yaml`. `PartitioningType` is the IFC enum. `Pset_BlueprintsWindow.PanelOperations` gives one IFC `IfcWindowPanelOperationEnum` name per panel. It is a property set because yaml-ifc has no `IfcWindowPanelProperties`. Panels are listed along the host wall axis, from the start jamb to the end jamb. W-001 and W-002 run west to east. Panels split the width equally. In the elevations the two panes look about equal; nothing else gives the split. The model (`models/ground_floor.py`, `window_panels`, `_window_sashes`, `_window_motion`) splits the glazing into one solid per panel. It writes `docs/models/ground_floor.windows.json` for the viewer. A sliding sash sits one pane plus 6 mm (`SASH_GAP_MM`) indoors of the fixed pane, in its own track. When open, it slides `WINDOW_TRAVEL` (80 %) of its own width toward the fixed pane. That 80 % is the earlier viewer animation, not a product figure.
+
+| Window | Room | DWG mark and drawing | Model |
+| --- | --- | --- | --- |
+| WIN-OP01 | 1.11 west, 2.4 m | O3, POHLED JIHOZÁPADNÍ: sliding sash (north pane) and a fixed pane | Fixed glazing, `SINGLE_PANEL` `FIXEDCASEMENT`. Petr, 2026-11-12: “the two windows that are facing west in the bedroom, they are just fixed glass. Both the narrow one and the wide one.” His word overrides the 2022 drawing. |
+| WIN-OP02 | 1.11 west, 0.9 m | O4, POHLED JIHOZÁPADNÍ: tilt-and-turn | Fixed glazing, Petr (as above) |
+| WIN-OP05 | 1.11 south | O2, POHLED JIHOVÝCHODNÍ: arrow in the west pane pointing east, `+` in the east pane | West sash slides east; the east pane is fixed |
+| WIN-OP08, OP13, OP16 | 1.12, 1.13, 1.14 south | O2, as OP05 | As OP05 |
+| WIN-OP21 | 1.15 Pracovna south, 3.55 m | O1: `+` in the west pane, arrow in the east pane pointing west | Mirrored: the east sash slides west |
+| WIN-OP35 | 1.23 south, 3.1 m | O10: arrow in the west pane pointing east, `+` in the east pane | As OP05 |
+
+`guess:` OP35 in 1.23 is taken as the garzonka's large south window. The drawing names rooms 1.20–1.23 only by number.
+
+Petr, 2026-11-12, said the bedroom and the three children's rooms share one layout, the office is the opposite, and he was unsure about the garzonka. The drawing agrees: the garzonka matches the bedroom.
+
+Not changed yet. Every other window has no panel data. The model writes it as one `NOTDEFINED` pane, and the viewer slides it along the wall, as before. The drawing says otherwise for these:
+
+- North high windows O5 (OP04, OP07), O9 (garage OP45–OP48) and O7/O8 (OP15, OP42, two sashes each) are drawn bottom-hung (tilt in, apex at the top). O6 (OP12) is tilt-and-turn. None of them slides.
+- O11 (OP28, living room) is drawn as the fixed middle of a three-part unit. OP27 and OP29 on either side are the sashes, sliding toward it. OP27 and OP29 have no height, so they are not cut and have no glass.
+- OP39b (entrance, POHLED SEVEROVÝCHODNÍ, D1 bay) is drawn as fixed glazing.
+- OP26 (1.05), OP30 (1.23 east) and OP31 (1.20 east) do not appear in any elevation.
+
 ## Floor EPS take-off
 
 `scripts/export_podlaha_eps.py` writes `docs/podlaha-eps.xlsx` and `docs/podlaha-eps-souhrn.csv`. It is a quantity file, not a solid.

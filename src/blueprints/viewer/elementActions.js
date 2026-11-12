@@ -40,6 +40,8 @@ const KINDS = [
     priority: 50,
     labelKey: (el, api) => (api.isOpen?.(el) ? "ui.close" : "ui.open"),
     run: (el, hit, ctx, api) => api.onWindow?.(el, hit, ctx),
+    // Fixed glazing is not interactive: only a pane that opens claims.
+    accepts: (el, hit, api) => (api.windowAccepts ? api.windowAccepts(el, hit) : true),
   },
 ];
 
@@ -52,6 +54,7 @@ const KINDS = [
  *   onLight?: Function,
  *   onSwitch?: Function,
  *   onWindow?: Function,
+ *   windowAccepts?: (el: object, hit: object) => boolean,
  *   onCover?: Function,
  *   switchActions?: Function,
  *   coverActions?: Function,
@@ -68,6 +71,7 @@ export function registerElementActions(registry, api) {
         const element = api.elementOf?.(hit.object);
         if (!element || element.type !== kind.type) return null;
         if (kind.liveOnly && !api.isLive?.(element)) return null;
+        if (kind.accepts && !kind.accepts(element, hit, api)) return null;
         const run = () => kind.run(element, hit, ctx, api);
         const custom = kind.actions?.(element, hit, ctx, api);
         return {
