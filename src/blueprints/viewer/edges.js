@@ -8,6 +8,7 @@ import * as THREE from "three";
 import { LineSegments2 } from "three/addons/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js";
 import { LineMaterial } from "three/addons/lines/LineMaterial.js";
+import { LOG_DEPTH_DEFINED } from "./materials.js";
 import {
   cutEdgeSegmentPositions,
   worldPlanesToLocal,
@@ -68,7 +69,7 @@ function edgeFragDepthBias(mesh) {
 export const EDGE_LAYER = 1;
 
 /** Cache-key bump when bias shader strategy changes. */
-const EDGE_BIAS_SHADER_REV = 3;
+const EDGE_BIAS_SHADER_REV = 4;
 
 /** Grout wider than this is not a joint face (tile thickness is 8.5 mm). */
 const JOINT_MIN_M = 0.0012;
@@ -538,7 +539,7 @@ function createEdgeMaterial(planes, res, opacity = 1, fragBias = EDGE_LAYER_STEP
     shader.fragmentShader = shader.fragmentShader.replace(
       "#include <logdepthbuf_fragment>",
       `#include <logdepthbuf_fragment>
-			#if defined( USE_LOGDEPTHBUF )
+			#if ${LOG_DEPTH_DEFINED}
 				gl_FragDepth -= ${bias};
 			#else
 				gl_FragDepth = gl_FragCoord.z - ${bias};

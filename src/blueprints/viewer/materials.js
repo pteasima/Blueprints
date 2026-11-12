@@ -127,7 +127,18 @@ export const LAYER_DEPTH_BIAS = {
 export const LAYER_FRAG_DEPTH_STEP = 2e-6;
 
 /** Cache-key bump when the face-bias shader changes. */
-export const LAYER_DEPTH_SHADER_REV = 2;
+export const LAYER_DEPTH_SHADER_REV = 3;
+
+/**
+ * GLSL condition for "this program writes logarithmic depth". three r180
+ * renamed the define from `USE_LOGDEPTHBUF` to `USE_LOGARITHMIC_DEPTH_BUFFER`.
+ * Checking only the old name sent every edge stroke down the linear
+ * `gl_FragCoord.z` branch, so strokes lost the depth test against any face
+ * in front of the far floor and only silhouettes showed (Petr, 2026-11-12).
+ * Both names are kept so a pin change in either direction keeps working.
+ */
+export const LOG_DEPTH_DEFINED =
+  "defined( USE_LOGARITHMIC_DEPTH_BUFFER ) || defined( USE_LOGDEPTHBUF )";
 
 /**
  * Pull a face forward in the log-depth buffer. Polygon offset never survives
@@ -152,7 +163,7 @@ export function applyLayerDepthBias(mat, depthBias = 0) {
     shader.fragmentShader = shader.fragmentShader.replace(
       "#include <logdepthbuf_fragment>",
       `#include <logdepthbuf_fragment>
-#if defined( USE_LOGDEPTHBUF )
+#if ${LOG_DEPTH_DEFINED}
 	{
 		float bpFaceBias = ${bias}.0 * ${step};
 		float bpGraze = min(bpFaceBias, 0.35 * fwidth(gl_FragDepth));
