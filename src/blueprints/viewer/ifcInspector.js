@@ -5,8 +5,10 @@
  *
  * Two tabs (Spatial and Groups) share a segmented picker; switching
  * animates the panes. Long-press a row for hide / isolate and Info.
- * Element info lists the groups it belongs to; group info lists parent
- * groups, child groups and child elements (Petr, 2026-11-12).
+ * Element and group info carry the old popover's properties and actions
+ * (Petr, 2026-11-12: ditch the popover, go straight into the inspector).
+ * A long-press in the model opens that info screen. Back from info
+ * returns to the tree; back from the tree returns to the sheet menu.
  */
 
 import {
@@ -30,11 +32,6 @@ import {
 } from "./ifcTree.js";
 import { LONG_PRESS_MS, classifyHold } from "./gesture.js";
 
-const REVEAL_ICON = `<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false">
-  <path fill="currentColor" d="M2.5 4.2h8.2v1.35H2.5V4.2zm0 5.1h8.2v1.35H2.5V9.3zm0 5.15h8.2V15.8H2.5v-1.35z"/>
-  <path fill="currentColor" d="M13.2 6.15l3.15 3.15-3.15 3.15-1.05-1.05 1.35-1.35H11.2V8.55h2.3L12.15 7.2l1.05-1.05z"/>
-</svg>`;
-
 /**
  * @param {{
  *   index: { elements: Record<string, object>, roots: string[], groups?: string[] },
@@ -57,7 +54,7 @@ const REVEAL_ICON = `<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden
  */
 export function mountIfcInspector(opts) {
   const scroll = document.getElementById("sheet-scroll");
-  if (!scroll) return { reveal() {}, open() {}, closePopover() {}, refresh() {} };
+  if (!scroll) return { reveal() {}, open() {}, inspect() {}, refresh() {} };
 
   const main = document.createElement("div");
   main.id = "sheet-main";
@@ -130,12 +127,6 @@ export function mountIfcInspector(opts) {
   page.append(head, tree, info);
   scroll.append(main, page);
 
-  const pop = document.createElement("div");
-  pop.id = "ifc-popover";
-  pop.hidden = true;
-  pop.className = "ifc-popover";
-  document.body.append(pop);
-
   const menu = document.createElement("div");
   menu.id = "ifc-row-menu";
   menu.hidden = true;
@@ -159,6 +150,9 @@ export function mountIfcInspector(opts) {
   let infoId = null;
   /** @type {string[]} */
   let infoStack = [];
+  /** True when the info page is showing a solid with no IFC record. */
+  let infoMissing = false;
+  let infoPartName = "";
   const scrollPos = { spatial: 0, groups: 0 };
 
   function makePane() {
@@ -279,7 +273,7 @@ export function mountIfcInspector(opts) {
   }
 
   function render() {
-    const inInfo = Boolean(infoId);
+    const inInfo = Boolean(infoId) || infoMissing;
     if (inInfo) {
       const previous = infoStack.length ? infoStack[infoStack.length - 1] : null;
       back.textContent = previous ? `‹ ${labelOf(previous)}` : `‹ ${opts.t("ui.inspector")}`;
@@ -523,7 +517,6 @@ export function mountIfcInspector(opts) {
   let menuReady = false;
 
   function openRowMenu(id, x, y) {
-    closePopover();
     menu.replaceChildren();
     menu.hidden = false;
     menuReady = false;
@@ -579,14 +572,11 @@ export function mountIfcInspector(opts) {
     menu.replaceChildren();
   }
 
-  function closePopover() {
-    pop.hidden = true;
-    pop.replaceChildren();
-  }
-
   function closeInfo() {
     infoId = null;
     infoStack = [];
+    infoMissing = false;
+    infoPartName = "";
     info.replaceChildren();
   }
 
@@ -612,7 +602,8 @@ export function mountIfcInspector(opts) {
   function openInfo(id, detail = {}) {
     if (!opts.index.elements[id]) return;
     closeMenu();
-    closePopover();
+    infoMissing = false;
+    infoPartName = "";
     if (detail.push && infoId && infoId !== id) infoStack.push(infoId);
     else if (detail.fromMenu) infoStack = [];
     infoId = id;
@@ -652,20 +643,49 @@ export function mountIfcInspector(opts) {
   }
 
   function renderInfo() {
-    const element = opts.index.elements[infoId];
     info.replaceChildren();
-    if (!element) return;
-    const title = document.createElement("div");
-    title.className = "ifc-info-title";
+    const element = infoId ? opts.index.elements[infoId] : null;
+    if (!element) {
+      addInfoLine(opts.t("ui.noIfc"), infoPartName || "");
+      return;
+    }
+    const title = document.createElement("button");
+    title.type = "button";
+    title.className = "ifc-info-swap";
     const kicker = document.createElement("div");
     kicker.className = "ifc-kicker";
-    kicker.textContent = element.type || "";
-    const name = document.createElement("div");
-    name.className = "ifc-name";
-    name.textContent = element.name || element.id || infoId;
-    title.append(kicker, name);
-    info.append(title);
+    const value = document.createElement("div");
+    value.className = "ifc-name";
+    const name = element.name || element.id || "";
+    const gid = element.globalId || "";
+    let showId = false;
+    let titleAt = 0;
+    const paintTitle = () => {
+      kicker.hidden = !showId;
+      kicker.textContent = showId ? opts.t("ui.globalId") : "";
+      value.textContent = showId ? gid : name;
+      value.className = showId ? "ifc-gid" : "ifc-name";
+      title.setAttribute("aria-label", showId ? name : opts.t("ui.globalId"));
+    };
+    const swapTitle = (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const now = performance.now();
+      if (now - titleAt < 80) return;
+      titleAt = now;
+      showId = !showId;
+      paintTitle();
+    };
+    paintTitle();
+    title.append(kicker, value);
+    title.addEventListener("touchend", swapTitle);
+    title.addEventListener("click", swapTitle);
+    const wrap = document.createElement("div");
+    wrap.className = "ifc-info-title";
+    wrap.append(title);
+    info.append(wrap);
 
+    addInfoLine(opts.t("ui.type"), element.type || "");
     const where = containmentOf(opts.index, element.globalId);
     if (where.storey) addInfoLine(opts.t("ui.storey"), where.storey.name || where.storey.id);
     if (where.space) addInfoLine(opts.t("ui.space"), where.space.name || where.space.id);
@@ -683,6 +703,69 @@ export function mountIfcInspector(opts) {
     } else {
       addInfoLinks(opts.t("ui.groups"), element.groups || []);
     }
+
+    const interaction = opts.actionsFor?.(element) || [];
+    addInfoActions(interaction);
+    addInfoActions(visibilityActions(element.globalId));
+  }
+
+  /**
+   * Hide / isolate / frame. A group's actions apply to its members
+   * recursively (createVisibility / onFrame already use subtreeIds).
+   * @param {string} id
+   */
+  function visibilityActions(id) {
+    if (!id || !opts.index.elements[id]) return [];
+    const hidden = opts.visibility.isHidden(id);
+    return [
+      {
+        id: "frame",
+        labelKey: "ui.frame",
+        run: () => opts.onFrame(id, { move: true }),
+      },
+      {
+        id: "hide",
+        labelKey: hidden ? "ui.unhideThis" : "ui.hideThis",
+        run: () => {
+          if (hidden) opts.visibility.unhide(id);
+          else opts.visibility.hide(id);
+        },
+      },
+      {
+        id: "hideOthers",
+        labelKey: "ui.hideOthers",
+        run: () => opts.visibility.hideOthers(id),
+      },
+      {
+        id: "unhideOthers",
+        labelKey: "ui.unhideOthers",
+        run: () => opts.visibility.unhideOthers(id),
+      },
+    ];
+  }
+
+  /**
+   * @param {{ id: string, labelKey: string, label?: string, run: Function }[]} actions
+   */
+  function addInfoActions(actions) {
+    if (!actions.length) return;
+    const row = document.createElement("div");
+    row.className = "ifc-actions";
+    for (const action of actions) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "ifc-action";
+      button.textContent = action.label || opts.t(action.labelKey);
+      button.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        action.run();
+        opts.onVisibility();
+        render();
+      });
+      row.append(button);
+    }
+    info.append(row);
   }
 
   function addInfoLine(kicker, value) {
@@ -769,131 +852,33 @@ export function mountIfcInspector(opts) {
   /**
    * @param {object | null} element
    * @param {string | null} partName
-   * @param {{ id: string, labelKey: string, label?: string, run: Function }[]} actions
-   * @param {number} x
-   * @param {number} y
+  /**
+   * Open the inspector on this element's info screen (a long-press in the
+   * model). No IFC record still opens info, with the part name.
+   * @param {object | null} element
+   * @param {{ partName?: string }} [detail]
    */
-  function openPopover(element, partName, actions, x, y) {
+  function inspect(element, detail = {}) {
     closeMenu();
-    pop.replaceChildren();
-    pop.hidden = false;
-    if (!element) {
-      addLine(opts.t("ui.noIfc"), partName || "");
+    const id = element?.globalId;
+    if (id && opts.index.elements[id]) {
+      infoMissing = false;
+      infoPartName = "";
+      infoStack = [];
+      infoId = id;
+      revealInTree(id, { switchTab: true, openInfo: false, animate: false });
+      opts.onFrame?.(id, { move: false });
     } else {
-      const idRow = document.createElement("div");
-      idRow.className = "ifc-pop-id";
-      const title = document.createElement("button");
-      title.type = "button";
-      title.className = "ifc-pop-title";
-      const kicker = document.createElement("div");
-      kicker.className = "ifc-kicker";
-      const value = document.createElement("div");
-      value.className = "ifc-name";
-      const name = element.name || element.id || "";
-      const gid = element.globalId || "";
-      let showId = false;
-      let titleAt = 0;
-      const paintTitle = () => {
-        kicker.hidden = !showId;
-        kicker.textContent = showId ? opts.t("ui.globalId") : "";
-        value.textContent = showId ? gid : name;
-        value.className = showId ? "ifc-gid" : "ifc-name";
-        title.setAttribute("aria-label", showId ? name : opts.t("ui.globalId"));
-      };
-      const swapTitle = (ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-        const now = performance.now();
-        if (now - titleAt < 80) return;
-        titleAt = now;
-        showId = !showId;
-        paintTitle();
-      };
-      paintTitle();
-      title.append(kicker, value);
-      title.addEventListener("touchend", swapTitle);
-      title.addEventListener("click", swapTitle);
-      const reveal = document.createElement("button");
-      reveal.type = "button";
-      reveal.className = "ifc-reveal";
-      reveal.innerHTML = REVEAL_ICON;
-      reveal.setAttribute("aria-label", opts.t("ui.reveal"));
-      reveal.title = opts.t("ui.reveal");
-      reveal.addEventListener("click", (ev) => {
-        ev.stopPropagation();
-        closePopover();
-        revealElement(element.globalId);
-      });
-      idRow.append(title, reveal);
-      pop.append(idRow);
-      addLine(opts.t("ui.type"), element.type || "");
-      const where = containmentOf(opts.index, element.globalId);
-      if (where.storey) addLine(opts.t("ui.storey"), where.storey.name || where.storey.id);
-      if (where.space) addLine(opts.t("ui.space"), where.space.name || where.space.id);
-      const dims = dimensionLines(element);
-      if (dims.length) addBlock(opts.t("ui.dimensions"), dims);
-      const notes = noteLines(element);
-      if (notes.length) addBlock(opts.t("ui.note"), notes);
-      const live = opts.liveLines?.(element) || [];
-      if (live.length) addBlock(opts.t("home.live"), live);
+      infoId = null;
+      infoStack = [];
+      infoMissing = true;
+      infoPartName = detail.partName || "";
     }
-    if (actions.length) {
-      const row = document.createElement("div");
-      row.className = "ifc-actions";
-      for (const action of actions) {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "ifc-action";
-        button.textContent = action.label || opts.t(action.labelKey);
-        button.addEventListener("click", (ev) => {
-          ev.stopPropagation();
-          action.run();
-          opts.onVisibility();
-        });
-        row.append(button);
-      }
-      pop.append(row);
-    }
-    placeFloating(pop, x, y);
+    opts.openSheet();
+    showInspector();
+    render();
   }
 
-  /**
-   * @param {string} kicker
-   * @param {string} value
-   */
-  function addLine(kicker, value) {
-    const block = document.createElement("div");
-    block.className = "ifc-line";
-    const k = document.createElement("div");
-    k.className = "ifc-kicker";
-    k.textContent = kicker;
-    const v = document.createElement("div");
-    v.className = "ifc-value";
-    v.textContent = value;
-    block.append(k, v);
-    pop.append(block);
-  }
-
-  /**
-   * @param {string} title
-   * @param {string[]} lines
-   */
-  function addBlock(title, lines) {
-    const block = document.createElement("div");
-    block.className = "ifc-line";
-    const k = document.createElement("div");
-    k.className = "ifc-kicker";
-    k.textContent = title;
-    const v = document.createElement("div");
-    v.className = "ifc-note";
-    v.textContent = lines.join("\n");
-    block.append(k, v);
-    pop.append(block);
-  }
-
-  /**
-   * @param {string} id
-   */
   function revealElement(id) {
     if (!opts.index.elements[id]) return;
     closeInfo();
@@ -905,14 +890,13 @@ export function mountIfcInspector(opts) {
   scroll.addEventListener(
     "scroll",
     () => {
-      if (!page.hidden && !infoId) renderRows();
+      if (!page.hidden && !infoId && !infoMissing) renderRows();
     },
     { passive: true },
   );
 
   const outside = (target) => {
     if (!(target instanceof Node)) return true;
-    if (!pop.hidden && pop.contains(target)) return false;
     if (!menu.hidden && menu.contains(target)) return false;
     return true;
   };
@@ -930,7 +914,6 @@ export function mountIfcInspector(opts) {
     "pointerdown",
     (ev) => {
       const target = ev.target;
-      if (!pop.hidden && outside(target)) closePopover();
       if (!menu.hidden && menuReady && outside(target)) closeMenu();
     },
     true,
@@ -939,8 +922,7 @@ export function mountIfcInspector(opts) {
   return {
     open: openInspector,
     refresh: render,
-    closePopover,
-    openPopover,
+    inspect,
     reveal: revealElement,
     isInspectorOpen: () => !page.hidden,
   };
