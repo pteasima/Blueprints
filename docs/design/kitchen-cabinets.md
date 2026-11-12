@@ -68,6 +68,7 @@ Measured from the layout, not by hand: `kitchen_cabinet.bay_summary(run)` return
 Agreed with Petr on 2026-11-11 and built here:
 
 - **The run is the assembly.** `KR-ISL` and the other runs are `IfcFurniture` (`ObjectType: KitchenRun`) contained in `SP-1.02`. Every physical part is its child through one `IfcRelAggregates`: end sides, dividers, central back, bottoms, rails, backs, top boards, fronts, drawers, plinth boards (`IfcSystemFurnitureElement`, `PANEL`; drawers `USERDEFINED` / `Drawer`), the worktop (`IfcSystemFurnitureElement`, `WORKSURFACE`), the stone cladding and the west backsplash (`IfcCovering`, `CLADDING`).
+- **Box runs.** `KR-DN` (`Carcass: Box`) has one oak `Body` part per bay plus the worktop, instead of the panel set.
 - **The hob is an appliance, not a run part.** `EA-KM8665` is an `IfcElectricAppliance`, `ELECTRICCOOKER`, contained in `SP-1.02` like the dishwasher (not in the run's `IfcRelAggregates`), with `Pset_Hob` (Model, Mounting, CutoutToBackEdge). It is a member of the SF-I600b group. Selecting `KR-ISL` and “Hide all others” therefore hides the hob; isolating SF-I600b keeps it.
 - **The bay is a group.** Each bay (`SF-I600a` …) is an `IfcGroup` with the same GlobalId its yaml box had, so references by GlobalId survive. It keeps its property sets (`Pset_Drawers`, `Pset_KitchenBay`). One `IfcRelAssignsToGroup` per bay lists its own parts plus the shared parts it touches: both dividers (or an end side), the island's central back, the cladding at its end, and any appliance or sink standing in it (the dishwasher is in SF-A600, the Teka RS15 71.40 in SF-B800, the Teka RS15 18.40 in SF-I500a, the hob on SF-I600b). Every bay of the west run also lists the west backsplash.
 - **Nothing is duplicated.** A divider is one product assigned to two groups, so a take-off counts it once.
@@ -144,8 +145,10 @@ and straight after:
 | Overhang past the front faces (fronts and drawer fronts) | 30 mm | **Petr**, 2026-11-12 (corrected from 300) |
 | Overhang at the back of a wall run | 0 (against the wall) | `guess:` |
 | Island | one piece, 2540 × 1260: the 2500 × 1200 body, + 30 on both long fronts, + 20 at each end over the cladding | derived |
-| West-wall run | one piece, 2500 × 630, y 11.35–13.85 (over the dishwasher slot too), x 18.80–19.43 | derived |
+| West-wall run | one piece, 2540 × 630, y 11.33–13.87 (over the dishwasher slot too, + 20 at each clad end), x 18.80–19.43 | derived |
+| North dining run | 20 mm, top 930, 30 front overhang, one slab per base (see “North dining run”) | **Petr**; derived |
 | Slab formats | 3270 × 1590 and 3060 × 1410 | **Cosentino**. The island top fits one 3270 × 1590 slab |
+| West run end cladding | same as the island ends, both ends (see “West run end cladding”) | **Petr** (“the sides of the west run”) |
 | Island end cladding | Silestone Blanco Maple, 20 thick (same as the worktop), floor to the worktop underside (0–910), full worktop depth 1260, covering the plinth ends | **Petr** (“sides … clad in the same silestone”); thickness and floor-to-underside `guess:` |
 | Worktop–cladding joint | the cladding sits under the worktop; the worktop runs 20 past the carcass end so its end is flush with the cladding face | `guess:` |
 | Sink cut-outs | the manufacturer's undermount cut-out, centred on the sink box; see “Sinks” | **Teka** |
@@ -217,13 +220,50 @@ In IFC the worktop's rebate is a second extrusion layer. The slab is one 14.5 mm
 
 `open:` surface-mounted or flush-fit (Petr). Surface-mounted is `Mounting: SurfaceMounted`: the glass then rests on the stone (top 934) and there is no rebate. `open:` the cut-out's position in the bay depth. `open:` fan airflow (the air-intake base panel holes) is not modelled.
 
+## West run end cladding
+
+Petr, 2026-11-12: “Oh, and also do the sides of the west run of cabinets.”
+
+Both ends of `KR-WEST` are free: the south end is at OP24's north jamb (y 11.35), the north end at OP25's south jamb (y 13.85). Neither touches a wall or a tall cabinet. So `CladEnds: true`, the same rule as the island:
+
+| Piece | Size (mm) | Where | Group |
+| --- | --- | --- | --- |
+| `KR-WEST-CLAD-S` | 20 × 630 × 910, floor to the worktop underside | y 11.33–11.35, x 18.80–19.43 | SF-C850 |
+| `KR-WEST-CLAD-N` | 20 × 630 × 910 | y 13.85–13.87 | SF-A600 (the dishwasher slot: the stone is its north side) |
+
+The worktop runs 20 further at each end, flush with the cladding: 2500 → **2540**, y 11.33–13.87. `IfcCovering` `CLADDING`, part of the `KR-WEST` assembly.
+
+`open:` the two 20 mm pieces and the worktop ends now stand 20 mm in front of the OP24 and OP25 door openings (the run filled the jamb-to-jamb 2500 with 0 clearance). Check the door frames and leaves; the alternative is to shorten the run's bays by 40.
+
+## North dining run
+
+Petr, 2026-11-12: “And also do the north cabinets (in the dining area in the same silestone).”
+
+`KR-DN` is a kitchen run over the four dining bases, west to east: SF-F052 (300 × 200, in front of pier W-052), SF-DN (2700 × 450), SF-F053 (300 × 200), SF-DN70 (70 × 450). They are oak boxes, not METOD carcasses, so the run uses `Carcass: Box`:
+
+- **Each base stays one oak body, cut down under the stone.** Body top 930 → **910**, so the counter stays 930. The body is `<bay>-BODY`, `IfcSystemFurnitureElement` `USERDEFINED`, material “natural oak”, and the only member of its bay group. I picked this over keeping the oak top and swapping it for stone: the height comes from the bay box and the worktop thickness, so a thicker stone lowers the body by itself.
+- **Worktop** `KR-DN-WORKTOP`: 20 mm Silestone Blanco Maple, top 930, 30 mm overhang at the front (y 15.12). It is one part with one slab per base, because the depth steps at the piers:
+
+| Slab | x | y | Size (mm) |
+| --- | --- | --- | --- |
+| over SF-F052 | 22.15–22.45 | 15.12–15.35 | 300 × 230 |
+| over SF-DN | 22.45–25.15 | 15.12–15.60 | 2700 × 480 |
+| over SF-F053 | 25.15–25.45 | 15.12–15.35 | 300 × 230 |
+| over SF-DN70 | 25.45–25.52 | 15.12–15.60 | 70 × 480 |
+
+- **No end cladding: no side is exposed.**
+  - The west end of SF-F052 abuts SF-T4, the kitchen tall cabinet, which already overlaps the filler by 8 mm.
+  - The east end of SF-DN70 abuts SF-LB, the low base behind the sofa (top 800), with the bookshelf above it from 850. Only a 110 mm strip of SF-DN70's east face shows, above SF-LB (800–910) and in front of the bookshelf.
+  - The sides between the bases face the piers. `open:` clad that 110 mm strip?
+- The real stone would be one notched piece (or joints at the piers); the model's slabs only show the outline. `open:` joints.
+
 ## Backsplash
 
-Petr, 2026-11-12: “back wall for both west and north”. The stone runs up the wall behind the counters, 12 mm Silestone Blanco Maple. The 12 mm comes from Bob's brief, not from Petr's quote. Blanco Maple comes in 12, 20 and 30 (**Cosentino**).
+Petr, 2026-11-12: “As well as the back wall above countertop, below top cabinets, also in silestone (12.5mm or whatever the thin one for wall cladding is)” and “back wall for both west and north”. Blanco Maple comes in 12, 20 and 30 (**Cosentino**), so the thin one is **12 mm**.
 
 | Piece | Where | Size (mm) | Top | Source |
 | --- | --- | --- | --- | --- |
-| `KR-WEST-BACKSPLASH` | west wall, on the west worktop, y 11.35–13.85 (OP24 to OP25 jamb), x 18.800–18.812 | 2500 × 12 × 620, 930 → 1550 | underside of SF-CH850 / SF-BH800 / SF-AH850 | derived by `kitchen_cabinet` (`Backsplash: true`): the lowest box over the strip |
+| `KR-WEST-BACKSPLASH` | west wall, on the west worktop, y 11.35–13.85 (OP24 to OP25 jamb, not over the clad ends' extra 20), x 18.800–18.812 | 2500 × 12 × 620, 930 → 1550 | underside of SF-CH850 / SF-BH800 / SF-AH850 | derived by `kitchen_cabinet` (`Backsplash: true`): the lowest box over the strip |
 | `CV-BS-DN` | north wall behind SF-DN, x 22.45–25.15, y 15.588–15.600 | 2700 × 12 × 620, 930 → 1550 | underside of SF-DH | yaml `coverings` |
 | `CV-BS-R052`, `CV-BS-R053W` | the piers' faces facing each other in the dining bay, y 15.35–15.588 | 238 × 12 × 620 each | under SF-DH | `guess:` the stone wraps the piers |
 | `CV-BS-P052` | front of pier W-052 over filler SF-F052, x 22.158–22.462, y 15.338–15.35 | 304 × 12 × 620 | **1550, `open:`** (nothing above) | `guess:` wrap |
@@ -233,12 +273,12 @@ Petr, 2026-11-12: “back wall for both west and north”. The stone runs up the
 
 - The north pieces stop at 1550 wherever nothing hangs above, the same top as under SF-DH and the west run. `open:` Petr to confirm that top.
 - SF-LB, the low base behind the sofa, gets no backsplash: the bookshelf's oak lamella back is on that wall from 850.
-- The dining bases are oak boxes with a 930 top and no modelled worktop, so the north backsplash is plain `IfcCovering` in the yaml, not part of a kitchen run. `open:` is there a stone top on the dining bases too?
+- The north backsplash stands on the dining run's stone worktop (`KR-DN`, see “North dining run”). It stays plain `IfcCovering` in the yaml, because the run's two depths (200 at the piers, 450 between) would need a stepped strip.
 - Pier W-052's front piece starts at SF-T4's east face (x 22.158), not the pier edge, because T4 already nicks the pier by 8 mm.
 
 ## Parametric rule
 
-Everything above is computed in `kitchen_cabinet.runs` from the bay boxes (`Origin`, `RefDirection`, `Width`, `Depth`, `Height`, `Elevation`), the run's `Pset_KitchenRun` (any `IKEA_DEFAULTS_MM` key, in metres, plus `WorktopMaterial`, `CladEnds`, `Backsplash`, `BacksplashThickness`, `BacksplashTop`, `BacksplashMaterial`) and each bay's `Pset_Drawers` (`NominalHeights` in metres top to bottom, one `*` for the rest; `Contents` separated by `;`). A bay may override the drawer and front values in its own `Pset_KitchenCabinet`. Change a bay's width and its dividers move, both neighbours' clear widths and drawer boxes follow, and the worktop grows; change the counter height or the worktop thickness and the carcass, the `*` drawer and the cladding follow. Rows that stand back to back (same back plane, fronts facing away) share one central back; a run with `CladEnds` gets stone on both ends. A sink's cut-out comes from its `Pset_Sink` and follows the sink box. A hob follows its bay (`Pset_Hob`): move or widen the bay and the cut-out, rebate, glass and housing move with it. The model stops the export if the hob comes closer than `MinBackEdge` to the far edge. A backsplash runs the worktop's length, from the worktop top up to the lowest box hanging over it.
+Everything above is computed in `kitchen_cabinet.runs` from the bay boxes (`Origin`, `RefDirection`, `Width`, `Depth`, `Height`, `Elevation`), the run's `Pset_KitchenRun` (any `IKEA_DEFAULTS_MM` key, in metres, plus `WorktopMaterial`, `CladEnds`, `Carcass` (`Box` for whole-body bays), `BodyMaterial`, `Backsplash`, `BacksplashThickness`, `BacksplashTop`, `BacksplashMaterial`) and each bay's `Pset_Drawers` (`NominalHeights` in metres top to bottom, one `*` for the rest; `Contents` separated by `;`). A bay may override the drawer and front values in its own `Pset_KitchenCabinet`. Change a bay's width and its dividers move, both neighbours' clear widths and drawer boxes follow, and the worktop grows; change the counter height or the worktop thickness and the carcass, the `*` drawer and the cladding follow. Rows that stand back to back (same back plane, fronts facing away) share one central back; a run with `CladEnds` gets stone on both ends. A sink's cut-out comes from its `Pset_Sink` and follows the sink box. A hob follows its bay (`Pset_Hob`): move or widen the bay and the cut-out, rebate, glass and housing move with it. The model stops the export if the hob comes closer than `MinBackEdge` to the far edge. A backsplash runs the worktop's length, from the worktop top up to the lowest box hanging over it.
 
 ## Tap to open
 

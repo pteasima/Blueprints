@@ -35,6 +35,7 @@ PART_CLASS = {
     "Cladding": ("IfcCovering", "CLADDING"),
     "Backsplash": ("IfcCovering", "CLADDING"),
     "Drawer": ("IfcSystemFurnitureElement", "USERDEFINED"),
+    "Body": ("IfcSystemFurnitureElement", "USERDEFINED"),  # a whole box bay (Carcass: Box)
     # The hob is an appliance, not a piece of the carcass: it is contained in
     # the room like the dishwasher and only joins its bay's group.
     "Hob": ("IfcElectricAppliance", "ELECTRICCOOKER"),
@@ -177,7 +178,8 @@ class _Writer:
 
     def material(self, name: str):
         if name not in self.materials:
-            self.materials[name] = self.m.create_entity("IfcMaterial", Name=name, Category="Quartz surface")
+            category = "Quartz surface" if "silestone" in name.lower() else None
+            self.materials[name] = self.m.create_entity("IfcMaterial", Name=name, Category=category)
         return self.materials[name]
 
 

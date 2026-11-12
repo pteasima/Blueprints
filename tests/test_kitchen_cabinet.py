@@ -161,3 +161,19 @@ def test_west_backsplash_up_to_wall_cabinets():
     assert box[3] - box[2] == pytest.approx(12.0)
     assert (box[4], box[5]) == (pytest.approx(930.0), pytest.approx(1550.0))
     assert box[1] - box[0] == pytest.approx(2500.0)
+
+
+def test_west_run_ends_clad():
+    run = _runs()["KR-WEST"]
+    for name in ("KR-WEST-CLAD-N", "KR-WEST-CLAD-S"):
+        (box,) = run.part(name).boxes
+        assert box[1] - box[0] == pytest.approx(20.0) and (box[4], box[5]) == (0.0, pytest.approx(910.0))
+    assert run.worktop[1] - run.worktop[0] == pytest.approx(2540.0)
+
+
+def test_dining_run_box_bodies_under_stone():
+    run = _runs()["KR-DN"]
+    assert run.part("SF-DN-BODY").boxes[0][5] == pytest.approx(910.0)
+    slabs = run.part("KR-DN-WORKTOP").boxes
+    assert len(slabs) == 4 and all(s[5] == pytest.approx(930.0) and s[2] == pytest.approx(-30.0) for s in slabs)
+    assert not [p for p in run.parts if p.role == "Cladding"]

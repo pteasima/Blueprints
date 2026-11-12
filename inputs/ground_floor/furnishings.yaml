@@ -557,6 +557,9 @@ systemFurniture:
     Depth: 0.2
     Height: 0.93
     PropertySets:
+      - Name: Pset_KitchenBay
+        Properties:
+          Run: KR-DN
       - Name: Pset_Finish
         Properties:
           Material: "natural oak"
@@ -572,6 +575,9 @@ systemFurniture:
     Depth: 0.45
     Height: 0.93
     PropertySets:
+      - Name: Pset_KitchenBay
+        Properties:
+          Run: KR-DN
       - Name: Pset_Finish
         Properties:
           Material: "natural oak"
@@ -587,6 +593,9 @@ systemFurniture:
     Depth: 0.2
     Height: 0.93
     PropertySets:
+      - Name: Pset_KitchenBay
+        Properties:
+          Run: KR-DN
       - Name: Pset_Finish
         Properties:
           Material: "natural oak"
@@ -602,6 +611,9 @@ systemFurniture:
     Depth: 0.45
     Height: 0.93
     PropertySets:
+      - Name: Pset_KitchenBay
+        Properties:
+          Run: KR-DN
       - Name: Pset_Finish
         Properties:
           Material: "natural oak"
@@ -763,7 +775,7 @@ furniture:
           PlinthHeight: 0.11
   - id: KR-WEST
     Name: "Západní linka"
-    Description: "West-wall base monoblock between OP24 and OP25: C850, B800, A250 and the dishwasher slot. Silestone worktop, 30 mm overhang at the front."
+    Description: "West-wall base monoblock between OP24 and OP25: C850, B800, A250 and the dishwasher slot. Silestone worktop, 30 mm overhang at the front, Silestone cladding on both ends, 12 mm Silestone backsplash."
     PredefinedType: USERDEFINED
     ObjectType: KitchenRun
     ContainedInStructure: SP-1.02
@@ -779,6 +791,26 @@ furniture:
           Backsplash: true
           BacksplashThickness: 0.012
           BacksplashMaterial: "Silestone Blanco Maple"
+          # Petr, 2026-11-12: "do the sides of the west run of cabinets".
+          # Both ends are free (door openings OP24 / OP25), so both are clad.
+          CladEnds: true
+  - id: KR-DN
+    Name: "Jídelní linka"
+    Description: "North dining base run: SF-F052, SF-DN, SF-F053, SF-DN70. Oak boxes under a 20 mm Silestone Blanco Maple worktop, 30 mm front overhang, top 930. No exposed ends: west abuts SF-T4, east abuts SF-LB and the bookshelf."
+    PredefinedType: USERDEFINED
+    ObjectType: KitchenRun
+    ContainedInStructure: SP-1.02
+    PropertySets:
+      # Petr, 2026-11-12: "do the north cabinets (in the dining area in
+      # the same silestone)". Carcass Box: each oak box stays one body,
+      # cut to 910 under the stone (kitchen-cabinets.md).
+      - Name: Pset_KitchenRun
+        Properties:
+          Carcass: Box
+          BodyMaterial: "natural oak"
+          WorktopThickness: 0.02
+          WorktopOverhang: 0.03
+          WorktopMaterial: "Silestone Blanco Maple"
   - id: KR-WEST-H
     Name: "Západní horní"
     Description: "West-wall wall-cabinet monoblock: CH850, BH800, AH850."

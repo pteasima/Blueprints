@@ -71,6 +71,10 @@ IKEA_DEFAULTS_MM = {
     "BacksplashTop": 0.0,  # 0 = up to the wall cabinets above; else a height above the floor
 }
 RUN_FLAGS = ("CladEnds", "Backsplash")
+# Pset_KitchenRun.Carcass: "Monoblock" (default, the IKEA-style parts below)
+# or "Box": each bay stays one solid body (the oak dining bases) cut down
+# under the stone worktop; only the worktop and cladding are added.
+CARCASS_BOX = "Box"
 # A worktop cut-out with no manufacturer size: the bowl less 2 mm a side
 # (the Teka RS15 pattern: bowl 710×400 → cut-out 706×396). guess:
 SINK_CUTOUT_INSET_MM = 2.0
@@ -363,6 +367,9 @@ class _Builder:
             raise ValueError(f"{run.id}: every bay needs the same Elevation and Height, got {sorted(bases)}")
         z_base, height = cabinets[0].z_base, cabinets[0].height
         wt = p["WorktopThickness"]
+        if str(_prop(run.element, PSET_RUN, "Carcass", "")) == CARCASS_BOX:
+            self._box_run(cabinets, z_base, height, wt)
+            return
         z0 = z_base + p["PlinthHeight"]
         z1 = z_base + height - wt
         run.carcass_z0, run.carcass_z1 = z0, z1
@@ -404,6 +411,40 @@ class _Builder:
                 a0, a1 = part.boxes[0][0], part.boxes[0][1]
                 if _near(a1, bay.a0) or _near(a0, bay.a1):
                     bay.members.append(part.id)
+
+    def _box_run(self, bays, z_base, height, wt):
+        """Bays as whole bodies under a stone worktop (``Carcass: Box``).
+
+        The body keeps the bay's plan and stops at the worktop underside, so
+        the 930 counter stays 930. The worktop is one part made of one slab
+        per bay (bays of different depth step around the piers), each with
+        the front overhang; clad ends add the cladding thickness.
+        """
+        run, p = self.run, self.p
+        run.carcass_z0, run.carcass_z1 = z_base, z_base + height - wt
+        material = _prop(run.element, PSET_RUN, "BodyMaterial")
+        for bay in bays:
+            self.add(Part(f"{bay.id}-BODY", bay.element.get("Name") or bay.id, "Body",
+                          [(bay.a0, bay.a1, bay.c0, bay.c1, z_base, z_base + height - wt)], material=material), bay)
+        if wt <= 0:
+            return
+        oh = p["WorktopOverhang"]
+        clad = _prop(run.element, PSET_RUN, "CladEnds")
+        ct = p["CladdingThickness"] or wt
+        a_lo, a_hi = min(b.a0 for b in bays), max(b.a1 for b in bays)
+        slabs = []
+        for bay in sorted(bays, key=lambda b: b.a0):
+            a0 = bay.a0 - (ct if clad and _near(bay.a0, a_lo) else 0.0)
+            a1 = bay.a1 + (ct if clad and _near(bay.a1, a_hi) else 0.0)
+            c0 = bay.c0 - (oh if bay.front_low else 0.0)
+            c1 = bay.c1 + (0.0 if bay.front_low else oh)
+            slabs.append((a0, a1, c0, c1, z_base + height - wt, z_base + height))
+        run.worktop = (min(s[0] for s in slabs), max(s[1] for s in slabs),
+                       min(s[2] for s in slabs), max(s[3] for s in slabs), slabs[0][4], slabs[0][5])
+        self.add(Part(f"{run.id}-WORKTOP", "Pracovní deska", "Worktop", slabs, label="worktop",
+                      material=_prop(run.element, PSET_RUN, "WorktopMaterial")))
+        if clad:
+            self._cladding(_rows(run.bays), z_base, z_base + height - wt)
 
     def _pairs(self, rows):
         """Back-to-back rows: a row facing c0 whose back plane is another row's back plane."""
@@ -641,7 +682,9 @@ class _Builder:
         run, p = self.run, self.p
         bt = p["BacksplashThickness"]
         paired = {id(r) for pair in pairs for r in pair}
-        a0, a1 = run.worktop[0], run.worktop[1]
+        # Wall to wall along the bays, not over the clad ends' extra 20
+        # (those reach past the door jambs).
+        a0, a1 = min(b.a0 for b in run.bays), max(b.a1 for b in run.bays)
         material = _prop(run.element, PSET_RUN, "BacksplashMaterial") or _prop(run.element, PSET_RUN, "WorktopMaterial")
         for row in rows:
             if id(row) in paired:
