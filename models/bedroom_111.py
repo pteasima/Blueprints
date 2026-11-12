@@ -220,8 +220,52 @@ def _under_bed_strip(doc: dict) -> list:
     ]
 
 
+# Curtain-rail strips: size of the LED profile and its inset from the wall face.
+RAIL_STRIP_SIZE = 0.012
+# The downlight sits under the 20 mm rail, 4 mm off the wall; the uplight on
+# the room side of the rail, its top flush with the rail top, because the bay
+# is checked against a 2.50 m ceiling.
+RAIL_STRIP_INSET = {"down": 0.004, "up": 0.020}
+RAIL_STRIP_IDS = ("C7-S", "C8-S")
+
+
+def rail_strip_path(element: dict) -> tuple[tuple[float, float], tuple[float, float], tuple[float, float], float, str]:
+    """North end, corner, east end, bottom elevation, and ``up``/``down``."""
+    props = _pset_props(element)
+    return (
+        (float(props["X0"]), float(props["Y0"])),
+        (float(props["XC"]), float(props["YC"])),
+        (float(props["X1"]), float(props["Y1"])),
+        float(props["Z"]),
+        str(props["Emits"]),
+    )
+
+
+def _rail_strips(doc: dict) -> list:
+    """Cables 7 and 8 are each one L along the west and south walls.
+
+    One yaml-ifc box cannot be an L, so the viewer gets two legs per strip,
+    read from the path in Pset_YamlIfc. The uplight runs along the top edge
+    of the garnýž and the downlight under it (Petr, 2026-11-12).
+    """
+    found = []
+    size = RAIL_STRIP_SIZE
+    for element in doc.get("lightFixtures") or []:
+        if element.get("id") not in RAIL_STRIP_IDS:
+            continue
+        (nx, ny), (cx, cy), (ex, ey), z, emits = rail_strip_path(element)
+        inset = RAIL_STRIP_INSET[emits]
+        if abs(nx - cx) > 1e-6 or abs(cy - ey) > 1e-6:
+            raise ValueError(f"{element['id']} is not a west-then-south L")
+        west_len = ny - (cy + inset)
+        south_len = ex - (cx + inset + size)
+        found.append(_axis_box((cx + inset, ny, z), (0.0, -1.0), (west_len, size, size), element["id"]))
+        found.append(_axis_box((cx + inset + size, cy + inset, z), (1.0, 0.0), (south_len, size, size), element["id"]))
+    return found
+
+
 def parts(path: Path | None = None) -> list:
-    """One solid per boxed device, plus the bed, the rails, and the under-bed U."""
+    """One solid per boxed device, plus the bed, the rails, the under-bed U and the rail Ls."""
     doc = load_document(path)
     if not doc or not any(doc.get(key) for key, _label in DEVICE_LISTS):
         return []
@@ -240,6 +284,7 @@ def parts(path: Path | None = None) -> list:
             if part is not None:
                 found.append(part)
     found.extend(_under_bed_strip(doc))
+    found.extend(_rail_strips(doc))
     return found
 
 
