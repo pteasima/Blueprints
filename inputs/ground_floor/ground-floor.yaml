@@ -1097,10 +1097,24 @@ doors:
     OverallWidth: 1.1
     OverallHeight: 2.45
     OperationType: SLIDING_TO_LEFT
+  # D-OP32 (1.01 Zádveří → 1.24 Terasa, west). Petr 2026-11-12: the door onto
+  # the terrace is a "balcony" door, a hinged door made of glass. Glazed leaf
+  # from Pset_DoorCommon.GlazingAreaFraction (the frame is a 70 mm profile, so
+  # the glass is about 0.8 of the leaf). Hinge and swing per the DWG arc: hinge
+  # on the north jamb (W-055 runs south to north, so the end jamb), opening out
+  # west onto the terrace (+Y). docs/OpeningsSpec.md.
   - id: D-OP32
     FillsOpening: OP32
     OverallWidth: 1.15
     OverallHeight: 2.5
+    PropertySets:
+      - Name: Pset_DoorCommon
+        Properties:
+          GlazingAreaFraction: 0.8
+      - Name: Pset_BlueprintsDoor
+        Properties:
+          HingeSide: end
+          Swing: "+"
   # D-OP33 (1.02 living room → 1.01 Zádveří): single pocket door. The DWG plan draws no swing
   # arc, only the leaf parked beside the opening on the living-room face of
   # the wall (y 11.05–12.20), so it slides north (toward the W-056 end jamb) into the wall.

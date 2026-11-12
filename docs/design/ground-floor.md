@@ -78,6 +78,7 @@ Every door Petr has specified, and its source, is listed in [OpeningsSpec.md](..
 | `HingeSide` | `start` or `end`: the jamb, along the host wall axis, that carries the hinge |
 | `Swing` | `+` or `-`: the side of the wall the leaf opens to, along the wall's local +Y (the axis turned 90° counter-clockwise) |
 | `LeafOffset` | metres along local +Y. Moves the leaf off the wall centre. OP11 and OP17 use it so they sit flush on the hallway face, in line with the WC door OP19 |
+| `Pset_DoorCommon.GlazingAreaFraction` | above 0: a glazed leaf, a glass pane (glazing material) in a 70 mm frame (`GLAZED_DOOR_FRAME_MM`), one `door__<id>__` node so frame and glass swing together. The terrace door OP32 |
 | `UserDefinedOperationType` | `SECTIONAL_OVERHEAD` with `OperationType: USERDEFINED`. IFC4 has no sectional door type |
 
 Sliding (`SLIDING_TO_LEFT`/`SLIDING_TO_RIGHT`): D-OP03 (double pocket) and the living-room pocket doors D-OP24, D-OP25, D-OP33. The leaf slides its full width inside the wall's centre plane. The DWG draws each leaf parked beside its opening on the living-room face, which gives the direction.

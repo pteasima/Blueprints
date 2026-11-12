@@ -432,6 +432,7 @@ HINGES = {
     "D-OP37": ("north", "east"),  # 1.01 → WC 1.19, inward
     "D-OP38": ("north", "east"),  # 1.01 → 1.17 garage hallway
     "D-OP40": ("east", "north"),  # 1.22 → 1.21
+    "D-OP32": ("north", "west"),  # 1.01 → terrace 1.24, glazed, per the DWG arc
 }
 
 
@@ -478,3 +479,23 @@ def test_head_heights_match_the_window_head():
     for oid in ("OP38", "OP39a"):
         assert openings[oid]["SillHeight"] + openings[oid]["Height"] == pytest.approx(window_head)
         assert doors[f"D-{oid}"]["OverallHeight"] == pytest.approx(window_head)
+
+
+def test_terrace_door_is_a_glazed_hinged_leaf():
+    """OP32 onto the terrace: hinged, glass in a frame (Petr 2026-11-12)."""
+    import struct
+
+    from ground_floor import is_glazed_door
+
+    doc = _document()
+    doors = {item["id"]: item for item in doc["doors"]}
+    glazed = [d for d, item in doors.items() if is_glazed_door(item)]
+    assert glazed == ["D-OP32"]
+    assert _door_records()["D-OP32"]["kind"] == "hinged"
+    data = (ROOT / "docs" / "models" / "ground_floor.glb").read_bytes()
+    n, _ = struct.unpack_from("<II", data, 12)
+    nodes = json.loads(data[20 : 20 + n])["nodes"]
+    host = [x for x in nodes if x.get("name") == "door__D-OP32__"]
+    assert len(host) == 1
+    kids = sorted(nodes[i].get("name") for i in host[0].get("children", []))
+    assert kids == ["door", "glazing__D-OP32__"]

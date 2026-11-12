@@ -722,6 +722,43 @@ function slabFor(record, size, name) {
   }
 }
 
+// Terrace balcony door D-OP32 (Petr, 2026-11-12: "a hinged door but made out
+// of glass"): the GLB node holds a frame mesh and a glass mesh. Both are one
+// host, matched to the hinged record, and they swing together.
+{
+  const records = JSON.parse(
+    readFileSync(new URL("../../../docs/models/ground_floor.doors.json", import.meta.url), "utf8"),
+  );
+  const record = records.find((r) => r.id === "D-OP32");
+  assert.equal(record.kind, "hinged");
+  const scene = new THREE.Scene();
+  const node = new THREE.Group();
+  node.name = "door__D-OP32__";
+  const c = new THREE.Vector3(...record.center);
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(0.04, 2.485, 1.12), new THREE.MeshBasicMaterial());
+  frame.name = "door";
+  const glass = new THREE.Mesh(new THREE.BoxGeometry(0.024, 2.345, 0.98), new THREE.MeshBasicMaterial());
+  glass.name = "glazing__D-OP32__";
+  frame.position.copy(c);
+  glass.position.copy(c);
+  node.add(frame, glass);
+  scene.add(node);
+  scene.updateMatrixWorld(true);
+  const hosts = collectDoorHosts(scene, [record]);
+  assert.equal(hosts.length, 1, "frame and glass are one door host");
+  assert.equal(hosts[0], node);
+  const ctrl = createDoorController({ canvas: fakeCanvas(), getCamera: () => null, records: [record] });
+  assert.equal(ctrl.bind(scene), 1);
+  const binding = ctrl.bindings[0];
+  toggleDoor(binding, 0);
+  applyDoorSwing(binding, DOOR_SWING_MS + 1);
+  scene.updateMatrixWorld(true);
+  const f = new THREE.Box3().setFromObject(frame).getCenter(new THREE.Vector3());
+  const g = new THREE.Box3().setFromObject(glass).getCenter(new THREE.Vector3());
+  near1(f.distanceTo(g), 0, "glass stays in its frame");
+  assert.ok(f.x < record.hinge[0] - 0.3, `opens west onto the terrace: ${f.x}`);
+}
+
 function near1(a, b, msg) {
   assert.ok(Math.abs(a - b) < 1e-4, `${msg}: ${a} vs ${b}`);
 }

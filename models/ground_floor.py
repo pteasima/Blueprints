@@ -135,6 +135,13 @@ CUT_PAD_MM = 2.0
 DOOR_LEAF_MM = 40.0
 WINDOW_LEAF_MM = 24.0
 LEAF_GAP_MM = 15.0
+# Glazed hinged door (the terrace "balcony" door OP32, Petr 2026-11-12): a
+# frame of this face width round a glass pane, same leaf thickness. Set by
+# Pset_DoorCommon.GlazingAreaFraction > 0 on the IfcDoor (a standard IFC
+# property), not by id. The frame width is a typical aluminium profile face,
+# not product data.
+GLAZED_DOOR_FRAME_MM = 70.0
+GLAZED_DOOR_GLASS_MM = 24.0
 # A sliding sash runs in its own track beside the fixed pane, so it can pass
 # over it without the two panes sharing a plane. Offset from the frame centre
 # toward local +Y, which is indoors on the west-to-east south-façade walls
@@ -599,6 +606,48 @@ def _point_cad(location, x: float, y: float, z: float) -> tuple[float, float, fl
     moved = location * Pos(x, y, z)
     v = moved.position
     return (float(v.X), float(v.Y), float(v.Z))
+
+
+def is_glazed_door(filler: dict) -> bool:
+    """True when ``Pset_DoorCommon.GlazingAreaFraction`` is above zero."""
+    value = _door_field(filler, "GlazingAreaFraction")
+    try:
+        return value is not None and float(value) > 0.0
+    except (TypeError, ValueError):
+        return False
+
+
+def _glazed_leaf(leaf, origin, angle, element_id: str):
+    """Frame (door label) plus glass pane (glazing label), as one door part.
+
+    The two solids sit in one labelled compound, so the GLB has one
+    ``door__<id>__`` node holding both meshes and the viewer swings them
+    together. ``leaf`` is the plain slab in wall-local millimetres.
+    """
+    bb = leaf.bounding_box()
+    w = float(bb.max.X - bb.min.X)
+    t = float(bb.max.Y - bb.min.Y)
+    h = float(bb.max.Z - bb.min.Z)
+    f = min(GLAZED_DOOR_FRAME_MM, w / 4.0, h / 4.0)
+    inner = Pos(float(bb.min.X) + f, float(bb.min.Y) - 1.0, float(bb.min.Z) + f) * Box(
+        w - 2.0 * f, t + 2.0, h - 2.0 * f, align=(Align.MIN, Align.MIN, Align.MIN)
+    )
+    frame = leaf - inner
+    gt = min(GLAZED_DOOR_GLASS_MM, t * 0.6)
+    yc = (float(bb.min.Y) + float(bb.max.Y)) / 2.0
+    glass = Pos(float(bb.min.X) + f, yc, float(bb.min.Z) + f) * Box(
+        w - 2.0 * f, gt, h - 2.0 * f, align=(Align.MIN, Align.CENTER, Align.MIN)
+    )
+    frame_part = _place(frame, origin, angle, LABEL_DOOR)
+    glass_part = _place(glass, origin, angle, LABEL_GLAZING)
+    # Named ``glazing__<id>__`` so the viewer gives it the glass material
+    # (identityOf stops at the first node with an element id).
+    glass_part.element_id = element_id
+    part = Compound(children=[frame_part, glass_part])
+    part.label = LABEL_DOOR
+    part.color = _color(LABEL_DOOR)
+    part.element_id = element_id
+    return part
 
 
 def _door_motion(part, filler: dict) -> dict | None:
@@ -1109,6 +1158,14 @@ def build(
                 placed_panels.append((panel, placed))
             window_motions.append(_window_motion(filler, placed_panels))
         for leaf, filler in door_leaves:
+            if is_glazed_door(filler) and not is_sectional(filler):
+                part = _glazed_leaf(leaf, origin, angle, filler["id"])
+                parts.append(part)
+                # Hinge from the plain slab: it carries the wall-local frame.
+                motion = _door_motion(_place(leaf, origin, angle, LABEL_DOOR), filler)
+                if motion is not None:
+                    door_motions.append(motion)
+                continue
             for solid in _solids(leaf):
                 part = _place(solid, origin, angle, LABEL_DOOR)
                 part.element_id = filler["id"]
