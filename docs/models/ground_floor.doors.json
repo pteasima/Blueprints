@@ -573,10 +573,10 @@
   {
     "id": "SF-I600a-D1",
     "kind": "drawer",
-    "element": "SF-I600a",
+    "element": "SF-I600a-D1",
     "center": [
       20.8385,
-      0.792,
+      0.81,
       -13.0
     ],
     "slide": [
@@ -588,10 +588,10 @@
   {
     "id": "SF-I600a-D2",
     "kind": "drawer",
-    "element": "SF-I600a",
+    "element": "SF-I600a-D2",
     "center": [
       20.8385,
-      0.592,
+      0.61,
       -13.0
     ],
     "slide": [
@@ -603,10 +603,10 @@
   {
     "id": "SF-I600a-D3",
     "kind": "drawer",
-    "element": "SF-I600a",
+    "element": "SF-I600a-D3",
     "center": [
       20.8385,
-      0.292,
+      0.31,
       -13.0
     ],
     "slide": [

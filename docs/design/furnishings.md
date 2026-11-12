@@ -46,17 +46,19 @@ The fridge’s south face is y = 14.884, 66 mm south of OP25’s north jamb, so 
 
 2500 × 1200, counter 930. Centred on the drawn rectangle: west 20.554, east 21.754, north 13.800, south 11.300. Split at about x = 21.15.
 
+The island is one monoblock (`KR-ISL`, Petr 2026-11-12) with a Silestone worktop overhanging 30 past both long fronts and Silestone cladding on both ends, so at worktop level it is 2540 × 1260 (x 20.524–21.784, y 11.280–13.820). The bay boxes did not move. Structure, worktop and cladding: [kitchen-cabinets.md](kitchen-cabinets.md).
+
 West row faces west. Modules north to south: 500, 600, 500, 600, 300. The rectangular sink is in the north 500. The 600 south of it (SF-I600a) is the knife-drawer cabinet; its drawers are in [kitchen-cabinets.md](kitchen-cabinets.md). The two round bowls cross the second 500 and the second 600.
 
 East row faces east. It is the plinth and robot-dock side. No module lines are drawn there, so the 2500 is split 600/600/600/700 from the north, the 700 at the south.
 
-Clear of the inner faces, to the outline: west 1.754, east 8.146, north 1.800, south 1.050.
+Clear of the inner faces, to the outline: west 1.754, east 8.146, north 1.800, south 1.050. Those are to the bay boxes; the worktop and cladding take 30 (west, east) and 20 (north, south) of each, so the island-to-table gap at worktop height is 1303, not 1333.
 
 ### West wall, between the two doors
 
 OP24 is y 10.25–11.35. OP25 is y 13.85–14.95. The clear gap is 2500 mm and the run fills it with zero clearance at each jamb. The island was left where it was. Bases are 600 deep and 930 high, backs on x = 18.80, fronts east.
 
-Facing the west wall, left is south and right is north. North to south: A 850 (250 pull-out on the south, dishwasher on the north), B 800 (bin south, compost north, one box), C 850 (sorted waste).
+Facing the west wall, left is south and right is north. North to south: A 850 (250 pull-out on the south, dishwasher on the north), B 800 (bin south, compost north, one box), C 850 (sorted waste). The bases are one monoblock (`KR-WEST`); the dishwasher slot is the bay `SF-A600` with no carcass. The Silestone worktop overhangs 30 into the aisle (x 19.43), so the aisle to the island worktop is 1094. The wall cabinets are a second monoblock (`KR-WEST-H`). See [kitchen-cabinets.md](kitchen-cabinets.md).
 
 Wall cabinets: depth 350, height 900, bottom 1550 (620 above the 930 counter), top 2450.
 

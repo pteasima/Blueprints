@@ -1,7 +1,9 @@
 /**
  * Session-only visibility. Not written to the URL.
- * Hiding a row hides that element and everything aggregated or contained
- * under it. "All others" is every element outside that subtree.
+ * Hiding a row hides that element, everything aggregated or contained
+ * under it, and the members of a group (a kitchen bay keeps its shared
+ * dividers, see ifcTree.subtreeIds). "All others" is every element outside
+ * that set.
  */
 
 import { subtreeIds } from "./ifcTree.js";

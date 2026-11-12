@@ -115,6 +115,15 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "roughness": 0.42,
         "metallic": 0.0,
     },
+    "worktop": {
+        # Silestone Blanco Maple, a mottled white quartz (kitchen-cabinets.md).
+        "fill": (236, 233, 226),
+        "line": (120, 116, 108),
+        "dxf": ColorIndex.LIGHT_GRAY,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.3,
+        "metallic": 0.0,
+    },
     "oak": {
         "fill": (196, 150, 96),
         "line": (110, 72, 36),
@@ -560,6 +569,7 @@ SECTION_LAYER_ORDER = [
     "furniture",
     "upholstery",
     "cabinet",
+    "worktop",
     "oak",
     "appliance",
     "sink",

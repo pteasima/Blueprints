@@ -2,9 +2,13 @@
 
 The viewer does not parse IFC. Export walks the IfcOpenShell model
 ``yaml_ifc`` already builds and writes ``docs/models/<id>.ifc.json``.
-Spatial containment and IfcRelAggregates / IfcRelNests are the only
-parent links. Everything else (property sets, cable number, circuit,
-role) is carried on the element for the popover note.
+Spatial containment and IfcRelAggregates / IfcRelNests are the parent
+links. A plain ``IfcGroup`` (a kitchen bay, docs/design/kitchen-cabinets.md)
+is not in that tree in IFC; the index hangs it under the aggregate parent
+most of its members share, for display only, and lists each member's
+groups in ``groups`` so the viewer can hide or isolate a whole group.
+Everything else (property sets, cable number, circuit, role) is carried on
+the element for the popover note.
 """
 
 from __future__ import annotations
@@ -32,13 +36,19 @@ DIMENSION_NAMES = (
 PSET_ID_NAMES = ("yaml-ifc", "Pset_YamlIfc")
 
 
-def index_documents(docs: list[dict]) -> dict[str, Any]:
-    """Merge one index per yaml-ifc document. Same GlobalId keeps one element."""
+def index_documents(docs: list[dict], transform=None) -> dict[str, Any]:
+    """Merge one index per yaml-ifc document. Same GlobalId keeps one element.
+
+    ``transform(model, doc)`` may rewrite each built model before indexing
+    (the kitchen runs, ``models/kitchen_ifc.py``).
+    """
     indexes = []
     for doc in docs:
         if not doc or not doc.get("project"):
             continue
         model = build_ifc(doc)
+        if transform is not None:
+            transform(model, doc)
         errors = validation_errors(model)
         if errors:
             raise ValueError("yaml-ifc document failed validation: " + "; ".join(errors))
@@ -102,6 +112,35 @@ def index_model(model) -> dict[str, Any]:
             if label not in circuits[element.GlobalId]:
                 circuits[element.GlobalId].append(label)
 
+    # Plain groups (not systems such as circuits): membership for hide and
+    # isolate, and a display parent for the tree.
+    groups_of: dict[str, list[str]] = {}
+    group_members: dict[str, list[str]] = {}
+    for rel in model.by_type("IfcRelAssignsToGroup"):
+        group = rel.RelatingGroup
+        if group is None or group.is_a("IfcSystem"):
+            continue
+        for element in rel.RelatedObjects or []:
+            if element is None:
+                continue
+            groups_of.setdefault(element.GlobalId, [])
+            if group.GlobalId not in groups_of[element.GlobalId]:
+                groups_of[element.GlobalId].append(group.GlobalId)
+            group_members.setdefault(group.GlobalId, []).append(element.GlobalId)
+    group_rank = 0
+    for group_id, members in group_members.items():
+        if group_id in parent_of:
+            continue
+        counts: dict[str, int] = {}
+        for member in members:
+            parent = parent_of.get(member)
+            if parent:
+                counts[parent] = counts.get(parent, 0) + 1
+        if counts:
+            parent_of[group_id] = max(counts, key=lambda key: counts[key])
+            parent_order[group_id] = -100_000 + group_rank
+            group_rank += 1
+
     elements: dict[str, dict] = {}
     order = 0
     products = (
@@ -118,6 +157,7 @@ def index_model(model) -> dict[str, Any]:
         record["parentId"] = parent_of.get(gid)
         record["containerId"] = container_of.get(gid)
         record["circuits"] = circuits.get(gid, [])
+        record["groups"] = groups_of.get(gid, [])
         elements[gid] = record
         order += 1
 

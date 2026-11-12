@@ -114,7 +114,37 @@ export function visibleRange(scrollTop, viewHeight, listTop, count, rowHeight = 
   return { start, end: Math.max(start, end) };
 }
 
+/** @type {WeakMap<object, Map<string, string[]>>} */
+const membersCache = new WeakMap();
+
 /**
+ * Members of each plain IfcGroup (IfcRelAssignsToGroup, the index's
+ * `groups` field). A kitchen bay is such a group: its own parts plus the
+ * shared dividers and back it touches (docs/design/kitchen-cabinets.md).
+ * @param {object} index
+ * @param {string} id
+ * @returns {string[]}
+ */
+export function groupMemberIds(index, id) {
+  let map = membersCache.get(index.elements);
+  if (!map) {
+    map = new Map();
+    for (const element of Object.values(index.elements)) {
+      for (const group of element?.groups || []) {
+        if (!map.has(group)) map.set(group, []);
+        map.get(group).push(element.globalId);
+      }
+    }
+    membersCache.set(index.elements, map);
+  }
+  return map.get(id) || [];
+}
+
+/**
+ * The element, everything aggregated or contained under it, and the members
+ * of any group in that set. Hide / "Hide all others" and framing use this, so
+ * isolating a bay keeps both its side dividers even though a divider's
+ * aggregate parent is the whole run.
  * @param {object} index
  * @param {string} id
  */
@@ -129,6 +159,7 @@ export function subtreeIds(index, id) {
     seen.add(cur);
     out.push(cur);
     for (const child of childIds(index, cur)) stack.push(child);
+    for (const member of groupMemberIds(index, cur)) stack.push(member);
   }
   return out;
 }

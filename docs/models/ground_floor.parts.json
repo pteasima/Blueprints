@@ -11,6 +11,7 @@
     "id": "interior",
     "children": [
       "cabinet",
+      "worktop",
       "oak",
       "appliance",
       "sink",

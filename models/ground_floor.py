@@ -44,7 +44,10 @@ one placement: the ``IfcExtrudedAreaSolid`` that ``yaml_ifc`` writes
 (placement origin at the minimum corner, profile centred so the box fills
 Width × Depth × Height). The kitchen, the sofa and the cabinets stay that
 box. The Gatta table, the chairs and the bookshelf are drawn inside the
-same box. This model does not read the sizes itself; the detail builders
+same box. Kitchen cabinets are monoblock runs (``kitchen_cabinet.runs``):
+each part is its own solid, and ``kitchen_ifc.apply`` turns the bay boxes
+into IfcGroups and the parts into the run's IfcRelAggregates children
+(docs/design/kitchen-cabinets.md). This model does not read the sizes itself; the detail builders
 use the extrusion. Solids are inset by 1 mm so flush modules do not share
 a face. Walls are not moved to make a box fit. The space has no body.
 
@@ -106,6 +109,7 @@ from bathroom_120 import (
 )
 from living_geometry import OAK_TYPES, living_detail
 import kitchen_cabinet
+import kitchen_ifc
 from blueprints.export_utils import SECTION_LAYERS
 from blueprints.scenes import cad_mm_to_gltf_m
 
@@ -259,9 +263,7 @@ def _corner_size(product, solid) -> tuple[float, float, float]:
 def _solid_from_product(product, label: str, list_key: str, element: dict | None, motions=None):
     """build123d solids from the converter's extrusion, in millimetres.
 
-    Usually one solid. A drawer cabinet (``Pset_Drawers``, see
-    docs/design/kitchen-cabinets.md) is its carcass plus one solid per
-    drawer, and each drawer gets a slide record appended to ``motions``.
+    One solid. Kitchen run parts are built by ``_kitchen_run_parts``.
     """
     solid = _body_extrusion(product)
     if solid is None:
@@ -274,8 +276,6 @@ def _solid_from_product(product, label: str, list_key: str, element: dict | None
     gap = min(MESH_GAP_MM, width * 0.25, depth * 0.25, height * 0.25)
     plane = Plane(origin=origin, x_dir=x_dir, z_dir=z_dir)
     yaml_id = _yaml_id(product)
-    if kitchen_cabinet.has_drawers(element):
-        return _drawer_cabinet_parts(plane, element, yaml_id, label, list_key, width, depth, height, gap, motions)
     detail = living_detail(element, width, depth, height, gap) if element else None
     if detail is None:
         detail = Pos(gap / 2.0, gap / 2.0, gap / 2.0) * Box(
@@ -294,34 +294,64 @@ def _tag(painted, yaml_id: str, list_key: str):
     return painted
 
 
-def _drawer_cabinet_parts(plane, element, yaml_id, label, list_key, width, depth, height, gap, motions):
-    """Carcass, then one solid per drawer. All sizes from kitchen_cabinet.layout."""
-    lay = kitchen_cabinet.layout(element, width, depth, height)
-    static = Compound(obj=kitchen_cabinet.carcass_solids(lay, gap))
-    parts = [_tag(_paint(plane * static, label), yaml_id, list_key)]
-    out_dir = plane.y_dir * -1.0
-    for dr in lay.drawers:
-        # Front face inset like every other solid, so it does not share the box face.
-        inset = Pos(0.0, gap / 2.0, 0.0)
-        part = _tag(_paint(plane * (inset * kitchen_cabinet.drawer_solid(dr, lay)), label), yaml_id, list_key)
-        parts.append(part)
-        if motions is None:
+LABEL_WORKTOP = "worktop"
+
+
+def _run_box(box, shrink: float):
+    a0, a1, c0, c1, z0, z1 = box
+    return Pos(a0 + shrink, c0 + shrink, z0 + shrink) * Box(
+        a1 - a0 - 2 * shrink, c1 - c0 - 2 * shrink, z1 - z0 - 2 * shrink, align=(Align.MIN,) * 3
+    )
+
+
+def _kitchen_run_parts(run, motions=None) -> list:
+    """Solids for one kitchen run (docs/design/kitchen-cabinets.md).
+
+    Every part is its own mesh named by its part id, so the viewer can hide
+    a divider with either neighbouring bay. Boxes shrink by half the mesh
+    gap so touching boards do not share a face. A drawer is fused unshrunk
+    (the viewer moves it as one connected mesh) and set back half a gap.
+    """
+    frame = run.frame
+    plane = Plane(origin=(frame.ox, frame.oy, 0.0), x_dir=(frame.ux, frame.uy, 0.0), z_dir=(0.0, 0.0, 1.0))
+    half = MESH_GAP_MM / 2.0
+    out = []
+    for part in run.parts:
+        if part.drawer is not None:
+            dr = part.drawer
+            solid = _run_box(part.boxes[0], 0.0)
+            for box in part.boxes[1:]:
+                solid = solid + _run_box(box, 0.0)
+            inward = -dr.out * half
+            solid = Pos(0.0, inward, 0.0) * solid
+        else:
+            pieces = [_run_box(box, half) for box in part.boxes]
+            solid = pieces[0] if len(pieces) == 1 else Compound(obj=pieces)
+            for a0, a1, c0, c1 in part.voids:
+                z0, z1 = part.boxes[0][4], part.boxes[0][5]
+                solid = solid - _run_box((a0, a1, c0, c1, z0 - 1.0, z1 + 1.0), 0.0)
+        label = LABEL_WORKTOP if part.label == "worktop" else LABEL_CABINET
+        out.append(_tag(_paint(plane * solid, label), part.id, "systemFurniture"))
+        if part.drawer is None or motions is None:
             continue
-        cx, cy, cz = kitchen_cabinet.drawer_center_local(dr)
-        centre = plane.from_local_coords(Vector(cx, cy + gap / 2.0, cz))
-        moved = centre + out_dir * dr.extension
-        c = cad_mm_to_gltf_m((centre.X, centre.Y, centre.Z))
-        m = cad_mm_to_gltf_m((moved.X, moved.Y, moved.Z))
+        dr = part.drawer
+        a = (min(b[0] for b in part.boxes) + max(b[1] for b in part.boxes)) / 2.0
+        c = (min(b[2] for b in part.boxes) + max(b[3] for b in part.boxes)) / 2.0 - dr.out * half
+        z = (min(b[4] for b in part.boxes) + max(b[5] for b in part.boxes)) / 2.0
+        centre = frame.world(a, c, z)
+        moved = frame.world(a, c + dr.out * dr.extension, z)
+        cg = cad_mm_to_gltf_m(centre)
+        mg = cad_mm_to_gltf_m(moved)
         motions.append(
             {
-                "id": f"{yaml_id}-D{dr.index}",
+                "id": part.id,
                 "kind": "drawer",
-                "element": yaml_id,
-                "center": [round(v, 6) for v in c],
-                "slide": [round(b - a, 6) for a, b in zip(c, m)],
+                "element": part.id,
+                "center": [round(v, 6) for v in cg],
+                "slide": [round(q - p, 6) + 0.0 for p, q in zip(cg, mg)],
             }
         )
-    return parts
+    return out
 
 
 def _furnishing_parts(doc: dict, motions: list | None = None) -> list:
@@ -336,12 +366,20 @@ def _furnishing_parts(doc: dict, motions: list | None = None) -> list:
         for element in (doc.get(key) or [])
     }
     model = build_ifc(doc)
+    # Kitchen runs: bays become groups, parts become the run's children
+    # (models/kitchen_ifc.py). Their solids come from the same layout below.
+    runs = kitchen_cabinet.runs(doc)
+    written = set(kitchen_ifc.apply(model, doc, runs).values())
     errors = validation_errors(model)
     if errors:
         raise ValueError("yaml-ifc furnishings failed validation: " + "; ".join(errors))
     parts = []
+    for run in runs:
+        parts.extend(_kitchen_run_parts(run, motions))
     for key, ifc_class, _type_class in FURNISHINGS:
         for product in model.by_type(ifc_class):
+            if product.GlobalId in written:
+                continue
             element = by_id.get(_yaml_id(product))
             label = FURNISHING_LABELS[key]
             object_type = element.get("ObjectType") if element is not None else None
@@ -1521,6 +1559,7 @@ def part_groups() -> list[dict]:
             "id": "interior",
             "children": [
                 LABEL_CABINET,
+                LABEL_WORKTOP,
                 LABEL_OAK,
                 LABEL_APPLIANCE,
                 LABEL_SINK,
@@ -1567,7 +1606,7 @@ def ifc_index() -> dict:
     for path in (SOURCE_PATH, FURNISHINGS_PATH, BEDROOM, BATH_120, BATH_107):
         if path.is_file():
             docs.append(load_yaml_ifc(path))
-    return index_documents(docs)
+    return index_documents(docs, transform=kitchen_ifc.apply)
 
 
 if __name__ == "__main__":

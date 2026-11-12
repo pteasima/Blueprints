@@ -20,6 +20,7 @@ export const SOLID_COLORS = {
   plaster: [255, 225, 120],
   furniture: [255, 150, 0],
   cabinet: [214, 148, 40],
+  worktop: [236, 233, 226],
   appliance: [176, 190, 205],
   sink: [40, 185, 195],
   rug: [150, 70, 175],
@@ -81,6 +82,7 @@ export const LAYER_DEPTH_BIAS = {
   soffit_gkf: 4,
   furniture: 6,
   cabinet: 6,
+  worktop: 6,
   appliance: 7,
   sink: 7,
   rug: 1,
@@ -459,6 +461,15 @@ export const REALISTIC_PRESETS = {
     clearcoat: 0.3,
     clearcoatRoughness: 0.3,
     map: "wood",
+  },
+  worktop: {
+    // Silestone Blanco Maple: mottled white quartz, polished.
+    color: [236, 233, 226],
+    roughness: 0.3,
+    metalness: 0.0,
+    clearcoat: 0.4,
+    clearcoatRoughness: 0.2,
+    map: "plaster",
   },
   appliance: {
     color: [176, 190, 205],
