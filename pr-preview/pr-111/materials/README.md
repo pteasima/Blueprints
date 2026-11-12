@@ -8,7 +8,7 @@ The realistic mode does not reuse the solid-mode colours. Solid colours are diag
 
 - **Materials are keyed by id, never baked into geometry.** The models keep emitting meshes named `<label>__<id>__` (e.g. `cabinet__KR-ISL-END-N__`) or just `<label>`. Each catalogue entry's `applies_to.selectors` says which meshes it covers: `{label}`, `{label, ids}` or `{label, id_pattern}` (a regex searched in the id). The most specific selector wins (ids, then pattern, then label). Every label the three models emit has exactly one label-only selector, so no mesh is left without a material; `python -m blueprints.materials` checks that against the committed GLBs.
 - **Real 3D fixtures later.** A glTF for a fixture (a tap, a light, a chair) names its material slots with catalogue ids (`chrome-polished`, `oak-natural-kaplan`, …). The viewer swaps each slot for the catalogue material with that id, so the fixture picks up the same finish and a later finish change is one catalogue edit. A slot with an unknown name keeps the glTF's own material. Nothing here assumes boxes.
-- **Entries with `pending`** describe surfaces the models do not build yet (room floors, ceilings, door frames, window frames, blinds, facade). They are in the catalogue now so the finish decision is written down once.
+- **Entries with `pending`** describe surfaces the models do not build yet (room floors, ceilings, window frames, blinds, facade). They are in the catalogue now so the finish decision is written down once.
 - **Fields.** The contract is the comment at the top of `catalogue.yaml`. `base_color` is the albedo whenever there is no colour map (several sets ship only normal/roughness so plain painted surfaces stay even). `tile_size_m` is the real size of one texture repeat. `rotation_deg` is given where direction matters (oak grain, brushed steel): at 0 the grain runs along texture V.
 
 ## Textures
@@ -22,7 +22,8 @@ They are either CC0 scans (Poly Haven, ambientCG) re-tinted to the product's mea
 | `oak-natural-kaplan` | Poly Haven *Oak Veneer 01*, tinted to Kaplan's D 02 swatch | 1.83 m |
 | `silestone-blanco-maple` | procedural speckled quartz | 1.0 m |
 | `abk-poetry-stone-trani-beige` | procedural limestone | 0.6 m |
-| `floor-pu-living`, `floor-pu-garage` | procedural poured floor | 2.0 m |
+| `floor-pu-living` | procedural light-beige PU with sparse colour chips | 1.0 m |
+| `floor-pu-garage` | procedural plain poured floor | 2.0 m |
 | `paint-interior-white` | ambientCG *Plaster001* normal/roughness only | 2.0 m |
 | `fabric-sofa-livom-harvey` | ambientCG *Fabric062*, tinted | 0.4 m |
 | `rug-wool-oatmeal` | ambientCG *Carpet014*, tinted | 0.5 m |
@@ -41,12 +42,14 @@ Swatches (0.3 m crops of each colour map, or the flat `base_color`): [`docs/prev
 | Material | Colour | Rough / metal | Textures | Viewer selectors | Sources |
 | --- | --- | --- | --- | --- | --- |
 | **Natural oak, matt lacquer (Kaplan 1934, Přírodní D 02)** `oak-natural-kaplan` | `#aa7e60` | 0.45 / 0.0 | color, normal, roughness | `oak`; `cabinet` /-BODY$/; `cabinet` SF-LB, SF-TC, SF-DH | [1](https://www.kaplan1934.cz/produkty/stoly/stul-gatta) [2](https://www.kaplan1934.cz/kolekce-gatta/) [3](https://polyhaven.com/a/oak_veneer_01) |
+| **Kitchen fronts, warm cream matt (about RAL 9001)** `kitchen-front-cream` | `#e9e0d2` | 0.35 / 0.0 | none | `cabinet` /-(FRONT\|D[0-9]+\|END-[NSEW]\|PLINTH-[NSEW])$/; `appliance` EA-SBD6ECX | [1](https://github.com/pteasima/Blueprints/blob/main/docs/design/kitchen-cabinets.md) |
 | **Silestone Blanco Maple, 20 mm** `silestone-blanco-maple` | `#ede8dd` | 0.12 / 0.0 | color, roughness | `worktop` | [1](https://www.cosentino.com/en-ie/colours/silestone/blanco-maple) [2](https://www.stoneone.co.uk/product/silestone-blanco-maple/) [3](https://in2stone.co.uk/products/quartz/silestone-blanco-maple/) |
 | **ABK Poetry Stone Trani Beige, natural, rectified, 8.5 mm** `abk-poetry-stone-trani-beige` | `#e0d1bc` | 0.62 / 0.0 | color, normal, roughness | `floor_tile`; `wall_tile`; pending | [1](https://www.abkgroup.it/it/abk/area-download/minimali/poetry-stone/trani-beige/pf60010540-v100/) [2](https://www.ceramishop.it/abk-poetry-stone-trani-beige-nat-60x60-pf60010540.html) |
+| **Poured polyurethane floor, light beige with colour chips** `floor-pu-living` | `#d8cdbb` | 0.35 / 0.0 | color, roughness | pending | [1](https://github.com/pteasima/Blueprints/blob/main/scripts/export_podlaha_eps.py) |
 | **Window glass, insulated triple glazing** `glass-window-triple` | `#e6eeec` | 0.02 / 0.0 | none | `glazing` | [1](https://github.com/pteasima/Blueprints/blob/main/docs/design/ground-floor.md) |
 | **Aluminium window and door frames, anthracite (RAL 7016)** `aluminium-anthracite` | `#383e42` | 0.45 / 0.0 | none | `door` D-OP32, D-OP39a; pending | [1](https://github.com/pteasima/Blueprints/blob/main/docs/design/ground-floor.md) |
-| **Jung LS 990, snow white matt (WWM)** `jung-ls990-snow-white-matt` | `#f1f0ea` | 0.55 / 0.0 | none | `switch`; `sensor`; `outlet` | [1](https://www.jung-group.com/es-ES/p/Tecla-simple-blanco-alpino-mate/LS-990-WWM) [2](https://www.jung-group.com/de-DE/Produkte/Schalterprogramme/LS-990-aus-Kunststoff/) [3](https://www.jungstore.nl/designseries/ls-990/ls-990-sneeuwwit-mat/) |
-| **Jung LS socket insert, alpine white gloss (LS 1520 KI WW)** `jung-ls-alpine-white-gloss` | `#f1f0ea` | 0.2 / 0.0 | none | pending | [1](https://www.elanto24.de/Jung-LS1520KIWW-SCHUKO-Steckdose-Safety-Serie-LS-alpinweiss) |
+| **Interior door leaves, white** `door-leaf-white` | `#f1f0ec` | 0.4 / 0.0 | none | `door` | [1](https://github.com/pteasima/Blueprints/blob/main/docs/OpeningsSpec.md) |
+| **Jung LS, alpine white gloss (WW)** `jung-ls-alpine-white-gloss` | `#f1f0ea` | 0.15 / 0.0 | none | `switch`; `sensor`; `outlet` | [1](https://www.elanto24.de/Jung-LS1520KIWW-SCHUKO-Steckdose-Safety-Serie-LS-alpinweiss) [2](https://www.jung-group.com/de-DE/Produkte/Schalterprogramme/LS-990-aus-Kunststoff/) |
 | **Brushed stainless steel** `stainless-brushed` | `#c4c5c6` | 0.32 / 1.0 | color, normal, roughness | `sink`; `drain`; `profile`; `appliance`; `cabinet` /-LEG-/ | [1](https://www.teka.com/cs-cz/produkt/be-linea-rs15-71-40_115000004/) [2](https://www.teka.com/cs-cz/produkt/be-linea-rs15-18-40-ss_115000010/) [3](https://www.spotrebice-kuchyne.cz/p/25492/chladnicka-whirlpool-wq9i-mo2l-ef) [4](https://ambientcg.com/view?id=Metal009) |
 | **Black glass-ceramic (Miele KM 8665 FL hob)** `glass-ceramic-black` | `#18181b` | 0.06 / 0.0 | none | `hob` | [1](https://www.miele.cz/product/12911610/indukcni-varna-deska-km-8665-fl) |
 | **Glossy white sanitaryware** `sanitary-white-gloss` | `#f5f5f2` | 0.08 / 0.0 | none | `fixture` | [1](https://www.sanitino.sk/vane-prislusenstvo/cersanit) |
@@ -56,15 +59,12 @@ Swatches (0.3 m crops of each colour map, or the flat `base_color`): [`docs/prev
 
 | Material | Colour | Rough / metal | Textures | Viewer selectors | Sources |
 | --- | --- | --- | --- | --- | --- |
-| **Oak veneer joinery (kitchen fronts, vanity), assumed to match** `oak-veneer-joinery` | `#aa7e60` | 0.45 / 0.0 | color, normal, roughness | `cabinet` /-(FRONT\|D[0-9]+\|END-[NSEW]\|PLINTH-[NSEW])$/; `appliance` EA-SBD6ECX; `vanity`; `furniture` | [1](https://polyhaven.com/a/oak_veneer_01) |
+| **Oak veneer joinery (bathroom vanity, loose furniture), assumed** `oak-veneer-joinery` | `#aa7e60` | 0.45 / 0.0 | color, normal, roughness | `vanity`; `furniture` | [1](https://polyhaven.com/a/oak_veneer_01) |
 | **White melamine carcass (kitchen interiors)** `kitchen-carcass-white` | `#eeece6` | 0.5 / 0.0 | none | `cabinet` | [1](https://github.com/pteasima/Blueprints/blob/main/docs/design/kitchen-cabinets.md) |
 | **Tile grout, sand beige, 2 mm** `grout-sand` | `#bbab93` | 0.85 / 0.0 | none | `grout` | none |
-| **Poured polyurethane floor, warm light grey** `floor-pu-living` | `#bdb8ae` | 0.38 / 0.0 | color, roughness | pending | [1](https://github.com/pteasima/Blueprints/blob/main/scripts/export_podlaha_eps.py) |
 | **Poured polyurethane floor, garage grey** `floor-pu-garage` | `#8f9294` | 0.4 / 0.0 | color, roughness | pending | [1](https://github.com/pteasima/Blueprints/blob/main/scripts/export_podlaha_eps.py) |
 | **Interior plaster, white paint** `paint-interior-white` | `#f3f2ee` | 0.9 / 0.0 | normal, roughness | `masonry`; `prewall`; pending | [1](https://ambientcg.com/view?id=Plaster001) |
 | **Exterior render, off-white** `facade-render-white` | `#eceae4` | 0.95 / 0.0 | normal | pending | none |
-| **Interior door leaves, white lacquer** `door-leaf-white` | `#f1f0ec` | 0.4 / 0.0 | none | `door` | none |
-| **Interior door frames, white lacquer** `door-frame-white` | `#f1f0ec` | 0.4 / 0.0 | none | pending | none |
 | **Sectional garage doors, anthracite** `garage-door-anthracite` | `#383e42` | 0.5 / 0.0 | none | `door` D-OP49, D-OP50 | none |
 | **Exterior blinds and blind motors, anthracite** `blind-anthracite` | `#383e42` | 0.45 / 0.0 | none | `actuator`; pending | none |
 | **Light fittings, white housing with opal diffuser** `light-diffuser-opal` | `#f7f7f4` | 0.3 / 0.0 | none | `light` | [1](https://github.com/pteasima/Blueprints/blob/main/docs/electrical/PlanNotes.md) |
@@ -81,16 +81,33 @@ Swatches (0.3 m crops of each colour map, or the flat `base_color`): [`docs/prev
 
 Per-material reasoning and confidence are in each entry's `notes` in the catalogue.
 
+## Decisions (Petr, 2026-11-12)
+
+Petr answered the first round of open questions on 2026-11-12. The catalogue entries quote him.
+
+- **Kitchen fronts are cream** ("some sort of cream color (white-ish)"): `kitchen-front-cream`. The exact shade (RAL 9001) and the smooth matt lacquer or laminate are still our assumption. The oak stays on the Kaplan furniture and the dining run.
+- **House floor: light beige PU with plastic colour chips**, chip colours our choice: `floor-pu-living` (beige, warm grey, off-white and a few taupe flakes, sparse). The garage was not included in that answer and stays a plain grey assumption (`floor-pu-garage`).
+- **Silestone: the cheaper basic finish**, which is the standard polished finish (Suede costs extra).
+- **Window frames: anthracite aluminium everywhere, inside too** (`aluminium-anthracite`).
+- **Doors: white leaves, "invisible" frames** that are flush and plastered over, so there is no frame material.
+- **Hinged doors are reverse-mounted.** The leaf sits flush with the hallway wall face and opens inward into the room. This is a geometry fact. The model still centres most leaves in the wall (only OP11 and OP17 have a `LeafOffset` to the hallway face, [ground-floor.md](../design/ground-floor.md)). Moving every hinged leaf is a separate change. This PR only records it.
+- **Jung fixtures are gloss white** (LS 1520 KI WW, LS 990 WW, alpine white): `jung-ls-alpine-white-gloss` covers switches, sockets and sensors. The plan's general rule "everything matt white, code WWM" is **obsolete** (Petr, 2026-11-12: "the matt white note is obsolete"). [PlanNotes.md](../electrical/PlanNotes.md) keeps the original quote, marked obsolete.
+
+### Retired entries
+
+| Id | Why |
+| --- | --- |
+| `door-frame-white` | Door frames are flush and plastered over, so there is no visible frame to give a material. The wall paint (`paint-interior-white`) covers the reveal. |
+| `jung-ls990-snow-white-matt` | The WWM matt rule is obsolete. All Jung fixtures are alpine white gloss. |
+
 ## Open questions for Petr
 
-1. **Kitchen fronts.** Nothing says what the kitchen fronts are. Assumed lacquered natural oak veneer to match the dining run and the Kaplan table (`oak-veneer-joinery`). White matt or a colour would change the look the most of anything here.
-2. **Living-area floor colour.** The floor take-off says 4 mm PU screed for the dry rooms. Which colour? Assumed a warm light grey (about RAL 7044); garage a mid grey.
-3. **Silestone finish.** Polished (assumed) or Suede?
-4. **Sockets: gloss or matt?** The plan legend names the socket insert LS 1520 KI **WW** (alpine white gloss), the general rule says everything is **WWM** (snow white matt). Is the socket meant to be LS 1520 KI WWM?
-5. **Grout colour** for Trani Beige. Assumed a sand beige a shade darker than the tile.
-6. **Interior doors and frames.** Assumed flush white lacquer leaves and frames. Product or finish?
-7. **Window colour inside.** The legend says anthracite aluminium; assumed RAL 7016 on both faces. Some systems are white inside.
-8. **Sofa cover.** Which Livom fabric and colour (Cord, Bouclé, Linea, Fuego, Veluno)? Assumed a warm light grey weave.
-9. **Paffoni Tango finish.** Assumed chrome.
-10. **Rug, bed, vanity top, light housings, garage doors, blinds, facade**: all assumed (see the table). Any that are already chosen?
-11. **Other wet rooms** (WC 1.06, 1.19, bathrooms 1.09, 1.21): same Poetry Stone Trani Beige as 1.07 and 1.20?
+1. **Exact cream shade and finish of the kitchen fronts.** Assumed RAL 9001 in a smooth matt finish. Should it be whiter (RAL 9010), and lacquer or laminate?
+2. **PU chip colours.** We chose beige, warm grey, off-white and taupe. Change them when the supplier's chip blend is picked.
+3. **Garage floor.** Plain mid grey PU is assumed. Should it match the house's beige with chips?
+4. **Grout colour** for Trani Beige. Assumed a sand beige a shade darker than the tile.
+5. **Door leaf finish.** White is decided; satin lacquer is assumed.
+6. **Sofa cover.** Which Livom fabric and colour (Cord, Bouclé, Linea, Fuego, Veluno)? Assumed a warm light grey weave.
+7. **Paffoni Tango finish.** Assumed chrome.
+8. **Rug, bed, vanity top, light housings, garage doors, blinds, facade, kitchen carcass interior**: all assumed (see the table). Any that are already chosen?
+9. **Other wet rooms** (WC 1.06, 1.19, bathrooms 1.09, 1.21): same Poetry Stone Trani Beige as 1.07 and 1.20?
