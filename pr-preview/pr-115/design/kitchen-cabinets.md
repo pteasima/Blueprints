@@ -566,7 +566,7 @@ No carcass size or position changed. These are the fronts:
 - The IKEA-like rack, shelf and bin sizes.
 
 `open:`
-- The HF open pose: the lower front's −15° and the lever pivot and fixing are read off Blum's planning sketch, not published figures (see “Opening in the viewer”).
+- The HF open pose: the lower front's −15° at 116° and the lever pivot and fixing are read off Blum's planning sketch, not published figures, so the −8° and the 1991 edge at the 88° stop follow from that guess (see “Opening in the viewer”).
 - SF-DH's fronts and fitting: 2700 wide is over AVENTOS's 1800, so one HF pair would not do; it would need splitting into bays (for example 2 × 1350, each an HF pair). Kept as the plain box with no fronts.
 - The Silestone / oak-veneer joint at x 25.52 and the oak top's thickness.
 - The lever's real shape: drawn as a straight 16 × 16 bar, 6 in front of the shelves.
@@ -608,7 +608,11 @@ and then:
 
 > btw the way they open right now is that they fully fold the two halves onto one another. Thats not how it works in reality. You still need to be able to reach up and pull it back down, so they stay only partially folded, like my image.
 
-So the photo is **HF top, the bi-fold**, and the cabinets keep their 1560 bottom and lose 10 in height (890, top 2450 as before). At 890 HF is inside every Blum range below; each bay's `Pset_Fronts.BlumRangeOverride` still records Petr's “assume the hinge exists for our width”, and the export would keep (and list as `OutsideBlumRange`) anything outside Blum's tables instead of stopping. Without an override it stops, as for any other fitting.
+and then:
+
+> do 88 degrees in the model.
+
+So the photo is **HF top, the bi-fold**, opening to the **88° stop**, and the cabinets keep their 1560 bottom and lose 10 in height (890, top 2450 as before). At 890 HF is inside every Blum range below; each bay's `Pset_Fronts.BlumRangeOverride` still records Petr's “assume the hinge exists for our width”, and the export would keep (and list as `OutsideBlumRange`) anything outside Blum's tables instead of stopping. Without an override it stops, as for any other fitting.
 
 ### Our wall cabinets against HF top
 
@@ -621,8 +625,9 @@ So the photo is **HF top, the bi-fold**, and the cabinets keep their 1560 bottom
 | Fronts | 847 (797) × 442 + 3 + 442, 18 thick | symmetrical pair, KH = 2 × FHo + gaps | p. 24 |
 | Front weight FG, both fronts | 9.4 kg (850), 8.9 kg (800) | — | oak-veneered chipboard at 700 kg/m³, `guess:` (Blum's chipboard reference is 680, [p. 716](https://publications.blum.com/2024/catalogue/en/716/)); no handle |
 | Power factor LF = KH × FG | 8396 (850), 7901 (800) | 2700–13500 → lift mechanism 22F2510 (system screws) or 22F2500 | p. 22 |
-| Space above the top, fully open (116°, no angle stop) | **232** (Y = FHo × 0.44 + 38) | | p. 24; [planning sketch](https://575022.myshoptet.com/user/documents/documents/pictures/schm_Blum_AVENTOS_HF_TOP_Planungsskizzen_01.pdf) |
-| Reach in front of the face, open | **460** (X max = FHo × 0.9 + 1.5 × FD + 35) | | same |
+| Opening angle | **88°** (stop) | 116° without a stop; opening-angle stops 107°, 97°, 88°, 81° | [p. 22–24](https://publications.blum.com/2024/catalogue/en/22/) |
+| Space above the top, open at 88° | **28** (Blum's Y for the 88° stop; the swept fronts themselves rise 16) | Y = FHo × 0.44 + 38 at 116° (232 for us), × 0.29 + 35 at 107°, × 0.12 + 31 at 97°, 28 at 88°, 0 at 81° | p. 24; [planning sketch](https://575022.myshoptet.com/user/documents/documents/pictures/schm_Blum_AVENTOS_HF_TOP_Planungsskizzen_01.pdf) |
+| Reach in front of the face, open at 88° | **443** (swept four-bar) | X max = FHo × 0.9 + 1.5 × FD + 35 = 460, at 116° | same |
 | Shelves behind the fronts | 22 | min 22 (the lever runs there) | planning sketch, “Platzbedarf” |
 
 Modelled (`models/kitchen_cabinet.py`, band kind `lift`, `AVENTOS` table):
@@ -630,11 +635,12 @@ Modelled (`models/kitchen_cabinet.py`, band kind `lift`, `AVENTOS` table):
 - A lift mechanism `<bay>-LIFTMECH-L` / `-R` on each side panel, just under the top board, 30 off the side, 264 deep, 195 high (2237–2432). Blum's sketch gives min 264 and 194.
 - A lever `<bay>-LIFTARM-L` / `-R` per side, `Role: LiftArm`: a 16 × 16 bar from the mechanism's underside (its pivot, 2237) plumb down just behind the fronts to its fixing on the lower front at 1819, 186 under the centre hinge. Blum's “Platzbedarf” sketch has the lever this way (pivot under the mechanism, fixed to the lower front); its length is solved (below).
 - Two shelves, re-spaced by the model in the 854 inside: 1851–1869 and 2141–2159, three equal spaces, 22 behind the fronts. Both are below the mechanisms, and the export stops if a shelf would hit a mechanism or a lever.
-- The space the open fronts need is `run.clearances` (232 above, 460 ahead, Blum's Y and X max) and is drawn in red by `scripts/render_kitchen_run.py`. It is not a solid in the IFC or the viewer.
+- The opening angle is the band option `angle=` (`lift * fitting=HF angle=88 shelves=2`). The export stops unless it is one of Blum's HF stop settings (116, 107, 97, 88, 81; `AVENTOS["HF"]["stops"]`). Without it a front opens to the fitting's largest angle.
+- The space the open fronts need is `run.clearances` (28 above, 443 ahead: above, the larger of Blum's Y for the stop and the swept fronts; ahead, the swept fronts) and is drawn in red by `scripts/render_kitchen_run.py`. It is not a solid in the IFC or the viewer.
 
 ### Opening in the viewer
 
-Petr, 2026-11-13: “And make them open too, add the animation for this opening mechanism.”, then “they stay only partially folded, like my image”.
+Petr, 2026-11-13: “And make them open too, add the animation for this opening mechanism.”, then “they stay only partially folded, like my image”, then “do 88 degrees in the model.”
 
 Each lift front is one `kind: "linkage"` record in `ground_floor.doors.json` (`_linkage_motion` in `models/ground_floor.py`, from the `LiftJoint` that `_lift_motion` in `models/kitchen_cabinet.py` puts on each part). A linkage is a list of joints; each turns its part meshes about a line (`pivot` point, `axis`), by `angles` sampled at 25 even steps from shut to open, relative to a `parent` joint or to the model. The viewer (`doors.js` `bindLinkage`) interpolates them over 900 ms. Any part of it takes the tap.
 
@@ -642,13 +648,18 @@ The motion is a four-bar (`_hf_fourbar`): carcass, upper front, lower front, lev
 
 | Joint | Parts | Line | Motion |
 | --- | --- | --- | --- |
-| 0 | `<bay>-LIFT1`, upper front | its top edge, on the inner face | 0 → 116°, up and out. 116° is HF without an angle stop: Blum's Y formulas are FHo × −cos(angle) (0.44 at 116°, 0.29 at 107°, 0.12 at 97°) |
-| 1, rides on 0 | `<bay>-LIFT2`, lower front | the centre hinge, inner faces | whatever keeps the lever's length: it hangs almost plumb on the way up (−4° at half way) and ends **−15° from vertical**, its bottom edge tilted back towards the cabinet (−131° relative to the upper front) |
-| 2 | `<bay>-LIFTARM-L/R`, levers | the pivot under the mechanism | rigid, turns 123° with its fixing on the lower front |
+| 0 | `<bay>-LIFT1`, upper front | its top edge, on the inner face | 0 → 88°, up and out, to the 88° stop. 116° is HF without a stop; the stops are 107°, 97°, 88°, 81° (Blum's Y formulas go as FHo × −cos(angle): 0.44 at 116°, 0.29 at 107°, 0.12 at 97°) |
+| 1, rides on 0 | `<bay>-LIFT2`, lower front | the centre hinge, inner faces | whatever keeps the lever's length: it hangs almost plumb on the way up (−3° at half way) and ends at the 88° stop **−8° from vertical**, its bottom edge tilted back towards the cabinet (−96° relative to the upper front). Without the stop it would go on to −15° at 116° |
+| 2 | `<bay>-LIFTARM-L/R`, levers | the pivot under the mechanism | rigid, turns 92° with its fixing on the lower front (123° at 116°) |
 
-The −15° is read off Blum's “Platzbedarf nach oben” sketch (the open lower front against the cabinet), `guess:` measured on the drawing, not a published figure; the lever's fixing height (186 under the centre hinge) is solved so the four-bar ends there (`LIFT_HF_LOWER_OPEN_DEG`). The export stops if the lower front's bottom edge would pass into the carcass on the way.
+The −15° at 116° is read off Blum's “Platzbedarf nach oben” sketch (the open lower front against the cabinet), `guess:` measured on the drawing, not a published figure; the lever's fixing height (186 under the centre hinge) is solved so the four-bar ends there with no stop (`LIFT_HF_LOWER_OPEN_DEG`). A stop does not change the lever, only where the motion ends, so at 88° the lower front hangs −8°: a result of that guess, not a Blum figure. The export stops if the lower front's bottom edge would pass into the carcass on the way.
 
-**Open, the lower front's bottom edge is at 2210 above the floor, 283 out from the closed face** (1280 above the 930 worktop): in reach to pull it back down, as Petr asked. The fold (centre hinge) is the highest point, 2682, inside Blum's 232 above the top.
+**Open at 88°, the lower front's bottom edge is at 1991 above the floor, 383 out from the closed face** (1061 above the 930 worktop; 2210 and 283 at 116°). The fronts project at most **443** from the face (at the centre hinge, which ends about 2433 high, near the top: the upper front stands almost level); the swept fronts rise 16 above the 2450 top, Blum asks for 28.
+
+| Person | Head (standing) | Under the open edge (1991) |
+| --- | ---: | ---: |
+| Zuzana, 174 cm | 1740 | **251** above her head; ~1991 is about what a 174 cm person reaches at a stretch (`guess:` from body proportions), so the edge is at the top of her reach |
+| 186 cm | 1860 | **131** above the head |
 
 ### The ceiling line and the open fronts
 
@@ -658,9 +669,9 @@ The −15° is read off Blum's “Platzbedarf nach oben” sketch (the open lowe
 
 | Front | Open envelope | Kitchen-gable trap | Soffit | Under the sloped ceiling |
 | --- | --- | ---: | ---: | ---: |
-| SF-AH850 | x 19.124–19.610, top 2682 | 134 clear (envelope starts at x 19.124, trap face 18.990) | 1300 | 1428 |
-| SF-BH800 | same | 134 | 2150 | 1974 |
-| SF-CH850 | same | 134 | 2950 | 1261 |
+| SF-AH850 | x 19.132–19.593, top 2478 (Blum's 28 above) | 142 clear (envelope starts at x 19.132, trap face 18.990) | 1300 | 1633 |
+| SF-BH800 | same | 142 | 2150 | 2178 |
+| SF-CH850 | same | 142 | 2950 | 1465 |
 
 - **No overlap with the bass trap**: the trap is behind the cabinets (the 350 deep box stands in front of its 190), the closed cabinets stop at its 2450 underside, and the open fronts swing out into the room from the cabinet face.
 - SF-DH's top is back at 2450: 20 under the 2470 soffit, as before 2026-11-13.
