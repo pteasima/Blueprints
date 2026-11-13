@@ -61,6 +61,10 @@
 # that rectangle: west 20.554, east 21.754, north 13.800, south 11.300.
 # The faint line at x≈773 (world x≈21.15) is the split. Two rows, each 600
 # deep, overall 2500×1200, counter 930.
+#   Gridfinity (Petr, 2026-11-13): the west row is 586 deep (west face
+#   20.568, the central back stays at 21.154) and 500/607/481/607/305 wide
+#   so the drawer insides are whole Gridfinity cells (MAXIMERA deductions,
+#   scripts/gridfinity_fit.py, kitchen-cabinets.md "Gridfinity drawers").
 #   West row, faces west. RefDirection [0, -1]: Origin is the north-west
 #   corner, Width runs south, Depth runs east. Modules north to south
 #   500, 600, 500, 600, 300. The green rectangular sink is in the north
@@ -330,10 +334,10 @@ systemFurniture:
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
-    Origin: [20.554, 13.8]
+    Origin: [20.568, 13.8]
     RefDirection: [0, -1]
     Width: 0.5
-    Depth: 0.6
+    Depth: 0.586
     Height: 0.93
     PropertySets:
       - Name: Pset_KitchenBay
@@ -353,10 +357,10 @@ systemFurniture:
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
-    Origin: [20.554, 13.3]
+    Origin: [20.568, 13.3]
     RefDirection: [0, -1]
-    Width: 0.6
-    Depth: 0.6
+    Width: 0.607
+    Depth: 0.586
     Height: 0.93
     PropertySets:
       - Name: Pset_KitchenBay
@@ -367,7 +371,8 @@ systemFurniture:
       # nominals in metres, top to bottom; "*" is the rest of the carcass.
       - Name: Pset_Drawers
         Properties:
-          NominalHeights: "0.2 0.2 *"
+          NominalHeights: "0.1 0.1 *"
+          Gridfinity: true
           Contents: "nože; nářadí; dole nevím"
   - id: SF-I500b
     Name: "Ostrov západ 500"
@@ -375,10 +380,10 @@ systemFurniture:
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
-    Origin: [20.554, 12.7]
+    Origin: [20.568, 12.693]
     RefDirection: [0, -1]
-    Width: 0.5
-    Depth: 0.6
+    Width: 0.481
+    Depth: 0.586
     Height: 0.93
     PropertySets:
       - Name: Pset_KitchenBay
@@ -390,7 +395,8 @@ systemFurniture:
       # need more than a 20 cm front (kitchen-cabinets.md).
       - Name: Pset_Drawers
         Properties:
-          NominalHeights: "0.2 0.2 *"
+          NominalHeights: "0.1 0.1 *"
+          Gridfinity: true
           Contents: "koření; oleje, octy, mouky, cukry, dochucovadla; hrnce"
   - id: SF-I600b
     Name: "Ostrov západ 600 varná deska"
@@ -398,10 +404,10 @@ systemFurniture:
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
-    Origin: [20.554, 12.2]
+    Origin: [20.568, 12.212]
     RefDirection: [0, -1]
-    Width: 0.6
-    Depth: 0.6
+    Width: 0.607
+    Depth: 0.586
     Height: 0.93
     PropertySets:
       - Name: Pset_KitchenBay
@@ -412,7 +418,8 @@ systemFurniture:
       # The top box keeps Miele's 8 mm under the hob (Pset_Hob).
       - Name: Pset_Drawers
         Properties:
-          NominalHeights: "0.2 0.2 *"
+          NominalHeights: "0.2 0.1 *"
+          Gridfinity: true
           Contents: "příbory; vařečky, stěrky, naběračky; pánve"
       # Miele KM 8665 FL (Petr, 2026-11-11). Sizes: Miele installation
       # manual pp. 23, 29, see kitchen-cabinets.md "Induction hob".
@@ -444,10 +451,10 @@ systemFurniture:
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
-    Origin: [20.554, 11.6]
+    Origin: [20.568, 11.605]
     RefDirection: [0, -1]
-    Width: 0.3
-    Depth: 0.6
+    Width: 0.305
+    Depth: 0.586
     Height: 0.93
     PropertySets:
       - Name: Pset_KitchenBay
@@ -819,9 +826,9 @@ sanitaryTerminals:
     Description: "Island sink in SF-I500a, the card on Petr's KitchenPlan.jpg. Undermount. Overall 440×220, bowl 400×180×140, cut-out 396×176 R13 (Teka). Long side across the island (east-west), as the plan's rectangle is drawn, guess:. Centred on the 500 bay and on its 600 depth, guess:. Rim top 910 under the 20 mm stone."
     PredefinedType: SINK
     ContainedInStructure: SP-1.02
-    # Centre x = 20.554 + 0.300, y = 13.800 − 0.250 (SF-I500a centre).
+    # Centre x = 20.568 + 0.293, y = 13.800 − 0.250 (SF-I500a centre).
     # Elevation 0.93 − 0.02 − 0.14 = 0.77.
-    Origin: [20.634, 13.44]
+    Origin: [20.641, 13.44]
     Elevation: 0.77
     Width: 0.44
     Depth: 0.22
@@ -1050,7 +1057,7 @@ furniture:
   # docs/design/kitchen-cabinets.md.
   - id: KR-ISL
     Name: "Ostrov"
-    Description: "Island monoblock: west row (5 bays) and east row (4 bays) back to back on one shared central back. Silestone Blanco Maple worktop, 30 mm overhang on both long fronts, Silestone cladding on both ends."
+    Description: "Island monoblock: west row (5 bays) and east row (4 bays) back to back on one shared central back. Silestone Blanco Maple worktop, 20 mm overhang on both long fronts, Silestone cladding on both ends."
     PredefinedType: USERDEFINED
     ObjectType: KitchenRun
     ContainedInStructure: SP-1.02
@@ -1058,7 +1065,7 @@ furniture:
       - Name: Pset_KitchenRun
         Properties:
           WorktopThickness: 0.02
-          WorktopOverhang: 0.03
+          WorktopOverhang: 0.02
           WorktopMaterial: "Silestone Blanco Maple"
           CladEnds: true
           # Petr, 2026-11-12: "Ok, 100mm it is." Lowest plinth the robot
@@ -1067,7 +1074,7 @@ furniture:
           PlinthKind: Legs
   - id: KR-WEST
     Name: "Západní linka"
-    Description: "West-wall base monoblock between OP24 and OP25: C850, B800, A250 and the dishwasher slot. Silestone worktop, 30 mm overhang at the front, Silestone cladding on both ends, 12 mm Silestone backsplash."
+    Description: "West-wall base monoblock between OP24 and OP25: C850, B800, A250 and the dishwasher slot. Silestone worktop, 20 mm overhang at the front, Silestone cladding on both ends, 12 mm Silestone backsplash."
     PredefinedType: USERDEFINED
     ObjectType: KitchenRun
     ContainedInStructure: SP-1.02
@@ -1075,7 +1082,7 @@ furniture:
       - Name: Pset_KitchenRun
         Properties:
           WorktopThickness: 0.02
-          WorktopOverhang: 0.03
+          WorktopOverhang: 0.02
           WorktopMaterial: "Silestone Blanco Maple"
           # Petr, 2026-11-12: "Ok, 100mm it is." Lowest plinth the robot
           # vacuum fits under (Dreame X60 Pro Master 89 mm); open legs, no kick board.
@@ -1091,7 +1098,7 @@ furniture:
           CladEnds: true
   - id: KR-DN
     Name: "Jídelní linka"
-    Description: "North dining base run: SF-F052, SF-DN, SF-F053, SF-DN70. Oak boxes under a 20 mm Silestone Blanco Maple worktop, 30 mm front overhang, top 930. No exposed ends: west abuts SF-T4, east abuts SF-LB and the bookshelf."
+    Description: "North dining base run: SF-F052, SF-DN, SF-F053, SF-DN70. Oak boxes under a 20 mm Silestone Blanco Maple worktop, 20 mm front overhang, top 930. No exposed ends: west abuts SF-T4, east abuts SF-LB and the bookshelf."
     PredefinedType: USERDEFINED
     ObjectType: KitchenRun
     ContainedInStructure: SP-1.02
@@ -1104,7 +1111,7 @@ furniture:
           Carcass: Box
           BodyMaterial: "natural oak"
           WorktopThickness: 0.02
-          WorktopOverhang: 0.03
+          WorktopOverhang: 0.02
           WorktopMaterial: "Silestone Blanco Maple"
   - id: KR-WEST-H
     Name: "Západní horní"

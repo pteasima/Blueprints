@@ -48,9 +48,13 @@ def test_island_drawer_bays_follow_the_notes():
         ("SF-I600b", ["příbory", "vařečky, stěrky, naběračky", "pánve"]),
     ):
         drawers = [run.part(f"{bay_id}-D{i}").drawer for i in (1, 2, 3)]
-        assert [d.nominal for d in drawers] == [200.0, 200.0, 400.0]
         assert [d.content for d in drawers] == contents
-        assert [round(d.front[5] - d.front[4]) for d in drawers] == [197, 197, 407]
+    # Petr, 2026-11-13: the top drawers are MAXIMERA's lowest (band 100, box
+    # 78); the bottom drawer takes the rest. Under the hob the top band stays
+    # 200 (a 100 band leaves 61 mm to the hob limit, the low box is 78).
+    fronts = {b: [round(run.part(f"{b}-D{i}").drawer.front[5] - run.part(f"{b}-D{i}").drawer.front[4])
+                  for i in (1, 2, 3)] for b in ("SF-I600a", "SF-I500b", "SF-I600b")}
+    assert fronts == {"SF-I600a": [97, 97, 607], "SF-I500b": [97, 97, 607], "SF-I600b": [197, 97, 507]}
     # The slab-front bays the plan does not give a front type for stay slabs.
     for bay_id in ("SF-I500a", "SF-I300", "SF-E600a", "SF-E600b", "SF-E600c", "SF-E700"):
         assert run.part(f"{bay_id}-FRONT").role == "Front"
@@ -147,7 +151,7 @@ def test_island_clear_widths():
     run = _runs()["KR-ISL"]
     clear = {b["id"]: b["clear"] for b in kc.bay_summary(run)}
     assert clear == {
-        "SF-I500a": 473.0, "SF-I600a": 582.0, "SF-I500b": 482.0, "SF-I600b": 582.0, "SF-I300": 273.0,
+        "SF-I500a": 473.0, "SF-I600a": 589.0, "SF-I500b": 463.0, "SF-I600b": 589.0, "SF-I300": 278.0,
         "SF-E600a": 573.0, "SF-E600b": 582.0, "SF-E600c": 582.0, "SF-E700": 673.0,
     }
 
@@ -164,19 +168,23 @@ def test_divider_is_in_both_bays_once():
 def test_sf_i600a_drawers():
     run = _runs()["KR-ISL"]
     drawers = [run.part(f"SF-I600a-D{i}").drawer for i in (1, 2, 3)]
-    assert [d.nominal for d in drawers] == [200.0, 200.0, 400.0]
+    assert [d.nominal for d in drawers] == [100.0, 100.0, 610.0]
     assert [d.content for d in drawers] == ["nože", "nářadí", "dole nevím"]
     assert [(round(d.front[1] - d.front[0]), round(d.front[5] - d.front[4])) for d in drawers] == [
-        (597, 197), (597, 197), (597, 407)]
-    assert all(round(d.box[1] - d.box[0]) == 556 for d in drawers)
-    assert all(d.extension == 550.0 for d in drawers)
+        (604, 97), (604, 97), (604, 607)]
+    # MAXIMERA deductions: inside = clear 589 − 84 by side depth 559 − 96.
+    assert all((round(d.inside[0]), round(d.inside[1])) == (505, 463) for d in drawers)
+    assert [round(d.box[5] - d.box[4]) for d in drawers] == [78, 78, 500]
+    assert all(d.grid == (12, 11) for d in drawers)
+    assert all(d.extension == pytest.approx(463.0 + 2 * 19.0) for d in drawers)
     assert run.carcass_z1 - run.carcass_z0 == pytest.approx(810.0)
 
 
 def test_island_worktop_and_cladding():
     run = _runs()["KR-ISL"]
     a0, a1, c0, c1, z0, z1 = run.worktop
-    assert (a1 - a0, c1 - c0, z1 - z0, z1) == pytest.approx((2540.0, 1260.0, 20.0, 930.0))
+    # 1186 deep body (west row 586 for the Gridfinity depth, east 600) + 20 overhang each side.
+    assert (a1 - a0, c1 - c0, z1 - z0, z1) == pytest.approx((2540.0, 1226.0, 20.0, 930.0))
     clad = run.part("KR-ISL-CLAD-N").boxes[0]
     assert clad[1] - clad[0] == pytest.approx(20.0) and clad[4] == 0.0 and clad[5] == pytest.approx(910.0)
 
@@ -189,7 +197,7 @@ def test_height_change_follows():
     run = _runs(doc)["KR-ISL"]
     assert run.carcass_z1 - run.carcass_z0 == pytest.approx(900.0)
     d3 = run.part("SF-I600a-D3").drawer
-    assert d3.nominal == pytest.approx(500.0)
+    assert d3.nominal == pytest.approx(700.0)
     assert run.worktop[5] == pytest.approx(1030.0)
     assert run.part("KR-ISL-CLAD-N").boxes[0][5] == pytest.approx(1010.0)
 
@@ -314,6 +322,21 @@ def test_hob_flush_fit_in_sf_i600b():
     assert "SF-I600b-RAIL-F" not in [p.id for p in run.parts]
 
 
+def test_gridfinity_drawers_fit_the_grid():
+    run = _runs()["KR-ISL"]
+    p = run.params
+    for bay in ("SF-I600a", "SF-I500b", "SF-I600b"):
+        for i in (1, 2, 3):
+            d = run.part(f"{bay}-D{i}").drawer
+            n, m = d.grid
+            assert d.inside[0] == pytest.approx(n * 42 + 1) and d.inside[1] == pytest.approx(m * 42 + 1)
+            # The baseplate rides in the drawer: n × m cells, on the inside floor.
+            plate = d.items[0]
+            assert plate[1] - plate[0] == pytest.approx(n * p["GridfinityPitch"])
+            assert plate[4] == pytest.approx(d.floor_z)
+    assert not [n for n in run.notes if "Gridfinity" in n]
+
+
 def test_drawers_under_the_hob_clear_it():
     run = _runs()["KR-ISL"]
     hob = run.hobs["SF-I600b"]
@@ -341,7 +364,7 @@ def test_dining_run_box_bodies_under_stone():
     run = _runs()["KR-DN"]
     assert run.part("SF-DN-BODY").boxes[0][5] == pytest.approx(910.0)
     slabs = run.part("KR-DN-WORKTOP").boxes
-    assert len(slabs) == 4 and all(s[5] == pytest.approx(930.0) and s[2] == pytest.approx(-30.0) for s in slabs)
+    assert len(slabs) == 4 and all(s[5] == pytest.approx(930.0) and s[2] == pytest.approx(-20.0) for s in slabs)
     assert not [p for p in run.parts if p.role == "Cladding"]
 
 
