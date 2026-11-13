@@ -359,7 +359,7 @@ def _kitchen_run_parts(run, motions=None) -> list:
                 bottom = z0 - 1.0 if not void.depth else z1 - void.depth
                 solid = solid - _void_solid(void, bottom, z1 + 1.0)
         label = {"worktop": LABEL_WORKTOP, "hob": LABEL_HOB, "appliance": LABEL_APPLIANCE,
-                 "sink": LABEL_SINK}.get(part.label, LABEL_CABINET)
+                 "sink": LABEL_SINK, "oak": LABEL_OAK}.get(part.label, LABEL_CABINET)
         list_key = {"appliance": "electricAppliances", "sink": "sanitaryTerminals"}.get(part.label, "systemFurniture")
         out.append(_tag(_paint(plane * solid, label), part.id, list_key))
         if motions is None:

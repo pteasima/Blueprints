@@ -48,7 +48,9 @@ PART_CLASS = {
     "Backsplash": ("IfcCovering", "CLADDING"),
     "Drawer": ("IfcSystemFurnitureElement", "USERDEFINED"),
     "PullOut": ("IfcSystemFurnitureElement", "USERDEFINED"),
-    # Door, Shelf, Board, Filler, Packer: PANEL (DEFAULT_CLASS).
+    # A Blum AVENTOS lift mechanism on a side panel (fitting hardware).
+    "LiftMechanism": ("IfcSystemFurnitureElement", "USERDEFINED"),
+    # Door, Lift (a lift-up front), Shelf, Board, Filler, Packer: PANEL (DEFAULT_CLASS).
     "Body": ("IfcSystemFurnitureElement", "USERDEFINED"),  # a whole box bay (Carcass: Box)
     # The hob is an appliance, not a piece of the carcass: it is contained in
     # the room like the dishwasher and only joins its bay's group.
@@ -57,7 +59,8 @@ PART_CLASS = {
 NOT_AGGREGATED = frozenset({"Hob"})
 PSET_FRONT = "Pset_KitchenFront"
 PSET_BUILTIN_LAYOUT = "Pset_KitchenBuiltIn"
-FRONT_ROLES = frozenset({"Front", "Door", "Drawer", "PullOut", "Filler", "Shelf", "Board", "Packer"})
+FRONT_ROLES = frozenset({"Front", "Door", "Lift", "LiftMechanism", "Drawer", "PullOut", "Filler", "Shelf", "Board",
+                         "Packer"})
 FURNITURE_GROUP_ID = "GRP-FURNITURE"
 ELECTRICAL_GROUP_ID = "GRP-ELECTRICAL"
 # yaml-ifc types these as IfcFurniture, but they are construction or the

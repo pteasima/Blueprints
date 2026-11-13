@@ -1,11 +1,12 @@
 """PNG previews of one kitchen run, straight from models/kitchen_cabinet.py.
 
-    python scripts/render_kitchen_run.py KR-ISL [--bay SF-I600a] [--open SF-I600a-D1,SF-T2-DOOR1] [--out DIR]
+    python scripts/render_kitchen_run.py KR-ISL [--bay SF-I600a] [--open SF-I600a-D1,SF-T2-DOOR1,SF-BH800-LIFT1,SF-BH800-LIFT2] [--out DIR]
 
 Writes ``<run>-iso.png`` (the whole monoblock, worktop see-through),
 ``<run>-plan.png`` (a plan cut at mid carcass height with every bay's clear
 width), ``<run>-front.png`` (the fronts as you face them: every drawer,
-door with its hinge side, filler and appliance, labelled) and, with ``--bay``, ``<bay>-isolated.png``: only that bay's group
+door with its hinge side, lift front, filler and appliance, labelled; the
+space an AVENTOS lift front needs open in red) and, with ``--bay``, ``<bay>-isolated.png``: only that bay's group
 members, which is what the viewer's "Hide all others" keeps. Every number
 comes from ``kitchen_cabinet.runs``; nothing here is a typed-in size.
 """
@@ -41,6 +42,9 @@ COLORS = {
     "Drawer": "#f2d27a",
     "PullOut": "#f4b860",
     "Door": "#9ecae1",
+    "Lift": "#9ecae1",
+    "LiftMechanism": "#333333",
+    "Clearance": "#e41a1c",
     "Filler": "#c7b299",
     "Shelf": "#a0785a",
     "Board": "#a0785a",
@@ -52,8 +56,9 @@ COLORS = {
     "Worktop": "#ece9e2",
     "Cladding": "#d9d5cc",
 }
-ALPHA = {"Worktop": 0.35, "Cladding": 0.45, "Front": 0.55, "Door": 0.6}
-FRONT_ROLES = ("Front", "Drawer", "PullOut", "Door", "Filler", "Appliance")
+ALPHA = {"Worktop": 0.35, "Cladding": 0.45, "Front": 0.55, "Door": 0.6, "Lift": 0.6, "Clearance": 0.12}
+FRONT_ROLES = ("Front", "Drawer", "PullOut", "Door", "Lift", "Filler", "Appliance")
+LIFT_OPEN_RAD = np.radians(116.0)  # AVENTOS HF top's largest opening angle (Blum)
 
 
 def _box_faces(box, offset):
@@ -80,7 +85,42 @@ def _swing(face, part, angle=np.pi / 2):
     return out
 
 
-def iso(run, parts, open_ids, path: Path, title: str, elev=26, azim=-62):
+def _lift_open(face, part, bay, run):
+    """A lift front drawn open (approximate): the front, or the upper front
+    of a bi-fold pair, turned up and out about its top edge to the largest
+    opening angle; the lower front of a pair folded flat behind it."""
+    tf = run.params["FrontThickness"]
+    out = -1.0 if bay.front_low else 1.0
+    a0, a1, c0, c1, z0, z1 = part.boxes[0]
+    inner = c1 if bay.front_low else c0
+    upper = [p for p in run.parts if p.role == "Lift" and p.id.startswith(bay.id + "-LIFT")]
+    top = max(p.boxes[0][5] for p in upper)
+    lower = part.id.endswith("2")
+    t = LIFT_OPEN_RAD
+    res = face.copy()
+    if lower:
+        # fold: shift onto the upper front's inner face, then turn with it
+        top_part = min(upper, key=lambda p: -p.boxes[0][5])
+        dz = top_part.boxes[0][4] - z0
+        res = res.copy()
+        res[:, 2] = res[:, 2] + dz
+        res[:, 1] = res[:, 1] + out * -tf
+    u = out * (res[:, 1] - inner)
+    dz = res[:, 2] - top
+    u2 = u * np.cos(t) - dz * np.sin(t)
+    z2 = u * np.sin(t) + dz * np.cos(t)
+    res[:, 1] = inner + out * u2
+    res[:, 2] = top + z2
+    return res
+
+
+def iso(run, parts, open_ids, path: Path, title: str, elev=26, azim=-62, clearances=True):
+    owner = {m: b for b in run.bays for m in b.members}
+    if clearances:
+        ids = {p.id for p in parts}
+        extra = [kc.Part(f"{bid}-CLEAR", "open front", "Clearance", [box]) for bid, box in run.clearances
+                 if f"{bid}-LIFT" in ids or f"{bid}-LIFT1" in ids]
+        parts = list(parts) + extra
     fig = plt.figure(figsize=(11, 9), dpi=150)
     ax = fig.add_subplot(projection="3d")
     light = np.array([-0.4, -0.7, 0.6])
@@ -94,6 +134,8 @@ def iso(run, parts, open_ids, path: Path, title: str, elev=26, azim=-62):
         faces = [f for box in part.boxes for f in _box_faces(box, off)]
         if part.door is not None and part.id in open_ids:
             faces = [_swing(f, part) for f in faces]
+        if part.role == "Lift" and part.id in open_ids:
+            faces = [_lift_open(f, part, owner[part.id], run) for f in faces]
         base = np.array(matplotlib.colors.to_rgb(COLORS.get(part.role, "#999999")))
         cols = []
         for f in faces:
@@ -168,6 +210,8 @@ def front(run, path: Path):
                                    alpha=0.9))
         bits = [part.id.replace(bay.id + "-", "") if part.role != "Appliance" else part.name,
                 f"{a1 - a0:.0f}×{z1 - z0:.0f}"]
+        if part.role == "Lift":
+            bits.append(f"{part.props.get('FittingCode')} lift, {part.props.get('FrontWeight')} kg")
         if part.door is not None:
             bits.append(f"hinge {part.door.hinge}")
             hx = x0 if (part.door.hinge == "L") else x1
@@ -184,13 +228,21 @@ def front(run, path: Path):
     for bay in run.bays:
         x0, x1 = (-bay.a1, -bay.a0) if not bay.front_low else (bay.a0, bay.a1)
         top = bay.z_base + bay.height if bay.z_base else run.carcass_z1
+        top += max((b[5] - b[4] for bid, b in run.clearances if bid == bay.id), default=0.0)
         ax.text((x0 + x1) / 2, top + 60, f"{bay.id} {bay.width:.0f}", ha="center", va="bottom", fontsize=7,
                 weight="bold")
     ax.autoscale_view()
     ax.set_aspect("equal")
     ax.margins(0.05)
     ax.set_axis_off()
-    ax.set_title(f"{run.id} — fronts as you face them (red bar = hinge side; mm)", fontsize=9)
+    for bay_id, (a0, a1, _c0, _c1, z0, z1) in run.clearances:
+        bay = run.bay(bay_id)
+        x0, x1 = (-a1, -a0) if not bay.front_low else (a0, a1)
+        ax.add_patch(plt.Rectangle((x0, z0), x1 - x0, z1 - z0, fc="#e41a1c", ec="#e41a1c", alpha=0.15, lw=0.6))
+        ax.text((x0 + x1) / 2, (z0 + z1) / 2, f"open front needs {z1 - z0:.0f} above, {_c1 - _c0:.0f} ahead",
+                ha="center", va="center", fontsize=5.5, color="#a00")
+    ax.set_title(f"{run.id} — fronts as you face them (red bar = hinge side; red box = space a lift front needs open; mm)",
+                 fontsize=9)
     fig.tight_layout()
     fig.savefig(path)
     plt.close(fig)

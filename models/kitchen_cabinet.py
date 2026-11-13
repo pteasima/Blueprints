@@ -106,6 +106,39 @@ IKEA_DEFAULTS_MM = {
     "BinWall": 3.0,  # plastic bin wall
 }
 RUN_FLAGS = ("CladEnds", "Backsplash")
+
+# Blum AVENTOS lift systems (``lift`` bands), from the Blum catalogue and
+# technical manual 2024/2025 (publications.blum.com/2024/catalogue/en/):
+# HF top p. 20–28, HS top p. 32–36, HL top p. 38–40, HK top p. 44–48, and the
+# overview leaflet for HK-S / HK-XS. Sources and the photo reading:
+# docs/design/kitchen-cabinets.md "Wall cabinets: lift-up fronts".
+#   kh      cabinet height KH range, mm
+#   kb      cabinet width KB, max mm
+#   lt      internal cabinet depth LT, min mm (None: not given)
+#   lf      power factor LF = KH x front weight FG (kg), min..max over the
+#           lift mechanism sets (None: Blum selects by FG, not LF)
+#   fg      front weight FG, max kg for two mechanisms (None: not given)
+#   fronts  1 one-part front, 2 bi-fold (two fronts)
+#   mech    lift mechanism box on each side panel, (width off the side
+#           panel, depth from the carcass front, height down from the top),
+#           mm. guess: read off Blum's planning drawings, not a data sheet.
+AVENTOS = {
+    "HF": {"name": "Blum AVENTOS HF top (bi-fold)", "kh": (480.0, 1200.0), "kb": 1800.0, "lt": 264.0,
+           "lf": (2700.0, 19300.0), "fg": None, "fronts": 2, "mech": (30.0, 264.0, 195.0)},
+    "HS": {"name": "Blum AVENTOS HS top (up and over)", "kh": (350.0, 800.0), "kb": 1800.0, "lt": 264.0,
+           "lf": None, "fg": 18.5, "fronts": 1, "mech": (30.0, 264.0, 141.0)},
+    "HL": {"name": "Blum AVENTOS HL top (lift up)", "kh": (300.0, 580.0), "kb": 1800.0, "lt": 264.0,
+           "lf": None, "fg": None, "fronts": 1, "mech": (30.0, 264.0, 141.0)},
+    "HK": {"name": "Blum AVENTOS HK top (stay lift)", "kh": (205.0, 600.0), "kb": 1800.0, "lt": None,
+           "lf": (420.0, 9000.0), "fg": 18.0, "fronts": 1, "mech": (30.0, 235.0, 187.0)},
+    "HK-S": {"name": "Blum AVENTOS HK-S (small stay lift)", "kh": (180.0, 400.0), "kb": 1800.0, "lt": None,
+             "lf": None, "fg": None, "fronts": 1, "mech": (30.0, 200.0, 120.0)},
+    "HK-XS": {"name": "Blum AVENTOS HK-XS (stay lift)", "kh": (240.0, 600.0), "kb": 1800.0, "lt": None,
+              "lf": None, "fg": None, "fronts": 1, "mech": (30.0, 200.0, 120.0)},
+}
+# Front weight for a lift: oak-veneered chipboard, kg/m3. Blum's reference
+# chipboard is 680 (catalogue p. 716); veneer and glue add a little. guess:
+LIFT_FRONT_DENSITY = 700.0
 # Pset_KitchenRun.Carcass: "Monoblock" (default, the IKEA-style parts below)
 # or "Box": each bay stays one solid body (the oak dining bases) cut down
 # under the stone worktop; only the worktop and cladding are added.
@@ -330,6 +363,7 @@ class Run:
     worktop: tuple | None = None  # run-frame box
     hobs: dict = field(default_factory=dict)  # bay id -> Hob
     builtins: list = field(default_factory=list)  # yaml appliance elements placed in this run
+    clearances: list = field(default_factory=list)  # (bay id, run-frame box): space a lift front needs open
     notes: list = field(default_factory=list)  # derived facts for docs ("open:" ones too)
 
     def part(self, part_id: str) -> Part:
@@ -520,8 +554,9 @@ class _Builder:
             slabs.append((a0, a1, c0, c1, z_base + height - wt, z_base + height))
         run.worktop = (min(s[0] for s in slabs), max(s[1] for s in slabs),
                        min(s[2] for s in slabs), max(s[3] for s in slabs), slabs[0][4], slabs[0][5])
-        self.add(Part(f"{run.id}-WORKTOP", "Pracovní deska", "Worktop", slabs, label="worktop",
-                      material=_prop(run.element, PSET_RUN, "WorktopMaterial")))
+        material = _prop(run.element, PSET_RUN, "WorktopMaterial")
+        self.add(Part(f"{run.id}-WORKTOP", "Pracovní deska", "Worktop", slabs, label=_worktop_label(material),
+                      material=material))
         if clad:
             self._cladding(_rows(run.bays), z_base, z_base + height - wt)
 
@@ -741,6 +776,9 @@ class _Builder:
                     self.add(Part(f"{bay.id}-FILLER{zone.index}", "Lišta", "Filler",
                                   [(a0, a1, fc0, fc1, front_box[4], front_box[5])], props={"Zone": zone.index}), bay)
                 self._shelves(bay, p, zone, in_z0, in_z1, back_y, racks=int(zone.opts.get("racks", 0)))
+            elif zone.kind == "lift":
+                mechs = self._lift(bay, p, zone, front_box, in_z1, back_y, base)
+                self._shelves(bay, p, zone, in_z0, in_z1, back_y, avoid=mechs)
             elif zone.kind == "niche":
                 n0, n1 = lo, hi
                 clear = zone.opts.get("clear")
@@ -766,9 +804,89 @@ class _Builder:
                     self._shelves(bay, p, zone, in_z0, in_z1, back_y)
             # "none": an open band, nothing in front.
 
-    def _shelves(self, bay, p, zone, z_lo, z_hi, back_y, racks=0):
+    def _lift(self, bay: Bay, p: dict, zone: Zone, front_box: tuple, in_z1: float, back_y: float,
+              base: dict) -> list:
+        """A Blum AVENTOS lift-up front (``lift`` band), its two lift
+        mechanisms and the space it needs open (``run.clearances``).
+
+        The band must be inside the fitting's Blum ranges (``AVENTOS``):
+        cabinet height KH (the band), width KB (the bay), internal depth LT
+        and the power factor LF = KH x front weight. The export stops if not.
+        Returns the mechanism boxes so the shelves can keep clear of them.
+        """
+        fit = str(zone.opts.get("fitting", "HK"))
+        if fit not in AVENTOS:
+            raise ValueError(f"{bay.id}: lift fitting={fit!r}, one of {sorted(AVENTOS)}")
+        spec = AVENTOS[fit]
+        t, tf = p["BoardThickness"], p["FrontThickness"]
+        kh, kb, lt = zone.nominal, bay.width, back_y - tf
+        lo_kh, hi_kh = spec["kh"]
+        if not (lo_kh - TOL <= kh <= hi_kh + TOL):
+            raise ValueError(f"{bay.id}: {spec['name']} takes a cabinet height of {lo_kh:.0f}–{hi_kh:.0f} mm, "
+                             f"this one is {kh:.0f}")
+        if kb > spec["kb"] + TOL:
+            raise ValueError(f"{bay.id}: {spec['name']} takes a cabinet width up to {spec['kb']:.0f}, this one is {kb:.0f}")
+        if spec["lt"] is not None and lt < spec["lt"] - TOL:
+            raise ValueError(f"{bay.id}: {spec['name']} needs {spec['lt']:.0f} internal depth, this one has {lt:.0f}")
+        a0, a1, fc0, fc1, z0, z1 = front_box
+        fb, fh = a1 - a0, z1 - z0
+        density = float(zone.opts.get("density", LIFT_FRONT_DENSITY))
+        if spec["fronts"] == 2:
+            gap = p["FrontGap"]
+            upper = zone.opts.get("upper")
+            fho = (fh - gap) / 2.0 if upper is None else float(upper) * 1000.0
+            fhu = fh - gap - fho
+            if fhu > fho + TOL:
+                raise ValueError(f"{bay.id}: Blum HF: the taller front must be at the top")
+            fronts = [("1", "Horní klapka", (z1 - fho, z1)), ("2", "Dolní klapka", (z0, z0 + fhu))]
+        else:
+            fho = fh
+            fronts = [("", "Výklopná dvířka", (z0, z1))]
+        fg = sum((zz1 - zz0) * fb * tf for _n, _l, (zz0, zz1) in fronts) * 1e-9 * density
+        lf = kh * fg
+        if spec["lf"] is not None and not (spec["lf"][0] <= lf <= spec["lf"][1]):
+            raise ValueError(f"{bay.id}: {spec['name']} power factor {lf:.0f} outside {spec['lf'][0]:.0f}–{spec['lf'][1]:.0f}")
+        if spec["fg"] is not None and fg > spec["fg"] + 1e-6:
+            raise ValueError(f"{bay.id}: {spec['name']} front weight {fg:.1f} kg over {spec['fg']} kg")
+        # Space the open front needs (Blum planning pages, at the largest
+        # opening angle): Y above the cabinet top, X out in front of it.
+        if fit == "HF":
+            above = fho * 0.44 + 38.0  # 116°
+            ahead = fho * 0.9 + tf * 1.5 + 35.0
+        elif fit == "HK":
+            above = fh * 0.29 + tf - t  # max angle, Y = FH x 0.29 + FD - SOB
+            ahead = fh + tf  # guess: the front tilts out about its top edge
+        else:
+            above, ahead = fh, fh + tf  # guess: Blum's tables not read for this type
+        out = -1.0 if bay.front_low else 1.0
+        face = fc0 if bay.front_low else fc1
+        cc0, cc1 = sorted((face, face + out * ahead))
+        top = zone.slot_z1
+        self.run.clearances.append((bay.id, (bay.a0, bay.a1, cc0, cc1, top, top + above)))
+        props = dict(base, Fitting=spec["name"], FittingCode=fit, CabinetHeight=round(kh / 1000.0, 6),
+                     FrontWeight=round(fg, 2), PowerFactor=round(lf), OpenAbove=round(above / 1000.0, 6),
+                     OpenAhead=round(ahead / 1000.0, 6))
+        for tag, label, (zz0, zz1) in fronts:
+            self.add(Part(f"{bay.id}-LIFT{tag}", label, "Lift", [(a0, a1, fc0, fc1, zz0, zz1)],
+                          props=dict(props, LeafWidth=round(fb / 1000.0, 6), LeafHeight=round((zz1 - zz0) / 1000.0, 6))),
+                     bay)
+        mw, md, mh = spec["mech"]
+        mc0, mc1 = self.c_range(bay, tf, tf + md)
+        boxes = []
+        for side, (x0, x1) in (("L", (bay.clear_lo, bay.clear_lo + mw)), ("R", (bay.clear_hi - mw, bay.clear_hi))):
+            box = (x0, x1, mc0, mc1, in_z1 - mh, in_z1)
+            boxes.append(box)
+            self.add(Part(f"{bay.id}-LIFTMECH-{side}", f"Zdvihací mechanismus {fit}", "LiftMechanism", [box],
+                          props={"Zone": zone.index, "Fitting": spec["name"], "FittingCode": fit}), bay)
+        self.run.notes.append(
+            f"{bay.id}: {spec['name']}, KH {kh:.0f}, front(s) {fb:.0f} wide, {fg:.1f} kg, LF {lf:.0f}, "
+            f"open {above:.0f} above the top and {ahead:.0f} ahead of the face")
+        return boxes
+
+    def _shelves(self, bay, p, zone, z_lo, z_hi, back_y, racks=0, avoid=()):
         """Loose shelves in a door band: ``shelves=N`` evenly spaced, the
-        first one ``first=`` metres above the band's floor if given."""
+        first one ``first=`` metres above the band's floor if given. A shelf
+        that would hit a box in ``avoid`` (a lift mechanism) stops the export."""
         n = int(zone.opts.get("shelves", 0))
         if n <= 0:
             return
@@ -784,8 +902,11 @@ class _Builder:
         for k, z in enumerate(levels, start=1):
             if z + t > z_hi - TOL or z < z_lo - TOL:
                 raise ValueError(f"{bay.id}: shelf {k} of zone {zone.index} does not fit")
+            shelf = (bay.clear_lo, bay.clear_hi, c0, c1, z, z + t)
+            if any(_boxes_meet(shelf, box) for box in avoid):
+                raise ValueError(f"{bay.id}: shelf {k} of zone {zone.index} hits the lift mechanism")
             self.add(Part(f"{bay.id}-SH{zone.index}-{k}", f"Police {k}", "Shelf",
-                          [(bay.clear_lo, bay.clear_hi, c0, c1, z, z + t)],
+                          [shelf],
                           props={"Zone": zone.index, "Elevation": round(z / 1000.0, 6)}), bay)
 
     def _obstacle_ceiling(self, bay: Bay, p: dict):
@@ -1053,12 +1174,18 @@ class _Builder:
                           [(a0, a1, c0, c1, zt, top)], label="worktop", material=material), *row)
 
 
+def _worktop_label(material) -> str:
+    """Viewer label of a worktop: ``oak`` for a wooden top (the living-room
+    counter, Petr 2026-11-13: "oak veneer, not silestone"), else stone."""
+    return "oak" if material and "oak" in str(material).lower() else "worktop"
+
+
 def _boxes_meet(a, b) -> bool:
     return all(a[2 * i] < b[2 * i + 1] - TOL and b[2 * i] < a[2 * i + 1] - TOL for i in range(3))
 
 
 DRAWER_KINDS = ("drawer", "pullout")
-ZONE_KINDS = ("drawer", "pullout", "door", "doors", "niche", "front", "none")
+ZONE_KINDS = ("drawer", "pullout", "door", "doors", "lift", "niche", "front", "none")
 
 
 def zone_spec(element: dict) -> list[tuple[str, str, dict]]:
@@ -1076,6 +1203,10 @@ def zone_spec(element: dict) -> list[tuple[str, str, dict]]:
       ``first=`` (metres, first shelf above the band floor), ``racks=N``
       (door shelves);
     - ``doors``: a pair, left leaf hinged L, right leaf R; ``shelves=N``;
+    - ``lift``: a Blum AVENTOS lift-up front, ``fitting=HF|HS|HL|HK|HK-S|HK-XS``
+      (``AVENTOS``); HF is a bi-fold pair, ``upper=`` (metres) sets the
+      upper front for an asymmetrical pair. ``shelves=N``, ``first=`` as a
+      door. The cabinet must be inside the fitting's Blum ranges;
     - ``niche``: an appliance niche; the height is the *clear* niche height,
       the band adds one board under it; ``clear=`` (metres) narrows the
       opening with a packer on each side. The appliance names the bay and

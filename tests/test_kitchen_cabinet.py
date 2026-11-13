@@ -125,16 +125,41 @@ def test_disposers_and_taps_hang_on_their_sinks():
     assert len(pull.items) == 2
 
 
-def test_wall_cabinets_and_over_fridge_have_pairs_of_doors():
+def test_wall_cabinets_have_aventos_hf_lift_fronts():
+    """Petr, 2026-11-13: "I want this hinge for the top cabinets" (Blum
+    AVENTOS) and "top cabinets to start at 1560mm". At 900 high only HF fits."""
     runs = _runs()
-    for run_id, bay_id in (("KR-WEST-H", "SF-AH850"), ("KR-WEST-H", "SF-BH800"),
-                           ("KR-WEST-H", "SF-CH850"), ("KR-TALL-F", "SF-TF")):
-        run = runs[run_id]
-        leaves = [run.part(f"{bay_id}-DOOR{i}").door for i in (1, 2)]
-        assert sorted(leaf.hinge for leaf in leaves) == ["L", "R"]
-    tf = runs["KR-TALL-F"]
+    run = runs["KR-WEST-H"]
+    for bay in run.bays:
+        assert bay.z_base == pytest.approx(1560.0) and bay.z_base + bay.height == pytest.approx(2460.0)
+        upper, lower = run.part(f"{bay.id}-LIFT1"), run.part(f"{bay.id}-LIFT2")
+        assert upper.props["FittingCode"] == "HF"
+        assert upper.boxes[0][4] > lower.boxes[0][5]
+        kc_min, kc_max = kc.AVENTOS["HF"]["lf"]
+        assert kc_min <= upper.props["PowerFactor"] <= kc_max
+        mechs = [run.part(f"{bay.id}-LIFTMECH-{s}") for s in ("L", "R")]
+        shelves = [p for p in run.parts if p.role == "Shelf" and p.id.startswith(bay.id)]
+        assert len(shelves) == 2
+        assert all(sh.boxes[0][5] <= min(m.boxes[0][4] for m in mechs) for sh in shelves)
+    assert {bid for bid, _box in run.clearances} == {b.id for b in run.bays}
+
+
+def test_lift_outside_blum_range_stops_the_export():
+    doc = copy.deepcopy(load_furnishings())
+    bay = next(e for e in doc["systemFurniture"] if e["id"] == "SF-BH800")
+    for pset in bay["PropertySets"]:
+        if pset["Name"] == "Pset_Fronts":
+            pset["Properties"]["Layout"] = "lift * fitting=HK shelves=2"
+    with pytest.raises(ValueError, match="cabinet height"):
+        _runs(doc)
+
+
+def test_over_fridge_has_a_pair_of_doors():
+    run = _runs()["KR-TALL-F"]
+    leaves = [run.part(f"SF-TF-DOOR{i}").door for i in (1, 2)]
+    assert sorted(leaf.hinge for leaf in leaves) == ["L", "R"]
     fridge_top = 1876.0
-    assert tf.bays[0].z_base >= fridge_top
+    assert run.bays[0].z_base >= fridge_top
 
 
 def test_fronts_layout_is_parametric():
@@ -237,7 +262,7 @@ def test_ifc_groups_and_assembly():
     assert child_names == bay_names
     member_ids = {kitchen_ifc._yaml_id(p) for p in product_rel.RelatedObjects}
     # Loose pieces (sofa, table, standalone cabinets, worktops not in a bay).
-    assert {"FN-GATTA", "FN-S2A", "SF-DH", "SF-LB", "SF-TC", "KR-ISL-WORKTOP"} <= member_ids
+    assert {"FN-GATTA", "FN-S2A", "SF-DH", "SF-TC", "KR-ISL-WORKTOP"} <= member_ids
     # Kitchen-run assemblies stay out: their bays are already child groups.
     assert "KR-ISL" not in member_ids and "KR-WEST" not in member_ids
     # Electrical stays empty until a circuit or IfcSystem exists in the model.
@@ -281,7 +306,7 @@ def test_drawer_motions_in_model():
 def test_cabinet_door_motions_swing_outward():
     _shape, meta = build()
     doors = {m["id"]: m for m in meta["door_motions"] if m["kind"] == "hinged" and m["id"].startswith("SF-")}
-    assert {"SF-T1-DOOR1", "SF-T2-DOOR1", "SF-TF-DOOR1", "SF-TF-DOOR2", "SF-AH850-DOOR1"} <= set(doors)
+    assert {"SF-T1-DOOR1", "SF-T2-DOOR1", "SF-TF-DOOR1", "SF-TF-DOOR2"} <= set(doors)
     # T1 hinges on its west edge and opens toward the room (south, glTF +z).
     t1 = doors["SF-T1-DOOR1"]
     assert t1["element"] == "SF-T1-DOOR1" and t1["axis"] == [0, 1, 0]
@@ -348,7 +373,7 @@ def test_west_backsplash_up_to_wall_cabinets():
     run = _runs()["KR-WEST"]
     (box,) = run.part("KR-WEST-BACKSPLASH").boxes
     assert box[3] - box[2] == pytest.approx(12.0)
-    assert (box[4], box[5]) == (pytest.approx(930.0), pytest.approx(1550.0))
+    assert (box[4], box[5]) == (pytest.approx(930.0), pytest.approx(1560.0))
     assert box[1] - box[0] == pytest.approx(2500.0)
 
 
