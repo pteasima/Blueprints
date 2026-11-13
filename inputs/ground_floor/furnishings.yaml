@@ -566,7 +566,7 @@ systemFurniture:
           Kind: "Niche"
   - id: SF-AH850
     Name: "Západ horní 850 sklenice"
-    Description: "Section A wall cabinet, glasses, 850. Depth 350, bottom 1560, height 890, top 2450 (the ceiling line). One Blum AVENTOS HK top stay-lift front."
+    Description: "Section A wall cabinet, glasses, 850. Depth 350, bottom 1560, height 890, top 2450 (the ceiling line). Blum AVENTOS HF top bi-fold lift fronts, upper and lower."
     PredefinedType: USERDEFINED
     ObjectType: WallCabinet
     ContainedInStructure: SP-1.02
@@ -585,11 +585,16 @@ systemFurniture:
       # then: "assume the hinge exists for our width. Also, don't move
       # anything up, make it shorter in height. The existing ceiling line
       # (windows, pocket doors, furtniture, basstraps) is an invariant."
-      # So one HK top front at KH 890, over Blum's published 600: kept by
-      # BlumRangeOverride. Two shelves: guess:.
+      # Then: "btw the way they open right now is that they fully fold the
+      # two halves onto one another. Thats not how it works in reality. You
+      # still need to be able to reach up and pull it back down, so they
+      # stay only partially folded, like my image." So the photo is HF top
+      # (bi-fold), opening partly folded. KH 890 is inside HF's 480–1200;
+      # BlumRangeOverride records Petr's word for anything outside Blum's
+      # tables. Two shelves: guess:.
       - Name: Pset_Fronts
         Properties:
-          Layout: "lift * fitting=HK shelves=2"
+          Layout: "lift * fitting=HF shelves=2"
           BlumRangeOverride: "Petr, 2026-11-13: assume the hinge exists for our width"
           Contents: "sklenice"
   - id: SF-B800
@@ -621,7 +626,7 @@ systemFurniture:
           North: "kompost"
   - id: SF-BH800
     Name: "Západ horní 800 talíře"
-    Description: "Section B wall cabinet, plates. Depth 350, bottom 1560, height 890, top 2450 (the ceiling line). One Blum AVENTOS HK top stay-lift front."
+    Description: "Section B wall cabinet, plates. Depth 350, bottom 1560, height 890, top 2450 (the ceiling line). Blum AVENTOS HF top bi-fold lift fronts, upper and lower."
     PredefinedType: USERDEFINED
     ObjectType: WallCabinet
     ContainedInStructure: SP-1.02
@@ -635,11 +640,11 @@ systemFurniture:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-WEST-H
-      # Note B: "nahore talire". AVENTOS HK top stay lift, one front (Petr, 2026-11-13, see
+      # Note B: "nahore talire". AVENTOS HF top bi-fold (Petr, 2026-11-13, see
       # SF-AH850). Two shelves: guess:.
       - Name: Pset_Fronts
         Properties:
-          Layout: "lift * fitting=HK shelves=2"
+          Layout: "lift * fitting=HF shelves=2"
           BlumRangeOverride: "Petr, 2026-11-13: assume the hinge exists for our width"
           Contents: "talíře"
   - id: SF-C850
@@ -665,7 +670,7 @@ systemFurniture:
           Contents: "tříděný odpad"
   - id: SF-CH850
     Name: "Západ horní 850"
-    Description: "Section C wall cabinet, 850. Stick blender, bowls, measuring cups. Depth 350, bottom 1560, height 890, top 2450 (the ceiling line). One Blum AVENTOS HK top stay-lift front."
+    Description: "Section C wall cabinet, 850. Stick blender, bowls, measuring cups. Depth 350, bottom 1560, height 890, top 2450 (the ceiling line). Blum AVENTOS HF top bi-fold lift fronts, upper and lower."
     PredefinedType: USERDEFINED
     ObjectType: WallCabinet
     ContainedInStructure: SP-1.02
@@ -679,11 +684,11 @@ systemFurniture:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-WEST-H
-      # Note C: "nahore tycovy mixer, velke misky, odmerky". AVENTOS HK top
-      # stay lift, one front (Petr, 2026-11-13, see SF-AH850). Two shelves: guess:.
+      # Note C: "nahore tycovy mixer, velke misky, odmerky". AVENTOS HF top
+      # bi-fold (Petr, 2026-11-13, see SF-AH850). Two shelves: guess:.
       - Name: Pset_Fronts
         Properties:
-          Layout: "lift * fitting=HK shelves=2"
+          Layout: "lift * fitting=HF shelves=2"
           BlumRangeOverride: "Petr, 2026-11-13: assume the hinge exists for our width"
           Contents: "tyčový mixér, velké mísy, odměrky"
   - id: SF-F052
@@ -784,7 +789,7 @@ systemFurniture:
           Form: "solid or veneer"
   - id: SF-DH
     Name: "Jídelna horní"
-    Description: "Oak-front wall cabinet over the dining bay, x 22.45–25.15. Kitchen wall-cabinet size: depth 350, bottom 1560, height 890, top 2450 (Petr, 2026-11-13: top cabinets start at 1560; the ceiling line at 2450 is an invariant). Not carried across the piers. Fronts not split yet: one 2700 lift front is not reasonable (open:)."
+    Description: "Oak-front wall cabinet over the dining bay, x 22.45–25.15. Kitchen wall-cabinet size: depth 350, bottom 1560, height 890, top 2450 (Petr, 2026-11-13: top cabinets start at 1560; the ceiling line at 2450 is an invariant). Not carried across the piers. Fronts not split yet: 2700 is over AVENTOS HF's 1800, so it would need two bays (open:)."
     PredefinedType: USERDEFINED
     ObjectType: WallCabinet
     ContainedInStructure: SP-1.02
@@ -1146,7 +1151,7 @@ furniture:
           WorktopMaterial: "oak veneer"
   - id: KR-WEST-H
     Name: "Západní horní"
-    Description: "West-wall wall-cabinet monoblock: CH850, BH800, AH850. Bottom 1560, top 2450, 890 high (Petr, 2026-11-13). One Blum AVENTOS HK top stay-lift front per bay."
+    Description: "West-wall wall-cabinet monoblock: CH850, BH800, AH850. Bottom 1560, top 2450, 890 high (Petr, 2026-11-13). Blum AVENTOS HF top bi-fold lift fronts."
     PredefinedType: USERDEFINED
     ObjectType: KitchenRun
     ContainedInStructure: SP-1.02

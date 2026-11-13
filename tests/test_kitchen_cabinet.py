@@ -126,38 +126,56 @@ def test_disposers_and_taps_hang_on_their_sinks():
     assert len(pull.items) == 2
 
 
-def test_wall_cabinets_have_one_hk_stay_lift_front():
-    """Petr, 2026-11-13: "I want this hinge for the top cabinets" (a Blum
-    AVENTOS stay lift), "top cabinets to start at 1560mm", then "assume the
-    hinge exists for our width. Also, don't move anything up, make it shorter
-    in height. The existing ceiling line ... is an invariant."""
+def test_wall_cabinets_have_hf_bifold_fronts_that_open_partly_folded():
+    """Petr, 2026-11-13: "I want this hinge for the top cabinets", "top
+    cabinets to start at 1560mm", "don't move anything up, make it shorter in
+    height", and "they stay only partially folded, like my image" (HF top)."""
     runs = _runs()
     run = runs["KR-WEST-H"]
     for bay in run.bays:
         assert bay.z_base == pytest.approx(1560.0) and bay.z_base + bay.height == pytest.approx(2450.0)
-        front = run.part(f"{bay.id}-LIFT")
-        assert front.props["FittingCode"] == "HK"
-        assert "205–600" in front.props["OutsideBlumRange"]
-        assert "assume the hinge exists" in front.props["BlumRangeOverride"]
-        assert front.lift.parent is None and front.lift.angles[-1] == pytest.approx(math.radians(kc.LIFT_OPEN_DEG["HK"]))
-        assert not [p for p in run.parts if p.id in (f"{bay.id}-LIFT1", f"{bay.id}-LIFT2")]
+        upper, lower = run.part(f"{bay.id}-LIFT1"), run.part(f"{bay.id}-LIFT2")
+        assert upper.props["FittingCode"] == "HF"
+        assert "assume the hinge exists" in upper.props["BlumRangeOverride"]
+        assert upper.boxes[0][4] > lower.boxes[0][5]
+        kc_min, kc_max = kc.AVENTOS["HF"]["lf"]
+        assert kc_min <= upper.props["PowerFactor"] <= kc_max
+        assert upper.lift.angles[-1] == pytest.approx(math.radians(116.0))
+        assert lower.lift.parent == 0
+        # Open, the lower front hangs partly folded, not flat behind the upper.
+        hang = math.degrees(upper.lift.angles[-1] + lower.lift.angles[-1])
+        assert hang == pytest.approx(kc.LIFT_HF_LOWER_OPEN_DEG, abs=0.5)
+        assert 2.1 < lower.props["OpenBottomEdgeHeight"] < 2.3
         mechs = [run.part(f"{bay.id}-LIFTMECH-{s}") for s in ("L", "R")]
         arms = [run.part(f"{bay.id}-LIFTARM-{s}") for s in ("L", "R")]
-        assert all(a.lift.stretch for a in arms)
+        # The lever is rigid, fixed to the lower front, pivoting at the mechanism's underside.
+        assert all(a.lift.stretch is None and a.lift.pivot_z == pytest.approx(mechs[0].boxes[0][4]) for a in arms)
+        assert lower.boxes[0][4] < arms[0].boxes[0][4] < lower.boxes[0][5]
         shelves = [p for p in run.parts if p.role == "Shelf" and p.id.startswith(bay.id)]
         assert len(shelves) == 2
         assert all(sh.boxes[0][5] <= min(m.boxes[0][4] for m in mechs) for sh in shelves)
     assert {bid for bid, _box in run.clearances} == {b.id for b in run.bays}
 
 
-def test_lift_outside_blum_range_stops_the_export_without_an_override():
+def test_lift_outside_blum_range_stops_the_export():
     doc = copy.deepcopy(load_furnishings())
     bay = next(e for e in doc["systemFurniture"] if e["id"] == "SF-BH800")
     for pset in bay["PropertySets"]:
         if pset["Name"] == "Pset_Fronts":
+            pset["Properties"]["Layout"] = "lift * fitting=HK shelves=2"
             pset["Properties"].pop("BlumRangeOverride")
     with pytest.raises(ValueError, match="cabinet height"):
         _runs(doc)
+
+
+def test_blum_range_override_keeps_the_breach():
+    doc = copy.deepcopy(load_furnishings())
+    bay = next(e for e in doc["systemFurniture"] if e["id"] == "SF-BH800")
+    for pset in bay["PropertySets"]:
+        if pset["Name"] == "Pset_Fronts":
+            pset["Properties"]["Layout"] = "lift * fitting=HK shelves=2"
+    front = _runs(doc)["KR-WEST-H"].part("SF-BH800-LIFT")
+    assert "205–600" in front.props["OutsideBlumRange"]
 
 
 def test_nothing_above_the_ceiling_line():

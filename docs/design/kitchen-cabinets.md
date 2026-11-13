@@ -20,7 +20,7 @@ Petr, 2026-11-12:
 | --- | --- | --- |
 | `KR-ISL` island | west row SF-I500a, SF-I600a, SF-I500b, SF-I600b, SF-I300 (north → south); east row SF-E600a … SF-E700 | The two rows stand back to back on one shared central back. One end side at each end spans both rows. |
 | `KR-WEST` west-wall base | SF-C850, SF-B800, SF-A250, SF-A600 (south → north) | SF-A600 is the dishwasher slot (`Kind: Niche`): no carcass, worktop over it, SF-A250's end side is its south wall. |
-| `KR-WEST-H` west-wall wall cabinets | SF-CH850, SF-BH800, SF-AH850 | No plinth, no worktop; a top board per bay. Bottom 1560, top 2450 (the ceiling line), 890 high, one Blum AVENTOS HK top stay-lift front per bay (see “Wall cabinets: lift-up fronts”). |
+| `KR-WEST-H` west-wall wall cabinets | SF-CH850, SF-BH800, SF-AH850 | No plinth, no worktop; a top board per bay. Bottom 1560, top 2450 (the ceiling line), 890 high, Blum AVENTOS HF top bi-fold lift fronts (see “Wall cabinets: lift-up fronts”). |
 | `KR-TALL-W` | SF-T1 | Alone between the west wall and the fridge, so a monoblock of one. |
 | `KR-TALL` | SF-T2, SF-T3, SF-T4 | SF-T3 is the oven column: microwave over steam oven, in niches (see “Fronts and interiors”). |
 | `KR-TALL-F` | SF-TF | The cabinet over the fridge, between SF-T1 and SF-T2: a monoblock of one, no worktop, no plinth. New 2026-11-12. |
@@ -453,9 +453,9 @@ The quoted notes are the yellow sticky notes next to each bay on KitchenPlan.jpg
 | SF-A600 | Note A: „dole vpravo mycka“ | bottom right: dishwasher | Unchanged: the niche for the Bosch SBD6ECX12E. |
 | SF-B800 (west sink) | Note B: „800 / dole vlevo kos, vpravo kompost / nahore talire / kose se musi vyhnout drtici, to se proste bude resit az skrinky budou“ | 800 / bottom left: bin, right: compost / top: plates / the bins must avoid the disposer, that will be solved once the cabinets exist | One full-height pull-out (front 797 × 807) with two bins (`guess:` one pull-out for both). The disposer `EA-EVO3-W` hangs under the bowl. The pull-out box stops 10 under it, so it is only **207 high (493 cut)**. Tap `SN-TAP-W` is modelled. `open:` the bin-vs-disposer conflict. Petr's own note defers it, and EcoMaster's manual suggests the disposer between two bins or a lower bin under it. |
 | SF-C850 | Note C: „900 / dole trideny odpad“ | 900 / bottom: sorted waste | A full-height pull-out (front 847 × 807) with three bins. The bin count is `guess:`. |
-| SF-AH850 | Note A: „nahore sklenice“ | top: glasses | Blum AVENTOS HK top stay lift, one front 847 × 887, two shelves (since 2026-11-13; two doors before). The shelf count is `guess:`. |
-| SF-BH800 | Note B: „nahore talire“ | top: plates | AVENTOS HK top, one front 797 × 887, two shelves, as above. |
-| SF-CH850 | Note C: „nahore tycovy mixer, velke misky, odmerky (vsechno co se musi mejt ale moc se nepouziva)“ | top: stick blender, big bowls, measuring cups (everything that needs washing but is rarely used) | AVENTOS HK top lift, one front 847 × 887, two shelves, as above. |
+| SF-AH850 | Note A: „nahore sklenice“ | top: glasses | Blum AVENTOS HF top bi-fold, two fronts 847 × 442, two shelves (since 2026-11-13; two doors before). The shelf count is `guess:`. |
+| SF-BH800 | Note B: „nahore talire“ | top: plates | AVENTOS HF top, two fronts 797 × 442, two shelves, as above. |
+| SF-CH850 | Note C: „nahore tycovy mixer, velke misky, odmerky (vsechno co se musi mejt ale moc se nepouziva)“ | top: stick blender, big bowls, measuring cups (everything that needs washing but is rarely used) | AVENTOS HF top lift, two fronts 847 × 442, two shelves, as above. |
 | SF-T1 | „dvere 60L, sirka skrine az ke zdi (~75) / dole napoje, basy od piva / nahore plechovky, vyvary, trvanlive potraviny“ | door 60 hinged left; cabinet width up to the wall (~75) / bottom: drinks, beer crates / top: cans, broths, long-life food | One 600 door, hinged on the left (west). The other 150 is a fixed filler (a 147 front) on the hinge (wall) side (`guess:`; the hinge needs the filler there to clear the wall). Four shelves: the first 400 over the floor for beer crates, the rest even (`guess:`). |
 | SF-TF (new, over the fridge) | Fridge note: „naproti pruchodu (ne v rohu) / s pripojenim na vodu / s vyrobnikem triste / 4 dvere / nahore prislusenstvi od robota, ryzovar“ | opposite the passage (not in the corner) / with a water connection / with an ice crusher / 4 doors / above: food-processor accessories, rice cooker | New bay over the Whirlpool, x 19.55–20.458, from 1926 (fridge top 1876 + 50, `guess:`) to 2450, fronts flush with the tall run. Two doors, no shelf (a rice cooker is tall, `guess:`). |
 | SF-T2 | „nahore dvere 60R / police na dverich / nahore ryze, testoviny, tortilly, asie, peceni“ | top: door 60 hinged right / shelves on the door / top: rice, pasta, tortillas, Asian, baking | The upper band is a door hinged on the right (the T3 side), with 4 door racks and 4 shelves set back behind the racks. The lower band, 810 (level with the base carcasses, `guess:`), is not described: a slab, `open:`. |
@@ -530,17 +530,17 @@ No carcass size or position changed. These are the fronts:
 | Item | Before | Now |
 | --- | --- | --- |
 | SF-AH850, SF-BH800, SF-CH850 bottom / top | 1550 / 2450 | **1560 / 2450**, 890 high (was 900) |
-| SF-AH850, SF-CH850 fronts | two doors 422 × 897 (L, R) | one AVENTOS HK top stay-lift front 847 × 887 |
-| SF-BH800 fronts | two doors 397 × 897 | one AVENTOS HK top front 797 × 887 |
-| Wall-cabinet shelves | 2 per bay | 2 per bay, re-spaced in the 854 inside: 1851–1869 and 2141–2159 (three equal spaces of 273) |
-| Lift mechanisms | — | new: `<bay>-LIFTMECH-L/R`, 30 × 235 × 187 inside each side panel, under the top board (HK top) |
+| SF-AH850, SF-CH850 fronts | two doors 422 × 897 (L, R) | AVENTOS HF top bi-fold: upper 847 × 442 over lower 847 × 442, 3 gap between |
+| SF-BH800 fronts | two doors 397 × 897 | AVENTOS HF top: 797 × 442 over 797 × 442 |
+| Wall-cabinet shelves | 2 per bay | 2 per bay, re-spaced in the 854 inside: 1851–1869 and 2141–2159 (three equal spaces of 273), 22 behind the fronts (Blum HF min 22) |
+| Lift mechanisms | — | new: `<bay>-LIFTMECH-L/R`, 30 × 264 × 195 inside each side panel, under the top board (2237–2432) |
 | KR-WEST-BACKSPLASH | 930 → 1550 | 930 → 1560 |
 | SF-DH (north, dining) bottom / top | 1550 / 2450 | 1560 / 2450, 890 high (fronts not changed) |
 | North backsplash pieces `CV-BS-*` | 620 high, to 1550 | 630 high, to 1560 |
 | SF-LB | oak box 4180 × 450 × 800, no top | `KR-LB`: oak body 4180 × 450 × 910 + 20 oak-veneer top, 20 front overhang (4180 × 470), top **930** |
 | FN-BK (bookshelf) | 850–2450, 1600 high | **980–2450, 1470 high** |
 | The open-door records in `ground_floor.doors.json` | 6 wall-cabinet door leaves | replaced by 3 `kind: "linkage"` records, one per lift front (tap to open, see “Opening in the viewer”) |
-| Lever arms | — | new: `<bay>-LIFTARM-L/R`, 16 × 18, from inside each mechanism to the front, 120 under the mechanism |
+| Levers | — | new: `<bay>-LIFTARM-L/R`, 16 × 16, from the mechanism's underside (pivot at 2237) plumb down to the lower front (fixed at 1819) |
 | Ceiling line | — | new check: nothing above 2450 (`models/ceiling_line.py`), and no open lift front in a bass trap, the soffit or the sloped ceiling |
 
 ### Discrepancies on the plan
@@ -566,10 +566,10 @@ No carcass size or position changed. These are the fronts:
 - The IKEA-like rack, shelf and bin sizes.
 
 `open:`
-- Whether Blum (or another maker) has a stay lift for an 890 front: Blum publishes HK top to 600. Modelled as HK top on Petr's word (“assume the hinge exists for our width”); its clearance and mechanism are HK top's, extrapolated.
-- SF-DH's fronts and fitting: 2700 wide, over AVENTOS's 1800 and about 30 kg as one 890 front, so it keeps its plain box with no fronts.
+- The HF open pose: the lower front's −15° and the lever pivot and fixing are read off Blum's planning sketch, not published figures (see “Opening in the viewer”).
+- SF-DH's fronts and fitting: 2700 wide is over AVENTOS's 1800, so one HF pair would not do; it would need splitting into bays (for example 2 × 1350, each an HF pair). Kept as the plain box with no fronts.
 - The Silestone / oak-veneer joint at x 25.52 and the oak top's thickness.
-- The lever arm's real geometry (pivot, fixing, telescoping): the drawn arm is placed by eye. It runs 2 mm in front of the upper shelf's front edge (shelf c 38, arm 18–36).
+- The lever's real shape: drawn as a straight 16 × 16 bar, 6 in front of the shelves.
 - SF-I500a front type, the boards/strainer split, the towel bar and the sBox.
 - SF-I300: drawer or pull-out.
 - Oil bottles in SF-I500b's 100 drawer.
@@ -600,44 +600,55 @@ Blum's lift systems, from the [catalogue and technical manual 2024/2025](https:/
 | HS top | up and over: the front swings up and over the cabinet top | 350–800 | ≤ 1800 | [p. 32](https://publications.blum.com/2024/catalogue/en/32/), [p. 34](https://publications.blum.com/2024/catalogue/en/34/), [p. 36](https://publications.blum.com/2024/catalogue/en/36/) |
 | HF top | bi-fold: two fronts, the upper turns up about the top, the lower folds onto it | 480–1200 | ≤ 1800 | [p. 20](https://publications.blum.com/2024/catalogue/en/20/), [p. 22](https://publications.blum.com/2024/catalogue/en/22/), [p. 24](https://publications.blum.com/2024/catalogue/en/24/) |
 
-**The photo reads as a one-part front on a single lever arm per side, most likely HK top (flagged: Bob did not see the image file itself, only its description).** HK top stops at 600 high in Blum's tables. A first pass modelled HF top, the bi-fold (the only AVENTOS that takes 900), and raised the tops to 2460. Petr, 2026-11-13:
+Petr's photo (Bob did not see the image file itself, only its description) was first read as a one-part HK top front, and a first pass modelled HF top with the tops raised to 2460. Petr, 2026-11-13:
 
 > assume the hinge exists for our width. Also, don't move anything up, make it shorter in height. The existing ceiling line (windows, pocket doors, furtniture, basstraps) is an invariant.
 
-So the cabinets keep their 1560 bottom and lose 10 in height (890, top 2450 as before), and each gets **one HK top front**, outside Blum's published range on purpose: each bay's `Pset_Fronts.BlumRangeOverride` holds Petr's quote, and the front records the breach (`OutsideBlumRange`, “takes a cabinet height of 205–600 mm, this one is 890”). Without the override the export stops, as for any other fitting.
+and then:
 
-### Our wall cabinets against HK top
+> btw the way they open right now is that they fully fold the two halves onto one another. Thats not how it works in reality. You still need to be able to reach up and pull it back down, so they stay only partially folded, like my image.
 
-| Check | Ours | Blum HK top | Source |
+So the photo is **HF top, the bi-fold**, and the cabinets keep their 1560 bottom and lose 10 in height (890, top 2450 as before). At 890 HF is inside every Blum range below; each bay's `Pset_Fronts.BlumRangeOverride` still records Petr's “assume the hinge exists for our width”, and the export would keep (and list as `OutsideBlumRange`) anything outside Blum's tables instead of stopping. Without an override it stops, as for any other fitting.
+
+### Our wall cabinets against HF top
+
+| Check | Ours | Blum HF top | Source |
 | --- | ---: | --- | --- |
-| Cabinet height KH | **890** | 205–600 (outside: kept by Petr's override) | [p. 44](https://publications.blum.com/2024/catalogue/en/44/) |
-| Cabinet width KB | 850 / 800 / 850 | ≤ 1800 | p. 44 |
-| Internal height LH | 854 (890 − 2 × 18) | | |
-| Front | 847 (797) × 887, 18 thick, 1.5 gap all round | one front | |
-| Front weight FG | 9.5 kg (850), 8.9 kg (800) | ≤ 18 | oak-veneered chipboard at 700 kg/m³, `guess:` (Blum's chipboard reference is 680, [p. 716](https://publications.blum.com/2024/catalogue/en/716/)); no handle |
-| Power factor LF = KH × FG | 8425 (850), 7928 (800) | 420–9000 | [p. 48](https://publications.blum.com/2024/catalogue/en/48/) |
-| Space above the top, fully open (107°) | **257** (FH × 0.29 + FD − SOB, Blum's HK formula extrapolated to 887) | | p. 48 |
-| Reach in front of the face, open | **905** (FH + FD, `guess:`) | | |
+| Cabinet height KH | **890** | 480–1200; lever set 22F3500 for 600–910 | [p. 22](https://publications.blum.com/2024/catalogue/en/22/) |
+| Cabinet width KB | 850 / 800 / 850 | ≤ 1800 | [p. 20](https://publications.blum.com/2024/catalogue/en/20/) |
+| Internal depth LT | 324 (350 − 18 front − 8 back) | ≥ 264 | p. 20 |
+| Internal height LH | 854 | ≥ 512 with 22F3500 | [p. 24](https://publications.blum.com/2024/catalogue/en/24/) |
+| Fronts | 847 (797) × 442 + 3 + 442, 18 thick | symmetrical pair, KH = 2 × FHo + gaps | p. 24 |
+| Front weight FG, both fronts | 9.4 kg (850), 8.9 kg (800) | — | oak-veneered chipboard at 700 kg/m³, `guess:` (Blum's chipboard reference is 680, [p. 716](https://publications.blum.com/2024/catalogue/en/716/)); no handle |
+| Power factor LF = KH × FG | 8396 (850), 7901 (800) | 2700–13500 → lift mechanism 22F2510 (system screws) or 22F2500 | p. 22 |
+| Space above the top, fully open (116°, no angle stop) | **232** (Y = FHo × 0.44 + 38) | | p. 24; [planning sketch](https://575022.myshoptet.com/user/documents/documents/pictures/schm_Blum_AVENTOS_HF_TOP_Planungsskizzen_01.pdf) |
+| Reach in front of the face, open | **460** (X max = FHo × 0.9 + 1.5 × FD + 35) | | same |
+| Shelves behind the fronts | 22 | min 22 (the lever runs there) | planning sketch, “Platzbedarf” |
 
 Modelled (`models/kitchen_cabinet.py`, band kind `lift`, `AVENTOS` table):
-- Each bay's front is `<bay>-LIFT`, `Role: Lift`, `Pset_KitchenFront` with the fitting, front weight, power factor, the open clearances and the override.
-- A lift mechanism `<bay>-LIFTMECH-L` / `-R` on each side panel, just under the top board, 30 off the side, 235 deep, 187 high (2245–2432). `guess:` sizes read off Blum's planning drawings.
-- Two shelves, re-spaced by the model in the 854 inside: 1851–1869 and 2141–2159, three equal spaces. Both are below the mechanisms, and the export stops if a shelf would hit one or an arm.
-- A lever arm `<bay>-LIFTARM-L` / `-R` per side, `Role: LiftArm`: a 16 × 18 bar on the inner face of the front, from 15 inside the mechanism's underside down to 120 under it (2125–2270). `guess:` placed by eye.
-- The space the open front needs is `run.clearances` (257 above, 905 ahead) and is drawn in red by `scripts/render_kitchen_run.py`. It is not a solid in the IFC or the viewer.
+- Each bay's fronts are `<bay>-LIFT1` (upper, 2006–2448) and `<bay>-LIFT2` (lower, 1562–2004), `Role: Lift`, `Pset_KitchenFront` with the fitting, front weight, power factor, the open clearances and the override; the lower front also has its open pose (`OpenBottomEdgeHeight`, `OpenBottomEdgeAhead`, `OpenLowerAngle`).
+- A lift mechanism `<bay>-LIFTMECH-L` / `-R` on each side panel, just under the top board, 30 off the side, 264 deep, 195 high (2237–2432). Blum's sketch gives min 264 and 194.
+- A lever `<bay>-LIFTARM-L` / `-R` per side, `Role: LiftArm`: a 16 × 16 bar from the mechanism's underside (its pivot, 2237) plumb down just behind the fronts to its fixing on the lower front at 1819, 186 under the centre hinge. Blum's “Platzbedarf” sketch has the lever this way (pivot under the mechanism, fixed to the lower front); its length is solved (below).
+- Two shelves, re-spaced by the model in the 854 inside: 1851–1869 and 2141–2159, three equal spaces, 22 behind the fronts. Both are below the mechanisms, and the export stops if a shelf would hit a mechanism or a lever.
+- The space the open fronts need is `run.clearances` (232 above, 460 ahead, Blum's Y and X max) and is drawn in red by `scripts/render_kitchen_run.py`. It is not a solid in the IFC or the viewer.
 
 ### Opening in the viewer
 
-Petr, 2026-11-13: “And make them open too, add the animation for this opening mechanism.”
+Petr, 2026-11-13: “And make them open too, add the animation for this opening mechanism.”, then “they stay only partially folded, like my image”.
 
 Each lift front is one `kind: "linkage"` record in `ground_floor.doors.json` (`_linkage_motion` in `models/ground_floor.py`, from the `LiftJoint` that `_lift_motion` in `models/kitchen_cabinet.py` puts on each part). A linkage is a list of joints; each turns its part meshes about a line (`pivot` point, `axis`), by `angles` sampled at 25 even steps from shut to open, relative to a `parent` joint or to the model. The viewer (`doors.js` `bindLinkage`) interpolates them over 900 ms. Any part of it takes the tap.
 
+The motion is a four-bar (`_hf_fourbar`): carcass, upper front, lower front, lever.
+
 | Joint | Parts | Line | Motion |
 | --- | --- | --- | --- |
-| 0 | `<bay>-LIFT`, the front | its top edge, on the inner face | 0 → 107° (`LIFT_OPEN_DEG["HK"]`), up and out |
-| 1 | `<bay>-LIFTARM-L/R` | its pivot inside the mechanism | turns to keep pointing at its fixing on the front, and telescopes (`stretch`) to reach it |
+| 0 | `<bay>-LIFT1`, upper front | its top edge, on the inner face | 0 → 116°, up and out. 116° is HF without an angle stop: Blum's Y formulas are FHo × −cos(angle) (0.44 at 116°, 0.29 at 107°, 0.12 at 97°) |
+| 1, rides on 0 | `<bay>-LIFT2`, lower front | the centre hinge, inner faces | whatever keeps the lever's length: it hangs almost plumb on the way up (−4° at half way) and ends **−15° from vertical**, its bottom edge tilted back towards the cabinet (−131° relative to the upper front) |
+| 2 | `<bay>-LIFTARM-L/R`, levers | the pivot under the mechanism | rigid, turns 123° with its fixing on the lower front |
 
-Simplified: the real HK motion is set by the mechanism's arm, not by one fixed line. Shut, everything sits where the model has it; fully open, the front ends inside the clearance box. An HF bi-fold (still supported) adds a joint for the lower front that rides on the upper one and folds back by twice its angle; HS and HL are drawn as the same tilt, which is not their real path.
+The −15° is read off Blum's “Platzbedarf nach oben” sketch (the open lower front against the cabinet), `guess:` measured on the drawing, not a published figure; the lever's fixing height (186 under the centre hinge) is solved so the four-bar ends there (`LIFT_HF_LOWER_OPEN_DEG`). The export stops if the lower front's bottom edge would pass into the carcass on the way.
+
+**Open, the lower front's bottom edge is at 2210 above the floor, 283 out from the closed face** (1280 above the 930 worktop): in reach to pull it back down, as Petr asked. The fold (centre hinge) is the highest point, 2682, inside Blum's 232 above the top.
 
 ### The ceiling line and the open fronts
 
@@ -647,11 +658,11 @@ Simplified: the real HK motion is set by the mechanism's arm, not by one fixed l
 
 | Front | Open envelope | Kitchen-gable trap | Soffit | Under the sloped ceiling |
 | --- | --- | ---: | ---: | ---: |
-| SF-AH850 | x 19.127–20.055, top 2725 | 137 clear (envelope starts at x 19.127, trap face 18.990) | 1300 | 1387 |
-| SF-BH800 | same | 137 | 2150 | 1932 |
-| SF-CH850 | same | 137 | 2950 | 1219 |
+| SF-AH850 | x 19.124–19.610, top 2682 | 134 clear (envelope starts at x 19.124, trap face 18.990) | 1300 | 1428 |
+| SF-BH800 | same | 134 | 2150 | 1974 |
+| SF-CH850 | same | 134 | 2950 | 1261 |
 
-- **No overlap with the bass trap**: the trap is behind the cabinets (the 350 deep box stands in front of its 190), the closed cabinets stop at its 2450 underside, and the open front swings out into the room from the cabinet face.
+- **No overlap with the bass trap**: the trap is behind the cabinets (the 350 deep box stands in front of its 190), the closed cabinets stop at its 2450 underside, and the open fronts swing out into the room from the cabinet face.
 - SF-DH's top is back at 2450: 20 under the 2470 soffit, as before 2026-11-13.
 - Above the worktop: 1560 − 930 = **630** clear. The 12 mm backsplash runs 930 → 1560.
 - The tops line up with the tall run (2450) again.

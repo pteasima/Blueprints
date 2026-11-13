@@ -862,9 +862,9 @@ function slabFor(record, size, name) {
   near1(at(lower).distanceTo(new THREE.Vector3(0.009, 1.745, 0)), 0, "shuts back where it was");
 }
 
-// The committed ground floor: each wall cabinet's single stay-lift front
-// (AVENTOS HK top, Petr 2026-11-13) binds as one linkage: the front and its
-// two arms.
+// The committed ground floor: each wall cabinet's AVENTOS HF bi-fold binds as
+// one linkage: upper front, lower front riding on it, and the two levers.
+// Open, the lower front hangs partly folded (Petr, 2026-11-13).
 {
   const records = JSON.parse(
     readFileSync(new URL("../../../docs/models/ground_floor.doors.json", import.meta.url), "utf8"),
@@ -876,11 +876,12 @@ function slabFor(record, size, name) {
   );
   for (const r of lifts) {
     assert.ok(isLinkageRecord(r), r.id);
-    assert.deepEqual(r.joints.map((j) => j.parent), [null, null]);
-    assert.equal(r.joints[0].elements[0].element, r.id, "one front, named like the linkage");
-    near1(r.joints[0].angles.at(-1), (107 * Math.PI) / 180, "HK top opens to 107°");
-    assert.equal(r.joints[1].elements.length, 2, "an arm on each side");
-    assert.ok(r.joints[1].stretch, "the arms telescope");
+    assert.deepEqual(r.joints.map((j) => j.parent), [null, 0, null]);
+    near1(r.joints[0].angles.at(-1), (116 * Math.PI) / 180, "HF top opens to 116°");
+    const hang = r.joints[0].angles.at(-1) + r.joints[1].angles.at(-1);
+    assert.ok(Math.abs(hang) < (30 * Math.PI) / 180, `lower front hangs, not folded flat: ${hang}`);
+    assert.equal(r.joints[2].elements.length, 2, "a lever on each side");
+    assert.ok(!r.joints[2].stretch, "the levers are rigid");
   }
 }
 
