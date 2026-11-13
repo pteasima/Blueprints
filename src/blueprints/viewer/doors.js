@@ -33,6 +33,19 @@
  * leaf head, then level into the room under the ceiling, each section
  * turned to the track's tangent (`sectionalTrack`). A simplification of the
  * real hardware (models/ground_floor.py `_sectional_record`).
+ *
+ * Linkages (the kitchen's lift-up fronts) are records with kind "linkage":
+ * `joints`, each turning some part meshes about a line. A joint has
+ * `elements` ({ element, center } per mesh, matched like a drawer), a
+ * `pivot` point on its line and the line's `axis` (glTF metres, as built,
+ * shut), `angles` (radians, a right-handed turn about `axis`, sampled at
+ * even steps from shut to open) and `parent`: null to turn in the model,
+ * or the index of an earlier joint it rides on (its angles are then
+ * relative to that joint). An optional `stretch` { along, scales } grows
+ * the joint's parts along `along` (a direction from the pivot) by one
+ * scale per angle, for a telescoping arm. `duration_ms` sets the motion's
+ * length (default `DOOR_SWING_MS`). Tapping any part of the linkage opens
+ * or shuts it. models/ground_floor.py `_linkage_motion` writes them.
  */
 import * as THREE from "three";
 import { LONG_PRESS_MS, classifyHold } from "./gesture.js";
@@ -221,12 +234,17 @@ export function collectDoorHosts(root, records = []) {
     named.push(obj);
   });
   // Drawers and cabinet doors (kitchen runs) are named by their part id,
-  // not "door"; their records name that mesh in `element`.
+  // not "door"; their records name that mesh in `element`. A linkage names
+  // one mesh per joint element.
   const drawerElements = new Set(
     (records || [])
       .filter((r) => r && (r.kind === "drawer" || r.kind === "hinged") && r.element)
       .map((r) => String(r.element)),
   );
+  for (const r of records || []) {
+    if (!isLinkageRecord(r)) continue;
+    for (const joint of r.joints) for (const el of joint.elements) drawerElements.add(String(el.element));
+  }
   if (drawerElements.size) {
     root.traverse((obj) => {
       const ident = meshIdentity(obj.name || "");
@@ -379,6 +397,180 @@ export function bindDrawer(host, record) {
   tag(pivot);
   host.traverse(tag);
   return binding;
+}
+
+/**
+ * @param {object | null | undefined} record
+ * @returns {boolean}
+ */
+export function isLinkageRecord(record) {
+  return Boolean(
+    record &&
+      record.kind === "linkage" &&
+      Array.isArray(record.joints) &&
+      record.joints.length > 0 &&
+      record.joints.every(
+        (j, i) =>
+          j &&
+          Array.isArray(j.elements) &&
+          Array.isArray(j.pivot) &&
+          Array.isArray(j.axis) &&
+          Array.isArray(j.angles) &&
+          j.angles.length > 0 &&
+          (j.parent === null || j.parent === undefined || (Number.isInteger(j.parent) && j.parent >= 0 && j.parent < i)),
+      ),
+  );
+}
+
+/**
+ * Value at `amount` (0…1) along evenly spaced samples, linear between them.
+ * @param {ArrayLike<number>} values
+ * @param {number} amount
+ */
+export function sampleSeries(values, amount) {
+  const n = values.length;
+  if (!n) return 0;
+  if (n === 1) return Number(values[0]);
+  const x = Math.min(1, Math.max(0, amount)) * (n - 1);
+  const i = Math.min(n - 2, Math.floor(x));
+  const f = x - i;
+  return Number(values[i]) * (1 - f) + Number(values[i + 1]) * f;
+}
+
+/**
+ * Hosts for each joint of a linkage record: the nearest unused mesh named
+ * by the element whose centre is within `tolerance` of the record's.
+ * @param {{ host: THREE.Object3D, center: THREE.Vector3 }[]} entries
+ * @param {object} record
+ * @param {Set<object>} [used] entries already taken (updated)
+ * @param {number} [tolerance]
+ * @returns {THREE.Object3D[][]}
+ */
+export function matchLinkageHosts(entries, record, used = new Set(), tolerance = DOOR_MATCH_M) {
+  return record.joints.map((joint) => {
+    const hosts = [];
+    for (const el of joint.elements) {
+      const c = Array.isArray(el?.center) ? el.center.map(Number) : null;
+      if (!c || c.length < 3) continue;
+      let best = null;
+      let bestD = tolerance;
+      for (const entry of entries) {
+        if (used.has(entry)) continue;
+        if (meshIdentity(entry.host.name || "").element !== String(el.element)) continue;
+        const d = Math.hypot(entry.center.x - c[0], entry.center.y - c[1], entry.center.z - c[2]);
+        if (d <= bestD) {
+          best = entry;
+          bestD = d;
+        }
+      }
+      if (best) {
+        used.add(best);
+        hosts.push(best.host);
+      }
+    }
+    return hosts;
+  });
+}
+
+const _yAxis = new THREE.Vector3(0, 1, 0);
+
+/**
+ * Linkage: one pivot group per joint, on its line, holding that joint's
+ * meshes. A joint with a parent hangs under the parent's pivot, so it rides
+ * along. A stretch sits between pivot and meshes: turned so its y is the
+ * stretch direction, scaled in y, turned back.
+ * @param {object} record
+ * @param {THREE.Object3D[][]} hostsByJoint from {@link matchLinkageHosts}
+ */
+export function bindLinkage(record, hostsByJoint) {
+  if (!isLinkageRecord(record)) return null;
+  const first = hostsByJoint[0]?.[0];
+  if (!first?.parent) return null;
+  const root = first.parent;
+  /** @type {({ pivot: THREE.Object3D, axis: THREE.Vector3, angles: number[], stretch: { group: THREE.Object3D, scales: number[] } | null } | null)[]} */
+  const joints = [];
+  /** @type {THREE.Object3D[]} */
+  const hosts = [];
+  const quat = new THREE.Quaternion();
+  record.joints.forEach((joint, i) => {
+    const mine = hostsByJoint[i] || [];
+    const parentJoint = joint.parent === null || joint.parent === undefined ? null : joints[joint.parent];
+    if (!mine.length || (joint.parent !== null && joint.parent !== undefined && !parentJoint)) {
+      joints.push(null);
+      return;
+    }
+    const holder = parentJoint ? parentJoint.pivot : mine[0].parent || root;
+    holder.updateWorldMatrix(true, false);
+    holder.getWorldQuaternion(quat).invert();
+    const pivot = new THREE.Group();
+    pivot.name = `linkage:${record.id}:${i}`;
+    holder.add(pivot);
+    pivot.position.copy(holder.worldToLocal(new THREE.Vector3(...joint.pivot.map(Number))));
+    const axis = new THREE.Vector3(...joint.axis.map(Number)).applyQuaternion(quat);
+    if (axis.lengthSq() < 1e-12) {
+      holder.remove(pivot);
+      joints.push(null);
+      return;
+    }
+    axis.normalize();
+    let target = pivot;
+    let stretch = null;
+    const st = joint.stretch;
+    if (st && Array.isArray(st.along) && Array.isArray(st.scales) && st.scales.length) {
+      const along = new THREE.Vector3(...st.along.map(Number)).applyQuaternion(quat);
+      if (along.lengthSq() > 1e-12) {
+        const turn = new THREE.Quaternion().setFromUnitVectors(_yAxis, along.normalize());
+        const outer = new THREE.Group();
+        outer.quaternion.copy(turn);
+        const scaler = new THREE.Group();
+        const inner = new THREE.Group();
+        inner.quaternion.copy(turn).invert();
+        pivot.add(outer);
+        outer.add(scaler);
+        scaler.add(inner);
+        target = inner;
+        stretch = { group: scaler, scales: st.scales.map(Number) };
+      }
+    }
+    target.updateWorldMatrix(true, false);
+    for (const host of mine) {
+      target.attach(host);
+      hosts.push(host);
+    }
+    joints.push({ pivot, axis, angles: joint.angles.map(Number), stretch });
+  });
+  const live = joints.filter(Boolean);
+  if (!live.length) return null;
+  const binding = {
+    id: record.id,
+    kind: "linkage",
+    pivot: live[0].pivot,
+    host: first,
+    hosts,
+    joints: live,
+    duration: Number(record.duration_ms) > 0 ? Number(record.duration_ms) : DOOR_SWING_MS,
+    sign: 1,
+    goal: 0,
+    anim: null,
+  };
+  placeLinkage(binding, 0);
+  for (const joint of live) {
+    joint.pivot.traverse((obj) => {
+      obj.userData.bpDoor = binding;
+    });
+  }
+  return binding;
+}
+
+/**
+ * @param {{ joints: { pivot: THREE.Object3D, axis: THREE.Vector3, angles: number[], stretch: { group: THREE.Object3D, scales: number[] } | null }[] }} binding
+ * @param {number} amount 0 shut … 1 open
+ */
+export function placeLinkage(binding, amount) {
+  for (const joint of binding.joints) {
+    joint.pivot.quaternion.setFromAxisAngle(joint.axis, sampleSeries(joint.angles, amount));
+    if (joint.stretch) joint.stretch.group.scale.set(1, sampleSeries(joint.stretch.scales, amount), 1);
+  }
 }
 
 /**
@@ -612,7 +804,7 @@ export function bindSliding(host, record) {
 export function sampleDoor(binding, now) {
   const anim = binding.anim;
   if (!anim) return binding.goal;
-  const t = (now - anim.t0) / DOOR_SWING_MS;
+  const t = (now - anim.t0) / (binding.duration || DOOR_SWING_MS);
   if (t >= 1) {
     binding.anim = null;
     binding.goal = anim.to;
@@ -651,6 +843,10 @@ export function setPivotSwing(pivot, angle) {
  */
 export function applyDoorSwing(binding, now) {
   const amount = sampleDoor(binding, now);
+  if (binding.joints) {
+    placeLinkage(binding, amount);
+    return amount;
+  }
   if (binding.sections) {
     placeSections(binding, amount);
     return amount;
@@ -1007,6 +1203,13 @@ export function createDoorController(opts) {
       binding.obb = obb;
       binding.proxy = obb ? proxyMeshFromObb(obb, `opening:${binding.id}`) : null;
       bindings.push(binding);
+    }
+    const used = new Set();
+    for (const record of records) {
+      if (!isLinkageRecord(record)) continue;
+      const binding = bindLinkage(record, matchLinkageHosts(entries, record, used));
+      // A linkage is tapped on its parts, like a drawer: no doorway proxy.
+      if (binding) bindings.push(binding);
     }
     return bindings.length;
   }

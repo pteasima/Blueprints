@@ -566,25 +566,37 @@ systemFurniture:
           Kind: "Niche"
   - id: SF-AH850
     Name: "Západ horní 850 sklenice"
-    Description: "Section A wall cabinet, glasses, 850. Depth 350, bottom 1550, height 900, top 2450."
+    Description: "Section A wall cabinet, glasses, 850. Depth 350, bottom 1560, height 890, top 2450 (the ceiling line). Blum AVENTOS HF top bi-fold lift fronts, upper and lower."
     PredefinedType: USERDEFINED
     ObjectType: WallCabinet
     ContainedInStructure: SP-1.02
     Origin: [19.15, 13.0]
-    Elevation: 1.55
+    Elevation: 1.56
     RefDirection: [0, 1]
     Width: 0.85
     Depth: 0.35
-    Height: 0.9
+    Height: 0.89
     PropertySets:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-WEST-H
-      # Note A: "nahore sklenice". Two doors (a METOD door is at most 600
-      # wide), two shelves: guess:.
+      # Note A: "nahore sklenice". Petr, 2026-11-13: "I want this hinge
+      # for the top cabinets" (a Blum AVENTOS stay-lift photo, one front),
+      # then: "assume the hinge exists for our width. Also, don't move
+      # anything up, make it shorter in height. The existing ceiling line
+      # (windows, pocket doors, furtniture, basstraps) is an invariant."
+      # Then: "btw the way they open right now is that they fully fold the
+      # two halves onto one another. Thats not how it works in reality. You
+      # still need to be able to reach up and pull it back down, so they
+      # stay only partially folded, like my image." So the photo is HF top
+      # (bi-fold), opening partly folded. KH 890 is inside HF's 480–1200;
+      # BlumRangeOverride records Petr's word for anything outside Blum's
+      # tables. Two shelves: guess:.
       - Name: Pset_Fronts
         Properties:
-          Layout: "doors * shelves=2"
+          # angle=88: the HF opening-angle stop, Petr 2026-11-13 "do 88 degrees in the model." (Blum stops 116/107/97/88/81, catalogue 2024/25 p. 22–24).
+          Layout: "lift * fitting=HF angle=88 shelves=2"
+          BlumRangeOverride: "Petr, 2026-11-13: assume the hinge exists for our width"
           Contents: "sklenice"
   - id: SF-B800
     Name: "Západ 800 dřez"
@@ -615,25 +627,27 @@ systemFurniture:
           North: "kompost"
   - id: SF-BH800
     Name: "Západ horní 800 talíře"
-    Description: "Section B wall cabinet, plates. Depth 350, bottom 1550, height 900, top 2450."
+    Description: "Section B wall cabinet, plates. Depth 350, bottom 1560, height 890, top 2450 (the ceiling line). Blum AVENTOS HF top bi-fold lift fronts, upper and lower."
     PredefinedType: USERDEFINED
     ObjectType: WallCabinet
     ContainedInStructure: SP-1.02
     Origin: [19.15, 12.2]
-    Elevation: 1.55
+    Elevation: 1.56
     RefDirection: [0, 1]
     Width: 0.8
     Depth: 0.35
-    Height: 0.9
+    Height: 0.89
     PropertySets:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-WEST-H
-      # Note B: "nahore talire". Two doors (a METOD door is at most 600
-      # wide), two shelves: guess:.
+      # Note B: "nahore talire". AVENTOS HF top bi-fold (Petr, 2026-11-13, see
+      # SF-AH850). Two shelves: guess:.
       - Name: Pset_Fronts
         Properties:
-          Layout: "doors * shelves=2"
+          # angle=88: Petr 2026-11-13, see SF-AH850.
+          Layout: "lift * fitting=HF angle=88 shelves=2"
+          BlumRangeOverride: "Petr, 2026-11-13: assume the hinge exists for our width"
           Contents: "talíře"
   - id: SF-C850
     Name: "Západ 850 odpad"
@@ -658,25 +672,27 @@ systemFurniture:
           Contents: "tříděný odpad"
   - id: SF-CH850
     Name: "Západ horní 850"
-    Description: "Section C wall cabinet, 850. Stick blender, bowls, measuring cups. Depth 350, bottom 1550, height 900, top 2450."
+    Description: "Section C wall cabinet, 850. Stick blender, bowls, measuring cups. Depth 350, bottom 1560, height 890, top 2450 (the ceiling line). Blum AVENTOS HF top bi-fold lift fronts, upper and lower."
     PredefinedType: USERDEFINED
     ObjectType: WallCabinet
     ContainedInStructure: SP-1.02
     Origin: [19.15, 11.35]
-    Elevation: 1.55
+    Elevation: 1.56
     RefDirection: [0, 1]
     Width: 0.85
     Depth: 0.35
-    Height: 0.9
+    Height: 0.89
     PropertySets:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-WEST-H
-      # Note C: "nahore tycovy mixer, velke misky, odmerky". Two doors (a METOD door is at most 600
-      # wide), two shelves: guess:.
+      # Note C: "nahore tycovy mixer, velke misky, odmerky". AVENTOS HF top
+      # bi-fold (Petr, 2026-11-13, see SF-AH850). Two shelves: guess:.
       - Name: Pset_Fronts
         Properties:
-          Layout: "doors * shelves=2"
+          # angle=88: Petr 2026-11-13, see SF-AH850.
+          Layout: "lift * fitting=HF angle=88 shelves=2"
+          BlumRangeOverride: "Petr, 2026-11-13: assume the hinge exists for our width"
           Contents: "tyčový mixér, velké mísy, odměrky"
   - id: SF-F052
     Name: "Výplň W-052"
@@ -750,32 +766,41 @@ systemFurniture:
         Properties:
           Material: "natural oak"
           Form: "solid or veneer"
+  # Petr, 2026-11-13: "I want the living room part of the counter (behind
+  # sofa) to continue at the same 930 height as the dining area. It will be
+  # oak veneer, not silestone. We'll work out the details of where the two
+  # materials connect later." Its own run KR-LB: an oak body under a 20 mm
+  # oak-veneer counter (thickness guess:, the same as the stone so both
+  # bodies stop at 910), 30 front overhang like KR-DN.
   - id: SF-LB
     Name: "Obývák nízká"
-    Description: "Low base behind the sofa, x 25.52–29.70. 450 deep, front y=15.15. Top 800, 40 mm above the 760 sofa back. The east 200 is the tall cabinet. Natural oak."
+    Description: "Low base behind the sofa, x 25.52–29.70. 450 deep, front y=15.15. Counter 930, the dining-run height (was 800), oak veneer top. 170 mm above the 760 sofa back. Natural oak."
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
     Origin: [25.52, 15.15]
     Width: 4.18
     Depth: 0.45
-    Height: 0.8
+    Height: 0.93
     PropertySets:
+      - Name: Pset_KitchenBay
+        Properties:
+          Run: KR-LB
       - Name: Pset_Finish
         Properties:
           Material: "natural oak"
           Form: "solid or veneer"
   - id: SF-DH
     Name: "Jídelna horní"
-    Description: "Oak-front wall cabinet over the dining bay, x 22.45–25.15. Kitchen wall-cabinet size: depth 350, bottom 1550, height 900, top 2450. Not carried across the piers."
+    Description: "Oak-front wall cabinet over the dining bay, x 22.45–25.15. Kitchen wall-cabinet size: depth 350, bottom 1560, height 890, top 2450 (Petr, 2026-11-13: top cabinets start at 1560; the ceiling line at 2450 is an invariant). Not carried across the piers. Fronts not split yet: 2700 is over AVENTOS HF's 1800, so it would need two bays (open:)."
     PredefinedType: USERDEFINED
     ObjectType: WallCabinet
     ContainedInStructure: SP-1.02
     Origin: [22.45, 15.25]
-    Elevation: 1.55
+    Elevation: 1.56
     Width: 2.7
     Depth: 0.35
-    Height: 0.9
+    Height: 0.89
     PropertySets:
       - Name: Pset_Finish
         Properties:
@@ -1098,7 +1123,7 @@ furniture:
           CladEnds: true
   - id: KR-DN
     Name: "Jídelní linka"
-    Description: "North dining base run: SF-F052, SF-DN, SF-F053, SF-DN70. Oak boxes under a 20 mm Silestone Blanco Maple worktop, 20 mm front overhang, top 930. No exposed ends: west abuts SF-T4, east abuts SF-LB and the bookshelf."
+    Description: "North dining base run: SF-F052, SF-DN, SF-F053, SF-DN70. Oak boxes under a 20 mm Silestone Blanco Maple worktop, 20 mm front overhang, top 930. No exposed ends: west abuts SF-T4, east abuts SF-LB (KR-LB, oak-veneer top, also 930)."
     PredefinedType: USERDEFINED
     ObjectType: KitchenRun
     ContainedInStructure: SP-1.02
@@ -1113,9 +1138,23 @@ furniture:
           WorktopThickness: 0.02
           WorktopOverhang: 0.02
           WorktopMaterial: "Silestone Blanco Maple"
+  - id: KR-LB
+    Name: "Obývák linka"
+    Description: "Living-room counter behind the sofa: SF-LB. Oak body under a 20 mm oak-veneer top, 20 mm front overhang like the stone runs, top 930 like the dining run. The joint with KR-DN's Silestone at x 25.52 is open (Petr, 2026-11-13)."
+    PredefinedType: USERDEFINED
+    ObjectType: KitchenRun
+    ContainedInStructure: SP-1.02
+    PropertySets:
+      - Name: Pset_KitchenRun
+        Properties:
+          Carcass: Box
+          BodyMaterial: "natural oak"
+          WorktopThickness: 0.02
+          WorktopOverhang: 0.02
+          WorktopMaterial: "oak veneer"
   - id: KR-WEST-H
     Name: "Západní horní"
-    Description: "West-wall wall-cabinet monoblock: CH850, BH800, AH850."
+    Description: "West-wall wall-cabinet monoblock: CH850, BH800, AH850. Bottom 1560, top 2450, 890 high (Petr, 2026-11-13). Blum AVENTOS HF top bi-fold lift fronts."
     PredefinedType: USERDEFINED
     ObjectType: KitchenRun
     ContainedInStructure: SP-1.02
@@ -1291,15 +1330,15 @@ furniture:
     Height: 0.66
   - id: FN-BK
     Name: "Knihovna"
-    Description: "Open bookshelf above the sofa, x 25.52–29.70. Depth 250, bottom 850, top 2450. Three shelves. Oak lamella back, slats 40 / gap 20 / thick 12. Sides, top and shelves 20."
+    Description: "Open bookshelf above the sofa, x 25.52–29.70. Depth 250, bottom 980 (50 above the 930 counter; was 850 over the old 800 base), top 2450. Three shelves. Oak lamella back, slats 40 / gap 20 / thick 12. Sides, top and shelves 20."
     PredefinedType: SHELF
     ObjectType: Bookshelf
     ContainedInStructure: SP-1.02
     Origin: [25.52, 15.35]
-    Elevation: 0.85
+    Elevation: 0.98
     Width: 4.18
     Depth: 0.25
-    Height: 1.6
+    Height: 1.47
     PropertySets:
       - Name: Pset_Finish
         Properties:
@@ -1499,14 +1538,15 @@ furniture:
 coverings:
   # North backsplash. Petr, 2026-11-12: "back wall for both west and
   # north". 12 mm Silestone Blanco Maple (thickness from the brief), from
-  # the 930 counter (the oak bases' top) to 1550, the underside of SF-DH.
+  # the 930 counter (the oak bases' top) to 1560, the underside of SF-DH
+  # (1550 until Petr, 2026-11-13: "top cabinets to start at 1560mm").
   # North wall inner face y=15.60, pier faces y=15.35, piers W-052
   # x 22.15–22.45 and W-053 x 25.15–25.45. Pieces with no wall cabinet
-  # above stop at the same 1550: open:. SF-LB behind the sofa gets none,
+  # above stop at the same 1560: open:. SF-LB behind the sofa gets none,
   # the bookshelf's oak lamella back is there from 850.
   - id: CV-BS-DN
     Name: "Obklad stěny jídelna"
-    Description: "Main panel on the north wall behind SF-DN, between the piers. Up to the underside of SF-DH (1550)."
+    Description: "Main panel on the north wall behind SF-DN, between the piers. Up to the underside of SF-DH (1560)."
     PredefinedType: CLADDING
     ObjectType: Backsplash
     ContainedInStructure: SP-1.02
@@ -1514,7 +1554,7 @@ coverings:
     Elevation: 0.93
     Width: 2.7
     Depth: 0.012
-    Height: 0.62
+    Height: 0.63
     PropertySets:
       - Name: Pset_Finish
         Properties:
@@ -1529,7 +1569,7 @@ coverings:
     Elevation: 0.93
     Width: 0.012
     Depth: 0.238
-    Height: 0.62
+    Height: 0.63
     PropertySets:
       - Name: Pset_Finish
         Properties:
@@ -1544,14 +1584,14 @@ coverings:
     Elevation: 0.93
     Width: 0.012
     Depth: 0.238
-    Height: 0.62
+    Height: 0.63
     PropertySets:
       - Name: Pset_Finish
         Properties:
           Material: "Silestone Blanco Maple"
   - id: CV-BS-P052
     Name: "Obklad čela pilíře W-052"
-    Description: "On W-052's front face above filler SF-F052, from SF-T4's east face (x=22.158) to the return's face (x=22.462). No wall cabinet above: open: top height, 1550 like the rest. guess: the stone wraps the pier."
+    Description: "On W-052's front face above filler SF-F052, from SF-T4's east face (x=22.158) to the return's face (x=22.462). No wall cabinet above: open: top height, 1560 like the rest. guess: the stone wraps the pier."
     PredefinedType: CLADDING
     ObjectType: Backsplash
     ContainedInStructure: SP-1.02
@@ -1559,14 +1599,14 @@ coverings:
     Elevation: 0.93
     Width: 0.304
     Depth: 0.012
-    Height: 0.62
+    Height: 0.63
     PropertySets:
       - Name: Pset_Finish
         Properties:
           Material: "Silestone Blanco Maple"
   - id: CV-BS-P053
     Name: "Obklad čela pilíře W-053"
-    Description: "On W-053's front face above filler SF-F053, x 25.138–25.462. No wall cabinet above: open: top height, 1550. guess: the stone wraps the pier."
+    Description: "On W-053's front face above filler SF-F053, x 25.138–25.462. No wall cabinet above: open: top height, 1560. guess: the stone wraps the pier."
     PredefinedType: CLADDING
     ObjectType: Backsplash
     ContainedInStructure: SP-1.02
@@ -1574,14 +1614,14 @@ coverings:
     Elevation: 0.93
     Width: 0.324
     Depth: 0.012
-    Height: 0.62
+    Height: 0.63
     PropertySets:
       - Name: Pset_Finish
         Properties:
           Material: "Silestone Blanco Maple"
   - id: CV-BS-R053E
     Name: "Obklad boku pilíře W-053 východ"
-    Description: "Return on W-053's east face above SF-DN70. No wall cabinet above: open: top height, 1550. guess: the stone wraps the pier."
+    Description: "Return on W-053's east face above SF-DN70. No wall cabinet above: open: top height, 1560. guess: the stone wraps the pier."
     PredefinedType: CLADDING
     ObjectType: Backsplash
     ContainedInStructure: SP-1.02
@@ -1589,14 +1629,14 @@ coverings:
     Elevation: 0.93
     Width: 0.012
     Depth: 0.238
-    Height: 0.62
+    Height: 0.63
     PropertySets:
       - Name: Pset_Finish
         Properties:
           Material: "Silestone Blanco Maple"
   - id: CV-BS-DN70
     Name: "Obklad stěny nad DN70"
-    Description: "Strip on the north wall above SF-DN70, from the return to the bookshelf (x 25.462–25.52). No wall cabinet above: open: top height, 1550."
+    Description: "Strip on the north wall above SF-DN70, from the return to the bookshelf (x 25.462–25.52). No wall cabinet above: open: top height, 1560."
     PredefinedType: CLADDING
     ObjectType: Backsplash
     ContainedInStructure: SP-1.02
@@ -1604,7 +1644,7 @@ coverings:
     Elevation: 0.93
     Width: 0.058
     Depth: 0.012
-    Height: 0.62
+    Height: 0.63
     PropertySets:
       - Name: Pset_Finish
         Properties:

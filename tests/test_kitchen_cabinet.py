@@ -5,6 +5,7 @@ workflow is paused (AGENTS.md); written against the 2026-11-12 layout.
 """
 
 import copy
+import math
 from pathlib import Path
 import sys
 
@@ -125,16 +126,94 @@ def test_disposers_and_taps_hang_on_their_sinks():
     assert len(pull.items) == 2
 
 
-def test_wall_cabinets_and_over_fridge_have_pairs_of_doors():
+def test_wall_cabinets_have_hf_bifold_fronts_that_open_partly_folded():
+    """Petr, 2026-11-13: "I want this hinge for the top cabinets", "top
+    cabinets to start at 1560mm", "don't move anything up, make it shorter in
+    height", and "they stay only partially folded, like my image" (HF top)."""
     runs = _runs()
-    for run_id, bay_id in (("KR-WEST-H", "SF-AH850"), ("KR-WEST-H", "SF-BH800"),
-                           ("KR-WEST-H", "SF-CH850"), ("KR-TALL-F", "SF-TF")):
-        run = runs[run_id]
-        leaves = [run.part(f"{bay_id}-DOOR{i}").door for i in (1, 2)]
-        assert sorted(leaf.hinge for leaf in leaves) == ["L", "R"]
-    tf = runs["KR-TALL-F"]
+    run = runs["KR-WEST-H"]
+    for bay in run.bays:
+        assert bay.z_base == pytest.approx(1560.0) and bay.z_base + bay.height == pytest.approx(2450.0)
+        upper, lower = run.part(f"{bay.id}-LIFT1"), run.part(f"{bay.id}-LIFT2")
+        assert upper.props["FittingCode"] == "HF"
+        assert "assume the hinge exists" in upper.props["BlumRangeOverride"]
+        assert upper.boxes[0][4] > lower.boxes[0][5]
+        kc_min, kc_max = kc.AVENTOS["HF"]["lf"]
+        assert kc_min <= upper.props["PowerFactor"] <= kc_max
+        # Petr, 2026-11-13: "do 88 degrees in the model." (an HF opening-angle stop)
+        assert upper.props["OpeningAngle"] == 88.0
+        assert upper.lift.angles[-1] == pytest.approx(math.radians(88.0))
+        assert lower.lift.parent == 0
+        # Open, the lower front hangs partly folded, not flat behind the upper.
+        hang = math.degrees(upper.lift.angles[-1] + lower.lift.angles[-1])
+        assert hang == pytest.approx(lower.props["OpenLowerAngle"], abs=0.1)
+        assert -15.0 < hang < 0.0
+        assert lower.props["OpenBottomEdgeHeight"] == pytest.approx(1.991, abs=0.003)
+        # Space above: at least Blum's Y for the 88° stop (28).
+        assert upper.props["OpenAbove"] >= upper.props["BlumOpenAbove"] == pytest.approx(0.028)
+        mechs = [run.part(f"{bay.id}-LIFTMECH-{s}") for s in ("L", "R")]
+        arms = [run.part(f"{bay.id}-LIFTARM-{s}") for s in ("L", "R")]
+        # The lever is rigid, fixed to the lower front, pivoting at the mechanism's underside.
+        assert all(a.lift.stretch is None and a.lift.pivot_z == pytest.approx(mechs[0].boxes[0][4]) for a in arms)
+        assert lower.boxes[0][4] < arms[0].boxes[0][4] < lower.boxes[0][5]
+        shelves = [p for p in run.parts if p.role == "Shelf" and p.id.startswith(bay.id)]
+        assert len(shelves) == 2
+        assert all(sh.boxes[0][5] <= min(m.boxes[0][4] for m in mechs) for sh in shelves)
+    assert {bid for bid, _box in run.clearances} == {b.id for b in run.bays}
+
+
+def test_lift_outside_blum_range_stops_the_export():
+    doc = copy.deepcopy(load_furnishings())
+    bay = next(e for e in doc["systemFurniture"] if e["id"] == "SF-BH800")
+    for pset in bay["PropertySets"]:
+        if pset["Name"] == "Pset_Fronts":
+            pset["Properties"]["Layout"] = "lift * fitting=HK shelves=2"
+            pset["Properties"].pop("BlumRangeOverride")
+    with pytest.raises(ValueError, match="cabinet height"):
+        _runs(doc)
+
+
+def test_lift_angle_must_be_an_hf_stop():
+    doc = copy.deepcopy(load_furnishings())
+    bay = next(e for e in doc["systemFurniture"] if e["id"] == "SF-BH800")
+    for pset in bay["PropertySets"]:
+        if pset["Name"] == "Pset_Fronts":
+            pset["Properties"]["Layout"] = "lift * fitting=HF angle=90 shelves=2"
+    with pytest.raises(ValueError, match="opening-angle stops are 116, 107, 97, 88, 81"):
+        _runs(doc)
+
+
+def test_blum_range_override_keeps_the_breach():
+    doc = copy.deepcopy(load_furnishings())
+    bay = next(e for e in doc["systemFurniture"] if e["id"] == "SF-BH800")
+    for pset in bay["PropertySets"]:
+        if pset["Name"] == "Pset_Fronts":
+            pset["Properties"]["Layout"] = "lift * fitting=HK shelves=2"
+    front = _runs(doc)["KR-WEST-H"].part("SF-BH800-LIFT")
+    assert "205–600" in front.props["OutsideBlumRange"]
+
+
+def test_nothing_above_the_ceiling_line():
+    import ceiling_line
+    from ground_floor import FURNISHING_LISTS, ROOM_X0, ROOM_X1, ROOM_Y0, ROOM_Y1
+
+    doc = load_furnishings()
+    runs = list(_runs(doc).values())
+    ceiling_line.check_ceiling_line(doc, FURNISHING_LISTS, runs)
+    notes = ceiling_line.check_open_envelopes(runs, (ROOM_X0, ROOM_X1, ROOM_Y0, ROOM_Y1))
+    assert len(notes) == 3
+    doc = copy.deepcopy(doc)
+    next(e for e in doc["systemFurniture"] if e["id"] == "SF-DH")["Height"] = 0.9
+    with pytest.raises(ValueError, match="ceiling line"):
+        ceiling_line.check_ceiling_line(doc, FURNISHING_LISTS, list(_runs(doc).values()))
+
+
+def test_over_fridge_has_a_pair_of_doors():
+    run = _runs()["KR-TALL-F"]
+    leaves = [run.part(f"SF-TF-DOOR{i}").door for i in (1, 2)]
+    assert sorted(leaf.hinge for leaf in leaves) == ["L", "R"]
     fridge_top = 1876.0
-    assert tf.bays[0].z_base >= fridge_top
+    assert run.bays[0].z_base >= fridge_top
 
 
 def test_fronts_layout_is_parametric():
@@ -237,7 +316,7 @@ def test_ifc_groups_and_assembly():
     assert child_names == bay_names
     member_ids = {kitchen_ifc._yaml_id(p) for p in product_rel.RelatedObjects}
     # Loose pieces (sofa, table, standalone cabinets, worktops not in a bay).
-    assert {"FN-GATTA", "FN-S2A", "SF-DH", "SF-LB", "SF-TC", "KR-ISL-WORKTOP"} <= member_ids
+    assert {"FN-GATTA", "FN-S2A", "SF-DH", "SF-TC", "KR-ISL-WORKTOP"} <= member_ids
     # Kitchen-run assemblies stay out: their bays are already child groups.
     assert "KR-ISL" not in member_ids and "KR-WEST" not in member_ids
     # Electrical stays empty until a circuit or IfcSystem exists in the model.
@@ -281,7 +360,7 @@ def test_drawer_motions_in_model():
 def test_cabinet_door_motions_swing_outward():
     _shape, meta = build()
     doors = {m["id"]: m for m in meta["door_motions"] if m["kind"] == "hinged" and m["id"].startswith("SF-")}
-    assert {"SF-T1-DOOR1", "SF-T2-DOOR1", "SF-TF-DOOR1", "SF-TF-DOOR2", "SF-AH850-DOOR1"} <= set(doors)
+    assert {"SF-T1-DOOR1", "SF-T2-DOOR1", "SF-TF-DOOR1", "SF-TF-DOOR2"} <= set(doors)
     # T1 hinges on its west edge and opens toward the room (south, glTF +z).
     t1 = doors["SF-T1-DOOR1"]
     assert t1["element"] == "SF-T1-DOOR1" and t1["axis"] == [0, 1, 0]
@@ -348,7 +427,7 @@ def test_west_backsplash_up_to_wall_cabinets():
     run = _runs()["KR-WEST"]
     (box,) = run.part("KR-WEST-BACKSPLASH").boxes
     assert box[3] - box[2] == pytest.approx(12.0)
-    assert (box[4], box[5]) == (pytest.approx(930.0), pytest.approx(1550.0))
+    assert (box[4], box[5]) == (pytest.approx(930.0), pytest.approx(1560.0))
     assert box[1] - box[0] == pytest.approx(2500.0)
 
 

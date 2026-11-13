@@ -46,8 +46,9 @@
     description: >-
       Solid and veneered natural oak furniture: the Gatta dining table, the six
       dining chairs, the bookshelf with its lamella back, the north dining run
-      bodies (KR-DN), the low base behind the sofa, the tall corner cabinet and
-      the oak-front wall cabinet over the dining run. Everything
+      bodies (KR-DN), the low base behind the sofa (KR-LB) and its oak-veneer
+      counter (Petr, 2026-11-13), the tall corner cabinet and the oak-front
+      wall cabinet over the dining run. Everything
       `Pset_Finish.Material: natural oak` in furnishings.yaml.
     selectors:
       - {label: oak}
@@ -109,11 +110,11 @@
   name: Kitchen fronts, warm cream matt (about RAL 9001)
   applies_to:
     description: >-
-      Kitchen door and drawer fronts, the visible end sides and plinth
+      Kitchen door, drawer and lift-up (AVENTOS) fronts, the visible end sides and plinth
       boards of the kitchen runs (island, west run, tall runs, west wall
       cabinets), and the integrated dishwasher's door panel.
     selectors:
-      - {label: cabinet, id_pattern: "-(FRONT|D[0-9]+|END-[NSEW]|PLINTH-[NSEW])$"}
+      - {label: cabinet, id_pattern: "-(FRONT|D[0-9]+|LIFT[0-9]*|END-[NSEW]|PLINTH-[NSEW])$"}
       - {label: appliance, ids: [EA-SBD6ECX]}
   base_color: "#e9e0d2"
   roughness: 0.35
