@@ -1,0 +1,3 @@
+Source: ambientCG "Plaster001", https://ambientcg.com/view?id=Plaster001 (CC0 1.0).
+Modified: normal flattened to 35 % (smooth filled-and-painted plaster), roughness re-centred on 0.9.
+No colour map: the viewer uses base_color. Physical size of one repeat: assumed 2.0 m.
