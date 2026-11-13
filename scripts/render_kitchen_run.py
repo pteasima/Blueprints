@@ -44,6 +44,7 @@ COLORS = {
     "Door": "#9ecae1",
     "Lift": "#9ecae1",
     "LiftMechanism": "#333333",
+    "LiftArm": "#555555",
     "Clearance": "#e41a1c",
     "Filler": "#c7b299",
     "Shelf": "#a0785a",

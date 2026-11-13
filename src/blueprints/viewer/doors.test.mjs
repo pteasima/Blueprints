@@ -28,6 +28,8 @@ import {
   collectDoorHosts,
   isSlidingRecord,
   isSectionalRecord,
+  isLinkageRecord,
+  sampleSeries,
   sectionalTrack,
   sectionalTravel,
 } from "./doors.js";
@@ -757,6 +759,125 @@ function slabFor(record, size, name) {
   const g = new THREE.Box3().setFromObject(glass).getCenter(new THREE.Vector3());
   near1(f.distanceTo(g), 0, "glass stays in its frame");
   assert.ok(f.x > record.hinge[0] + 0.3, `opens east, into 1.01 (Petr's sketch): ${f.x}`);
+}
+
+// Linkage: a bi-fold lift front under a turned (Z-up) root. The upper front
+// turns 116° about its top edge; the lower one hangs from the centre hinge
+// and folds back by twice that (to −180°), so open it lies behind the upper.
+// An arm turns and telescopes. World frame: +x out of the cabinet, +y up.
+{
+  assert.equal(sampleSeries([0, 1, 3], 0.75), 2);
+  assert.equal(sampleSeries([0, 1, 3], 2), 3);
+  const scene = new THREE.Scene();
+  const root = new THREE.Group();
+  root.rotation.x = -Math.PI / 2;
+  scene.add(root);
+  const bay = new THREE.Group();
+  bay.name = "systemFurniture__SF-L__";
+  root.add(bay);
+  scene.updateMatrixWorld(true);
+  const mat = new THREE.MeshBasicMaterial();
+  const panel = (name, y) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.45, 0.8), mat);
+    m.name = name;
+    m.position.set(0.009, y, 0);
+    scene.add(m);
+    m.updateMatrixWorld(true);
+    bay.attach(m);
+    return m;
+  };
+  const upper = panel("cabinet__SF-L-LIFT1__", 2.2);
+  const lower = panel("cabinet__SF-L-LIFT2__", 1.745);
+  const arm = new THREE.Mesh(new THREE.BoxGeometry(0.016, 0.1, 0.016), mat);
+  arm.name = "cabinet__SF-L-LIFTARM-L__";
+  arm.position.set(-0.01, 2.2, 0.39);
+  scene.add(arm);
+  arm.updateMatrixWorld(true);
+  bay.attach(arm);
+  const steps = 24;
+  const theta = [...Array(steps + 1)].map((_, k) => ((116 * Math.PI) / 180) * (k / steps));
+  const record = {
+    id: "SF-L-LIFT",
+    kind: "linkage",
+    duration_ms: 900,
+    joints: [
+      {
+        elements: [{ element: "SF-L-LIFT1", center: [0.009, 2.2, 0] }],
+        parent: null,
+        pivot: [0, 2.425, 0],
+        axis: [0, 0, 1],
+        angles: theta,
+      },
+      {
+        elements: [{ element: "SF-L-LIFT2", center: [0.009, 1.745, 0] }],
+        parent: 0,
+        pivot: [0, 1.9725, 0],
+        axis: [0, 0, 1],
+        angles: theta.map((t) => (t <= Math.PI / 2 ? -2 * t : -Math.PI)),
+      },
+      {
+        elements: [{ element: "SF-L-LIFTARM-L", center: [-0.01, 2.2, 0.39] }],
+        parent: null,
+        pivot: [-0.01, 2.25, 0],
+        axis: [0, 0, 1],
+        angles: theta.map(() => 0),
+        stretch: { along: [0, -1, 0], scales: theta.map((_, k) => 1 + k / steps) },
+      },
+    ],
+  };
+  assert.ok(isLinkageRecord(record));
+  assert.ok(!isLinkageRecord({ ...record, joints: [{ ...record.joints[1], parent: 0 }] }), "parent must come first");
+  const ctrl = createDoorController({ canvas: fakeCanvas(), getCamera: () => null, records: [record] });
+  assert.equal(ctrl.bind(scene), 1);
+  const binding = ctrl.bindings[0];
+  assert.equal(binding.kind, "linkage");
+  assert.equal(binding.joints.length, 3);
+  assert.equal(binding.duration, 900);
+  const at = (m) => {
+    scene.updateMatrixWorld(true);
+    return new THREE.Box3().setFromObject(m).getCenter(new THREE.Vector3());
+  };
+  near1(at(upper).distanceTo(new THREE.Vector3(0.009, 2.2, 0)), 0, "upper stays put when bound");
+  // Half way (58°): the lower front's bottom edge rides the cabinet's front plane.
+  toggleDoor(binding, 0);
+  binding.anim = null;
+  binding.goal = 0.5;
+  applyDoorSwing(binding, 0);
+  scene.updateMatrixWorld(true);
+  const lowBox = new THREE.Box3().setFromObject(lower);
+  assert.ok(lowBox.max.y > 1.6 && lowBox.min.x > -0.03, `lower folds up in front, not into the carcass: ${lowBox.min.x}`);
+  binding.goal = 1;
+  applyDoorSwing(binding, 0);
+  const u = at(upper);
+  const l = at(lower);
+  assert.ok(u.y > 2.425 && u.x > 0.15, `upper swings up and out: ${u.x}, ${u.y}`);
+  near1(u.distanceTo(l), 0.018, "lower lies flat behind the upper");
+  const a = new THREE.Box3().setFromObject(arm);
+  near1(a.max.y - a.min.y, 0.2, "arm telescopes to twice its length");
+  // Tapping the lower front or the arm drives the same linkage.
+  assert.equal(lower.userData.bpDoor, binding);
+  assert.equal(arm.userData.bpDoor, binding);
+  binding.goal = 0;
+  applyDoorSwing(binding, 0);
+  near1(at(lower).distanceTo(new THREE.Vector3(0.009, 1.745, 0)), 0, "shuts back where it was");
+}
+
+// The committed ground floor: each wall cabinet's lift front binds as one
+// linkage (upper, lower, two arms) that opens up and out of the wall.
+{
+  const records = JSON.parse(
+    readFileSync(new URL("../../../docs/models/ground_floor.doors.json", import.meta.url), "utf8"),
+  );
+  const lifts = records.filter((r) => r.kind === "linkage");
+  assert.deepEqual(
+    lifts.map((r) => r.id),
+    ["SF-AH850-LIFT", "SF-BH800-LIFT", "SF-CH850-LIFT"],
+  );
+  for (const r of lifts) {
+    assert.ok(isLinkageRecord(r), r.id);
+    assert.deepEqual(r.joints.map((j) => j.parent), [null, 0, null]);
+    assert.equal(r.joints[2].elements.length, 2, "an arm on each side");
+  }
 }
 
 function near1(a, b, msg) {

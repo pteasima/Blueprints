@@ -331,6 +331,7 @@ def _kitchen_run_parts(run, motions=None) -> list:
     frame = run.frame
     plane = Plane(origin=(frame.ox, frame.oy, 0.0), x_dir=(frame.ux, frame.uy, 0.0), z_dir=(0.0, 0.0, 1.0))
     half = MESH_GAP_MM / 2.0
+    linkages: dict[str, list] = {}
     out = []
     for part in run.parts:
         if part.drawer is not None:
@@ -364,6 +365,9 @@ def _kitchen_run_parts(run, motions=None) -> list:
         out.append(_tag(_paint(plane * solid, label), part.id, list_key))
         if motions is None:
             continue
+        if part.lift is not None:
+            linkages.setdefault(part.lift.group, []).append(part)
+            continue
         if part.door is not None:
             motions.append(_cabinet_door_motion(frame, part))
             continue
@@ -386,7 +390,79 @@ def _kitchen_run_parts(run, motions=None) -> list:
                 "slide": [round(q - p, 6) + 0.0 for p, q in zip(cg, mg)],
             }
         )
+    if motions is not None:
+        for group, members in linkages.items():
+            motions.append(_linkage_motion(frame, group, members))
     return out
+
+
+# A lift front takes longer to open than a door swings (doors.js DOOR_SWING_MS).
+LINKAGE_MS = 900
+
+
+def _linkage_motion(frame, group: str, members: list) -> dict:
+    """A ``kind: "linkage"`` record (the viewer's doors.js): a lift front,
+    its folding lower front and its lever arms, each a joint turning about
+    a line, angles sampled from shut to open (``kitchen_cabinet.LiftJoint``).
+
+    ``pivot`` is a point on the joint's line and ``axis`` its direction,
+    glTF metres, as built (shut). A positive angle is a right-handed turn
+    about ``axis``, relative to the ``parent`` joint (null: the model). An
+    optional ``stretch`` scales the part along ``along`` (a direction from
+    the pivot, shut) by ``scales``, one per angle (a telescoping arm). Each
+    element names a part mesh and its shut bbox centre, to find it.
+    """
+    joints: dict[int, dict] = {}
+    for part in sorted(members, key=lambda p: (p.lift.index, p.id)):
+        lj = part.lift
+        boxes = part.boxes
+        a = (min(b[0] for b in boxes) + max(b[1] for b in boxes)) / 2.0
+        c = (min(b[2] for b in boxes) + max(b[3] for b in boxes)) / 2.0
+        z = (min(b[4] for b in boxes) + max(b[5] for b in boxes)) / 2.0
+        element = {"element": part.id, "center": [round(v, 6) + 0.0 for v in cad_mm_to_gltf_m(frame.world(a, c, z))]}
+        if lj.index in joints:
+            joints[lj.index]["elements"].append(element)
+            continue
+        p0 = cad_mm_to_gltf_m(frame.world(a, lj.pivot_c, lj.pivot_z))
+        # Down (−z) turned towards out (+c·out) by a positive angle: axis = down × out.
+        o0 = frame.world(a, lj.pivot_c, lj.pivot_z)
+        o1 = frame.world(a, lj.pivot_c + lj.out * 1000.0, lj.pivot_z)
+        ox, oy = o1[0] - o0[0], o1[1] - o0[1]
+        n = math.hypot(ox, oy)
+        kx, ky = oy / n, -ox / n  # (0, 0, -1) × (ox, oy, 0)
+        tip = cad_mm_to_gltf_m((o0[0] + kx * 1000.0, o0[1] + ky * 1000.0, o0[2]))
+        axis = [round(q - p, 6) + 0.0 for p, q in zip(p0, tip)]
+        joints[lj.index] = {
+            "elements": [element],
+            "parent": lj.parent,
+            "pivot": [round(v, 6) + 0.0 for v in p0],
+            "axis": axis,
+            "angles": [round(v, 6) + 0.0 for v in lj.angles],
+        }
+        if lj.stretch is not None:
+            down = cad_mm_to_gltf_m((o0[0], o0[1], o0[2] - 1000.0))
+            joints[lj.index]["stretch"] = {
+                "along": [round(q - p, 6) + 0.0 for p, q in zip(p0, down)],
+                "scales": [round(v, 6) + 0.0 for v in lj.stretch],
+            }
+    order = sorted(joints)
+    # Parents are named by joint index in the model; in the record, by
+    # position in ``joints``.
+    place = {index: k for k, index in enumerate(order)}
+    out = []
+    for index in order:
+        j = joints[index]
+        j["parent"] = None if j["parent"] is None else place[j["parent"]]
+        out.append(j)
+    first = out[0]["elements"][0]
+    return {
+        "id": group,
+        "kind": "linkage",
+        "element": first["element"],
+        "center": first["center"],
+        "duration_ms": LINKAGE_MS,
+        "joints": out,
+    }
 
 
 def _cabinet_door_motion(frame, part) -> dict:

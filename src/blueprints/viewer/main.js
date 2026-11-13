@@ -2666,9 +2666,12 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       }
     }
     for (const binding of doorCtrl.bindings) {
-      const key = meshIdentity(binding.host?.name || "").element;
-      const hidden = Boolean(key && hiddenKeys.has(key));
-      if (binding.host) binding.host.userData.bpIfcHidden = hidden;
+      // A linkage moves several parts; each hides with its own element.
+      for (const host of binding.hosts || [binding.host]) {
+        const key = meshIdentity(host?.name || "").element;
+        const hidden = Boolean(key && hiddenKeys.has(key));
+        if (host) host.userData.bpIfcHidden = hidden;
+      }
     }
     for (const [name, meshes] of parts) {
       applyOpacityToMeshes(meshes, partOpacity.get(name) ?? 1, { edgeMode });
@@ -2871,7 +2874,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
 
   /**
    * Drawer: straight arrow along its slide. Sliding door: one straight arrow
-   * per panel, along that panel's slide. Sectional door: up or down arrow.
+   * per panel, along that panel's slide. Sectional door and lift-up front
+   * (linkage): up or down arrow.
    * Hinged leaf: arc along the swing.
    */
   function doorFeedback(binding, move) {
@@ -2880,7 +2884,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     if (box.isEmpty()) return;
     const center = box.getCenter(new THREE.Vector3());
     const opening = move.to > move.from;
-    if (binding.sections) {
+    if (binding.sections || binding.joints) {
       feedback.showFeedback({ worldPos: center, kind: "lift", direction: opening ? "up" : "down" });
       return;
     }

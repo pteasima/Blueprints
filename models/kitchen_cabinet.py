@@ -136,6 +136,18 @@ AVENTOS = {
     "HK-XS": {"name": "Blum AVENTOS HK-XS (stay lift)", "kh": (240.0, 600.0), "kb": 1800.0, "lt": None,
               "lf": None, "fg": None, "fronts": 1, "mech": (30.0, 200.0, 120.0)},
 }
+# Opening angle each fitting is animated to in the viewer, degrees (Blum's
+# largest setting; HF's 116 matches the clearance below). HS (up and over)
+# and HL (lifts parallel) are drawn as a tilt about the top edge too: a
+# simplification, their real fronts do not turn about one line.
+LIFT_OPEN_DEG = {"HF": 116.0, "HS": 110.0, "HL": 107.0, "HK": 107.0, "HK-S": 104.0, "HK-XS": 105.0}
+# Samples per linkage joint, shut to open (the viewer interpolates).
+LIFT_STEPS = 24
+# Lever arm drawn from each mechanism to the upper front: mm wide (a),
+# deep (c), and how far under the mechanism it fixes to the front.
+# guess: read off Blum's HF drawings, not measured.
+LIFT_ARM = (16.0, 18.0, 120.0)
+
 # Front weight for a lift: oak-veneered chipboard, kg/m3. Blum's reference
 # chipboard is 680 (catalogue p. 716); veneer and glue add a little. guess:
 LIFT_FRONT_DENSITY = 700.0
@@ -259,6 +271,30 @@ class Leaf:
 
 
 @dataclass
+class LiftJoint:
+    """One joint of a lift front's linkage, run frame mm (the viewer's
+    ``kind: "linkage"`` record, models/ground_floor.py).
+
+    The joint turns about a line along the run's a axis through
+    (``pivot_c``, ``pivot_z``). ``angles`` are radians, relative to the
+    ``parent`` joint (None: the carcass), sampled at even steps from shut
+    (first) to open (last). A positive angle swings the part's lower edge
+    out of the carcass, towards ``out`` (+1 / -1 in c).
+    """
+
+    group: str  # the linkage, one per lift front (``<bay>-LIFT``)
+    index: int  # this joint's place in the linkage
+    parent: int | None
+    pivot_c: float
+    pivot_z: float
+    out: float
+    angles: tuple
+    # Optional, per sample: how much the part grows along the line straight
+    # down from the pivot (a telescoping arm), 1 = as built.
+    stretch: tuple | None = None
+
+
+@dataclass
 class Zone:
     """One horizontal band of a bay's front, top to bottom (Pset_Fronts)."""
 
@@ -316,6 +352,7 @@ class Part:
     door: Leaf | None = None
     props: dict = field(default_factory=dict)  # Pset_KitchenFront / Pset_BuiltIn values for IFC
     builtin: dict | None = None  # a yaml appliance laid out here (its own IFC product)
+    lift: LiftJoint | None = None  # a lift front or its arm: how it moves open (viewer)
 
 
 @dataclass
@@ -878,10 +915,74 @@ class _Builder:
             boxes.append(box)
             self.add(Part(f"{bay.id}-LIFTMECH-{side}", f"Zdvihací mechanismus {fit}", "LiftMechanism", [box],
                           props={"Zone": zone.index, "Fitting": spec["name"], "FittingCode": fit}), bay)
+        boxes += self._lift_motion(bay, fit, fronts, front_box, out, boxes, in_z1 - mh, zone, spec)
         self.run.notes.append(
             f"{bay.id}: {spec['name']}, KH {kh:.0f}, front(s) {fb:.0f} wide, {fg:.1f} kg, LF {lf:.0f}, "
             f"open {above:.0f} above the top and {ahead:.0f} ahead of the face")
         return boxes
+
+    def _lift_motion(self, bay: Bay, fit: str, fronts: list, front_box: tuple, out: float, mechs: list,
+                     mech_z0: float, zone: Zone, spec: dict) -> list:
+        """How the lift front moves open, as ``LiftJoint`` s on its parts,
+        plus a lever arm from each mechanism to the upper front. Returns
+        the arm boxes (the shelves keep clear of them too).
+
+        Upper front (or the single one): turns about its top edge on the
+        inner face, 0 to ``LIFT_OPEN_DEG``. HF's lower front hangs from the
+        centre hinge on the inner faces and folds back by twice the upper
+        angle, so its bottom edge rides up the cabinet's front plane, until
+        it lies flat behind the upper one (at 90°); then the pair turns on
+        together. Each arm turns about its pivot in the mechanism and
+        telescopes so its tip stays on its fixing on the upper front.
+        guess: the arm is drawn as a straight bar, pivot and fixing placed
+        by eye, not from Blum's drawings.
+        """
+        a0, a1, fc0, fc1, _z0, z1 = front_box
+        inner = fc0 if out > 0 else fc1  # the front's carcass-side face
+        top_z = z1
+        steps = [k / LIFT_STEPS for k in range(LIFT_STEPS + 1)]
+        theta = [math.radians(LIFT_OPEN_DEG[fit]) * t for t in steps]
+        group = f"{bay.id}-LIFT"
+        upper_id = f"{bay.id}-LIFT1" if spec["fronts"] == 2 else f"{bay.id}-LIFT"
+        joints = {upper_id: LiftJoint(group, 0, None, inner, top_z, out, tuple(theta))}
+        if spec["fronts"] == 2:
+            (_t1, _l1, (u0, _u1)), (_t2, _l2, (_l0, l1)) = fronts
+            fold = tuple(-2.0 * th if th <= math.pi / 2 else -math.pi for th in theta)
+            joints[f"{bay.id}-LIFT2"] = LiftJoint(group, 1, 0, inner, (u0 + l1) / 2.0, out, fold)
+        for pid, joint in joints.items():
+            self.run.part(pid).lift = joint
+        # Lever arms: a bar down the inner face of the upper front, from
+        # inside the mechanism to its fixing, turning about its top end.
+        aw, ad, drop = LIFT_ARM
+        fix_z = max(mech_z0 - drop, fronts[0][2][0] + 20.0)
+        piv_z = mech_z0 + 10.0
+        if fix_z > mech_z0 - 20.0:
+            return []  # the front is too short under the mechanism for an arm
+        ac0, ac1 = sorted((inner, inner - out * ad))
+        arm_c = (ac0 + ac1) / 2.0
+        # Outward distance u (+ towards ``out``) and height z, about the top hinge.
+        hu, hz = 0.0, top_z
+        fu, fz = out * (arm_c - inner), fix_z
+        pu, pz = fu, piv_z
+        swing, stretch = [], []
+        for th in theta:
+            du, dz = fu - hu, fz - hz
+            # A positive turn takes "down" towards "out": counter-clockwise in (u, z).
+            ru = hu + du * math.cos(th) - dz * math.sin(th)
+            rz = hz + du * math.sin(th) + dz * math.cos(th)
+            v0 = (fu - pu, fz - pz)
+            v1 = (ru - pu, rz - pz)
+            swing.append(math.atan2(v0[0] * v1[1] - v0[1] * v1[0], v0[0] * v1[0] + v0[1] * v1[1]))
+            stretch.append(math.hypot(*v1) / math.hypot(*v0))
+        arms = []
+        for side, mech in zip(("L", "R"), mechs):
+            mid = (mech[0] + mech[1]) / 2.0
+            box = (mid - aw / 2.0, mid + aw / 2.0, ac0, ac1, fix_z, piv_z + 15.0)
+            arms.append(box)
+            self.add(Part(f"{bay.id}-LIFTARM-{side}", f"Rameno zdvihacího mechanismu {fit}", "LiftArm", [box],
+                          props={"Zone": zone.index, "Fitting": spec["name"], "FittingCode": fit},
+                          lift=LiftJoint(group, 2, None, arm_c, piv_z, out, tuple(swing), tuple(stretch))), bay)
+        return arms
 
     def _shelves(self, bay, p, zone, z_lo, z_hi, back_y, racks=0, avoid=()):
         """Loose shelves in a door band: ``shelves=N`` evenly spaced, the
