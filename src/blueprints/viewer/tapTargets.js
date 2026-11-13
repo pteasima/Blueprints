@@ -59,7 +59,7 @@ function isSeeThroughMaterial(m) {
 }
 
 /**
- * True when `obj` is glass: a glass part, or every material see-through.
+ * True when `obj` is glass: a `GLASS_PARTS` part, or a transmission material.
  * @param {object | null | undefined} obj
  */
 export function isGlassLike(obj) {
