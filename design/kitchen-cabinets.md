@@ -43,15 +43,15 @@ End sides and dividers run the full carcass height, and bottoms and rails sit be
 
 ### Clear inner width per bay
 
-The bay boxes in the yaml did not move or change size. What changed is the space inside: a divider takes 9 mm from each neighbour instead of a full 18 mm side, and an end bay keeps a full 18 mm end side. Before this change every cabinet was its own box with two 18 mm sides (clear = width − 36).
+The bay boxes in the yaml did not move or change size (until the Gridfinity change of 2026-11-13, which resized the island's west row; see “Gridfinity drawers”). What changed is the space inside: a divider takes 9 mm from each neighbour instead of a full 18 mm side, and an end bay keeps a full 18 mm end side. Before this change every cabinet was its own box with two 18 mm sides (clear = width − 36).
 
 | Bay | Width | Clear before | Clear now | Change |
 | --- | ---: | ---: | ---: | ---: |
 | SF-I500a | 500 | 464 | 473 | +9 (north end) |
-| SF-I600a | 600 | 564 | 582 | +18 |
-| SF-I500b | 500 | 464 | 482 | +18 |
-| SF-I600b | 600 | 564 | 582 | +18 |
-| SF-I300 | 300 | 264 | 273 | +9 (south end) |
+| SF-I600a | **607** (was 600, Gridfinity) | 564 | 589 | +25 |
+| SF-I500b | **481** (was 500, Gridfinity) | 464 | 463 | −1 |
+| SF-I600b | **607** (was 600, Gridfinity) | 564 | 589 | +25 |
+| SF-I300 | **305** (was 300, Gridfinity) | 264 | 278 | +14 (south end) |
 | SF-E600a | 600 | 564 | 573 | +9 (north end) |
 | SF-E600b | 600 | 564 | 582 | +18 |
 | SF-E600c | 600 | 564 | 582 | +18 |
@@ -131,9 +131,9 @@ Contents are now written on every front (`Pset_KitchenFront.Contents`), from the
 | Worktop thickness | 20 | Silestone comes in 12, 20 and 30 (**Cosentino**). Petr gave no thickness: `guess:` 20 |
 | Plinth (sokl) height | **100**, open legs, no kick board | **Petr**, 2026-11-12: “Ok, 100mm it is.” (was 110; 92 before that) |
 | Carcass height | **810** | derived: 930 − 20 − 100. METOD's carcass is 800; the extra 10 goes into the `*` drawer |
-| Drawer grid, D1 nože | 200 | **IKEA** METOD 80-grid, “low” front 20 cm |
-| Drawer grid, D2 nářadí | 200 | **IKEA** METOD 80-grid, “low” front 20 cm |
-| Drawer grid, D3 dole nevím | **410** (rest; was 400) | **IKEA** METOD 80-grid, “high” front 40 cm. Written `*`, the rest of the carcass, so a carcass change lands here |
+| Drawer band, D1 (top) | **100** (was 200); SF-I600b (hob) **200** | **Petr**, 2026-11-13: the top drawers are MAXIMERA's lowest variant (system height 10 cm, **IKEA**). Under the hob see “Gridfinity drawers” |
+| Drawer band, D2 | **100** (was 200) | **Petr**, 2026-11-13, as D1 |
+| Drawer band, D3 (bottom) | **610** (rest; was 410); SF-I600b **510** | **Petr**, 2026-11-13: “The bottom drawer can grow by that leftover amount.” Written `*`, the rest of the carcass, so a carcass change lands here |
 | Tall run carcass | **2350** | 2450 (**Petr**, tall height, unchanged) − the same 100 plinth, so the tall plinth lines up with the bases. The tall runs keep a kick board (`PlinthKind` is `Board` by default) |
 | Wall-cabinet carcass | 900 | the box height, bottom 1550, top 2450 (furnishings.md) |
 
@@ -150,26 +150,44 @@ Petr, 2026-11-12: “Ok, 100mm it is.” He wants the lowest plinth his robot va
 - Legs: Ø40, adjustable, IKEA-like. Each row has a front and a back leg on every wall line, under each end side and each shared divider. The front leg centre is 50 behind the carcass front (68 behind the front face) and the back one is 50 before the back. `guess:` IKEA puts 4 legs under each cabinet; a monoblock shares them at the dividers. Island: 22 legs. West run: 8 legs.
 - The stone end cladding (island and west run) still runs from the floor to the worktop underside, so the robot gets in from the long sides only.
 - The dishwasher slot (SF-A600) has no carcass: floor to worktop underside is **910**, unchanged by the plinth. The Bosch SBD6ECX12E is the XXL model (865 high) and takes a 865–925 niche ([Bosch spec sheet](https://media3.bosch-home.com/Documents/specsheet/de-DE/SBD6ECX12E.pdf)), so 910 fits. The usual 815–875 niche is the 815-high SMD model, not this one. The robot does not get under the dishwasher.
-- The hob is unchanged: carcass top 910, hob underside 879. SF-I600b now has three drawers under it (see “Fronts and interiors”); the top box stops 8 under the hob.
+- The hob is unchanged: carcass top 910, hob underside 879. SF-I600b has three drawers under it (see “Gridfinity drawers”); the top box (a MAXIMERA medium, 713–857) stays 22 under the hob, more than Miele's 8.
 - The north dining run (`KR-DN`) has no plinth parameter: its oak bodies stand on the floor (`Carcass: Box`). `open:` should they get legs too?
 - `open:` the drawer and door fronts stop 1.5 above the carcass bottom (101.5), with no kick board behind. Check the look and toe space with Petr.
 
-## Fronts, boxes, slides (SF-I600a)
+## Fronts, boxes, slides (island drawers)
+
+The drawer boxes are modelled after IKEA **MAXIMERA** (Petr, 2026-11-13, see “Gridfinity drawers”). Until then the box was 13 mm a side off the carcass (labelled “IKEA/Blum-style”; Blum's own MOVENTO rule is 5 mm a side for 16 mm sides, IKEA gives no such number), 16 mm walls, no box front and as long as a 50 mm slide step. That gave a 600 bay a 524 × 534 inside, roomier than the real MAXIMERA (480 × 504). All of it is replaced by the two MAXIMERA deductions.
 
 | Item | Value (mm) | Source |
 | --- | ---: | --- |
 | Front thickness | 18 | **IKEA** METOD fronts |
 | Gap between fronts (and to the sides, 1.5 each) | 3 | **IKEA**: a 600×200 grid front is 597×197 |
-| Front sizes | 597×197, 597×197, **597×407** | derived: grid − 3. D3 was 597×397 before the 100 plinth |
-| Clear opening | 582 | derived: 600 − 9 − 9 (two shared dividers). Was 564 |
-| Drawer box side clearance, each side | 13 | **IKEA**/Blum-style runner clearance, approx. |
-| Drawer box outer width | 556 | derived: 582 − 2 × 13. Was 538 |
-| Drawer box wall | 16 | `guess:` MAXIMERA-like side |
-| Drawer box side height | front grid − 110, at least 60 → 90, 90, **300** (was 290) | `guess:` approximates MAXIMERA low/high sides |
-| Box bottom above its slot bottom | 25 | `guess:` |
-| Carcass depth, island rows | 573 | derived: bay depth 600 − front 18 − half the 18 central back. The bay box `Depth` stays 600 |
-| Slide / drawer box length | 550 | derived: largest 50 mm step that fits 573 − 10 rear clearance. **IKEA** MAXIMERA uses full-extension runners in a 60-deep carcass. Unchanged |
-| Extension | 550 (full) | **IKEA** MAXIMERA full extension: travel = box length |
+| Drawer inside width | clear width − **84** (`DrawerInnerWidthDeduction`) | **IKEA** MAXIMERA, see below |
+| Drawer inside depth | side depth − **96** (`DrawerInnerDepthDeduction`); the side depth is the divider's, carcass front edge to the back (the island's central back face) | **IKEA** MAXIMERA, see below |
+| Drawn box walls (sides, box front, back) | 19 (`BoxWall`) | (542 − 504) / 2: MAXIMERA box 542 deep, inside 504 (**IKEA**). The decor front screws to the box front |
+| Drawn box bottom | 16 (`BoxBottomThickness`) | `guess:` |
+| Box side height | low **78** in a 100 band, medium **144** in 200, high **212** in 300; bands of 400 and more (and pull-outs): front − 110 | **IKEA** MAXIMERA product pages; the 400+ rule is `guess:` (a high box with side extensions) |
+| Box bottom | 3 above its band (the lowest box 3 above the 18 carcass bottom) | `guess:`; the top box must clear the 18 top rail (box top 891, rail from 892) |
+| Box length, extension | inside depth + 2 × 19, full extension (travel = box length) | **IKEA** MAXIMERA full extension |
+| Carcass depth, island west row | **586** bay, so the side depth is 586 − 18 front − 9 (half the central back) = **559** | Gridfinity depth, see below. Was 600 / 573 |
+
+### Drawers: MAXIMERA
+
+IKEA's own pages:
+
+- [IKEA Sverige, “Vad är innermåtten på MAXIMERA lådor?”](https://www.ikea.com/se/sv/customer-service/knowledge/articles/2f2d5df3-50gg-4939-gfef-150779b2c4e2.html): drawer 40 × 60 inside 28.0 × 50.4 cm, 60 × 60 inside 48.0 × 50.4, 80 × 60 inside 68.0 × 50.4 (37 deep: 30.9 inside).
+- [MAXIMERA drawer, low, 60×60](https://www.ikea.com/se/en/p/maximera-drawer-low-white-20204628/): width 56.4, depth 54.2, height **7.8** cm, frame 60 × 60. The 80 × 60 low drawer is 76.4 wide. [Medium 60×60](https://www.ikea.com/gb/en/p/maximera-drawer-medium-white-60285038/): height **14.4**. [High 60×60](https://www.ikea.com/gb/en/p/maximera-drawer-high-white-30285025/): height **21.2**.
+- [MAXIMERA low drawer with front 60×60×10](https://www.ikea.com/se/en/p/maximera-low-drawer-with-front-s49282673/): “System, height: 10 cm”, with a 60 × 10 front. IKEA's [inner-drawer article](https://www.ikea.com/se/en/customer-service/knowledge/articles/925bf3bb-b393-4967-g3d6-b8d7gc065g90.html): “a low drawer is 10 cm high, a medium drawer is 20 cm high, and a high drawer is 30 cm high.”
+
+Derived. The drawer's outer width equals the frame's clear width (56.4 = 60 − 2 × 1.8; 76.4 = 80 − 2 × 1.8), which also confirms the **18 mm METOD side**:
+
+| Frame | Clear (frame − 36) | Inside width | Width deduction | Inside depth | Depth deduction (600 frame) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 40 × 60 | 364 | 280 | 84 | 504 | 96 |
+| 60 × 60 | 564 | 480 | 84 | 504 | 96 |
+| 80 × 60 | 764 | 680 | 84 | 504 | 96 |
+
+The same at every width, so the model subtracts 84 from our clear width and 96 from our side depth (“subtract the same from whatever our side is”). The 480 is measured at the bottom: MAXIMERA's steel sides slope out, so it is wider higher up. The pull-outs on the west run follow the same rule; their box sizes changed with it (see “Gridfinity drawers”).
 
 ## Worktop and cladding
 
@@ -181,19 +199,23 @@ and straight after:
 
 > 30mm overhang, sorry
 
+and on 2026-11-13:
+
+> Tiny change along with this PR: make the silestone overhangs only 20mm, not 30mm.
+
 | Item | Value | Source |
 | --- | --- | --- |
 | Material | Silestone **Blanco Maple** (Cosentino, Tropical Forest series, a mottled white quartz) | **Petr** (“silestone maple”). Blanco Maple is the only Silestone colour named Maple ([Cosentino](https://www.cosentino.com/en-ie/colours/silestone/blanco-maple)) |
 | Thickness | 20 mm | `guess:`; Blanco Maple comes in 12, 20, 30 mm (**Cosentino**) |
 | Top | 930 | **Petr** |
-| Overhang past the front faces (fronts and drawer fronts) | 30 mm | **Petr**, 2026-11-12 (corrected from 300) |
+| Overhang past the front faces (fronts and drawer fronts) | **20 mm** (was 30) | **Petr**, 2026-11-13 (30 on 2026-11-12, corrected from 300). Every Silestone run: island, west run, north dining |
 | Overhang at the back of a wall run | 0 (against the wall) | `guess:` |
-| Island | one piece, 2540 × 1260: the 2500 × 1200 body, + 30 on both long fronts, + 20 at each end over the cladding | derived |
-| West-wall run | one piece, 2540 × 630, y 11.33–13.87 (over the dishwasher slot too, + 20 at each clad end), x 18.80–19.43 | derived |
-| North dining run | 20 mm, top 930, 30 front overhang, one slab per base (see “North dining run”) | **Petr**; derived |
+| Island | one piece, **2540 × 1226** (was 2540 × 1260): the 2500 × 1186 body (west row 586 deep, east row 600), + 20 on both long fronts, + 20 at each end over the cladding | derived |
+| West-wall run | one piece, **2540 × 620**, y 11.33–13.87 (over the dishwasher slot too, + 20 at each clad end), x 18.80–19.42 | derived |
+| North dining run | 20 mm, top 930, 20 front overhang, one slab per base (see “North dining run”) | **Petr**; derived |
 | Slab formats | 3270 × 1590 and 3060 × 1410 | **Cosentino**. The island top fits one 3270 × 1590 slab |
 | West run end cladding | same as the island ends, both ends (see “West run end cladding”) | **Petr** (“the sides of the west run”) |
-| Island end cladding | Silestone Blanco Maple, 20 thick (same as the worktop), floor to the worktop underside (0–910), full worktop depth 1260, covering the leg zone at the ends | **Petr** (“sides … clad in the same silestone”); thickness and floor-to-underside `guess:` |
+| Island end cladding | Silestone Blanco Maple, 20 thick (same as the worktop), floor to the worktop underside (0–910), full worktop depth **1226**, covering the leg zone at the ends | **Petr** (“sides … clad in the same silestone”); thickness and floor-to-underside `guess:` |
 | Worktop–cladding joint | the cladding sits under the worktop; the worktop runs 20 past the carcass end so its end is flush with the cladding face | `guess:` |
 | Sink cut-outs | the manufacturer's undermount cut-out, centred on the sink box; see “Sinks” | **Teka** |
 | Hob cut-out | flush-fit, stepped: 600 × 500 through, rebate 624 × 524 × 5.5; see “Induction hob” | **Miele** manual |
@@ -214,7 +236,7 @@ Both sinks are Teka BE LINEA RS15 and both are **undermount** only (Teka: “Spo
 | `SN-RS1840`, Teka BE LINEA RS15 18.40 X | island, SF-I500a, centred on the bay | 440 × 220 | 400 × 180 × 140 | **396 × 176, R13** | 910 (`Elevation` 0.77) | [Teka 115000010](https://www.teka.com/cs-cz/produkt/be-linea-rs15-18-40-ss_115000010/); the card on [`KitchenPlan.jpg`](../../inputs/ground_floor/KitchenPlan.jpg) next to the island's green rectangle |
 
 - `SN-RS1840`'s long side runs across the island (east–west), because the plan's green rectangle is a little longer that way. `guess:` Both ways fit: the clear width is 473 and 440 is the longest side.
-- `SN-RS1840` is centred on the 600 bay depth, so its cut-out runs 102–498 behind the bay front, 132–528 from the worktop's front edge. `guess:` The plan's rectangle sits a bit further forward.
+- `SN-RS1840` is centred on the bay depth (586 since 2026-11-13), so its cut-out runs 95–491 behind the bay front, 115–511 from the worktop's front edge. `guess:` The plan's rectangle sits a bit further forward. Its yaml `Origin` moved 7 mm east with the bay centre.
 - Without a manufacturer cut-out, `Pset_Sink` falls back to the bowl less 2 mm a side (`kitchen_cabinet.SINK_CUTOUT_INSET_MM`), which is the Teka pattern. `guess:`
 - The rounded corners (R13) are in the IFC profile (chords, 6 per corner) and in the 3D model.
 - On the plan, the island has one sink card and one green rectangle. The two green circles in a rectangle on the second 600 were read as “two round bowls” before; they are the hob (see below).
@@ -248,17 +270,17 @@ The hob is on **SF-I600b**, the island's west row, second 600 from the north (y 
 | Item | Value (mm) | Source |
 | --- | --- | --- |
 | Mounting | **flush-fit**: the glass top is level with the worktop | `guess:` (Petr has not chosen). Flush-fit was trivial to model, so it is used |
-| Through cut-out | 600 × 500, centred on the bay along the run (it reaches the middle of both dividers) | Miele |
+| Through cut-out | 600 × 500, centred on the bay along the run (the bay is 607, so 3.5 inside each bay line) | Miele |
 | Rebate | 624 × 524, 5.5 deep, around the cut-out | Miele |
-| Cut-out front edge | 50 behind the bay front face (80 from the worktop edge): the 500 cut-out centred on the 600 bay depth | `guess:` |
-| Cut-out to the worktop's far (east) edge | **680** (≥ 50 required) | derived, checked by the model |
+| Cut-out front edge | 50 behind the bay front face (70 from the worktop edge). It was the 500 cut-out centred on the 600 bay depth; the bay is 586 now and `FrontOffset` stayed 50 | `guess:` |
+| Cut-out to the worktop's far (east) edge | **656** (was 680; ≥ 50 required) | derived, checked by the model |
 | Glass | 620 × 520 × 4, top at 930 | Miele |
 | Housing | 533 × 427, from 879 to 926 | Miele (51 installation height) |
 | Hob underside | **879**, 31 below the carcass top (910) | derived |
 | Front rail in SF-I600b | **left out**: the housing (86.5–513.5 behind the front face) drops into the rail (18–98) | `guess:` |
-| Drawers | SF-I600b has none (one slab door), so nothing changed | yaml |
+| Drawers | three: fronts 197 / 97 / 507, boxes MAXIMERA medium 144 (713–857), low 78, tall 400. Housing 533 in a 589 clear, 28 a side | yaml, see “Gridfinity drawers” |
 
-If a bay under a hob has drawers, the top drawer box is cut down to 8 mm below the hob underside (`MinDrawerGap`). With the METOD grid the top box ends at 825, 54 below the hob, so nothing would be cut today. The fronts stay on the grid.
+If a bay under a hob has drawers, the top drawer box is cut down to 8 mm below the hob underside (`MinDrawerGap`), and the export stops if that leaves less than `BoxMinHeight`. The top box ends at 857, 22 below the hob, so nothing is cut. A 100 band under the hob would stop the export (61 mm to the limit, the low box is 78).
 
 In IFC the worktop's rebate is a second extrusion layer. The slab is one 14.5 mm layer with the through holes and one 5.5 mm top layer with the rebate. In the 3D model the rebate is a pocket.
 
@@ -272,8 +294,8 @@ Both ends of `KR-WEST` are free: the south end is at OP24's north jamb (y 11.35)
 
 | Piece | Size (mm) | Where | Group |
 | --- | --- | --- | --- |
-| `KR-WEST-CLAD-S` | 20 × 630 × 910, floor to the worktop underside | y 11.33–11.35, x 18.80–19.43 | SF-C850 |
-| `KR-WEST-CLAD-N` | 20 × 630 × 910 | y 13.85–13.87 | SF-A600 (the dishwasher slot: the stone is its north side) |
+| `KR-WEST-CLAD-S` | 20 × 620 × 910, floor to the worktop underside | y 11.33–11.35, x 18.80–19.42 | SF-C850 |
+| `KR-WEST-CLAD-N` | 20 × 620 × 910 | y 13.85–13.87 | SF-A600 (the dishwasher slot: the stone is its north side) |
 
 The worktop runs 20 further at each end, flush with the cladding: 2500 → **2540**, y 11.33–13.87. `IfcCovering` `CLADDING`, part of the `KR-WEST` assembly.
 
@@ -286,14 +308,14 @@ Petr, 2026-11-12: “And also do the north cabinets (in the dining area in the s
 `KR-DN` is a kitchen run over the four dining bases, west to east: SF-F052 (300 × 200, in front of pier W-052), SF-DN (2700 × 450), SF-F053 (300 × 200), SF-DN70 (70 × 450). They are oak boxes, not METOD carcasses, so the run uses `Carcass: Box`:
 
 - **Each base stays one oak body, cut down under the stone.** Body top 930 → **910**, so the counter stays 930. The body is `<bay>-BODY`, `IfcSystemFurnitureElement` `USERDEFINED`, material “natural oak”, and the only member of its bay group. I picked this over keeping the oak top and swapping it for stone: the height comes from the bay box and the worktop thickness, so a thicker stone lowers the body by itself.
-- **Worktop** `KR-DN-WORKTOP`: 20 mm Silestone Blanco Maple, top 930, 30 mm overhang at the front (y 15.12). It is one part with one slab per base, because the depth steps at the piers:
+- **Worktop** `KR-DN-WORKTOP`: 20 mm Silestone Blanco Maple, top 930, 20 mm overhang at the front (y 15.13; 30 and y 15.12 until 2026-11-13). It is one part with one slab per base, because the depth steps at the piers:
 
 | Slab | x | y | Size (mm) |
 | --- | --- | --- | --- |
-| over SF-F052 | 22.15–22.45 | 15.12–15.35 | 300 × 230 |
-| over SF-DN | 22.45–25.15 | 15.12–15.60 | 2700 × 480 |
-| over SF-F053 | 25.15–25.45 | 15.12–15.35 | 300 × 230 |
-| over SF-DN70 | 25.45–25.52 | 15.12–15.60 | 70 × 480 |
+| over SF-F052 | 22.15–22.45 | 15.13–15.35 | 300 × 220 |
+| over SF-DN | 22.45–25.15 | 15.13–15.60 | 2700 × 470 |
+| over SF-F053 | 25.15–25.45 | 15.13–15.35 | 300 × 220 |
+| over SF-DN70 | 25.45–25.52 | 15.13–15.60 | 70 × 470 |
 
 - **No end cladding: no side is exposed.**
   - The west end of SF-F052 abuts SF-T4, the kitchen tall cabinet, which already overlaps the filler by 8 mm.
@@ -320,9 +342,65 @@ Petr, 2026-11-12: “As well as the back wall above countertop, below top cabine
 - The north backsplash stands on the dining run's stone worktop (`KR-DN`, see “North dining run”). It stays plain `IfcCovering` in the yaml, because the run's two depths (200 at the piers, 450 between) would need a stepped strip.
 - Pier W-052's front piece starts at SF-T4's east face (x 22.158), not the pier edge, because T4 already nicks the pier by 8 mm.
 
+## Gridfinity drawers (2026-11-13)
+
+Petr, 2026-11-13, after a plan for sizing the island drawers' insides to the Gridfinity grid (42 mm pitch, inside n × 42 + 1 mm):
+
+> On Gridfinity: cleanup the issues you've found. Model this after maximera (so if 600 ikea metod has a certain maximera inner size, subtract the same from whatever our side is). Also assume Metod material thicknesses for now (although its a monoblock, so the woodworker might ask for thicker material). When considering depth, always round down (i.e. make the whole island a bit shallower to fit gridfinity grid, don't make it any deeper). Add gridfinity baseplates to each drawer so that I can see them in the 3D model.
+>
+> Tiny change along with this PR: make the silestone overhangs only 20mm, not 30mm.
+
+and:
+
+> make the top drawers maximera's shallowest variant. The bottom drawer can grow by thet leftover amount.
+
+What it means here:
+
+- **Thicknesses: METOD**, 18 mm carcass board, dividers and central back (`BoardThickness`). `open:` the woodworker may want thicker boards for a monoblock; rerun `scripts/gridfinity_fit.py` and adjust the bay boxes.
+- **Inside: MAXIMERA deductions**, clear width − 84 and side depth − 96 (see “Drawers: MAXIMERA”).
+- **Target:** inside width n × 42 + 1 and depth m × 42 + 1 (`GridfinityPitch`, `GridfinityPlay`). Width: the nearest n; the shared divider moves, so a bay's clear width changes 1:1 with its width. The west row stays 2500: SF-I300 takes the difference, so the sink bay SF-I500a does not move. Depth: always round down, the bay gets shallower.
+- Bays with `Pset_Drawers.Gridfinity: true`: SF-I600a, SF-I500b, SF-I600b. The model checks the fit and writes an `open:` note when a drawer is off the grid. `scripts/gridfinity_fit.py` prints the bay width and depth that would make it exact.
+
+| Bay | Width (old → new) | Clear | Drawer inside | Grid | Fronts (old → new) |
+| --- | --- | ---: | --- | --- | --- |
+| SF-I500a (sink) | 500 → 500 | 473 | — | — | slab, unchanged |
+| SF-I600a | 600 → **607** | 589 | 505 × 463 | 12 × 11 | 597 × 197 / 197 / 407 → **604 × 97 / 97 / 607** |
+| SF-I500b | 500 → **481** | 463 | 379 × 463 | 9 × 11 | 497 × 197 / 197 / 407 → **478 × 97 / 97 / 607** |
+| SF-I600b (hob) | 600 → **607** | 589 | 505 × 463 | 12 × 11 | 597 × 197 / 197 / 407 → **604 × 197 / 97 / 507** |
+| SF-I300 | 300 → **305** | 278 | — | — | slab 297 → 302 |
+
+- SF-I500b rounds down to 9 cells (−19 to the bay) because 10 cells would need +23.
+- **Depth.** The side depth was 573 (600 − 18 − 9), so the inside was 477, which is 11 cells (463). The west row's bays go **600 → 586** deep, the side depth 559. The west faces move 14 east (x 20.554 → 20.568). The central back (x 21.154) and the east row stay where they were: the east row has no drawers yet, so it keeps its 600. **The island body is 2500 × 1186 (was 1200).**
+- **Worktop 2540 × 1226** (was 1260: −14 body, −2 × 10 overhang). End cladding 20 × 1226 × 910, still flush with the worktop's ends and long edges (it follows the worktop's depth).
+- The hob bay's centre moves 8.5 north (y 11.900 → 11.9085), and the cut-out and housing move with it. The sink bay does not move along the run. The sink, disposer and tap move 7 east with the bay's depth centre.
+- Box side heights by Petr's “shallowest variant”: the top two drawers are MAXIMERA low (100 band, 78 box), and the bottom drawer takes the rest (610 band, 500 box, front − 110).
+- **Under the hob the top band stays 200.** A 100 band ends at 810, and the hob limit is 871 (879 − Miele's 8), so the 78 low box does not fit (61 mm). The export stops on it. SF-I600b is therefore **200 / 100 / 510**, and its top box is a MAXIMERA medium (144, 713–857). **Its front lines (710, 610) no longer line up with the neighbours' (810, 710).** One alternative that keeps them aligned is a fixed 97 blind front under the hob plus two drawers (100 + 610); not done.
+- The west run's pull-outs follow the same MAXIMERA rule. SF-A250's box is 177 × 516 (was 197 × 550), SF-B800's 736 × 516 (was 756 × 550), and SF-C850's 777 × 516 (was 797 × 550). Their heights are unchanged (front − 110; SF-B800 still trimmed under the disposer).
+
+### Baseplates
+
+Each Gridfinity drawer carries an n × m baseplate on its inside floor, centred. It is drawn as a 1 mm floor plus a 5 mm rib on every grid line (`GridfinityHeight` 5, `GridfinityFloor` 1, `GridfinityRib` 2.5, all `guess:`; a standard plate is about 5 high). It is part of the drawer's mesh and IFC shape, like a pull-out's bins, so it slides with the drawer. The drawer's `Pset_KitchenFront` has `Gridfinity` (for example `12x11`), `InsideWidth`, `InsideDepth`, `InsideHeight` and the slack.
+
+### Height in Gridfinity units (7 mm), above the baseplate
+
+“Side” is up to the top of the box sides. “Clear” is up to whatever stops the bin when the drawer closes: the top rail (892), the hob limit (871) or the box bottom of the drawer above. Bin heights exclude a stacking lip.
+
+| Drawer | Front | Box | Side | Clear |
+| --- | ---: | ---: | --- | --- |
+| SF-I600a / SF-I500b D1 | 97 | 78 | 57 (8 u) | 58 (8 u) |
+| SF-I600a / SF-I500b D2 | 97 | 78 | 57 (8 u) | 79 (11 u) |
+| SF-I600a / SF-I500b D3 | 607 | 500 | 479 (68 u) | 571 (81 u) |
+| SF-I600b D1 (hob) | 197 | 144 | 123 (17 u) | 137 (19 u) |
+| SF-I600b D2 | 97 | 78 | 57 (8 u) | 79 (11 u) |
+| SF-I600b D3 | 507 | 400 | 379 (54 u) | 471 (67 u) |
+
+Alternative, only the top drawer shallow (not built): SF-I600a and SF-I500b 100 / 200 / 510 (boxes 78 / 144 / 400: side 8 / 17 / 54 u, clear 8 / 25 / 67 u); SF-I600b 200 / 200 / 410 (boxes 144 / 144 / 300: side 17 / 17 / 39 u, clear 19 / 25 / 53 u).
+
+`open:` the woodworker's board thickness (the fit changes with it); the hob bay's front lines; the east row (no drawers, kept at 600 deep); MAXIMERA's real box height position in its band (`BoxBottomOffset` 3 is `guess:`, and the top box clears the rail by 1).
+
 ## Parametric rule
 
-Everything above is computed in `kitchen_cabinet.runs` from the bay boxes (`Origin`, `RefDirection`, `Width`, `Depth`, `Height`, `Elevation`), the run's `Pset_KitchenRun` (any `IKEA_DEFAULTS_MM` key, in metres, plus `WorktopMaterial`, `CladEnds`, `Carcass` (`Box` for whole-body bays), `BodyMaterial`, `PlinthKind` (`Legs` or `Board`), `Backsplash`, `BacksplashThickness`, `BacksplashTop`, `BacksplashMaterial`) and each bay's `Pset_Fronts` (`Layout`, `Contents`: see “Fronts and interiors”) or the older `Pset_Drawers` (`NominalHeights` in metres top to bottom, one `*` for the rest; `Contents` separated by `;`), plus the built-ins' `Pset_BuiltIn`. A bay may override the drawer and front values in its own `Pset_KitchenCabinet`. Change a bay's width and its dividers move, both neighbours' clear widths and drawer boxes follow, and the worktop grows; change the counter height or the worktop thickness and the carcass, the `*` drawer and the cladding follow. Rows that stand back to back (same back plane, fronts facing away) share one central back; a run with `CladEnds` gets stone on both ends. A sink's cut-out comes from its `Pset_Sink` and follows the sink box. A hob follows its bay (`Pset_Hob`): move or widen the bay and the cut-out, rebate, glass and housing move with it. The model stops the export if the hob comes closer than `MinBackEdge` to the far edge. A backsplash runs the worktop's length, from the worktop top up to the lowest box hanging over it.
+Everything above is computed in `kitchen_cabinet.runs` from the bay boxes (`Origin`, `RefDirection`, `Width`, `Depth`, `Height`, `Elevation`), the run's `Pset_KitchenRun` (any `IKEA_DEFAULTS_MM` key, in metres, plus `WorktopMaterial`, `CladEnds`, `Carcass` (`Box` for whole-body bays), `BodyMaterial`, `PlinthKind` (`Legs` or `Board`), `Backsplash`, `BacksplashThickness`, `BacksplashTop`, `BacksplashMaterial`) and each bay's `Pset_Fronts` (`Layout`, `Contents`: see “Fronts and interiors”) or the older `Pset_Drawers` (`NominalHeights` in metres top to bottom, one `*` for the rest; `Contents` separated by `;`), plus the built-ins' `Pset_BuiltIn`. A bay may override the drawer and front values in its own `Pset_KitchenCabinet`. Change a bay's width and its dividers move, both neighbours' clear widths and drawer boxes follow (drawer insides are the clear width and side depth less the MAXIMERA deductions, Gridfinity baseplates follow the inside), and the worktop grows; change the counter height or the worktop thickness and the carcass, the `*` drawer and the cladding follow. Rows that stand back to back (same back plane, fronts facing away) share one central back; a run with `CladEnds` gets stone on both ends. A sink's cut-out comes from its `Pset_Sink` and follows the sink box. A hob follows its bay (`Pset_Hob`): move or widen the bay and the cut-out, rebate, glass and housing move with it. The model stops the export if the hob comes closer than `MinBackEdge` to the far edge. A backsplash runs the worktop's length, from the worktop top up to the lowest box hanging over it.
 
 ## Tap to open
 
@@ -342,7 +420,7 @@ A bay's `Pset_Fronts.Layout` lists its bands top to bottom, split by `|`. Each b
 
 | Kind | What it builds | Keys |
 | --- | --- | --- |
-| `drawer` | A drawer: a front on the 3 mm grid, plus an open box on 550 slides (as SF-I600a). | — |
+| `drawer` | A drawer: a front on the 3 mm grid, plus a MAXIMERA-like box (inside = clear width − 84 by side depth − 96, full extension; see “Fronts, boxes, slides”). `Pset_Drawers.Gridfinity: true` adds a Gridfinity baseplate. | — |
 | `pullout` | A full-height front with one box behind it, plus the baskets or bins riding in it. | `items=shelves\|bins`, `n=` |
 | `door` | One hinged leaf. The rest of the bay is a fixed filler. Adjustable shelves sit behind it. | `hinge=L\|R` (as you face it), `width=` (leaf grid), `filler=L\|R` (default: the hinge side), `shelves=`, `first=` (the first shelf's height over the band floor), `racks=` (door shelves) |
 | `doors` | A pair of leaves: the left one hinged left, the right one hinged right. | `shelves=`, `first=` |
@@ -363,9 +441,9 @@ The quoted notes are the yellow sticky notes next to each bay on KitchenPlan.jpg
 | Bay | Note (Czech, as written) | Translation | Modelled |
 | --- | --- | --- | --- |
 | SF-I500a (island sink) | „vlevo prkynka / vpravo cednik do drezu (a drtic) / madlo na uterku / SBox by mel trcet doprava, coz nejde, ma nakou vuli a de pootocit, ale musi se vyhnout drtici, snad to vyjde“ | left: cutting boards / right: sink strainer (and the disposer) / towel-bar handle / the sBox should stick out to the right, which is not possible; it has some play and can be turned, but it must avoid the disposer, hopefully it works out | The slab front is unchanged. Disposer `EA-EVO3-I` hangs under the bowl. Tap `SN-TAP-I` stands behind the bowl. `open:` door or pull-out, and the split between boards and strainer. `open:` the towel-bar handle. `open:` the sBox (not modelled). |
-| SF-I600a | „noze / naradi (lis na cesnek, hmozdir, vaha, ..) / dole nevim 🤷“ | knives / tools (garlic press, mortar, scales …) / bottom: don't know | Unchanged: three drawers, 200 / 200 / rest. |
-| SF-I500b | „koreni / oleje, octy, mouky, cukry, dochucovadla / hrnce“ | spices / oils, vinegars, flours, sugars, seasonings / pots | Three drawers, 200 / 200 / rest (heights **IKEA**, as SF-I600a). Fronts 497 × 197 / 197 / 407. Boxes 90 / 90 / 300 high. `open:` oil and vinegar bottles do not stand in a 200 drawer (a 90 box); a taller middle drawer is one `NominalHeights` edit away. |
-| SF-I600b (hob) | „pribory / varecky, sterky, naberacky / panve“ | cutlery / wooden spoons, spatulas, ladles / pans | Three drawers, 200 / 200 / rest. Fronts 597 × 197 / 197 / 407. The top box (735–825) stays 8 under the hob's underside (879 − 8 = 871). |
+| SF-I600a | „noze / naradi (lis na cesnek, hmozdir, vaha, ..) / dole nevim 🤷“ | knives / tools (garlic press, mortar, scales …) / bottom: don't know | Three drawers, **100 / 100 / rest (610)** since 2026-11-13 (Gridfinity drawers). Fronts 604 × 97 / 97 / 607. |
+| SF-I500b | „koreni / oleje, octy, mouky, cukry, dochucovadla / hrnce“ | spices / oils, vinegars, flours, sugars, seasonings / pots | Three drawers, **100 / 100 / rest (610)** since 2026-11-13. Fronts 478 × 97 / 97 / 607. Boxes 78 / 78 / 500 high. **`open:` oil and vinegar bottles now go in a 100 drawer (a 78 box); they did not stand in the old 90 box either.** |
+| SF-I600b (hob) | „pribory / varecky, sterky, naberacky / panve“ | cutlery / wooden spoons, spatulas, ladles / pans | Three drawers, **200 / 100 / rest (510)** since 2026-11-13. Fronts 604 × 197 / 97 / 507. The top box (MAXIMERA medium, 713–857) stays under the hob limit (879 − 8 = 871). |
 | SF-I300 | „alobal, folie, spejle, pytliky“ | foil, cling film, skewers, bags | Slab front, `Contents` only. `open:` one bullet, so one drawer or a pull-out? |
 | SF-E600a … SF-E700 (island east row) | Black card: „Jak vyresit detail spodniho soklu vs. dock pro robota? …“ (in full under “Island east row”) | Questions only | Unchanged. `open:` everything (see below). |
 | SF-A250 | Note A: „dole vlevo suplik uklid (mycka, jar, odmastovac, houbicky)“ | bottom left: cleaning drawer (dishwasher tabs, washing-up liquid, degreaser, sponges) | A full-height pull-out (front 247 × 807) with 3 baskets. The basket count is `guess:`. |
@@ -432,8 +510,8 @@ No carcass size or position changed. These are the fronts:
 
 | Item | Before | Now |
 | --- | --- | --- |
-| SF-I500b | one slab 497 × 807 | three drawers 497 × 197 / 197 / 407 |
-| SF-I600b | one slab 597 × 807 | three drawers 597 × 197 / 197 / 407 |
+| SF-I500b | one slab 497 × 807 | three drawers 497 × 197 / 197 / 407 (2026-11-13: 478 × 97 / 97 / 607, see “Gridfinity drawers”) |
+| SF-I600b | one slab 597 × 807 | three drawers 597 × 197 / 197 / 407 (2026-11-13: 604 × 197 / 97 / 507) |
 | SF-A250 | slab 247 × 807 | pull-out (same front) with 3 baskets |
 | SF-B800 | slab 797 × 807 | pull-out (same front) with 2 bins, box 207 high under the disposer |
 | SF-C850 | slab 847 × 807 | pull-out (same front) with 3 bins |
@@ -454,7 +532,7 @@ No carcass size or position changed. These are the fronts:
 ### guess: and open: (fronts and appliances)
 
 `guess:`
-- Drawer heights 200 / 200 / rest on SF-I500b and SF-I600b.
+- Drawer heights on SF-I500b and SF-I600b (Petr set the island's top drawers to MAXIMERA low on 2026-11-13).
 - Pull-out basket and bin counts (3 / 2 / 3).
 - Two doors and two shelves per wall cabinet.
 - SF-T1 filler side, shelf count and the 400 first shelf.
@@ -468,7 +546,7 @@ No carcass size or position changed. These are the fronts:
 `open:`
 - SF-I500a front type, the boards/strainer split, the towel bar and the sBox.
 - SF-I300: drawer or pull-out.
-- Oil bottles in SF-I500b's 200 drawer.
+- Oil bottles in SF-I500b's 100 drawer.
 - The bin-vs-disposer conflict in SF-B800.
 - SF-T2 lower band.
 - SF-T3 top and bottom bands, and the combi-microwave idea.
