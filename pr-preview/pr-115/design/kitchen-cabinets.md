@@ -461,7 +461,8 @@ No carcass size or position changed. These are the fronts:
 | North backsplash pieces `CV-BS-*` | 620 high, to 1550 | 630 high, to 1560 |
 | SF-LB | oak box 4180 × 450 × 800, no top | `KR-LB`: oak body 4180 × 450 × 910 + 20 oak-veneer top, 30 front overhang (4180 × 480), top **930** |
 | FN-BK (bookshelf) | 850–2450, 1600 high | **980–2450, 1470 high** |
-| The open-door records in `ground_floor.doors.json` | 6 wall-cabinet door leaves | removed (lift fronts have no tap animation yet) |
+| The open-door records in `ground_floor.doors.json` | 6 wall-cabinet door leaves | replaced by 3 `kind: "linkage"` records, one per lift front (tap to open, see “Opening in the viewer”) |
+| Lever arms | — | new: `<bay>-LIFTARM-L/R`, 16 × 18, from inside each mechanism to the upper front, 120 under the mechanism |
 
 ### Discrepancies on the plan
 
@@ -490,7 +491,7 @@ No carcass size or position changed. These are the fronts:
 - The 10 mm the wall cabinets now reach into the kitchen-gable trap (from 2450) and the north soffit gap (2470) over SF-DH.
 - SF-DH's fronts and fitting (2700 wide; AVENTOS takes 1800 at most).
 - The Silestone / oak-veneer joint at x 25.52 and the oak top's thickness.
-- Tap-to-open in the viewer for lift fronts.
+- The lever arm's real geometry (pivot, fixing, telescoping): the drawn arm is placed by eye. Open, the folded lower front passes through the drawn arms.
 - SF-I500a front type, the boards/strainer split, the towel bar and the sBox.
 - SF-I300: drawer or pull-out.
 - Oil bottles in SF-I500b's 200 drawer.
@@ -542,7 +543,22 @@ Modelled (`models/kitchen_cabinet.py`, band kind `lift`, `AVENTOS` table):
 - A lift mechanism `<bay>-LIFTMECH-L` / `-R` on each side panel, just under the top board, 30 off the side, 264 deep, 195 high. `guess:` sizes read off Blum's planning drawings.
 - The two shelves stay. Their tops (1872, 2166) are below the mechanisms (from 2247), and the export stops if a shelf would hit one.
 - The space the open front needs is `run.clearances` (235 above, 464 ahead) and is drawn in red by `scripts/render_kitchen_run.py`. It is not a solid in the IFC or the viewer.
-- No tap-to-open in the viewer yet: its door records only turn about a vertical axis. `open:`.
+- A lever arm `<bay>-LIFTARM-L` / `-R` per side, `Role: LiftArm`: a 16 × 18 bar on the inner face of the upper front, from 15 inside the mechanism's underside down to 120 under it. `guess:` placed by eye.
+- Tap-to-open in the viewer, below.
+
+### Opening in the viewer
+
+Petr, 2026-11-13: “And make them open too, add the animation for this opening mechanism.”
+
+Each lift front is one `kind: "linkage"` record in `ground_floor.doors.json` (`_linkage_motion` in `models/ground_floor.py`, from the `LiftJoint` that `_lift_motion` in `models/kitchen_cabinet.py` puts on each part). A linkage is a list of joints; each turns its part meshes about a line (`pivot` point, `axis`), by `angles` sampled at 25 even steps from shut to open, relative to a `parent` joint or to the model. The viewer (`doors.js` `bindLinkage`) interpolates them over 900 ms. Any part of it takes the tap.
+
+| Joint | Parts | Line | Motion |
+| --- | --- | --- | --- |
+| 0 | `<bay>-LIFT1`, upper front | its top edge, on the inner face | 0 → 116° (Blum's largest HF angle), up and out |
+| 1, rides on 0 | `<bay>-LIFT2`, lower front | the centre hinge, inner faces | folds back by twice the upper angle, so its bottom edge runs up the cabinet's front plane, until it lies flat behind the upper front (−180° at 90°); then both turn on to 116° |
+| 2 | `<bay>-LIFTARM-L/R` | its pivot inside the mechanism | turns to keep pointing at its fixing on the upper front, and telescopes (`stretch`) to reach it |
+
+Simplified: the real HF motion is set by the mechanism's arms and the centre hinges, not by these angles. Shut, everything sits where the model has it; fully open, the fronts end where the clearance box above assumes. A single-front fitting (HK and the small ones) gets joint 0 only (HK 107°); HS and HL are drawn as the same tilt, which is not their real path.
 
 ### What 1560 touches
 
