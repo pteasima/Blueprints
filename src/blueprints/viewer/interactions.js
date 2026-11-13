@@ -10,8 +10,13 @@
  * 3. Extended target: each handler's `targets(ctx)` lists centres; a 44 pt
  *    circle on screen around each, nearest to the camera wins
  *    (tapTargets.js). Needs `ctx.camera`, `ctx.root`, `ctx.tap`, `ctx.size`.
- * 4. Legacy: the nearest claimed solid anywhere on the ray, behind walls
- *    too, then fallbacks without `maxT` (PR 87). Only when 1–3 found nothing.
+ *
+ * Nothing reaches through opaque geometry (Petr, 2026-11-13: "I can
+ * literally open doors through multiple walls"). The old fourth pass (the
+ * nearest claimed solid anywhere on the ray, then doorways without `maxT`,
+ * PR 87) is gone. Only hits on drawn surfaces count (`isRenderedHit`: shown
+ * through every ancestor, not cut away by a section plane); glass never
+ * blocks (`isOpaqueMaterialOf`).
  *
  * Proxies set `userData.bpHitProxy`. Zoom, pan, orbit pivot, and Measure skip
  * that flag, and the proxy's own `raycast` is a no-op.
@@ -19,6 +24,8 @@
 
 import {
   OCCLUSION_TOLERANCE_M,
+  isClippedAt,
+  isRenderedHit,
   TAP_TARGET_PX,
   centerOccluded,
   findDirectHit,
@@ -74,6 +81,7 @@ export function createTapRegistry() {
     /** @type {object[]} */
     const solids = [];
     for (const hit of hits) {
+      if (!isRenderedHit(hit)) continue;
       if (keep && !keep(hit)) continue;
       solids.push(hit);
     }
@@ -93,6 +101,8 @@ export function createTapRegistry() {
       if (!Array.isArray(list)) continue;
       for (const target of list) {
         if (!target?.center) continue;
+        // A centre cut away by a section plane is not drawn: no target.
+        if (target.hit?.object && isClippedAt(target.hit.object, target.center)) continue;
         const at = projectTarget(target.center, camera, size);
         if (!at) continue;
         candidates.push({ ...target, ...at, handler });
@@ -113,7 +123,7 @@ export function createTapRegistry() {
 
   /**
    * Which target a tap means, without running it. `kind` is "direct",
-   * "fallback" (a visible opening), "extended", or "legacy".
+   * "fallback" (a visible opening), or "extended".
    * @param {object[]} hits nearest first
    * @param {object} ctx
    * @param {(hit: object) => boolean} [keep]
@@ -134,10 +144,6 @@ export function createTapRegistry() {
     }
     const ext = extendedTarget(ctx);
     if (ext) return { kind: "extended", hit: ext.hit, claim: ext.claim };
-    for (const hit of solids) {
-      const claim = claimOf(hit, ctx);
-      if (claim) return { kind: "legacy", hit, claim };
-    }
     return null;
   }
 
@@ -155,16 +161,12 @@ export function createTapRegistry() {
       found.claim.onTap();
       return true;
     }
-    const solids = solidsOf(hits, keep);
-    for (const handler of handlers) {
-      if (handler.fallback?.(solids, ctx)) return true;
-    }
     return false;
   }
 
   /**
-   * Buttons for the target a long-press means (direct or extended), else the
-   * nearest claimed solid on the ray. Does not run the tap.
+   * Buttons for the target a long-press means (direct or extended). Does not
+   * run the tap.
    * @param {object[]} hits nearest first
    * @param {object} ctx
    * @param {(hit: object) => boolean} [keep]

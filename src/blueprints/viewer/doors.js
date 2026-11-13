@@ -1117,7 +1117,8 @@ export function createDoorController(opts) {
   }
   const taps = createTapRegistry();
   // Leaf claims beat the opening fallback. A later switch registers a claim
-  // of its own; the nearest claimed solid wins, wherever it sits on the ray.
+  // of its own; the nearest claimed solid wins unless an opaque solid hides
+  // it (interactions.js).
   taps.register({
     id: "door",
     priority: 100,

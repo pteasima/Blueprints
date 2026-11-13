@@ -339,7 +339,9 @@ function hasDoor(hits) {
   assert.equal(scene.children.includes(binding.proxy), false);
 }
 
-// Open doorway: far geometry does not block the close. An interactive anywhere does.
+// Open doorway: far geometry does not block the close. An opaque solid in
+// front of the doorway does (Petr, 2026-11-13: nothing through walls). A
+// visible interactive behind the opening takes the tap instead.
 {
   const wall = new THREE.Mesh(new THREE.BoxGeometry(8, 6, 0.2));
   wall.position.set(0.4, 1, -20);
@@ -364,7 +366,7 @@ function hasDoor(hits) {
   assert.equal(binding.goal, 0, "far wall must not block the close");
   assert.ok(binding.anim && binding.anim.to === 0);
 
-  // Non-interactive solid in front of the hole still closes.
+  // An opaque solid in front of the hole hides it: nothing happens.
   binding.goal = 1;
   binding.anim = null;
   binding.shown = 1;
@@ -374,7 +376,9 @@ function hasDoor(hits) {
   scene.updateWorldMatrix(true, true);
   assert.ok(centerHits(camera, scene).some((hit) => hit.object === front));
   tapAt(canvas);
-  assert.equal(binding.goal, 0, "non-interactive geometry in front does not block");
+  assert.equal(binding.goal, 1, "an opaque wall in front of the doorway blocks the close");
+  assert.equal(binding.anim, null);
+  scene.remove(front);
 
   binding.goal = 1;
   binding.anim = null;
