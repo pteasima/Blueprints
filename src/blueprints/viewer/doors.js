@@ -1351,5 +1351,15 @@ export function createDoorController(opts) {
   canvas.addEventListener("pointercancel", onPointerCancel, true);
   canvas.addEventListener("contextmenu", (ev) => ev.preventDefault());
 
-  return { bind, step, bindings, taps };
+  /**
+   * Run a tap at a client point without a pointer event (walk mode's centre
+   * dot while the mouse is locked).
+   * @param {number} clientX
+   * @param {number} clientY
+   */
+  function pickAt(clientX, clientY) {
+    pick(/** @type {PointerEvent} */ ({ clientX, clientY }));
+  }
+
+  return { bind, step, bindings, taps, pickAt };
 }

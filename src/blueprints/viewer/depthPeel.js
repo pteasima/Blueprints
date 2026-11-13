@@ -29,6 +29,20 @@ import {
 } from "./edges.js";
 
 /**
+ * Scene children outside the model root that are ordinary opaque geometry,
+ * not overlays: the Realistic staging floor (`bpStage`, realistic.js) and
+ * the walk-mode person figure (`bpSceneContent`, personFigure.js). The
+ * overlay pass (`renderOverlays`) redraws every other scene child after
+ * clearing depth so annotations sit on top; these must not be redrawn there,
+ * or nothing in front of them hides them (Petr, 2026-11-13: "person figure
+ * clips through everything else").
+ * @param {THREE.Object3D | null | undefined} obj
+ */
+export function isOpaqueSceneContent(obj) {
+  return Boolean(obj?.userData?.bpStage || obj?.userData?.bpSceneContent);
+}
+
+/**
  * Everitt peels for CAD shell stacking. Sorted alpha remains the emergency
  * fallback via {@link createDepthPeelRenderer}'s abortToStandard.
  */
@@ -938,7 +952,7 @@ export function createDepthPeelRenderer(renderer) {
     root.visible = false;
     // The Realistic staging floor is scene content, not an overlay. Drawn
     // here (after clearDepth) it would cover the whole model.
-    const stage = scene.children.filter((c) => c.userData?.bpStage && c.visible);
+    const stage = scene.children.filter((c) => isOpaqueSceneContent(c) && c.visible);
     for (const c of stage) c.visible = false;
     scene.background = null;
     renderer.autoClear = false;
@@ -1162,8 +1176,8 @@ export function createDepthPeelRenderer(renderer) {
     for (const child of scene.children) {
       if (child === root) continue;
       if (child.isLight) continue;
-      // Realistic staging floor (realistic.js) is opaque scene content.
-      if (child.userData?.bpStage) continue;
+      // Realistic staging floor and the walk figure are opaque scene content.
+      if (isOpaqueSceneContent(child)) continue;
       extraBackup.push({ obj: child, visible: child.visible });
       child.visible = false;
     }

@@ -146,6 +146,7 @@ canvas {
 }
 #ar:not([hidden]),
 #measure:not([hidden]),
+#walk:not([hidden]),
 #labels:not([hidden]),
 #drawing:not([hidden]) { min-width: auto; }
 

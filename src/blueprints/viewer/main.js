@@ -47,6 +47,13 @@ import {
 import { createDepthPeelRenderer } from "./depthPeel.js";
 import { createRealistic } from "./realistic.js";
 import { createMeasureTool } from "./measure.js";
+import { createWalkMode } from "./walkMode.js";
+import {
+  HEIGHT_DETENTS_CM,
+  HEIGHT_MAX_CM,
+  HEIGHT_MIN_CM,
+  snapHeightCm,
+} from "./walkPhysics.js";
 import { createDoorController, swingAngle } from "./doors.js";
 import { createWindowSlides } from "./windows.js";
 import { createFeedbackLayer, rotateAboutY } from "./feedback.js";
@@ -375,6 +382,11 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
 
   /** @type {THREE.Object3D | null} */
   let root = null;
+  /**
+   * First-person walk mode (walkMode.js). Created after the Measure tool.
+   * @type {ReturnType<typeof createWalkMode> | null}
+   */
+  let walk = null;
   // Surface-anchored zoom / pan / close-up orbit. Installed after `root` exists
   // in the closure; the GLB is assigned later, and taps still reach the doors.
   attachPivotNav({
@@ -451,6 +463,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       }
       buildCameraButtons();
       buildFovControl();
+      buildWalkHeightControl();
       ensureDraftCut();
       buildCutUI();
       refreshMaterials();
@@ -459,6 +472,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       chromeApi?.refreshPartialHeight();
       showArButton();
       showMeasureButton();
+      syncWalkButton();
       syncDrawingButton();
       syncLabelButton();
     },
@@ -775,6 +789,54 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     syncFovUi();
   }
 
+  /** @type {ReturnType<typeof createCooperativeRange> | null} */
+  let walkHeightRange = null;
+
+  /**
+   * Person height for walk mode (View section, under FOV). Snaps to the
+   * 174 and 186 cm detents (walkPhysics.js).
+   */
+  function buildWalkHeightControl() {
+    const host = document.getElementById("walk-height");
+    if (!host) return;
+    host.replaceChildren();
+    const row = document.createElement("div");
+    row.className = "fov-row";
+    const label = document.createElement("span");
+    label.className = "fov-label";
+    label.textContent = tr("ui.personHeight");
+    const value = document.createElement("span");
+    value.className = "fov-value";
+    const cm = walk ? walk.heightCm : snapHeightCm(Number.NaN);
+    value.textContent = `${cm} cm`;
+    const apply = (v) => {
+      const snapped = walk ? walk.setHeight(v) : snapHeightCm(v);
+      if (walkHeightRange && walkHeightRange.value !== snapped) walkHeightRange.value = snapped;
+      value.textContent = `${snapped} cm`;
+    };
+    walkHeightRange = createCooperativeRange({
+      min: HEIGHT_MIN_CM,
+      max: HEIGHT_MAX_CM,
+      step: 1,
+      value: cm,
+      ariaLabel: tr("ui.personHeight"),
+      formatAriaValue: (v) => `${Math.round(v)} cm`,
+      onInput: apply,
+      onChange: apply,
+    });
+    walkHeightRange.el.classList.add("fov-range");
+    const track = walkHeightRange.el.querySelector(".coop-range-track");
+    for (const d of HEIGHT_DETENTS_CM) {
+      const mark = document.createElement("div");
+      mark.className = "fov-detent";
+      mark.setAttribute("aria-hidden", "true");
+      mark.style.left = `${((d - HEIGHT_MIN_CM) / (HEIGHT_MAX_CM - HEIGHT_MIN_CM)) * 100}%`;
+      track?.append(mark);
+    }
+    row.append(label, walkHeightRange.el, value);
+    host.append(row);
+  }
+
   /** Keep near/far tight around the model so depth precision stays usable. */
   function updateCameraClipPlanes() {
     const span = Math.max(size.x, size.y, size.z, 0.01);
@@ -839,6 +901,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
 
   function setCameraPreset(name) {
     if (!root) return;
+    if (walk?.active) walk.exit({ keepCamera: true });
     activeSceneSpec = null;
     annotations.clear();
     setVerticalExaggeration(1);
@@ -882,6 +945,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
    */
   function applyScene(spec) {
     if (!root || !spec) return;
+    if (walk?.active) walk.exit({ keepCamera: true });
     activeSceneSpec = spec;
     setVerticalExaggeration(spec.verticalExaggeration);
     const zScale = verticalExaggeration;
@@ -1961,6 +2025,17 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   const arBtn = document.getElementById("ar");
   /** @type {HTMLButtonElement | null} */
   const measureBtn = document.getElementById("measure");
+  /** @type {HTMLButtonElement | null} */
+  const walkBtn = document.getElementById("walk");
+
+  function syncWalkButton() {
+    if (!walkBtn) return;
+    walkBtn.hidden = !root;
+    const on = Boolean(walk?.active);
+    walkBtn.textContent = tr("ui.walk");
+    walkBtn.classList.toggle("is-active", on);
+    walkBtn.setAttribute("aria-pressed", on ? "true" : "false");
+  }
   let arBusy = false;
   const MEASURE_LABEL = () => tr("ui.measure");
 
@@ -1988,6 +2063,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     applyStaticI18n(document);
     if (arBtn && !arBusy) arBtn.textContent = tr("ui.ar");
     if (measureBtn) measureBtn.textContent = MEASURE_LABEL();
+    syncWalkButton();
     syncDrawingButton();
     syncLabelButton();
     annotations.relocalize();
@@ -1996,6 +2072,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       buildEdgesToggle();
       buildCameraButtons();
       buildFovControl();
+      buildWalkHeightControl();
       buildPartToggles();
       buildCutUI();
       buildLocaleToggle();
@@ -2302,7 +2379,54 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       measureTool.setActive(!measureTool.isActive());
     });
   }
-  doorInputBlocked = () => Boolean(measureTool?.isActive());
+  /** Window elements whose panes slide: they collide where they are now. */
+  const slidingWindowKeys = new Set(windowRecords.map((r) => String(r?.id ?? "")));
+  walk = createWalkMode({
+    canvas,
+    scene,
+    getRoot: () => root,
+    getCamera: () => camera,
+    isDynamic: (mesh) =>
+      Boolean(mesh.userData.bpDoor) || slidingWindowKeys.has(String(mesh.userData.bpElementKey ?? "")),
+    pickAt: (x, y) => doorCtrl.pickAt(x, y),
+    onBeforeEnter: () => {
+      if (measureTool?.isActive()) measureTool.setActive(false);
+      if (projection === "ortho") leaveOrtho(lastHFovDeg);
+      camFly = null;
+      clearCameraPresetHighlight();
+    },
+    onEnter: () => {
+      controls.enabled = false;
+      syncWalkButton();
+      realisticCtl?.stage.markDirty();
+    },
+    onExit: (pose) => {
+      controls.enabled = true;
+      if (pose) {
+        withSuppressedCameraChange(() => {
+          camera.position.copy(pose.position);
+          controls.target.copy(pose.target);
+          updateCameraClipPlanes();
+          controls.update();
+        });
+      }
+      syncWalkButton();
+      realisticCtl?.stage.markDirty();
+    },
+    onCamera: (target) => controls.target.copy(target),
+    onChange: () => {
+      viewDirty = true;
+    },
+    t: tr,
+  });
+  doorInputBlocked = () => Boolean(measureTool?.isActive()) || Boolean(walk?.blocksPointerTaps());
+
+  if (walkBtn) {
+    walkBtn.addEventListener("click", () => {
+      walk?.toggle({ lock: true });
+      syncWalkButton();
+    });
+  }
 
   function buildArExportScene() {
     if (!root) return null;
@@ -2412,6 +2536,10 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     buildArExportScene,
     /** @returns {"fast" | "high"} */
     getPeelQuality: () => lastPeelQuality,
+    /** First-person walk mode (walkMode.js). */
+    get walk() {
+      return walk;
+    },
   };
   window.BlueprintsViewer = api;
 
@@ -3310,6 +3438,17 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     return bits.join("|");
   }
 
+  /** Walk physics time of the last frame (ms); `BlueprintsViewer.frameStats`. */
+  let walkFrameMs = 0;
+  /** Rolling frame timings for headless checks. */
+  const frameStats = { frames: 0, totalMs: 0, renderMs: 0, walkMs: 0, reset() {
+    this.frames = 0;
+    this.totalMs = 0;
+    this.renderMs = 0;
+    this.walkMs = 0;
+  } };
+  api.frameStats = frameStats;
+
   function tick() {
     if (pauseTick) return;
     const now = performance.now();
@@ -3324,6 +3463,11 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     stepPulse(now);
     stepCamFly(now);
     stepFrameAnim(now);
+    if (walk?.active) {
+      const w0 = performance.now();
+      if (walk.update(now)) viewDirty = true;
+      walkFrameMs = performance.now() - w0;
+    }
     controls.update();
     // Keep near/far tight as orbit distance changes.
     if (root) updateCameraClipPlanes();
@@ -3341,6 +3485,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
 
     const contentNow = readContentSig();
     const contentChanged = contentNow !== contentSig;
+    if (contentChanged) walk?.markColliderStale();
     // Cuts and hides change what casts a shadow.
     if (contentChanged) realisticCtl?.stage.markDirty();
     const camChanged = cameraSigChanged();
@@ -3368,6 +3513,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     measureTool?.update();
     annotations.update();
 
+    const r0 = performance.now();
     const usedPeel = depthPeel.render(scene, camera, root, anyPartFaded, {
       quality: lastPeelQuality,
       batchKey: contentNow,
@@ -3386,6 +3532,11 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       healOpacitiesFromState();
     }
     prevUsedPeel = usedPeel;
+    const r1 = performance.now();
+    frameStats.frames += 1;
+    frameStats.renderMs += r1 - r0;
+    frameStats.walkMs += walk?.active ? walkFrameMs : 0;
+    frameStats.totalMs += r1 - now;
     requestAnimationFrame(tick);
   }
   tick();
