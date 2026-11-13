@@ -61,7 +61,7 @@ OP24 is y 10.25–11.35. OP25 is y 13.85–14.95. The clear gap is 2500 mm and t
 
 Facing the west wall, left is south and right is north. North to south: A 850 (250 pull-out on the south, dishwasher on the north), B 800 (bin south, compost north, one box), C 850 (sorted waste). The bases are one monoblock (`KR-WEST`); the dishwasher slot is the bay `SF-A600` with no carcass. The Silestone worktop overhangs 20 into the aisle (x 19.42), so the aisle to the island worktop is 1128. The wall cabinets are a second monoblock (`KR-WEST-H`). See [kitchen-cabinets.md](kitchen-cabinets.md).
 
-Wall cabinets: depth 350, height 900, bottom 1550 (620 above the 930 counter), top 2450.
+Wall cabinets: depth 350, height **890**, bottom **1560** (630 above the 930 counter), top **2450**, the ceiling line. Petr, 2026-11-13: “I want top cabinets to start at 1560mm from floor.” then “don't move anything up, make it shorter in height. The existing ceiling line (windows, pocket doors, furtniture, basstraps) is an invariant.” (900 high, bottom 1550 before). Their fronts are Blum AVENTOS HF top bi-folds, 2 × 442: “I want this hinge for the top cabinets.”, “assume the hinge exists for our width”. Open, they stay partly folded (“You still need to be able to reach up and pull it back down”), and they stop at 88° (“do 88 degrees in the model.”, Blum's HF opening-angle stop): the lower front's bottom edge at 1991, 383 out from the face. See [kitchen-cabinets.md](kitchen-cabinets.md) “Wall cabinets: lift-up fronts”.
 
 Bosch SBD6ECX12E, 598 × 550 × 865, centred in the north 600 of A, back on the wall, 1 mm clear of each side of the niche.
 
@@ -79,13 +79,17 @@ The kitchen boxes stay as they are.
 
 North inner face y = 15.60, east inner face x = 29.90. The base run is x 22.15–29.90, front y = 15.15, depth 450, so the back sits on the north face. That 450 mm is the soffit band, and the depth of these dining and living-area cabinets (Petr, 2026-11-06). y = 15.15 is the cabinet front used to find the false ridge. The 600 mm kitchen tall cabinets, further west on the same wall, stick out past it on purpose.
 
-Piers W-052 (x 22.15–22.45) and W-053 (x 25.15–25.45) project to y = 15.35. In front of each pier the box is 300 wide and 200 deep, front flush with the 450 run. The 450 run stops at the pier and starts again on the other side. W-053’s east face is x = 25.45 and the sofa’s west face was drawn at x = 25.52, so a 70 mm piece fills that gap. Both piers are west of the sofa, so the fillers and that sliver are at the kitchen counter, 930. Behind the sofa the base is 800 high, 40 mm above the 760 back.
+Piers W-052 (x 22.15–22.45) and W-053 (x 25.15–25.45) project to y = 15.35. In front of each pier the box is 300 wide and 200 deep, front flush with the 450 run. The 450 run stops at the pier and starts again on the other side. W-053’s east face is x = 25.45 and the sofa’s west face was drawn at x = 25.52, so a 70 mm piece fills that gap. Both piers are west of the sofa, so the fillers and that sliver are at the kitchen counter, 930. Behind the sofa the base was 800 high, 40 mm above the 760 back. Since 2026-11-13 it is 930 like the dining run, with an oak-veneer top. Petr:
+
+> I want the living room part of the counter (behind sofa) to continue at the same 930 height as the dining area. It will be oak veneer, not silestone. We'll work out the details of where the two materials connect later.
+
+It is the run `KR-LB` (an oak body to 910, a 20 mm oak-veneer top, 20 front overhang), 170 mm over the sofa back. The joint with the dining run's Silestone at x 25.52 is `open:`. Details: [kitchen-cabinets.md](kitchen-cabinets.md) “Living-room counter”.
 
 The tall corner cabinet is the east 200 mm (x 29.70–29.90), floor to 2450, the kitchen tall height, not the 5.05 m slope. It is one armrest wide.
 
-Oak-front wall cabinets follow the kitchen wall cabinet: depth 350, bottom 1550, height 900, top 2450. A 350 mm cabinet on the wall would enter a pier (pier face y = 15.35, cabinet front would be y = 15.25), so the wall cabinet is only the clear bay x 22.45–25.15.
+Oak-front wall cabinets follow the kitchen wall cabinet: depth 350, bottom 1560, height 890, top 2450 (bottom 1550, height 900 until 2026-11-13; SF-DH follows the kitchen wall cabinets, a reading of Petr's “top cabinets”). 20 mm under the 2470 soffit. No fronts yet: 2700 is over AVENTOS HF's 1800 width, so it would need two bays (`open:`). A 350 mm cabinet on the wall would enter a pier (pier face y = 15.35, cabinet front would be y = 15.25), so the wall cabinet is only the clear bay x 22.45–25.15.
 
-The bookshelf is above the sofa, x 25.52–29.70, depth 250 (front y = 15.35, the pier face, so it does not pass the piers). Bottom 850, 50 mm above the low base, top 2450. Three shelf boards. Oak lamella on the back.
+The bookshelf is above the sofa, x 25.52–29.70, depth 250 (front y = 15.35, the pier face, so it does not pass the piers). Bottom **980**, 50 mm above the 930 counter, top 2450. Three shelf boards. Oak lamella on the back. **Its bottom was 850 (50 over the old 800 base); the 930 counter would have cut 80 into it, so it was raised and is 130 shorter (1600 → 1470). Petr did not ask for this.**
 
 `guess:` bookshelf sides, top and shelves 20 mm; slats 40 wide, 20 apart, 12 thick. The branch says these thicknesses are not on the plan.
 
