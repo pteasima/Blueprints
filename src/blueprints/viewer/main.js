@@ -67,7 +67,7 @@ import { mountIfcInspector } from "./ifcInspector.js";
 import { createVisibility } from "./ifcHide.js";
 import { normalizeIndex, subtreeIds } from "./ifcTree.js";
 import { isSceneSolid } from "./interactions.js";
-import { switchTargetCenters } from "./tapTargets.js";
+import { isRenderedHit, switchTargetCenters } from "./tapTargets.js";
 import { identityOf, meshIdentity } from "./meshIdentity.js";
 import { attachPivotNav } from "./pivotNav.js";
 import { cadMmToGltf, createAnnotations } from "./annotations.js";
@@ -3047,7 +3047,10 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     ifcPointer.x = ((pt.clientX - rect.left) / w) * 2 - 1;
     ifcPointer.y = -((pt.clientY - rect.top) / h) * 2 + 1;
     ifcRaycaster.setFromCamera(ifcPointer, cameraNow);
-    const hits = ifcRaycaster.intersectObject(root, true).filter((hit) => isSceneSolid(hit.object));
+    // Only surfaces drawn at the hit (not under a hidden group, not cut away).
+    const hits = ifcRaycaster
+      .intersectObject(root, true)
+      .filter((hit) => isSceneSolid(hit.object) && isRenderedHit(hit));
     let top = root;
     while (top.parent) top = top.parent;
     const ctx = {

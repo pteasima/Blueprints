@@ -13,6 +13,9 @@ import { pressTarget } from "./homeLive.js";
 import {
   TAP_TARGET_PX,
   centerOccluded,
+  isClippedAt,
+  isGlassLike,
+  isRenderedHit,
   findDirectHit,
   isOpaqueMaterialOf,
   pickExtendedTarget,
@@ -239,9 +242,10 @@ const SIZE = { w: 400, h: 400 };
     { kind: "extended", press: "switch:up" },
     "an occluded centre never takes the tap as an extended target",
   );
-  // With the switch gone, the old rule still reaches through the wall (PR 87).
+  // With the switch gone nothing reaches through the wall (Petr, 2026-11-13;
+  // the PR 87 fallback used to press the light behind it).
   sw.visible = false;
-  assert.deepEqual(tapAt(hiddenAt.x, hiddenAt.y), { kind: "legacy", press: "light@-1" });
+  assert.deepEqual(tapAt(hiddenAt.x, hiddenAt.y), { kind: null, press: null });
   sw.visible = true;
 
   // Long-press resolves the same way and exposes the target's buttons.
@@ -286,6 +290,167 @@ const SIZE = { w: 400, h: 400 };
     console.warn = real.warn;
   }
   assert.deepEqual(said.filter((m) => m.includes("Raycaster.camera")), [], "occlusion ray carries the camera");
+}
+
+// --- occlusion: doors behind walls, openings, switches, glass, cuts ------
+// Petr, 2026-11-13: "I can literally open doors through multiple walls."
+{
+  const camera = new THREE.PerspectiveCamera(50, 1, 0.01, 100);
+  camera.position.set(0, 1.0, 5);
+  camera.lookAt(0, 1.0, 0);
+  camera.updateMatrixWorld(true);
+  const scene = new THREE.Scene();
+  const wallMat = () => new THREE.MeshStandardMaterial();
+  // A 20 cm wall at z = 0 with a 1 m opening at x = -0.5..0.5, 2.1 m high.
+  const wallGroup = new THREE.Group();
+  wallGroup.name = "masonry__W-1__";
+  const left = new THREE.Mesh(new THREE.BoxGeometry(3, 3, 0.2), wallMat());
+  left.position.set(-2, 1.5, 0);
+  const right = new THREE.Mesh(new THREE.BoxGeometry(3, 3, 0.2), wallMat());
+  right.position.set(2, 1.5, 0);
+  const header = new THREE.Mesh(new THREE.BoxGeometry(1, 0.9, 0.2), wallMat());
+  header.position.set(0, 2.55, 0);
+  wallGroup.add(left, right, header);
+  // A door 1 m behind the opening, another 1 m behind the solid right part,
+  // and a third behind two walls (the "multiple walls" case).
+  const leaf = (x, z, id) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(0.8, 2, 0.04), wallMat());
+    m.position.set(x, 1, z);
+    m.userData.door = id;
+    return m;
+  };
+  const doorSeen = leaf(0, -1, "seen");
+  const doorHidden = leaf(2, -1, "hidden");
+  const second = new THREE.Mesh(new THREE.BoxGeometry(10, 3, 0.2), wallMat());
+  second.position.set(0, 1.5, -2);
+  const doorFar = leaf(-3, -3, "far");
+  // A switch on the near face of the wall (z = 0.1), and one recessed so its
+  // centre sits 1 cm behind that face (flush-mounted box).
+  const sw = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.01), wallMat());
+  sw.position.set(1.2, 1.1, 0.105);
+  sw.userData.door = "switch";
+  const flush = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.02), wallMat());
+  flush.position.set(-1.2, 1.1, 0.09);
+  flush.userData.door = "flush";
+  // A switch on the far face of the wall (other room).
+  const backSw = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.01), wallMat());
+  backSw.position.set(-1.8, 1.6, -0.105);
+  backSw.userData.door = "back";
+  scene.add(wallGroup, doorSeen, doorHidden, second, doorFar, sw, flush, backSw);
+  scene.updateMatrixWorld(true);
+
+  const tapped = [];
+  const registry = createTapRegistry();
+  const interactive = [doorSeen, doorHidden, doorFar, sw, flush, backSw];
+  registry.register({
+    id: "door",
+    priority: 100,
+    claim(hit) {
+      const id = hit.object.userData.door;
+      return id ? { onTap: () => tapped.push(id), actions: [{ id }] } : null;
+    },
+    targets() {
+      return interactive
+        .filter((o) => isShownInSceneForTest(o))
+        .map((o) => {
+          const center = new THREE.Box3().setFromObject(o).getCenter(new THREE.Vector3());
+          return { center, group: o.uuid, hit: { object: o, point: center }, owns: (x) => x === o };
+        });
+    },
+  });
+  function isShownInSceneForTest(o) {
+    for (let n = o; n; n = n.parent) if (!n.visible) return false;
+    return true;
+  }
+  const raycaster = new THREE.Raycaster();
+  const tapAt = (x, y) => {
+    raycaster.setFromCamera(new THREE.Vector2((x / SIZE.w) * 2 - 1, -(y / SIZE.h) * 2 + 1), camera);
+    const hits = raycaster.intersectObject(scene, true);
+    const ctx = { raycaster, now: 0, camera, root: scene, tap: { x, y }, size: SIZE };
+    const keep = (h) => isSceneSolid(h.object);
+    tapped.length = 0;
+    const kind = registry.resolve(hits, ctx, keep)?.kind ?? null;
+    registry.dispatch(hits, ctx, keep);
+    return { kind, tapped: tapped[0] ?? null };
+  };
+  const at = (obj, dx = 0, dy = 0) => {
+    const c = new THREE.Box3().setFromObject(obj).getCenter(new THREE.Vector3());
+    const p = projectTarget(c, camera, SIZE);
+    return [p.x + dx, p.y + dy];
+  };
+
+  assert.deepEqual(tapAt(...at(doorHidden)), { kind: null, tapped: null }, "a door behind a wall is not tappable");
+  assert.deepEqual(tapAt(...at(doorHidden, -6, 8)), { kind: null, tapped: null }, "nor near its centre");
+  assert.deepEqual(tapAt(...at(doorFar)), { kind: null, tapped: null }, "nor a door behind two walls");
+  assert.deepEqual(tapAt(...at(doorSeen)), { kind: "direct", tapped: "seen" }, "a door seen through the opening is");
+  // The opening's edge: the leaf is visible just inside it.
+  const edge = projectTarget(new THREE.Vector3(-0.38, 1, -1), camera, SIZE);
+  assert.deepEqual(tapAt(edge.x, edge.y), { kind: "direct", tapped: "seen" });
+
+  assert.deepEqual(tapAt(...at(sw, 1, 1)), { kind: "direct", tapped: "switch" }, "switch on a wall face, direct");
+  assert.deepEqual(tapAt(...at(sw, 0, -18)), { kind: "extended", tapped: "switch" }, "and through its 44 pt target");
+  assert.deepEqual(tapAt(...at(flush, 0, 18)), { kind: "extended", tapped: "flush" }, "a flush switch's centre sits in its own wall");
+  assert.deepEqual(tapAt(...at(backSw, 0, 18)), { kind: null, tapped: null }, "a switch on the far face is hidden");
+
+  // Glass never blocks: Realistic transmission (opacity 1), Solid's opaque
+  // `glazing` part, and a translucent pane.
+  const pane = new THREE.Mesh(new THREE.BoxGeometry(3, 3, 0.01), new THREE.MeshPhysicalMaterial({ transmission: 0.9 }));
+  pane.position.set(2, 1.2, 0.5);
+  scene.add(pane);
+  scene.updateMatrixWorld(true);
+  assert.equal(isGlassLike(pane), true);
+  assert.deepEqual(tapAt(...at(sw, 1, 1)), { kind: "direct", tapped: "switch" }, "Realistic glass in front does not block");
+  pane.material = new THREE.MeshStandardMaterial();
+  pane.name = "glazing__WIN-OP05__";
+  assert.equal(isGlassLike(pane), true, "glazing part");
+  assert.deepEqual(tapAt(...at(sw, 1, 1)), { kind: "direct", tapped: "switch" }, "Solid glazing does not block");
+  assert.deepEqual(tapAt(...at(sw, 0, -18)), { kind: "extended", tapped: "switch" });
+  pane.name = "";
+  pane.material = new THREE.MeshStandardMaterial({ transparent: true, opacity: 0.2 });
+  assert.deepEqual(tapAt(...at(sw, 1, 1)), { kind: "direct", tapped: "switch" }, "translucent pane");
+  pane.material = new THREE.MeshStandardMaterial();
+  assert.deepEqual(tapAt(...at(sw, 1, 1)), { kind: null, tapped: null }, "an opaque panel does block");
+  scene.remove(pane);
+  scene.updateMatrixWorld(true);
+
+  // Hidden layers: a hidden parent group takes the wall out; so does a cut.
+  wallGroup.visible = false;
+  assert.deepEqual(tapAt(...at(doorHidden)), { kind: "direct", tapped: "hidden" }, "a hidden wall does not block");
+  wallGroup.visible = true;
+  left.userData.bpIfcHidden = right.userData.bpIfcHidden = true;
+  assert.deepEqual(tapAt(...at(doorHidden)), { kind: "direct", tapped: "hidden" }, "a session-hidden wall does not block");
+  left.userData.bpIfcHidden = right.userData.bpIfcHidden = false;
+
+  // Section cut keeping z < -0.5 (near side removed): the wall is cut away.
+  const cut = new THREE.Plane(new THREE.Vector3(0, 0, -1), -0.5);
+  scene.traverse((o) => {
+    if (o.isMesh) o.material.clippingPlanes = [cut];
+  });
+  assert.equal(isClippedAt(right, new THREE.Vector3(2, 1, 0.1)), true);
+  assert.equal(isRenderedHit({ object: doorHidden, point: new THREE.Vector3(2, 1, -1) }), true);
+  assert.deepEqual(tapAt(...at(doorHidden)), { kind: "direct", tapped: "hidden" }, "a cut-away wall does not block");
+  assert.deepEqual(tapAt(...at(sw, 0, -18)), { kind: null, tapped: null }, "a cut-away switch has no target");
+  assert.deepEqual(tapAt(...at(doorFar)), { kind: null, tapped: null }, "the uncut second wall still blocks");
+  scene.traverse((o) => {
+    if (o.isMesh) o.material.clippingPlanes = [];
+  });
+
+  // Orthographic (ISO) camera: same answers.
+  const iso = new THREE.OrthographicCamera(-4, 4, 4, -4, 0.01, 100);
+  iso.position.copy(camera.position);
+  iso.lookAt(0, 1, 0);
+  iso.updateMatrixWorld(true);
+  const isoTap = (obj, dx = 0, dy = 0) => {
+    const c = new THREE.Box3().setFromObject(obj).getCenter(new THREE.Vector3());
+    const p = projectTarget(c, iso, SIZE);
+    raycaster.setFromCamera(new THREE.Vector2((p.x + dx) / SIZE.w * 2 - 1, -((p.y + dy) / SIZE.h) * 2 + 1), iso);
+    const hits = raycaster.intersectObject(scene, true);
+    const ctx = { raycaster, now: 0, camera: iso, root: scene, tap: { x: p.x + dx, y: p.y + dy }, size: SIZE };
+    return registry.resolve(hits, ctx, (h) => isSceneSolid(h.object))?.claim?.actions?.[0]?.id ?? null;
+  };
+  assert.equal(isoTap(doorHidden), null, "ISO: door behind a wall");
+  assert.equal(isoTap(doorSeen), "seen", "ISO: door through the opening");
+  assert.equal(isoTap(sw, 0, -18), "switch", "ISO: switch 44 pt target");
 }
 
 console.log("tapTargets.test.mjs ok");
