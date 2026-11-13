@@ -45,9 +45,9 @@ The fridge’s south face is y = 14.884, 66 mm south of OP25’s north jamb, so 
 
 ### Island
 
-2500 × 1200, counter 930. Centred on the drawn rectangle: west 20.554, east 21.754, north 13.800, south 11.300. Split at about x = 21.15.
+2500 × 1200 as drawn, counter 930. Centred on the drawn rectangle: west 20.554, east 21.754, north 13.800, south 11.300. Split at about x = 21.15. Since 2026-11-13 the west row is 14 shallower (west face 20.568, body 2500 × 1186) for the Gridfinity drawers.
 
-The island is one monoblock (`KR-ISL`, Petr 2026-11-12) with a Silestone worktop overhanging 30 past both long fronts and Silestone cladding on both ends, so at worktop level it is 2540 × 1260 (x 20.524–21.784, y 11.280–13.820). The bay boxes did not move. Structure, worktop and cladding: [kitchen-cabinets.md](kitchen-cabinets.md).
+The island is one monoblock (`KR-ISL`, Petr 2026-11-12) with a Silestone worktop overhanging 20 past both long fronts (Petr, 2026-11-13; was 30) and Silestone cladding on both ends. Since 2026-11-13 the west row is 586 deep for Gridfinity drawers (west face x 20.568), so at worktop level the island is 2540 × 1226 (x 20.548–21.774, y 11.280–13.820). Structure, worktop and cladding: [kitchen-cabinets.md](kitchen-cabinets.md).
 
 West row faces west. Modules north to south: 500, 600, 500, 600, 300. The rectangular sink is in the north 500. The 600 south of it (SF-I600a) is the knife-drawer cabinet; its drawers are in [kitchen-cabinets.md](kitchen-cabinets.md). The rectangular sink is the Teka BE LINEA RS15 18.40 X (`SN-RS1840`). The green rectangle with two circles on the second 600 (SF-I600b) is the Miele KM 8665 FL hob, not two bowls; see [kitchen-cabinets.md](kitchen-cabinets.md).
 
@@ -59,7 +59,7 @@ Clear of the inner faces, to the outline: west 1.754, east 8.146, north 1.800, s
 
 OP24 is y 10.25–11.35. OP25 is y 13.85–14.95. The clear gap is 2500 mm and the run fills it with zero clearance at each jamb. The island was left where it was. Bases are 600 deep and 930 high, backs on x = 18.80, fronts east.
 
-Facing the west wall, left is south and right is north. North to south: A 850 (250 pull-out on the south, dishwasher on the north), B 800 (bin south, compost north, one box), C 850 (sorted waste). The bases are one monoblock (`KR-WEST`); the dishwasher slot is the bay `SF-A600` with no carcass. The Silestone worktop overhangs 30 into the aisle (x 19.43), so the aisle to the island worktop is 1094. The wall cabinets are a second monoblock (`KR-WEST-H`). See [kitchen-cabinets.md](kitchen-cabinets.md).
+Facing the west wall, left is south and right is north. North to south: A 850 (250 pull-out on the south, dishwasher on the north), B 800 (bin south, compost north, one box), C 850 (sorted waste). The bases are one monoblock (`KR-WEST`); the dishwasher slot is the bay `SF-A600` with no carcass. The Silestone worktop overhangs 20 into the aisle (x 19.42), so the aisle to the island worktop is 1128. The wall cabinets are a second monoblock (`KR-WEST-H`). See [kitchen-cabinets.md](kitchen-cabinets.md).
 
 Wall cabinets: depth 350, height 900, bottom **1560** (630 above the 930 counter), top **2460**. Petr, 2026-11-13: “I want top cabinets to start at 1560mm from floor.” (bottom 1550, top 2450 before). Their fronts are Blum AVENTOS HF lift-ups: “I want this hinge for the top cabinets.” See [kitchen-cabinets.md](kitchen-cabinets.md) “Wall cabinets: lift-up fronts”.
 
@@ -83,7 +83,7 @@ Piers W-052 (x 22.15–22.45) and W-053 (x 25.15–25.45) project to y = 15.35. 
 
 > I want the living room part of the counter (behind sofa) to continue at the same 930 height as the dining area. It will be oak veneer, not silestone. We'll work out the details of where the two materials connect later.
 
-It is the run `KR-LB` (an oak body to 910, a 20 mm oak-veneer top, 30 front overhang), 170 mm over the sofa back. The joint with the dining run's Silestone at x 25.52 is `open:`. Details: [kitchen-cabinets.md](kitchen-cabinets.md) “Living-room counter”.
+It is the run `KR-LB` (an oak body to 910, a 20 mm oak-veneer top, 20 front overhang), 170 mm over the sofa back. The joint with the dining run's Silestone at x 25.52 is `open:`. Details: [kitchen-cabinets.md](kitchen-cabinets.md) “Living-room counter”.
 
 The tall corner cabinet is the east 200 mm (x 29.70–29.90), floor to 2450, the kitchen tall height, not the 5.05 m slope. It is one armrest wide.
 
