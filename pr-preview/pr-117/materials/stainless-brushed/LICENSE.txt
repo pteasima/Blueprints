@@ -1,2 +1,0 @@
-Source: ambientCG "Metal009", https://ambientcg.com/view?id=Metal009 (CC0 1.0). Physical size assumed 0.3 m.
-Modified: colour set to stainless reflectance #c4c5c6, roughness re-centred on 0.32.
