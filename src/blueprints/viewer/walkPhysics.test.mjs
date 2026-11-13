@@ -20,6 +20,7 @@ import {
   figurePlacement,
   findSpawn,
   freeCameraAfterWalk,
+  lineOfSight,
   forwardOf,
   loadWalkHeight,
   saveWalkHeight,
@@ -230,6 +231,27 @@ assert.ok(Math.abs(eyeHeightM(174) - 1.74 * EYE_RATIO) < 1e-9);
   const fwd = forwardOf(p.yaw);
   assert.ok(look.y < 0, "looks down at the figure");
   assert.ok(look.setY(0).normalize().dot(fwd) > 0.99, "from behind the walker");
+}
+
+// --- Free camera on exit avoids walls between it and the figure ---
+{
+  const root = new THREE.Group();
+  // A tall wall just behind the walker (walker faces -z, so behind is +z).
+  root.add(box([-5, 0, 1], [5, 9, 1.2]));
+  root.updateMatrixWorld(true);
+  const world = buildWalkWorld(root);
+  const p = createPlayer({ feet: new THREE.Vector3(0, 0, 0), yaw: 0, heightCm: 186 });
+  const plain = freeCameraAfterWalk(p);
+  assert.ok(plain.position.z > 1.2, "plain pose is behind the wall");
+  assert.equal(lineOfSight(world, plain.position, plain.target), false, "the wall blocks the plain pose");
+  const cam = freeCameraAfterWalk(p, world);
+  assert.ok(lineOfSight(world, cam.position, cam.target), `clear view of the figure, ${cam.position.toArray()}`);
+  assert.ok(cam.position.z < 1, "camera on the walker's side of the wall");
+  assert.ok(cam.target.clone().sub(cam.position).y < 0, "still looks down at the figure");
+  // Open ground: the default behind-and-above pose is kept.
+  const open = buildWalkWorld(new THREE.Group());
+  const keep = freeCameraAfterWalk(p, open);
+  assert.ok(keep.position.distanceTo(plain.position) < 1e-9, "unchanged without obstruction");
 }
 
 console.log("walkPhysics tests passed");

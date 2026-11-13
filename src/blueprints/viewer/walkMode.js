@@ -312,7 +312,7 @@ export function createWalkMode(opts) {
     if (player) {
       figure.place(figurePlacement(player));
       figure.show(true);
-      if (!o.keepCamera) pose = freeCameraAfterWalk(player);
+      if (!o.keepCamera) pose = freeCameraAfterWalk(player, world);
     }
     world?.dispose();
     world = null;

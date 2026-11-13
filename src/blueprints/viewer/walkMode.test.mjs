@@ -7,6 +7,7 @@ import * as THREE from "three";
 import { applyFirstPersonCamera, keysToInput, spawnRay, yawPitchOf } from "./walkMode.js";
 import { createPersonFigure, FIGURE_SHAPE } from "./personFigure.js";
 import { createPlayer, eyeHeightM, figurePlacement } from "./walkPhysics.js";
+import { isOpaqueSceneContent } from "./depthPeel.js";
 
 // Keys: WASD and arrows, opposite keys cancel.
 assert.deepEqual(keysToInput(new Set(["KeyW"])), { forward: 1, right: 0, run: false });
@@ -72,6 +73,29 @@ assert.deepEqual(keysToInput(new Set(["KeyW", "ArrowUp"])), { forward: 1, right:
   const box2 = new THREE.Box3().setFromObject(fig.object);
   assert.ok(Math.abs(box2.max.y - 1.74) < 1e-6, "glTF stand-in scaled to the height");
   assert.equal(rc.intersectObject(fig.object, true).length, 0, "stand-in does not raycast either");
+}
+
+// Figure renders like normal opaque geometry, so closer walls hide it
+// (Petr, 2026-11-13: "person figure clips through everything else").
+{
+  const fig = createPersonFigure();
+  assert.ok(isOpaqueSceneContent(fig.object), "depth peel keeps it out of the overlay pass");
+  let meshes = 0;
+  fig.object.traverse((o) => {
+    assert.equal(o.layers.mask, 1, `${o.name || o.type} only on layer 0, not an overlay layer`);
+    assert.equal(o.renderOrder, 0, "no render-order override");
+    if (!o.isMesh) return;
+    meshes++;
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    for (const m of mats) {
+      assert.equal(m.depthTest, true, "depthTest on");
+      assert.equal(m.depthWrite, true, "depthWrite on");
+      assert.equal(m.transparent, false, "opaque");
+      assert.ok(m.opacity === 1, "full opacity");
+    }
+  });
+  assert.ok(meshes >= 2);
+  assert.equal(isOpaqueSceneContent(new THREE.Group()), false, "annotations and other overlays still redraw on top");
 }
 
 console.log("walkMode tests passed");

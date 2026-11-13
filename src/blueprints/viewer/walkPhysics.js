@@ -712,13 +712,42 @@ export function figurePlacement(player) {
 
 /**
  * Free-camera pose after walking: behind and above the walker, looking at
- * the figure's chest, so the figure is in view.
+ * the figure's chest, so the figure is in view. Since the figure is
+ * occluded by closer geometry, a pose with a wall in the way would hide it;
+ * given the walk world, candidates are tried around the figure (behind
+ * first, then turning away from behind, then steeper) and the first with a
+ * clear line to the figure's head and chest wins. Falls back to straight
+ * above, then to plain behind-and-above.
  * @param {Player} player
+ * @param {WalkWorld} [world]
  */
-export function freeCameraAfterWalk(player) {
+export function freeCameraAfterWalk(player, world) {
   const h = snapHeightCm(player.heightCm) / 100;
   const target = player.feet.clone().setY(player.feet.y + h * 0.55);
-  const back = forwardOf(player.yaw, new THREE.Vector3()).multiplyScalar(-4.2);
-  const position = target.clone().add(back).setY(target.y + 4.2);
-  return { position, target };
+  const pose = (yaw, dist, rise) => {
+    const back = forwardOf(yaw, new THREE.Vector3()).multiplyScalar(-dist);
+    return { position: target.clone().add(back).setY(target.y + rise), target: target.clone() };
+  };
+  const first = pose(player.yaw, 4.2, 4.2);
+  if (!world?.bvh) return first;
+  const head = player.feet.clone().setY(player.feet.y + h * 0.9);
+  const candidates = [];
+  for (const [dist, rise] of [[4.2, 4.2], [3.2, 5.2], [2, 6], [3, 3]]) {
+    for (const turn of [0, 1, -1, 2, -2, 3, -3, 4]) {
+      candidates.push(pose(player.yaw + (turn * Math.PI) / 4, dist, rise));
+    }
+  }
+  candidates.push(pose(player.yaw, 0.05, 6.5)); // nearly top-down
+  return candidates.find((c) => lineOfSight(world, c.position, head) && lineOfSight(world, c.position, target)) || first;
+}
+
+const _losRay = new THREE.Ray();
+/** Whether nothing static in the walk world blocks the segment from a to b. */
+export function lineOfSight(world, a, b) {
+  const dir = b.clone().sub(a);
+  const len = dir.length();
+  if (len < 1e-6) return true;
+  _losRay.set(a, dir.divideScalar(len));
+  const hit = world.bvh.raycastFirst(_losRay, THREE.DoubleSide, 0, len);
+  return !hit || hit.distance >= len - 1e-3;
 }

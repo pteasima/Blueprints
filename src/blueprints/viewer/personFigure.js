@@ -70,6 +70,9 @@ export function createPersonFigure() {
   root.name = "WalkFigure";
   root.visible = false;
   root.userData.bpWalkFigure = true;
+  // Ordinary opaque geometry: depth-peel.js must not redraw it in the
+  // overlay pass (after clearDepth), where it would show through walls.
+  root.userData.bpSceneContent = true;
   let model = createDefaultFigure();
   inertify(model);
   root.add(model);
