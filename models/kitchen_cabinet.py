@@ -848,23 +848,27 @@ class _Builder:
 
         The band must be inside the fitting's Blum ranges (``AVENTOS``):
         cabinet height KH (the band), width KB (the bay), internal depth LT
-        and the power factor LF = KH x front weight. The export stops if not.
+        and the power factor LF = KH x front weight. The export stops if not,
+        unless the bay's ``Pset_Fronts.BlumRangeOverride`` says why it may
+        (a quote with its source); then each breach is kept on the front's
+        properties (``OutsideBlumRange``) and in ``run.notes``.
         Returns the mechanism boxes so the shelves can keep clear of them.
         """
         fit = str(zone.opts.get("fitting", "HK"))
         if fit not in AVENTOS:
             raise ValueError(f"{bay.id}: lift fitting={fit!r}, one of {sorted(AVENTOS)}")
         spec = AVENTOS[fit]
+        override = _prop(bay.element, PSET_FRONTS, "BlumRangeOverride")
+        breaches = []
         t, tf = p["BoardThickness"], p["FrontThickness"]
         kh, kb, lt = zone.nominal, bay.width, back_y - tf
         lo_kh, hi_kh = spec["kh"]
         if not (lo_kh - TOL <= kh <= hi_kh + TOL):
-            raise ValueError(f"{bay.id}: {spec['name']} takes a cabinet height of {lo_kh:.0f}–{hi_kh:.0f} mm, "
-                             f"this one is {kh:.0f}")
+            breaches.append(f"{spec['name']} takes a cabinet height of {lo_kh:.0f}–{hi_kh:.0f} mm, this one is {kh:.0f}")
         if kb > spec["kb"] + TOL:
-            raise ValueError(f"{bay.id}: {spec['name']} takes a cabinet width up to {spec['kb']:.0f}, this one is {kb:.0f}")
+            breaches.append(f"{spec['name']} takes a cabinet width up to {spec['kb']:.0f}, this one is {kb:.0f}")
         if spec["lt"] is not None and lt < spec["lt"] - TOL:
-            raise ValueError(f"{bay.id}: {spec['name']} needs {spec['lt']:.0f} internal depth, this one has {lt:.0f}")
+            breaches.append(f"{spec['name']} needs {spec['lt']:.0f} internal depth, this one has {lt:.0f}")
         a0, a1, fc0, fc1, z0, z1 = front_box
         fb, fh = a1 - a0, z1 - z0
         density = float(zone.opts.get("density", LIFT_FRONT_DENSITY))
@@ -882,9 +886,11 @@ class _Builder:
         fg = sum((zz1 - zz0) * fb * tf for _n, _l, (zz0, zz1) in fronts) * 1e-9 * density
         lf = kh * fg
         if spec["lf"] is not None and not (spec["lf"][0] <= lf <= spec["lf"][1]):
-            raise ValueError(f"{bay.id}: {spec['name']} power factor {lf:.0f} outside {spec['lf'][0]:.0f}–{spec['lf'][1]:.0f}")
+            breaches.append(f"{spec['name']} power factor {lf:.0f} outside {spec['lf'][0]:.0f}–{spec['lf'][1]:.0f}")
         if spec["fg"] is not None and fg > spec["fg"] + 1e-6:
-            raise ValueError(f"{bay.id}: {spec['name']} front weight {fg:.1f} kg over {spec['fg']} kg")
+            breaches.append(f"{spec['name']} front weight {fg:.1f} kg over {spec['fg']} kg")
+        if breaches and not override:
+            raise ValueError(f"{bay.id}: {breaches[0]}")
         # Space the open front needs (Blum planning pages, at the largest
         # opening angle): Y above the cabinet top, X out in front of it.
         if fit == "HF":
@@ -903,6 +909,9 @@ class _Builder:
         props = dict(base, Fitting=spec["name"], FittingCode=fit, CabinetHeight=round(kh / 1000.0, 6),
                      FrontWeight=round(fg, 2), PowerFactor=round(lf), OpenAbove=round(above / 1000.0, 6),
                      OpenAhead=round(ahead / 1000.0, 6))
+        if breaches:
+            props.update(OutsideBlumRange="; ".join(breaches), BlumRangeOverride=str(override))
+            self.run.notes.append(f"{bay.id}: outside Blum's range, kept by override ({override}): {'; '.join(breaches)}")
         for tag, label, (zz0, zz1) in fronts:
             self.add(Part(f"{bay.id}-LIFT{tag}", label, "Lift", [(a0, a1, fc0, fc1, zz0, zz1)],
                           props=dict(props, LeafWidth=round(fb / 1000.0, 6), LeafHeight=round((zz1 - zz0) / 1000.0, 6))),

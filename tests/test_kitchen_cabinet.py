@@ -5,6 +5,7 @@ workflow is paused (AGENTS.md); written against the 2026-11-12 layout.
 """
 
 import copy
+import math
 from pathlib import Path
 import sys
 
@@ -125,33 +126,53 @@ def test_disposers_and_taps_hang_on_their_sinks():
     assert len(pull.items) == 2
 
 
-def test_wall_cabinets_have_aventos_hf_lift_fronts():
-    """Petr, 2026-11-13: "I want this hinge for the top cabinets" (Blum
-    AVENTOS) and "top cabinets to start at 1560mm". At 900 high only HF fits."""
+def test_wall_cabinets_have_one_hk_stay_lift_front():
+    """Petr, 2026-11-13: "I want this hinge for the top cabinets" (a Blum
+    AVENTOS stay lift), "top cabinets to start at 1560mm", then "assume the
+    hinge exists for our width. Also, don't move anything up, make it shorter
+    in height. The existing ceiling line ... is an invariant."""
     runs = _runs()
     run = runs["KR-WEST-H"]
     for bay in run.bays:
-        assert bay.z_base == pytest.approx(1560.0) and bay.z_base + bay.height == pytest.approx(2460.0)
-        upper, lower = run.part(f"{bay.id}-LIFT1"), run.part(f"{bay.id}-LIFT2")
-        assert upper.props["FittingCode"] == "HF"
-        assert upper.boxes[0][4] > lower.boxes[0][5]
-        kc_min, kc_max = kc.AVENTOS["HF"]["lf"]
-        assert kc_min <= upper.props["PowerFactor"] <= kc_max
+        assert bay.z_base == pytest.approx(1560.0) and bay.z_base + bay.height == pytest.approx(2450.0)
+        front = run.part(f"{bay.id}-LIFT")
+        assert front.props["FittingCode"] == "HK"
+        assert "205–600" in front.props["OutsideBlumRange"]
+        assert "assume the hinge exists" in front.props["BlumRangeOverride"]
+        assert front.lift.parent is None and front.lift.angles[-1] == pytest.approx(math.radians(kc.LIFT_OPEN_DEG["HK"]))
+        assert not [p for p in run.parts if p.id in (f"{bay.id}-LIFT1", f"{bay.id}-LIFT2")]
         mechs = [run.part(f"{bay.id}-LIFTMECH-{s}") for s in ("L", "R")]
+        arms = [run.part(f"{bay.id}-LIFTARM-{s}") for s in ("L", "R")]
+        assert all(a.lift.stretch for a in arms)
         shelves = [p for p in run.parts if p.role == "Shelf" and p.id.startswith(bay.id)]
         assert len(shelves) == 2
         assert all(sh.boxes[0][5] <= min(m.boxes[0][4] for m in mechs) for sh in shelves)
     assert {bid for bid, _box in run.clearances} == {b.id for b in run.bays}
 
 
-def test_lift_outside_blum_range_stops_the_export():
+def test_lift_outside_blum_range_stops_the_export_without_an_override():
     doc = copy.deepcopy(load_furnishings())
     bay = next(e for e in doc["systemFurniture"] if e["id"] == "SF-BH800")
     for pset in bay["PropertySets"]:
         if pset["Name"] == "Pset_Fronts":
-            pset["Properties"]["Layout"] = "lift * fitting=HK shelves=2"
+            pset["Properties"].pop("BlumRangeOverride")
     with pytest.raises(ValueError, match="cabinet height"):
         _runs(doc)
+
+
+def test_nothing_above_the_ceiling_line():
+    import ceiling_line
+    from ground_floor import FURNISHING_LISTS, ROOM_X0, ROOM_X1, ROOM_Y0, ROOM_Y1
+
+    doc = load_furnishings()
+    runs = list(_runs(doc).values())
+    ceiling_line.check_ceiling_line(doc, FURNISHING_LISTS, runs)
+    notes = ceiling_line.check_open_envelopes(runs, (ROOM_X0, ROOM_X1, ROOM_Y0, ROOM_Y1))
+    assert len(notes) == 3
+    doc = copy.deepcopy(doc)
+    next(e for e in doc["systemFurniture"] if e["id"] == "SF-DH")["Height"] = 0.9
+    with pytest.raises(ValueError, match="ceiling line"):
+        ceiling_line.check_ceiling_line(doc, FURNISHING_LISTS, list(_runs(doc).values()))
 
 
 def test_over_fridge_has_a_pair_of_doors():

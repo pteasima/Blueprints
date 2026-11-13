@@ -111,6 +111,7 @@ from bathroom_120 import (
     scenes as bathroom_scenes,
 )
 from living_geometry import OAK_TYPES, living_detail
+import ceiling_line
 import kitchen_cabinet
 import kitchen_ifc
 from blueprints.export_utils import SECTION_LAYERS
@@ -515,6 +516,10 @@ def _furnishing_parts(doc: dict, motions: list | None = None) -> list:
     # Kitchen runs: bays become groups, parts become the run's children
     # (models/kitchen_ifc.py). Their solids come from the same layout below.
     runs = kitchen_cabinet.runs(doc)
+    # Petr, 2026-11-13: the ceiling line is an invariant (models/ceiling_line.py).
+    ceiling_line.check_ceiling_line(doc, FURNISHING_LISTS, runs)
+    for run in runs:
+        run.notes.extend(ceiling_line.check_open_envelopes([run], (ROOM_X0, ROOM_X1, ROOM_Y0, ROOM_Y1)))
     written = set(kitchen_ifc.apply(model, doc, runs).values())
     errors = validation_errors(model)
     if errors:

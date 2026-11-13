@@ -862,8 +862,9 @@ function slabFor(record, size, name) {
   near1(at(lower).distanceTo(new THREE.Vector3(0.009, 1.745, 0)), 0, "shuts back where it was");
 }
 
-// The committed ground floor: each wall cabinet's lift front binds as one
-// linkage (upper, lower, two arms) that opens up and out of the wall.
+// The committed ground floor: each wall cabinet's single stay-lift front
+// (AVENTOS HK top, Petr 2026-11-13) binds as one linkage: the front and its
+// two arms.
 {
   const records = JSON.parse(
     readFileSync(new URL("../../../docs/models/ground_floor.doors.json", import.meta.url), "utf8"),
@@ -875,8 +876,11 @@ function slabFor(record, size, name) {
   );
   for (const r of lifts) {
     assert.ok(isLinkageRecord(r), r.id);
-    assert.deepEqual(r.joints.map((j) => j.parent), [null, 0, null]);
-    assert.equal(r.joints[2].elements.length, 2, "an arm on each side");
+    assert.deepEqual(r.joints.map((j) => j.parent), [null, null]);
+    assert.equal(r.joints[0].elements[0].element, r.id, "one front, named like the linkage");
+    near1(r.joints[0].angles.at(-1), (107 * Math.PI) / 180, "HK top opens to 107°");
+    assert.equal(r.joints[1].elements.length, 2, "an arm on each side");
+    assert.ok(r.joints[1].stretch, "the arms telescope");
   }
 }
 

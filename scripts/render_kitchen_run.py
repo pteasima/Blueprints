@@ -1,6 +1,6 @@
 """PNG previews of one kitchen run, straight from models/kitchen_cabinet.py.
 
-    python scripts/render_kitchen_run.py KR-ISL [--bay SF-I600a] [--open SF-I600a-D1,SF-T2-DOOR1,SF-BH800-LIFT1,SF-BH800-LIFT2] [--out DIR]
+    python scripts/render_kitchen_run.py KR-ISL [--bay SF-I600a] [--open SF-I600a-D1,SF-T2-DOOR1,SF-BH800-LIFT] [--out DIR]
 
 Writes ``<run>-iso.png`` (the whole monoblock, worktop see-through),
 ``<run>-plan.png`` (a plan cut at mid carcass height with every bay's clear
@@ -59,7 +59,6 @@ COLORS = {
 }
 ALPHA = {"Worktop": 0.35, "Cladding": 0.45, "Front": 0.55, "Door": 0.6, "Lift": 0.6, "Clearance": 0.12}
 FRONT_ROLES = ("Front", "Drawer", "PullOut", "Door", "Lift", "Filler", "Appliance")
-LIFT_OPEN_RAD = np.radians(116.0)  # AVENTOS HF top's largest opening angle (Blum)
 
 
 def _box_faces(box, offset):
@@ -86,32 +85,29 @@ def _swing(face, part, angle=np.pi / 2):
     return out
 
 
+def _turn(res, lj, angle):
+    """Turn run-frame points about a LiftJoint's line by ``angle``."""
+    u = lj.out * (res[:, 1] - lj.pivot_c)
+    dz = res[:, 2] - lj.pivot_z
+    out = res.copy()
+    out[:, 1] = lj.pivot_c + lj.out * (u * np.cos(angle) - dz * np.sin(angle))
+    out[:, 2] = lj.pivot_z + u * np.sin(angle) + dz * np.cos(angle)
+    return out
+
+
 def _lift_open(face, part, bay, run):
-    """A lift front drawn open (approximate): the front, or the upper front
-    of a bi-fold pair, turned up and out about its top edge to the largest
-    opening angle; the lower front of a pair folded flat behind it."""
-    tf = run.params["FrontThickness"]
-    out = -1.0 if bay.front_low else 1.0
-    a0, a1, c0, c1, z0, z1 = part.boxes[0]
-    inner = c1 if bay.front_low else c0
-    upper = [p for p in run.parts if p.role == "Lift" and p.id.startswith(bay.id + "-LIFT")]
-    top = max(p.boxes[0][5] for p in upper)
-    lower = part.id.endswith("2")
-    t = LIFT_OPEN_RAD
+    """A lift front or arm drawn fully open: its ``LiftJoint`` (the same
+    motion the viewer plays), then its parent joint's, at the last sample.
+    An arm also telescopes (``stretch``) down from its pivot."""
+    lj = part.lift
     res = face.copy()
-    if lower:
-        # fold: shift onto the upper front's inner face, then turn with it
-        top_part = min(upper, key=lambda p: -p.boxes[0][5])
-        dz = top_part.boxes[0][4] - z0
-        res = res.copy()
-        res[:, 2] = res[:, 2] + dz
-        res[:, 1] = res[:, 1] + out * -tf
-    u = out * (res[:, 1] - inner)
-    dz = res[:, 2] - top
-    u2 = u * np.cos(t) - dz * np.sin(t)
-    z2 = u * np.sin(t) + dz * np.cos(t)
-    res[:, 1] = inner + out * u2
-    res[:, 2] = top + z2
+    if lj.stretch:
+        res[:, 2] = lj.pivot_z + (res[:, 2] - lj.pivot_z) * lj.stretch[-1]
+    res = _turn(res, lj, lj.angles[-1])
+    if lj.parent is not None:
+        parent = next(p.lift for p in run.parts if p.lift is not None and p.lift.group == lj.group
+                      and p.lift.index == lj.parent)
+        res = _turn(res, parent, parent.angles[-1])
     return res
 
 
@@ -135,7 +131,7 @@ def iso(run, parts, open_ids, path: Path, title: str, elev=26, azim=-62, clearan
         faces = [f for box in part.boxes for f in _box_faces(box, off)]
         if part.door is not None and part.id in open_ids:
             faces = [_swing(f, part) for f in faces]
-        if part.role == "Lift" and part.id in open_ids:
+        if part.lift is not None and (part.id in open_ids or part.lift.group in open_ids):
             faces = [_lift_open(f, part, owner[part.id], run) for f in faces]
         base = np.array(matplotlib.colors.to_rgb(COLORS.get(part.role, "#999999")))
         cols = []
