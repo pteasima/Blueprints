@@ -53,7 +53,7 @@ KIND_NICHE = "Niche"
 # overrides the drawer and front values for that bay only.
 IKEA_DEFAULTS_MM = {
     "WorktopThickness": 38.0,  # IKEA worktops; the island run sets 20 (Silestone)
-    "WorktopOverhang": 0.0,  # past the front faces; Petr gave 30 for Silestone
+    "WorktopOverhang": 0.0,  # past the front faces; Petr gave 20 for Silestone (2026-11-13)
     "CladdingThickness": 0.0,  # 0 = same as the worktop
     "PlinthHeight": 92.0,  # METOD legs 80–100
     "PlinthSetback": 50.0,  # plinth board behind the front face (guess)
@@ -64,13 +64,36 @@ IKEA_DEFAULTS_MM = {
     "BackThickness": 8.0,  # single-row back panel (guess)
     "FrontGap": 3.0,  # 600×200 grid front is 597×197
     "RailDepth": 80.0,  # top front/back rails (guess)
-    "SlideClearance": 13.0,  # per side, drawer box to carcass side
-    "BoxBottomOffset": 25.0,  # slot bottom to drawer box bottom (guess)
-    "BoxHeightReserve": 110.0,  # front height minus drawer box side height (guess)
+    # Drawers modelled after IKEA MAXIMERA in a METOD 60×60 frame (IKEA's own
+    # pages, kitchen-cabinets.md "Drawers: MAXIMERA"): inside 480 × 504 in a
+    # 564 clear (600 − 2 × 18) by 600 deep frame, the same deduction at 40, 60
+    # and 80 wide. Our carcass loses the same from its own sides.
+    "DrawerInnerWidthDeduction": 84.0,  # clear width between the sides − drawer inside width (IKEA)
+    "DrawerInnerDepthDeduction": 96.0,  # side depth (front edge to the back) − drawer inside depth (IKEA)
+    "BoxWall": 19.0,  # drawn box side / front / back: (542 − 504) / 2, MAXIMERA box 542 deep (IKEA)
+    "BoxBottomThickness": 16.0,  # drawn box bottom (guess; MAXIMERA's is particleboard)
+    "BoxBottomOffset": 3.0,  # band bottom (above the carcass bottom board for the lowest) to box bottom (guess)
+    # MAXIMERA side heights by "system height" (the front band it is sold for):
+    # low 78 in 100, medium 144 in 200, high 212 in 300 (IKEA). A taller band
+    # than MaximeraTallBand gets front − BoxHeightReserve (a high box with side
+    # extensions, guess:), as do pull-outs.
+    "MaximeraLowBand": 100.0,
+    "MaximeraLowHeight": 78.0,
+    "MaximeraMediumBand": 200.0,
+    "MaximeraMediumHeight": 144.0,
+    "MaximeraHighBand": 300.0,
+    "MaximeraHighHeight": 212.0,
+    "MaximeraTallBand": 400.0,
+    "BoxHeightReserve": 110.0,  # front height minus drawer box side height, tall bands (guess)
     "BoxMinHeight": 60.0,
-    "BoxWall": 16.0,  # MAXIMERA side / back (guess)
-    "BoxRearClearance": 10.0,  # box back to carcass back
-    "SlideStep": 50.0,  # slide lengths come in 50 mm steps
+    # Gridfinity (bays with Pset_Drawers.Gridfinity): 42 mm pitch, the drawer
+    # inside is n × 42 + GridfinityPlay; the baseplate is drawn in the drawer.
+    "GridfinityPitch": 42.0,
+    "GridfinityPlay": 1.0,
+    "GridfinityHeight": 5.0,  # baseplate height (guess: standard plates are about 5)
+    "GridfinityFloor": 1.0,  # drawn floor under the cells (guess)
+    "GridfinityRib": 2.5,  # drawn rib between cells (guess)
+    "GridfinityUnit": 7.0,  # bin height unit
     "BacksplashThickness": 12.0,  # Silestone backsplash (Petr, 2026-11-12, via Bob)
     "BacksplashTop": 0.0,  # 0 = up to the wall cabinets above; else a height above the floor
     # Fronts and interiors (Pset_Fronts), all guess: unless kitchen-cabinets.md says otherwise.
@@ -184,8 +207,11 @@ class Drawer:
     out: float  # +1 / -1: the c direction the drawer pulls out
     trimmed: float = 0.0  # mm taken off the box height to clear a hob (or a sink, a disposer) above
     kind: str = "drawer"  # "drawer" or "pullout" (a full-height front with a frame box)
-    items: list = field(default_factory=list)  # run-frame boxes riding in the box (baskets, bins)
+    items: list = field(default_factory=list)  # run-frame boxes riding in the box (baskets, bins, baseplate)
     zone: int = 0  # Pset_Fronts zone, 1 = top
+    inside: tuple = (0.0, 0.0, 0.0)  # drawer inside width, depth, side height above the floor (mm)
+    floor_z: float = 0.0  # z of the box's inside floor
+    grid: tuple | None = None  # Gridfinity (n, m) cells when the bay asks for a baseplate
 
 
 @dataclass
@@ -672,14 +698,29 @@ class _Builder:
                     "Contents": zone.content or None}
             if zone.kind in DRAWER_KINDS:
                 drawer_no += 1
-                dr = _drawer(bay, p, zone, drawer_no, back_y, ceiling, self._obstacle_ceiling(bay, p))
+                dr = _drawer(bay, p, zone, drawer_no, back_y, ceiling, self._obstacle_ceiling(bay, p),
+                             carcass_z0=z0, top_limit=(z1 - t) if top_zone else None)
                 name = ("Výsuv" if zone.kind == "pullout" else "Šuplík") + f" {drawer_no} {dr.content}"
                 props = dict(base, Extension=round(dr.extension / 1000.0, 6),
                              BoxWidth=round((dr.box[1] - dr.box[0]) / 1000.0, 6),
                              BoxDepth=round(abs(dr.box[3] - dr.box[2]) / 1000.0, 6),
                              BoxHeight=round((dr.box[5] - dr.box[4]) / 1000.0, 6),
                              Trimmed=round(dr.trimmed / 1000.0, 6) if dr.trimmed else None,
-                             Items=len(dr.items) or None, ItemKind=zone.opts.get("items"))
+                             Items=(len(dr.items) if dr.grid is None else None) or None,
+                             ItemKind=zone.opts.get("items"),
+                             InsideWidth=round(dr.inside[0] / 1000.0, 6),
+                             InsideDepth=round(dr.inside[1] / 1000.0, 6),
+                             InsideHeight=round(dr.inside[2] / 1000.0, 6),
+                             Gridfinity=f"{dr.grid[0]}x{dr.grid[1]}" if dr.grid else None,
+                             GridfinitySlackWidth=round(gridfinity_cells(p, dr.inside[0])[1] / 1000.0, 6) if dr.grid else None,
+                             GridfinitySlackDepth=round(gridfinity_cells(p, dr.inside[1])[1] / 1000.0, 6) if dr.grid else None)
+                if dr.grid:
+                    sw = gridfinity_cells(p, dr.inside[0])[1]
+                    sd = gridfinity_cells(p, dr.inside[1])[1]
+                    if abs(sw) > TOL or abs(sd) > TOL:
+                        self.run.notes.append(f"open: {bay.id}-D{drawer_no} inside {dr.inside[0]:g} x {dr.inside[1]:g} is "
+                                              f"{sw:+g} / {sd:+g} off the Gridfinity {dr.grid[0]}x{dr.grid[1]} size "
+                                              f"(scripts/gridfinity_fit.py)")
                 self.add(Part(f"{bay.id}-D{drawer_no}", name.strip(), "Drawer" if zone.kind == "drawer" else "PullOut",
                               drawer_boxes(dr, p), drawer=dr, props=props), bay)
             elif zone.kind in ("door", "doors"):
@@ -1099,23 +1140,71 @@ def zones(element: dict, carcass_height: float, board: float, z0: float) -> list
     return out
 
 
+def box_side_height(p: dict, kind: str, nominal: float) -> float:
+    """Drawer box side height for a front band (mm). Drawers in bands up to
+    a MAXIMERA "system height" get that MAXIMERA box: low 78 (band 100),
+    medium 144 (200), high 212 (300), IKEA. Taller bands and pull-outs get
+    the front height less ``BoxHeightReserve`` (guess:)."""
+    reserve = max(p["BoxMinHeight"], nominal - p["BoxHeightReserve"])
+    if kind != "drawer" or nominal >= p["MaximeraTallBand"] - TOL:
+        return reserve
+    tiers = [(p["MaximeraHighBand"], p["MaximeraHighHeight"]), (p["MaximeraMediumBand"], p["MaximeraMediumHeight"]),
+             (p["MaximeraLowBand"], p["MaximeraLowHeight"])]
+    for band, height in tiers:
+        if nominal >= band - TOL:
+            return height
+    return max(p["BoxMinHeight"], min(p["MaximeraLowHeight"], nominal - (p["MaximeraLowBand"] - p["MaximeraLowHeight"])))
+
+
+def drawer_inside(bay: Bay, p: dict, back_y: float) -> tuple[float, float]:
+    """Drawer inside width and depth (mm): the bay's clear width and side
+    depth less the MAXIMERA deductions (kitchen-cabinets.md)."""
+    side_depth = back_y - p["FrontThickness"]
+    return bay.clear_width - p["DrawerInnerWidthDeduction"], side_depth - p["DrawerInnerDepthDeduction"]
+
+
+def gridfinity_cells(p: dict, inside: float) -> tuple[int, float]:
+    """Whole Gridfinity cells that fit an inside length, and the slack over
+    n × pitch + play (0 when the drawer is sized to the grid)."""
+    pitch, play = p["GridfinityPitch"], p["GridfinityPlay"]
+    n = int(math.floor((inside - play) / pitch + 1e-6))
+    return n, inside - (n * pitch + play)
+
+
+def wants_gridfinity(element: dict) -> bool:
+    v = _prop(element, PSET_DRAWERS, "Gridfinity", _prop(element, PSET_FRONTS, "Gridfinity", False))
+    return v is True or str(v).lower() == "true"
+
+
 def _drawer(bay: Bay, p: dict, zone: Zone, number: int, back_y: float, ceiling: float | None,
-            obstacles: list) -> Drawer:
-    """One drawer or pull-out in its band, from the clear opening (mm)."""
-    tf = p["FrontThickness"]
-    usable = back_y - tf - p["BoxRearClearance"]
-    slide = p["SlideStep"] * int(usable // p["SlideStep"])
+            obstacles: list, carcass_z0: float = 0.0, top_limit: float | None = None) -> Drawer:
+    """One drawer or pull-out in its band, from the clear opening (mm).
+
+    The box is a MAXIMERA-like box: its inside is the clear width and side
+    depth less the MAXIMERA deductions, its walls ``BoxWall`` (front, back
+    and sides; the decor front is screwed to the box front), centred in the
+    opening, full extension (travel = box length). See kitchen-cabinets.md.
+    """
+    tf, wall = p["FrontThickness"], p["BoxWall"]
+    inner_w, inner_d = drawer_inside(bay, p, back_y)
+    if inner_w <= 0 or inner_d <= 0:
+        raise ValueError(f"{bay.id}: no room for a drawer ({inner_w} × {inner_d})")
+    length = inner_d + 2 * wall
     g = p["FrontGap"] / 2.0
     out_dir = -1.0 if bay.front_low else 1.0
     fc0, fc1 = _Builder.c_range(bay, 0.0, tf)
     front = (bay.a0 + g, bay.a1 - g, fc0, fc1, zone.slot_z0 + g, zone.slot_z1 - g)
-    box_h = max(p["BoxMinHeight"], zone.nominal - p["BoxHeightReserve"])
-    bz0 = zone.slot_z0 + p["BoxBottomOffset"]
-    clr = p["SlideClearance"]
-    bc0, bc1 = _Builder.c_range(bay, tf, tf + slide)
-    box = (bay.clear_lo + clr, bay.clear_hi - clr, bc0, bc1, bz0, bz0 + box_h)
+    box_h = box_side_height(p, zone.kind, zone.nominal)
+    lowest = abs(zone.slot_z0 - carcass_z0) < TOL
+    bz0 = zone.slot_z0 + p["BoxBottomOffset"] + (p["BoardThickness"] if lowest else 0.0)
+    mid = (bay.clear_lo + bay.clear_hi) / 2.0
+    half = inner_w / 2.0 + wall
+    bc0, bc1 = _Builder.c_range(bay, tf, tf + length)
+    box = (mid - half, mid + half, bc0, bc1, bz0, bz0 + box_h)
     limit, why = None, ""
-    if ceiling is not None and box[5] > ceiling:
+    if top_limit is not None and box[5] > top_limit:
+        limit, why = top_limit, "rail"
+    if ceiling is not None and box[5] > ceiling and (limit is None or ceiling < limit):
         # Miele: >= 8 mm from the hob underside to a drawer's top edge.
         limit, why = ceiling, "hob"
     for obox, top, oid in obstacles:
@@ -1127,9 +1216,35 @@ def _drawer(bay: Bay, p: dict, zone: Zone, number: int, back_y: float, ceiling: 
         if limit - bz0 < p["BoxMinHeight"]:
             raise ValueError(f"{bay.id}: drawer {number} under the {why} would be under {p['BoxMinHeight']} mm")
         box = (*box[:5], limit)
+    floor_z = bz0 + p["BoxBottomThickness"]
     items = _items(p, zone, box, out_dir)
-    return Drawer(number, zone.content, zone.nominal, zone.slot_z0, front, box, slide, out_dir, trimmed,
-                  kind=zone.kind, items=items, zone=zone.index)
+    grid = None
+    if zone.kind == "drawer" and wants_gridfinity(bay.element):
+        n, _sw = gridfinity_cells(p, inner_w)
+        m, _sd = gridfinity_cells(p, inner_d)
+        grid = (n, m)
+        ic0, ic1 = _Builder.c_range(bay, tf + wall, tf + wall + inner_d)
+        items = items + gridfinity_baseplate(p, n, m, mid, (ic0 + ic1) / 2.0, floor_z)
+    return Drawer(number, zone.content, zone.nominal, zone.slot_z0, front, box, length, out_dir, trimmed,
+                  kind=zone.kind, items=items, zone=zone.index,
+                  inside=(inner_w, inner_d, box[5] - floor_z), floor_z=floor_z, grid=grid)
+
+
+def gridfinity_baseplate(p: dict, n: int, m: int, a_mid: float, c_mid: float, z0: float) -> list:
+    """An n × m Gridfinity baseplate as boxes (run frame mm): a thin floor
+    and a rib on every grid line, centred on the drawer's inside floor. A
+    drawing aid, not the real profiled plate."""
+    pitch, h, rib = p["GridfinityPitch"], p["GridfinityHeight"], p["GridfinityRib"]
+    w, d = n * pitch, m * pitch
+    a0, c0 = a_mid - w / 2.0, c_mid - d / 2.0
+    out = [(a0, a0 + w, c0, c0 + d, z0, z0 + p["GridfinityFloor"])]
+    for i in range(n + 1):
+        x = a0 + i * pitch
+        out.append((max(a0, x - rib / 2.0), min(a0 + w, x + rib / 2.0), c0, c0 + d, z0, z0 + h))
+    for j in range(m + 1):
+        y = c0 + j * pitch
+        out.append((a0, a0 + w, max(c0, y - rib / 2.0), min(c0 + d, y + rib / 2.0), z0, z0 + h))
+    return out
 
 
 def _items(p: dict, zone: Zone, box: tuple, out_dir: float) -> list:
@@ -1222,17 +1337,20 @@ def _racks(bay: Bay, p: dict, span: tuple, front_box: tuple, n: int) -> list:
 
 
 def drawer_boxes(dr: Drawer, p: dict) -> list:
-    """Front plus open box (bottom, two sides, back), run frame, then any
-    baskets or bins riding in it."""
+    """Front plus the box (bottom, two sides, box front, back), run frame,
+    then anything riding in it (baskets, bins, a Gridfinity baseplate)."""
     wall = p["BoxWall"]
     a0, a1, c0, c1, z0, z1 = dr.box
     back_lo = dr.out > 0  # pulls toward +c, so its back is the c0 end
-    back = (a0, a1, c0, c0 + wall, z0, z1) if back_lo else (a0, a1, c1 - wall, c1, z0, z1)
+    lo_wall = (a0, a1, c0, c0 + wall, z0, z1)
+    hi_wall = (a0, a1, c1 - wall, c1, z0, z1)
+    back, box_front = (lo_wall, hi_wall) if back_lo else (hi_wall, lo_wall)
     return [
         dr.front,
-        (a0, a1, c0, c1, z0, z0 + wall),
+        (a0, a1, c0, c1, z0, z0 + p["BoxBottomThickness"]),
         (a0, a0 + wall, c0, c1, z0, z1),
         (a1 - wall, a1, c0, c1, z0, z1),
+        box_front,
         back,
         *dr.items,
     ]
