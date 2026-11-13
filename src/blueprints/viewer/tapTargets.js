@@ -13,10 +13,21 @@
  * finger wins. A target whose centre is off screen, behind the camera, or
  * hidden behind an opaque solid is skipped.
  *
+ * Occlusion (Petr, 2026-11-13: "I can literally open doors through multiple
+ * walls"): nothing is tappable through opaque geometry. A ray hit only counts
+ * where that surface is actually drawn (`isRenderedHit`): visible through
+ * every ancestor, not session-hidden, and not cut away by a section plane.
+ * Of those, every opaque mesh blocks (`isOpaqueMaterialOf`). Glass never
+ * blocks, in every mode: a pane with transmission (Realistic), a translucent
+ * material (faded parts, phone glass), or a `glazing` / `screen` part even
+ * when Solid paints it opaque blue. You see the door through the window, so
+ * you can tap it; an operable sash still claims its own tap first.
+ *
  * The pure selection (`pickExtendedTarget`, `findDirectHit`) has no Three.js
  * state; the projection and occlusion helpers below take a camera and root.
  */
 import * as THREE from "three";
+import { identityOf } from "./meshIdentity.js";
 
 /** Apple HIG minimum hit target, in points (= CSS px on iOS). */
 export const TAP_TARGET_PX = 44;
@@ -30,16 +41,99 @@ export const OCCLUSION_TOLERANCE_M = 0.05;
 export const DEPTH_TIE_M = 0.05;
 
 /**
+ * Parts that are glass whatever the mode paints them (Solid draws `glazing`
+ * opaque light blue). They never hide what is behind them.
+ */
+export const GLASS_PARTS = new Set(["glazing", "screen"]);
+
+/** @param {object | null | undefined} m */
+function isSeeThroughMaterial(m) {
+  if (!m) return true;
+  // Generated geometry a Realistic glTF asset stands in for is drawn by the
+  // asset (whose own meshes do not raycast), so it still hides things.
+  if (m.visible === false) return !m.userData?.bpAssetHidden;
+  if (m.transparent && (m.opacity ?? 1) < 0.99) return true;
+  // Realistic glass: MeshPhysicalMaterial transmission, often opacity 1.
+  if ((m.transmission ?? 0) > 0) return true;
+  return false;
+}
+
+/**
+ * True when `obj` is glass: a glass part, or every material see-through.
+ * @param {object | null | undefined} obj
+ */
+export function isGlassLike(obj) {
+  if (!obj) return false;
+  const part = obj.userData?.bpPart || identityOf(obj).part;
+  if (part && GLASS_PARTS.has(part)) return true;
+  const mat = obj.material;
+  const list = Array.isArray(mat) ? mat : [mat];
+  return list.length > 0 && list.some((m) => m && (m.transmission ?? 0) > 0);
+}
+
+/**
  * True when every material on `obj` would hide what is behind it. Faded parts
- * (opacity slider) and glass are see-through and do not occlude.
+ * (opacity slider), glass (`isGlassLike`), and lines (edge strokes) are
+ * see-through and do not occlude.
  * @param {object | null | undefined} obj
  */
 export function isOpaqueMaterialOf(obj) {
-  const mat = obj && obj.material;
+  if (!obj || obj.isLine || obj.isLineSegments2 || obj.isLine2 || obj.isPoints || obj.isSprite) {
+    return false;
+  }
+  const mat = obj.material;
   if (!mat) return false;
   const list = Array.isArray(mat) ? mat : [mat];
   if (!list.length) return false;
-  return list.every((m) => m && m.visible !== false && !(m.transparent && (m.opacity ?? 1) < 0.99));
+  if (!list.every((m) => !isSeeThroughMaterial(m))) return false;
+  return !isGlassLike(obj);
+}
+
+/**
+ * True when `point` on `obj` is cut away by its materials' clipping planes
+ * (section cuts, main.js `applyClipPlanes`). three.js drops a fragment on the
+ * negative side of any plane, or of all planes with `clipIntersection`.
+ * Raycasts ignore clipping, so taps have to apply it themselves.
+ * @param {object | null | undefined} obj
+ * @param {THREE.Vector3 | null | undefined} point world space
+ */
+export function isClippedAt(obj, point) {
+  const mat = obj && obj.material;
+  if (!mat || !point) return false;
+  const list = Array.isArray(mat) ? mat : [mat];
+  let any = false;
+  for (const m of list) {
+    const planes = m?.clippingPlanes;
+    if (!planes || !planes.length) return false;
+    const outside = planes.map((plane) => plane.distanceToPoint(point) < -1e-6);
+    const clipped = m.clipIntersection ? outside.every(Boolean) : outside.some(Boolean);
+    if (!clipped) return false;
+    any = true;
+  }
+  return any;
+}
+
+/**
+ * True when `obj` and every ancestor are visible. The raycaster does not
+ * check this: it reports meshes under a hidden group too.
+ * @param {object | null | undefined} obj
+ */
+export function isShownInScene(obj) {
+  for (let node = obj; node; node = node.parent) if (node.visible === false) return false;
+  return Boolean(obj);
+}
+
+/**
+ * True when the surface a ray hit is actually drawn at that point: shown,
+ * not session-hidden (`bpIfcHidden`), and not cut away by a section plane.
+ * Hits that fail this neither take a tap nor hide anything.
+ * @param {{ object?: object, point?: THREE.Vector3 } | null | undefined} hit
+ */
+export function isRenderedHit(hit) {
+  const obj = hit && hit.object;
+  if (!obj || !isShownInScene(obj)) return false;
+  if (obj.userData?.bpIfcHidden) return false;
+  return !isClippedAt(obj, hit.point);
 }
 
 /**
@@ -126,7 +220,10 @@ const _ndc = new THREE.Vector2();
 
 /**
  * True when an opaque solid that `owns` does not claim sits more than
- * `tolerance` in front of `center` on the line of sight.
+ * `tolerance` in front of `center` on the line of sight. Only drawn surfaces
+ * count (`isRenderedHit`). The tolerance is what lets a switch or socket on
+ * a wall face keep its target: the mounting surface is behind (or within a
+ * few centimetres of) the centre, while a wall between rooms is thicker.
  * @param {THREE.Vector3} center
  * @param {THREE.Camera} camera
  * @param {THREE.Object3D} root
@@ -158,7 +255,7 @@ export function centerOccluded(center, camera, root, owns, opts = {}) {
   const hits = _occRay.intersectObject(root, true);
   for (const hit of hits) {
     if (hit.distance >= dist - tol) break;
-    if (!keep(hit.object) || owns(hit.object)) continue;
+    if (!isRenderedHit(hit) || !keep(hit.object, hit) || owns(hit.object)) continue;
     if (isOccluder(hit.object)) return true;
   }
   return false;
