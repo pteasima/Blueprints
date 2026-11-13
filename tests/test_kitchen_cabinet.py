@@ -140,12 +140,17 @@ def test_wall_cabinets_have_hf_bifold_fronts_that_open_partly_folded():
         assert upper.boxes[0][4] > lower.boxes[0][5]
         kc_min, kc_max = kc.AVENTOS["HF"]["lf"]
         assert kc_min <= upper.props["PowerFactor"] <= kc_max
-        assert upper.lift.angles[-1] == pytest.approx(math.radians(116.0))
+        # Petr, 2026-11-13: "do 88 degrees in the model." (an HF opening-angle stop)
+        assert upper.props["OpeningAngle"] == 88.0
+        assert upper.lift.angles[-1] == pytest.approx(math.radians(88.0))
         assert lower.lift.parent == 0
         # Open, the lower front hangs partly folded, not flat behind the upper.
         hang = math.degrees(upper.lift.angles[-1] + lower.lift.angles[-1])
-        assert hang == pytest.approx(kc.LIFT_HF_LOWER_OPEN_DEG, abs=0.5)
-        assert 2.1 < lower.props["OpenBottomEdgeHeight"] < 2.3
+        assert hang == pytest.approx(lower.props["OpenLowerAngle"], abs=0.1)
+        assert -15.0 < hang < 0.0
+        assert lower.props["OpenBottomEdgeHeight"] == pytest.approx(1.991, abs=0.003)
+        # Space above: at least Blum's Y for the 88° stop (28).
+        assert upper.props["OpenAbove"] >= upper.props["BlumOpenAbove"] == pytest.approx(0.028)
         mechs = [run.part(f"{bay.id}-LIFTMECH-{s}") for s in ("L", "R")]
         arms = [run.part(f"{bay.id}-LIFTARM-{s}") for s in ("L", "R")]
         # The lever is rigid, fixed to the lower front, pivoting at the mechanism's underside.
@@ -165,6 +170,16 @@ def test_lift_outside_blum_range_stops_the_export():
             pset["Properties"]["Layout"] = "lift * fitting=HK shelves=2"
             pset["Properties"].pop("BlumRangeOverride")
     with pytest.raises(ValueError, match="cabinet height"):
+        _runs(doc)
+
+
+def test_lift_angle_must_be_an_hf_stop():
+    doc = copy.deepcopy(load_furnishings())
+    bay = next(e for e in doc["systemFurniture"] if e["id"] == "SF-BH800")
+    for pset in bay["PropertySets"]:
+        if pset["Name"] == "Pset_Fronts":
+            pset["Properties"]["Layout"] = "lift * fitting=HF angle=90 shelves=2"
+    with pytest.raises(ValueError, match="opening-angle stops are 116, 107, 97, 88, 81"):
         _runs(doc)
 
 

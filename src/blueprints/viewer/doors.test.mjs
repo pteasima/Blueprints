@@ -877,7 +877,7 @@ function slabFor(record, size, name) {
   for (const r of lifts) {
     assert.ok(isLinkageRecord(r), r.id);
     assert.deepEqual(r.joints.map((j) => j.parent), [null, 0, null]);
-    near1(r.joints[0].angles.at(-1), (116 * Math.PI) / 180, "HF top opens to 116°");
+    near1(r.joints[0].angles.at(-1), (88 * Math.PI) / 180, "HF top at its 88° stop (Petr 2026-11-13)");
     const hang = r.joints[0].angles.at(-1) + r.joints[1].angles.at(-1);
     assert.ok(Math.abs(hang) < (30 * Math.PI) / 180, `lower front hangs, not folded flat: ${hang}`);
     assert.equal(r.joints[2].elements.length, 2, "a lever on each side");

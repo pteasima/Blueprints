@@ -594,7 +594,8 @@ systemFurniture:
       # tables. Two shelves: guess:.
       - Name: Pset_Fronts
         Properties:
-          Layout: "lift * fitting=HF shelves=2"
+          # angle=88: the HF opening-angle stop, Petr 2026-11-13 "do 88 degrees in the model." (Blum stops 116/107/97/88/81, catalogue 2024/25 p. 22–24).
+          Layout: "lift * fitting=HF angle=88 shelves=2"
           BlumRangeOverride: "Petr, 2026-11-13: assume the hinge exists for our width"
           Contents: "sklenice"
   - id: SF-B800
@@ -644,7 +645,8 @@ systemFurniture:
       # SF-AH850). Two shelves: guess:.
       - Name: Pset_Fronts
         Properties:
-          Layout: "lift * fitting=HF shelves=2"
+          # angle=88: Petr 2026-11-13, see SF-AH850.
+          Layout: "lift * fitting=HF angle=88 shelves=2"
           BlumRangeOverride: "Petr, 2026-11-13: assume the hinge exists for our width"
           Contents: "talíře"
   - id: SF-C850
@@ -688,7 +690,8 @@ systemFurniture:
       # bi-fold (Petr, 2026-11-13, see SF-AH850). Two shelves: guess:.
       - Name: Pset_Fronts
         Properties:
-          Layout: "lift * fitting=HF shelves=2"
+          # angle=88: Petr 2026-11-13, see SF-AH850.
+          Layout: "lift * fitting=HF angle=88 shelves=2"
           BlumRangeOverride: "Petr, 2026-11-13: assume the hinge exists for our width"
           Contents: "tyčový mixér, velké mísy, odměrky"
   - id: SF-F052

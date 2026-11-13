@@ -124,7 +124,11 @@ RUN_FLAGS = ("CladEnds", "Backsplash")
 #           mm. guess: read off Blum's planning drawings, not a data sheet.
 AVENTOS = {
     "HF": {"name": "Blum AVENTOS HF top (bi-fold)", "kh": (480.0, 1200.0), "kb": 1800.0, "lt": 264.0,
-           "lf": (2700.0, 19300.0), "fg": None, "fronts": 2, "mech": (30.0, 264.0, 195.0)},
+           "lf": (2700.0, 19300.0), "fg": None, "fronts": 2, "mech": (30.0, 264.0, 195.0),
+           # Opening-angle stop on the lift mechanism, degrees (116: no stop),
+           # and Blum's space above for each, Y = FHo x k + c mm (catalogue
+           # 2024/25 p. 22–24, planning sketch "Platzbedarf nach oben").
+           "stops": {116.0: (0.44, 38.0), 107.0: (0.29, 35.0), 97.0: (0.12, 31.0), 88.0: (0.0, 28.0), 81.0: (0.0, 0.0)}},
     "HS": {"name": "Blum AVENTOS HS top (up and over)", "kh": (350.0, 800.0), "kb": 1800.0, "lt": 264.0,
            "lf": None, "fg": 18.5, "fronts": 1, "mech": (30.0, 264.0, 141.0)},
     "HL": {"name": "Blum AVENTOS HL top (lift up)", "kh": (300.0, 580.0), "kb": 1800.0, "lt": 264.0,
@@ -903,8 +907,20 @@ class _Builder:
             breaches.append(f"{spec['name']} front weight {fg:.1f} kg over {spec['fg']} kg")
         if breaches and not override:
             raise ValueError(f"{bay.id}: {breaches[0]}")
+        # Opening angle: ``angle=`` in the band, one of the fitting's stop
+        # settings; else its largest.
+        angle = zone.opts.get("angle")
+        if angle is None:
+            angle = LIFT_OPEN_DEG[fit]
+        else:
+            angle = float(angle)
+            stops = spec.get("stops")
+            if not stops or not any(abs(angle - a) < 1e-6 for a in stops):
+                raise ValueError(f"{bay.id}: {spec['name']} angle={angle:g}, the opening-angle stops are "
+                                 f"{', '.join(f'{a:g}' for a in stops) if stops else 'not modelled'}")
         # Space the open front needs (Blum planning pages, at the largest
         # opening angle): Y above the cabinet top, X out in front of it.
+        # HF: replaced below by the swept four-bar at ``angle``.
         if fit == "HF":
             above = fho * 0.44 + 38.0  # 116°
             ahead = fho * 0.9 + tf * 1.5 + 35.0
@@ -938,20 +954,38 @@ class _Builder:
             boxes.append(box)
             self.add(Part(f"{bay.id}-LIFTMECH-{side}", f"Zdvihací mechanismus {fit}", "LiftMechanism", [box],
                           props={"Zone": zone.index, "Fitting": spec["name"], "FittingCode": fit}), bay)
-        boxes += self._lift_motion(bay, fit, fronts, front_box, out, boxes, in_z1 - mh, zone, spec)
+        arms, env = self._lift_motion(bay, fit, fronts, front_box, out, boxes, in_z1 - mh, zone, spec, angle)
+        boxes += arms
+        if env is not None:
+            # The space the swept fronts need, from the four-bar (the top
+            # hinge is at the front's top edge, ``top`` the carcass top).
+            max_u, max_z = env
+            k, c = spec["stops"][min(spec["stops"], key=lambda a: abs(a - angle))]
+            # Above: the larger of the swept fronts and Blum's Y for the stop.
+            above = max(0.0, z1 + max_z - top, fho * k + c)
+            ahead = max_u - tf
+            cc0, cc1 = sorted((face, face + out * ahead))
+            self.run.clearances[-1] = (bay.id, (bay.a0, bay.a1, cc0, cc1, top, top + above))
+            for tag, _l, _z in fronts:
+                self.run.part(f"{bay.id}-LIFT{tag}").props.update(
+                    OpenAbove=round(above / 1000.0, 6), OpenAhead=round(ahead / 1000.0, 6),
+                    BlumOpenAbove=round((fho * k + c) / 1000.0, 6))
+        for tag, _l, _z in fronts:
+            self.run.part(f"{bay.id}-LIFT{tag}").props.update(OpeningAngle=angle)
         self.run.notes.append(
             f"{bay.id}: {spec['name']}, KH {kh:.0f}, front(s) {fb:.0f} wide, {fg:.1f} kg, LF {lf:.0f}, "
-            f"open {above:.0f} above the top and {ahead:.0f} ahead of the face")
+            f"opens to {angle:g}°, {above:.0f} above the top and {ahead:.0f} ahead of the face")
         return boxes
 
     def _lift_motion(self, bay: Bay, fit: str, fronts: list, front_box: tuple, out: float, mechs: list,
-                     mech_z0: float, zone: Zone, spec: dict) -> list:
+                     mech_z0: float, zone: Zone, spec: dict, angle: float) -> tuple:
         """How the lift front moves open, as ``LiftJoint`` s on its parts,
         plus a lever arm on each side. Returns the arm boxes (the shelves
-        keep clear of them too).
+        keep clear of them too) and, for HF, the swept fronts' reach (u out
+        of the inner face, z above the top hinge), else None.
 
         The upper front (or the one front) turns about its top edge on the
-        inner face, 0 to ``LIFT_OPEN_DEG``.
+        inner face, 0 to ``angle`` (the opening-angle stop).
 
         HF top (two fronts), after Blum's planning sketches: the lever pivots
         at the mechanism's underside and is fixed to the lower front, which
@@ -959,7 +993,9 @@ class _Builder:
         front, lower front, lever); for each upper angle the lower front's
         angle is the one that keeps the lever's length. The fixing height is
         solved so that, open, the lower front hangs ``LIFT_HF_LOWER_OPEN_DEG``
-        from vertical: partly folded, its bottom edge in reach (Petr,
+        from vertical at the mechanism's full 116° (the lever geometry does
+        not change with the stop); a stop ends the same path earlier. Partly
+        folded, its bottom edge in reach (Petr,
         2026-11-13). The export stops if the lower front's bottom edge would
         pass into the carcass on the way.
 
@@ -971,7 +1007,7 @@ class _Builder:
         inner = fc0 if out > 0 else fc1  # the front's carcass-side face
         top_z = z1
         steps = [k / LIFT_STEPS for k in range(LIFT_STEPS + 1)]
-        theta = [math.radians(LIFT_OPEN_DEG[fit]) * t for t in steps]
+        theta = [math.radians(angle) * t for t in steps]
         group = f"{bay.id}-LIFT"
         aw, ad, drop = LIFT_ARM
         ac0, ac1 = sorted((inner, inner - out * ad))
@@ -982,7 +1018,7 @@ class _Builder:
             cz = (u0 + l1) / 2.0  # centre hinge
             lo, fhu = top_z - cz, cz - lz0
             piv_z = mech_z0
-            solved = _hf_fourbar(lo, fhu, ua, piv_z - top_z, theta, fc1 - fc0)
+            solved = _hf_fourbar(lo, fhu, ua, piv_z - top_z, theta, fc1 - fc0, math.radians(LIFT_OPEN_DEG["HF"]))
             fix_z = cz - solved["s"]
             upper = LiftJoint(group, 0, None, inner, top_z, out, tuple(theta))
             lower = LiftJoint(group, 1, 0, inner, cz, out, tuple(a - th for a, th in zip(solved["alpha"], theta)))
@@ -994,17 +1030,19 @@ class _Builder:
                          OpenBottomEdgeAhead=round((bu - (fc1 - fc0)) / 1000.0, 3),
                          OpenLowerAngle=round(math.degrees(solved["alpha"][-1]), 1))
             self.run.notes.append(
-                f"{bay.id}: open, the lower front hangs {math.degrees(solved['alpha'][-1]):.0f}° from vertical; "
+                f"{bay.id}: open at {angle:g}°, the lower front hangs {math.degrees(solved['alpha'][-1]):.0f}° from vertical; "
                 f"its bottom edge at {top_z + bz:.0f} above the floor, {bu - (fc1 - fc0):.0f} out from the closed face")
             swing, stretch = solved["lever"], None
+            env = solved["reach"]
         else:
+            env = None
             self.run.part(f"{bay.id}-LIFT").lift = LiftJoint(group, 0, None, inner, top_z, out, tuple(theta))
             # A bar down the inner face of the front, from inside the
             # mechanism to its fixing, turning about its top end.
             fix_z = max(mech_z0 - drop, fronts[0][2][0] + 20.0)
             piv_z = mech_z0 + 10.0
             if fix_z > mech_z0 - 20.0:
-                return []  # the front is too short under the mechanism for an arm
+                return [], env  # the front is too short under the mechanism for an arm
             swing, stretch = [], []
             for th in theta:
                 du, dz = ua, fix_z - top_z
@@ -1024,7 +1062,7 @@ class _Builder:
             self.add(Part(f"{bay.id}-LIFTARM-{side}", f"Rameno zdvihacího mechanismu {fit}", "LiftArm", [box],
                           props={"Zone": zone.index, "Fitting": spec["name"], "FittingCode": fit},
                           lift=LiftJoint(group, 2, None, arm_c, piv_z, out, tuple(swing), stretch)), bay)
-        return arms
+        return arms, env
 
     def _shelves(self, bay, p, zone, z_lo, z_hi, back_y, racks=0, avoid=()):
         """Loose shelves in a door band: ``shelves=N`` evenly spaced, the
@@ -1348,8 +1386,9 @@ def zone_spec(element: dict) -> list[tuple[str, str, dict]]:
     - ``doors``: a pair, left leaf hinged L, right leaf R; ``shelves=N``;
     - ``lift``: a Blum AVENTOS lift-up front, ``fitting=HF|HS|HL|HK|HK-S|HK-XS``
       (``AVENTOS``); HF is a bi-fold pair, ``upper=`` (metres) sets the
-      upper front for an asymmetrical pair. ``shelves=N``, ``first=`` as a
-      door. The cabinet must be inside the fitting's Blum ranges;
+      upper front for an asymmetrical pair; ``angle=`` an opening-angle
+      stop (HF: 116, 107, 97, 88, 81; default the largest). ``shelves=N``,
+      ``first=`` as a door. The cabinet must be inside the fitting's Blum ranges;
     - ``niche``: an appliance niche; the height is the *clear* niche height,
       the band adds one board under it; ``clear=`` (metres) narrows the
       opening with a packer on each side. The appliance names the bay and
@@ -1764,17 +1803,20 @@ def _rot(v, a):
     return (v[0] * math.cos(a) - v[1] * math.sin(a), v[0] * math.sin(a) + v[1] * math.cos(a))
 
 
-def _hf_fourbar(lo: float, fhu: float, ua: float, mz: float, theta: list, tf: float) -> dict:
+def _hf_fourbar(lo: float, fhu: float, ua: float, mz: float, theta: list, tf: float, full: float) -> dict:
     """AVENTOS HF top as a four-bar, in (u, z) about the top hinge (u out
     of the inner face, z up, mm). The upper front's centre hinge is ``lo``
     below the top hinge; the lower front (``fhu`` long) hangs from it; the
     lever pivots at (``ua``, ``mz``) and is fixed to the lower front at
     (``ua``, ``-s``) in the lower front's frame, plumb under the pivot when
-    shut. ``s`` is solved so the open lower front hangs at
-    ``LIFT_HF_LOWER_OPEN_DEG``. Returns ``s``, the lower front's absolute
-    angle and the lever's turn per sample of ``theta``, and the open bottom
-    edge of the lower front: its lowest corner's z and its farthest u."""
-    fine = [theta[-1] * k / 400 for k in range(401)]
+    shut. ``s`` is solved so the lower front hangs at
+    ``LIFT_HF_LOWER_OPEN_DEG`` with the upper front at ``full`` (the
+    mechanism without a stop); ``theta`` may end earlier (a stop). Returns
+    ``s``, the lower front's absolute angle and the lever's turn per sample
+    of ``theta``, the open bottom edge of the lower front (its farthest u,
+    its lowest corner's z) and ``reach``: the farthest u and highest z any
+    corner of either front passes on the way to ``theta[-1]``."""
+    fine = [full * k / 400 for k in range(401)]
 
     def run(s: float, samples: list):
         r = (-lo - s) - mz
@@ -1815,6 +1857,14 @@ def _hf_fourbar(lo: float, fhu: float, ua: float, mz: float, theta: list, tf: fl
         bu, _bz = _rot((0.0, -fhu), a)
         if pu + bu < -TOL:
             raise ValueError("AVENTOS HF: the lower front's bottom edge would pass into the carcass")
+    sweep, _r = run(s, [theta[-1] * k / 400 for k in range(401)])
+    reach_u, reach_z = -1e9, -1e9
+    for th, a, _A in sweep:
+        pu, pz = _rot((0.0, -lo), th)
+        pts = [_rot(c, th) for c in ((0.0, 0.0), (tf, 0.0), (0.0, -lo), (tf, -lo))]
+        pts += [(pu + q[0], pz + q[1]) for q in (_rot(c, a) for c in ((0.0, 0.0), (tf, 0.0), (0.0, -fhu), (tf, -fhu)))]
+        reach_u = max(reach_u, max(q[0] for q in pts))
+        reach_z = max(reach_z, max(q[1] for q in pts))
     sampled, _r = run(s, theta)
     a0 = (0.0, -lo - s - mz)
     lever = []
@@ -1827,4 +1877,4 @@ def _hf_fourbar(lo: float, fhu: float, ua: float, mz: float, theta: list, tf: fl
     # the outer face, the front's thickness out from it.
     corners = [_rot((0.0, -fhu), a), _rot((tf, -fhu), a)]
     bottom = (max(pu + c[0] for c in corners), min(pz + c[1] for c in corners))
-    return {"s": s, "alpha": [x[1] for x in sampled], "lever": lever, "bottom": bottom}
+    return {"s": s, "alpha": [x[1] for x in sampled], "lever": lever, "bottom": bottom, "reach": (reach_u, reach_z)}
