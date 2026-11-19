@@ -61,7 +61,7 @@
 </aside>
 <pre id="err"></pre>
 <canvas id="c"></canvas>
-<script src="viewer.iife.js?v=a55028491e"></script>
+<script src="viewer.iife.js?v=2ba0515a81"></script>
 <script>
 (function () {
   const errEl = document.getElementById("err");
@@ -84,6 +84,9 @@
   // Cable routes (python -m blueprints.cable_routes); none for most models.
   const cablesUrl = "../models/" + encodeURIComponent(id) + ".cables.json";
   const ifcUrl = "../models/" + encodeURIComponent(id) + ".ifc.json";
+  // On-demand layers (blueprints.export_utils.write_lazy_layers): fetched
+  // only when their Parts leaf is switched on.
+  const layersUrl = "../models/" + encodeURIComponent(id) + ".layers.json";
   function loadJsonArray(url) {
     return fetch(url).then(function (r) {
       if (r.status === 404) return [];
@@ -117,6 +120,7 @@
     loadJsonObject(ifcUrl),
     loadJsonArray(windowsUrl),
     loadJsonObject(cablesUrl),
+    loadJsonArray(layersUrl),
   ])
     .then(function (loaded) {
       BlueprintsViewerBundle.mountViewer(canvas, loaded[0], {
@@ -126,6 +130,9 @@
         ifc: loaded[4],
         windows: loaded[5],
         cables: loaded[6],
+        lazyLayers: loaded[7].map(function (layer) {
+          return { id: layer && layer.id, url: "../models/" + String((layer && layer.url) || "") };
+        }),
         modelId: id,
         // Realistic mode fetches this (and its textures) only when chosen.
         materialsUrl: "../materials/catalogue.yaml?v=a54a929717",
