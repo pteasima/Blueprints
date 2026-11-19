@@ -124,7 +124,7 @@ function writeSceneQuery(sceneId) {
 /**
  * @param {HTMLCanvasElement} canvas
  * @param {ArrayBuffer} glbBuffer
- * @param {{ scenes?: object[], scene?: string, partGroups?: object[], doors?: object[], windows?: object[], ifc?: object, modelId?: string, materialsUrl?: string, materialsText?: string, fixtureAssets?: object[], fixtureModelsUrl?: string }} [options]
+ * @param {{ scenes?: object[], scene?: string, partGroups?: object[], doors?: object[], windows?: object[], ifc?: object, modelId?: string, materialsUrl?: string, materialsText?: string, fixtureAssets?: object[], fixtureModelsUrl?: string, lazyLayers?: { id: string, url: string }[] }} [options]
  */
 /** Layer leaf id of the cable routes (under the "electrical" group). */
 const CABLE_LEAF = "cables";
@@ -203,6 +203,35 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     partOpacity.set(CABLE_LEAF, on ? 1 : 0);
     partLastNonZero.set(CABLE_LEAF, 1);
   }
+  // On-demand layers (README "On-demand layers"; `<model>.layers.json`):
+  // a Parts leaf whose meshes live in their own GLB, fetched, parsed and
+  // uploaded only when the leaf is first switched on. Off by default, and,
+  // like the cables, outside group sliders, views and scenes; `?<id>=1`
+  // starts with it on. ground_floor's Gridfinity baseplates are one,
+  // temporarily, for the iPhone/iPad crash (docs/Roadmap.md "Performance").
+  /** @type {Map<string, { url: string, state: "idle" | "loading" | "loaded" | "failed", promise: Promise<void> | null }>} */
+  const lazyLayers = new Map();
+  /** Lazy leaves to load as soon as the model is in (`?<id>=1`). */
+  const lazyAtStart = [];
+  for (const entry of Array.isArray(options.lazyLayers) ? options.lazyLayers : []) {
+    const id = String(entry?.id || "").trim();
+    const url = String(entry?.url || "").trim();
+    if (!id || !url || id === CABLE_LEAF || lazyLayers.has(id)) continue;
+    lazyLayers.set(id, { url, state: "idle", promise: null });
+    let on = false;
+    try {
+      on = new URLSearchParams(window.location.search).get(id) === "1";
+    } catch {
+      on = false;
+    }
+    partOpacity.set(id, on ? 1 : 0);
+    partLastNonZero.set(id, 1);
+    if (on) lazyAtStart.push(id);
+  }
+  /** Bumped when a lazy layer's meshes arrive (peel batches, colliders). */
+  let lazyRevision = 0;
+  /** Cables and on-demand layers: leaves no group slider, view or scene drives. */
+  const isLayerLeaf = (name) => name === CABLE_LEAF || lazyLayers.has(name);
   /** Last opacity written via a group slider (when children diverge). */
   const groupSliderOpacity = new Map();
   /**
@@ -492,6 +521,114 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   /** True while a section slider is being dragged (avoid rebuilding that row). */
   let cutSliderActive = false;
 
+  /**
+   * Index one model mesh by part label and element (Parts rows, inspector,
+   * hides). The node is `masonry__W-001__`; the mesh under it is just
+   * `masonry`.
+   * @param {THREE.Object3D} obj
+   */
+  function registerMesh(obj) {
+    if (!obj.isMesh) return;
+    const ident = identityOf(obj);
+    if (ident.element) ident.element = idForNodeKey.get(ident.element) || ident.element;
+    obj.userData.bpPart = ident.part;
+    obj.userData.bpElementKey = ident.element;
+    if (ident.element) {
+      if (!meshesByKey.has(ident.element)) meshesByKey.set(ident.element, []);
+      meshesByKey.get(ident.element).push(obj);
+    }
+    const name = ident.part;
+    if (!parts.has(name)) parts.set(name, []);
+    parts.get(name).push(obj);
+    if (obj.material) {
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      for (const m of mats) {
+        if ("side" in m) m.side = THREE.DoubleSide;
+      }
+    }
+  }
+
+  /**
+   * The element node (`cabinet__SF-E700-D1__`) a mesh belongs to.
+   * @param {THREE.Object3D} obj
+   * @returns {THREE.Object3D}
+   */
+  function elementNodeOf(obj) {
+    let node = obj;
+    while (node && !meshIdentity(node.name || "").element) node = node.parent;
+    return node || obj;
+  }
+
+  /**
+   * Fetch, parse and hang in one on-demand layer (`lazyLayers`). Each node
+   * (`gridfinity__SF-E700-D1__`) is in the main GLB's frame and goes under
+   * its element's own node in the model (the drawer), placed as if that
+   * drawer were shut, so it slides, hides and highlights with it. A node
+   * with no such element goes under the model root.
+   * @param {string} id
+   * @returns {Promise<void>}
+   */
+  function loadLazyLayer(id) {
+    const layer = lazyLayers.get(id);
+    if (!layer) return Promise.resolve();
+    if (layer.promise) return layer.promise;
+    layer.state = "loading";
+    layer.promise = new GLTFLoader()
+      .loadAsync(layer.url)
+      .then((gltf) => {
+        if (!root) throw new Error("model not loaded");
+        const holder = gltf.scene;
+        // Same parent and frame as the main model's scene.
+        zScaleGroup.add(holder);
+        holder.updateMatrixWorld(true);
+        /** @type {THREE.Object3D[]} */
+        const nodes = [];
+        holder.traverse((obj) => {
+          const ident = meshIdentity(obj.name || "");
+          if (ident.element && !meshIdentity(obj.parent?.name || "").element) nodes.push(obj);
+        });
+        for (const node of nodes) {
+          const raw = meshIdentity(node.name || "").element;
+          const key = idForNodeKey.get(raw) || raw;
+          const anchor = (meshesByKey.get(key) || []).find((m) => m.userData.bpPart !== id);
+          const host = anchor ? elementNodeOf(anchor) : root;
+          const binding = anchor ? anchor.userData.bpDoor : null;
+          // Attach as if shut: a drawer pivot rests at its parent's origin.
+          const pivot = binding?.kind === "drawer" ? binding.pivot : null;
+          const saved = pivot ? pivot.position.clone() : null;
+          if (pivot) {
+            pivot.position.set(0, 0, 0);
+            pivot.updateMatrixWorld(true);
+          }
+          host.attach(node);
+          if (pivot && saved) {
+            pivot.position.copy(saved);
+            pivot.updateMatrixWorld(true);
+          }
+          node.traverse((obj) => {
+            if (binding) obj.userData.bpDoor = binding;
+            registerMesh(obj);
+          });
+        }
+        zScaleGroup.remove(holder);
+        if (!parts.has(id)) parts.set(id, []);
+        layer.state = "loaded";
+        lazyRevision += 1;
+        applyInspectorVisibility();
+        refreshMaterials();
+        updateBox();
+        walk?.markColliderStale();
+        realisticCtl?.stage.markDirty();
+        viewDirty = true;
+      })
+      .catch((err) => {
+        layer.state = "failed";
+        layer.promise = null;
+        console.warn(`Layer ${id} did not load:`, err);
+      });
+    return layer.promise;
+  }
+
   const loader = new GLTFLoader();
   loader.parse(
     glbBuffer,
@@ -500,27 +637,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       root = gltf.scene;
       zScaleGroup.add(root);
       doorCtrl.bind(root);
-      root.traverse((obj) => {
-        if (!obj.isMesh) return;
-        // The node is `masonry__W-001__`; the mesh under it is just `masonry`.
-        const ident = identityOf(obj);
-        if (ident.element) ident.element = idForNodeKey.get(ident.element) || ident.element;
-        obj.userData.bpPart = ident.part;
-        obj.userData.bpElementKey = ident.element;
-        if (ident.element) {
-          if (!meshesByKey.has(ident.element)) meshesByKey.set(ident.element, []);
-          meshesByKey.get(ident.element).push(obj);
-        }
-        const name = ident.part;
-        if (!parts.has(name)) parts.set(name, []);
-        parts.get(name).push(obj);
-        if (obj.material) {
-          const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-          for (const m of mats) {
-            if ("side" in m) m.side = THREE.DoubleSide;
-          }
-        }
-      });
+      root.traverse(registerMesh);
       frameIso();
       buildMaterialToggle();
       buildEdgesToggle();
@@ -540,6 +657,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       refreshMaterials();
       // Real fixture models (fixtureModels.js); boxes until they arrive.
       void fixtureModels.install();
+      for (const id of lazyAtStart) void loadLazyLayer(id);
       if (initialSpec) applyScene(initialSpec);
       syncSceneUrl();
       chromeApi?.refreshPartialHeight();
@@ -965,6 +1083,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   /** Iso and the other builtin views show every part. */
   function resetDefaultOpacities() {
     for (const name of parts.keys()) {
+      if (lazyLayers.has(name)) continue;
       partOpacity.set(name, 1);
       partLastNonZero.set(name, 1);
       applyOpacityToMeshes(parts.get(name) || [], 1, { edgeMode });
@@ -1034,6 +1153,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         spec.opacity && typeof spec.opacity === "object" ? spec.opacity : {};
       const overrides = expandOpacityGroups(rawOverrides, partOutline);
       for (const name of parts.keys()) {
+        if (lazyLayers.has(name)) continue;
         const raw =
           Object.prototype.hasOwnProperty.call(overrides, name)
             ? overrides[name]
@@ -1159,6 +1279,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     partOpacity.set(name, o);
     if (o > 0) partLastNonZero.set(name, o);
     if (opts.detach) detachedLeaves.add(name);
+    if (o > 0 && lazyLayers.get(name)?.state === "idle") void loadLazyLayer(name);
     applyOpacityToMeshes(parts.get(name) || [], o, { edgeMode });
     if (opts.skipClip) return;
     updateBox();
@@ -1497,7 +1618,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     }
 
     // The cable layer is not driven by its group's slider.
-    const leafIds = collectLeafIds(node).filter((id) => id !== CABLE_LEAF);
+    const leafIds = collectLeafIds(node).filter((id) => !isLayerLeaf(id));
     const groupWrap = document.createElement("div");
     groupWrap.className = "part-group";
     groupWrap.dataset.group = node.id;
@@ -1583,7 +1704,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
 
     const childParent = { groupId: node.id, leafIds };
     for (const child of node.children) {
-      appendOutlineNode(child, children, depth + 1, child.id === CABLE_LEAF ? null : childParent);
+      appendOutlineNode(child, children, depth + 1, isLayerLeaf(child.id) ? null : childParent);
     }
 
     // Restore expand state if rebuilding; default collapsed.
@@ -1606,9 +1727,10 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       if (!partLastNonZero.has(name)) partLastNonZero.set(name, 1);
     }
 
+    const lazyIds = [...lazyLayers.keys()].filter((id) => !parts.has(id));
     const outline = hasCables
-      ? resolvePartOutline([...parts.keys(), CABLE_LEAF], withCableLeaf(partGroups), tr)
-      : resolvePartOutline(parts.keys(), partGroups, tr);
+      ? resolvePartOutline([...parts.keys(), ...lazyIds, CABLE_LEAF], withCableLeaf(partGroups), tr)
+      : resolvePartOutline([...parts.keys(), ...lazyIds], partGroups, tr);
     partOutline = outline;
     for (const node of outline) {
       appendOutlineNode(node, host, 0, null);
@@ -2629,6 +2751,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   function anyPartFaded() {
     for (const [name, o] of partOpacity) {
       if (name === CABLE_LEAF) continue;
+      // An on-demand layer that is off (or not in yet) has nothing to fade.
+      if (lazyLayers.has(name) && (o <= 1e-4 || lazyLayers.get(name)?.state !== "loaded")) continue;
       if (o < 1 - 1e-4) return true;
     }
     return false;
@@ -3516,6 +3640,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       String(sceneBg),
       // Moved fixtures change the merged peel batches and the walk collider.
       `edit${editMode ? editMode.revision() : 0}`,
+      // Meshes that arrive with an on-demand layer.
+      `lazy${lazyRevision}`,
     ];
     const bg = scene?.background;
     if (bg && bg.isColor) bits.push(bg.getHexString());

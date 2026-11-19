@@ -328,6 +328,7 @@ class Drawer:
     inside: tuple = (0.0, 0.0, 0.0)  # drawer inside width, depth, side height above the floor (mm)
     floor_z: float = 0.0  # z of the box's inside floor
     grid: tuple | None = None  # Gridfinity (n, m) cells when the bay asks for a baseplate
+    baseplate: list = field(default_factory=list)  # the baseplate's boxes (also in items); the viewer loads them on demand
 
 
 @dataclass
@@ -1640,10 +1641,14 @@ def _drawer(bay: Bay, p: dict, zone: Zone, number: int, back_y: float, ceiling: 
         m, _sd = gridfinity_cells(p, inner_d)
         grid = (n, m)
         ic0, ic1 = _Builder.c_range(bay, tf + wall, tf + wall + inner_d)
-        items = items + gridfinity_baseplate(p, n, m, mid, (ic0 + ic1) / 2.0, floor_z)
+        baseplate = gridfinity_baseplate(p, n, m, mid, (ic0 + ic1) / 2.0, floor_z)
+        items = items + baseplate
+    else:
+        baseplate = []
     return Drawer(number, zone.content, zone.nominal, zone.slot_z0, front, box, length, out_dir, trimmed,
                   kind=zone.kind, items=items, zone=zone.index,
-                  inside=(inner_w, inner_d, box[5] - floor_z), floor_z=floor_z, grid=grid)
+                  inside=(inner_w, inner_d, box[5] - floor_z), floor_z=floor_z, grid=grid,
+                  baseplate=baseplate)
 
 
 def gridfinity_baseplate(p: dict, n: int, m: int, a_mid: float, c_mid: float, z0: float) -> list:

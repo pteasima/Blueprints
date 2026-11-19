@@ -115,6 +115,15 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "roughness": 0.42,
         "metallic": 0.0,
     },
+    # Gridfinity baseplates in the kitchen drawers (printed plastic, grey).
+    "gridfinity": {
+        "fill": (150, 154, 160),
+        "line": (80, 84, 90),
+        "dxf": ColorIndex.GRAY,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.6,
+        "metallic": 0.0,
+    },
     "worktop": {
         # Silestone Blanco Maple, a mottled white quartz (kitchen-cabinets.md).
         "fill": (236, 233, 226),
@@ -578,6 +587,7 @@ SECTION_LAYER_ORDER = [
     "furniture",
     "upholstery",
     "cabinet",
+    "gridfinity",
     "worktop",
     "hob",
     "oak",
@@ -1415,6 +1425,46 @@ def rewrite_glb_element_names(glb_path: Path, shape: Shape | Compound) -> int:
     out += rest
     glb_path.write_bytes(out)
     return renamed
+
+
+def write_lazy_layers(model_name: str, layers: dict, models_dir: Path) -> list[Path]:
+    """Write on-demand viewer layers: ``<model>.<label>.glb`` per label and
+    ``<model>.layers.json`` listing them. The viewer shows each as a Parts
+    leaf, off by default, and fetches its GLB only when it is switched on
+    (src/blueprints/viewer/README.md "On-demand layers"). Nodes are named
+    like the main GLB's (``gridfinity__SF-E700-D1__``), in the same frame.
+    With no layers, the manifest and the GLBs it listed are removed.
+    """
+    import json
+
+    models_dir = Path(models_dir)
+    manifest = models_dir / f"{model_name}.layers.json"
+    if manifest.is_file():
+        try:
+            old = json.loads(manifest.read_text())
+        except ValueError:
+            old = []
+        for entry in old if isinstance(old, list) else []:
+            url = str((entry or {}).get("url") or "")
+            if url and url not in {f"{model_name}.{label}.glb" for label in layers}:
+                (models_dir / url).unlink(missing_ok=True)
+    written: list[Path] = []
+    entries = []
+    for label in sorted(layers):
+        solids = list(layers[label])
+        if not solids:
+            continue
+        compound = Compound(obj=solids, children=solids, label=f"{model_name}.{label}")
+        path = write_glb(compound, models_dir / f"{model_name}.{label}.glb")
+        rewrite_glb_element_names(path, compound)
+        written.append(path)
+        entries.append({"id": label, "url": path.name})
+    if entries:
+        manifest.write_text(json.dumps(entries, indent=2) + "\n")
+        written.append(manifest)
+    else:
+        manifest.unlink(missing_ok=True)
+    return written
 
 
 def write_gltf_html_viewer(

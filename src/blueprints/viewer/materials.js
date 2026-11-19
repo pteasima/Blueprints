@@ -30,6 +30,7 @@ export const SOLID_COLORS = {
   plaster: [255, 225, 120],
   furniture: [255, 150, 0],
   cabinet: [214, 148, 40],
+  gridfinity: [150, 154, 160],
   worktop: [236, 233, 226],
   hob: [24, 24, 27],
   appliance: [176, 190, 205],
@@ -93,6 +94,7 @@ export const LAYER_DEPTH_BIAS = {
   soffit_gkf: 4,
   furniture: 6,
   cabinet: 6,
+  gridfinity: 7,
   worktop: 6,
   hob: 7,
   appliance: 7,
@@ -477,6 +479,12 @@ export const SHADED_PRESETS = {
     clearcoat: 0.3,
     clearcoatRoughness: 0.3,
     map: "wood",
+  },
+  // Printed Gridfinity baseplates in the kitchen drawers.
+  gridfinity: {
+    color: [150, 154, 160],
+    roughness: 0.6,
+    metalness: 0.0,
   },
   worktop: {
     // Silestone Blanco Maple: mottled white quartz, polished.

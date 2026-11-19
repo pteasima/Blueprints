@@ -170,6 +170,14 @@ LABEL_MASONRY = "masonry"
 LABEL_GLAZING = "glazing"
 LABEL_DOOR = "door"
 LABEL_CABINET = "cabinet"
+# Gridfinity baseplates in the drawers (kitchen-cabinets.md "Gridfinity
+# drawers"). Temporary (Petr, 2026-11-19, the viewer crashed on iPhone and
+# iPad): they are not in ground_floor.glb but in their own
+# ground_floor.gridfinity.glb, which the viewer loads only when the
+# Gridfinity layer is switched on (docs/Roadmap.md "Performance"). Back to
+# one GLB once primitives merge per mesh: set GRIDFINITY_ON_DEMAND = False.
+LABEL_GRIDFINITY = "gridfinity"
+GRIDFINITY_ON_DEMAND = True
 LABEL_APPLIANCE = "appliance"
 LABEL_SINK = "sink"
 LABEL_FURNITURE = "furniture"
@@ -327,13 +335,18 @@ def _run_box(box, shrink: float):
     )
 
 
-def _kitchen_run_parts(run, motions=None) -> list:
+def _kitchen_run_parts(run, motions=None, layers: dict | None = None) -> list:
     """Solids for one kitchen run (docs/design/kitchen-cabinets.md).
 
     Every part is its own mesh named by its part id, so the viewer can hide
     a divider with either neighbouring bay. Boxes shrink by half the mesh
     gap so touching boards do not share a face. A drawer is fused unshrunk
     (the viewer moves it as one connected mesh) and set back half a gap.
+
+    With ``layers`` (a dict), a drawer's Gridfinity baseplate is not fused
+    into it but goes, as its own ``gridfinity`` solid named by the drawer
+    id, into ``layers["gridfinity"]`` (an on-demand GLB; the viewer hangs
+    it on the drawer).
     """
     frame = run.frame
     plane = Plane(origin=(frame.ox, frame.oy, 0.0), x_dir=(frame.ux, frame.uy, 0.0), z_dir=(0.0, 0.0, 1.0))
@@ -343,11 +356,23 @@ def _kitchen_run_parts(run, motions=None) -> list:
     for part in run.parts:
         if part.drawer is not None:
             dr = part.drawer
-            solid = _run_box(part.boxes[0], 0.0)
-            for box in part.boxes[1:]:
+            plate = list(dr.baseplate) if layers is not None else []
+            boxes = list(part.boxes)
+            for box in plate:
+                boxes.remove(box)
+            solid = _run_box(boxes[0], 0.0)
+            for box in boxes[1:]:
                 solid = solid + _run_box(box, 0.0)
             inward = -dr.out * half
             solid = Pos(0.0, inward, 0.0) * solid
+            if plate:
+                plate_solid = _run_box(plate[0], 0.0)
+                for box in plate[1:]:
+                    plate_solid = plate_solid + _run_box(box, 0.0)
+                plate_solid = Pos(0.0, inward, 0.0) * plate_solid
+                layers.setdefault(LABEL_GRIDFINITY, []).append(
+                    _tag(_paint(plane * plate_solid, LABEL_GRIDFINITY), part.id, "systemFurniture")
+                )
         elif part.door is not None:
             # A cabinet door leaf and its door racks: fused unshrunk into one
             # connected mesh the viewer swings about its hinge.
@@ -507,7 +532,7 @@ def _cabinet_door_motion(frame, part) -> dict:
     }
 
 
-def _furnishing_parts(doc: dict, motions: list | None = None) -> list:
+def _furnishing_parts(doc: dict, motions: list | None = None, layers: dict | None = None) -> list:
     """Boxes the converter writes. A partial size has no solid."""
     if not doc or not any(doc.get(key) for key in FURNISHING_LISTS):
         return []
@@ -532,7 +557,7 @@ def _furnishing_parts(doc: dict, motions: list | None = None) -> list:
         raise ValueError("yaml-ifc furnishings failed validation: " + "; ".join(errors))
     parts = []
     for run in runs:
-        parts.extend(_kitchen_run_parts(run, motions))
+        parts.extend(_kitchen_run_parts(run, motions, layers))
     for key, ifc_class, _type_class in FURNISHINGS:
         for product in model.by_type(ifc_class):
             if product.GlobalId in written:
@@ -1417,7 +1442,9 @@ def build(
                 if motion is not None:
                     door_motions.append(motion)
 
-    furnishing_parts = _furnishing_parts(furnishings, door_motions)
+    # On-demand viewer layers: label -> solids written to <model>.<label>.glb.
+    lazy_layers: dict[str, list] | None = {} if GRIDFINITY_ON_DEMAND else None
+    furnishing_parts = _furnishing_parts(furnishings, door_motions, lazy_layers)
     parts.extend(furnishing_parts)
     bath_parts = bathroom_parts()
     parts.extend(bath_parts)
@@ -1470,6 +1497,7 @@ def build(
         "door_motions": door_motions,
         "windows": len(windows),
         "window_motions": window_motions,
+        "lazy_layers": lazy_layers or {},
     }
     return assembly, meta
 
@@ -1785,6 +1813,7 @@ def part_groups() -> list[dict]:
             "id": "interior",
             "children": [
                 LABEL_CABINET,
+                LABEL_GRIDFINITY,
                 LABEL_WORKTOP,
                 LABEL_OAK,
                 LABEL_APPLIANCE,
@@ -1863,6 +1892,9 @@ if __name__ == "__main__":
         meta.get("window_motions") or [],
         repo / "docs" / "models" / f"{MODEL_NAME}.windows.json",
     )
+    from blueprints.export_utils import write_lazy_layers
+
+    write_lazy_layers(MODEL_NAME, meta.get("lazy_layers") or {}, repo / "docs" / "models")
     print(f"Built {MODEL_NAME}: {summarize_params(meta['derived'])}")
     if meta["openings_skipped"]:
         print("  not cut:", ", ".join(item["id"] for item in meta["openings_skipped"]))
