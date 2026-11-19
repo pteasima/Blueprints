@@ -659,6 +659,7 @@ export function createEditMode(ctx) {
       <textarea readonly rows="6" data-role="export-text"></textarea>
       <div class="edit-row">
         <button type="button" class="edit-btn edit-share" data-role="share" hidden></button>
+        <button type="button" class="edit-btn" data-role="share-file" hidden></button>
         <button type="button" class="edit-btn" data-role="copy"></button>
         <button type="button" class="edit-btn" data-role="download"></button>
         <span class="edit-spacer"></span>
@@ -1085,27 +1086,27 @@ export function createEditMode(ctx) {
     exportBox.hidden = true;
     notifyLayout();
   });
-  if (typeof navigator !== "undefined" && typeof navigator.share === "function") $("share").hidden = false;
-  // No await before navigator.share: iOS Safari opens the share sheet only
-  // inside the tap's user activation.
-  $("share").addEventListener("click", () => {
-    const text = patchText();
-    exportText.value = text;
-    const name = shareFileName(new Date());
-    const title = t("edit.shareTitle");
+  function compactPatchText() {
+    return JSON.stringify(buildPatch(store, rowsById));
+  }
+  const canShareAny = typeof navigator !== "undefined" && typeof navigator.share === "function";
+  if (canShareAny) $("share").hidden = false;
+  // "Share file" only where the browser says it can share a JSON file.
+  try {
+    if (canShareAny && typeof navigator.canShare === "function" &&
+        navigator.canShare({ files: [new File(["{}"], "x.json", { type: "application/json" })] })) {
+      $("share-file").hidden = false;
+    }
+  } catch {
+    /* no File constructor or canShare threw: keep it hidden */
+  }
+
+  /** Runs navigator.share synchronously (no await first: iOS Safari opens
+   * the sheet only inside the tap's user activation) and reports back. */
+  function runShare(data) {
     let promise = null;
     try {
-      let file = null;
-      try {
-        file = new File([text], name, { type: "application/json" });
-      } catch {
-        file = null;
-      }
-      if (file && typeof navigator.canShare === "function" && navigator.canShare({ files: [file] })) {
-        promise = navigator.share({ files: [file], title });
-      } else {
-        promise = navigator.share({ title, text });
-      }
+      promise = navigator.share(data);
     } catch (err) {
       promise = Promise.reject(err);
     }
@@ -1119,6 +1120,18 @@ export function createEditMode(ctx) {
         flash(t("edit.shareFailed"));
       },
     );
+  }
+  // Share the JSON itself as text, with no title: a real iPhone sharing a
+  // file + title into the Grok Bot app delivered only the title (2026-11-19).
+  $("share").addEventListener("click", () => {
+    const text = compactPatchText();
+    exportText.value = patchText();
+    runShare({ text });
+  });
+  $("share-file").addEventListener("click", () => {
+    const text = patchText();
+    exportText.value = text;
+    runShare({ files: [new File([text], shareFileName(new Date()), { type: "application/json" })] });
   });
   $("copy").addEventListener("click", async () => {
     const text = patchText();
@@ -1196,6 +1209,7 @@ export function createEditMode(ctx) {
     $("title").textContent = t("edit.title");
     $("search").placeholder = t("edit.search");
     $("share").textContent = t("edit.share");
+    $("share-file").textContent = t("edit.shareFile");
     $("copy").textContent = t("edit.copy");
     $("download").textContent = t("edit.download");
     $("discard").textContent = t("edit.discard");
@@ -1325,6 +1339,7 @@ export function createEditMode(ctx) {
     store: () => JSON.parse(JSON.stringify(store)),
     patch: () => buildPatch(store, rowsById),
     patchText,
+    compactPatchText,
     position: (id) => currentTarget(id),
     worldCenter: (id) => {
       const box = worldBox(displayMeshes(id));
