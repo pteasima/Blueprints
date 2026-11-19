@@ -1817,12 +1817,15 @@ def ifc_index() -> dict:
     from bathroom_107 import SOURCE_PATH as BATH_107
     from bathroom_120 import SOURCE_PATH as BATH_120
     from bedroom_111 import SOURCE_PATH as BEDROOM
+    from blueprints.fixture_overrides import load_fixture_document
     from blueprints.ifc_index import index_documents
 
     docs = []
     for path in (SOURCE_PATH, FURNISHINGS_PATH, BEDROOM, BATH_120, BATH_107):
         if path.is_file():
-            docs.append(load_yaml_ifc(path))
+            # Edit-mode overrides touch only the fixture ids they name, so
+            # every document goes through them (docs/electrical/EditMode.md).
+            docs.append(load_fixture_document(path))
     return index_documents(docs, transform=kitchen_ifc.apply)
 
 

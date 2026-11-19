@@ -13,7 +13,7 @@ from pathlib import Path
 from yaml_ifc import footprints
 from yaml_ifc.yamlio import load as load_yaml
 
-from bedroom_111 import SOURCE_PATH, WALLS_PATH, device_records
+from bedroom_111 import SOURCE_PATH, WALLS_PATH, device_records, load_document
 from bedroom_111_geometry import FRAME_PITCH_MM, bounds, opening, polygon
 
 
@@ -80,7 +80,7 @@ def _opening_span(opening_id: str) -> tuple[float, float]:
 
 def _strip_path(device_id: str) -> tuple[tuple[float, float], tuple[float, float], tuple[float, float], str]:
     """North end, corner, east end, and ``up``/``down`` of a curtain-rail L strip."""
-    doc = load_yaml(SOURCE_PATH)
+    doc = load_document()
     record = next(item for item in doc["lightFixtures"] if item["id"] == device_id)
     props: dict = {}
     for group in record.get("PropertySets") or []:

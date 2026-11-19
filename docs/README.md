@@ -25,7 +25,7 @@ The agent waits for `pages-content` to finish, checks that the preview URL loads
 | `.nojekyll` | Keep Pages from running Jekyll |
 | `materials/` | Realistic-mode material catalogue doc ([materials/README.md](materials/README.md)) and its texture sets, `materials/<id>/*.jpg` via **Git LFS** |
 | `previews/` | Small PNG/SVG review stills for chat |
-| `electrical/` | Fixture-plan notes and the 1.11 floor-plan page |
+| `electrical/` | Fixture-plan notes, the 1.11 floor-plan page, and the viewer's fixture edit mode ([electrical/EditMode.md](electrical/EditMode.md)) |
 | `Home.md` | Split with the Home repo: this repo keeps the model and IFC, and will consume Home's API as a client |
 
 On the live site only (content branch `pages-site`, not in `main`): `pr-preview/pr-<N>/` holds isolated copies of the hub for open PRs.
