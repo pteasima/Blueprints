@@ -103,8 +103,8 @@ storey:
   Elevation: 0
 spaces:
   - id: SP-1.07
-    Name: Koupelna
-    LongName: "1.07"
+    Name: "1.07 Koupelna"
+    LongName: Koupelna
     PredefinedType: INTERNAL
 walls: []
 openings: []
@@ -229,7 +229,7 @@ coverings:
           Width: 5
           SillHeight: 2.230
           Height: 0.3
-  - id: CLAD-E
+  - id: CLAD-E-1.07
     Name: East wall tiles
     Description: Shower east wall. 596 mm module, the same door-sill grid as the level floor, from height 0. Cut at 2230 mm.
     PredefinedType: CLADDING
@@ -254,7 +254,7 @@ coverings:
           Width: 5
           SillHeight: 2.230
           Height: 0.3
-  - id: CLAD-S
+  - id: CLAD-S-1.07
     Name: South wall tiles
     Description: Level-floor portion, to the glass. Passage mouth x=11.50–12.50 is open to 2230 mm. The door leaf is at the corridor end of the passage. The narrow pieces at the mouth stay.
     PredefinedType: CLADDING
@@ -308,7 +308,7 @@ coverings:
           Width: 5
           SillHeight: 2.230
           Height: 0.3
-  - id: CLAD-W
+  - id: CLAD-W-1.07
     Name: West wall tiles
     Description: Straight west wall. The radon chase is no longer in this corner. Along-wall joints use the door-sill Y origin, with the level floor.
     PredefinedType: CLADDING
@@ -466,6 +466,21 @@ coverings:
           UpstandMin: 0.1
           UpstandMax: 0.15
           ShowerUpstand: full-height
+  # The two stainless edge profiles (header note). Their solids are built
+  # from the FLR-SHOWER footprint and plane in models/bathroom_107.py
+  # (_edge_profiles); these rows give them an IFC element in the space.
+  - id: PROF-SH-W
+    Name: Shower edge profile west
+    Description: 10 mm stainless wedge on the glass side of the shower floor. Top at 0, bottom on the 1.25% shower plane.
+    PredefinedType: MOLDING
+    ObjectType: StainlessEdgeProfile
+    ContainedInStructure: SP-1.07
+  - id: PROF-SH-E
+    Name: Shower edge profile east
+    Description: 10 mm stainless wedge on the east tile side of the shower floor. Top at 0, bottom on the 1.25% shower plane.
+    PredefinedType: MOLDING
+    ObjectType: StainlessEdgeProfile
+    ContainedInStructure: SP-1.07
 wasteTerminals:
   - id: DRAIN-1.07
     Name: "KOV 3G110CM"

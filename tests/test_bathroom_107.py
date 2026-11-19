@@ -59,7 +59,7 @@ def test_room_is_a_rectangle_and_the_chase_left_the_bathroom():
     doc = load_document()
     assert SOURCE_PATH.is_file()
     space = doc["spaces"][0]
-    assert space["Name"] == "Koupelna" and space["LongName"] == "1.07"
+    assert space["Name"] == "1.07 Koupelna" and space["LongName"] == "Koupelna"
     level = next(row for row in doc["slabs"] if row["id"] == "SLAB-LEVEL")
     shower = next(row for row in doc["slabs"] if row["id"] == "SLAB-SHOWER")
     assert level["Plane"]["Gradient"] == [0, 0]
@@ -90,10 +90,10 @@ def test_room_is_a_rectangle_and_the_chase_left_the_bathroom():
     assert walls == {
         "CLAD-PW",
         "CLAD-NS",
-        "CLAD-E",
-        "CLAD-S",
+        "CLAD-E-1.07",
+        "CLAD-S-1.07",
         "CLAD-SS",
-        "CLAD-W",
+        "CLAD-W-1.07",
         "CLAD-PASS-W",
         "CLAD-PASS-E",
         "CLAD-DOOR",
@@ -168,10 +168,10 @@ def test_door_joint_two_tiles_and_plaster_above_the_shelf():
     assert pw_tops
     assert max(pw_tops) == pytest.approx(1194.0, abs=0.05)
     for wall_id in (
-        "CLAD-E",
-        "CLAD-S",
+        "CLAD-E-1.07",
+        "CLAD-S-1.07",
         "CLAD-SS",
-        "CLAD-W",
+        "CLAD-W-1.07",
         "CLAD-NS",
         "CLAD-PASS-W",
         "CLAD-PASS-E",
@@ -180,13 +180,13 @@ def test_door_joint_two_tiles_and_plaster_above_the_shelf():
         assert max(tile["top_mm"] for tile in walls[wall_id]) == pytest.approx(2230.0, abs=0.05)
     for wall_id, tiles in walls.items():
         assert max(tile["width_mm"] for tile in tiles) < 700.0
-    east_widths = sorted({round(tile["width_mm"], 1) for tile in walls["CLAD-E"]})
+    east_widths = sorted({round(tile["width_mm"], 1) for tile in walls["CLAD-E-1.07"]})
     assert 596.0 in east_widths
     assert 600.0 not in east_widths
     assert 555.0 not in east_widths
     ns_widths = sorted({round(tile["width_mm"], 1) for tile in walls["CLAD-NS"]})
     assert ns_widths == [549.0]
-    south = {round(tile["width_mm"], 1) for tile in walls["CLAD-S"]}
+    south = {round(tile["width_mm"], 1) for tile in walls["CLAD-S-1.07"]}
     assert {96.0, 97.0, 509.5} <= south
     assert 430.0 not in south
     assert {round(tile["width_mm"], 1) for tile in walls["CLAD-SS"]} == {549.0}
@@ -221,8 +221,8 @@ def test_door_joint_two_tiles_and_plaster_above_the_shelf():
     ]
     assert north_sliver
     assert max(north_sliver) == pytest.approx(188.0, abs=0.2)
-    assert {round(tile["width_mm"], 1) for tile in walls["CLAD-W"]} >= {519.0, 596.0, 383.0}
-    assert {round(tile["width_mm"], 1) for tile in walls["CLAD-E"]} >= {519.0, 596.0, 196.5}
+    assert {round(tile["width_mm"], 1) for tile in walls["CLAD-W-1.07"]} >= {519.0, 596.0, 383.0}
+    assert {round(tile["width_mm"], 1) for tile in walls["CLAD-E-1.07"]} >= {519.0, 596.0, 196.5}
     shower_grout = unary_union([Polygon(ring) for ring in info["shower_grout"]])
     for y0, y1 in ((10.669, 10.671), (11.267, 11.269), (11.865, 11.867)):
         assert shower_grout.intersects(Polygon([(13.4, y0), (13.8, y0), (13.8, y1), (13.4, y1)]))

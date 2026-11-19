@@ -42,6 +42,9 @@ LABEL_FLOOR = "floor_tile"
 LABEL_WALL = "wall_tile"
 LABEL_GROUT = "grout"
 LABEL_DRAIN = "drain"
+# yaml-ifc ids of the floor covering and the drain (bathroom-1.20.yaml).
+FLOOR_ID = "FLR-1.20"
+DRAIN_ID = "DRAIN-1.20"
 TILE_THICKNESS_MM = 8.5
 
 MM = 1000.0
@@ -90,7 +93,7 @@ def _plane_of(doc: dict) -> dict:
 
 
 def _floor(doc: dict) -> dict:
-    return _by_id(doc["coverings"])["FLR-1.20"]["TileLayout"]
+    return _by_id(doc["coverings"])[FLOOR_ID]["TileLayout"]
 
 
 def _walls(doc: dict) -> list[dict]:
@@ -275,10 +278,15 @@ def _color(label: str) -> Color:
     return Color(rgb[0] / 255.0, rgb[1] / 255.0, rgb[2] / 255.0)
 
 
-def _paint(shape, label: str):
+def _paint(shape, label: str, element_id: str | None = None):
+    """Colour and label a solid. ``element_id`` is the yaml-ifc product it
+    belongs to, so the viewer maps the mesh to its IFC element
+    (docs/design/bathrooms.md, "IFC elements")."""
     shape.label = label
     shape.color = _color(label)
     shape.room_id = "1.20"
+    if element_id:
+        shape.element_id = element_id
     return shape
 
 
@@ -355,14 +363,19 @@ def parts(doc: dict | None = None) -> list:
     def z_grout(x, y):
         return z_at(x, y) - GROUT_RECESS_M
 
+    # Grout is part of the tile covering it joins: same IFC element, its
+    # own part label (docs/design/bathrooms.md, "IFC elements").
+    floor_id = FLOOR_ID
     for ring in _merged_rings(info["floor_tiles"]):
-        solids.append(_paint(_floor_solid(ring, z_at, thickness, gradient), LABEL_FLOOR))
+        solids.append(
+            _paint(_floor_solid(ring, z_at, thickness, gradient), LABEL_FLOOR, floor_id)
+        )
     # Each joint stays its own strip. Unioning them makes one polygon with a
     # hole per enclosed tile; dropping the holes fills the middle of the room
     # and draws that 2×2 block as a slab.
     for ring in info["floor_grout"]:
         solids.append(
-            _paint(_floor_solid(ring, z_grout, thickness, gradient), LABEL_GROUT)
+            _paint(_floor_solid(ring, z_grout, thickness, gradient), LABEL_GROUT, floor_id)
         )
 
     for wall in info["walls"]:
@@ -371,17 +384,18 @@ def parts(doc: dict | None = None) -> list:
         thick = float(tile["Thickness"])
         for piece in wall["result"]["tiles"]:
             solids.append(
-                _paint(_wall_solid(piece["polygon"], frame, thick), LABEL_WALL)
+                _paint(_wall_solid(piece["polygon"], frame, thick), LABEL_WALL, wall["id"])
             )
         for piece in wall["result"]["grout"]:
             solids.append(
                 _paint(
                     _wall_solid(piece["polygon"], frame, thick - GROUT_RECESS_M),
                     LABEL_GROUT,
+                    wall["id"],
                 )
             )
 
-    drain = _by_id(info["doc"]["wasteTerminals"])["DRAIN-1.20"]
+    drain = _by_id(info["doc"]["wasteTerminals"])[DRAIN_ID]
     ox, oy = (float(v) for v in drain["Origin"])
     width, depth = float(drain["Width"]), float(drain["Depth"])
     ring = [(0.0, 0.0), (width, 0.0), (width, depth), (0.0, depth)]
@@ -393,7 +407,7 @@ def parts(doc: dict | None = None) -> list:
     grate = _floor_solid(ring, z_grate, DEFAULT_GRATE_THICKNESS, gradient)
     # The mesh is local to the grate corner. Shift it onto the storey.
     placed = Pos(ox * MM, oy * MM, corner * MM) * grate
-    solids.append(_paint(placed, LABEL_DRAIN))
+    solids.append(_paint(placed, LABEL_DRAIN, DRAIN_ID))
     return solids
 
 

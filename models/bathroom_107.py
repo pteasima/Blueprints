@@ -87,7 +87,7 @@ MODEL_NAME = "bathroom_107"
 MODEL_LABEL = "Koupelna 1.07"
 PROJECT = "RD Šíma 1.NP"
 # Elevations the plates draw. The jog faces are tiled and dimensioned on the plan.
-PLATE_WALLS = ("CLAD-PW", "CLAD-E", "CLAD-S", "CLAD-W")
+PLATE_WALLS = ("CLAD-PW", "CLAD-E-1.07", "CLAD-S-1.07", "CLAD-W-1.07")
 
 
 def load_document(path: Path | None = None) -> dict:
@@ -215,10 +215,15 @@ def layout(doc: dict | None = None) -> dict:
     }
 
 
-def _paint(shape, label: str):
+def _paint(shape, label: str, element_id: str | None = None):
+    """Colour and label a solid. ``element_id`` is the yaml-ifc product it
+    belongs to, so the viewer maps the mesh to its IFC element
+    (docs/design/bathrooms.md, "IFC elements")."""
     shape.label = label
     shape.color = _color(label)
     shape.room_id = "1.07"
+    if element_id:
+        shape.element_id = element_id
     return shape
 
 
@@ -353,7 +358,9 @@ def parts(doc: dict | None = None) -> list:
     info = layout(doc)
     solids = []
 
-    def add_floor(rings, plane, label: str, recess: float = 0.0):
+    # Grout is part of the tile covering it joins: same IFC element, its
+    # own part label (docs/design/bathrooms.md, "IFC elements").
+    def add_floor(rings, plane, label: str, element_id: str, recess: float = 0.0):
         gradient = plane["Gradient"]
 
         def z_at(x, y, plane=plane, recess=recess):
@@ -361,31 +368,44 @@ def parts(doc: dict | None = None) -> list:
 
         thickness = float(info["level"]["Thickness"])
         for ring in rings:
-            solids.append(_paint(_floor_solid(ring, z_at, thickness, gradient), label))
+            solids.append(
+                _paint(_floor_solid(ring, z_at, thickness, gradient), label, element_id)
+            )
 
     # Keep each tile. Merging fills the origin butt and draws ~1192 mm slabs.
-    add_floor(info["level_tiles"], info["level_plane"], LABEL_FLOOR)
-    add_floor(info["shower_tiles"], info["shower_plane"], LABEL_FLOOR)
-    add_floor(info["level_grout"], info["level_plane"], LABEL_GROUT, GROUT_RECESS_M)
-    add_floor(info["shower_grout"], info["shower_plane"], LABEL_GROUT, GROUT_RECESS_M)
+    add_floor(info["level_tiles"], info["level_plane"], LABEL_FLOOR, "FLR-LEVEL")
+    add_floor(info["shower_tiles"], info["shower_plane"], LABEL_FLOOR, "FLR-SHOWER")
+    add_floor(info["level_grout"], info["level_plane"], LABEL_GROUT, "FLR-LEVEL", GROUT_RECESS_M)
+    add_floor(info["shower_grout"], info["shower_plane"], LABEL_GROUT, "FLR-SHOWER", GROUT_RECESS_M)
 
     for wall in info["walls"]:
         frame = wall["result"]["frame"]
         thick = float(wall["layout"]["Thickness"])
         for piece in wall["result"]["tiles"]:
-            solids.append(_paint(_wall_solid(piece["polygon"], frame, thick), LABEL_WALL))
+            solids.append(
+                _paint(_wall_solid(piece["polygon"], frame, thick), LABEL_WALL, wall["id"])
+            )
         for piece in wall["result"]["grout"]:
             solids.append(
                 _paint(
                     _wall_solid(piece["polygon"], frame, thick - GROUT_RECESS_M),
                     LABEL_GROUT,
+                    wall["id"],
                 )
             )
 
-    solids.extend(_drain_solids(info))
+    solids.extend(_tag(_drain_solids(info), "DRAIN-1.07"))
     solids.extend(_fixture_boxes(info["doc"]))
-    solids.extend(_vanity_shelf(info))
+    # The shelf tiles come from the washbasin pre-wall's CLAD-PW layout.
+    solids.extend(_tag(_vanity_shelf(info), "CLAD-PW"))
     solids.extend(_edge_profiles(info))
+    return solids
+
+
+def _tag(solids: list, element_id: str) -> list:
+    """Map solids to the yaml-ifc product they belong to (see ``_paint``)."""
+    for solid in solids:
+        solid.element_id = element_id
     return solids
 
 
@@ -426,7 +446,7 @@ def _vanity_shelf(info: dict) -> list:
     return solids
 
 
-def _box(origin, size, label: str, elevation: float = 0.0):
+def _box(origin, size, label: str, elevation: float = 0.0, element_id: str | None = None):
     x, y = (float(v) for v in origin)
     width, depth, height = (float(v) for v in size)
     solid = Pos(x * MM, y * MM, elevation * MM) * Box(
@@ -435,7 +455,7 @@ def _box(origin, size, label: str, elevation: float = 0.0):
         height * MM,
         align=(Align.MIN, Align.MIN, Align.MIN),
     )
-    return _paint(solid, label)
+    return _paint(solid, label, element_id)
 
 
 def _niche_frame(doc: dict) -> dict:
@@ -537,8 +557,9 @@ def _fixture_boxes(doc: dict) -> list:
                 continue
             if row["id"] == "PW-SHOWER":
                 frame = _niche_frame(doc)
-                solids.append(_cut_prewall(row, frame))
-                solids.extend(_niche_linings(frame))
+                solids.extend(_tag([_cut_prewall(row, frame)], row["id"]))
+                # The niche lining tiles belong to the shower pre-wall tiles.
+                solids.extend(_tag(_niche_linings(frame), "CLAD-NS"))
                 continue
             if row["id"] == "PW-VANITY":
                 # The YAML height is the finished shelf. The top 8.5 mm is tile.
@@ -549,6 +570,7 @@ def _fixture_boxes(doc: dict) -> list:
                         (row["Width"], row["Depth"], float(row["Height"]) - t),
                         label,
                         float(row.get("Elevation") or 0.0),
+                        element_id=row["id"],
                     )
                 )
                 continue
@@ -558,6 +580,7 @@ def _fixture_boxes(doc: dict) -> list:
                     (row["Width"], row["Depth"], row["Height"]),
                     label,
                     float(row.get("Elevation") or 0.0),
+                    element_id=row["id"],
                 )
             )
     return solids
@@ -600,9 +623,10 @@ def _edge_profiles(info: dict) -> list:
     z_north = plane_elevation(plane, west, north)
     solids = []
     # The footprint already stops on the glass east face and the east tile face.
-    for x_face, direction in (
-        (west, 1.0),
-        (east, -1.0),
+    # One IfcCovering MOLDING per profile in bathroom-1.07.yaml.
+    for x_face, direction, element_id in (
+        (west, 1.0, "PROF-SH-W"),
+        (east, -1.0, "PROF-SH-E"),
     ):
         x0 = x_face if direction > 0 else x_face - PROFILE_WIDTH_M
         points = [
@@ -610,7 +634,9 @@ def _edge_profiles(info: dict) -> list:
             Vector(x0 * MM, north * MM, 0.0),
             Vector(x0 * MM, north * MM, z_north * MM),
         ]
-        solids.append(_paint(_extrude(points, (PROFILE_WIDTH_M * MM, 0.0, 0.0)), LABEL_PROFILE))
+        solids.append(
+            _paint(_extrude(points, (PROFILE_WIDTH_M * MM, 0.0, 0.0)), LABEL_PROFILE, element_id)
+        )
     return solids
 
 
@@ -735,7 +761,7 @@ def _grid_lines(tiles, grout, z_mm: float) -> list[dict]:
 
 def _room_east(info: dict) -> float:
     """Structural east face. The shower floor stops 8.5 mm west, on the tile face."""
-    east = next(wall for wall in info["walls"] if wall["id"] == "CLAD-E")
+    east = next(wall for wall in info["walls"] if wall["id"] == "CLAD-E-1.07")
     return float(east["result"]["frame"]["start"][0])
 
 
@@ -1016,7 +1042,7 @@ def _elevation_drawing(info: dict, wall_ids: tuple[str, ...], scene_id: str, nam
                 leader=False,
             )
         )
-    if "CLAD-E" in wall_ids:
+    if "CLAD-E-1.07" in wall_ids:
         notes.append(
             _callout(
                 _station(frame, frame["length"] * 0.5, 80.0),
@@ -1053,18 +1079,18 @@ def scenes(info: dict | None = None) -> list[dict]:
             (0.0, 0.0, -1.0),
         ),
         _elevation_drawing(
-            info, ("CLAD-E",), "bath107-elev-e", "east wall, shower", "východní stěna, sprcha", (1.0, 0.0, 0.0)
+            info, ("CLAD-E-1.07",), "bath107-elev-e", "east wall, shower", "východní stěna, sprcha", (1.0, 0.0, 0.0)
         ),
         _elevation_drawing(
             info,
-            ("CLAD-S", "CLAD-SS"),
+            ("CLAD-S-1.07", "CLAD-SS"),
             "bath107-elev-s",
             "south wall, door",
             "jižní stěna, dveře",
             (0.0, 0.0, 1.0),
         ),
         _elevation_drawing(
-            info, ("CLAD-W",), "bath107-elev-w", "west wall", "západní stěna", (-1.0, 0.0, 0.0)
+            info, ("CLAD-W-1.07",), "bath107-elev-w", "west wall", "západní stěna", (-1.0, 0.0, 0.0)
         ),
     ]
 
@@ -1122,9 +1148,9 @@ def write_plates(directory: Path, info: dict | None = None) -> list[Path]:
     plates = [
         ("bath107-plan", _svg_plan(info)),
         ("bath107-elev-n", _svg_wall(info, ("CLAD-PW", "CLAD-NS"), "North wall — window", "Severní stěna — okno")),
-        ("bath107-elev-e", _svg_wall(info, ("CLAD-E",), "East wall — shower", "Východní stěna — sprcha")),
-        ("bath107-elev-s", _svg_wall(info, ("CLAD-S", "CLAD-SS"), "South wall — door", "Jižní stěna — dveře")),
-        ("bath107-elev-w", _svg_wall(info, ("CLAD-W",), "West wall", "Západní stěna")),
+        ("bath107-elev-e", _svg_wall(info, ("CLAD-E-1.07",), "East wall — shower", "Východní stěna — sprcha")),
+        ("bath107-elev-s", _svg_wall(info, ("CLAD-S-1.07", "CLAD-SS"), "South wall — door", "Jižní stěna — dveře")),
+        ("bath107-elev-w", _svg_wall(info, ("CLAD-W-1.07",), "West wall", "Západní stěna")),
     ]
     written = []
     for name, svg in plates:
@@ -1357,7 +1383,7 @@ def _svg_wall(info: dict, wall_ids: tuple[str, ...], title_en: str, title_cs: st
                 15,
             )
         )
-    if "CLAD-E" in wall_ids:
+    if "CLAD-E-1.07" in wall_ids:
         body.append(_svg_text(origin_x + 40, pt(0.4, 0.15)[1], "tiles from 0, sloped profile", 15, anchor="start"))
     body.append(_svg_text(48, 1360, title_cs, 14, anchor="start"))
     return _svg_document("".join(body), f"Koupelna 1.07 — {title_en}")
