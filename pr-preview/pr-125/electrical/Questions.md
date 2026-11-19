@@ -45,3 +45,12 @@ Raised while placing every fixture from FixturePlan.pdf and the Soupis sheet. Ea
 ## Room 1.11
 
 Nothing in the latest review is unresolved. Cable 6 and cable 11 stay off the plan until they are added back. The bedroom header called the green plan mark panel(cable); it is cabletype(cable) (see PlanNotes.md). Only that comment changed.
+
+## Cable routes (pilot 1.11, 1.12)
+
+The routes are guesses; the assumptions are numbered in [CableRoutes.md](CableRoutes.md#routing-rules). The open ones:
+
+1. Boards RS-1 and RS-2: are the positions from the FixturePlan purple squares right, and what size and height are the boxes?
+2. Cable 9: one UTP to the door switch box and on to the window contact C9-M (19 m modelled, 15 m in Soupis), or a home run to the contact?
+3. Cables 100, 101 (1.12 lights, 7.5 m modelled, 12 m in Soupis) and 34 (the 1.12 strip, 8.7 m vs 12 m): which way do they run, and which end of the strip is fed?
+4. Blinds 61 and 66: up W-002 by the 1.12 south-east corner and along the facade, or another way to the 1.13 motors?
