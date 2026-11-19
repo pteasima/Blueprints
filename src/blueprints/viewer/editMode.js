@@ -385,7 +385,32 @@ export function createEditMode(ctx) {
     updateSelectionBox();
     renderRow(id);
     renderPosition();
+    syncDetailState();
     if (opts.save !== false) save();
+  }
+
+  /**
+   * Badge and Revert after a move, without rebuilding the pane: a rebuild
+   * would replace the − / + button Petr is holding. (Revert used to stay
+   * disabled after the first nudge until another fixture was selected.)
+   */
+  function syncDetailState() {
+    if (!selectedId || detail.hidden) return;
+    const edit = store.fixtures[selectedId];
+    const state = rowState(selectedId);
+    const head = detail.querySelector(".edit-detail-head");
+    let badge = head?.querySelector(".edit-badge");
+    if (edit && head) {
+      if (!badge) {
+        badge = document.createElement("span");
+        badge.className = "edit-badge";
+        head.appendChild(badge);
+      }
+      badge.dataset.state = state;
+      badge.textContent = t(`edit.state.${state}`);
+    } else badge?.remove();
+    const revertBtn = detail.querySelector('button[data-role="revert"]');
+    if (revertBtn) revertBtn.disabled = !(edit && !edit.add);
   }
 
   function setProp(id, key, raw) {
@@ -633,6 +658,7 @@ export function createEditMode(ctx) {
       <p class="edit-hint" data-role="export-hint"></p>
       <textarea readonly rows="6" data-role="export-text"></textarea>
       <div class="edit-row">
+        <button type="button" class="edit-btn edit-share" data-role="share" hidden></button>
         <button type="button" class="edit-btn" data-role="copy"></button>
         <button type="button" class="edit-btn" data-role="download"></button>
         <span class="edit-spacer"></span>
@@ -839,12 +865,9 @@ export function createEditMode(ctx) {
     const target = ev.target.closest?.("button");
     if (!target || !selectedId) return;
     if (target.dataset.nudge != null) {
-      const pos = currentTarget(selectedId);
-      if (!pos) return;
-      const axis = Number(target.dataset.nudge);
-      const step = snapStep || 0.001;
-      pos[axis] += Number(target.dataset.sign) * step;
-      setTarget(selectedId, pos);
+      // Pointer presses are handled by the hold-to-repeat below; a click
+      // with no pointer press (keyboard, VoiceOver) steps once.
+      if (ev.detail === 0 && !hold) nudge(target, 1);
       return;
     }
     if (target.dataset.snap != null) {
@@ -857,6 +880,62 @@ export function createEditMode(ctx) {
     else if (role === "duplicate") duplicate(selectedId);
     else if (role === "delete") toggleDelete(selectedId);
     else if (role === "revert") revert(selectedId);
+  });
+
+  // --- − / + hold to repeat (Petr, 2026-11-19: "I need to long press those
+  // position buttons to move faster") ---
+  /** @type {{ button: HTMLButtonElement, pointerId: number, t0: number, timer: ReturnType<typeof setTimeout> | null } | null} */
+  let hold = null;
+
+  function nudge(button, factor) {
+    if (!selectedId) return;
+    const pos = currentTarget(selectedId);
+    if (!pos) return;
+    const axis = Number(button.dataset.nudge);
+    const step = (snapStep || 0.001) * factor;
+    pos[axis] += Number(button.dataset.sign) * step;
+    setTarget(selectedId, pos, { save: false });
+  }
+
+  function stopHold() {
+    if (!hold) return;
+    if (hold.timer) clearTimeout(hold.timer);
+    hold.button.classList.remove("is-held");
+    hold = null;
+    save();
+  }
+
+  function holdTick() {
+    if (!hold) return;
+    const held = performance.now() - hold.t0;
+    const { factor, interval } = holdRate(held);
+    nudge(hold.button, factor);
+    hold.timer = setTimeout(holdTick, interval);
+  }
+
+  detail.addEventListener("pointerdown", (ev) => {
+    const button = ev.target.closest?.("button[data-nudge]");
+    if (!button || button.disabled || (ev.button !== undefined && ev.button !== 0)) return;
+    ev.preventDefault();
+    stopHold();
+    hold = { button, pointerId: ev.pointerId, t0: performance.now(), timer: null };
+    button.classList.add("is-held");
+    nudge(button, 1);
+    hold.timer = setTimeout(holdTick, HOLD_DELAY_MS);
+  });
+  // Released anywhere, cancelled by the system, or slid off the button.
+  for (const type of ["pointerup", "pointercancel"]) {
+    window.addEventListener(type, (ev) => {
+      if (hold && ev.pointerId === hold.pointerId) stopHold();
+    }, true);
+  }
+  detail.addEventListener("pointerleave", (ev) => {
+    if (hold && ev.pointerId === hold.pointerId && ev.target === hold.button) stopHold();
+  }, true);
+  window.addEventListener("blur", stopHold);
+  // A long press must not open the iOS callout or the context menu.
+  panel.addEventListener("contextmenu", (ev) => {
+    if (ev.target.closest?.("button")) ev.preventDefault();
   });
 
   detail.addEventListener("change", (ev) => {
@@ -1006,6 +1085,41 @@ export function createEditMode(ctx) {
     exportBox.hidden = true;
     notifyLayout();
   });
+  if (typeof navigator !== "undefined" && typeof navigator.share === "function") $("share").hidden = false;
+  // No await before navigator.share: iOS Safari opens the share sheet only
+  // inside the tap's user activation.
+  $("share").addEventListener("click", () => {
+    const text = patchText();
+    exportText.value = text;
+    const name = shareFileName(new Date());
+    const title = t("edit.shareTitle");
+    let promise = null;
+    try {
+      let file = null;
+      try {
+        file = new File([text], name, { type: "application/json" });
+      } catch {
+        file = null;
+      }
+      if (file && typeof navigator.canShare === "function" && navigator.canShare({ files: [file] })) {
+        promise = navigator.share({ files: [file], title });
+      } else {
+        promise = navigator.share({ title, text });
+      }
+    } catch (err) {
+      promise = Promise.reject(err);
+    }
+    Promise.resolve(promise).then(
+      () => flash(t("edit.shared")),
+      (err) => {
+        if (err && err.name === "AbortError") return;
+        // The share sheet refused: leave the text selected for Copy.
+        exportText.focus();
+        exportText.select();
+        flash(t("edit.shareFailed"));
+      },
+    );
+  });
   $("copy").addEventListener("click", async () => {
     const text = patchText();
     exportText.value = text;
@@ -1023,7 +1137,7 @@ export function createEditMode(ctx) {
     const blob = new Blob([text], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `fixture-edits-${ctx.modelId || "model"}.json`;
+    a.download = shareFileName(new Date());
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -1081,6 +1195,7 @@ export function createEditMode(ctx) {
     button.textContent = t("ui.edit");
     $("title").textContent = t("edit.title");
     $("search").placeholder = t("edit.search");
+    $("share").textContent = t("edit.share");
     $("copy").textContent = t("edit.copy");
     $("download").textContent = t("edit.download");
     $("discard").textContent = t("edit.discard");
@@ -1220,6 +1335,28 @@ export function createEditMode(ctx) {
   };
 }
 
+/** Hold − / +: first repeat after this delay. */
+export const HOLD_DELAY_MS = 400;
+
+/**
+ * Repeat rate for a held − / + button, by how long it has been held: the
+ * step grows from 1× to 5× to 10× the snap step (1 cm → 5 cm → 10 cm at
+ * the 1 cm snap) and the interval shortens.
+ * @param {number} heldMs
+ */
+export function holdRate(heldMs) {
+  if (heldMs < 1200) return { factor: 1, interval: 110 };
+  if (heldMs < 2400) return { factor: 5, interval: 90 };
+  return { factor: 10, interval: 70 };
+}
+
+/** `FixtureEdits-YYYYMMDD-HHMM.json`, local time. */
+export function shareFileName(date) {
+  const pad = (n) => String(n).padStart(2, "0");
+  const d = date instanceof Date ? date : new Date();
+  return `FixtureEdits-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.json`;
+}
+
 function cssEscape(value) {
   if (typeof CSS !== "undefined" && CSS.escape) return CSS.escape(value);
   return String(value).replace(/["\\]/g, "\\$&");
@@ -1258,6 +1395,7 @@ function injectStyles() {
     .edit-btn, .edit-seg, .edit-panel input, .edit-panel textarea { color: #1c1c1e !important;
       background: rgba(0,0,0,0.06) !important; border-color: rgba(0,0,0,0.14) !important; }
     .edit-table tr.is-selected td { background: rgba(255,176,32,0.35) !important; }
+    .edit-panel .edit-share { background: #0a84ff !important; border-color: #0a84ff !important; color: #fff !important; }
   }
   .edit-head { display: flex; align-items: center; gap: 8px; padding: 6px 10px; min-height: 48px; box-sizing: border-box; }
   .edit-title { margin: 0; font-size: 16px; font-weight: 600; }
@@ -1266,8 +1404,13 @@ function injectStyles() {
   .edit-btn, .edit-seg { min-height: 44px; min-width: 44px; padding: 0 12px; border-radius: 10px;
     border: 1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.08); color: inherit;
     font: inherit; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-  .edit-btn:active, .edit-seg:active { transform: scale(0.96); filter: brightness(1.3); }
+  .edit-btn:active, .edit-seg:active, .edit-btn.is-held { transform: scale(0.96); filter: brightness(1.3); }
+  /* A long press on a button must not select its text or open the callout. */
+  .edit-panel button, .edit-panel summary, .edit-head, .edit-axis-label {
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
   .edit-btn:disabled { opacity: 0.4; }
+  .edit-btn[hidden] { display: none; }
+  .edit-share { background: #0a84ff; border-color: #0a84ff; color: #fff; }
   .edit-btn.has-edits { background: #0a84ff; border-color: #0a84ff; color: #fff; }
   .edit-danger { color: #ff6961 !important; }
   .edit-seg { min-width: 0; padding: 0 10px; }
