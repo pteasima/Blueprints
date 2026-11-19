@@ -11,7 +11,6 @@ sys.path.insert(0, str(ROOT / "models"))
 from ground_floor import (  # noqa: E402
     FURNISHINGS_PATH,
     FURNISHING_LISTS,
-    FURNITURE_VIEWS,
     LABEL_CABINET,
     LABEL_DOOR,
     LABEL_GLAZING,
@@ -516,18 +515,10 @@ def test_living_room_boxes_follow_plan_v3():
     assert placed["FN-GATTA"].volume < 1100.0 * 2400.0 * 760.0 * 0.5
     assert placed["FN-BK"].volume < 4180.0 * 250.0 * 1470.0 * 0.7
 
-    specs = {item["id"]: item for item in scenes()}
-    assert specs["living-plan"]["projection"] == "ortho"
-    assert specs["living-plan"]["cuts"][0]["anchor"][2] == pytest.approx(2000.0)
-    assert specs["living-terrace"]["title"]["cs"] == "Obývák od terasy"
 
-
-def test_furniture_scenes_keep_the_existing_views():
-    specs = {item["id"]: item for item in scenes()}
-    assert {"overview", "opening", "posts", "plan"} <= set(specs)
-    for spec in FURNITURE_VIEWS:
-        scene = specs[spec["id"]]
-        assert scene["title"]["cs"]
-        assert "projection" not in scene
-        assert scene["camera"]["up"] == [0.0, 1.0, 0.0]
-        assert scene["hFovDeg"] == spec["hFovDeg"]
+def test_kitchen_scene_is_the_whole_kitchen_from_the_sofa():
+    scene = next(item for item in scenes() if item["id"] == "living-kitchen")
+    assert scene["title"]["cs"] == "Obývák ke kuchyni"
+    assert "projection" not in scene
+    assert scene["camera"]["up"] == [0.0, 1.0, 0.0]
+    assert scene["hFovDeg"] == 52

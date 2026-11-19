@@ -13,14 +13,10 @@ sys.path.insert(0, str(ROOT / "models"))
 
 from bathroom_120 import drain_bottom_z_mm  # noqa: E402
 from ground_floor import (  # noqa: E402
-    CORNER_VIEWS,
     DEFAULT_WALL_HEIGHT_M,
     LABEL_GLAZING,
     LABEL_MASONRY,
     MISSING_THICKNESS_M,
-    OPENING_VIEW_WALL,
-    PLAN_CUT_Z_M,
-    PLAN_HALF_M,
     SOURCE_COMMIT,
     SOURCE_PATH,
     WINDOW_TRAVEL,
@@ -134,9 +130,6 @@ def test_ground_floor_builds_and_cuts_openings():
     assert windows_json == meta["window_motions"]
     assert {item["id"] for item in meta["window_motions"]} == {item["id"] for item in doc["windows"]}
     assert derived["furnishings"] == len(furnishing_records())
-    host = next(wall for wall in walls if wall["id"] == OPENING_VIEW_WALL)
-    hosted = [item["id"] for item in openings if item["VoidsElement"] == host["id"]]
-    assert "OP39a" in hosted and "OP39b" in hosted
 
 
 def _wall_solids(shape):
@@ -224,33 +217,26 @@ def test_butt_corners_do_not_overlap():
         seen[kind] = pair
     assert seen["L"] is not None and seen["T"] is not None
     assert checked.count("L") >= 1 and checked.count("T") >= 1
-    by_end = {
-        (row["RelatedElement"], row["RelatedConnectionType"]): row for row in doc["connections"]
-    }
-    for spec in CORNER_VIEWS:
-        row = by_end[(spec["related"], spec["end"])]
-        kind = "T" if row["RelatingConnectionType"] == "ATPATH" else "L"
-        assert spec["id"].startswith(f"{kind}-")
 
 
-def test_plan_scenes_keep_the_perspective_views():
-    specs = {item["id"]: item for item in scenes()}
-    assert {"overview", "opening", "posts", "bathroom-floor", "bathroom", "bathroom-door"} <= set(specs)
-    for spec in CORNER_VIEWS:
-        assert spec["id"] in specs
-        assert "projection" not in specs[spec["id"]]
-        plan = specs[f"plan-{spec['id']}"]
-        assert plan["projection"] == "ortho"
-        assert plan["cuts"][0]["normal"] == [0.0, -1.0, 0.0]
-        assert plan["cuts"][0]["anchor"][2] == pytest.approx(PLAN_CUT_Z_M * 1000.0)
-        assert plan["camera"]["orthoFit"] == [PLAN_HALF_M, PLAN_HALF_M]
-        assert plan["camera"]["up"] == [0.0, 0.0, -1.0]
-    overview = specs["plan"]
-    assert overview["projection"] == "ortho"
-    assert overview["cuts"][0]["anchor"][2] == PLAN_CUT_Z_M * 1000.0
-    half_x, half_y = overview["camera"]["orthoFit"]
-    assert half_x > 20
-    assert half_y > 8
+def test_ground_floor_keeps_one_scene_per_detailed_room():
+    """Petr, 2026-11-19: one scene each for the bedroom, the kitchen and the two bathrooms."""
+    from bathroom_107 import scenes as bath_107_scenes
+    from bathroom_120 import scenes as bath_120_scenes
+
+    found = scenes()
+    assert [item["id"] for item in found] == [
+        "living-kitchen",
+        "bathroom-plan",
+        "bath107-plan",
+        "bedroom-1.11",
+    ]
+    by_id = {item["id"]: item for item in found}
+    # The bathroom scenes are the standalone models' own, unchanged.
+    assert by_id["bathroom-plan"] == next(s for s in bath_120_scenes() if s["id"] == "bathroom-plan")
+    assert by_id["bath107-plan"] == next(s for s in bath_107_scenes() if s["id"] == "bath107-plan")
+    committed = json.loads((ROOT / "docs" / "models" / "ground_floor.scenes.json").read_text())
+    assert [item["id"] for item in committed] == [item["id"] for item in found]
 
 
 # Which panes open, per window (docs/design/ground-floor.md, Windows).

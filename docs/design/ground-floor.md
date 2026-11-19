@@ -86,6 +86,19 @@ Sliding (`SLIDING_TO_LEFT`/`SLIDING_TO_RIGHT`): D-OP03 (double pocket) and the l
 
 Sectional overhead: the garage doors D-OP49 (D6) and D-OP50 (D5). `ground_floor.doors.json` writes them as `kind: "sectional"` with the opening's start, end, bottom and top, the inward direction, 4 sections and a 0.3 m bend. The viewer runs the sections up the opening, round the bend and level under the ceiling. It is a simplified animation, not a product's track. The leaf hangs on the garage face of W-067. Their height is still waiting on Petr.
 
+## Scenes
+
+The ground floor has four scenes in the View list, one per room that has its own detailed model, plus the built-in Iso, Front, Side and Top. Source: Petr, 2026-11-19 (Cody chat): "For the room specific scenes we have, please keep one per room (one for bedroom, one for kitchen, one for each bathroom), make reasonable picks and don't work on editing existing ones. Nuke all the rest, they are useless."
+
+| Room | Scene | Why this one |
+| --- | --- | --- |
+| Kitchen 1.02 | `living-kitchen` (Living room toward the kitchen) | The only view that shows the whole kitchen: island, cabinet wall, tall units and the dining table. The other kitchen glances each showed one part. |
+| Bathroom 1.20 | `bathroom-plan` (floor tiles) | Top view of the whole room with the tile and fall annotations, a ready contractor plate from **Drawing**. The perspective `bathroom` looks mostly at the floor. Same kind of view as the 1.07 pick. |
+| Bathroom 1.07 | `bath107-plan` (floor tiles) | 1.07 has no perspective view; its plan shows the whole room, the shower and the drain. |
+| Bedroom 1.11 | `bedroom-1.11` | The only bedroom perspective (the corner glance toward the bed, lamp and pendant). |
+
+The scenes are unchanged copies: `scenes()` in `models/ground_floor.py` picks the two bathroom scenes by id from `bathroom_120.scenes()` and `bathroom_107.scenes()`. The standalone bathroom models and `obyvak` keep all their scenes. Removed on 2026-11-19: the overview, the door-and-window and 120 mm post close-ups, the four butt-joint corner views and their plans, the whole-floor plan, five other kitchen and living views, the living-room plan, the other nine 1.20 and four 1.07 views, and the 22 per-room top views (`plan-1.xx`). An old `?scene=` link to a removed scene opens in Iso and drops the parameter. The electrical room plans in `docs/previews/electrical/` are separate PNGs from `models/electrical_rooms_plan.py` and are unaffected.
+
 ## Floor EPS take-off
 
 `scripts/export_podlaha_eps.py` writes `docs/podlaha-eps.xlsx` and `docs/podlaha-eps-souhrn.csv`. It is a quantity file, not a solid.

@@ -101,10 +101,7 @@ from bedroom_111 import (
     parts as bedroom_111_parts,
     scenes as bedroom_111_scenes,
 )
-from electrical_rooms import (
-    parts as electrical_rooms_parts,
-    scenes as electrical_rooms_scenes,
-)
+from electrical_rooms import parts as electrical_rooms_parts
 from bathroom_120 import (
     LABEL_DRAIN,
     LABEL_FLOOR,
@@ -140,8 +137,6 @@ DEFAULT_WALL_HEIGHT_M = 3.0
 # Placeholder band for W-017, centred on the drawn line.
 MISSING_THICKNESS_M = 0.05
 GLAZED_WALLS = frozenset({"W-023"})
-# Close view: this wall carries door OP39a and window OP39b side by side.
-OPENING_VIEW_WALL = "W-060"
 
 MM = 1000.0
 # Cutter sticks out of the wall so the boolean does not share a face with it.
@@ -1502,217 +1497,28 @@ def build(
     return assembly, meta
 
 
-def _bounds_mm(doc: dict) -> tuple[float, float, float, float, float, float]:
-    xs: list[float] = []
-    ys: list[float] = []
-    for wall in doc.get("walls") or []:
-        frame = _axis(wall)
-        if frame is None:
-            continue
-        (sx, sy), (ex, ey), _length = frame
-        xs.extend((_mm(sx), _mm(ex)))
-        ys.extend((_mm(sy), _mm(ey)))
-    return min(xs), min(ys), 0.0, max(xs), max(ys), _mm(DEFAULT_WALL_HEIGHT_M)
+# Ground-floor scenes: one per room that has its own detailed model.
+# Petr, 2026-11-19 (Cody chat): "For the room specific scenes we have, please
+# keep one per room (one for bedroom, one for kitchen, one for each bathroom),
+# make reasonable picks and don't work on editing existing ones. Nuke all the
+# rest, they are useless." The picks and why: docs/design/ground-floor.md,
+# "Scenes". The standalone bathroom models keep all their drawings.
+KITCHEN_SCENE = "living-kitchen"
+BATHROOM_120_SCENE = "bathroom-plan"
+BATHROOM_107_SCENE = "bath107-plan"
 
 
-def _overview_scene(doc: dict) -> dict:
-    x0, y0, z0, x1, y1, z1 = _bounds_mm(doc)
-    center = cad_mm_to_gltf_m(((x0 + x1) / 2.0, (y0 + y1) / 2.0, (z0 + z1) / 2.0))
-    span_m = max(x1 - x0, y1 - y0, z1 - z0) / MM
-    dist = span_m * 1.85
-    return {
-        "id": "overview",
-        "hFovDeg": 55,
-        "camera": {
-            "target": center,
-            "position": [
-                center[0] + dist * 0.75,
-                center[1] + dist * 0.55,
-                center[2] + dist * 0.75,
-            ],
-            "up": [0.0, 1.0, 0.0],
-        },
-    }
+def _kitchen_scene() -> dict:
+    """Standing by the sofa, looking west at the whole kitchen; glass on the left.
 
-
-def _opening_scene(doc: dict) -> dict:
-    wall = next(item for item in doc["walls"] if item["id"] == OPENING_VIEW_WALL)
-    (sx, sy), (ex, ey), length = _axis(wall)
-    ux, uy = (ex - sx) / length, (ey - sy) / length
-    # Door OP39a (along 0.475 m) and window OP39b (along 1.575 m) sit side by side.
-    # The shared point is the middle of that pair after the axis snap.
-    along = 1.575
-    px, py = sx + ux * along, sy + uy * along
-    # East of W-060 and north of W-025 (y ≈ 11.6). A camera south of that
-    # wall sits against its face and never sees the door and the window.
-    eye = (px + 4.0, py - 0.35, 1.65)
-    target = (px, py + 0.15, 1.30)
-    return {
-        "id": "opening",
-        "hFovDeg": 48,
-        "camera": {
-            "target": cad_mm_to_gltf_m((_mm(target[0]), _mm(target[1]), _mm(target[2]))),
-            "position": cad_mm_to_gltf_m((_mm(eye[0]), _mm(eye[1]), _mm(eye[2]))),
-            "up": [0.0, 1.0, 0.0],
-        },
-    }
-
-
-def _posts_scene(doc: dict) -> dict:
-    """W-004 and W-014, the two free-standing 120 mm squares."""
-    wall_a = next(item for item in doc["walls"] if item["id"] == "W-004")
-    wall_b = next(item for item in doc["walls"] if item["id"] == "W-014")
-    def mid(wall):
-        (sx, sy), (ex, ey), _length = _axis(wall)
-        return (sx + ex) / 2.0, (sy + ey) / 2.0
-    ax, ay = mid(wall_a)
-    bx, by = mid(wall_b)
-    px, py = (ax + bx) / 2.0, (ay + by) / 2.0
-    # Close enough that a 120 mm square reads as a column, still framing both.
-    eye = (px + 6.0, py - 1.6, 1.8)
-    target = (px, py, 1.5)
-    return {
-        "id": "posts",
-        "hFovDeg": 58,
-        "camera": {
-            "target": cad_mm_to_gltf_m((_mm(target[0]), _mm(target[1]), _mm(target[2]))),
-            "position": cad_mm_to_gltf_m((_mm(eye[0]), _mm(eye[1]), _mm(eye[2]))),
-            "up": [0.0, 1.0, 0.0],
-        },
-    }
-
-
-# Butt-joint close-ups. The target is the related wall's snapped end, which
-# is the centre-line intersection stored in the YAML. The eye offset is only
-# a camera position; the wall solids come from yaml_ifc.footprints.
-CORNER_VIEWS = (
-    {
-        "id": "L-W054-W001",
-        "related": "W-001",
-        "end": "ATSTART",
-        "eye_m": (-1.15, -1.2, 2.8),
-        "target_z_m": 0.35,
-        "hFovDeg": 42,
-    },
-    {
-        "id": "L-W026-W030",
-        "related": "W-030",
-        "end": "ATEND",
-        "eye_m": (-1.25, -1.35, 2.7),
-        "target_z_m": 0.35,
-        "hFovDeg": 42,
-    },
-    {
-        "id": "T-W029-W050",
-        "related": "W-050",
-        "end": "ATEND",
-        "eye_m": (1.15, -2.15, 1.85),
-        "target_z_m": 1.05,
-        "hFovDeg": 40,
-    },
-    {
-        "id": "T-W030-W018",
-        "related": "W-018",
-        "end": "ATSTART",
-        "eye_m": (1.7, 1.15, 1.7),
-        "target_z_m": 1.05,
-        "hFovDeg": 40,
-    },
-)
-
-
-def _end_m(wall: dict, kind: str) -> tuple[float, float]:
-    frame = _axis(wall)
-    if frame is None:
-        raise ValueError(f"{wall.get('id')} has no axis")
-    (sx, sy), (ex, ey), _length = frame
-    return (sx, sy) if kind == "ATSTART" else (ex, ey)
-
-
-def _corner_scene(doc: dict, spec: dict) -> dict:
-    wall = next(item for item in doc["walls"] if item["id"] == spec["related"])
-    px, py = _end_m(wall, spec["end"])
-    ex, ey, ez = spec["eye_m"]
-    eye = (px + ex, py + ey, ez)
-    target = (px, py, spec["target_z_m"])
-    return {
-        "id": spec["id"],
-        "hFovDeg": spec["hFovDeg"],
-        "camera": {
-            "target": cad_mm_to_gltf_m((_mm(target[0]), _mm(target[1]), _mm(target[2]))),
-            "position": cad_mm_to_gltf_m((_mm(eye[0]), _mm(eye[1]), _mm(eye[2]))),
-            "up": [0.0, 1.0, 0.0],
-        },
-    }
-
-
-# Plan close-ups of the same four joints. Half-extent is metres: a square
-# view is about 2.7 m across, wide enough to read the butt and the two walls.
-PLAN_HALF_M = 1.35
-PLAN_CUT_Z_M = 1.0
-
-
-def _plan_scene(
-    scene_id: str,
-    px: float,
-    py: float,
-    half_x_m: float,
-    half_y_m: float,
-    cut_z_m: float = PLAN_CUT_Z_M,
-) -> dict:
-    """Top-down orthographic view with a horizontal cut at 1 m.
-
-    The cut normal is glTF −Y (CAD down), so the storey above 1 m is removed
-    and the caps are the plan footprints.
+    Same glance as the owner's SketchUp view. Eye and target are storey metres.
     """
+    eye = (28.9, 10.7, 1.55)
+    target = (21.2, 14.2, 1.05)
     return {
-        "id": scene_id,
-        "projection": "ortho",
-        "cuts": [
-            {
-                "normal": [0.0, -1.0, 0.0],
-                "anchor": [_mm(px), _mm(py), _mm(cut_z_m)],
-            }
-        ],
-        "camera": {
-            "target": cad_mm_to_gltf_m((_mm(px), _mm(py), 0.0)),
-            "position": cad_mm_to_gltf_m((_mm(px), _mm(py), _mm(30.0))),
-            "up": [0.0, 0.0, -1.0],
-            "orthoFit": [half_x_m, half_y_m],
-        },
-    }
-
-
-def _plan_corner_scene(doc: dict, spec: dict) -> dict:
-    wall = next(item for item in doc["walls"] if item["id"] == spec["related"])
-    px, py = _end_m(wall, spec["end"])
-    return _plan_scene(f"plan-{spec['id']}", px, py, PLAN_HALF_M, PLAN_HALF_M)
-
-
-def _plan_overview_scene(doc: dict) -> dict:
-    x0, y0, _z0, x1, y1, _z1 = _bounds_mm(doc)
-    pad = 1000.0
-    return _plan_scene(
-        "plan",
-        ((x0 + x1) / 2.0) / MM,
-        ((y0 + y1) / 2.0) / MM,
-        ((x1 - x0) / 2.0 + pad) / MM,
-        ((y1 - y0) / 2.0 + pad) / MM,
-    )
-
-
-def _room_scene(
-    scene_id: str,
-    eye: tuple[float, float, float],
-    target: tuple[float, float, float],
-    fov: float,
-    title: dict,
-) -> dict:
-    """Perspective inside room 1.02. Eye and target are storey metres."""
-    return {
-        "id": scene_id,
-        "hFovDeg": fov,
-        "title": title,
+        "id": KITCHEN_SCENE,
+        "hFovDeg": 52,
+        "title": {"en": "Living room toward the kitchen", "cs": "Obývák ke kuchyni"},
         "project": "RD Šíma 1.NP",
         "camera": {
             "target": cad_mm_to_gltf_m(tuple(_mm(v) for v in target)),
@@ -1722,84 +1528,16 @@ def _room_scene(
     }
 
 
-# Same three glances as the owner's SketchUp views.
-# kitchen-living: standing in the kitchen, looking east toward the sofa.
-# living-kitchen: standing by the sofa, looking west; glass is on the left.
-# kitchen-run: looking north at the cabinet wall; tall units on the left.
-FURNITURE_VIEWS = (
-    {
-        "id": "kitchen-living",
-        "eye": (19.3, 12.0, 1.55),
-        "target": (27.2, 13.6, 0.95),
-        "hFovDeg": 52,
-        "title": {"en": "Kitchen toward the living room", "cs": "Kuchyň k obýváku"},
-    },
-    {
-        "id": "living-kitchen",
-        "eye": (28.9, 10.7, 1.55),
-        "target": (21.2, 14.2, 1.05),
-        "hFovDeg": 52,
-        "title": {"en": "Living room toward the kitchen", "cs": "Obývák ke kuchyni"},
-    },
-    {
-        "id": "kitchen-run",
-        "eye": (22.7, 12.35, 1.55),
-        "target": (20.2, 15.35, 1.25),
-        "hFovDeg": 50,
-        "title": {"en": "Kitchen cabinet wall", "cs": "Kuchyňská linka"},
-    },
-    {
-        # Island top from the west aisle: the hob (SF-I600b) and the sink
-        # (SF-I500a) cut into the Silestone (kitchen-cabinets.md).
-        "id": "kitchen-island",
-        "eye": (19.75, 11.55, 1.85),
-        "target": (20.95, 12.75, 0.9),
-        "hFovDeg": 55,
-        "title": {"en": "Island: hob and sink", "cs": "Ostrov: varná deska a dřez"},
-    },
-    {
-        # The north dining wall: the oak bases and the Silestone backsplash.
-        "id": "dining-wall",
-        "eye": (24.0, 11.4, 1.7),
-        "target": (24.0, 15.4, 1.2),
-        "hFovDeg": 70,
-        "title": {"en": "Dining wall backsplash", "cs": "Obklad stěny u jídelny"},
-    },
-    {
-        "id": "living-terrace",
-        "eye": (22.9, 10.55, 1.55),
-        "target": (27.0, 14.3, 1.05),
-        "hFovDeg": 70,
-        "title": {"en": "Living room from the terrace", "cs": "Obývák od terasy"},
-    },
-)
+def _pick(found: list[dict], scene_id: str) -> dict:
+    return next(scene for scene in found if scene["id"] == scene_id)
 
 
 def scenes() -> list[dict]:
-    doc = load_document()
     return [
-        _overview_scene(doc),
-        _opening_scene(doc),
-        _posts_scene(doc),
-        *(_corner_scene(doc, spec) for spec in CORNER_VIEWS),
-        _plan_overview_scene(doc),
-        *(_plan_corner_scene(doc, spec) for spec in CORNER_VIEWS),
-        *(
-            _room_scene(spec["id"], spec["eye"], spec["target"], spec["hFovDeg"], spec["title"])
-            for spec in FURNITURE_VIEWS
-        ),
-        _plan_scene(
-            "living-plan",
-            (ROOM_X0 + ROOM_X1) / 2.0,
-            (ROOM_Y0 + ROOM_Y1) / 2.0,
-            (ROOM_X1 - ROOM_X0) / 2.0 + 0.7,
-            (ROOM_Y1 - ROOM_Y0) / 2.0 + 0.55,
-            2.0,
-        ),
-        *bathroom_scenes(),
-        *bathroom_107_scenes(),
+        _kitchen_scene(),
+        _pick(bathroom_scenes(), BATHROOM_120_SCENE),
+        _pick(bathroom_107_scenes(), BATHROOM_107_SCENE),
         *bedroom_111_scenes(),
-        *electrical_rooms_scenes(),
     ]
 
 

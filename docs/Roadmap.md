@@ -6,7 +6,7 @@ None of these is scheduled. When one starts, link its PR here and move it to Don
 
 1. **Merge the visibility layers with the IFC groups.** The viewer's layer sliders (part groups such as Electrical › switch, sensor, outlet, actuator, cables) and the IFC inspector's groups become one tree.
 2. **Merge edit mode with the IFC inspector.** One panel to inspect, select and edit an element ([electrical/EditMode.md](electrical/EditMode.md), [electrical/CableRoutes.md](electrical/CableRoutes.md)).
-3. **Remove unused scenes and features** from the viewer and the model modules.
+3. **Remove unused scenes and features** from the viewer and the model modules. Partly done: the ground floor keeps one scene per detailed room (scenes-cleanup PR, [design/ground-floor.md](design/ground-floor.md#scenes)). The standalone models' scenes and unused viewer features remain.
 4. **Remove unused models** (`models/`, `docs/models/`, the hub).
 5. **Refactor and clean up the codebase.**
 
