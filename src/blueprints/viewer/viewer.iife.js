@@ -5941,6 +5941,7 @@ canvas {
     -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4);
     border-top: 1px solid rgba(255,255,255,0.12); border-radius: 14px 14px 0 0;
     font-size: 14px; }
+  .edit-panel[hidden] { display: none; }
   .edit-panel.is-collapsed { height: auto; max-height: 52vh; }
   .edit-panel.is-collapsed .edit-search, .edit-panel.is-collapsed .edit-table-wrap { display: none; }
   @media (min-width: 768px) {
