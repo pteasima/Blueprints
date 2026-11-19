@@ -44,7 +44,7 @@ import {
   setEdgeOverlayResolution,
   syncEdgeOverlays,
 } from "./edges.js";
-import { createDepthPeelRenderer } from "./depthPeel.js";
+import { createDepthPeelRenderer, isSeeThroughOpacity } from "./depthPeel.js";
 import { createRealistic } from "./realistic.js";
 import { createMeasureTool } from "./measure.js";
 import { createWalkMode } from "./walkMode.js";
@@ -2753,7 +2753,10 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       if (name === CABLE_LEAF) continue;
       // An on-demand layer that is off (or not in yet) has nothing to fade.
       if (lazyLayers.has(name) && (o <= 1e-4 || lazyLayers.get(name)?.state !== "loaded")) continue;
-      if (o < 1 - 1e-4) return true;
+      // A part at 0% is hidden (visible = false), not see-through; it needs
+      // no peel. Counting it sent every "hide this layer" view down the peel
+      // path, whose still frame lost the Realistic floor (Petr, 2026-11-19).
+      if (isSeeThroughOpacity(o)) return true;
     }
     return false;
   }
