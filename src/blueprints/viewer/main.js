@@ -72,6 +72,7 @@ import {
 } from "./homeLive.js";
 import { mountIfcInspector } from "./ifcInspector.js";
 import { createVisibility } from "./ifcHide.js";
+import { hiddenForRoom, pickRoom, roomAt, worldToPlan } from "./roomIsolate.js";
 import {
   IFC_LOCK_PREFIX,
   clearVisibility,
@@ -1892,6 +1893,15 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
    * @type {Set<string>}
    */
   let extraHiddenGlobalIds = new Set();
+  /**
+   * Meshes with no IFC element that room isolate hides by position (the
+   * bathroom tiles, grout and fixtures until they carry IFC ids), and the
+   * ones applyInspectorVisibility last flagged.
+   * @type {Set<THREE.Object3D>}
+   */
+  let looseHiddenMeshes = new Set();
+  /** @type {Set<THREE.Object3D>} */
+  let looseHiddenApplied = new Set();
   /** Bumped whenever applyInspectorVisibility runs (content signature). */
   let visibilitySigRevision = 0;
   /** Hooks that add to the saved state / reset (room isolate). */
@@ -3017,6 +3027,14 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       toggleLock: (id) => toggleLock(id),
       lockedLeaves: () => [...lockedLeaves],
       elementLocked: (globalId) => elementLocked(globalId),
+      /** Room isolate (roomIsolate.js). */
+      room: () => ({
+        space: currentRoom?.space || null,
+        isolate: roomIsolateOn,
+        hidden: extraHiddenGlobalIds.size,
+        looseHidden: looseHiddenApplied.size,
+      }),
+      setRoomIsolate: (on) => setRoomIsolate(on),
       /** Same as the inspector row menu's "Hide all others". */
       hideOthers: (globalId) => {
         ifcVisibility.hideOthers(globalId);
@@ -3092,6 +3110,170 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     },
   });
   ifcUiRef = ifcUi;
+
+  // ---- Room isolate (roomIsolate.js; docs/viewer/RoomIsolate.md) ----
+  // Petr, 2026-11-19: "Proceed on "hide/show other rooms" shortcut. Either
+  // based on camera position or camera target." A chip in the top bar names
+  // the room the view is in and toggles "Only this room" / "Show all rooms".
+  const roomRecords = Array.isArray(options.ifc?.rooms) ? options.ifc.rooms : [];
+  /** yaml space id → IFC name ("1.11 Ložnice"). */
+  const roomNames = new Map();
+  for (const el of Object.values(ifcIndex.elements || {})) {
+    if (el?.type === "IfcSpace" && el.id) roomNames.set(el.id, el.name || el.id);
+  }
+  let roomIsolateOn = false;
+  /** @type {object | null} */
+  let currentRoom = null;
+  /** Last pick, applied once two checks in a row agree (debounce). */
+  let pendingRoomId = null;
+  let roomCheckAt = 0;
+  let roomCamDirty = true;
+  /** @type {Map<string, number[] | null>} plan centre per GlobalId */
+  const roomCentreCache = new Map();
+  const roomCentreBox = new THREE.Box3();
+  const roomMeshBox = new THREE.Box3();
+  const roomCentreVec = new THREE.Vector3();
+  const roomRaycaster = new THREE.Raycaster();
+
+  function roomCentreOf(globalId) {
+    if (roomCentreCache.has(globalId)) return roomCentreCache.get(globalId);
+    const element = ifcIndex.elements?.[globalId];
+    const meshes = element?.id ? meshesByKey.get(element.id) || [] : [];
+    roomCentreBox.makeEmpty();
+    for (const mesh of meshes) {
+      if (!mesh.geometry) continue;
+      if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
+      roomMeshBox.copy(mesh.geometry.boundingBox).applyMatrix4(mesh.matrixWorld);
+      roomCentreBox.union(roomMeshBox);
+    }
+    const out = roomCentreBox.isEmpty() ? null : worldToPlan(roomCentreBox.getCenter(roomCentreVec));
+    roomCentreCache.set(globalId, out);
+    return out;
+  }
+
+  /** Plan point of the first drawn surface under the screen centre. */
+  function roomCentreHit() {
+    if (!root) return null;
+    roomRaycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+    for (const hit of roomRaycaster.intersectObject(root, true)) {
+      if (isRenderedHit(hit)) return worldToPlan(hit.point);
+    }
+    return null;
+  }
+
+  const roomChip = document.createElement("div");
+  roomChip.id = "room-chip";
+  roomChip.className = "room-chip";
+  roomChip.hidden = true;
+  const roomChipName = document.createElement("span");
+  roomChipName.className = "room-chip-name";
+  const roomChipToggle = document.createElement("button");
+  roomChipToggle.type = "button";
+  roomChipToggle.className = "room-chip-toggle";
+  roomChipToggle.addEventListener("click", () => setRoomIsolate(!roomIsolateOn));
+  roomChip.append(roomChipName, roomChipToggle);
+  document.querySelector("#top-chrome .top-chrome-start")?.append(roomChip);
+
+  function syncRoomChip() {
+    roomChip.hidden = !root || !roomRecords.length || !currentRoom;
+    if (!currentRoom) return;
+    roomChipName.textContent = roomNames.get(currentRoom.space) || currentRoom.name || currentRoom.space;
+    roomChipToggle.textContent = tr(roomIsolateOn ? "ui.showAllRooms" : "ui.onlyThisRoom");
+    roomChipToggle.setAttribute("aria-pressed", roomIsolateOn ? "true" : "false");
+    roomChip.classList.toggle("is-active", roomIsolateOn);
+  }
+
+  /** @type {Map<THREE.Object3D, number[] | null>} */
+  const looseCentreCache = new Map();
+  /** Meshes on no IFC element whose plan centre is outside `room`. */
+  function looseMeshesOutside(room) {
+    const keyed = new Set();
+    for (const meshes of meshesByKey.values()) for (const m of meshes) keyed.add(m);
+    /** @type {Set<THREE.Object3D>} */
+    const out = new Set();
+    for (const meshes of parts.values()) {
+      for (const mesh of meshes) {
+        if (keyed.has(mesh)) continue;
+        let c = looseCentreCache.get(mesh);
+        if (c === undefined) {
+          c = null;
+          if (mesh.geometry) {
+            if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
+            roomMeshBox.copy(mesh.geometry.boundingBox).applyMatrix4(mesh.matrixWorld);
+            c = worldToPlan(roomMeshBox.getCenter(roomCentreVec));
+          }
+          looseCentreCache.set(mesh, c);
+        }
+        if (c && !roomAt([room], c[0], c[1])) out.add(mesh);
+      }
+    }
+    return out;
+  }
+
+  function applyRoomIsolate() {
+    const on = roomIsolateOn && currentRoom;
+    extraHiddenGlobalIds = on ? hiddenForRoom(ifcIndex, currentRoom, roomCentreOf) : new Set();
+    looseHiddenMeshes = on ? looseMeshesOutside(currentRoom) : new Set();
+    applyInspectorVisibility();
+  }
+
+  function setRoomIsolate(on) {
+    roomIsolateOn = Boolean(on);
+    if (roomIsolateOn && !currentRoom) trackRoom(performance.now(), true);
+    applyRoomIsolate();
+    syncRoomChip();
+  }
+
+  /**
+   * Which room the view is in, every 250 ms while the camera moves. Walk
+   * mode uses the eye; orbit uses the target, then the screen-centre hit,
+   * then the nearest room. A new room takes over once two checks agree.
+   */
+  function trackRoom(now, force = false) {
+    if (!root || !roomRecords.length) return;
+    if (!force && (now - roomCheckAt < 250 || !roomCamDirty)) return;
+    roomCheckAt = now;
+    roomCamDirty = false;
+    const picked = pickRoom(roomRecords, {
+      walk: Boolean(walk?.active),
+      eye: worldToPlan(camera.position),
+      target: worldToPlan(controls.target),
+      centreHit: roomCentreHit,
+    });
+    const id = picked?.room.space || null;
+    if (!force && id !== pendingRoomId) {
+      pendingRoomId = id;
+      roomCamDirty = true; // look again next check
+      return;
+    }
+    pendingRoomId = id;
+    if (id === (currentRoom?.space || null)) return;
+    currentRoom = picked?.room || null;
+    if (roomIsolateOn) applyRoomIsolate();
+    syncRoomChip();
+  }
+
+  onLocaleChange(() => syncRoomChip());
+  visibilityExtras.push({
+    collect(state) {
+      state.roomIsolate = roomIsolateOn;
+    },
+    restore(saved) {
+      roomIsolateOn = Boolean(saved.roomIsolate) && roomRecords.length > 0;
+      if (roomIsolateOn && root) {
+        trackRoom(performance.now(), true);
+        extraHiddenGlobalIds = currentRoom ? hiddenForRoom(ifcIndex, currentRoom, roomCentreOf) : new Set();
+        looseHiddenMeshes = currentRoom ? looseMeshesOutside(currentRoom) : new Set();
+      }
+      syncRoomChip();
+    },
+    reset() {
+      roomIsolateOn = false;
+      extraHiddenGlobalIds = new Set();
+      looseHiddenMeshes = new Set();
+      syncRoomChip();
+    },
+  });
 
   function elementFromMesh(obj) {
     let node = obj;
@@ -3302,6 +3484,14 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
           }
         }
       }
+    }
+    // Meshes with no IFC element (room isolate decides them by position).
+    for (const mesh of looseHiddenApplied) mesh.userData.bpIfcHidden = false;
+    looseHiddenApplied = new Set();
+    for (const mesh of looseHiddenMeshes) {
+      if (lockedLeaves.has(mesh.userData.bpPart)) continue;
+      mesh.userData.bpIfcHidden = true;
+      looseHiddenApplied.add(mesh);
     }
     for (const binding of doorCtrl.bindings) {
       // A linkage moves several parts; each hides with its own element.
@@ -4009,6 +4199,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       controls.target.distanceToSquared(peelCamTarget) > 1e-8;
     peelCamPos.copy(camera.position);
     peelCamTarget.copy(controls.target);
+    if (camMoved) roomCamDirty = true;
+    trackRoom(now);
 
     const contentNow = readContentSig();
     const contentChanged = contentNow !== contentSig;

@@ -15,7 +15,7 @@ The viewer keeps one `localStorage` entry per model, `blueprints.visibility.<mod
 - every Parts leaf's opacity (cables and on-demand layers such as Gridfinity included), the leaves detached from their group slider, and the group sliders' last values;
 - the locks;
 - the IFC inspector's hides ("Hide", "Hide all others");
-- the room isolate (once that lands).
+- the room isolate ([RoomIsolate.md](RoomIsolate.md)).
 
 It is written a moment after each change and on page hide, and put back when the model loads. Nothing goes into the URL. An explicit `?cables=1` / `?cables=0` / `?gridfinity=1` still wins on load, and `?scene=` still applies its scene on top. A different viewer version that changes the shape bumps `v` and the old entry is ignored.
 

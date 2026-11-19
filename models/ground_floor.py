@@ -1612,7 +1612,15 @@ def ifc_index() -> dict:
             # Edit-mode overrides touch only the fixture ids they name, so
             # every document goes through them (docs/electrical/EditMode.md).
             docs.append(load_fixture_document(path))
-    return index_documents(docs, transform=kitchen_ifc.apply)
+    index = index_documents(docs, transform=kitchen_ifc.apply)
+    # Room floor outlines for the viewer's room isolate; no IFC geometry
+    # (models/ground_floor_rooms.py, docs/viewer/RoomIsolate.md).
+    from ground_floor_rooms import outlines as room_outlines
+
+    index["rooms"] = room_outlines(
+        [SOURCE_PATH, FURNISHINGS_PATH, BEDROOM, BATH_120, BATH_107, *electrical_room_paths()]
+    )["rooms"]
+    return index
 
 
 if __name__ == "__main__":
