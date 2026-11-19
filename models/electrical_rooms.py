@@ -157,7 +157,8 @@ def _top(doc: dict) -> float:
 
 # Clear height per room, from the ground-floor.yaml header (heights-notes.txt,
 # column s.v.). A plan cut above the ceiling shows the slab instead of the
-# room, so the cut stops at the ceiling; gutter strips higher up are cut off
+# room, so the cut stops 5 mm under the ceiling (a cut exactly on the ceiling
+# plane let the slab hide ceiling lights from taps); gutter strips higher up are cut off
 # there (the PNG preview in docs/previews/electrical shows them). 1.02 has a
 # sloped ceiling and is cut above its highest device.
 CEILING_M = {
@@ -182,7 +183,7 @@ def scenes() -> list[dict]:
         x0, y0, x1, y1 = box
         cut_z = max(2.6, _top(doc) + 0.05)
         if room in CEILING_M:
-            cut_z = min(cut_z, CEILING_M[room])
+            cut_z = min(cut_z, CEILING_M[room] - 0.005)
         cx, cy = (x0 + x1) / 2.0, (y0 + y1) / 2.0
         half_x = max((x1 - x0) / 2.0 + 0.8, 1.6)
         half_y = max((y1 - y0) / 2.0 + 0.8, 1.6)
