@@ -82,6 +82,7 @@ import {
   switchTargetCenters,
 } from "./tapTargets.js";
 import { createEditMode } from "./editMode.js";
+import { createFixtureModels } from "./fixtureModels.js";
 import { identityOf, meshIdentity, nodeKeyMap } from "./meshIdentity.js";
 import { attachPivotNav } from "./pivotNav.js";
 import { cadMmToGltf, createAnnotations } from "./annotations.js";
@@ -123,8 +124,28 @@ function writeSceneQuery(sceneId) {
 /**
  * @param {HTMLCanvasElement} canvas
  * @param {ArrayBuffer} glbBuffer
- * @param {{ scenes?: object[], scene?: string, partGroups?: object[], doors?: object[], windows?: object[], ifc?: object, modelId?: string, materialsUrl?: string, materialsText?: string, fixtureAssets?: object[] }} [options]
+ * @param {{ scenes?: object[], scene?: string, partGroups?: object[], doors?: object[], windows?: object[], ifc?: object, modelId?: string, materialsUrl?: string, materialsText?: string, fixtureAssets?: object[], fixtureModelsUrl?: string }} [options]
  */
+/** Layer leaf id of the cable routes (under the "electrical" group). */
+const CABLE_LEAF = "cables";
+
+/** The part groups with the cable leaf added under "electrical" (else it lands in "other"). */
+function withCableLeaf(groups) {
+  const src = Array.isArray(groups) ? groups : [];
+  let placed = false;
+  const walk = (nodes) =>
+    nodes.map((node) => {
+      if (!node || typeof node !== "object") return node;
+      const children = walk(node.children || []);
+      if (node.id === "electrical" && !placed) {
+        placed = true;
+        return { ...node, children: [...children, CABLE_LEAF] };
+      }
+      return { ...node, children };
+    });
+  return walk(src);
+}
+
 export function mountViewer(canvas, glbBuffer, options = {}) {
   /** Custom named scenes (model-specific); shown alongside Iso/Front/Side/Top. */
   const customScenes = Array.isArray(options.scenes) ? options.scenes : [];
@@ -166,6 +187,22 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   const partOpacity = new Map();
   /** Last non-zero opacity per leaf (for tap-toggle). */
   const partLastNonZero = new Map();
+  // Cable routes (docs/electrical/CableRoutes.md): a layer leaf under
+  // Electrical with no meshes of its own; cables.js draws them. Hidden by
+  // default (Petr, 2026-11-19: "make cables a layer under "electrical",
+  // hidden by default but I can show them without going to edit"); views and
+  // scenes leave it alone, and ?cables=1 starts with it on.
+  const hasCables = Array.isArray(options.cables?.routes) && options.cables.routes.length > 0;
+  if (hasCables) {
+    let on = false;
+    try {
+      on = new URLSearchParams(window.location.search).get("cables") === "1";
+    } catch {
+      on = false;
+    }
+    partOpacity.set(CABLE_LEAF, on ? 1 : 0);
+    partLastNonZero.set(CABLE_LEAF, 1);
+  }
   /** Last opacity written via a group slider (when children diverge). */
   const groupSliderOpacity = new Map();
   /**
@@ -269,6 +306,24 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   const feedback = createFeedbackLayer({ canvas, getCamera: () => camera });
   /** Debugging: `blueprintsFeedback.showFeedback({ worldPos: [x, y, z], kind: "switch", direction: "up" })`. */
   window.blueprintsFeedback = feedback;
+  /**
+   * Real fixture models instead of boxes (fixtureModels.js,
+   * docs/electrical/FixtureModels.md). Off without `fixtureModelsUrl`.
+   */
+  const fixtureModels = createFixtureModels({
+    baseUrl: options.fixtureModelsUrl || "",
+    elements: () => Object.values(ifcIndex.elements || {}),
+    meshesForElement: (element) => meshesForElement(element),
+    onChange: () => {
+      if (!root) return;
+      // A model arrived: put it in the current mode, then redraw.
+      fixtureModels.sync(materialMode, lockedClipPlanes());
+      refreshEdges();
+      syncSectionCaps(parts, lockedClipPlanes());
+      viewDirty = true;
+      realisticCtl?.stage.markDirty();
+    },
+  });
   const lightOn = new Map();
   const windowOpen = new Map();
   /** Pane slide animation per window (windows.js). */
@@ -483,6 +538,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       ensureDraftCut();
       buildCutUI();
       refreshMaterials();
+      // Real fixture models (fixtureModels.js); boxes until they arrive.
+      void fixtureModels.install();
       if (initialSpec) applyScene(initialSpec);
       syncSceneUrl();
       chromeApi?.refreshPartialHeight();
@@ -1252,6 +1309,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       renderer.toneMapping = THREE.NoToneMapping;
       renderer.toneMappingExposure = 1;
     }
+    // Before edges and caps: a box a model stands in for gets neither.
+    fixtureModels.sync(materialMode, lockedClipPlanes());
     refreshEdges();
     syncSectionCaps(parts, lockedClipPlanes());
     if (materialMode === MODE_REALISTIC) realisticCtl?.afterRefresh();
@@ -1437,7 +1496,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       return;
     }
 
-    const leafIds = collectLeafIds(node);
+    // The cable layer is not driven by its group's slider.
+    const leafIds = collectLeafIds(node).filter((id) => id !== CABLE_LEAF);
     const groupWrap = document.createElement("div");
     groupWrap.className = "part-group";
     groupWrap.dataset.group = node.id;
@@ -1523,7 +1583,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
 
     const childParent = { groupId: node.id, leafIds };
     for (const child of node.children) {
-      appendOutlineNode(child, children, depth + 1, childParent);
+      appendOutlineNode(child, children, depth + 1, child.id === CABLE_LEAF ? null : childParent);
     }
 
     // Restore expand state if rebuilding; default collapsed.
@@ -1546,7 +1606,9 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       if (!partLastNonZero.has(name)) partLastNonZero.set(name, 1);
     }
 
-    const outline = resolvePartOutline(parts.keys(), partGroups, tr);
+    const outline = hasCables
+      ? resolvePartOutline([...parts.keys(), CABLE_LEAF], withCableLeaf(partGroups), tr)
+      : resolvePartOutline(parts.keys(), partGroups, tr);
     partOutline = outline;
     for (const node of outline) {
       appendOutlineNode(node, host, 0, null);
@@ -2529,6 +2591,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   // Public hook for future agent-driven features (flyover, blink, …).
   const api = {
     scene,
+    /** Real fixture models (fixtureModels.js). */
+    fixtureModels,
     get camera() {
       return camera;
     },
@@ -2563,7 +2627,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   window.BlueprintsViewer = api;
 
   function anyPartFaded() {
-    for (const o of partOpacity.values()) {
+    for (const [name, o] of partOpacity) {
+      if (name === CABLE_LEAF) continue;
       if (o < 1 - 1e-4) return true;
     }
     return false;
@@ -2746,6 +2811,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
 
   function startPulse(meshes) {
     if (pulse) finishPulse();
+    meshes = [...meshes, ...fixtureModels.displayMeshesForMeshes(meshes)];
     const clones = [];
     for (const mesh of meshes) {
       if (!mesh.isMesh || !mesh.material) continue;
@@ -2879,6 +2945,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         return mat;
       });
     }
+    // A real model glows only in its diffuser.
+    fixtureModels.setLightLook(element, restore ? null : { on, color: target.clone(), level });
     viewDirty = true;
   }
 
@@ -3010,6 +3078,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         c.addScaledVector(right, (side * Math.max(size.x, size.z)) / 4);
       }
     }
+    if (fixtureModels.press(element, target)) viewDirty = true;
     feedback.showFeedback({ worldPos: c, kind: "switch", direction: target.position, haptic });
   }
 
@@ -3148,6 +3217,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   }
 
   function pressSwitch(element) {
+    // A real model tips its rocker instead (fixtureModels.press).
+    if (fixtureModels.placedFor(element)?.holder.visible) return;
     for (const mesh of meshesForElement(element)) {
       if (mesh.userData.bpPressing) continue;
       mesh.userData.bpPressing = true;
@@ -3482,6 +3553,10 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       realisticCtl?.stage.markDirty();
     }
     stepPulse(now);
+    if (fixtureModels.step(now)) {
+      viewDirty = true;
+      realisticCtl?.stage.markDirty();
+    }
     stepCamFly(now);
     stepFrameAnim(now);
     if (walk?.active) {
@@ -3590,6 +3665,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     },
     onLayout: () => applySafeViewOffset(true),
     t: tr,
+    cablesLayer: () => hasCables && (partOpacity.get(CABLE_LEAF) ?? 0) > 1e-3,
+    cables: options.cables && typeof options.cables === "object" ? options.cables : null,
   });
   if (root) editMode.showButton(editMode.hasFixtures());
   onLocaleChange(() => editMode?.refreshLocale());

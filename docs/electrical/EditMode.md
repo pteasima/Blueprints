@@ -11,7 +11,9 @@ Source: Petr, 2026-11-19 (Cody chat): "I need an edit mode where I can drag repl
 5. The selected fixture gets an orange outline and three arrows. Red is x (east), blue is y (the blue arrow points south, toward −y), and green is z (up). Drag an arrow to move the fixture along that axis. The move snaps to **1 cm**, **1 mm**, or **Off**. The x/y/z fields show the position in house metres (the YAML `Origin` x, y and `Elevation`). Type a value, or step with − and +. Hold − or + to repeat: after 400 ms it steps every 110 ms, after 1.2 s the step is 5× the snap step and after 2.4 s 10× (1 cm → 5 cm → 10 cm at the 1 cm snap), faster each time; it stops when the finger lifts, slides off, or the system cancels the touch. A long press on any panel button does not select its text or open the iOS callout (Petr, 2026-11-19: "I need to long press those position buttons to move faster (right now it selects the text on the button)").
 6. **To wall** pushes a wall device back onto its wall (behind its face, up to 80 cm). A fixture without a wall direction goes to the nearest surface along ±x, ±y or up.
 7. **Cable schedule** edits Číslo kabelu, Zařízení, Specifikace, Délka, Rozvaděč and Poznámka for the fixture. **Add copy on cable** places a copy of the fixture 10 cm along its wall, with id `C<cable>-<code>-<n>` (see [Naming.md](Naming.md)). **Delete** hides the fixture and marks it for removal, and **Restore** brings it back. **Revert** drops every edit on that fixture.
-8. **Export** shows the edits as JSON. **Share** opens the native share sheet with the file `FixtureEdits-YYYYMMDD-HHMM.json` (`application/json`), so it can go straight to Cody (Petr, 2026-11-19: "can you let me share it with the native share dialog? Ill send it straight to you."). A browser that cannot share files gets the JSON as text instead, and one without the share sheet shows no Share button. **Copy** puts the JSON on the clipboard, and **Download** saves the same file. **Discard all** clears every edit on this device.
+8. **Export** shows the edits as JSON. **Share** opens the native share sheet with the JSON itself as text, compact (one line) and with no title, so it can go straight to Cody in a chat app (Petr, 2026-11-19: "can you let me share it with the native share dialog? Ill send it straight to you."). The first version shared a `.json` file with a title, and on Petr's iPhone the Grok Bot app received only the title, so text is now the default. **Share file** (shown only where the browser can share files) sends `FixtureEdits-YYYYMMDD-HHMM.json` (`application/json`) for apps that take attachments. Without a share sheet neither Share button shows. **Copy** puts the JSON on the clipboard, and **Download** saves the same file. **Discard all** clears every edit on this device.
+
+9. The **Cables** tab edits the cable routes: select a route, then slide a segment or move a vertex with the same arrows, fields and − / + ([CableRoutes.md](CableRoutes.md#editing-in-the-viewer)).
 
 Edits stay in the browser's `localStorage` (`blueprints.fixtureEdits.<model>`). They show in the model outside edit mode too, and they survive a reload. Nothing reaches the repo until a bot commits the export.
 
@@ -24,7 +26,7 @@ viewer edits ─▶ localStorage ─▶ Export JSON ─▶ Cody
   ─▶ python -m blueprints.export ground_floor ─▶ GLB, ifc.json, plans
 ```
 
-1. Save Petr's shared `FixtureEdits-….json` (or pasted JSON) as a file and run `python -m blueprints.fixture_overrides merge <file>`. That rewrites `inputs/ground_floor/fixture_overrides.json` and prints the merged entry of every fixture in the patch.
+1. Save Petr's shared JSON (the one-line text from Share, or a `FixtureEdits-….json` file) as a file and run `python -m blueprints.fixture_overrides merge <file>`. That rewrites `inputs/ground_floor/fixture_overrides.json` and prints the merged entry of every fixture in the patch.
 2. Re-export the model (`python -m blueprints.export ground_floor`) and open a PR with the overrides file and the exports, as for any model change.
 3. After the deploy, the viewer compares each saved edit with the new model. An edit whose target position, schedule values, addition or deletion the model now has is dropped from `localStorage`, so it is not applied twice. If the model moved a fixture somewhere else in the meantime, Petr's absolute target still wins.
 
@@ -32,19 +34,24 @@ Every room device YAML is loaded through `blueprints.fixture_overrides.load_fixt
 
 ## Overrides file
 
-`inputs/ground_floor/fixture_overrides.json`, keyed by the YAML `id`. Version 1:
+`inputs/ground_floor/fixture_overrides.json`, fixtures keyed by the YAML `id`, cable routes by the route id of `inputs/ground_floor/cable-routes.yaml`. Version 2:
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "fixtures": {
     "C10-V": { "Origin": [0.45, 8.2355], "Elevation": 1.3145, "CableLength": 9 },
     "C7-S": { "Move": [0.0, 0.05, 0.0] },
     "SOCK-N2": { "delete": true },
     "C10-V-1": { "add": { "list": "switchingDevices", "id": "C10-V-1", "ContainedInStructure": "SP-1.11", "Origin": [0.45, 8.1], "Elevation": 1.3145, "...": "..." } }
+  },
+  "cables": {
+    "C10": { "points": [[6.335, 10.055, 2.1], [6.335, 10.055, 2.56], "...", [0.45, 8.2355, 1.35]] }
   }
 }
 ```
+
+Version 1 (PR 119) is the same without `cables`. Files and exports in version 1 are still read, and the viewer still loads version 1 edits from `localStorage`.
 
 | Key | Meaning |
 | --- | --- |
@@ -55,6 +62,7 @@ Every room device YAML is loaded through `blueprints.fixture_overrides.load_fixt
 | `list` | Moves the element to another yaml-ifc list (for example `sensors`). |
 | `delete: true` | Drops the element. |
 | `add: {…}` | A whole new YAML element plus its `list`. It lands in the document whose `spaces` define its `ContainedInStructure`. |
+| `cables.<route>.points` | The whole route polyline, absolute house metres. `merge` replaces the route; `{"reset": true}` in a patch removes it. Applied by `blueprints.cable_routes` ([CableRoutes.md](CableRoutes.md)). |
 
 ### Why a layer over the YAML
 

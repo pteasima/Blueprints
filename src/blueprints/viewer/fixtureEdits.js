@@ -47,6 +47,12 @@ export const ABSORBED_M = 0.0015;
 export const STORAGE_PREFIX = "blueprints.fixtureEdits.";
 
 /**
+ * Store and patch format. 2 adds `cables` (cable route edits,
+ * cableEdits.js); a version 1 store from before the cable routes still loads.
+ */
+export const EDITS_VERSION = 2;
+
+/**
  * @param {object | null | undefined} element
  * @param {string} name
  */
@@ -218,7 +224,7 @@ export function dist(a, b) {
  * @param {string} model
  */
 export function emptyStore(model) {
-  return { version: 1, model: String(model || ""), fixtures: {} };
+  return { version: EDITS_VERSION, model: String(model || ""), fixtures: {}, cables: {} };
 }
 
 /**
@@ -230,8 +236,9 @@ export function parseStore(raw, model) {
   if (!raw) return emptyStore(model);
   try {
     const data = JSON.parse(raw);
-    if (!data || data.version !== 1 || typeof data.fixtures !== "object") return emptyStore(model);
-    return { version: 1, model: String(data.model || model || ""), fixtures: { ...data.fixtures } };
+    if (!data || (data.version !== 1 && data.version !== 2) || typeof data.fixtures !== "object") return emptyStore(model);
+    const cables = data.cables && typeof data.cables === "object" ? { ...data.cables } : {};
+    return { version: EDITS_VERSION, model: String(data.model || model || ""), fixtures: { ...data.fixtures }, cables };
   } catch {
     return emptyStore(model);
   }
@@ -314,9 +321,10 @@ function sameValue(a, b) {
  *   relative to the deployed model; merge adds it to any committed Move.
  * - Changed schedule values: the Pset_YamlIfc keys themselves.
  * - `delete: true`, or `add: { ...yaml element }` for a new fixture.
+ * - `cables`: route id → `{ points }`, absolute, from cableEdits.cablePatch.
  * @param {ReturnType<typeof emptyStore>} store
  * @param {Map<string, object>} rowsById
- * @param {{ exportedAt?: string }} [meta]
+ * @param {{ exportedAt?: string, cables?: Record<string, { points: number[][] }> }} [meta]
  */
 export function buildPatch(store, rowsById, meta = {}) {
   const fixtures = {};
@@ -351,10 +359,11 @@ export function buildPatch(store, rowsById, meta = {}) {
     if (Object.keys(out).length) fixtures[id] = out;
   }
   return {
-    version: 1,
+    version: EDITS_VERSION,
     model: store.model,
     exportedAt: meta.exportedAt || new Date().toISOString(),
     fixtures,
+    cables: meta.cables || {},
   };
 }
 

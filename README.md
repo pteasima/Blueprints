@@ -40,6 +40,8 @@ AGENTS.md           # agent operating notes (PNG previews, env)
 .cursor/            # cloud agent environment hints
 ```
 
+Long-term plans: [docs/Roadmap.md](docs/Roadmap.md).
+
 ## Agent workflow
 
 1. Drop source material (DXF + prior Python) under `inputs/`.

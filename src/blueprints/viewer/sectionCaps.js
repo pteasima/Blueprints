@@ -274,7 +274,8 @@ export function syncSectionCaps(partsMap, worldPlanes) {
   const planes = worldPlanes || [];
   const sig = planeSignature(planes);
   for (const [label, meshes] of partsMap) {
-    const list = (meshes || []).filter((mesh) => mesh && !isSectionCap(mesh));
+    // A box a real fixture model stands in for (fixtureModels.js) is not cut.
+    const list = (meshes || []).filter((mesh) => mesh && !isSectionCap(mesh) && !mesh.userData?.bpModelReplaced);
     if (!list.length) continue;
     const visible = list.filter((mesh) => mesh.visible);
     const group = findExistingGroup(list, label);

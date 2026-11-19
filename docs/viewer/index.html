@@ -61,7 +61,7 @@
 </aside>
 <pre id="err"></pre>
 <canvas id="c"></canvas>
-<script src="viewer.iife.js?v=4146aa98aa"></script>
+<script src="viewer.iife.js?v=8a3f8685a3"></script>
 <script>
 (function () {
   const errEl = document.getElementById("err");
@@ -81,6 +81,8 @@
   const partsUrl = "../models/" + encodeURIComponent(id) + ".parts.json";
   const doorsUrl = "../models/" + encodeURIComponent(id) + ".doors.json";
   const windowsUrl = "../models/" + encodeURIComponent(id) + ".windows.json";
+  // Cable routes (python -m blueprints.cable_routes); none for most models.
+  const cablesUrl = "../models/" + encodeURIComponent(id) + ".cables.json";
   const ifcUrl = "../models/" + encodeURIComponent(id) + ".ifc.json";
   function loadJsonArray(url) {
     return fetch(url).then(function (r) {
@@ -114,6 +116,7 @@
     loadJsonArray(doorsUrl),
     loadJsonObject(ifcUrl),
     loadJsonArray(windowsUrl),
+    loadJsonObject(cablesUrl),
   ])
     .then(function (loaded) {
       BlueprintsViewerBundle.mountViewer(canvas, loaded[0], {
@@ -122,9 +125,12 @@
         doors: loaded[3],
         ifc: loaded[4],
         windows: loaded[5],
+        cables: loaded[6],
         modelId: id,
         // Realistic mode fetches this (and its textures) only when chosen.
         materialsUrl: "../materials/catalogue.yaml?v=a54a929717",
+        // Real fixture models (docs/electrical/FixtureModels.md).
+        fixtureModelsUrl: "../models/fixtures/",
       });
     })
     .catch(function (e) {
