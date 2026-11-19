@@ -50,6 +50,11 @@ import { LONG_PRESS_MS, classifyHold } from "./gesture.js";
  *   openSheet: () => void,
  *   actionsFor: (element: object | null) => { id: string, labelKey: string, run: Function }[],
  *   liveLines?: (element: object) => string[],
+ *   locks?: {
+ *     isLocked: (id: string) => boolean,
+ *     isLockedSelf: (id: string) => boolean,
+ *     toggle: (id: string) => void,
+ *   },
  * }} opts
  */
 export function mountIfcInspector(opts) {
@@ -400,6 +405,37 @@ export function mountIfcInspector(opts) {
     text.append(name, meta);
     el.append(text);
 
+    // Padlock badge (visibilityState.js locks): shown only on locked rows;
+    // a row locked by itself unlocks on tap, one locked from above (a
+    // locked storey, group or Parts leaf) is dimmed and inert.
+    if (opts.locks?.isLocked(row.id)) {
+      const self = opts.locks.isLockedSelf(row.id);
+      const lock = document.createElement("button");
+      lock.type = "button";
+      lock.className = `ifc-row-lock${self ? " is-on" : " is-inherited"}`;
+      lock.textContent = "\u{1F512}";
+      lock.disabled = !self;
+      lock.setAttribute("aria-label", opts.t(self ? "ui.unlock" : "ui.lockedByGroup"));
+      lock.title = opts.t(self ? "ui.unlock" : "ui.lockedByGroup");
+      let used = false;
+      const fire = (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        if (!self || used) return;
+        used = true;
+        opts.locks?.toggle(row.id);
+        render();
+      };
+      // touchend: iOS may drop click inside the scrolling sheet (selectRow).
+      lock.addEventListener("touchend", fire);
+      lock.addEventListener("click", fire);
+      for (const type of ["pointerdown", "touchstart"]) {
+        lock.addEventListener(type, (ev) => ev.stopPropagation(), { passive: true });
+      }
+      el.classList.add("is-locked");
+      el.append(lock);
+    }
+
     wireRowGesture(el, row.id);
     return el;
   }
@@ -538,6 +574,14 @@ export function mountIfcInspector(opts) {
       opts.visibility.unhideOthers(id);
       commitVisibility();
     });
+    if (opts.locks && (opts.locks.isLockedSelf(id) || !opts.locks.isLocked(id))) {
+      const self = opts.locks.isLockedSelf(id);
+      addMenuButton(self ? "ui.unlock" : "ui.lock", () => {
+        opts.locks?.toggle(id);
+        closeMenu();
+        render();
+      });
+    }
     placeFloating(menu, x, y);
   }
 

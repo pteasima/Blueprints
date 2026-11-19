@@ -1,19 +1,23 @@
 /**
- * Session-only visibility. Not written to the URL.
+ * Inspector visibility. Not written to the URL; main.js remembers it per
+ * model in localStorage (visibilityState.js) and puts it back on load.
  * Hiding a row hides that element, everything aggregated or contained
  * under it, and the members of a group (a kitchen bay keeps its shared
  * dividers, see ifcTree.subtreeIds). "All others" is every element outside
- * that set.
+ * that set. A locked element (`opts.isLocked`, visibilityState.js) is
+ * never added by hide or hide-others.
  */
 
 import { isGroup, subtreeIds } from "./ifcTree.js";
 
 /**
  * @param {object} index
+ * @param {{ isLocked?: (id: string) => boolean }} [opts]
  */
-export function createVisibility(index) {
+export function createVisibility(index, opts = {}) {
   /** @type {Set<string>} */
   const hidden = new Set();
+  const locked = (id) => Boolean(opts.isLocked?.(id));
 
   function everyId() {
     return Object.keys(index.elements);
@@ -39,6 +43,7 @@ export function createVisibility(index) {
     },
     hide(id) {
       for (const item of subtreeIds(index, id)) {
+        if (locked(item)) continue;
         if (!isGroup(index.elements[item]) || item === id) hidden.add(item);
       }
     },
@@ -48,7 +53,7 @@ export function createVisibility(index) {
     hideOthers(id) {
       const keep = new Set(subtreeIds(index, id));
       for (const item of everyId()) {
-        if (keep.has(item) || isGroup(index.elements[item])) continue;
+        if (keep.has(item) || isGroup(index.elements[item]) || locked(item)) continue;
         hidden.add(item);
       }
     },
@@ -61,6 +66,10 @@ export function createVisibility(index) {
     },
     showAll() {
       hidden.clear();
+    },
+    /** Remembered hides (ids already known to the index). */
+    restore(ids) {
+      for (const id of ids || []) if (index.elements[id]) hidden.add(id);
     },
   };
 }

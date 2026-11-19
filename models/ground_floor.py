@@ -1543,8 +1543,15 @@ def scenes() -> list[dict]:
 
 def part_groups() -> list[dict]:
     return [
+        # Enclosure: walls, windows and doors toggle together; locked by
+        # default so room isolate, scenes and inspector hide-others leave
+        # them standing (Petr, 2026-11-19: "add an 'enclosure' group ...
+        # that includes walls, windows, doors"; "my usecase would be
+        # locking enclosure group and leaving it so forever").
+        # docs/viewer/VisibilityState.md
         {
-            "id": "shell",
+            "id": "enclosure",
+            "locked": True,
             "children": [LABEL_MASONRY, LABEL_GLAZING, LABEL_DOOR],
         },
         {

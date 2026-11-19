@@ -242,6 +242,8 @@ export function resolvePartOutline(availableLabels, groups, labelFn) {
         id: node.id,
         label: t(node.id),
         children: kids,
+        // Locked by default (visibilityState.js defaultLocks).
+        ...(node.locked ? { locked: true } : {}),
       });
     }
     return out;

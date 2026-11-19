@@ -584,6 +584,69 @@ canvas {
   display: none !important;
 }
 
+/* Padlock (visibilityState.js locks; docs/viewer/VisibilityState.md).
+   44 pt target. Open and faint when unlocked, closed and accent-filled
+   when locked, closed and dimmed when a parent group holds the lock. */
+.part-lock {
+  appearance: none;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin: 0 -0.35rem 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0.6rem;
+  background: transparent;
+  color: var(--fg-secondary);
+  opacity: 0.45;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.part-lock:active { background: var(--fill); }
+.part-lock.is-on {
+  color: var(--accent);
+  opacity: 1;
+}
+.part-lock.is-inherited {
+  color: var(--accent);
+  opacity: 0.4;
+  cursor: default;
+}
+/* The wrap still swallows taps (so a locked group row does not fold);
+   only the slider inside ignores them. */
+.part-row.is-locked .part-opacity-wrap {
+  opacity: 0.4;
+}
+.part-row.is-locked .part-opacity-wrap > * {
+  pointer-events: none;
+}
+.part-row.is-locked .part-sync { display: none !important; }
+
+.parts-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.5rem 0 0.15rem;
+}
+.parts-reset {
+  appearance: none;
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border: 0;
+  border-radius: 0.6rem;
+  background: var(--fill);
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.parts-reset:active { background: var(--fill-active); }
+
 .cuts {
   display: flex;
   flex-direction: column;
@@ -834,6 +897,21 @@ canvas {
   cursor: pointer;
 }
 .ifc-row.is-target { background: rgba(10, 132, 255, 0.28); }
+.ifc-row-lock {
+  appearance: none;
+  flex: 0 0 auto;
+  margin-left: auto;
+  min-width: 2.75rem;
+  height: 100%;
+  min-height: 2.75rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 0.95rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.ifc-row-lock.is-inherited { opacity: 0.4; cursor: default; }
 .ifc-row.is-hidden .ifc-row-name {
   opacity: 0.4;
   text-decoration: line-through;
