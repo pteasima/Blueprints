@@ -67,6 +67,13 @@ def main(argv: list[str] | None = None) -> int:
 
         repo = Path(__file__).resolve().parents[2]
         write_viewer_json(repo / "docs" / "models" / f"{model_name}.cables.json")
+    # On-demand viewer layers (ground_floor's Gridfinity baseplates).
+    lazy_layers = meta.get("lazy_layers")
+    if isinstance(lazy_layers, dict):
+        from blueprints.export_utils import write_lazy_layers
+
+        repo = Path(__file__).resolve().parents[2]
+        write_lazy_layers(model_name, lazy_layers, repo / "docs" / "models")
     ifc_fn = getattr(mod, "ifc_index", None)
     ifc_index = ifc_fn() if callable(ifc_fn) else None
     if kind == "section":
