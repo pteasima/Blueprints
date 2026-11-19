@@ -19,9 +19,6 @@ _HUB_HTML = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <title>Blueprints</title>
 <style>
-  /* Solid colours only. Backdrop filters, fixed backgrounds, layered
-     gradients, and large shadows blank this page on iPadOS when Safari's
-     GPU Process DOM Rendering is off. */
   :root {
     color-scheme: light dark;
     --bg: #f4f1ec;
