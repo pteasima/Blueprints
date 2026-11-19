@@ -4,6 +4,25 @@ Source: Petr, 2026-11-19 (Cody chat): "Can you guess the cable routes and add th
 
 The pilot covers **1.11 Ložnice** and **1.12 Pokoj**: 26 Soupis cables in 31 routes. The routes are **guesses** from the house rules below, not a design. Petr corrects them in the viewer's edit mode.
 
+## Status (2026-11-19)
+
+Petr's review of the pilot (PR 126, 2026-11-19): "They're not the exact correct routes but pretty close."
+
+| Rooms | Routes | State |
+| --- | --- | --- |
+| 1.11 Ložnice | 19 (16 cables: 1–5, 7–10, 12–14, 16, 18, 32, 46) | Guessed, reviewed by Petr: close, not exact. Corrections come as edit-mode exports. |
+| 1.12 Pokoj | 12 (10 cables: 33–35, 61, 66, 100, 101, 140–142) | Guessed, reviewed by Petr: close, not exact. |
+| 1.01–1.10, 1.13–1.17, 1.19–1.23 | none | Pending. Fixtures are placed ([Rooms.md](Rooms.md)); routes not guessed yet. |
+| Cables 6, 11 (1.11) | none | Off the plan for now (bedroom YAML header). |
+
+| Board | Where | State |
+| --- | --- | --- |
+| RS-1 (panel 1) | 1.04 Technická místnost, north face of W-024 | Position from FixturePlan.pdf; size and height guessed. |
+| RS-2 (panel 2) | Corridor 1.05, west end, south face of W-022 | Position from FixturePlan.pdf; size and height guessed. |
+| Panel 3, panel 4, irrigation board | East wing (plan squares at about x 34.8 / y 9.9, x 34.7 / y 5.4, x 26.0 / y 4.1) | Not modelled; positions to confirm before routing the east rooms. |
+
+Open questions: [Questions.md](Questions.md#cable-routes-pilot-111-112) (board sizes, cable 9's way to the contact, cables 34, 100, 101 against Soupis, the 61/66 riser).
+
 ## Files
 
 | File | What |
@@ -88,7 +107,7 @@ The flagged ones: 34 (the 1.12 strip; the strip's feed end may be the south end)
 4. **Vertex**: the arrows move one bend; both segments at it follow. Tap a vertex dot of the selected route to pick it. The ends are locked: they belong to the board and the box.
 5. **Insert vertex** splits the selected segment in the middle; **Delete vertex** removes a bend; **Reset route** drops the edits of that route.
 6. Moving a fixture drags the end vertex of every route that ends (or starts) at it; only that last segment changes, as Petr suggested. Cody straightens it after the export.
-7. The **Cables** switch next to the filter hides the layer. Outside edit mode the cables show only with `?cables=1` in the URL, for example `viewer/?m=ground_floor&cables=1`.
+7. Outside edit mode the cables are a layer: **Electrical › cables** in the layers list, off by default. Its slider shows them (any value above 0) without entering edit mode; the Electrical group slider and the views and scenes leave it alone. `?cables=1` in the URL starts with the layer on, for example `viewer/?m=ground_floor&cables=1`. In edit mode the cables show whenever the **Cables** switch next to the filter is on (default), and also when the layer is on.
 
 The cables are drawn after the model, so they show through walls and ceilings; they still hide each other. Colours: blue data (UTP), yellow 24 V light cable, red 230 V, purple boxes the boards.
 

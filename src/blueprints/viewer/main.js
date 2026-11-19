@@ -125,6 +125,26 @@ function writeSceneQuery(sceneId) {
  * @param {ArrayBuffer} glbBuffer
  * @param {{ scenes?: object[], scene?: string, partGroups?: object[], doors?: object[], windows?: object[], ifc?: object, modelId?: string, materialsUrl?: string, materialsText?: string, fixtureAssets?: object[] }} [options]
  */
+/** Layer leaf id of the cable routes (under the "electrical" group). */
+const CABLE_LEAF = "cables";
+
+/** The part groups with the cable leaf added under "electrical" (else it lands in "other"). */
+function withCableLeaf(groups) {
+  const src = Array.isArray(groups) ? groups : [];
+  let placed = false;
+  const walk = (nodes) =>
+    nodes.map((node) => {
+      if (!node || typeof node !== "object") return node;
+      const children = walk(node.children || []);
+      if (node.id === "electrical" && !placed) {
+        placed = true;
+        return { ...node, children: [...children, CABLE_LEAF] };
+      }
+      return { ...node, children };
+    });
+  return walk(src);
+}
+
 export function mountViewer(canvas, glbBuffer, options = {}) {
   /** Custom named scenes (model-specific); shown alongside Iso/Front/Side/Top. */
   const customScenes = Array.isArray(options.scenes) ? options.scenes : [];
@@ -166,6 +186,22 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   const partOpacity = new Map();
   /** Last non-zero opacity per leaf (for tap-toggle). */
   const partLastNonZero = new Map();
+  // Cable routes (docs/electrical/CableRoutes.md): a layer leaf under
+  // Electrical with no meshes of its own; cables.js draws them. Hidden by
+  // default (Petr, 2026-11-19: "make cables a layer under "electrical",
+  // hidden by default but I can show them without going to edit"); views and
+  // scenes leave it alone, and ?cables=1 starts with it on.
+  const hasCables = Array.isArray(options.cables?.routes) && options.cables.routes.length > 0;
+  if (hasCables) {
+    let on = false;
+    try {
+      on = new URLSearchParams(window.location.search).get("cables") === "1";
+    } catch {
+      on = false;
+    }
+    partOpacity.set(CABLE_LEAF, on ? 1 : 0);
+    partLastNonZero.set(CABLE_LEAF, 1);
+  }
   /** Last opacity written via a group slider (when children diverge). */
   const groupSliderOpacity = new Map();
   /**
@@ -1437,7 +1473,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       return;
     }
 
-    const leafIds = collectLeafIds(node);
+    // The cable layer is not driven by its group's slider.
+    const leafIds = collectLeafIds(node).filter((id) => id !== CABLE_LEAF);
     const groupWrap = document.createElement("div");
     groupWrap.className = "part-group";
     groupWrap.dataset.group = node.id;
@@ -1523,7 +1560,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
 
     const childParent = { groupId: node.id, leafIds };
     for (const child of node.children) {
-      appendOutlineNode(child, children, depth + 1, childParent);
+      appendOutlineNode(child, children, depth + 1, child.id === CABLE_LEAF ? null : childParent);
     }
 
     // Restore expand state if rebuilding; default collapsed.
@@ -1546,7 +1583,9 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       if (!partLastNonZero.has(name)) partLastNonZero.set(name, 1);
     }
 
-    const outline = resolvePartOutline(parts.keys(), partGroups, tr);
+    const outline = hasCables
+      ? resolvePartOutline([...parts.keys(), CABLE_LEAF], withCableLeaf(partGroups), tr)
+      : resolvePartOutline(parts.keys(), partGroups, tr);
     partOutline = outline;
     for (const node of outline) {
       appendOutlineNode(node, host, 0, null);
@@ -2563,7 +2602,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   window.BlueprintsViewer = api;
 
   function anyPartFaded() {
-    for (const o of partOpacity.values()) {
+    for (const [name, o] of partOpacity) {
+      if (name === CABLE_LEAF) continue;
       if (o < 1 - 1e-4) return true;
     }
     return false;
@@ -3590,6 +3630,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     },
     onLayout: () => applySafeViewOffset(true),
     t: tr,
+    cablesLayer: () => hasCables && (partOpacity.get(CABLE_LEAF) ?? 0) > 1e-3,
     cables: options.cables && typeof options.cables === "object" ? options.cables : null,
   });
   if (root) editMode.showButton(editMode.hasFixtures());

@@ -85,6 +85,7 @@ const PLANE_HANDLES = new Set(["XY", "YZ", "XZ", "XYZ"]);
  *   onLayout?: () => void,
  *   t: (key: string) => string,
  *   cables?: { routes?: object[], boards?: object[] } | null,
+ *   cablesLayer?: () => boolean,
  * }} ctx
  */
 export function createEditMode(ctx) {
@@ -348,7 +349,10 @@ export function createEditMode(ctx) {
   }
 
   function cablesVisible() {
-    return routes.length > 0 && bound && ((active && cablesOn) || cablesParam);
+    // The Electrical › cables layer (main.js) shows them everywhere; in edit
+    // mode the Cables switch shows them too.
+    const layer = typeof ctx.cablesLayer === "function" ? ctx.cablesLayer() : cablesParam;
+    return routes.length > 0 && bound && ((active && cablesOn) || layer);
   }
 
   /** Redraw the routes that end at this fixture (it moved). */
