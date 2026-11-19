@@ -40,6 +40,7 @@ Raised while placing every fixture from FixturePlan.pdf and the Soupis sheet. Ea
 34. **1.22** `C115-S`: 1.22 light mark reads only "2(" — assumed cable 115 (Soupis 1.22 S, 4x1.5).
 35. **1.23** `Q125-S`: Kitchenette strip in 1.23 is marked 2(125); Soupis 125 is the 1.09 gutter. Which cable? (Height 1.50 under the cabinets assumed.)
 36. **1.23** `C122-M`: 1.23: the plan draws a window contact on cable 122, but Soupis 122 is V,V (no M).
+37. **1.02** `SOCK-1.02-N1-1`…`N3-4`, `SOCK-1.02-K2`: the 0.30 m sockets on the north wall sit behind the kitchen run, and K2 sits under a wall cabinet. In the model they are hidden by the units, so you can only pick them from the table. That is fine for appliance sockets behind units. If they should be reachable, move them.
 
 ## Room 1.11
 
