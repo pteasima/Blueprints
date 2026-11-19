@@ -101,6 +101,10 @@ from bedroom_111 import (
     parts as bedroom_111_parts,
     scenes as bedroom_111_scenes,
 )
+from electrical_rooms import (
+    parts as electrical_rooms_parts,
+    scenes as electrical_rooms_scenes,
+)
 from bathroom_120 import (
     LABEL_DRAIN,
     LABEL_FLOOR,
@@ -1421,6 +1425,8 @@ def build(
         electrical_path = Path(path).with_name("bedroom-1.11.yaml")
     bed_parts = bedroom_111_parts(electrical_path)
     parts.extend(bed_parts)
+    room_device_parts = electrical_rooms_parts()
+    parts.extend(room_device_parts)
     bath107 = bathroom_107_figures()
 
     assembly = Compound(obj=parts, children=parts, label=MODEL_NAME)
@@ -1449,6 +1455,7 @@ def build(
             "bathroom_107_drop_mm": round(bath107["drop_mm"], 3),
             "bathroom_107_screed_drain_mm": round(bath107["screed_drain_mm"], 3),
             "bedroom_111": len(bed_parts),
+            "electrical_rooms": len(room_device_parts),
         },
         "footprints_omitted": omitted,
         "openings_cut": cut_ids,
@@ -1762,6 +1769,7 @@ def scenes() -> list[dict]:
         *bathroom_scenes(),
         *bathroom_107_scenes(),
         *bedroom_111_scenes(),
+        *electrical_rooms_scenes(),
     ]
 
 
@@ -1821,7 +1829,9 @@ def ifc_index() -> dict:
     from blueprints.ifc_index import index_documents
 
     docs = []
-    for path in (SOURCE_PATH, FURNISHINGS_PATH, BEDROOM, BATH_120, BATH_107):
+    from electrical_rooms import source_paths as electrical_room_paths
+
+    for path in (SOURCE_PATH, FURNISHINGS_PATH, BEDROOM, BATH_120, BATH_107, *electrical_room_paths()):
         if path.is_file():
             # Edit-mode overrides touch only the fixture ids they name, so
             # every document goes through them (docs/electrical/EditMode.md).

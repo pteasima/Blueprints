@@ -1,0 +1,160 @@
+# Room 1.19 (WC) field devices. yaml-ifc electrical schema, the bedroom
+# format (inputs/ground_floor/bedroom-1.11.yaml). Lengths are metres.
+# Boxes sit on the wall face or under the ceiling. No back boxes, no routes.
+#
+# Sources, not the permit electrical PDFs:
+#   FixturePlan.pdf — Petr's marks on a floor-plan screenshot (Home repo,
+#     sources/). Device positions are the plan symbols, read from the PDF
+#     vector symbols with a fit to ground-floor.yaml (about ±3 cm).
+#   CableSchedule.xlsx, sheet Soupis — cable number, devices, spec, length,
+#     panel, note. Exterior cables are listed under the room where the cable
+#     goes through the wall (Soupis note on cable 66), and so are they here.
+# The green plan mark is cabletype(cable): 1 UTP, 2 CYKY 4x1.5, 3 CYKY 4x2.5,
+# 4 CYKY 3x1.5, 5 CYKY 2x1.5, 7 CYKY 2x2.5 (sheet Kabelaz). Each element
+# carries the mark it was read from in its Description.
+#
+# Ids: C<cable>-<code>[-n] as in the bedroom. SOCK-<room>-<place>[-k] for
+# position-only sockets. Q<plan cable>-<code> where the plan number clashes
+# with a different Soupis row, NC-<room>-<code> for a drawn fixture with no
+# cable mark; both carry CableQuestion, and Question says what to decide.
+# Unplaced rows (no plan position) have no box and PositionUnknown.
+#
+# House rules (docs/electrical/PlanNotes.md): switch centre 1350, next one
+# +71; sockets 300/371/442, above a counter 1400; 150 mm from a door edge
+# (latch side), 300 mm from an inner corner or an outdoor outer corner; a
+# radar on a switch's cable sits in that switch box (InSwitchBox).
+# Contacts: on the latch jamb, centre 1.00 (high windows: sill + 0.15).
+# Blinds: on the facade beside the window, 150 mm past the jamb, bottom 2.32.
+# Outdoor wall lamps: centre 2.20. Gutter heating: a 0.30 m box at 2.95 on
+# the facade where the plan marks it.
+# Controls on a button lists the lights it switches: by default every light
+# of this room on the same side of the facade (Petr: switches control lights;
+# no separate blind switches). Data only; the viewer does not use it yet.
+#
+# Per-room notes and the open questions: docs/electrical/rooms/1.19.md.
+schema: IFC4 ADD2 TC1
+units:
+  LengthUnit: METRE
+project:
+  id: PRJ
+  Name: RD Šíma
+  Aggregates:
+    - SITE
+site:
+  id: SITE
+  Name: Bor u Tachova
+  RefElevation: 472.1
+  Aggregates:
+    - BLD
+building:
+  id: BLD
+  Name: RD Šíma
+  Aggregates:
+    - STOREY-1NP
+storey:
+  id: STOREY-1NP
+  Name: "1.NP"
+  Elevation: 0
+spaces:
+  - id: SP-1.19
+    Name: "1.19 WC"
+    LongName: WC
+    PredefinedType: INTERNAL
+walls: []
+openings: []
+doors: []
+windows: []
+lightFixtures:
+  - id: C94-S
+    Name: Světlo 94
+    Description: Plan mark 2(094). Plan symbol D100.
+    PredefinedType: POINTSOURCE
+    ObjectType: Downlight
+    ContainedInStructure: SP-1.19
+    Origin: [33.662, 9.069]
+    Elevation: 2.5
+    Width: 0.1
+    Depth: 0.1
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 94
+          Panel: 3
+          DeviceCode: "S"
+          CableSpec: CYKY 4x1.5
+          CableLength: 3
+switchingDevices:
+  - id: C93-V
+    Name: Vypínač 93
+    Description: Plan mark 1(093).
+    PredefinedType: MOMENTARYSWITCH
+    ObjectType: PushButton
+    ContainedInStructure: SP-1.19
+    Origin: [33.1, 9.3855]
+    Elevation: 1.3145
+    RefDirection: [0.0, -1.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 93
+          Panel: 3
+          DeviceCode: "V"
+          CableSpec: UTP Cat6a
+          CableLength: 4
+          Controls: C94-S
+sensors:
+  - id: C93-M
+    Name: Kontakt 93
+    Description: Plan mark 1(093).
+    PredefinedType: CONTACTSENSOR
+    ObjectType: DoorContact
+    ContainedInStructure: SP-1.19
+    Origin: [32.85, 9.19]
+    Elevation: 0.99
+    RefDirection: [0.0, 1.0]
+    Width: 0.02
+    Depth: 0.015
+    Height: 0.02
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 93
+          Panel: 3
+          DeviceCode: "M"
+          CableSpec: UTP Cat6a
+          CableLength: 4
+  - id: NC-1.19-R
+    Name: mmWave NC-1.19-R
+    Description: Radar drawn by the 1.19 switch; Soupis cable 93 is V,M only. Inside the box of C93-V; no body of its own.
+    PredefinedType: MOVEMENTSENSOR
+    ObjectType: MmWavePresence
+    ContainedInStructure: SP-1.19
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          DeviceCode: "R"
+          CableQuestion: No cable on the plan
+          InSwitchBox: C93-V
+          Question: "1.19 WC: a radar is drawn by the switch but cable 93 is V,M. Add R to 93?"
+outlets:
+  - id: SOCK-1.19-N
+    Name: Zásuvka N
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.19
+    Origin: [34.4365, 9.925]
+    Elevation: 0.2645
+    RefDirection: [-1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped

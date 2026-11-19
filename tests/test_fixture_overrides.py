@@ -94,3 +94,13 @@ def test_add_lands_only_in_the_document_with_its_space():
     other = {"spaces": [{"id": "SP-1.02"}], "switchingDevices": []}
     out = fo.apply_overrides(other, {"version": 1, "fixtures": {"C10-V-1": {"add": ADD}}})
     assert out["switchingDevices"] == []
+
+
+def test_move_shifts_a_room_strip_path():
+    element = {
+        "id": "C34-S",
+        "PropertySets": [{"Name": "Pset_YamlIfc", "Properties": {"Path": "1,2,0.05;3,2,0.05 | 1,4,0.9;3,4,0.9"}}],
+    }
+    fo._move(element, [0.1, -0.2, 0.01])
+    path = element["PropertySets"][0]["Properties"]["Path"]
+    assert path == "1.100,1.800,0.060;3.100,1.800,0.060 | 1.100,3.800,0.910;3.100,3.800,0.910"

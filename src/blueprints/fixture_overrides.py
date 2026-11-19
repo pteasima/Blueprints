@@ -54,7 +54,8 @@ ELEMENT_KEYS = {
     "Wattage",
 }
 CONTROL_KEYS = {"Move", "delete", "add", "list"}
-# Strips are drawn from a path in Pset_YamlIfc (models/bedroom_111.py).
+# Strips are drawn from a path in Pset_YamlIfc: the bedroom's X0…Y1 + Z
+# (models/bedroom_111.py), or Path in the other rooms (models/electrical_rooms.py).
 PATH_X = ("X0", "XC", "X1")
 PATH_Y = ("Y0", "YC", "Y1")
 # A fixture without its own placement (the under-bed strip, cut from the bed
@@ -90,6 +91,21 @@ def _round(value: float) -> float:
     return round(float(value), 6)
 
 
+def _shift_path(text: str, dx: float, dy: float, dz: float) -> str:
+    """Shift a room strip ``Path`` (``x,y,z;x,y,z`` points, runs split by ``|``)."""
+    runs = []
+    for run in text.split("|"):
+        points = []
+        for point in run.split(";"):
+            point = point.strip()
+            if not point:
+                continue
+            x, y, z = (float(value) for value in point.split(","))
+            points.append(f"{_round(x + dx):.3f},{_round(y + dy):.3f},{_round(z + dz):.3f}")
+        runs.append(";".join(points))
+    return " | ".join(runs)
+
+
 def _move(element: dict, move: list[float]) -> None:
     dx, dy, dz = (float(v) for v in (list(move) + [0.0, 0.0, 0.0])[:3])
     props = _pset(element)
@@ -97,6 +113,8 @@ def _move(element: dict, move: list[float]) -> None:
         x, y = element["Origin"][:2]
         element["Origin"] = [_round(x + dx), _round(y + dy)]
         element["Elevation"] = _round(float(element.get("Elevation") or 0.0) + dz)
+    elif props.get("Path"):
+        props["Path"] = _shift_path(str(props["Path"]), dx, dy, dz)
     elif all(key in props for key in (*PATH_X, *PATH_Y)):
         for key in PATH_X:
             props[key] = _round(float(props[key]) + dx)

@@ -1,0 +1,359 @@
+# Room 1.14 (Pokoj) field devices. yaml-ifc electrical schema, the bedroom
+# format (inputs/ground_floor/bedroom-1.11.yaml). Lengths are metres.
+# Boxes sit on the wall face or under the ceiling. No back boxes, no routes.
+#
+# Sources, not the permit electrical PDFs:
+#   FixturePlan.pdf — Petr's marks on a floor-plan screenshot (Home repo,
+#     sources/). Device positions are the plan symbols, read from the PDF
+#     vector symbols with a fit to ground-floor.yaml (about ±3 cm).
+#   CableSchedule.xlsx, sheet Soupis — cable number, devices, spec, length,
+#     panel, note. Exterior cables are listed under the room where the cable
+#     goes through the wall (Soupis note on cable 66), and so are they here.
+# The green plan mark is cabletype(cable): 1 UTP, 2 CYKY 4x1.5, 3 CYKY 4x2.5,
+# 4 CYKY 3x1.5, 5 CYKY 2x1.5, 7 CYKY 2x2.5 (sheet Kabelaz). Each element
+# carries the mark it was read from in its Description.
+#
+# Ids: C<cable>-<code>[-n] as in the bedroom. SOCK-<room>-<place>[-k] for
+# position-only sockets. Q<plan cable>-<code> where the plan number clashes
+# with a different Soupis row, NC-<room>-<code> for a drawn fixture with no
+# cable mark; both carry CableQuestion, and Question says what to decide.
+# Unplaced rows (no plan position) have no box and PositionUnknown.
+#
+# House rules (docs/electrical/PlanNotes.md): switch centre 1350, next one
+# +71; sockets 300/371/442, above a counter 1400; 150 mm from a door edge
+# (latch side), 300 mm from an inner corner or an outdoor outer corner; a
+# radar on a switch's cable sits in that switch box (InSwitchBox).
+# Contacts: on the latch jamb, centre 1.00 (high windows: sill + 0.15).
+# Blinds: on the facade beside the window, 150 mm past the jamb, bottom 2.32.
+# Outdoor wall lamps: centre 2.20. Gutter heating: a 0.30 m box at 2.95 on
+# the facade where the plan marks it.
+# Controls on a button lists the lights it switches: by default every light
+# of this room on the same side of the facade (Petr: switches control lights;
+# no separate blind switches). Data only; the viewer does not use it yet.
+#
+# Per-room notes and the open questions: docs/electrical/rooms/1.14.md.
+schema: IFC4 ADD2 TC1
+units:
+  LengthUnit: METRE
+project:
+  id: PRJ
+  Name: RD Šíma
+  Aggregates:
+    - SITE
+site:
+  id: SITE
+  Name: Bor u Tachova
+  RefElevation: 472.1
+  Aggregates:
+    - BLD
+building:
+  id: BLD
+  Name: RD Šíma
+  Aggregates:
+    - STOREY-1NP
+storey:
+  id: STOREY-1NP
+  Name: "1.NP"
+  Elevation: 0
+spaces:
+  - id: SP-1.14
+    Name: "1.14 Pokoj"
+    LongName: Pokoj
+    PredefinedType: INTERNAL
+walls: []
+openings: []
+doors: []
+windows: []
+lightFixtures:
+  - id: C76-S
+    Name: Světlo 76
+    Description: Plan mark 2(076). No box; the viewer draws the legs from Path (x,y,z points; | separates runs).
+    PredefinedType: USERDEFINED
+    ObjectType: LedStrip
+    ContainedInStructure: SP-1.14
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 76
+          Panel: 1
+          DeviceCode: "S"
+          CableSpec: CYKY 4x1.5
+          CableLength: 14
+          Path: "10.101,5.898,0.050;11.728,5.898,0.050;11.728,7.865,0.050"
+  - id: C96-S
+    Name: Světlo 96
+    Description: Plan mark 3(096). Plan symbol D600. D600 on 4x2.5 (main light), hung 0.30 m below the ceiling.
+    PredefinedType: POINTSOURCE
+    ObjectType: Pendant
+    ContainedInStructure: SP-1.14
+    Origin: [11.24, 5.271]
+    Elevation: 2.64
+    Width: 0.6
+    Depth: 0.6
+    Height: 0.06
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 96
+          Panel: 1
+          DeviceCode: "S"
+          CableSpec: CYKY 4x2.5
+          CableLength: 18
+  - id: C97-S
+    Name: Světlo 97
+    Description: Plan mark 2(097). Plan symbol Halo600.
+    PredefinedType: USERDEFINED
+    ObjectType: LedStrip
+    ContainedInStructure: SP-1.14
+    Origin: [11.24, 5.271]
+    Elevation: 2.988
+    Width: 0.6
+    Depth: 0.6
+    Height: 0.012
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 97
+          Panel: 1
+          DeviceCode: "S"
+          CableSpec: CYKY 4x1.5
+          CableLength: 18
+switchingDevices:
+  - id: C44-V
+    Name: Vypínač 44
+    Description: Plan mark 1(044).
+    PredefinedType: MOMENTARYSWITCH
+    ObjectType: PushButton
+    ContainedInStructure: SP-1.14
+    Origin: [11.9355, 7.95]
+    Elevation: 1.3145
+    RefDirection: [-1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 44
+          Panel: 1
+          DeviceCode: "V"
+          CableSpec: UTP Cat6a
+          CableLength: 13
+          Controls: C76-S, C96-S, C97-S
+  - id: C45-V
+    Name: Vypínač 45
+    Description: Plan mark 1(045).
+    PredefinedType: MOMENTARYSWITCH
+    ObjectType: PushButton
+    ContainedInStructure: SP-1.14
+    Origin: [10.6645, 3.275]
+    Elevation: 1.3145
+    RefDirection: [1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 45
+          Panel: 1
+          DeviceCode: "V"
+          CableSpec: UTP Cat6a
+          CableLength: 18
+          Controls: C76-S, C96-S, C97-S
+sensors:
+  - id: C44-R
+    Name: mmWave 44
+    Description: Plan mark 1(044). Inside the box of C44-V; no body of its own.
+    PredefinedType: MOVEMENTSENSOR
+    ObjectType: MmWavePresence
+    ContainedInStructure: SP-1.14
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 44
+          Panel: 1
+          DeviceCode: "R"
+          CableSpec: UTP Cat6a
+          CableLength: 13
+          InSwitchBox: C44-V
+  - id: C44-M
+    Name: Kontakt 44
+    Description: Plan mark 1(044).
+    PredefinedType: CONTACTSENSOR
+    ObjectType: DoorContact
+    ContainedInStructure: SP-1.14
+    Origin: [12.06, 7.95]
+    Elevation: 0.99
+    RefDirection: [-1.0, 0.0]
+    Width: 0.02
+    Depth: 0.015
+    Height: 0.02
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 44
+          Panel: 1
+          DeviceCode: "M"
+          CableSpec: UTP Cat6a
+          CableLength: 13
+  - id: C45-M
+    Name: Kontakt 45
+    Description: Plan mark 1(045).
+    PredefinedType: CONTACTSENSOR
+    ObjectType: WindowContact
+    ContainedInStructure: SP-1.14
+    Origin: [10.84, 3.275]
+    Elevation: 0.99
+    RefDirection: [1.0, 0.0]
+    Width: 0.02
+    Depth: 0.015
+    Height: 0.02
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 45
+          Panel: 1
+          DeviceCode: "M"
+          CableSpec: UTP Cat6a
+          CableLength: 18
+outlets:
+  - id: SOCK-1.14-W
+    Name: Zásuvka W
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.14
+    Origin: [10.125, 5.7905]
+    Elevation: 0.2645
+    RefDirection: [0.0, -1.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.14-E
+    Name: Zásuvka E
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.14
+    Origin: [13.05, 5.7385]
+    Elevation: 0.2645
+    RefDirection: [0.0, 1.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.14-SE
+    Name: Zásuvka SE
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.14
+    Origin: [13.05, 3.5395]
+    Elevation: 0.2645
+    RefDirection: [0.0, 1.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.14-D-1
+    Name: Zásuvka D-1
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.14
+    Origin: [11.7835, 7.95]
+    Elevation: 0.2645
+    RefDirection: [-1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.14-D-2
+    Name: Zásuvka D-2
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.14
+    Origin: [11.7835, 7.95]
+    Elevation: 0.3355
+    RefDirection: [-1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+actuators:
+  - id: C92-B
+    Name: Žaluzie 92 venku
+    Description: Plan mark 4(92).
+    PredefinedType: ELECTRICACTUATOR
+    ObjectType: BlindActuator
+    ContainedInStructure: SP-1.14
+    Origin: [13.21, 2.9]
+    Elevation: 2.32
+    RefDirection: [-1.0, 0.0]
+    Width: 0.12
+    Depth: 0.05
+    Height: 0.06
+    PropertySets:
+      - Name: Pset_ActuatorTypeCommon
+        Properties:
+          Application: SUNBLINDACTUATOR
+      - Name: Pset_ActuatorTypeElectricActuator
+        Properties:
+          ElectricActuatorType: MOTORDRIVE
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 92
+          Panel: 1
+          DeviceCode: "B"
+          CableSpec: CYKY 4x1.5
+          CableLength: 17
+          Note: pruraz je z 1.14, tedy drazka na obe zasuvky (1.14,1.15) a zaluzie) bude zrejme lepsi taky z 1.14, nechavam na vas
+  - id: C95-B
+    Name: Žaluzie 95 venku
+    Description: Plan mark 4(95). 1.15 window blind; Soupis lists it under 1.14.
+    PredefinedType: ELECTRICACTUATOR
+    ObjectType: BlindActuator
+    ContainedInStructure: SP-1.14
+    Origin: [13.86, 2.9]
+    Elevation: 2.32
+    RefDirection: [-1.0, 0.0]
+    Width: 0.12
+    Depth: 0.05
+    Height: 0.06
+    PropertySets:
+      - Name: Pset_ActuatorTypeCommon
+        Properties:
+          Application: SUNBLINDACTUATOR
+      - Name: Pset_ActuatorTypeElectricActuator
+        Properties:
+          ElectricActuatorType: MOTORDRIVE
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 95
+          Panel: 1
+          DeviceCode: "B"
+          CableSpec: CYKY 4x1.5
+          CableLength: 18

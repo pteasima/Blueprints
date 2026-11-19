@@ -1,0 +1,315 @@
+# Room 1.01 (Zádveří) field devices. yaml-ifc electrical schema, the bedroom
+# format (inputs/ground_floor/bedroom-1.11.yaml). Lengths are metres.
+# Boxes sit on the wall face or under the ceiling. No back boxes, no routes.
+#
+# Sources, not the permit electrical PDFs:
+#   FixturePlan.pdf — Petr's marks on a floor-plan screenshot (Home repo,
+#     sources/). Device positions are the plan symbols, read from the PDF
+#     vector symbols with a fit to ground-floor.yaml (about ±3 cm).
+#   CableSchedule.xlsx, sheet Soupis — cable number, devices, spec, length,
+#     panel, note. Exterior cables are listed under the room where the cable
+#     goes through the wall (Soupis note on cable 66), and so are they here.
+# The green plan mark is cabletype(cable): 1 UTP, 2 CYKY 4x1.5, 3 CYKY 4x2.5,
+# 4 CYKY 3x1.5, 5 CYKY 2x1.5, 7 CYKY 2x2.5 (sheet Kabelaz). Each element
+# carries the mark it was read from in its Description.
+#
+# Ids: C<cable>-<code>[-n] as in the bedroom. SOCK-<room>-<place>[-k] for
+# position-only sockets. Q<plan cable>-<code> where the plan number clashes
+# with a different Soupis row, NC-<room>-<code> for a drawn fixture with no
+# cable mark; both carry CableQuestion, and Question says what to decide.
+# Unplaced rows (no plan position) have no box and PositionUnknown.
+#
+# House rules (docs/electrical/PlanNotes.md): switch centre 1350, next one
+# +71; sockets 300/371/442, above a counter 1400; 150 mm from a door edge
+# (latch side), 300 mm from an inner corner or an outdoor outer corner; a
+# radar on a switch's cable sits in that switch box (InSwitchBox).
+# Contacts: on the latch jamb, centre 1.00 (high windows: sill + 0.15).
+# Blinds: on the facade beside the window, 150 mm past the jamb, bottom 2.32.
+# Outdoor wall lamps: centre 2.20. Gutter heating: a 0.30 m box at 2.95 on
+# the facade where the plan marks it.
+# Controls on a button lists the lights it switches: by default every light
+# of this room on the same side of the facade (Petr: switches control lights;
+# no separate blind switches). Data only; the viewer does not use it yet.
+#
+# Per-room notes and the open questions: docs/electrical/rooms/1.01.md.
+schema: IFC4 ADD2 TC1
+units:
+  LengthUnit: METRE
+project:
+  id: PRJ
+  Name: RD Šíma
+  Aggregates:
+    - SITE
+site:
+  id: SITE
+  Name: Bor u Tachova
+  RefElevation: 472.1
+  Aggregates:
+    - BLD
+building:
+  id: BLD
+  Name: RD Šíma
+  Aggregates:
+    - STOREY-1NP
+storey:
+  id: STOREY-1NP
+  Name: "1.NP"
+  Elevation: 0
+spaces:
+  - id: SP-1.01
+    Name: "1.01 Zádveří"
+    LongName: Zádveří
+    PredefinedType: INTERNAL
+walls: []
+openings: []
+doors: []
+windows: []
+lightFixtures:
+  - id: Q133-S
+    Name: Světlo Q133-S
+    Description: Plan mark 2(133). Plan symbol LP 170R.
+    PredefinedType: POINTSOURCE
+    ObjectType: Downlight
+    ContainedInStructure: SP-1.01
+    Origin: [30.53, 9.125]
+    Elevation: 2.51
+    Width: 0.17
+    Depth: 0.17
+    Height: 0.04
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          DeviceCode: "S"
+          PlanCable: 133
+          CableQuestion: Plan cable number clashes with the Soupis
+          Question: "1.01 lights are marked 2(132) and 2(133). Soupis 132 is the 1.20 V,M,R cable and 133 the 1.08 gutter; Soupis has no light row for 1.01. Which cables?"
+  - id: Q132-S
+    Name: Světlo Q132-S
+    Description: Plan mark 2(132). Plan symbol LP 170R.
+    PredefinedType: POINTSOURCE
+    ObjectType: Downlight
+    ContainedInStructure: SP-1.01
+    Origin: [32.058, 9.132]
+    Elevation: 2.51
+    Width: 0.17
+    Depth: 0.17
+    Height: 0.04
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          DeviceCode: "S"
+          PlanCable: 132
+          CableQuestion: Plan cable number clashes with the Soupis
+switchingDevices:
+  - id: C90-V
+    Name: Vypínač 90
+    Description: Plan mark 1(090). West wall pier between OP32 and OP33, at the plan dot. The model has no wall on that pier (y 9.65–10.25), so the box floats there in the model.
+    PredefinedType: MOMENTARYSWITCH
+    ObjectType: PushButton
+    ContainedInStructure: SP-1.01
+    Origin: [30.15, 9.9655]
+    Elevation: 1.3145
+    RefDirection: [0.0, -1.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 90
+          Panel: 3
+          DeviceCode: "V"
+          CableSpec: UTP Cat6a
+          CableLength: 7
+          Controls: Q133-S, Q132-S
+  - id: C91-V
+    Name: Vypínač 91
+    Description: Plan mark 1(091).
+    PredefinedType: MOMENTARYSWITCH
+    ObjectType: PushButton
+    ContainedInStructure: SP-1.01
+    Origin: [32.85, 14.2145]
+    Elevation: 1.3145
+    RefDirection: [0.0, 1.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 91
+          Panel: 3
+          DeviceCode: "V"
+          CableSpec: UTP Cat6a
+          CableLength: 8
+          Controls: Q133-S, Q132-S
+  - id: Q92-V
+    Name: Vypínač Q92-V
+    Description: Plan mark 1(092).
+    PredefinedType: MOMENTARYSWITCH
+    ObjectType: PushButton
+    ContainedInStructure: SP-1.01
+    Origin: [32.85, 11.3645]
+    Elevation: 1.3145
+    RefDirection: [0.0, 1.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          DeviceCode: "V"
+          PlanCable: 92
+          CableQuestion: Plan cable number clashes with the Soupis
+          Controls: Q133-S, Q132-S
+          Question: Button by the 1.01→1.17 door is marked 1(092); Soupis 92 is the 1.14 blind. Which cable?
+sensors:
+  - id: C90-M-1
+    Name: Kontakt 90-1
+    Description: Plan mark 1(090).
+    PredefinedType: CONTACTSENSOR
+    ObjectType: DoorContact
+    ContainedInStructure: SP-1.01
+    Origin: [30.15, 10.26]
+    Elevation: 0.99
+    RefDirection: [0.0, -1.0]
+    Width: 0.02
+    Depth: 0.015
+    Height: 0.02
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 90
+          Panel: 3
+          DeviceCode: "M"
+          CableSpec: UTP Cat6a
+          CableLength: 7
+  - id: C90-M-2
+    Name: Kontakt 90-2
+    Description: Plan mark 1(090).
+    PredefinedType: CONTACTSENSOR
+    ObjectType: DoorContact
+    ContainedInStructure: SP-1.01
+    Origin: [30.15, 9.66]
+    Elevation: 0.99
+    RefDirection: [0.0, -1.0]
+    Width: 0.02
+    Depth: 0.015
+    Height: 0.02
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 90
+          Panel: 3
+          DeviceCode: "M"
+          CableSpec: UTP Cat6a
+          CableLength: 7
+  - id: C131-R
+    Name: mmWave 131
+    Description: Plan mark 1(131). Drawn on the south wall; modelled on the ceiling next to it.
+    PredefinedType: MOVEMENTSENSOR
+    ObjectType: MmWavePresence
+    ContainedInStructure: SP-1.01
+    Origin: [31.195, 8.365]
+    Elevation: 2.52
+    Width: 0.07
+    Depth: 0.07
+    Height: 0.03
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 131
+          Panel: 3
+          DeviceCode: "R"
+          CableSpec: UTP Cat6a
+          CableLength: 8
+  - id: C147-C
+    Name: Kamera 147 venku
+    Description: "Plan mark 1(147). Plan: \"G6 Turret PoE venku před sklem\" on the east facade."
+    PredefinedType: USERDEFINED
+    ObjectType: Camera
+    ContainedInStructure: SP-1.01
+    Origin: [33.3, 13.196]
+    Elevation: 2.44
+    RefDirection: [0.0, -1.0]
+    Width: 0.12
+    Depth: 0.12
+    Height: 0.12
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 147
+          Panel: 1
+          DeviceCode: "C"
+          CableSpec: UTP Cat6a
+          CableLength: 26
+  - id: NC-1.01-A
+    Name: Aliro NC-1.01-A
+    Description: Key symbol in the entrance door OP39a, no cable mark (lock?).
+    PredefinedType: IDENTIFIERSENSOR
+    ObjectType: AliroReader
+    ContainedInStructure: SP-1.01
+    Origin: [32.85, 12.4545]
+    Elevation: 1.0145
+    RefDirection: [0.0, 1.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          DeviceCode: "A"
+          CableQuestion: No cable on the plan
+          Question: Key symbols at the entrance (OP39a), the 1.01→1.17 door and the garzonka door have no cable. Door locks fed from the Aliro boxes? Remove them if not fixtures.
+outlets:
+  - id: SOCK-1.01-S
+    Name: Zásuvka S
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.01
+    Origin: [30.9855, 8.2]
+    Elevation: 0.2645
+    RefDirection: [1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.01-NW
+    Name: Zásuvka NW
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.01
+    Origin: [30.15, 15.3315]
+    Elevation: 0.2645
+    RefDirection: [0.0, -1.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.01-E
+    Name: Zásuvka E
+    Description: Under C91-V.
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.01
+    Origin: [32.85, 14.3645]
+    Elevation: 0.2645
+    RefDirection: [0.0, 1.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped

@@ -1,0 +1,337 @@
+# Room 1.06 (WC) field devices. yaml-ifc electrical schema, the bedroom
+# format (inputs/ground_floor/bedroom-1.11.yaml). Lengths are metres.
+# Boxes sit on the wall face or under the ceiling. No back boxes, no routes.
+#
+# Sources, not the permit electrical PDFs:
+#   FixturePlan.pdf — Petr's marks on a floor-plan screenshot (Home repo,
+#     sources/). Device positions are the plan symbols, read from the PDF
+#     vector symbols with a fit to ground-floor.yaml (about ±3 cm).
+#   CableSchedule.xlsx, sheet Soupis — cable number, devices, spec, length,
+#     panel, note. Exterior cables are listed under the room where the cable
+#     goes through the wall (Soupis note on cable 66), and so are they here.
+# The green plan mark is cabletype(cable): 1 UTP, 2 CYKY 4x1.5, 3 CYKY 4x2.5,
+# 4 CYKY 3x1.5, 5 CYKY 2x1.5, 7 CYKY 2x2.5 (sheet Kabelaz). Each element
+# carries the mark it was read from in its Description.
+#
+# Ids: C<cable>-<code>[-n] as in the bedroom. SOCK-<room>-<place>[-k] for
+# position-only sockets. Q<plan cable>-<code> where the plan number clashes
+# with a different Soupis row, NC-<room>-<code> for a drawn fixture with no
+# cable mark; both carry CableQuestion, and Question says what to decide.
+# Unplaced rows (no plan position) have no box and PositionUnknown.
+#
+# House rules (docs/electrical/PlanNotes.md): switch centre 1350, next one
+# +71; sockets 300/371/442, above a counter 1400; 150 mm from a door edge
+# (latch side), 300 mm from an inner corner or an outdoor outer corner; a
+# radar on a switch's cable sits in that switch box (InSwitchBox).
+# Contacts: on the latch jamb, centre 1.00 (high windows: sill + 0.15).
+# Blinds: on the facade beside the window, 150 mm past the jamb, bottom 2.32.
+# Outdoor wall lamps: centre 2.20. Gutter heating: a 0.30 m box at 2.95 on
+# the facade where the plan marks it.
+# Controls on a button lists the lights it switches: by default every light
+# of this room on the same side of the facade (Petr: switches control lights;
+# no separate blind switches). Data only; the viewer does not use it yet.
+#
+# Per-room notes and the open questions: docs/electrical/rooms/1.06.md.
+schema: IFC4 ADD2 TC1
+units:
+  LengthUnit: METRE
+project:
+  id: PRJ
+  Name: RD Šíma
+  Aggregates:
+    - SITE
+site:
+  id: SITE
+  Name: Bor u Tachova
+  RefElevation: 472.1
+  Aggregates:
+    - BLD
+building:
+  id: BLD
+  Name: RD Šíma
+  Aggregates:
+    - STOREY-1NP
+storey:
+  id: STOREY-1NP
+  Name: "1.NP"
+  Elevation: 0
+spaces:
+  - id: SP-1.06
+    Name: "1.06 WC"
+    LongName: WC
+    PredefinedType: INTERNAL
+walls: []
+openings: []
+doors: []
+windows: []
+lightFixtures:
+  - id: C68-S
+    Name: Světlo 68
+    Description: Plan mark 2(068). Plan symbol LP 225R. Plan text LP225R 18W.
+    PredefinedType: POINTSOURCE
+    ObjectType: Downlight
+    ContainedInStructure: SP-1.06
+    Origin: [14.8235, 10.4705]
+    Elevation: 2.46
+    Width: 0.225
+    Depth: 0.225
+    Height: 0.04
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 68
+          Panel: 1
+          DeviceCode: "S"
+          CableSpec: CYKY 4x1.5
+          CableLength: 4
+  - id: C198-S-1
+    Name: Světlo 198-1 venku
+    Description: Plan mark 3(198). Plan symbol Panel 300x1200. Outdoor kitchen ceiling panel, plan "Panel 300x1200 (~100 W)". Ceiling height 2.50 assumed.
+    PredefinedType: POINTSOURCE
+    ObjectType: Panel
+    ContainedInStructure: SP-1.06
+    Origin: [18.105, 5.921]
+    Elevation: 2.47
+    Width: 0.3
+    Depth: 1.2
+    Height: 0.03
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 198
+          DeviceCode: "S"
+          CableSpec: CYKY 4x2.5
+          Question: "C198 outdoor-kitchen panels: Soupis room is 1.06 (WC), the panels are in the outdoor kitchen; ceiling height unknown (2.50 used)."
+  - id: C198-S-2
+    Name: Světlo 198-2 venku
+    Description: Plan mark 3(198). Plan symbol Panel 300x1200. Outdoor kitchen ceiling panel, plan "Panel 300x1200 (~100 W)". Ceiling height 2.50 assumed.
+    PredefinedType: POINTSOURCE
+    ObjectType: Panel
+    ContainedInStructure: SP-1.06
+    Origin: [18.105, 3.699]
+    Elevation: 2.47
+    Width: 0.3
+    Depth: 1.2
+    Height: 0.03
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 198
+          DeviceCode: "S"
+          CableSpec: CYKY 4x2.5
+switchingDevices:
+  - id: C70-V
+    Name: Vypínač 70
+    Description: Plan mark 1(070). West face of W-048 inside the WC, next to the OP19 latch.
+    PredefinedType: MOMENTARYSWITCH
+    ObjectType: PushButton
+    ContainedInStructure: SP-1.06
+    Origin: [15.5, 9.6005]
+    Elevation: 1.3145
+    RefDirection: [0.0, 1.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 70
+          Panel: 1
+          DeviceCode: "V"
+          CableSpec: UTP Cat6a
+          CableLength: 7
+          Controls: C68-S
+  - id: C196-V
+    Name: Vypínač 196 venku
+    Description: Plan mark 1(196). Outdoor kitchen, south face of W-012. The plan dot sits just past the wall end; moved 125 mm onto the wall.
+    PredefinedType: MOMENTARYSWITCH
+    ObjectType: PushButton
+    ContainedInStructure: SP-1.06
+    Origin: [18.6855, 7.85]
+    Elevation: 1.3145
+    RefDirection: [-1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 196
+          Panel: 1
+          DeviceCode: "V"
+          CableSpec: UTP Cat6a
+          CableLength: 6
+          Controls: C198-S-1, C198-S-2
+  - id: C197-V
+    Name: Vypínač 197 venku
+    Description: Plan mark 1(197). South facade by the outdoor kitchen, 300 mm from the outer corner.
+    PredefinedType: MOMENTARYSWITCH
+    ObjectType: PushButton
+    ContainedInStructure: SP-1.06
+    Origin: [18.8615, 2.9]
+    Elevation: 1.3145
+    RefDirection: [-1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 197
+          Panel: 1
+          DeviceCode: "V"
+          CableSpec: UTP Cat6a
+          CableLength: 12
+          Controls: C198-S-1, C198-S-2
+sensors:
+  - id: C69-R
+    Name: mmWave 69
+    Description: Plan mark 1(069).
+    PredefinedType: MOVEMENTSENSOR
+    ObjectType: MmWavePresence
+    ContainedInStructure: SP-1.06
+    Origin: [14.928, 10.871]
+    Elevation: 2.47
+    Width: 0.07
+    Depth: 0.07
+    Height: 0.03
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 69
+          Panel: 1
+          DeviceCode: "R"
+          CableSpec: UTP Cat6a
+          CableLength: 7
+          Note: delka uvazuje drazkovani do podhledu v ytongu, drazkou ve vpc nebo primym prurazem do tech. misnosti je to kratsi
+  - id: C70-M
+    Name: Kontakt 70
+    Description: Plan mark 1(070).
+    PredefinedType: CONTACTSENSOR
+    ObjectType: DoorContact
+    ContainedInStructure: SP-1.06
+    Origin: [15.51, 9.45]
+    Elevation: 0.99
+    RefDirection: [-1.0, 0.0]
+    Width: 0.02
+    Depth: 0.015
+    Height: 0.02
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 70
+          Panel: 1
+          DeviceCode: "M"
+          CableSpec: UTP Cat6a
+          CableLength: 7
+  - id: C196-M
+    Name: Kontakt 196 venku
+    Description: Plan mark 1(196).
+    PredefinedType: CONTACTSENSOR
+    ObjectType: DoorContact
+    ContainedInStructure: SP-1.06
+    Origin: [18.75, 7.85]
+    Elevation: 0.99
+    RefDirection: [-1.0, 0.0]
+    Width: 0.02
+    Depth: 0.015
+    Height: 0.02
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 196
+          Panel: 1
+          DeviceCode: "M"
+          CableSpec: UTP Cat6a
+          CableLength: 6
+          Question: "C196-M contact in the outdoor kitchen (plan dot at the east corner, x 19.02, y 7.66): there is no door or window there. What does it sense?"
+outlets:
+  - id: SOCK-1.06-OK1-1
+    Name: Zásuvka OK1-1 venku
+    Description: Outdoor kitchen, east face of W-049 above the counter (1400 assumed).
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.06
+    Origin: [18.0, 6.5115]
+    Elevation: 1.3645
+    RefDirection: [0.0, -1.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.06-OK1-2
+    Name: Zásuvka OK1-2 venku
+    Description: Outdoor kitchen, east face of W-049 above the counter (1400 assumed).
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.06
+    Origin: [18.0, 6.5115]
+    Elevation: 1.4355
+    RefDirection: [0.0, -1.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.06-OK2-1
+    Name: Zásuvka OK2-1 venku
+    Description: Outdoor kitchen, east face of W-049 above the counter (1400 assumed).
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.06
+    Origin: [18.0, 4.5965]
+    Elevation: 1.3645
+    RefDirection: [0.0, -1.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.06-OK2-2
+    Name: Zásuvka OK2-2 venku
+    Description: Outdoor kitchen, east face of W-049 above the counter (1400 assumed).
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.06
+    Origin: [18.0, 4.5965]
+    Elevation: 1.4355
+    RefDirection: [0.0, -1.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+electricAppliances:
+  - id: C134-O
+    Name: Vyhřívání okapu 134 venku
+    Description: Plan mark 4(134).
+    PredefinedType: USERDEFINED
+    ObjectType: GutterHeating
+    ContainedInStructure: SP-1.06
+    Origin: [14.81, 12.7]
+    Elevation: 2.925
+    RefDirection: [1.0, 0.0]
+    Width: 0.3
+    Depth: 0.08
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 134
+          Panel: 1
+          DeviceCode: "O"
+          CableSpec: CYKY 3x1.5
+          CableLength: 5

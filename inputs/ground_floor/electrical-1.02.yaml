@@ -1,0 +1,1258 @@
+# Room 1.02 (Obývací pokoj+KK) field devices. yaml-ifc electrical schema, the bedroom
+# format (inputs/ground_floor/bedroom-1.11.yaml). Lengths are metres.
+# Boxes sit on the wall face or under the ceiling. No back boxes, no routes.
+#
+# Sources, not the permit electrical PDFs:
+#   FixturePlan.pdf — Petr's marks on a floor-plan screenshot (Home repo,
+#     sources/). Device positions are the plan symbols, read from the PDF
+#     vector symbols with a fit to ground-floor.yaml (about ±3 cm).
+#   CableSchedule.xlsx, sheet Soupis — cable number, devices, spec, length,
+#     panel, note. Exterior cables are listed under the room where the cable
+#     goes through the wall (Soupis note on cable 66), and so are they here.
+# The green plan mark is cabletype(cable): 1 UTP, 2 CYKY 4x1.5, 3 CYKY 4x2.5,
+# 4 CYKY 3x1.5, 5 CYKY 2x1.5, 7 CYKY 2x2.5 (sheet Kabelaz). Each element
+# carries the mark it was read from in its Description.
+#
+# Ids: C<cable>-<code>[-n] as in the bedroom. SOCK-<room>-<place>[-k] for
+# position-only sockets. Q<plan cable>-<code> where the plan number clashes
+# with a different Soupis row, NC-<room>-<code> for a drawn fixture with no
+# cable mark; both carry CableQuestion, and Question says what to decide.
+# Unplaced rows (no plan position) have no box and PositionUnknown.
+#
+# House rules (docs/electrical/PlanNotes.md): switch centre 1350, next one
+# +71; sockets 300/371/442, above a counter 1400; 150 mm from a door edge
+# (latch side), 300 mm from an inner corner or an outdoor outer corner; a
+# radar on a switch's cable sits in that switch box (InSwitchBox).
+# Contacts: on the latch jamb, centre 1.00 (high windows: sill + 0.15).
+# Blinds: on the facade beside the window, 150 mm past the jamb, bottom 2.32.
+# Outdoor wall lamps: centre 2.20. Gutter heating: a 0.30 m box at 2.95 on
+# the facade where the plan marks it.
+# Controls on a button lists the lights it switches: by default every light
+# of this room on the same side of the facade (Petr: switches control lights;
+# no separate blind switches). Data only; the viewer does not use it yet.
+#
+# Per-room notes and the open questions: docs/electrical/rooms/1.02.md.
+schema: IFC4 ADD2 TC1
+units:
+  LengthUnit: METRE
+project:
+  id: PRJ
+  Name: RD Šíma
+  Aggregates:
+    - SITE
+site:
+  id: SITE
+  Name: Bor u Tachova
+  RefElevation: 472.1
+  Aggregates:
+    - BLD
+building:
+  id: BLD
+  Name: RD Šíma
+  Aggregates:
+    - STOREY-1NP
+storey:
+  id: STOREY-1NP
+  Name: "1.NP"
+  Elevation: 0
+spaces:
+  - id: SP-1.02
+    Name: "1.02 Obývací pokoj+KK"
+    LongName: Obývací pokoj+KK
+    PredefinedType: INTERNAL
+walls: []
+openings: []
+doors: []
+windows: []
+lightFixtures:
+  - id: C166-S-1
+    Name: Světlo 166-1
+    Description: Plan mark 2(166). Plan symbol D55. One cable feeds the pair of D55 spots.
+    PredefinedType: POINTSOURCE
+    ObjectType: Downlight
+    ContainedInStructure: SP-1.02
+    Origin: [19.8375, 15.0415]
+    Elevation: 3.0379
+    Width: 0.055
+    Depth: 0.055
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 166
+          Panel: 1
+          DeviceCode: "S"
+          CableSpec: CYKY 4x1.5
+          CableLength: 9
+  - id: C166-S-2
+    Name: Světlo 166-2
+    Description: Plan mark 2(166). Plan symbol D55. One cable feeds the pair of D55 spots.
+    PredefinedType: POINTSOURCE
+    ObjectType: Downlight
+    ContainedInStructure: SP-1.02
+    Origin: [20.0655, 15.0415]
+    Elevation: 3.0379
+    Width: 0.055
+    Depth: 0.055
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 166
+          Panel: 1
+          DeviceCode: "S"
+          CableSpec: CYKY 4x1.5
+          CableLength: 9
+  - id: C167-S-1
+    Name: Světlo 167-1
+    Description: Plan mark 2(167). Plan symbol D55. One cable feeds the pair of D55 spots.
+    PredefinedType: POINTSOURCE
+    ObjectType: Downlight
+    ContainedInStructure: SP-1.02
+    Origin: [19.8375, 10.3325]
+    Elevation: 3.0623
+    Width: 0.055
+    Depth: 0.055
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 167
+          Panel: 1
+          DeviceCode: "S"
+          CableSpec: CYKY 4x1.5
+          CableLength: 7
+  - id: C167-S-2
+    Name: Světlo 167-2
+    Description: Plan mark 2(167). Plan symbol D55. One cable feeds the pair of D55 spots.
+    PredefinedType: POINTSOURCE
+    ObjectType: Downlight
+    ContainedInStructure: SP-1.02
+    Origin: [20.0655, 10.3325]
+    Elevation: 3.0623
+    Width: 0.055
+    Depth: 0.055
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 167
+          Panel: 1
+          DeviceCode: "S"
+          CableSpec: CYKY 4x1.5
+          CableLength: 7
+  - id: C168-S-1
+    Name: Světlo 168-1
+    Description: Plan mark 3(168). Plan symbol D55. One cable feeds the pair of D55 spots.
+    PredefinedType: POINTSOURCE
+    ObjectType: Downlight
+    ContainedInStructure: SP-1.02
+    Origin: [21.7735, 15.0355]
+    Elevation: 3.043
+    Width: 0.055
+    Depth: 0.055
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 168
+          Panel: 1
+          DeviceCode: "S"
+          CableSpec: CYKY 4x2.5
+          CableLength: 11
+  - id: C168-S-2
+    Name: Světlo 168-2
+    Description: Plan mark 3(168). Plan symbol D55. One cable feeds the pair of D55 spots.
+    PredefinedType: POINTSOURCE
+    ObjectType: Downlight
+    ContainedInStructure: SP-1.02
+    Origin: [22.0015, 15.0355]
+    Elevation: 3.043
+    Width: 0.055
+    Depth: 0.055
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 168
+          Panel: 1
+          DeviceCode: "S"
+          CableSpec: CYKY 4x2.5
+          CableLength: 11
+  - id: C170-S-1
+    Name: Světlo 170-1
+    Description: Plan mark 3(170). Plan symbol D55. One cable feeds the pair of D55 spots.
+    PredefinedType: POINTSOURCE
+    ObjectType: Downlight
+    ContainedInStructure: SP-1.02
+    Origin: [21.7735, 10.3325]
+    Elevation: 3.0623
+    Width: 0.055
+    Depth: 0.055
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 170
+          Panel: 1
+          DeviceCode: "S"
+          CableSpec: CYKY 4x2.5
+          CableLength: 9
+  - id: C170-S-2
+    Name: Světlo 170-2
+    Description: Plan mark 3(170). Plan symbol D55. One cable feeds the pair of D55 spots.
+    PredefinedType: POINTSOURCE
+    ObjectType: Downlight
+    ContainedInStructure: SP-1.02
+    Origin: [22.0015, 10.3325]
+    Elevation: 3.0623
+    Width: 0.055
+    Depth: 0.055
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 170
+          Panel: 1
+          DeviceCode: "S"
+          CableSpec: CYKY 4x2.5
+          CableLength: 9
+  - id: C169-S-1
+    Name: Světlo 169-1
+    Description: Plan mark 3(169). Plan symbol D55. One cable feeds the pair of D55 spots.
+    PredefinedType: POINTSOURCE
+    ObjectType: Downlight
+    ContainedInStructure: SP-1.02
+    Origin: [23.9705, 15.0415]
+    Elevation: 3.0379
+    Width: 0.055
+    Depth: 0.055
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 169
+          DeviceCode: "S"
+          CableSpec: CYKY 4x2.5
+          CableLength: 3
+          Note: napojen na 168
+  - id: C169-S-2
+    Name: Světlo 169-2
+    Description: Plan mark 3(169). Plan symbol D55. One cable feeds the pair of D55 spots.
+    PredefinedType: POINTSOURCE
+    ObjectType: Downlight
+    ContainedInStructure: SP-1.02
+    Origin: [24.1985, 15.0415]
+    Elevation: 3.0379
+    Width: 0.055
+    Depth: 0.055
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 169
+          DeviceCode: "S"
+          CableSpec: CYKY 4x2.5
+          CableLength: 3
+          Note: napojen na 168
+  - id: C171-S-1
+    Name: Světlo 171-1
+    Description: Plan mark 3(171). Plan symbol D55. One cable feeds the pair of D55 spots.
+    PredefinedType: POINTSOURCE
+    ObjectType: Downlight
+    ContainedInStructure: SP-1.02
+    Origin: [23.9705, 10.3325]
+    Elevation: 3.0623
+    Width: 0.055
+    Depth: 0.055
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 171
+          DeviceCode: "S"
+          CableSpec: CYKY 4x2.5
+          CableLength: 3
+          Note: napojen na 170
+  - id: C171-S-2
+    Name: Světlo 171-2
+    Description: Plan mark 3(171). Plan symbol D55. One cable feeds the pair of D55 spots.
+    PredefinedType: POINTSOURCE
+    ObjectType: Downlight
+    ContainedInStructure: SP-1.02
+    Origin: [24.1985, 10.3325]
+    Elevation: 3.0623
+    Width: 0.055
+    Depth: 0.055
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 171
+          DeviceCode: "S"
+          CableSpec: CYKY 4x2.5
+          CableLength: 3
+          Note: napojen na 170
+  - id: C172-S
+    Name: Světlo 172
+    Description: Plan mark 2(172). Plan symbol D55. Pair marked with two cables; left spot = lower number (assumption).
+    PredefinedType: POINTSOURCE
+    ObjectType: Downlight
+    ContainedInStructure: SP-1.02
+    Origin: [25.8725, 15.0355]
+    Elevation: 3.043
+    Width: 0.055
+    Depth: 0.055
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 172
+          Panel: 1
+          DeviceCode: "S"
+          CableSpec: CYKY 4x1.5
+          CableLength: 16
+  - id: C174-S
+    Name: Světlo 174
+    Description: Plan mark 2(174). Plan symbol D55. Pair marked with two cables; left spot = lower number (assumption).
+    PredefinedType: POINTSOURCE
+    ObjectType: Downlight
+    ContainedInStructure: SP-1.02
+    Origin: [26.1005, 15.0355]
+    Elevation: 3.043
+    Width: 0.055
+    Depth: 0.055
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 174
+          Panel: 1
+          DeviceCode: "S"
+          CableSpec: CYKY 4x1.5
+          CableLength: 16
+  - id: C176-S
+    Name: Světlo 176
+    Description: Plan mark 2(176). Plan symbol D55. Pair marked with two cables; left spot = lower number (assumption).
+    PredefinedType: POINTSOURCE
+    ObjectType: Downlight
+    ContainedInStructure: SP-1.02
+    Origin: [25.8725, 10.3325]
+    Elevation: 3.0623
+    Width: 0.055
+    Depth: 0.055
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 176
+          Panel: 1
+          DeviceCode: "S"
+          CableSpec: CYKY 4x1.5
+          CableLength: 14
+  - id: C178-S
+    Name: Světlo 178
+    Description: Plan mark 2(178). Plan symbol D55. Pair marked with two cables; left spot = lower number (assumption).
+    PredefinedType: POINTSOURCE
+    ObjectType: Downlight
+    ContainedInStructure: SP-1.02
+    Origin: [26.1005, 10.3325]
+    Elevation: 3.0623
+    Width: 0.055
+    Depth: 0.055
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 178
+          Panel: 1
+          DeviceCode: "S"
+          CableSpec: CYKY 4x1.5
+          CableLength: 14
+  - id: C173-S
+    Name: Světlo 173
+    Description: Plan mark 2(173). Plan symbol D55. Pair marked with two cables; left spot = lower number (assumption).
+    PredefinedType: POINTSOURCE
+    ObjectType: Downlight
+    ContainedInStructure: SP-1.02
+    Origin: [27.7415, 15.0415]
+    Elevation: 3.0379
+    Width: 0.055
+    Depth: 0.055
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 173
+          DeviceCode: "S"
+          CableSpec: CYKY 4x1.5
+          CableLength: 3
+          Note: napojen na 172
+  - id: C175-S
+    Name: Světlo 175
+    Description: Plan mark 2(175). Plan symbol D55. Pair marked with two cables; left spot = lower number (assumption).
+    PredefinedType: POINTSOURCE
+    ObjectType: Downlight
+    ContainedInStructure: SP-1.02
+    Origin: [27.9695, 15.0415]
+    Elevation: 3.0379
+    Width: 0.055
+    Depth: 0.055
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 175
+          DeviceCode: "S"
+          CableSpec: CYKY 4x1.5
+          CableLength: 3
+          Note: napojen na 174
+  - id: C177-S
+    Name: Světlo 177
+    Description: Plan mark 2(177). Plan symbol D55. Pair marked with two cables; left spot = lower number (assumption).
+    PredefinedType: POINTSOURCE
+    ObjectType: Downlight
+    ContainedInStructure: SP-1.02
+    Origin: [27.7415, 10.2945]
+    Elevation: 3.0304
+    Width: 0.055
+    Depth: 0.055
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 177
+          DeviceCode: "S"
+          CableSpec: CYKY 4x1.5
+          CableLength: 3
+          Note: napojen na 176
+  - id: C179-S
+    Name: Světlo 179
+    Description: Plan mark 2(179). Plan symbol D55. Pair marked with two cables; left spot = lower number (assumption).
+    PredefinedType: POINTSOURCE
+    ObjectType: Downlight
+    ContainedInStructure: SP-1.02
+    Origin: [27.9695, 10.2945]
+    Elevation: 3.0304
+    Width: 0.055
+    Depth: 0.055
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 179
+          DeviceCode: "S"
+          CableSpec: CYKY 4x1.5
+          CableLength: 3
+          Note: napojen na 178
+  - id: C180-S
+    Name: Světlo 180
+    Description: "Plan mark 3(180). Plan symbol Panel 250x2400. Plan: \"Panel 250x2400 (~200 W)\". Flat box touching the sloped ceiling at its low end."
+    PredefinedType: POINTSOURCE
+    ObjectType: Panel
+    ContainedInStructure: SP-1.02
+    Origin: [18.907, 11.36]
+    Elevation: 3.9214
+    Width: 0.25
+    Depth: 2.4
+    Height: 0.03
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 180
+          Panel: 1
+          DeviceCode: "S"
+          CableSpec: CYKY 4x2.5
+          CableLength: 4
+  - id: C181-S
+    Name: Světlo 181
+    Description: "Plan mark 2(181). Under the wall cabinets (1560). Soupis: into a box in the pre-wall, position after the sliding-door work. No box; the viewer draws the legs from Path (x,y,z points; | separates runs)."
+    PredefinedType: USERDEFINED
+    ObjectType: LedStrip
+    ContainedInStructure: SP-1.02
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 181
+          Panel: 1
+          DeviceCode: "S"
+          CableSpec: CYKY 4x1.5
+          CableLength: 4
+          Note: do krabice v predstene (pozice bude upresnena po realizaci soupacek), mozno vest podlahou ale omezit soubeh se zasuvkami
+          Path: "19.430,11.310,1.530;19.430,13.780,1.530"
+  - id: C182-S
+    Name: Světlo 182
+    Description: "Plan mark 2(182). Island strips on both long sides; Soupis: from a floor box. Plinth height 0.10 assumed. No box; the viewer draws the legs from Path (x,y,z points; | separates runs)."
+    PredefinedType: USERDEFINED
+    ObjectType: LedStrip
+    ContainedInStructure: SP-1.02
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 182
+          Panel: 1
+          DeviceCode: "S"
+          CableSpec: CYKY 4x1.5
+          CableLength: 6
+          Note: do krabice v podlaze, omezit soubeh se zasuvkami
+          Path: "20.328,11.310,0.100;20.328,13.780,0.100 | 21.299,11.310,0.100;21.299,13.780,0.100"
+          Question: "C182 island strips: plinth (0.10 m) or under the worktop overhang?"
+  - id: C183-S
+    Name: Světlo 183
+    Description: Plan mark 3(183). Plan symbol Panel 300x1200. In the steel shelf above the hood (Soupis); shelf height not known, 2.00 m used.
+    PredefinedType: POINTSOURCE
+    ObjectType: Panel
+    ContainedInStructure: SP-1.02
+    Origin: [20.647, 12.303]
+    Elevation: 2.0
+    Width: 0.3
+    Depth: 1.2
+    Height: 0.03
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 183
+          Panel: 1
+          DeviceCode: "S"
+          CableSpec: CYKY 4x2.5
+          CableLength: 15
+          Note: pod strechou provlecen do jeklu police na digestor, detail zatim neni znam
+          Question: "C183 panel in the shelf over the hood: what height is the shelf?"
+  - id: C184-S
+    Name: Světlo 184
+    Description: Plan mark 3(184). Plan symbol Bar 2xL900. Suspended bar with 2x L900 (60 W) over the dining table; bottom 1.65 m assumed.
+    PredefinedType: POINTSOURCE
+    ObjectType: Pendant
+    ContainedInStructure: SP-1.02
+    Origin: [23.217, 11.576]
+    Elevation: 1.65
+    Width: 0.05
+    Depth: 2.75
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 184
+          Panel: 1
+          DeviceCode: "S"
+          CableSpec: CYKY 4x2.5
+          CableLength: 14
+          Note: uvazuji napojeni pod strechou na tenci, pohledovy kabel
+  - id: C186-S
+    Name: Světlo 186
+    Description: Plan mark 3(186). No box; the viewer draws the legs from Path (x,y,z points; | separates runs).
+    PredefinedType: USERDEFINED
+    ObjectType: LedStrip
+    ContainedInStructure: SP-1.02
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 186
+          Panel: 1
+          DeviceCode: "S"
+          CableSpec: CYKY 4x2.5
+          CableLength: 15
+          Note: uvazuji zakonceni 186,187,188 v hluboke krabici za vypinacem 185, pozdeji rozvedeni (nejspis tencimi kabely) v nabytku
+          Path: "25.428,15.044,0.050;25.428,11.378,0.050;26.489,11.378,0.050;26.489,14.171,0.050;29.145,14.171,0.050"
+          Question: C186 strip follows a drawn outline from the north wall round to x 29.1 (sofa?). Floor level assumed.
+  - id: C187-S
+    Name: Světlo 187
+    Description: Plan mark 3(187). Three shelf strips on the north wall (drawn as three lines); shelf heights 0.90/1.30/1.70 assumed. No box; the viewer draws the legs from Path (x,y,z points; | separates runs).
+    PredefinedType: USERDEFINED
+    ObjectType: LedStrip
+    ContainedInStructure: SP-1.02
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 187
+          Panel: 1
+          DeviceCode: "S"
+          CableSpec: CYKY 4x2.5
+          CableLength: 15
+          Path: "25.490,15.570,0.900;29.340,15.570,0.900 | 25.490,15.570,1.300;29.340,15.570,1.300 | 25.490,15.570,1.700;29.340,15.570,1.700"
+  - id: C188-S
+    Name: Světlo 188
+    Description: Plan mark 2(188). Plan symbol Out-door. Wall lamp on the north wall; height 1.80 assumed.
+    PredefinedType: POINTSOURCE
+    ObjectType: Lamp
+    ContainedInStructure: SP-1.02
+    Origin: [26.148, 15.6]
+    Elevation: 1.725
+    RefDirection: [-1.0, 0.0]
+    Width: 0.12
+    Depth: 0.12
+    Height: 0.15
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 188
+          Panel: 1
+          DeviceCode: "S"
+          CableSpec: CYKY 4x1.5
+          CableLength: 15
+  - id: NC-1.02-S
+    Name: Světlo NC-1.02-S
+    Description: "Plan symbol Panel 200x2500. Plan: \"Panel 200x2500 (~160 W)\" along the north wall, no cable mark."
+    PredefinedType: POINTSOURCE
+    ObjectType: Panel
+    ContainedInStructure: SP-1.02
+    Origin: [22.515, 15.343]
+    Elevation: 2.99
+    Width: 2.5
+    Depth: 0.2
+    Height: 0.03
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          DeviceCode: "S"
+          CableQuestion: No cable on the plan
+          Question: "1.02 \"Panel 200x2500\" by the north wall has no cable mark. Which cable?"
+switchingDevices:
+  - id: C185-V
+    Name: Vypínač 185
+    Description: Plan mark 1(185). Deep box; 186–188 end here (Soupis).
+    PredefinedType: MOMENTARYSWITCH
+    ObjectType: PushButton
+    ContainedInStructure: SP-1.02
+    Origin: [25.6125, 15.6]
+    Elevation: 1.3145
+    RefDirection: [-1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 185
+          Panel: 1
+          DeviceCode: "V"
+          CableSpec: UTP Cat6a
+          CableLength: 15
+          Controls: C166-S-1, C166-S-2, C167-S-1, C167-S-2, C168-S-1, C168-S-2, C170-S-1, C170-S-2, C169-S-1, C169-S-2, C171-S-1, C171-S-2, C172-S, C174-S, C176-S, C178-S, C173-S, C175-S, C177-S, C179-S, C180-S, C181-S, C182-S, C183-S, C184-S, C186-S, C187-S, C188-S, NC-1.02-S
+  - id: C88-V-1
+    Name: Vypínač 88-1
+    Description: Plan mark 1(088).
+    PredefinedType: MOMENTARYSWITCH
+    ObjectType: PushButton
+    ContainedInStructure: SP-1.02
+    Origin: [19.3015, 10.25]
+    Elevation: 1.3145
+    RefDirection: [1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 88
+          Panel: 1
+          DeviceCode: "V"
+          CableSpec: UTP Cat6a
+          CableLength: 6
+          Controls: C166-S-1, C166-S-2, C167-S-1, C167-S-2, C168-S-1, C168-S-2, C170-S-1, C170-S-2, C169-S-1, C169-S-2, C171-S-1, C171-S-2, C172-S, C174-S, C176-S, C178-S, C173-S, C175-S, C177-S, C179-S, C180-S, C181-S, C182-S, C183-S, C184-S, C186-S, C187-S, C188-S, NC-1.02-S
+  - id: C88-V-2
+    Name: Vypínač 88-2 venku
+    Description: Plan mark 1(088). Terrace side.
+    PredefinedType: MOMENTARYSWITCH
+    ObjectType: PushButton
+    ContainedInStructure: SP-1.02
+    Origin: [19.3835, 9.8]
+    Elevation: 1.3145
+    RefDirection: [-1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 88
+          Panel: 1
+          DeviceCode: "V"
+          CableSpec: UTP Cat6a
+          CableLength: 6
+  - id: C89-V-1
+    Name: Vypínač 89-1
+    Description: Plan mark 1(089).
+    PredefinedType: MOMENTARYSWITCH
+    ObjectType: PushButton
+    ContainedInStructure: SP-1.02
+    Origin: [29.0715, 10.25]
+    Elevation: 1.3145
+    RefDirection: [1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 89
+          Panel: 1
+          DeviceCode: "V"
+          CableSpec: UTP Cat6a
+          CableLength: 16
+          Controls: C166-S-1, C166-S-2, C167-S-1, C167-S-2, C168-S-1, C168-S-2, C170-S-1, C170-S-2, C169-S-1, C169-S-2, C171-S-1, C171-S-2, C172-S, C174-S, C176-S, C178-S, C173-S, C175-S, C177-S, C179-S, C180-S, C181-S, C182-S, C183-S, C184-S, C186-S, C187-S, C188-S, NC-1.02-S
+  - id: C89-V-2
+    Name: Vypínač 89-2 venku
+    Description: Plan mark 1(089). Terrace side.
+    PredefinedType: MOMENTARYSWITCH
+    ObjectType: PushButton
+    ContainedInStructure: SP-1.02
+    Origin: [29.1015, 9.8]
+    Elevation: 1.3145
+    RefDirection: [-1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 89
+          Panel: 1
+          DeviceCode: "V"
+          CableSpec: UTP Cat6a
+          CableLength: 16
+  - id: C200-V
+    Name: Vypínač 200
+    Description: Soupis row added 3.4.2026, after the plan; no position. No position on the plan; no body.
+    PredefinedType: MOMENTARYSWITCH
+    ObjectType: PushButton
+    ContainedInStructure: SP-1.02
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 200
+          Panel: 1
+          DeviceCode: "V"
+          CableSpec: UTP Cat6a
+          CableLength: 15
+          Note: tento a nize pridano 3.4.2026
+          PositionUnknown: true
+          Controls: C166-S-1, C166-S-2, C167-S-1, C167-S-2, C168-S-1, C168-S-2, C170-S-1, C170-S-2, C169-S-1, C169-S-2, C171-S-1, C171-S-2, C172-S, C174-S, C176-S, C178-S, C173-S, C175-S, C177-S, C179-S, C180-S, C181-S, C182-S, C183-S, C184-S, C186-S, C187-S, C188-S, NC-1.02-S
+sensors:
+  - id: C165-R
+    Name: mmWave 165
+    Description: Plan mark 1(165).
+    PredefinedType: MOVEMENTSENSOR
+    ObjectType: MmWavePresence
+    ContainedInStructure: SP-1.02
+    Origin: [29.617, 12.974]
+    Elevation: 4.7865
+    Width: 0.07
+    Depth: 0.07
+    Height: 0.03
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 165
+          Panel: 3
+          DeviceCode: "R"
+          CableSpec: UTP Cat6a
+          CableLength: 10
+          Note: nutno vymyslet presnou cestu do rozvadece 3, prinejhorsim kousek venkem
+  - id: C88-M
+    Name: Kontakt 88
+    Description: Plan mark 1(088).
+    PredefinedType: CONTACTSENSOR
+    ObjectType: WindowContact
+    ContainedInStructure: SP-1.02
+    Origin: [19.51, 10.125]
+    Elevation: 0.99
+    RefDirection: [-1.0, 0.0]
+    Width: 0.02
+    Depth: 0.015
+    Height: 0.02
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 88
+          Panel: 1
+          DeviceCode: "M"
+          CableSpec: UTP Cat6a
+          CableLength: 6
+  - id: C89-M
+    Name: Kontakt 89
+    Description: Plan mark 1(089).
+    PredefinedType: CONTACTSENSOR
+    ObjectType: WindowContact
+    ContainedInStructure: SP-1.02
+    Origin: [29.01, 10.125]
+    Elevation: 0.99
+    RefDirection: [-1.0, 0.0]
+    Width: 0.02
+    Depth: 0.015
+    Height: 0.02
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 89
+          Panel: 1
+          DeviceCode: "M"
+          CableSpec: UTP Cat6a
+          CableLength: 16
+outlets:
+  - id: C189-E
+    Name: Ethernet 189
+    Description: "Plan mark 1(189). TV corner: plan note \"2x Ethernet a 230V zásuvka pro AppleTV a TV ... výška cca 110, potvrdím\"."
+    PredefinedType: DATAOUTLET
+    ObjectType: Ethernet
+    ContainedInStructure: SP-1.02
+    Origin: [29.6355, 15.6]
+    Elevation: 1.1355
+    RefDirection: [-1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 189
+          Panel: 1
+          DeviceCode: "E"
+          CableSpec: UTP Cat6a
+          CableLength: 20
+  - id: C190-E
+    Name: Ethernet 190
+    Description: "Plan mark 1(190). TV corner: plan note \"2x Ethernet a 230V zásuvka pro AppleTV a TV ... výška cca 110, potvrdím\"."
+    PredefinedType: DATAOUTLET
+    ObjectType: Ethernet
+    ContainedInStructure: SP-1.02
+    Origin: [29.6355, 15.6]
+    Elevation: 1.2065
+    RefDirection: [-1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 190
+          Panel: 1
+          DeviceCode: "E"
+          CableSpec: UTP Cat6a
+          CableLength: 20
+  - id: SOCK-1.02-TV
+    Name: Zásuvka TV
+    Description: TV corner socket, 1100 (plan note, to be confirmed).
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.02
+    Origin: [29.6355, 15.6]
+    Elevation: 1.0645
+    RefDirection: [-1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: C195-W
+    Name: Wi-Fi 195
+    Description: "Plan mark (none). Plan: \"U7 Pro Wall na SDK ve výšce 2.5 m\"."
+    PredefinedType: COMMUNICATIONSOUTLET
+    ObjectType: WifiAccessPoint
+    ContainedInStructure: SP-1.02
+    Origin: [23.83, 15.6]
+    Elevation: 2.4
+    RefDirection: [-1.0, 0.0]
+    Width: 0.15
+    Depth: 0.035
+    Height: 0.2
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 195
+          Panel: 1
+          DeviceCode: "W"
+          CableSpec: UTP Cat6a
+          CableLength: 12
+  - id: C201-E
+    Name: Ethernet 201
+    Description: Soupis row added 3.4.2026, after the plan; no position. No position on the plan; no body.
+    PredefinedType: DATAOUTLET
+    ObjectType: Ethernet
+    ContainedInStructure: SP-1.02
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 201
+          Panel: 1
+          DeviceCode: "E"
+          CableSpec: UTP Cat6a
+          CableLength: 19
+          PositionUnknown: true
+  - id: SOCK-1.02-N1-1
+    Name: Zásuvka N1-1
+    Description: "Plan: \"Na lednici a mikrovlnku\"."
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.02
+    Origin: [20.3955, 15.6]
+    Elevation: 0.2645
+    RefDirection: [-1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.02-N1-2
+    Name: Zásuvka N1-2
+    Description: "Plan: \"Na lednici a mikrovlnku\"."
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.02
+    Origin: [20.3955, 15.6]
+    Elevation: 0.3355
+    RefDirection: [-1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.02-N2-1
+    Name: Zásuvka N2-1
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.02
+    Origin: [22.8665, 15.6]
+    Elevation: 0.2645
+    RefDirection: [-1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.02-N2-2
+    Name: Zásuvka N2-2
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.02
+    Origin: [22.8665, 15.6]
+    Elevation: 0.3355
+    RefDirection: [-1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.02-N2-3
+    Name: Zásuvka N2-3
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.02
+    Origin: [22.8665, 15.6]
+    Elevation: 0.4065
+    RefDirection: [-1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.02-N2-4
+    Name: Zásuvka N2-4
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.02
+    Origin: [22.8665, 15.6]
+    Elevation: 0.4775
+    RefDirection: [-1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.02-N2-5
+    Name: Zásuvka N2-5
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.02
+    Origin: [22.8665, 15.6]
+    Elevation: 0.5485
+    RefDirection: [-1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.02-N3-1
+    Name: Zásuvka N3-1
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.02
+    Origin: [25.7855, 15.6]
+    Elevation: 0.2645
+    RefDirection: [-1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.02-N3-2
+    Name: Zásuvka N3-2
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.02
+    Origin: [25.7855, 15.6]
+    Elevation: 0.3355
+    RefDirection: [-1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.02-N3-3
+    Name: Zásuvka N3-3
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.02
+    Origin: [25.7855, 15.6]
+    Elevation: 0.4065
+    RefDirection: [-1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.02-N3-4
+    Name: Zásuvka N3-4
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.02
+    Origin: [25.7855, 15.6]
+    Elevation: 0.4775
+    RefDirection: [-1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.02-N4
+    Name: Zásuvka N4
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.02
+    Origin: [28.8725, 15.6]
+    Elevation: 0.2645
+    RefDirection: [-1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.02-K1-1
+    Name: Zásuvka K1-1
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.02
+    Origin: [18.8, 11.6875]
+    Elevation: 1.3645
+    RefDirection: [0.0, -1.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.02-K1-2
+    Name: Zásuvka K1-2
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.02
+    Origin: [18.8, 11.6875]
+    Elevation: 1.4355
+    RefDirection: [0.0, -1.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.02-K2
+    Name: Zásuvka K2
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.02
+    Origin: [18.8, 13.2415]
+    Elevation: 1.3645
+    RefDirection: [0.0, -1.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.02-K3-1
+    Name: Zásuvka K3-1
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.02
+    Origin: [18.8, 13.5825]
+    Elevation: 1.3645
+    RefDirection: [0.0, -1.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.02-K3-2
+    Name: Zásuvka K3-2
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.02
+    Origin: [18.8, 13.5825]
+    Elevation: 1.4355
+    RefDirection: [0.0, -1.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.02-I1
+    Name: Zásuvka I1
+    Description: "Kitchen island; plan note: socket positions in the island to follow."
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.02
+    Origin: [21.023, 11.5985]
+    Elevation: 0.2645
+    RefDirection: [0.0, -1.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.02-I2
+    Name: Zásuvka I2
+    Description: "Kitchen island; plan note: socket positions in the island to follow."
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.02
+    Origin: [20.896, 12.9535]
+    Elevation: 0.2645
+    RefDirection: [0.0, -1.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.02-E
+    Name: Zásuvka E
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.02
+    Origin: [29.0715, 10.25]
+    Elevation: 0.2645
+    RefDirection: [1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.02-X1
+    Name: Zásuvka X1 venku
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.02
+    Origin: [19.3885, 9.8]
+    Elevation: 0.2645
+    RefDirection: [-1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.02-X2
+    Name: Zásuvka X2 venku
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.02
+    Origin: [29.1165, 9.8]
+    Elevation: 0.2645
+    RefDirection: [-1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
