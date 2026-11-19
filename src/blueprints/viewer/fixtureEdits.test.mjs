@@ -97,7 +97,8 @@ const patch = buildPatch(store, rowsById, { exportedAt: "2026-11-19T00:00:00Z" }
 assert.deepEqual(patch.fixtures["C32-V-2"], { Origin: [5.75, 9.4355], Elevation: 1.2145, CableLength: 3 });
 assert.deepEqual(patch.fixtures["C7-S"], { Move: [0, 0.05, 0] });
 assert.deepEqual(patch.fixtures["SOCK-N"], { delete: true });
-assert.equal(patch.version, 1);
+assert.equal(patch.version, 2);
+assert.deepEqual(patch.cables, {});
 
 // A copy on the same cable: next free id, full YAML element.
 const id = nextFixtureId(hall, new Set(["C32-V-1", "C32-V-2"]));
@@ -139,6 +140,9 @@ assert.deepEqual(stale.fixtures.moved, { base: [0, 0, 1.1], target: [0, 0, 1.2] 
 
 // Garbage in localStorage starts empty.
 assert.deepEqual(parseStore("{nope", "m").fixtures, {});
-assert.deepEqual(parseStore(JSON.stringify({ version: 2, fixtures: { a: {} } }), "m").fixtures, {});
+assert.deepEqual(parseStore(JSON.stringify({ version: 3, fixtures: { a: {} } }), "m").fixtures, {});
+// A version 1 store from before the cable routes still loads, with no cable edits.
+assert.deepEqual(parseStore(JSON.stringify({ version: 1, fixtures: { a: {} } }), "m").cables, {});
+assert.equal(parseStore(JSON.stringify({ version: 1, fixtures: { a: {} } }), "m").version, 2);
 
 console.log("fixtureEdits.test.mjs ok");

@@ -3590,6 +3590,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     },
     onLayout: () => applySafeViewOffset(true),
     t: tr,
+    cables: options.cables && typeof options.cables === "object" ? options.cables : null,
   });
   if (root) editMode.showButton(editMode.hasFixtures());
   onLocaleChange(() => editMode?.refreshLocale());

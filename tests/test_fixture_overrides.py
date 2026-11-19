@@ -56,8 +56,25 @@ def _props(element):
 
 def test_committed_file_is_valid():
     data = fo.load_overrides()
-    assert data["version"] == 1
+    assert data["version"] == 2
     assert isinstance(data["fixtures"], dict)
+    assert isinstance(data["cables"], dict)
+
+
+def test_version_1_patch_still_merges():
+    merged = fo.merge({"version": 1, "fixtures": {}}, {"version": 1, "fixtures": {"C7-S": {"Move": [0, 0.01, 0]}}})
+    assert merged["version"] == 2
+    assert merged["cables"] == {}
+
+
+def test_merge_replaces_and_resets_cable_routes():
+    route = [[6.0, 10.0, 2.1], [6.0, 10.0, 2.6], [0.4, 10.0, 2.6]]
+    merged = fo.merge({"version": 2, "fixtures": {}, "cables": {"C1": {"points": [[0, 0, 0], [1, 0, 0]]}}},
+                      {"version": 2, "fixtures": {}, "cables": {"C10": {"points": route}}})
+    assert merged["cables"]["C10"]["points"] == route
+    assert "C1" in merged["cables"]
+    again = fo.merge(merged, {"version": 2, "cables": {"C1": {"reset": True}}})
+    assert sorted(again["cables"]) == ["C10"]
 
 
 def test_merge_adds_moves_and_replaces_the_rest():
