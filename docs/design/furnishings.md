@@ -45,13 +45,13 @@ The fridge’s south face is y = 14.884, 66 mm south of OP25’s north jamb, so 
 
 ### Island
 
-2500 × 1200 as drawn, counter 930. Centred on the drawn rectangle: west 20.554, east 21.754, north 13.800, south 11.300. Split at about x = 21.15. Since 2026-11-13 the west row is 14 shallower (west face 20.568, body 2500 × 1186) for the Gridfinity drawers.
+2500 × 1200 as drawn, counter 930. Centred on the drawn rectangle: west 20.554, east 21.754, north 13.800, south 11.300. Split at about x = 21.15. Since 2026-11-13 the west row is 14 shallower (west face 20.568, body 2500 × 1186) for the Gridfinity drawers; since 2026-11-19 the east row is too (east face 21.740, body 2500 × 1172).
 
-The island is one monoblock (`KR-ISL`, Petr 2026-11-12) with a Silestone worktop overhanging 20 past both long fronts (Petr, 2026-11-13; was 30) and Silestone cladding on both ends. Since 2026-11-13 the west row is 586 deep for Gridfinity drawers (west face x 20.568), so at worktop level the island is 2540 × 1226 (x 20.548–21.774, y 11.280–13.820). Structure, worktop and cladding: [kitchen-cabinets.md](kitchen-cabinets.md).
+The island is one monoblock (`KR-ISL`, Petr 2026-11-12) with a Silestone worktop overhanging 20 past both long fronts (Petr, 2026-11-13; was 30) and Silestone cladding on both ends. Since 2026-11-13 the west row is 586 deep for Gridfinity drawers (west face x 20.568), and since 2026-11-19 the east row too (east face x 21.740), so at worktop level the island is 2540 × 1212 (x 20.548–21.760, y 11.280–13.820). Structure, worktop and cladding: [kitchen-cabinets.md](kitchen-cabinets.md).
 
 West row faces west. Modules north to south: 500, 600, 500, 600, 300. The rectangular sink is in the north 500. The 600 south of it (SF-I600a) is the knife-drawer cabinet; its drawers are in [kitchen-cabinets.md](kitchen-cabinets.md). The rectangular sink is the Teka BE LINEA RS15 18.40 X (`SN-RS1840`). The green rectangle with two circles on the second 600 (SF-I600b) is the Miele KM 8665 FL hob, not two bowls; see [kitchen-cabinets.md](kitchen-cabinets.md).
 
-East row faces east. It is the plinth and robot-dock side. No module lines are drawn there, so the 2500 is split 600/600/600/700 from the north, the 700 at the south.
+East row faces east. It is the plinth and robot-dock side. No module lines are drawn there, so the 2500 was split 600/600/600/700 from the north, the 700 at the south. Since 2026-11-19 (drawers on the Gridfinity rule) it is 586/607/607/700, 586 deep.
 
 Clear of the inner faces, to the outline: west 1.754, east 8.146, north 1.800, south 1.050. Those are to the bay boxes; the worktop and cladding take 30 (west, east) and 20 (north, south) of each, so the island-to-table gap at worktop height is 1303, not 1333.
 
@@ -85,9 +85,9 @@ Piers W-052 (x 22.15–22.45) and W-053 (x 25.15–25.45) project to y = 15.35. 
 
 It is the run `KR-LB` (an oak body to 910, a 20 mm oak-veneer top, 20 front overhang), 170 mm over the sofa back. The joint with the dining run's Silestone at x 25.52 is `open:`. Details: [kitchen-cabinets.md](kitchen-cabinets.md) “Living-room counter”.
 
-The tall corner cabinet is the east 200 mm (x 29.70–29.90), floor to 2450, the kitchen tall height, not the 5.05 m slope. It is one armrest wide.
+The tall corner cabinet is the east 200 mm (x 29.70–29.90), floor to 2450, the kitchen tall height, not the 5.05 m slope. It is one armrest wide. Since 2026-11-19 it is run `KR-TC`: one door over a fixed 700 slab behind the sofa arm ([kitchen-cabinets.md](kitchen-cabinets.md) “Fronts everywhere”).
 
-Oak-front wall cabinets follow the kitchen wall cabinet: depth 350, bottom 1560, height 890, top 2450 (bottom 1550, height 900 until 2026-11-13; SF-DH follows the kitchen wall cabinets, a reading of Petr's “top cabinets”). 20 mm under the 2470 soffit. No fronts yet: 2700 is over AVENTOS HF's 1800 width, so it would need two bays (`open:`). A 350 mm cabinet on the wall would enter a pier (pier face y = 15.35, cabinet front would be y = 15.25), so the wall cabinet is only the clear bay x 22.45–25.15.
+Oak-front wall cabinets follow the kitchen wall cabinet: depth 350, bottom 1560, height 890, top 2450 (bottom 1550, height 900 until 2026-11-13; SF-DH follows the kitchen wall cabinets, a reading of Petr's “top cabinets”). 20 mm under the 2470 soffit. Since 2026-11-19 it is run `KR-DH`: three 900 sections, each a pair of hinged doors with two shelves (not AVENTOS: the soffit leaves 20 over the top). See [kitchen-cabinets.md](kitchen-cabinets.md) “Fronts everywhere”. A 350 mm cabinet on the wall would enter a pier (pier face y = 15.35, cabinet front would be y = 15.25), so the wall cabinet is only the clear bay x 22.45–25.15.
 
 The bookshelf is above the sofa, x 25.52–29.70, depth 250 (front y = 15.35, the pier face, so it does not pass the piers). Bottom **980**, 50 mm above the 930 counter, top 2450. Three shelf boards. Oak lamella on the back. **Its bottom was 850 (50 over the old 800 base); the 930 counter would have cut 80 into it, so it was raised and is 130 shorter (1600 → 1470). Petr did not ask for this.**
 
@@ -115,7 +115,7 @@ The east arm occupies y 13.99–14.85 and z 0–660. The panel’s north edge is
 
 ### Table, chairs, rug, subwoofer
 
-Gatta, Kaplan 1934. 1100 × 2400. Catalogue height 760; the plan’s figure is about 750, and the model uses 760. Long axis north-south, y 11.35–13.75. Centred in the island-to-sofa gap: island east face x = 21.754, sofa west face x = 25.52, centre x = 23.637, top x 23.087–24.187. Each side gap is 1333 mm. Lacquered natural oak.
+Gatta, Kaplan 1934. 1100 × 2400. Catalogue height 760; the plan’s figure is about 750, and the model uses 760. Long axis north-south, y 11.35–13.75. Centred in the island-to-sofa gap as it was: island east face x = 21.754, sofa west face x = 25.52, centre x = 23.637, top x 23.087–24.187. Each side gap was 1333 mm. Since 2026-11-19 the island's east face is x 21.740 (the east row is 586 deep), so the island side is 1347; the table did not move. Lacquered natural oak.
 
 `guess:` top 30, apron 60 high by 20 thick set in 40, legs 50 square set in 80. Stated as assumed in `living_geometry.py`, not measured off the plan.
 

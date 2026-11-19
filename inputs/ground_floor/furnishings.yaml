@@ -255,9 +255,12 @@ systemFurniture:
       # testoviny, tortilly, asie, peceni". The door is the upper band,
       # hinged R, with door racks. The lower band (0.81, level with the
       # base carcasses, guess:) is not described: open:, one slab.
+      # Since 2026-11-19 (Petr, 2026-11-19: "Add the rest of the drawers, hinged doors, etc. to the whole kitchen and living room on a best effort basis. We'll adjust details later.")
+      # the lower band is two drawers, 400 + 410 (guess:), level with
+      # SF-T3's and SF-T4's.
       - Name: Pset_Fronts
         Properties:
-          Layout: "door * hinge=R shelves=4 racks=4 | front 0.81"
+          Layout: "door * hinge=R shelves=4 racks=4 | drawer 0.4 | drawer 0.41"
           Contents: "rýže, těstoviny, tortilly, asie, pečení; "
       - Name: Pset_CabinetDoor
         Properties:
@@ -285,7 +288,10 @@ systemFurniture:
         Properties:
           # The shared dividers leave 582 clear; both makers want 560–568
           # (562–568), so each niche gets 9 mm packers: clear 564.
-          Layout: "front * | niche 0.356 clear=0.564 | niche 0.593 clear=0.564 | front 0.81"
+          # 2026-11-19 (best effort, see SF-T2): the top band is a door
+          # hinged L (towards SF-T2) with one shelf, the bottom band two
+          # drawers 400 + 410. All guess:.
+          Layout: "door * hinge=L shelves=1 | niche 0.356 clear=0.564 | niche 0.593 clear=0.564 | drawer 0.4 | drawer 0.41"
   - id: SF-T4
     Name: "Vysoká 500"
     Description: "Tall run, east end. Note: zbyva sirka cca 50. Modelled 500. The same note allows 600 if a drinks fridge goes underneath. East face nicks pier W-052 by 8 mm."
@@ -303,10 +309,13 @@ systemFurniture:
       # Note: "zbyva sirka cca 50 / otvirani nevim (dreame link), mozna
       # suplik? / sladkosti, brambury, orisky / musi byt sirka 60 pokud ma
       # dole byt lednicka na sudy". Opening not decided: open:, slab.
+      # 2026-11-19 (best effort, see SF-T2; "mozna suplik?"): a door hinged
+      # R (the pier side) with four shelves over two drawers 400 + 410 in
+      # line with SF-T2 / SF-T3. All guess:; no keg fridge, so 500 stays.
       - Name: Pset_Fronts
         Properties:
-          Layout: "front *"
-          Contents: "sladkosti, brambůrky, oříšky"
+          Layout: "door * hinge=R shelves=4 | drawer 0.4 | drawer 0.41"
+          Contents: "sladkosti, brambůrky, oříšky; sladkosti, brambůrky, oříšky; sladkosti, brambůrky, oříšky"
   - id: SF-TF
     Name: "Nad lednicí 908"
     Description: "Cabinet over the Whirlpool fridge, between SF-T1 and SF-T2 (x 19.55–20.458). Fronts flush with the tall run, top 2450. Bottom 1926: the fridge top 1876 + 50 clearance (guess:). Note: nahore prislusenstvi od robota, ryzovar."
@@ -347,9 +356,11 @@ systemFurniture:
       # cednik do drezu (a drtic) / madlo na uterku / SBox by mel trcet
       # doprava ... musi se vyhnout drtici". Interior wishes, no front
       # type: open:, the slab front stays (kitchen-cabinets.md).
+      # 2026-11-19 (best effort, see SF-T2): one door hinged L (the island's
+      # north end), no shelf (bowl, disposer). guess:.
       - Name: Pset_Fronts
         Properties:
-          Layout: "front *"
+          Layout: "door * hinge=L"
           Contents: "vlevo prkýnka, vpravo cedník do dřezu (a drtič) / madlo na utěrku"
   - id: SF-I600a
     Name: "Ostrov západ 600"
@@ -462,70 +473,105 @@ systemFurniture:
           Run: KR-ISL
       # Note: "alobal, folie, spejle, pytliky". One bullet, no front type:
       # open:, the slab front stays.
+      # 2026-11-19 (best effort, see SF-T2): a full-height pull-out with
+      # three baskets (guess:). A pull-out, not drawers, so the 305 bay is
+      # not on the Gridfinity rule and keeps its width.
       - Name: Pset_Fronts
         Properties:
-          Layout: "front *"
+          Layout: "pullout * items=shelves n=3"
           Contents: "alobal, fólie, špejle, pytlíky"
   - id: SF-E600a
     Name: "Ostrov východ 600"
-    Description: "Island, east row, north module. No module line is drawn on this side. 600 of 600/600/600/700, north to south. Plinth and robot-dock side. Faces east."
+    Description: "Island, east row, north module. No module line is drawn on this side. Was 600 of 600/600/600/700, north to south; since 2026-11-19 586 of 586/607/607/700, 586 deep (Gridfinity drawers next to it). Door over a shelf for the vacuum sealer, guess:. Plinth and robot-dock side. Faces east."
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
-    Origin: [21.754, 13.2]
+    Origin: [21.74, 13.214]
     RefDirection: [0, 1]
-    Width: 0.6
-    Depth: 0.6
+    Width: 0.586
+    Depth: 0.586
     Height: 0.93
     PropertySets:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-ISL
+      # 2026-11-19 (best effort, see SF-T2): a door hinged R (the island's
+      # north end) with one shelf, for the vacuum sealer the black card asks
+      # about (guess:). Not a drawer bay, so it takes the row's Gridfinity
+      # remainder: 600 -> 586 wide.
+      - Name: Pset_Fronts
+        Properties:
+          Layout: "door * hinge=R shelves=1"
+          Contents: "vakuovačka"
   - id: SF-E600b
     Name: "Ostrov východ 600"
-    Description: "Island, east row. Second 600. Faces east."
+    Description: "Island, east row. Second module, 607 (was 600) for whole Gridfinity cells, guess: drawers. Faces east."
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
-    Origin: [21.754, 12.6]
+    Origin: [21.74, 12.607]
     RefDirection: [0, 1]
-    Width: 0.6
-    Depth: 0.6
+    Width: 0.607
+    Depth: 0.586
     Height: 0.93
     PropertySets:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-ISL
+      # 2026-11-19 (best effort, see SF-T2): three drawers like the west row,
+      # MAXIMERA low 100 + 100 + rest, Gridfinity (inside n x 42 + 1). The
+      # row goes 600 -> 586 deep (depth rounds down) and this bay is 607
+      # wide for a whole grid. Heights guess:.
+      - Name: Pset_Drawers
+        Properties:
+          NominalHeights: "0.1 0.1 *"
+          Gridfinity: true
   - id: SF-E600c
     Name: "Ostrov východ 600"
-    Description: "Island, east row. Third 600. Faces east."
+    Description: "Island, east row. Third module, 607 (was 600) for whole Gridfinity cells, guess: drawers. Faces east."
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
-    Origin: [21.754, 12.0]
+    Origin: [21.74, 12.0]
     RefDirection: [0, 1]
-    Width: 0.6
-    Depth: 0.6
+    Width: 0.607
+    Depth: 0.586
     Height: 0.93
     PropertySets:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-ISL
+      # 2026-11-19 (best effort, see SF-T2): three drawers like the west row,
+      # MAXIMERA low 100 + 100 + rest, Gridfinity (inside n x 42 + 1). The
+      # row goes 600 -> 586 deep (depth rounds down) and this bay is 607
+      # wide for a whole grid. Heights guess:.
+      - Name: Pset_Drawers
+        Properties:
+          NominalHeights: "0.1 0.1 *"
+          Gridfinity: true
   - id: SF-E700
     Name: "Ostrov východ 700"
     Description: "Island, east row, south end. The remaining 700. Faces east."
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
-    Origin: [21.754, 11.3]
+    Origin: [21.74, 11.3]
     RefDirection: [0, 1]
     Width: 0.7
-    Depth: 0.6
+    Depth: 0.586
     Height: 0.93
     PropertySets:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-ISL
+      # 2026-11-19 (best effort, see SF-T2): three drawers like the west row,
+      # MAXIMERA low 100 + 100 + rest, Gridfinity (inside n x 42 + 1). The
+      # row goes 600 -> 586 deep (depth rounds down) and this bay is 700
+      # wide for a whole grid. Heights guess:.
+      - Name: Pset_Drawers
+        Properties:
+          NominalHeights: "0.1 0.1 *"
+          Gridfinity: true
   - id: SF-A250
     Name: "Západ 250 úklid"
     Description: "Section A, south side. Cleaning pull-out, 250. Left when facing the west wall."
@@ -712,6 +758,12 @@ systemFurniture:
         Properties:
           Material: "natural oak"
           Form: "solid or veneer"
+      # 2026-11-19 (best effort, see SF-T2): a shallow cupboard, one door
+      # hinged R with two shelves (guess:). Hinged R because SF-T4 stands
+      # 150 proud on the west of SF-F052.
+      - Name: Pset_Fronts
+        Properties:
+          Layout: "door * hinge=R shelves=2"
   - id: SF-DN
     Name: "Jídelna spodní"
     Description: "Dining base between W-052 and W-053. 450 deep, front y=15.15, counter 930, the kitchen counter height. Butts both piers. Natural oak."
@@ -730,6 +782,16 @@ systemFurniture:
         Properties:
           Material: "natural oak"
           Form: "solid or veneer"
+      # 2026-11-19 (Petr, 2026-11-19: "Add the rest of the drawers, hinged doors, etc. to the whole kitchen and living room on a best effort basis. We'll adjust details later.")
+      # Five sections, west to east 600 / 600 / 300 / 600 / 600 (IKEA widths,
+      # guess:): drawers 200 / 300 / rest in the 600s, a 300 pull-out with
+      # three baskets in the middle. The note's "pecivo / doplnky stravy /
+      # leky" names no bay; not assigned (open:).
+      - Name: Pset_Fronts
+        Properties:
+          Sections: "0.6 0.6 0.3 0.6 0.6"
+          Layout: "drawer 0.2 | drawer 0.3 | drawer *"
+          Layout3: "pullout * items=shelves n=3"
   - id: SF-F053
     Name: "Výplň W-053"
     Description: "Shallow filler in front of pier W-053. 300 wide, 200 deep, front flush at y=15.15. Still west of the sofa, counter 930. Natural oak."
@@ -748,6 +810,11 @@ systemFurniture:
         Properties:
           Material: "natural oak"
           Form: "solid or veneer"
+      # 2026-11-19 (best effort, see SF-T2): a shallow cupboard, one door
+      # hinged R with two shelves (guess:). Hinged R like SF-F052.
+      - Name: Pset_Fronts
+        Properties:
+          Layout: "door * hinge=R shelves=2"
   - id: SF-DN70
     Name: "Jídelna 70"
     Description: "70 mm between W-053 (x=25.45) and the sofa (x=25.52). Full 450 depth, counter 930, so the dining run reaches the sofa with no gap. Natural oak."
@@ -790,9 +857,21 @@ systemFurniture:
         Properties:
           Material: "natural oak"
           Form: "solid or veneer"
+      # 2026-11-19 (Petr, 2026-11-19: "Add the rest of the drawers, hinged doors, etc. to the whole kitchen and living room on a best effort basis. We'll adjust details later.")
+      # Under-storage in seven equal sections (597): a 140 drawer above the
+      # sofa back (760; the drawer box clears it) over a door with one shelf,
+      # hinges alternating. The sofa back stands against the doors: they
+      # only open with the sofa pulled out (open:). All guess:.
+      - Name: Pset_Fronts
+        Properties:
+          Sections: "7"
+          Layout: "drawer 0.14 | door * hinge=L shelves=1"
+          Layout2: "drawer 0.14 | door * hinge=R shelves=1"
+          Layout4: "drawer 0.14 | door * hinge=R shelves=1"
+          Layout6: "drawer 0.14 | door * hinge=R shelves=1"
   - id: SF-DH
     Name: "Jídelna horní"
-    Description: "Oak-front wall cabinet over the dining bay, x 22.45–25.15. Kitchen wall-cabinet size: depth 350, bottom 1560, height 890, top 2450 (Petr, 2026-11-13: top cabinets start at 1560; the ceiling line at 2450 is an invariant). Not carried across the piers. Fronts not split yet: 2700 is over AVENTOS HF's 1800, so it would need two bays (open:)."
+    Description: "Oak-front wall cabinet over the dining bay, x 22.45–25.15. Kitchen wall-cabinet size: depth 350, bottom 1560, height 890, top 2450 (Petr, 2026-11-13: top cabinets start at 1560; the ceiling line at 2450 is an invariant). Not carried across the piers. Since 2026-11-19 its own run KR-DH: three 900 sections, each a pair of hinged doors with two shelves (not AVENTOS: the soffit is 20 above the top)."
     PredefinedType: USERDEFINED
     ObjectType: WallCabinet
     ContainedInStructure: SP-1.02
@@ -806,6 +885,21 @@ systemFurniture:
         Properties:
           Material: "natural oak"
           Form: "solid or veneer"
+      - Name: Pset_KitchenBay
+        Properties:
+          Run: KR-DH
+      # 2026-11-19 (Petr, 2026-11-19: "Add the rest of the drawers, hinged doors, etc. to the whole kitchen and living room on a best effort basis. We'll adjust details later.")
+      # Three 900 sections, each a pair of doors (447 leaves) with two
+      # shelves. Hinged doors, not AVENTOS HF like the west wall: the soffit
+      # is 20 over the top (2470) and HF at 88 wants 28. The dining note's
+      # "nahore hrnky" (top: mugs). All guess:.
+      - Name: Pset_Fronts
+        Properties:
+          Sections: "3"
+          Layout: "doors * shelves=2"
+          Contents1: "hrnky"
+          Contents2: "hrnky"
+          Contents3: "hrnky"
   - id: SF-TC
     Name: "Rohová vysoká"
     Description: "Tall corner cabinet, east end of the north wall. 200 wide, one sofa armrest, x 29.70–29.90. 450 deep, front y=15.15. Height 2450, the kitchen tall height. Natural oak."
@@ -821,6 +915,16 @@ systemFurniture:
         Properties:
           Material: "natural oak"
           Form: "solid or veneer"
+      - Name: Pset_KitchenBay
+        Properties:
+          Run: KR-TC
+      # 2026-11-19 (Petr, 2026-11-19: "Add the rest of the drawers, hinged doors, etc. to the whole kitchen and living room on a best effort basis. We'll adjust details later.")
+      # One 197 door hinged R (the east wall side) with four shelves, from
+      # 700 up; the sofa's east arm (660 high) stands in front of the
+      # bottom, so the lowest 700 is a fixed slab. All guess:.
+      - Name: Pset_Fronts
+        Properties:
+          Layout: "door * hinge=R shelves=4 | front 0.7"
 sanitaryTerminals:
   - id: SN-RS15
     Name: "Teka BE LINEA RS15 71.40"
@@ -1138,6 +1242,9 @@ furniture:
           WorktopThickness: 0.02
           WorktopOverhang: 0.02
           WorktopMaterial: "Silestone Blanco Maple"
+          # Bays with fronts (2026-11-19) get a carcass; no plinth, they
+          # stand on the floor like the bodies (open:).
+          PlinthHeight: 0.0
   - id: KR-LB
     Name: "Obývák linka"
     Description: "Living-room counter behind the sofa: SF-LB. Oak body under a 20 mm oak-veneer top, 20 mm front overhang like the stone runs, top 930 like the dining run. The joint with KR-DN's Silestone at x 25.52 is open (Petr, 2026-11-13)."
@@ -1152,6 +1259,30 @@ furniture:
           WorktopThickness: 0.02
           WorktopOverhang: 0.02
           WorktopMaterial: "oak veneer"
+          # The under-storage (2026-11-19) stands on the floor like the body did (open:).
+          PlinthHeight: 0.0
+  - id: KR-DH
+    Name: "Jídelna horní"
+    Description: "The oak wall cabinet over the dining run (SF-DH), a monoblock of one in three sections (2026-11-19)."
+    PredefinedType: USERDEFINED
+    ObjectType: KitchenRun
+    ContainedInStructure: SP-1.02
+    PropertySets:
+      - Name: Pset_KitchenRun
+        Properties:
+          WorktopThickness: 0.0
+          PlinthHeight: 0.0
+  - id: KR-TC
+    Name: "Rohová vysoká"
+    Description: "The oak tall corner cabinet (SF-TC), a monoblock of one (2026-11-19). On the floor like before."
+    PredefinedType: USERDEFINED
+    ObjectType: KitchenRun
+    ContainedInStructure: SP-1.02
+    PropertySets:
+      - Name: Pset_KitchenRun
+        Properties:
+          WorktopThickness: 0.0
+          PlinthHeight: 0.0
   - id: KR-WEST-H
     Name: "Západní horní"
     Description: "West-wall wall-cabinet monoblock: CH850, BH800, AH850. Bottom 1560, top 2450, 890 high (Petr, 2026-11-13). Blum AVENTOS HF top bi-fold lift fronts."

@@ -35,7 +35,7 @@ wall from the worktop up to the boxes hanging over it.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 PSET_CABINET = "Pset_KitchenCabinet"
 PSET_DRAWERS = "Pset_Drawers"
@@ -187,8 +187,64 @@ def _prop(element: dict, pset_name: str, key: str, default=None):
 
 
 def has_drawers(element: dict | None) -> bool:
-    """True when any band of the bay is a drawer or a pull-out."""
-    return bool(element) and any(kind in DRAWER_KINDS for kind, _h, _o in zone_spec(element))
+    """True when any band of the bay (or of any of its sections) is a drawer or a pull-out."""
+    if not element:
+        return False
+    specs = [zone_spec(e) for e in section_elements(element)] or [zone_spec(element)]
+    return any(kind in DRAWER_KINDS for spec in specs for kind, _h, _o in spec)
+
+
+def has_fronts(element: dict | None) -> bool:
+    """True when the bay describes its fronts (``Pset_Fronts`` or ``Pset_Drawers``)."""
+    return bool(element) and (_prop(element, PSET_FRONTS, "Layout") is not None
+                              or _prop(element, PSET_FRONTS, "Sections") is not None
+                              or _prop(element, PSET_DRAWERS, "NominalHeights") is not None)
+
+
+def section_widths(element: dict, width: float) -> list[float] | None:
+    """``Pset_Fronts.Sections`` (mm, left to right as you face it): a count of
+    equal sections (``"7"``) or widths in metres with at most one ``*``
+    (``"0.6 0.6 0.3 0.6 *"``). The widths are the bay's outer width split at
+    the section dividers' centres."""
+    raw = _prop(element, PSET_FRONTS, "Sections")
+    if raw is None:
+        return None
+    tokens = str(raw).split()
+    if len(tokens) == 1 and tokens[0].isdigit():
+        n = int(tokens[0])
+        if n < 2:
+            raise ValueError(f"{element['id']}: Sections {raw!r} needs at least 2")
+        return [width / n] * n
+    out = _nominals(" ".join(tokens), width)
+    if len(out) < 2:
+        raise ValueError(f"{element['id']}: Sections {raw!r} needs at least 2")
+    return out
+
+
+def section_element(element: dict, number: int) -> dict:
+    """The yaml element one section reads its fronts from: ``Layout<N>``
+    (else ``Layout``), ``Contents<N>`` (else none), ``Gridfinity``."""
+    props = next((ps.get("Properties") or {} for ps in element.get("PropertySets") or []
+                  if ps.get("Name") == PSET_FRONTS), {})
+    layout = props.get(f"Layout{number}", props.get("Layout"))
+    if layout is None:
+        raise ValueError(f"{element['id']}: section {number} has no Layout{number} or Layout")
+    sub = {"Layout": layout}
+    for key in (f"Contents{number}",):
+        if props.get(key) is not None:
+            sub["Contents"] = props[key]
+    if props.get("Gridfinity") is not None:
+        sub["Gridfinity"] = props["Gridfinity"]
+    return {"id": f"{element['id']}-S{number}", "Name": f"{element.get('Name', element['id'])} {number}",
+            "PropertySets": [{"Name": PSET_FRONTS, "Properties": sub}]}
+
+
+def section_elements(element: dict) -> list[dict]:
+    """The section elements of a bay with ``Pset_Fronts.Sections`` (else [])."""
+    if _prop(element, PSET_FRONTS, "Sections") is None:
+        return []
+    widths = section_widths(element, float(element.get("Width") or 1.0) * 1000.0)
+    return [section_element(element, k) for k in range(1, len(widths) + 1)]
 
 
 def run_of(element: dict | None) -> str | None:
@@ -588,7 +644,14 @@ class _Builder:
         run, p = self.run, self.p
         run.carcass_z0, run.carcass_z1 = z_base, z_base + height - wt
         material = _prop(run.element, PSET_RUN, "BodyMaterial")
+        z0 = z_base + p["PlinthHeight"]
         for bay in bays:
+            if has_fronts(bay.element):
+                # A bay with fronts is a carcass of its own (end sides,
+                # bottom, back, rails) with its fronts, on the run's plinth.
+                self._block("single", ([bay],), z0, z_base + height - wt)
+                self._bay_parts(bay, z0, z_base + height - wt, shared_back=False)
+                continue
             self.add(Part(f"{bay.id}-BODY", bay.element.get("Name") or bay.id, "Body",
                           [(bay.a0, bay.a1, bay.c0, bay.c1, z_base, z_base + height - wt)], material=material), bay)
         if wt <= 0:
@@ -745,7 +808,43 @@ class _Builder:
         else:
             self.add(Part(f"{bay.id}-TOP", "Strop", "Top", [(lo, hi, c_in0, c_in1, z1 - t, z1)]), bay)
         ceiling = None if hob is None else hob.underside - hob.min_drawer_gap
-        self._fronts(bay, p, z0, z1, back_y, ceiling)
+        subs = self._sections(bay, p, z0, z1, back_y)
+        for sub in subs or [bay]:
+            self._fronts(sub, p, z0, z1, back_y, ceiling)
+
+    def _sections(self, bay: Bay, p: dict, z0: float, z1: float, back_y: float) -> list | None:
+        """A wide bay split into side-by-side sections (``Pset_Fronts.Sections``):
+        an 18 mm divider between two sections, each section its own fronts
+        (``Layout<N>`` or the shared ``Layout``). The sections are bays of
+        their own for the fronts only (``<bay>-S<N>``); every part they make
+        joins the bay's group. None when the bay has no sections."""
+        widths = section_widths(bay.element, bay.width)
+        if widths is None:
+            return None
+        t, tf = p["BoardThickness"], p["FrontThickness"]
+        # Left to right as you face the front: low a first when the front is the c0 face.
+        if not bay.front_low:
+            widths = widths[::-1]
+        order = list(range(1, len(widths) + 1))
+        if not bay.front_low:
+            order = order[::-1]
+        edges = [bay.a0]
+        for w in widths:
+            edges.append(edges[-1] + w)
+        dc0, dc1 = self.c_range(bay, tf, back_y)
+        subs = []
+        for k, (number, a0, a1) in enumerate(zip(order, edges, edges[1:])):
+            first, last = k == 0, k == len(widths) - 1
+            if not last:
+                self.add(Part(f"{bay.id}-SDIV{k + 1}", f"Přepážka sekcí {k + 1}", "Divider",
+                              [(a1 - t / 2, a1 + t / 2, dc0, dc1, z0 + t, z1 - t)]), bay)
+            sub = replace(bay, id=f"{bay.id}-S{number}", element=section_element(bay.element, number),
+                          a0=a0, a1=a1, clear_lo=bay.clear_lo if first else a0 + t / 2,
+                          clear_hi=bay.clear_hi if last else a1 - t / 2, zones=[])
+            sub.members = bay.members  # the section's parts are the bay's
+            subs.append(sub)
+        subs.sort(key=lambda b: b.id)
+        return subs
 
     # --- fronts and interiors (Pset_Fronts) ---------------------------------
 
@@ -1398,6 +1497,10 @@ def zone_spec(element: dict) -> list[tuple[str, str, dict]]:
 
     Older forms still work: ``Pset_Drawers.NominalHeights`` (all drawers),
     ``Pset_KitchenBay.Front: none`` (no front) and nothing (one slab front).
+
+    A bay with ``Pset_Fronts.Sections`` is split side by side first (see
+    ``section_widths``); each section reads ``Layout<N>`` (else ``Layout``),
+    via ``section_element``.
     """
     layout = _prop(element, PSET_FRONTS, "Layout")
     if layout:

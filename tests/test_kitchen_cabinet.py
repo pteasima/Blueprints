@@ -30,7 +30,12 @@ def test_drawer_and_pullout_bays():
     # and "trideny odpad" are pull-outs (docs/design/kitchen-cabinets.md).
     doc = load_furnishings()
     ids = [e["id"] for e in doc["systemFurniture"] if kc.has_drawers(e)]
-    assert ids == ["SF-I600a", "SF-I500b", "SF-I600b", "SF-A250", "SF-B800", "SF-C850"]
+    # Since 2026-11-19 (Petr: "Add the rest of the drawers, hinged doors,
+    # etc. ... on a best effort basis"): the tall run's lower bands, the
+    # island's 300 pull-out and east row, the dining base and the living
+    # counter too.
+    assert ids == ["SF-T2", "SF-T3", "SF-T4", "SF-I600a", "SF-I500b", "SF-I600b", "SF-I300",
+                   "SF-E600b", "SF-E600c", "SF-E700", "SF-A250", "SF-B800", "SF-C850", "SF-DN", "SF-LB"]
 
 
 def test_zone_spec_grammar():
@@ -56,9 +61,28 @@ def test_island_drawer_bays_follow_the_notes():
     fronts = {b: [round(run.part(f"{b}-D{i}").drawer.front[5] - run.part(f"{b}-D{i}").drawer.front[4])
                   for i in (1, 2, 3)] for b in ("SF-I600a", "SF-I500b", "SF-I600b")}
     assert fronts == {"SF-I600a": [97, 97, 607], "SF-I500b": [97, 97, 607], "SF-I600b": [197, 97, 507]}
-    # The slab-front bays the plan does not give a front type for stay slabs.
-    for bay_id in ("SF-I500a", "SF-I300", "SF-E600a", "SF-E600b", "SF-E600c", "SF-E700"):
-        assert run.part(f"{bay_id}-FRONT").role == "Front"
+    # Best effort, 2026-11-19: the sink bay a door, the 300 a pull-out, the
+    # east row a door (north) and three Gridfinity drawer bays.
+    assert run.part("SF-I500a-DOOR1").door.hinge == "L"
+    assert run.part("SF-I300-D1").role == "PullOut" and len(run.part("SF-I300-D1").drawer.items) == 3
+    assert run.part("SF-E600a-DOOR1").door.hinge == "R"
+    assert not [p for p in run.parts if p.role == "Front"]
+
+
+def test_island_east_row_drawers_are_on_the_gridfinity_grid():
+    run = _runs()["KR-ISL"]
+    grids = {}
+    for bay_id in ("SF-E600b", "SF-E600c", "SF-E700"):
+        drawers = [run.part(f"{bay_id}-D{i}").drawer for i in (1, 2, 3)]
+        assert [d.nominal for d in drawers] == [100.0, 100.0, 610.0]
+        for d in drawers:
+            n, m = d.grid
+            # inside = n x 42 + 1 (MAXIMERA deductions; the depth rounded down to 586).
+            assert d.inside[0] == pytest.approx(n * 42.0 + 1.0) and d.inside[1] == pytest.approx(m * 42.0 + 1.0)
+        grids[bay_id] = drawers[0].grid
+    assert grids == {"SF-E600b": (12, 11), "SF-E600c": (12, 11), "SF-E700": (14, 11)}
+    assert all(b.depth == pytest.approx(586.0) for b in run.bays)
+    assert sum(b.width for b in run.bays if not b.front_low) == pytest.approx(2500.0)
 
 
 def test_tall_doors_hinge_as_the_notes_say():
@@ -93,7 +117,7 @@ def test_oven_column_niches_fit_miele():
     assert oven.props["Elevation"] == pytest.approx(0.928)
     assert micro.props["Elevation"] > oven.props["Elevation"] + 0.59
     # Fascias do not touch the slab fronts above and below.
-    front1 = run.part("SF-T3-FRONT1").boxes[0]
+    front1 = run.part("SF-T3-DOOR1").boxes[0]
     assert front1[4] >= micro.boxes[0][5]
 
 
@@ -231,7 +255,7 @@ def test_island_clear_widths():
     clear = {b["id"]: b["clear"] for b in kc.bay_summary(run)}
     assert clear == {
         "SF-I500a": 473.0, "SF-I600a": 589.0, "SF-I500b": 463.0, "SF-I600b": 589.0, "SF-I300": 278.0,
-        "SF-E600a": 573.0, "SF-E600b": 582.0, "SF-E600c": 582.0, "SF-E700": 673.0,
+        "SF-E600a": 559.0, "SF-E600b": 589.0, "SF-E600c": 589.0, "SF-E700": 673.0,
     }
 
 
@@ -262,8 +286,8 @@ def test_sf_i600a_drawers():
 def test_island_worktop_and_cladding():
     run = _runs()["KR-ISL"]
     a0, a1, c0, c1, z0, z1 = run.worktop
-    # 1186 deep body (west row 586 for the Gridfinity depth, east 600) + 20 overhang each side.
-    assert (a1 - a0, c1 - c0, z1 - z0, z1) == pytest.approx((2540.0, 1226.0, 20.0, 930.0))
+    # 1172 deep body (both rows 586 for the Gridfinity depth since 2026-11-19) + 20 overhang each side.
+    assert (a1 - a0, c1 - c0, z1 - z0, z1) == pytest.approx((2540.0, 1212.0, 20.0, 930.0))
     clad = run.part("KR-ISL-CLAD-N").boxes[0]
     assert clad[1] - clad[0] == pytest.approx(20.0) and clad[4] == 0.0 and clad[5] == pytest.approx(910.0)
 
@@ -316,7 +340,9 @@ def test_ifc_groups_and_assembly():
     assert child_names == bay_names
     member_ids = {kitchen_ifc._yaml_id(p) for p in product_rel.RelatedObjects}
     # Loose pieces (sofa, table, standalone cabinets, worktops not in a bay).
-    assert {"FN-GATTA", "FN-S2A", "SF-DH", "SF-TC", "KR-ISL-WORKTOP"} <= member_ids
+    assert {"FN-GATTA", "FN-S2A", "KR-ISL-WORKTOP"} <= member_ids
+    # SF-DH and SF-TC are bays of their own runs since 2026-11-19.
+    assert {"Jídelna horní", "Rohová vysoká"} <= child_names
     # Kitchen-run assemblies stay out: their bays are already child groups.
     assert "KR-ISL" not in member_ids and "KR-WEST" not in member_ids
     # Electrical stays empty until a circuit or IfcSystem exists in the model.
@@ -336,7 +362,7 @@ def test_ifc_groups_and_assembly():
     assert [r.RelatingStructure.Name for r in oven.ContainedInStructure] == ["1.02 Obývák"]
     t3 = groups["Vysoká 600 trouba"]
     t3_members = {kitchen_ifc._yaml_id(o) for r in t3.IsGroupedBy for o in r.RelatedObjects}
-    assert {"EA-DGC7465", "EA-M2230", "SF-T3-FRONT1", "SF-T3-PACK3L"} <= t3_members
+    assert {"EA-DGC7465", "EA-M2230", "SF-T3-DOOR1", "SF-T3-PACK3L"} <= t3_members
     tap = by_id["SN-TAP-I"]
     assert tap.is_a("IfcSanitaryTerminal") and not tap.Decomposes
     # The bay over the fridge is a new group under Furniture.
@@ -347,20 +373,32 @@ def test_drawer_motions_in_model():
     _shape, meta = build()
     drawers = [m for m in meta["door_motions"] if m["kind"] == "drawer"]
     island = [m for m in drawers if m["id"].startswith("SF-I")]
-    assert [m["id"] for m in island] == [f"{b}-D{i}" for b in ("SF-I600a", "SF-I500b", "SF-I600b") for i in (1, 2, 3)]
+    assert [m["id"] for m in island] == [f"{b}-D{i}" for b in ("SF-I600a", "SF-I500b", "SF-I600b") for i in (1, 2, 3)] + [
+        "SF-I300-D1"]
     for m in drawers:
         assert m["element"] == m["id"]
+    # The slide is the full extension (box length, 463 + 2 x 19 in the 586 island).
     for m in island:
-        assert m["slide"] == pytest.approx([-0.55, 0.0, 0.0])
-    assert [m["center"][2] for m in island[:3]] == pytest.approx([-13.0] * 3, abs=1e-6)
+        assert m["slide"] == pytest.approx([-0.501, 0.0, 0.0])
+    east = [m for m in drawers if m["id"].startswith("SF-E")]
+    assert len(east) == 9 and all(m["slide"] == pytest.approx([0.501, 0.0, 0.0]) for m in east)
+    # SF-I600a spans y 12.693–13.300 (607 since the Gridfinity widths).
+    assert [m["center"][2] for m in island[:3]] == pytest.approx([-12.9965] * 3, abs=1e-6)
     west = [m for m in drawers if m["id"] in ("SF-A250-D1", "SF-B800-D1", "SF-C850-D1")]
-    assert len(west) == 3 and all(m["slide"] == pytest.approx([0.55, 0.0, 0.0]) for m in west)
+    assert len(west) == 3 and all(m["slide"] == pytest.approx([0.516, 0.0, 0.0]) for m in west)
+    # Dining base and living counter drawers slide south (glTF +z).
+    for prefix in ("SF-DN-S", "SF-LB-S"):
+        found = [m for m in drawers if m["id"].startswith(prefix)]
+        assert found and all(m["slide"] == pytest.approx([0.0, 0.0, 0.366]) for m in found)
 
 
 def test_cabinet_door_motions_swing_outward():
     _shape, meta = build()
     doors = {m["id"]: m for m in meta["door_motions"] if m["kind"] == "hinged" and m["id"].startswith("SF-")}
-    assert {"SF-T1-DOOR1", "SF-T2-DOOR1", "SF-TF-DOOR1", "SF-TF-DOOR2"} <= set(doors)
+    assert {"SF-T1-DOOR1", "SF-T2-DOOR1", "SF-TF-DOOR1", "SF-TF-DOOR2", "SF-T3-DOOR1", "SF-T4-DOOR1",
+            "SF-I500a-DOOR1", "SF-E600a-DOOR1", "SF-F052-DOOR1", "SF-F053-DOOR1", "SF-TC-DOOR1"} <= set(doors)
+    assert len([d for d in doors if d.startswith("SF-DH-S")]) == 6
+    assert len([d for d in doors if d.startswith("SF-LB-S")]) == 7
     # T1 hinges on its west edge and opens toward the room (south, glTF +z).
     t1 = doors["SF-T1-DOOR1"]
     assert t1["element"] == "SF-T1-DOOR1" and t1["axis"] == [0, 1, 0]
@@ -441,7 +479,9 @@ def test_west_run_ends_clad():
 
 def test_dining_run_box_bodies_under_stone():
     run = _runs()["KR-DN"]
-    assert run.part("SF-DN-BODY").boxes[0][5] == pytest.approx(910.0)
+    # SF-DN70 (70 wide) stays a body; the bays with fronts are carcasses (2026-11-19).
+    assert run.part("SF-DN70-BODY").boxes[0][5] == pytest.approx(910.0)
+    assert run.carcass_z1 == pytest.approx(910.0)
     slabs = run.part("KR-DN-WORKTOP").boxes
     assert len(slabs) == 4 and all(s[5] == pytest.approx(930.0) and s[2] == pytest.approx(-20.0) for s in slabs)
     assert not [p for p in run.parts if p.role == "Cladding"]
@@ -455,3 +495,45 @@ def test_open_legs_no_kick_board():
         found = [p for p in run.parts if p.role == "Leg"]
         assert len(found) == legs and all(p.boxes[0][5] == pytest.approx(100.0) for p in found)
     assert runs["KR-TALL"].carcass_z1 == pytest.approx(2450.0)
+
+
+def test_wide_bays_split_into_sections():
+    # Petr, 2026-11-19: "Add the rest of the drawers, hinged doors, etc. to
+    # the whole kitchen and living room on a best effort basis."
+    runs = _runs()
+    dn = runs["KR-DN"]
+    bay = dn.bay("SF-DN")
+    dividers = sorted(dn.part(f"SF-DN-SDIV{k}").boxes[0][0] + 9.0 - bay.a0 for k in range(1, 5))
+    assert dividers == pytest.approx([600.0, 1200.0, 1500.0, 2100.0])
+    assert all(f"SF-DN-SDIV{k}" in bay.members for k in range(1, 5))
+    assert dn.part("SF-DN-S3-D1").role == "PullOut"
+    fronts = [round(dn.part(f"SF-DN-S1-D{i}").drawer.front[5] - dn.part(f"SF-DN-S1-D{i}").drawer.front[4])
+              for i in (1, 2, 3)]
+    assert fronts == [197, 297, 407]
+    # Each section's front is its width less the 3 mm gap.
+    s1 = dn.part("SF-DN-S1-D1").drawer.front
+    assert s1[1] - s1[0] == pytest.approx(597.0)
+    # The living counter: a drawer over the sofa back (760), a door under it.
+    lb = runs["KR-LB"]
+    for k in range(1, 8):
+        dr = lb.part(f"SF-LB-S{k}-D1").drawer
+        assert dr.box[4] > 760.0
+        door = lb.part(f"SF-LB-S{k}-DOOR1").door
+        assert door.hinge == ("L" if k % 2 else "R")
+    dh = runs["KR-DH"]
+    assert [dh.part(f"SF-DH-S{k}-DOOR{i}").door.hinge for k in (1, 2, 3) for i in (1, 2)] == ["L", "R"] * 3
+    assert max(b[5] for p in dh.parts for b in p.boxes) == pytest.approx(2450.0)
+    tc = runs["KR-TC"]
+    assert tc.part("SF-TC-DOOR1").boxes[0][4] > 660.0  # over the sofa's east arm
+
+
+def test_sections_grammar():
+    el = {"id": "X", "Width": 1.0, "PropertySets": [{"Name": kc.PSET_FRONTS, "Properties": {
+        "Sections": "0.3 *", "Layout": "doors *", "Layout2": "drawer *", "Contents2": "a"}}]}
+    assert kc.section_widths(el, 1000.0) == pytest.approx([300.0, 700.0])
+    assert kc.section_widths(dict(el, PropertySets=[{"Name": kc.PSET_FRONTS, "Properties": {"Sections": "4"}}]),
+                             1000.0) == pytest.approx([250.0] * 4)
+    subs = kc.section_elements(el)
+    assert [kc.zone_spec(e)[0][0] for e in subs] == ["doors", "drawer"]
+    assert kc.zone_contents(subs[1]) == ["a"]
+    assert kc.has_drawers(el)
