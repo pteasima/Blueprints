@@ -1,0 +1,433 @@
+# Room 1.16 (Garáž) field devices. yaml-ifc electrical schema, the bedroom
+# format (inputs/ground_floor/bedroom-1.11.yaml). Lengths are metres.
+# Boxes sit on the wall face or under the ceiling. No back boxes, no routes.
+#
+# Sources, not the permit electrical PDFs:
+#   FixturePlan.pdf — Petr's marks on a floor-plan screenshot (Home repo,
+#     sources/). Device positions are the plan symbols, read from the PDF
+#     vector symbols with a fit to ground-floor.yaml (about ±3 cm).
+#   CableSchedule.xlsx, sheet Soupis — cable number, devices, spec, length,
+#     panel, note. Exterior cables are listed under the room where the cable
+#     goes through the wall (Soupis note on cable 66), and so are they here.
+# The green plan mark is cabletype(cable): 1 UTP, 2 CYKY 4x1.5, 3 CYKY 4x2.5,
+# 4 CYKY 3x1.5, 5 CYKY 2x1.5, 7 CYKY 2x2.5 (sheet Kabelaz). Each element
+# carries the mark it was read from in its Description.
+#
+# Ids: C<cable>-<code>[-n] as in the bedroom. SOCK-<room>-<place>[-k] for
+# position-only sockets. Q<plan cable>-<code> where the plan number clashes
+# with a different Soupis row, NC-<room>-<code> for a drawn fixture with no
+# cable mark; both carry CableQuestion, and Question says what to decide.
+# Unplaced rows (no plan position) have no box and PositionUnknown.
+#
+# House rules (docs/electrical/PlanNotes.md): switch centre 1350, next one
+# +71; sockets 300/371/442, above a counter 1400; 150 mm from a door edge
+# (latch side), 300 mm from an inner corner or an outdoor outer corner; a
+# radar on a switch's cable sits in that switch box (InSwitchBox).
+# Contacts: on the latch jamb, centre 1.00 (high windows: sill + 0.15).
+# Blinds: on the facade beside the window, 150 mm past the jamb, bottom 2.32.
+# Outdoor wall lamps: centre 2.20. Gutter heating: a 0.30 m box at 2.95 on
+# the facade where the plan marks it.
+# Controls on a button lists the lights it switches: by default every light
+# of this room on the same side of the facade (Petr: switches control lights;
+# no separate blind switches). Data only; the viewer does not use it yet.
+#
+# Per-room notes and the open questions: docs/electrical/rooms/1.16.md.
+schema: IFC4 ADD2 TC1
+units:
+  LengthUnit: METRE
+project:
+  id: PRJ
+  Name: RD Šíma
+  Aggregates:
+    - SITE
+site:
+  id: SITE
+  Name: Bor u Tachova
+  RefElevation: 472.1
+  Aggregates:
+    - BLD
+building:
+  id: BLD
+  Name: RD Šíma
+  Aggregates:
+    - STOREY-1NP
+storey:
+  id: STOREY-1NP
+  Name: "1.NP"
+  Elevation: 0
+spaces:
+  - id: SP-1.16
+    Name: "1.16 Garáž"
+    LongName: Garáž
+    PredefinedType: INTERNAL
+walls: []
+openings: []
+doors: []
+windows: []
+lightFixtures:
+  - id: C15-S
+    Name: Světlo 15
+    Description: "Plan symbol Ceiling. Soupis: cable for the 400 W garage lights into a box; Petr runs the rest in surface conduit. No position on the plan. No position on the plan; no body."
+    PredefinedType: POINTSOURCE
+    ObjectType: CeilingLight
+    ContainedInStructure: SP-1.16
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 15
+          Panel: 3
+          DeviceCode: "S"
+          CableSpec: CYKY 4x6
+          CableLength: 5
+          Note: kabel na 400W svetla v garazi do krabicky, doresim sam priznanymi kabely po omitkach
+          PositionUnknown: true
+  - id: C152-S
+    Name: Světlo 152 venku
+    Description: Plan mark 7(152). Plan symbol Out-door.
+    PredefinedType: POINTSOURCE
+    ObjectType: OutdoorLamp
+    ContainedInStructure: SP-1.16
+    Origin: [45.05, 12.377]
+    Elevation: 2.11
+    RefDirection: [0.0, -1.0]
+    Width: 0.1
+    Depth: 0.1
+    Height: 0.18
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 152
+          Panel: 3
+          DeviceCode: "S"
+          CableSpec: CYKY 2x2.5
+          CableLength: 16
+  - id: C40-S
+    Name: Světlo 40 venku
+    Description: Plan mark 7(40). Plan symbol Out-door. Chained from 152 (Soupis row 40 has no room).
+    PredefinedType: POINTSOURCE
+    ObjectType: OutdoorLamp
+    ContainedInStructure: SP-1.16
+    Origin: [45.05, 4.128]
+    Elevation: 2.11
+    RefDirection: [0.0, -1.0]
+    Width: 0.1
+    Depth: 0.1
+    Height: 0.18
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 40
+          DeviceCode: "S"
+          CableSpec: CYKY 2x2.5
+          CableLength: 9
+          Note: napojen na 152
+switchingDevices:
+  - id: C128-V
+    Name: Vypínač 128
+    Description: Plan mark 1(128). Pier between the two garage doors.
+    PredefinedType: MOMENTARYSWITCH
+    ObjectType: PushButton
+    ContainedInStructure: SP-1.16
+    Origin: [44.7, 6.6345]
+    Elevation: 1.3145
+    RefDirection: [0.0, 1.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 128
+          Panel: 3
+          DeviceCode: "V"
+          CableSpec: UTP Cat6a
+          CableLength: 17
+          Controls: C15-S
+  - id: C128-2V
+    Name: Dvojvypínač 128
+    Description: Plan mark 1(128).
+    PredefinedType: MOMENTARYSWITCH
+    ObjectType: DoublePushButton
+    ContainedInStructure: SP-1.16
+    Origin: [44.7, 6.599]
+    Elevation: 1.3855
+    RefDirection: [0.0, 1.0]
+    Width: 0.142
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 128
+          Panel: 3
+          DeviceCode: "2V"
+          CableSpec: UTP Cat6a
+          CableLength: 17
+          Controls: C15-S
+          Question: Cable 128 (garage) is V,2V; the plan draws one button. The 2V is stacked above as a guess.
+  - id: C150-2V
+    Name: Dvojvypínač 150 venku
+    Description: Plan mark 1(150).
+    PredefinedType: MOMENTARYSWITCH
+    ObjectType: DoublePushButton
+    ContainedInStructure: SP-1.16
+    Origin: [45.05, 12.836]
+    Elevation: 1.3145
+    RefDirection: [0.0, -1.0]
+    Width: 0.142
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 150
+          Panel: 3
+          DeviceCode: "2V"
+          CableSpec: UTP Cat6a
+          CableLength: 16
+          Controls: C152-S, C40-S
+  - id: C151-2V
+    Name: Dvojvypínač 151 venku
+    Description: Plan mark 1(151).
+    PredefinedType: MOMENTARYSWITCH
+    ObjectType: DoublePushButton
+    ContainedInStructure: SP-1.16
+    Origin: [45.05, 3.715]
+    Elevation: 1.3145
+    RefDirection: [0.0, -1.0]
+    Width: 0.142
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 151
+          Panel: 4
+          DeviceCode: "2V"
+          CableSpec: UTP Cat6a
+          CableLength: 15
+          Note: uvazovan venkem pod polystyrenem
+          Controls: C152-S, C40-S
+sensors:
+  - id: C126-R
+    Name: mmWave 126
+    Description: Plan mark 1(126). Drawn on the west wall; modelled on the ceiling next to it.
+    PredefinedType: MOVEMENTSENSOR
+    ObjectType: MmWavePresence
+    ContainedInStructure: SP-1.16
+    Origin: [38.265, 7.775]
+    Elevation: 2.72
+    Width: 0.07
+    Depth: 0.07
+    Height: 0.03
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 126
+          Panel: 3
+          DeviceCode: "R"
+          CableSpec: UTP Cat6a
+          CableLength: 6
+outlets:
+  - id: C127-W
+    Name: Wi-Fi 127
+    Description: Plan mark 1(127). Drawn on the west wall; modelled on the ceiling next to it.
+    PredefinedType: COMMUNICATIONSOUTLET
+    ObjectType: WifiAccessPoint
+    ContainedInStructure: SP-1.16
+    Origin: [38.2, 7.35]
+    Elevation: 2.715
+    Width: 0.2
+    Depth: 0.2
+    Height: 0.035
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 127
+          Panel: 1
+          DeviceCode: "W"
+          CableSpec: UTP Cat6a
+          CableLength: 20
+  - id: SOCK-1.16-W
+    Name: Zásuvka W
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.16
+    Origin: [38.1, 9.8665]
+    Elevation: 0.2645
+    RefDirection: [0.0, -1.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.16-NW
+    Name: Zásuvka NW
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.16
+    Origin: [38.9165, 12.7]
+    Elevation: 0.2645
+    RefDirection: [-1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.16-NE
+    Name: Zásuvka NE
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.16
+    Origin: [44.7, 12.3185]
+    Elevation: 0.2645
+    RefDirection: [0.0, 1.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.16-SE
+    Name: Zásuvka SE
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.16
+    Origin: [44.7, 4.0125]
+    Elevation: 0.2645
+    RefDirection: [0.0, 1.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.16-SW
+    Name: Zásuvka SW
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.16
+    Origin: [38.7465, 3.7]
+    Elevation: 0.2645
+    RefDirection: [1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+  - id: SOCK-1.16-X
+    Name: Zásuvka X venku
+    Description: ''
+    PredefinedType: POWEROUTLET
+    ObjectType: Socket
+    ContainedInStructure: SP-1.16
+    Origin: [44.6535, 3.35]
+    Elevation: 0.2645
+    RefDirection: [-1.0, 0.0]
+    Width: 0.071
+    Depth: 0.015
+    Height: 0.071
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          PositionOnly: true
+          Wiring: skipped
+electricAppliances:
+  - id: C135-O
+    Name: Vyhřívání okapu 135 venku
+    Description: Plan mark 4(135).
+    PredefinedType: USERDEFINED
+    ObjectType: GutterHeating
+    ContainedInStructure: SP-1.16
+    Origin: [38.15, 13.05]
+    Elevation: 2.925
+    RefDirection: [1.0, 0.0]
+    Width: 0.3
+    Depth: 0.08
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 135
+          DeviceCode: "O"
+          CableSpec: CYKY 3x1.5
+          CableLength: 4
+          Note: predpokladam napojeni na 136 v krabicce nejblizsi zasuvky
+  - id: C136-O
+    Name: Vyhřívání okapu 136 venku
+    Description: Plan mark 4(136).
+    PredefinedType: USERDEFINED
+    ObjectType: GutterHeating
+    ContainedInStructure: SP-1.16
+    Origin: [44.35, 13.05]
+    Elevation: 2.925
+    RefDirection: [1.0, 0.0]
+    Width: 0.3
+    Depth: 0.08
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 136
+          Panel: 3
+          DeviceCode: "O"
+          CableSpec: CYKY 3x1.5
+          CableLength: 19
+  - id: C137-O
+    Name: Vyhřívání okapu 137 venku
+    Description: Plan mark 4(137).
+    PredefinedType: USERDEFINED
+    ObjectType: GutterHeating
+    ContainedInStructure: SP-1.16
+    Origin: [44.65, 3.35]
+    Elevation: 2.925
+    RefDirection: [-1.0, 0.0]
+    Width: 0.3
+    Depth: 0.08
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 137
+          Panel: 3
+          DeviceCode: "O"
+          CableSpec: CYKY 3x1.5
+          CableLength: 23
+  - id: C138-O
+    Name: Vyhřívání okapu 138 venku
+    Description: "Plan mark 4(138). Soupis: the cable hangs outside by the garsonka entrance."
+    PredefinedType: USERDEFINED
+    ObjectType: GutterHeating
+    ContainedInStructure: SP-1.16
+    Origin: [38.45, 3.35]
+    Elevation: 2.925
+    RefDirection: [-1.0, 0.0]
+    Width: 0.3
+    Depth: 0.08
+    Height: 0.05
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          CableNumber: 138
+          DeviceCode: "O"
+          CableSpec: CYKY 3x1.5
+          CableLength: 5
+          Note: kabel visi venku pred vchodem garzonky 🤦‍♂️, predpokladam pruraz do garaze a napojeni na 137 v krabicce nejblizsi zasuvky
