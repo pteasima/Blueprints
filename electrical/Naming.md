@@ -17,6 +17,8 @@ The id is `C<cable>-<code>`. The cable number is also the property `CableNumber`
 | W | Wi-Fi access point |
 | B | blind motor |
 
+A copy added in the viewer edit mode gets the next free `C<cable>-<code>-<n>` ([EditMode.md](EditMode.md)).
+
 Power sockets (`SOCK-`) have a current id and no cable number: the schedule has no row, and wiring is skipped. Cable 6 and cable 11 are off the plan for now. The bed `BED-1.11` is 2000×1800 and is not a device id.
 
 ## Proposed scheme
