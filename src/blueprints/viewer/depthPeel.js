@@ -43,6 +43,17 @@ export function isOpaqueSceneContent(obj) {
 }
 
 /**
+ * Whether a part slider value makes the part see-through and so needs the
+ * peel. 0% hides the part outright (`visible = false`, materials untouched)
+ * and 100% is opaque; neither is a reason to peel.
+ * @param {number} opacity
+ */
+export function isSeeThroughOpacity(opacity) {
+  const o = Number(opacity);
+  return Number.isFinite(o) && o > 1e-4 && o < 1 - 1e-4;
+}
+
+/**
  * Everitt peels for CAD shell stacking. Sorted alpha remains the emergency
  * fallback via {@link createDepthPeelRenderer}'s abortToStandard.
  */
@@ -273,17 +284,36 @@ export function createDepthPeelRenderer(renderer) {
       uniform sampler2D tAccum;
       uniform vec3 uBackground;
       varying vec2 vUv;
+      // The peel targets hold linear, not yet tone-mapped colour (three.js
+      // skips tone mapping and output encoding when drawing into a render
+      // target). Finish here what an ordinary frame does on screen: tone map
+      // the geometry, encode to the output colour space, and leave the
+      // background colour un-tone-mapped like the clear colour. Before this the
+      // still frame wrote linear values straight out, so every faded view
+      // went darker and more saturated the moment the camera stopped, and the
+      // theme background (#1c1c1e) came out near black.
+      vec3 toDisplay(vec3 c) {
+        #ifdef TONE_MAPPING
+        c = toneMapping(c);
+        #endif
+        return linearToOutputTexel(vec4(c, 1.0)).rgb;
+      }
       void main() {
         vec4 opaque = texture2D(tOpaque, vUv);
         vec4 accum = texture2D(tAccum, vUv);
-        vec3 base = mix(uBackground, opaque.rgb, opaque.a > 0.001 ? 1.0 : 0.0);
-        vec3 color = accum.rgb + (1.0 - accum.a) * base;
+        vec3 base = opaque.a > 0.001
+          ? toDisplay(opaque.rgb)
+          : linearToOutputTexel(vec4(uBackground, 1.0)).rgb;
+        // accum is premultiplied; tone map the un-premultiplied colour.
+        vec3 layers = accum.a > 1e-4 ? toDisplay(accum.rgb / accum.a) * accum.a : vec3(0.0);
+        vec3 color = layers + (1.0 - accum.a) * base;
         gl_FragColor = vec4(color, 1.0);
       }
     `,
     depthTest: false,
     depthWrite: false,
-    toneMapped: false,
+    // Tone mapping is applied by hand above (only on geometry).
+    toneMapped: true,
   });
   const compositeQuad = new THREE.Mesh(
     new THREE.PlaneGeometry(2, 2),
@@ -505,10 +535,12 @@ export function createDepthPeelRenderer(renderer) {
     disposeTargets();
     targetsPeelScale = scale;
 
+    // Linear half float: materials write scene-referred colour here and the
+    // composite tone maps it once, as the moving frame does on screen.
     opaqueRT = new THREE.WebGLRenderTarget(w, h, {
       format: THREE.RGBAFormat,
-      type: THREE.UnsignedByteType,
-      colorSpace: THREE.SRGBColorSpace,
+      type: THREE.HalfFloatType,
+      colorSpace: THREE.LinearSRGBColorSpace,
       depthBuffer: true,
       stencilBuffer: false,
     });
@@ -529,7 +561,7 @@ export function createDepthPeelRenderer(renderer) {
     accumRT = new THREE.WebGLRenderTarget(pw, ph, {
       format: THREE.RGBAFormat,
       type: THREE.HalfFloatType,
-      colorSpace: THREE.SRGBColorSpace,
+      colorSpace: THREE.LinearSRGBColorSpace,
       depthBuffer: false,
       stencilBuffer: false,
       magFilter: THREE.LinearFilter,
@@ -538,7 +570,7 @@ export function createDepthPeelRenderer(renderer) {
     layerRT = new THREE.WebGLRenderTarget(pw, ph, {
       format: THREE.RGBAFormat,
       type: THREE.HalfFloatType,
-      colorSpace: THREE.SRGBColorSpace,
+      colorSpace: THREE.LinearSRGBColorSpace,
       depthBuffer: false,
       stencilBuffer: false,
       magFilter: THREE.LinearFilter,
@@ -839,6 +871,10 @@ export function createDepthPeelRenderer(renderer) {
         batch.frustumCulled = false;
         batch.matrixAutoUpdate = false;
         batch.renderOrder = 0;
+        // Realistic shadows: the batch stands in for its sources in the still
+        // frame, and a shadow map refreshed during that frame sees only it.
+        batch.castShadow = bucket.meshes.some((m) => m.castShadow);
+        batch.receiveShadow = bucket.meshes.some((m) => m.receiveShadow);
         batch.userData.isPeelBatch = true;
         slot.meshes.push(batch);
         slot.sources.push(...bucket.meshes);
@@ -864,7 +900,7 @@ export function createDepthPeelRenderer(renderer) {
    * @param {THREE.Scene} scene
    * @param {THREE.Camera} camera
    */
-  function renderSlot(slot, expected, scene, camera) {
+  function renderSlot(slot, expected, scene, camera, extras = []) {
     if (!slot.meshes.length || slot.sources.length !== expected.length) {
       renderer.render(scene, camera);
       return false;
@@ -879,7 +915,13 @@ export function createDepthPeelRenderer(renderer) {
     }
     for (const light of lights) peelBatchScene.add(light);
     for (const batch of slot.meshes) peelBatchScene.add(batch);
+    // Opaque scene content outside the CAD root (Realistic staging floor,
+    // walk figure) joins the opaque pass. Without it the still frame showed
+    // the composite background (the theme colour) where the floor is.
+    const moved = extras.map((obj) => ({ obj, parent: obj.parent }));
+    for (const { obj } of moved) peelBatchScene.add(obj);
     renderer.render(peelBatchScene, camera);
+    for (const { obj, parent } of moved) (parent || scene).add(obj);
     for (const batch of slot.meshes) peelBatchScene.remove(batch);
     for (const light of lights) scene.add(light);
     return true;
@@ -899,9 +941,9 @@ export function createDepthPeelRenderer(renderer) {
    * @param {THREE.Camera} camera
    * @param {THREE.Mesh[]} opaque
    */
-  function renderOpaqueColour(scene, camera, opaque) {
-    if (!opaque.length) return;
-    renderSlot(opaqueBatches, opaque, scene, camera);
+  function renderOpaqueColour(scene, camera, opaque, extras = []) {
+    if (!opaque.length && !extras.length) return;
+    renderSlot(opaqueBatches, opaque, scene, camera, extras);
   }
 
   /**
@@ -910,7 +952,7 @@ export function createDepthPeelRenderer(renderer) {
    * @param {THREE.Mesh[]} opaque
    * @param {THREE.Material} overrideMat
    */
-  function renderOpaqueDepth(camera, opaque, overrideMat) {
+  function renderOpaqueDepth(camera, opaque, overrideMat, extras = []) {
     if (
       !opaqueBatches.meshes.length ||
       opaqueBatches.sources.length !== opaque.length
@@ -919,7 +961,11 @@ export function createDepthPeelRenderer(renderer) {
     }
     depthBatchScene.overrideMaterial = overrideMat;
     for (const mesh of opaqueBatches.meshes) depthBatchScene.add(mesh);
+    // The staging floor hides faded parts below it, as it does in motion.
+    const moved = extras.map((obj) => ({ obj, parent: obj.parent }));
+    for (const { obj } of moved) depthBatchScene.add(obj);
     renderer.render(depthBatchScene, camera);
+    for (const { obj, parent } of moved) parent?.add(obj);
     depthBatchScene.overrideMaterial = null;
     for (const mesh of opaqueBatches.meshes) depthBatchScene.remove(mesh);
     return true;
@@ -1181,6 +1227,10 @@ export function createDepthPeelRenderer(renderer) {
       extraBackup.push({ obj: child, visible: child.visible });
       child.visible = false;
     }
+    /** Opaque scene content drawn in the opaque passes, hidden in the peels. */
+    const sceneContent = scene.children.filter(
+      (child) => child !== root && isOpaqueSceneContent(child) && child.visible,
+    );
 
     function restoreOnBeforeRender() {
       for (const [mesh, prev] of onBeforeRenderBackup) {
@@ -1211,6 +1261,7 @@ export function createDepthPeelRenderer(renderer) {
       for (const { obj, visible } of extraBackup) {
         obj.visible = visible;
       }
+      for (const obj of sceneContent) obj.visible = true;
       restoreOnBeforeRender();
       setPeelShaderActive(transMats, false);
       peelStageUniform.value = 0;
@@ -1234,7 +1285,7 @@ export function createDepthPeelRenderer(renderer) {
     renderer.setRenderTarget(opaqueRT);
     renderer.setClearColor(0x000000, 0);
     renderer.clear();
-    renderOpaqueColour(scene, camera, opaque);
+    renderOpaqueColour(scene, camera, opaque, sceneContent);
 
     // --- Opaque linear view-Z at peel resolution ---
     renderer.setRenderTarget(opaqueViewZRT);
@@ -1259,7 +1310,7 @@ export function createDepthPeelRenderer(renderer) {
     const prevOverride = scene.overrideMaterial;
     renderer.setRenderTarget(opaqueViewZRT);
     renderer.autoClear = false;
-    if (!renderOpaqueDepth(camera, opaque, opaqueViewZMat)) {
+    if (!renderOpaqueDepth(camera, opaque, opaqueViewZMat, sceneContent)) {
       scene.overrideMaterial = opaqueViewZMat;
       renderer.render(scene, camera);
       scene.overrideMaterial = prevOverride;
@@ -1274,6 +1325,7 @@ export function createDepthPeelRenderer(renderer) {
     peelUniforms.tPrevViewZ.value = prevViewZRT.texture;
 
     setMeshesVisible(opaque, false);
+    for (const obj of sceneContent) obj.visible = false;
     setMeshesVisible(transparent, true);
     // Transparent peels also use mesh shaders; keep edge lines off.
     setEdgeOverlaysVisible(root, false);
@@ -1392,6 +1444,7 @@ export function createDepthPeelRenderer(renderer) {
     for (const { obj, visible } of extraBackup) {
       obj.visible = visible;
     }
+    for (const obj of sceneContent) obj.visible = true;
     restoreOnBeforeRender();
     setEdgeOverlaysVisible(root, true);
     setPeelShaderActive(transMats, false);

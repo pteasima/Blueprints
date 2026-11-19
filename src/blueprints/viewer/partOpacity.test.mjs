@@ -17,6 +17,7 @@ import {
   MAX_PEELS_HIGH,
   USE_DEPTH_PEEL,
   VIEW_Z_EPSILON,
+  isSeeThroughOpacity,
 } from "./depthPeel.js";
 
 const OBYVAK_GROUPS = [
@@ -137,5 +138,28 @@ assert.ok(MAX_PEELS_HIGH >= MAX_PEELS_FAST);
 assert.equal(MAX_PEELS, MAX_PEELS_HIGH);
 assert.ok(VIEW_Z_EPSILON > 0 && VIEW_Z_EPSILON < 0.01);
 assert.equal(USE_DEPTH_PEEL, true, "hardened peels are the fade path");
+
+// Hiding a layer (0%) or showing it fully (100%) is not a fade: no peel,
+// and the material ends up exactly opaque (Petr, 2026-11-19: the floor went
+// dark whenever anything was hidden).
+assert.equal(isSeeThroughOpacity(0), false, "0% hides; no peel");
+assert.equal(isSeeThroughOpacity(1), false);
+assert.equal(isSeeThroughOpacity(0.5), true);
+assert.equal(isSeeThroughOpacity(Number.NaN), false);
+{
+  const mat = new THREE.MeshStandardMaterial();
+  const m = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat);
+  applyOpacityToMeshes([m], 0);
+  assert.equal(m.visible, false, "0% sets visible = false");
+  assert.equal(mat.transparent, false, "0% leaves the material opaque");
+  assert.equal(mat.depthWrite, true);
+  applyOpacityToMeshes([m], 0.5);
+  assert.equal(mat.transparent, true);
+  applyOpacityToMeshes([m], 1);
+  assert.equal(m.visible, true);
+  assert.equal(mat.transparent, false, "100% restores an opaque material");
+  assert.equal(mat.depthWrite, true);
+  assert.equal(mat.opacity, 1);
+}
 
 console.log("partOpacity.test.mjs: ok");
