@@ -74,7 +74,14 @@ import { mountIfcInspector } from "./ifcInspector.js";
 import { createVisibility } from "./ifcHide.js";
 import { normalizeIndex, subtreeIds } from "./ifcTree.js";
 import { isSceneSolid } from "./interactions.js";
-import { isRenderedHit, switchTargetCenters } from "./tapTargets.js";
+import {
+  centerOccluded,
+  isOpaqueMaterialOf,
+  isRenderedHit,
+  projectTarget,
+  switchTargetCenters,
+} from "./tapTargets.js";
+import { createEditMode } from "./editMode.js";
 import { identityOf, meshIdentity } from "./meshIdentity.js";
 import { attachPivotNav } from "./pivotNav.js";
 import { cadMmToGltf, createAnnotations } from "./annotations.js";
@@ -243,11 +250,17 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   controls.screenSpacePanning = true;
   /** Measure owns taps while it is on; set once that tool exists. */
   let doorInputBlocked = () => false;
+  /**
+   * Fixture edit mode (editMode.js). Owns taps while it is on.
+   * @type {ReturnType<typeof createEditMode> | null}
+   */
+  let editMode = null;
   const doorCtrl = createDoorController({
     canvas,
     getCamera: () => camera,
     records: doorRecords,
-    isBlocked: () => doorInputBlocked(),
+    // Edit mode blocks door and switch taps but not pivotNav's zoom and pan.
+    isBlocked: () => doorInputBlocked() || Boolean(editMode?.blocksTaps()),
     onLongPress: (pt) => inspectAt(pt),
     onToggle: (binding, move) => doorFeedback(binding, move),
   });
@@ -475,6 +488,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       syncWalkButton();
       syncDrawingButton();
       syncLabelButton();
+      editMode?.showButton(editMode.hasFixtures());
     },
     (err) => {
       fail(String(err?.message || err));
@@ -1933,7 +1947,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     if (!chromeApi) {
       return { zoom: 1, offX: 0, offY: 0, w, h };
     }
-    const { bottom, right } = chromeApi.getSafeInsets();
+    const { bottom, right } = editMode?.active ? editMode.getSafeInsets() : chromeApi.getSafeInsets();
     if (bottom <= 0 && right <= 0) {
       return { zoom: 1, offX: 0, offY: 0, w, h };
     }
@@ -2376,6 +2390,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   if (measureBtn) {
     measureBtn.addEventListener("click", () => {
       if (!measureTool) return;
+      if (editMode?.active) editMode.setActive(false);
       measureTool.setActive(!measureTool.isActive());
     });
   }
@@ -2423,6 +2438,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
 
   if (walkBtn) {
     walkBtn.addEventListener("click", () => {
+      if (editMode?.active) editMode.setActive(false);
       walk?.toggle({ lock: true });
       syncWalkButton();
     });
@@ -3170,7 +3186,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   }
 
   function inspectAtPointer(pt) {
-    if (doorInputBlocked()) return;
+    if (doorInputBlocked() || editMode?.blocksTaps()) return;
     const cameraNow = camera;
     if (!cameraNow || !root) return;
     const rect = canvas.getBoundingClientRect();
@@ -3424,6 +3440,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       getLocale(),
       labelsOn ? "1" : "0",
       String(sceneBg),
+      // Moved fixtures change the merged peel batches and the walk collider.
+      `edit${editMode ? editMode.revision() : 0}`,
     ];
     const bg = scene?.background;
     if (bg && bg.isColor) bits.push(bg.getHexString());
@@ -3532,6 +3550,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       healOpacitiesFromState();
     }
     prevUsedPeel = usedPeel;
+    // Selection outline and move arrows, drawn over the finished frame.
+    editMode?.renderOverlay(renderer, camera);
     const r1 = performance.now();
     frameStats.frames += 1;
     frameStats.renderMs += r1 - r0;
@@ -3539,6 +3559,39 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     frameStats.totalMs += r1 - now;
     requestAnimationFrame(tick);
   }
+  editMode = createEditMode({
+    canvas,
+    renderer,
+    controls,
+    getCamera: () => camera,
+    getRoot: () => root,
+    index: ifcIndex,
+    modelId: String(options.modelId || ""),
+    meshesForElement,
+    elementFromMesh,
+    isSceneSolid,
+    isRenderedHit,
+    isOpaque: (obj) => isOpaqueMaterialOf(obj),
+    centerOccluded,
+    projectTarget,
+    flyTo: (pose) => flyCamera(pose),
+    pulse: (meshes) => startPulse(meshes),
+    markDirty: () => {
+      viewDirty = true;
+      realisticCtl?.stage.markDirty();
+    },
+    beforeEnter: () => {
+      if (walk?.active) walk.exit();
+      if (measureTool?.isActive()) measureTool.setActive(false);
+      syncWalkButton();
+    },
+    onLayout: () => applySafeViewOffset(true),
+    t: tr,
+  });
+  if (root) editMode.showButton(editMode.hasFixtures());
+  onLocaleChange(() => editMode?.refreshLocale());
+  /** Fixture edit mode, for headless checks: `BlueprintsViewer.edit`. */
+  api.edit = editMode;
   tick();
   return api;
 }

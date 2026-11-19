@@ -19,6 +19,7 @@ from yaml_ifc.to_ifc import build_ifc
 from yaml_ifc.yamlio import load as load_yaml_ifc
 
 from blueprints.export_utils import SECTION_LAYERS
+from blueprints.fixture_overrides import load_fixture_document
 from blueprints.scenes import cad_mm_to_gltf_m
 
 
@@ -48,10 +49,15 @@ _LIST_CLASS = {key: ifc for key, ifc, _type in (*FURNISHINGS, *ELECTRICAL)}
 
 
 def load_document(path: Path | None = None) -> dict:
+    """The device YAML with Petr's edit-mode overrides applied.
+
+    Overrides: inputs/ground_floor/fixture_overrides.json, written from the
+    viewer's edit mode (docs/electrical/EditMode.md).
+    """
     source = path or SOURCE_PATH
     if not source.is_file():
         return {}
-    return load_yaml_ifc(source)
+    return load_fixture_document(source)
 
 
 def device_records(doc: dict | None = None) -> list[dict]:
@@ -209,10 +215,15 @@ def _under_bed_strip(doc: dict) -> list:
     props = _pset_props(bed)
     x0, y0 = float(props["X0"]), float(props["Y0"])
     x1, y1 = float(props["X1"]), float(props["Y1"])
+    # A move from the viewer edit mode (fixture_overrides.py, OffsetX/Y/Z).
+    strip = next((item for item in doc.get("lightFixtures") or [] if item.get("id") == "C3-S"), None)
+    shift = _pset_props(strip) if strip else {}
+    dx, dy = float(shift.get("OffsetX") or 0.0), float(shift.get("OffsetY") or 0.0)
+    x0, x1, y0, y1 = x0 + dx, x1 + dx, y0 + dy, y1 + dy
     inset = 0.02
     foot = (y1 - y0) - 2.0 * inset
     side = (x1 - x0) - inset
-    elev = 0.02
+    elev = 0.02 + float(shift.get("OffsetZ") or 0.0)
     return [
         _axis_box((x0, y1 - inset, elev), (0.0, -1.0), (foot, inset, inset), "C3-S"),
         _axis_box((x0 + inset, y1 - inset, elev), (1.0, 0.0), (side, inset, inset), "C3-S"),
