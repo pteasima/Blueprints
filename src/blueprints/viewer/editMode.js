@@ -15,6 +15,9 @@
  *   green z (up). Drags snap the move to 1 cm (or 1 mm, or off).
  * - Edits live in localStorage and export as a JSON patch for
  *   inputs/ground_floor/fixture_overrides.json (docs/electrical/EditMode.md).
+ * - The Cables tab lists the cable routes (cables.js draws them). Select a
+ *   route from the table or by tapping it, then drag a vertex or a whole
+ *   segment with the same arrows (docs/electrical/CableRoutes.md).
  */
 import * as THREE from "three";
 import { TransformControls } from "three/addons/controls/TransformControls.js";
@@ -31,6 +34,25 @@ import {
   rowSearchText,
   snap,
 } from "./fixtureEdits.js";
+import { createCableLayer } from "./cables.js";
+import {
+  cablePatch,
+  cleanPoints,
+  currentPoints,
+  deleteVertex,
+  editFor,
+  endAnchors,
+  insertVertex,
+  isLocked,
+  moveSegment,
+  moveVertex,
+  polylineLength,
+  prepareSegmentMove,
+  pruneCables,
+  routeRecords,
+  routeSearchText,
+  samePoint,
+} from "./cableEdits.js";
 
 const PANEL_WIDE_PX = 560;
 const WALL_SNAP_MAX_M = 0.8;
@@ -62,6 +84,8 @@ const PLANE_HANDLES = new Set(["XY", "YZ", "XZ", "XYZ"]);
  *   onActiveChange?: (active: boolean) => void,
  *   onLayout?: () => void,
  *   t: (key: string) => string,
+ *   cables?: { routes?: object[], boards?: object[] } | null,
+ *   cablesLayer?: () => boolean,
  * }} ctx
  */
 export function createEditMode(ctx) {
@@ -95,6 +119,26 @@ export function createEditMode(ctx) {
   let bound = false;
   /** Phone: the schedule fields start folded; remember when Petr opens them. */
   let detailsOpen = false;
+
+  // --- cable routes (cables.js draws, cableEdits.js edits) ---
+  const routes = routeRecords(ctx.cables);
+  const routesById = new Map(routes.map((r) => [r.id, r]));
+  if (!store.cables) store.cables = {};
+  /** What the table lists: "fixtures" or "cables". */
+  let view = "fixtures";
+  /** The Cables switch in edit mode. */
+  let cablesOn = true;
+  /** `?cables=1` shows the cables outside edit mode too. */
+  const cablesParam = (() => {
+    try {
+      return new URLSearchParams(window.location.search).get("cables") === "1";
+    } catch {
+      return false;
+    }
+  })();
+  /** @type {{ id: string, mode: "vertex" | "segment", vertex: number, segment: number } | null} */
+  let cableSel = null;
+  const cableLayer = createCableLayer({ routes, boards: ctx.cables?.boards || [], getRoot: ctx.getRoot });
 
   // --- three.js overlay: gizmo and selection box ---
   const overlay = new THREE.Scene();
@@ -143,11 +187,17 @@ export function createEditMode(ctx) {
   gizmo.addEventListener("dragging-changed", (event) => {
     if (event.value) {
       holdOrbit();
-      const edit = selectedId ? currentTarget(selectedId) : null;
-      dragStart = edit ? { anchor: anchor.position.clone(), target: edit.slice() } : null;
+      if (cableSel) {
+        dragStart = { anchor: anchor.position.clone(), cable: { points: routePoints(cableSel.id), prepared: null } };
+      } else {
+        const edit = selectedId ? currentTarget(selectedId) : null;
+        dragStart = edit ? { anchor: anchor.position.clone(), target: edit.slice() } : null;
+      }
     } else {
       releaseOrbit();
+      const wasCable = Boolean(dragStart?.cable);
       dragStart = null;
+      if (wasCable) finishCableMove();
       save();
       renderDetail();
     }
@@ -155,6 +205,16 @@ export function createEditMode(ctx) {
   });
   gizmo.addEventListener("change", () => ctx.markDirty());
   gizmo.addEventListener("objectChange", () => {
+    if (dragStart?.cable && cableSel) {
+      const world = anchor.position.clone().sub(dragStart.anchor);
+      const house = worldDirToHouse(world);
+      const axis = { X: 0, Y: 1, Z: 2 }[gizmo.axis] ?? house.map(Math.abs).indexOf(Math.max(...house.map(Math.abs)));
+      const d = [0, 0, 0];
+      d[axis] = snapStep ? snap(house[axis], snapStep) : house[axis];
+      anchor.position.copy(dragStart.anchor).add(houseDirToWorld(d));
+      applyCableDelta(dragStart.cable, d, axis, { save: false });
+      return;
+    }
     if (!dragStart || !selectedId) return;
     const world = anchor.position.clone().sub(dragStart.anchor);
     const house = worldDirToHouse(world);
@@ -268,6 +328,249 @@ export function createEditMode(ctx) {
       if (edit.add) materializeAdd(id, edit);
     }
     for (const id of Object.keys(store.fixtures)) applyEdit(id);
+    if (pruneCables(store, routes, fixtureDelta).length) save();
+    for (const route of routes) cableLayer.update(route, routePoints(route.id));
+  }
+
+  // --- cable routes ---
+  /** How far a fixture has moved from the deployed model (house metres), or null. */
+  function fixtureDelta(id) {
+    if (!id || !bound) return null;
+    const base = deployedBase.get(id);
+    const now = currentTarget(id);
+    if (!base || !now) return null;
+    const d = now.map((v, i) => v - base[i]);
+    return d.some((v) => Math.abs(v) > 1e-9) ? d : null;
+  }
+
+  function routePoints(id) {
+    const route = routesById.get(id);
+    return route ? currentPoints(route, store.cables[id], fixtureDelta) : null;
+  }
+
+  function cablesVisible() {
+    // The Electrical › cables layer (main.js) shows them everywhere; in edit
+    // mode the Cables switch shows them too.
+    const layer = typeof ctx.cablesLayer === "function" ? ctx.cablesLayer() : cablesParam;
+    return routes.length > 0 && bound && ((active && cablesOn) || layer);
+  }
+
+  /** Redraw the routes that end at this fixture (it moved). */
+  function refreshCablesAt(fixtureId) {
+    if (!bound) return;
+    for (const route of routes) {
+      const a = endAnchors(route);
+      if (a.to !== fixtureId && a.from !== fixtureId) continue;
+      cableLayer.update(route, routePoints(route.id));
+      renderCableRow(route.id);
+    }
+  }
+
+  function routeEdited(id) {
+    return Boolean(store.cables[id]);
+  }
+
+  /** Store these points for a route (or drop the edit if they are the deployed ones). */
+  function setRoutePoints(id, points, opts = {}) {
+    const route = routesById.get(id);
+    if (!route) return;
+    const deployed = currentPoints(route, null, fixtureDelta);
+    const same = points.length === deployed.length && points.every((p, i) => samePoint(p, deployed[i]));
+    if (same) delete store.cables[id];
+    else store.cables[id] = editFor(route, points, fixtureDelta);
+    cableLayer.update(route, routePoints(id));
+    clampCableSel();
+    syncCableGizmo();
+    renderCableRow(id);
+    renderCablePosition();
+    syncCableState();
+    ctx.markDirty();
+    if (opts.save !== false) save();
+  }
+
+  /** Move the selected vertex or segment by `d` (house metres) along `axis`. */
+  function applyCableDelta(state, d, axis, opts = {}) {
+    if (!cableSel) return;
+    const base = state.points;
+    let next;
+    if (cableSel.mode === "vertex") {
+      if (isLocked(cableSel.vertex, base.length)) return;
+      const p = base[cableSel.vertex];
+      next = moveVertex(base, cableSel.vertex, [p[0] + d[0], p[1] + d[1], p[2] + d[2]]);
+    } else {
+      if (!state.prepared) {
+        state.prepared = prepareSegmentMove(base, cableSel.segment, axis);
+        state.moved = [state.prepared.a, state.prepared.b];
+      }
+      next = moveSegment(state.prepared.points, state.prepared.a, state.prepared.b, d);
+      cableSel.segment = state.prepared.a;
+    }
+    state.last = next;
+    setRoutePoints(cableSel.id, next, opts);
+  }
+
+  /** After a drag or a nudge: drop collapsed jogs, keep the moved part selected. */
+  function finishCableMove() {
+    if (!cableSel) return;
+    const pts = routePoints(cableSel.id);
+    if (!pts) return;
+    const keepA = cableSel.mode === "vertex" ? pts[cableSel.vertex] : pts[cableSel.segment];
+    const keepB = cableSel.mode === "vertex" ? null : pts[cableSel.segment + 1];
+    const clean = cleanPoints(pts);
+    if (clean.length !== pts.length) {
+      if (cableSel.mode === "vertex") {
+        const i = clean.findIndex((p) => samePoint(p, keepA));
+        if (i >= 0) cableSel.vertex = i;
+      } else {
+        const i = clean.findIndex((p, k) => k + 1 < clean.length && samePoint(p, keepA) && samePoint(clean[k + 1], keepB));
+        if (i >= 0) cableSel.segment = i;
+      }
+      setRoutePoints(cableSel.id, clean, { save: false });
+    }
+    cableLayer.setSelection(selectionState());
+  }
+
+  function cableMove(axis, amount) {
+    const state = { points: routePoints(cableSel.id), prepared: null };
+    const d = [0, 0, 0];
+    d[axis] = amount;
+    applyCableDelta(state, d, axis, { save: false });
+    finishCableMove();
+  }
+
+  /** Where the selected vertex / segment midpoint is (house metres). */
+  function cableSelPoint() {
+    if (!cableSel) return null;
+    const pts = routePoints(cableSel.id);
+    if (!pts) return null;
+    if (cableSel.mode === "vertex") return pts[cableSel.vertex]?.slice() || null;
+    const a = pts[cableSel.segment];
+    const b = pts[cableSel.segment + 1];
+    return a && b ? a.map((v, i) => (v + b[i]) / 2) : null;
+  }
+
+  function clampCableSel() {
+    if (!cableSel) return;
+    const n = routePoints(cableSel.id)?.length || 2;
+    cableSel.vertex = Math.max(0, Math.min(cableSel.vertex, n - 1));
+    cableSel.segment = Math.max(0, Math.min(cableSel.segment, n - 2));
+  }
+
+  function cableMovable() {
+    if (!cableSel) return false;
+    const n = routePoints(cableSel.id)?.length || 0;
+    return cableSel.mode === "segment" ? n >= 2 : !isLocked(cableSel.vertex, n);
+  }
+
+  function selectionState() {
+    if (cableSel) {
+      return {
+        routeId: cableSel.id,
+        vertex: cableSel.mode === "vertex" ? cableSel.vertex : null,
+        segment: cableSel.mode === "segment" ? cableSel.segment : null,
+      };
+    }
+    if (selectedId) {
+      const related = new Set(
+        routes.filter((r) => [r.to, r.from, r.toBox, r.fromBox].includes(selectedId)).map((r) => r.id),
+      );
+      return { related };
+    }
+    return {};
+  }
+
+  function syncCableGizmo() {
+    if (!cableSel || dragStart) return;
+    const p = cableSelPoint();
+    if (p && cableMovable()) {
+      anchor.position.copy(houseToWorld(p));
+      anchor.updateMatrixWorld(true);
+      gizmo.camera = ctx.getCamera();
+      gizmo.attach(anchor);
+      gizmo.enabled = true;
+      helper.visible = true;
+    } else {
+      gizmo.detach();
+      gizmo.enabled = false;
+      helper.visible = false;
+    }
+  }
+
+  /**
+   * Select a cable route (null clears it).
+   * @param {string | null} id
+   * @param {{ mode?: "vertex" | "segment", vertex?: number, segment?: number, frame?: boolean, scroll?: boolean }} [opts]
+   */
+  function selectRoute(id, opts = {}) {
+    const route = id ? routesById.get(id) : null;
+    if (selectedId) {
+      selectedId = null;
+      selHelper.visible = false;
+    }
+    if (!route) {
+      cableSel = null;
+      gizmo.detach();
+      gizmo.enabled = false;
+      helper.visible = false;
+    } else {
+      const keep = cableSel?.id === route.id ? cableSel : null;
+      const n = routePoints(route.id).length;
+      cableSel = {
+        id: route.id,
+        mode: opts.mode || keep?.mode || "segment",
+        vertex: opts.vertex ?? keep?.vertex ?? Math.min(1, n - 1),
+        segment: opts.segment ?? keep?.segment ?? Math.floor((n - 1) / 2),
+      };
+      clampCableSel();
+      if (view !== "cables") setView("cables");
+      syncCableGizmo();
+    }
+    cableLayer.setSelection(selectionState());
+    for (const tr of tbody.querySelectorAll("tr.is-selected")) tr.classList.remove("is-selected");
+    const tr = cableSel ? tbody.querySelector(`tr[data-route="${cssEscape(cableSel.id)}"]`) : null;
+    if (tr) {
+      tr.classList.add("is-selected");
+      if (opts.scroll) tr.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+    if (opts.frame && cableSel) frameRoute(cableSel.id);
+    renderDetail();
+    ctx.markDirty();
+  }
+
+  /** Fly to one route, or to all of them (no id). */
+  function frameRoute(id) {
+    const box = new THREE.Box3();
+    const list = Array.isArray(id) ? id.map((k) => routesById.get(k)) : id ? [routesById.get(id)] : routes;
+    for (const r of list) if (r) box.union(cableLayer.worldBox(r.id));
+    if (box.isEmpty()) return;
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const span = Math.max(size.x, size.y, size.z, 1);
+    const camera = ctx.getCamera();
+    // From above and to the side, so the risers and the ceiling runs both read.
+    const dir = camera.position.clone().sub(controls.target);
+    dir.y = Math.max(dir.y, dir.length() * 0.8);
+    if (dir.lengthSq() < 1e-8) dir.set(0.5, 1, 0.6);
+    dir.normalize();
+    ctx.flyTo({ center, position: center.clone().addScaledVector(dir, Math.max(3, span * 1.3)), span });
+  }
+
+  function setView(next) {
+    if (next === view || (next === "cables" && !routes.length)) return;
+    view = next;
+    if (view === "fixtures" && cableSel) {
+      cableSel = null;
+      gizmo.detach();
+      gizmo.enabled = false;
+      helper.visible = false;
+      cableLayer.setSelection({});
+    }
+    if (active) {
+      renderTabs();
+      renderHead();
+      renderRows();
+      renderDetail();
+    }
   }
 
   function materializeAdd(id, edit) {
@@ -334,6 +637,7 @@ export function createEditMode(ctx) {
       mesh.updateMatrixWorld(true);
     }
     revision += 1;
+    refreshCablesAt(id);
     ctx.markDirty();
   }
 
@@ -348,7 +652,9 @@ export function createEditMode(ctx) {
 
   function save() {
     try {
-      if (Object.keys(store.fixtures).length) localStorage.setItem(storageKey, JSON.stringify(store));
+      if (Object.keys(store.fixtures).length || Object.keys(store.cables || {}).length) {
+        localStorage.setItem(storageKey, JSON.stringify(store));
+      }
       else localStorage.removeItem(storageKey);
     } catch {
       /* private mode: edits stay for this session */
@@ -444,6 +750,8 @@ export function createEditMode(ctx) {
   // --- selection ---
   function select(id, opts = {}) {
     selectedId = id && rowsById.has(id) ? id : null;
+    if (cableSel) cableSel = null;
+    if (selectedId && view !== "fixtures") setView("fixtures");
     const meshes = selectedId ? displayMeshes(selectedId) : [];
     const movable = Boolean(selectedId && deployedBase.get(selectedId) && !store.fixtures[selectedId]?.deleted);
     if (movable) {
@@ -465,6 +773,7 @@ export function createEditMode(ctx) {
     }
     if (opts.frame && meshes.length) frameOn(selectedId, meshes);
     else if (meshes.length && opts.pulse !== false) ctx.pulse(meshes);
+    cableLayer.setSelection(selectionState());
     renderDetail();
     ctx.markDirty();
   }
@@ -567,6 +876,27 @@ export function createEditMode(ctx) {
     return best ? best.id : null;
   }
 
+  /** The cable (and vertex of the selected one) under a tap. */
+  function pickCable(clientX, clientY) {
+    if (!cablesVisible()) return null;
+    const camera = ctx.getCamera();
+    const rect = canvas.getBoundingClientRect();
+    const w = rect.width || 1;
+    const h = rect.height || 1;
+    const at = { x: clientX - rect.left, y: clientY - rect.top };
+    if (cableSel) {
+      const screen = cableLayer.screenPoints(cableSel.id, camera, w, h);
+      let best = null;
+      screen.forEach((p, i) => {
+        if (!p) return;
+        const d = Math.hypot(p.x - at.x, p.y - at.y);
+        if (d <= 20 && (!best || d < best.d)) best = { i, d };
+      });
+      if (best) return { routeId: cableSel.id, vertex: best.i };
+    }
+    return cableLayer.pick(camera, at, w, h, 14);
+  }
+
   // Pointer: a press on an arrow turns orbit off before OrbitControls sees it.
   /** @type {{ id: number, x: number, y: number, t: number, onGizmo: boolean } | null} */
   let press = null;
@@ -608,9 +938,21 @@ export function createEditMode(ctx) {
       }
       const moved = Math.hypot(ev.clientX - p.x, ev.clientY - p.y);
       if (moved > 8 || performance.now() - p.t > 700) return;
+      const cableHit = pickCable(ev.clientX, ev.clientY);
+      if (cableHit?.vertex != null) {
+        selectRoute(cableHit.routeId, { mode: "vertex", vertex: cableHit.vertex });
+        return;
+      }
+      // In the Cables tab a cable wins over the fixture behind it.
+      if (cableHit && view === "cables") {
+        selectRoute(cableHit.routeId, { mode: "segment", segment: cableHit.segment, scroll: true });
+        return;
+      }
       const id = pickAt(ev.clientX, ev.clientY);
       if (id) select(id, { scroll: true });
+      else if (cableHit) selectRoute(cableHit.routeId, { mode: "segment", segment: cableHit.segment, scroll: true });
       else if (selectedId) select(null);
+      else if (cableSel) selectRoute(null);
     },
     true,
   );
@@ -650,6 +992,10 @@ export function createEditMode(ctx) {
     <header class="edit-head">
       <button type="button" class="edit-btn edit-collapse" data-role="collapse" aria-expanded="true">▾</button>
       <h2 class="edit-title" data-role="title"></h2>
+      <div class="edit-tabs" data-role="tabs" role="tablist" hidden>
+        <button type="button" class="edit-seg" role="tab" data-view="fixtures"></button>
+        <button type="button" class="edit-seg" role="tab" data-view="cables"></button>
+      </div>
       <span class="edit-count" data-role="count"></span>
       <span class="edit-spacer"></span>
       <button type="button" class="edit-btn" data-role="export"></button>
@@ -668,7 +1014,10 @@ export function createEditMode(ctx) {
       </div>
     </div>
     <section class="edit-detail" data-role="detail" hidden></section>
-    <div class="edit-search"><input type="search" data-role="search" autocomplete="off" spellcheck="false"/></div>
+    <div class="edit-search">
+      <input type="search" data-role="search" autocomplete="off" spellcheck="false"/>
+      <label class="edit-cables-on" data-role="cables-label" hidden><input type="checkbox" data-role="cables-on" checked/><span data-role="cables-on-text"></span></label>
+    </div>
     <div class="edit-table-wrap" data-role="wrap">
       <table class="edit-table">
         <thead><tr data-role="head"></tr></thead>
@@ -724,8 +1073,93 @@ export function createEditMode(ctx) {
     return "edited";
   }
 
+  const CABLE_COLUMNS = [
+    { key: "room", label: "edit.colRoom" },
+    { key: "cable", label: "edit.colCable" },
+    { key: "id", label: "edit.colRoute" },
+    { key: "ends", label: "edit.colEnds" },
+    { key: "spec", label: "edit.colSpec" },
+    { key: "schedule", label: "edit.colScheduleLength", num: true },
+    { key: "modelled", label: "edit.colModelled", num: true },
+    { key: "vertices", label: "edit.colVertices", num: true },
+  ];
+
+  function cableCell(route, key) {
+    if (key === "room") return route.room;
+    if (key === "cable") return route.tail ? `${route.cable ?? ""} ↳` : fmt(route.cable);
+    if (key === "id") return route.id;
+    if (key === "ends") return `${route.fromBox || route.from || "?"} → ${route.toBox && !route.tail ? `${route.to} (${route.toBox})` : route.to || "?"}`;
+    if (key === "spec") return route.lead ? `${route.spec} · ${route.lead}` : route.spec;
+    if (key === "schedule") return route.tail || route.schedule == null ? "" : fmt(route.schedule);
+    const pts = routePoints(route.id) || route.points;
+    if (key === "modelled") return polylineLength(pts).toFixed(1);
+    if (key === "vertices") return String(pts.length);
+    return "";
+  }
+
+  function fillCableRow(tr, route) {
+    tr.innerHTML = "";
+    tr.dataset.state = routeEdited(route.id) ? "edited" : "";
+    tr.dataset.kind = route.kind;
+    tr.title = route.note || route.id;
+    for (const col of CABLE_COLUMNS) {
+      const td = document.createElement("td");
+      td.textContent = cableCell(route, col.key);
+      if (col.num) td.className = "num";
+      if (col.key === "id") td.className = "mono";
+      tr.appendChild(td);
+    }
+  }
+
+  function renderCableRow(id) {
+    if (!active || view !== "cables") return;
+    const tr = tbody.querySelector(`tr[data-route="${cssEscape(id)}"]`);
+    const route = routesById.get(id);
+    if (tr && route) fillCableRow(tr, route);
+    if (tr && cableSel?.id === id) tr.classList.add("is-selected");
+  }
+
+  function renderCableRows() {
+    tbody.innerHTML = "";
+    const needle = filterText.trim().toLowerCase();
+    let shown = 0;
+    for (const route of routes) {
+      if (needle && !routeSearchText(route).includes(needle)) continue;
+      const tr = document.createElement("tr");
+      tr.dataset.route = route.id;
+      if (route.tail) tr.classList.add("is-tail");
+      fillCableRow(tr, route);
+      tbody.appendChild(tr);
+      shown += 1;
+    }
+    $("count").textContent = needle ? `${shown} / ${routes.length}` : String(routes.length);
+    if (cableSel) tbody.querySelector(`tr[data-route="${cssEscape(cableSel.id)}"]`)?.classList.add("is-selected");
+  }
+
+  function renderTabs() {
+    const tabs = $("tabs");
+    tabs.hidden = !routes.length;
+    $("title").hidden = routes.length > 0;
+    for (const b of tabs.querySelectorAll("button[data-view]")) {
+      b.textContent = t(b.dataset.view === "cables" ? "edit.tabCables" : "edit.tabFixtures");
+      b.classList.toggle("is-on", b.dataset.view === view);
+      b.setAttribute("aria-selected", b.dataset.view === view ? "true" : "false");
+    }
+    $("cables-label").hidden = !routes.length;
+    $("cables-on").checked = cablesOn;
+    $("cables-on-text").textContent = t("edit.showCables");
+  }
+
   function renderHead() {
     $("head").innerHTML = "";
+    if (view === "cables") {
+      for (const col of CABLE_COLUMNS) {
+        const th = document.createElement("th");
+        th.textContent = t(col.label);
+        $("head").appendChild(th);
+      }
+      return;
+    }
     for (const col of COLUMNS) {
       const th = document.createElement("th");
       th.textContent = col.axis != null ? col.label : t(col.label);
@@ -735,6 +1169,10 @@ export function createEditMode(ctx) {
   }
 
   function renderRows() {
+    if (view === "cables") {
+      renderCableRows();
+      return;
+    }
     tbody.innerHTML = "";
     const needle = filterText.trim().toLowerCase();
     let shown = 0;
@@ -778,18 +1216,172 @@ export function createEditMode(ctx) {
   }
 
   tbody.addEventListener("click", (ev) => {
+    const routeTr = ev.target.closest?.("tr[data-route]");
+    if (routeTr) {
+      selectRoute(routeTr.dataset.route, { frame: true });
+      return;
+    }
     const tr = ev.target.closest?.("tr[data-id]");
     if (!tr) return;
     select(tr.dataset.id, { frame: true });
   });
 
   function renderExportCount() {
-    const n = Object.keys(store.fixtures).length;
+    const n = Object.keys(store.fixtures).length + Object.keys(store.cables || {}).length;
     $("export").textContent = n ? `${t("edit.export")} (${n})` : t("edit.export");
     $("export").classList.toggle("has-edits", n > 0);
   }
 
+  function renderCablePosition() {
+    if (!cableSel || detail.hidden) return;
+    const pos = cableSelPoint();
+    for (const input of detail.querySelectorAll("input[data-axis]")) {
+      if (document.activeElement === input) continue;
+      input.value = pos ? fmtM(pos[Number(input.dataset.axis)]) : "";
+    }
+    const pts = routePoints(cableSel.id) || [];
+    const len = detail.querySelector('[data-role="cable-length"]');
+    if (len) len.textContent = cableLengthText(routesById.get(cableSel.id), pts);
+  }
+
+  function cableLengthText(route, pts) {
+    const m = polylineLength(pts).toFixed(1);
+    if (route?.tail || route?.schedule == null) return `${m} m`;
+    return `${m} m · ${t("edit.soupis")} ${route.schedule} m`;
+  }
+
+  function syncCableState() {
+    if (!cableSel || detail.hidden) return;
+    const head = detail.querySelector(".edit-detail-head");
+    let badge = head?.querySelector(".edit-badge");
+    if (routeEdited(cableSel.id) && head) {
+      if (!badge) {
+        badge = document.createElement("span");
+        badge.className = "edit-badge";
+        head.appendChild(badge);
+      }
+      badge.dataset.state = "edited";
+      badge.textContent = t("edit.state.edited");
+    } else badge?.remove();
+    const reset = detail.querySelector('button[data-cable="reset"]');
+    if (reset) reset.disabled = !routeEdited(cableSel.id);
+    const n = routePoints(cableSel.id)?.length || 0;
+    const del = detail.querySelector('button[data-cable="delete"]');
+    if (del) del.disabled = cableSel.mode !== "vertex" || isLocked(cableSel.vertex, n) || n <= 2;
+    const pos = detail.querySelector('[data-role="cable-index"]');
+    if (pos) pos.textContent = cableIndexText(n);
+  }
+
+  function cableIndexText(n) {
+    return cableSel.mode === "vertex"
+      ? `${t("edit.vertex")} ${cableSel.vertex + 1} / ${n}`
+      : `${t("edit.segment")} ${cableSel.segment + 1} / ${n - 1}`;
+  }
+
+  function renderCableDetail() {
+    const route = routesById.get(cableSel.id);
+    const pts = routePoints(cableSel.id);
+    const n = pts.length;
+    const pos = cableSelPoint();
+    const movable = cableMovable();
+    detail.hidden = false;
+    const dis = movable && pos ? "" : "disabled";
+    const axes = ["x", "y", "z"]
+      .map(
+        (axis, i) => `
+        <div class="edit-axis axis-${axis}">
+          <label class="edit-axis-top"><span class="edit-axis-label">${axis}</span>
+          <input type="text" inputmode="decimal" data-axis="${i}" value="${pos ? fmtM(pos[i]) : ""}" ${dis}/></label>
+          <div class="edit-axis-nudges">
+          <button type="button" class="edit-btn edit-nudge" data-nudge="${i}" data-sign="-1" ${dis} aria-label="${axis} −">−</button>
+          <button type="button" class="edit-btn edit-nudge" data-nudge="${i}" data-sign="1" ${dis} aria-label="${axis} +">+</button>
+          </div>
+        </div>`,
+      )
+      .join("");
+    const snaps = [
+      [0.01, "1 cm"],
+      [0.001, "1 mm"],
+      [0, t("edit.snapOff")],
+    ]
+      .map(([step, label]) => `<button type="button" class="edit-seg ${snapStep === step ? "is-on" : ""}" data-snap="${step}">${label}</button>`)
+      .join("");
+    const locked = cableSel.mode === "vertex" && isLocked(cableSel.vertex, n);
+    const hint = locked
+      ? t("edit.cableEndHint")
+      : cableSel.mode === "segment"
+        ? t("edit.segmentHint")
+        : t("edit.vertexHint");
+    detail.innerHTML = `
+      <div class="edit-detail-head">
+        <strong class="mono">${escapeHtml(route.id)}</strong>
+        <span class="edit-detail-name"><span class="edit-kind" data-kind="${route.kind}"></span>${escapeHtml(route.spec)} · ${escapeHtml(cableCell(route, "ends"))} · <span data-role="cable-length">${escapeHtml(cableLengthText(route, pts))}</span></span>
+        ${routeEdited(route.id) ? `<span class="edit-badge" data-state="edited">${escapeHtml(t("edit.state.edited"))}</span>` : ""}
+      </div>
+      <div class="edit-row edit-tools">
+        <button type="button" class="edit-seg ${cableSel.mode === "segment" ? "is-on" : ""}" data-cable="mode-segment">${escapeHtml(t("edit.segment"))}</button>
+        <button type="button" class="edit-seg ${cableSel.mode === "vertex" ? "is-on" : ""}" data-cable="mode-vertex">${escapeHtml(t("edit.vertex"))}</button>
+        <span class="edit-spacer"></span>
+        <button type="button" class="edit-btn" data-cable="prev" aria-label="${escapeHtml(t("edit.prev"))}">◀</button>
+        <span class="edit-snap mono" data-role="cable-index">${escapeHtml(cableIndexText(n))}</span>
+        <button type="button" class="edit-btn" data-cable="next" aria-label="${escapeHtml(t("edit.next"))}">▶</button>
+      </div>
+      <p class="edit-hint">${escapeHtml(hint)}${route.lead ? ` ${escapeHtml(t("edit.leadHint"))} ${escapeHtml(route.lead)}.` : ""}</p>
+      <div class="edit-axes">${axes}</div>
+      <div class="edit-row edit-tools">
+        <span class="edit-snap">${escapeHtml(t("edit.snap"))}</span>${snaps}
+      </div>
+      <div class="edit-row">
+        <button type="button" class="edit-btn" data-cable="insert">${escapeHtml(t("edit.insertVertex"))}</button>
+        <button type="button" class="edit-btn edit-danger" data-cable="delete" ${cableSel.mode === "vertex" && !locked && n > 2 ? "" : "disabled"}>${escapeHtml(t("edit.deleteVertex"))}</button>
+        <span class="edit-spacer"></span>
+        <button type="button" class="edit-btn" data-cable="reset" ${routeEdited(route.id) ? "" : "disabled"}>${escapeHtml(t("edit.resetRoute"))}</button>
+      </div>
+      ${route.note ? `<p class="edit-hint">${escapeHtml(route.note)}</p>` : ""}`;
+    notifyLayout();
+  }
+
+  function cableAction(action) {
+    if (!cableSel) return;
+    const pts = routePoints(cableSel.id);
+    const n = pts.length;
+    if (action === "mode-segment" || action === "mode-vertex") {
+      cableSel.mode = action === "mode-vertex" ? "vertex" : "segment";
+      if (cableSel.mode === "vertex" && isLocked(cableSel.vertex, n)) cableSel.vertex = Math.min(Math.max(1, cableSel.segment + 1), n - 1);
+    } else if (action === "prev" || action === "next") {
+      const step = action === "next" ? 1 : -1;
+      if (cableSel.mode === "vertex") cableSel.vertex = (cableSel.vertex + step + n) % n;
+      else cableSel.segment = (cableSel.segment + step + (n - 1)) % (n - 1);
+    } else if (action === "insert") {
+      const at = cableSel.mode === "vertex" ? Math.min(cableSel.vertex, n - 2) : cableSel.segment;
+      const out = insertVertex(pts, at);
+      cableSel.mode = "vertex";
+      cableSel.vertex = out.index;
+      setRoutePoints(cableSel.id, out.points);
+    } else if (action === "delete") {
+      const out = deleteVertex(pts, cableSel.vertex);
+      cableSel.vertex = Math.max(1, Math.min(out.index, out.points.length - 2));
+      setRoutePoints(cableSel.id, out.points);
+    } else if (action === "reset") {
+      delete store.cables[cableSel.id];
+      const route = routesById.get(cableSel.id);
+      cableLayer.update(route, routePoints(cableSel.id));
+      clampCableSel();
+      renderCableRow(cableSel.id);
+      save();
+    }
+    clampCableSel();
+    syncCableGizmo();
+    cableLayer.setSelection(selectionState());
+    renderDetail();
+    ctx.markDirty();
+  }
+
   function renderPosition() {
+    if (cableSel) {
+      renderCablePosition();
+      return;
+    }
     if (!selectedId) return;
     const pos = currentTarget(selectedId);
     for (const input of detail.querySelectorAll("input[data-axis]")) {
@@ -800,6 +1392,10 @@ export function createEditMode(ctx) {
   }
 
   function renderDetail() {
+    if (cableSel && !selectedId) {
+      renderCableDetail();
+      return;
+    }
     if (!selectedId) {
       detail.hidden = true;
       detail.innerHTML = "";
@@ -864,7 +1460,7 @@ export function createEditMode(ctx) {
 
   detail.addEventListener("click", (ev) => {
     const target = ev.target.closest?.("button");
-    if (!target || !selectedId) return;
+    if (!target || (!selectedId && !cableSel)) return;
     if (target.dataset.nudge != null) {
       // Pointer presses are handled by the hold-to-repeat below; a click
       // with no pointer press (keyboard, VoiceOver) steps once.
@@ -876,6 +1472,11 @@ export function createEditMode(ctx) {
       renderDetail();
       return;
     }
+    if (target.dataset.cable) {
+      cableAction(target.dataset.cable);
+      return;
+    }
+    if (!selectedId) return;
     const role = target.dataset.role;
     if (role === "to-wall") snapToWall(selectedId);
     else if (role === "duplicate") duplicate(selectedId);
@@ -889,6 +1490,12 @@ export function createEditMode(ctx) {
   let hold = null;
 
   function nudge(button, factor) {
+    if (cableSel) {
+      if (!cableMovable()) return;
+      const step = (snapStep || 0.001) * factor;
+      cableMove(Number(button.dataset.nudge), Number(button.dataset.sign) * step);
+      return;
+    }
     if (!selectedId) return;
     const pos = currentTarget(selectedId);
     if (!pos) return;
@@ -941,7 +1548,17 @@ export function createEditMode(ctx) {
 
   detail.addEventListener("change", (ev) => {
     const input = ev.target;
-    if (!(input instanceof HTMLInputElement) || !selectedId) return;
+    if (!(input instanceof HTMLInputElement)) return;
+    if (cableSel && !selectedId && input.dataset.axis != null) {
+      const v = Number(String(input.value).replace(",", "."));
+      const pos = cableSelPoint();
+      const axis = Number(input.dataset.axis);
+      if (pos && Number.isFinite(v) && cableMovable()) cableMove(axis, v - pos[axis]);
+      save();
+      renderCablePosition();
+      return;
+    }
+    if (!selectedId) return;
     if (input.dataset.axis != null) {
       const v = Number(String(input.value).replace(",", "."));
       const pos = currentTarget(selectedId);
@@ -1073,8 +1690,12 @@ export function createEditMode(ctx) {
     select(id);
   }
 
+  function currentPatch() {
+    return buildPatch(store, rowsById, { cables: cablePatch(store, routes, fixtureDelta) });
+  }
+
   function patchText() {
-    return JSON.stringify(buildPatch(store, rowsById), null, 2) + "\n";
+    return JSON.stringify(currentPatch(), null, 2) + "\n";
   }
 
   $("export").addEventListener("click", () => {
@@ -1157,7 +1778,7 @@ export function createEditMode(ctx) {
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   });
   $("discard").addEventListener("click", () => {
-    if (!Object.keys(store.fixtures).length) return;
+    if (!Object.keys(store.fixtures).length && !Object.keys(store.cables || {}).length) return;
     if (!window.confirm(t("edit.discardConfirm"))) return;
     discardAll();
     exportText.value = patchText();
@@ -1165,6 +1786,20 @@ export function createEditMode(ctx) {
   $("search").addEventListener("input", (ev) => {
     filterText = ev.target.value || "";
     renderRows();
+  });
+  $("tabs").addEventListener("click", (ev) => {
+    const b = ev.target.closest?.("button[data-view]");
+    if (!b) return;
+    if (b.dataset.view === "cables" && selectedId) select(null);
+    const opening = b.dataset.view === "cables" && view !== "cables";
+    setView(b.dataset.view);
+    // Opening the Cables tab shows every route.
+    if (opening && !cableSel) frameRoute(null);
+  });
+  $("cables-on").addEventListener("change", (ev) => {
+    cablesOn = Boolean(ev.target.checked);
+    if (!cablesOn && cableSel) selectRoute(null);
+    ctx.markDirty();
   });
   $("collapse").addEventListener("click", () => {
     collapsed = !collapsed;
@@ -1184,10 +1819,13 @@ export function createEditMode(ctx) {
     rows = rows.filter((row) => !row.added);
     const ids = Object.keys(store.fixtures);
     store.fixtures = {};
+    store.cables = {};
     for (const id of ids) if (rowsById.has(id)) applyEdit(id);
+    for (const route of routes) cableLayer.update(route, routePoints(route.id));
     save();
     renderRows();
-    select(selectedId && rowsById.has(selectedId) ? selectedId : null);
+    if (cableSel) selectRoute(cableSel.id);
+    else select(selectedId && rowsById.has(selectedId) ? selectedId : null);
   }
 
   let flashTimer = null;
@@ -1214,6 +1852,7 @@ export function createEditMode(ctx) {
     $("download").textContent = t("edit.download");
     $("discard").textContent = t("edit.discard");
     $("export-hint").textContent = t("edit.exportHint");
+    renderTabs();
     renderHead();
     renderExportCount();
   }
@@ -1246,6 +1885,8 @@ export function createEditMode(ctx) {
       helper.visible = false;
       selHelper.visible = false;
       selectedId = null;
+      cableSel = null;
+      cableLayer.setSelection({});
       exportBox.hidden = true;
     }
     ctx.onActiveChange?.(on);
@@ -1262,10 +1903,14 @@ export function createEditMode(ctx) {
   }
 
   function renderOverlay(renderer, camera) {
+    const showCables = cablesVisible();
+    cableLayer.setVisible(showCables);
+    if (showCables) cableLayer.render(renderer, camera);
     if (!active || (!selHelper.visible && !helper.visible)) return;
     gizmo.camera = camera;
     gizmo.size = gizmoSize();
     if (selectedId && !dragStart) updateSelectionBox();
+    if (cableSel && !dragStart) syncCableGizmo();
     const autoClear = renderer.autoClear;
     renderer.autoClear = false;
     renderer.setRenderTarget(null);
@@ -1337,7 +1982,28 @@ export function createEditMode(ctx) {
     },
     rows: () => rows.map((row) => ({ ...row, position: currentTarget(row.id), state: rowState(row.id) })),
     store: () => JSON.parse(JSON.stringify(store)),
-    patch: () => buildPatch(store, rowsById),
+    patch: () => currentPatch(),
+    cables: {
+      routes: () => routes.map((r) => ({ ...r, points: routePoints(r.id), edited: routeEdited(r.id) })),
+      select: (id, opts) => selectRoute(id, opts),
+      get selection() {
+        return cableSel ? { ...cableSel } : null;
+      },
+      points: (id) => routePoints(id),
+      /** Screen points (CSS px, page) of a route's vertices. */
+      screen: (id) => {
+        const rect = canvas.getBoundingClientRect();
+        return cableLayer
+          .screenPoints(id, ctx.getCamera(), rect.width, rect.height)
+          .map((p) => (p ? { x: p.x + rect.left, y: p.y + rect.top } : null));
+      },
+      visible: () => cablesVisible(),
+      frame: (id) => frameRoute(id || null),
+      setView,
+      get view() {
+        return view;
+      },
+    },
     patchText,
     compactPatchText,
     position: (id) => currentTarget(id),
@@ -1410,6 +2076,7 @@ function injectStyles() {
     .edit-btn, .edit-seg, .edit-panel input, .edit-panel textarea { color: #1c1c1e !important;
       background: rgba(0,0,0,0.06) !important; border-color: rgba(0,0,0,0.14) !important; }
     .edit-table tr.is-selected td { background: rgba(255,176,32,0.35) !important; }
+    .edit-seg.is-on { background: #0a84ff !important; border-color: #0a84ff !important; color: #fff !important; }
     .edit-panel .edit-share { background: #0a84ff !important; border-color: #0a84ff !important; color: #fff !important; }
   }
   .edit-head { display: flex; align-items: center; gap: 8px; padding: 6px 10px; min-height: 48px; box-sizing: border-box; }
@@ -1462,7 +2129,22 @@ function injectStyles() {
   .edit-prop { display: flex; flex-direction: column; font-size: 12px; gap: 2px; opacity: 0.95; }
   .edit-prop input { min-height: 40px; box-sizing: border-box; font: inherit; font-size: 14px; color: inherit;
     background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.16); border-radius: 8px; padding: 0 8px; }
-  .edit-search { padding: 6px 10px; }
+  .edit-search { padding: 6px 10px; display: flex; gap: 8px; align-items: center; }
+  .edit-search input[type="search"] { flex: 1 1 auto; }
+  .edit-cables-on { display: flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 13px; min-height: 40px; }
+  .edit-cables-on[hidden] { display: none; }
+  .edit-cables-on input { width: 22px; height: 22px; margin: 0; }
+  .edit-tabs { display: flex; gap: 4px; }
+  .edit-tabs[hidden] { display: none; }
+  .edit-tabs .edit-seg { font-weight: 600; }
+  .edit-kind { display: inline-block; width: 10px; height: 10px; border-radius: 5px; margin-right: 6px; vertical-align: 0; }
+  .edit-kind[data-kind="data"] { background: #0a84ff; }
+  .edit-kind[data-kind="lv"] { background: #ffc400; }
+  .edit-kind[data-kind="power"] { background: #ff3b30; }
+  .edit-table tr[data-kind="data"] td:first-child { box-shadow: inset 4px 0 0 #0a84ff; }
+  .edit-table tr[data-kind="lv"] td:first-child { box-shadow: inset 4px 0 0 #ffc400; }
+  .edit-table tr[data-kind="power"] td:first-child { box-shadow: inset 4px 0 0 #ff3b30; }
+  .edit-table tr.is-tail td { opacity: 0.8; }
   .edit-search input { width: 100%; box-sizing: border-box; min-height: 40px; font: inherit; font-size: 16px;
     color: inherit; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.16); border-radius: 10px; padding: 0 10px; }
   .edit-table-wrap { flex: 1 1 auto; overflow: auto; -webkit-overflow-scrolling: touch; min-height: 0; }

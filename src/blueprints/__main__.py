@@ -61,6 +61,12 @@ def main(argv: list[str] | None = None) -> int:
         write_doors_json(
             model_name, window_motions, repo / "docs" / "models" / f"{model_name}.windows.json"
         )
+    # Cable routes (docs/electrical/CableRoutes.md): the model names the file.
+    if getattr(mod, "CABLE_ROUTES", False):
+        from blueprints.cable_routes import write_viewer_json
+
+        repo = Path(__file__).resolve().parents[2]
+        write_viewer_json(repo / "docs" / "models" / f"{model_name}.cables.json")
     ifc_fn = getattr(mod, "ifc_index", None)
     ifc_index = ifc_fn() if callable(ifc_fn) else None
     if kind == "section":
