@@ -82,6 +82,7 @@ import {
   switchTargetCenters,
 } from "./tapTargets.js";
 import { createEditMode } from "./editMode.js";
+import { createFixtureModels } from "./fixtureModels.js";
 import { identityOf, meshIdentity, nodeKeyMap } from "./meshIdentity.js";
 import { attachPivotNav } from "./pivotNav.js";
 import { cadMmToGltf, createAnnotations } from "./annotations.js";
@@ -123,7 +124,7 @@ function writeSceneQuery(sceneId) {
 /**
  * @param {HTMLCanvasElement} canvas
  * @param {ArrayBuffer} glbBuffer
- * @param {{ scenes?: object[], scene?: string, partGroups?: object[], doors?: object[], windows?: object[], ifc?: object, modelId?: string, materialsUrl?: string, materialsText?: string, fixtureAssets?: object[] }} [options]
+ * @param {{ scenes?: object[], scene?: string, partGroups?: object[], doors?: object[], windows?: object[], ifc?: object, modelId?: string, materialsUrl?: string, materialsText?: string, fixtureAssets?: object[], fixtureModelsUrl?: string }} [options]
  */
 export function mountViewer(canvas, glbBuffer, options = {}) {
   /** Custom named scenes (model-specific); shown alongside Iso/Front/Side/Top. */
@@ -269,6 +270,24 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   const feedback = createFeedbackLayer({ canvas, getCamera: () => camera });
   /** Debugging: `blueprintsFeedback.showFeedback({ worldPos: [x, y, z], kind: "switch", direction: "up" })`. */
   window.blueprintsFeedback = feedback;
+  /**
+   * Real fixture models instead of boxes (fixtureModels.js,
+   * docs/electrical/FixtureModels.md). Off without `fixtureModelsUrl`.
+   */
+  const fixtureModels = createFixtureModels({
+    baseUrl: options.fixtureModelsUrl || "",
+    elements: () => Object.values(ifcIndex.elements || {}),
+    meshesForElement: (element) => meshesForElement(element),
+    onChange: () => {
+      if (!root) return;
+      // A model arrived: put it in the current mode, then redraw.
+      fixtureModels.sync(materialMode, lockedClipPlanes());
+      refreshEdges();
+      syncSectionCaps(parts, lockedClipPlanes());
+      viewDirty = true;
+      realisticCtl?.stage.markDirty();
+    },
+  });
   const lightOn = new Map();
   const windowOpen = new Map();
   /** Pane slide animation per window (windows.js). */
@@ -483,6 +502,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       ensureDraftCut();
       buildCutUI();
       refreshMaterials();
+      // Real fixture models (fixtureModels.js); boxes until they arrive.
+      void fixtureModels.install();
       if (initialSpec) applyScene(initialSpec);
       syncSceneUrl();
       chromeApi?.refreshPartialHeight();
@@ -1252,6 +1273,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       renderer.toneMapping = THREE.NoToneMapping;
       renderer.toneMappingExposure = 1;
     }
+    // Before edges and caps: a box a model stands in for gets neither.
+    fixtureModels.sync(materialMode, lockedClipPlanes());
     refreshEdges();
     syncSectionCaps(parts, lockedClipPlanes());
     if (materialMode === MODE_REALISTIC) realisticCtl?.afterRefresh();
@@ -2529,6 +2552,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   // Public hook for future agent-driven features (flyover, blink, …).
   const api = {
     scene,
+    /** Real fixture models (fixtureModels.js). */
+    fixtureModels,
     get camera() {
       return camera;
     },
@@ -2746,6 +2771,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
 
   function startPulse(meshes) {
     if (pulse) finishPulse();
+    meshes = [...meshes, ...fixtureModels.displayMeshesForMeshes(meshes)];
     const clones = [];
     for (const mesh of meshes) {
       if (!mesh.isMesh || !mesh.material) continue;
@@ -2879,6 +2905,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         return mat;
       });
     }
+    // A real model glows only in its diffuser.
+    fixtureModels.setLightLook(element, restore ? null : { on, color: target.clone(), level });
     viewDirty = true;
   }
 
@@ -3010,6 +3038,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         c.addScaledVector(right, (side * Math.max(size.x, size.z)) / 4);
       }
     }
+    if (fixtureModels.press(element, target)) viewDirty = true;
     feedback.showFeedback({ worldPos: c, kind: "switch", direction: target.position, haptic });
   }
 
@@ -3148,6 +3177,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   }
 
   function pressSwitch(element) {
+    // A real model tips its rocker instead (fixtureModels.press).
+    if (fixtureModels.placedFor(element)?.holder.visible) return;
     for (const mesh of meshesForElement(element)) {
       if (mesh.userData.bpPressing) continue;
       mesh.userData.bpPressing = true;
@@ -3482,6 +3513,10 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       realisticCtl?.stage.markDirty();
     }
     stepPulse(now);
+    if (fixtureModels.step(now)) {
+      viewDirty = true;
+      realisticCtl?.stage.markDirty();
+    }
     stepCamFly(now);
     stepFrameAnim(now);
     if (walk?.active) {

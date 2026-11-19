@@ -824,7 +824,8 @@ export function syncEdgeOverlays(partsMap, enabled, opts = {}) {
         }
       }
 
-      if (!enabled) {
+      // A real fixture model (fixtureModels.js) is drawn instead of this box.
+      if (!enabled || mesh.userData.bpModelReplaced) {
         if (overlay) disposeOverlay(overlay);
         continue;
       }
