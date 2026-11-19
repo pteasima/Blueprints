@@ -30,6 +30,122 @@ export const FIXTURE_MODEL_RULES = [
   { model: "unifi-g6-turret", mount: "wall", objectType: "Camera", description: /G6 Turret/i },
 ];
 
+/**
+ * Edge lines on the models, tuned on the decimated meshes: a dihedral
+ * threshold (degrees), as the viewer's boxes use (20), plus for flat wall
+ * devices a front outline: the edge where the surface turns past 45 degrees
+ * from facing the room. The Jung frame and rocker have soft fillets; after
+ * decimation each fillet is two or three facets meeting at 20-40 degrees,
+ * so any plain threshold draws either a hatched band or nothing. The
+ * outline draws each fillet once. The D100 (revolved, exact) and the G6
+ * (smooth ball and shell) only need the threshold. Open borders (where two
+ * parts meet, the cut-off back) always draw.
+ * @type {Record<string, { threshold: number, frontOutline?: boolean, borders?: boolean }>}
+ */
+export const MODEL_EDGES = {
+  "kama-d100": { threshold: 30 },
+  "jung-ls990": { threshold: 50, frontOutline: true },
+  "jung-ls995": { threshold: 50, frontOutline: true },
+  "unifi-g6-turret": { threshold: 45 },
+};
+
+/**
+ * Feature edges of one geometry, like THREE.EdgesGeometry (creases over
+ * the threshold and open borders), plus optionally the front outline: edges
+ * whose two faces sit on either side of 45 degrees from +Z in `toModel`
+ * space (the model's out-of-wall axis).
+ * @param {THREE.BufferGeometry} geometry
+ * @param {THREE.Matrix4} toModel geometry space -> model frame
+ * @param {{ threshold: number, frontOutline?: boolean, borders?: boolean }} spec
+ * @returns {Float32Array} segments in the model frame
+ */
+export function featureEdges(geometry, toModel, spec) {
+  const pos = geometry.getAttribute("position");
+  if (!pos || !pos.count) return new Float32Array(0);
+  const index = geometry.getIndex();
+  const tris = index ? index.count / 3 : pos.count / 3;
+  const cosCrease = Math.cos((spec.threshold * Math.PI) / 180);
+  const cosFront = Math.cos(Math.PI / 4);
+  const p = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+  const tri = new THREE.Triangle();
+  const n = new THREE.Vector3();
+  /** @type {Map<string, { a: THREE.Vector3, b: THREE.Vector3, n: THREE.Vector3 }>} */
+  const open = new Map();
+  const out = [];
+  const key = (v) => `${Math.round(v.x * 2e4)},${Math.round(v.y * 2e4)},${Math.round(v.z * 2e4)}`;
+  const push = (a, b) => out.push(a.x, a.y, a.z, b.x, b.y, b.z);
+  for (let t = 0; t < tris; t++) {
+    for (let k = 0; k < 3; k++) {
+      const i = index ? index.getX(t * 3 + k) : t * 3 + k;
+      p[k].fromBufferAttribute(pos, i).applyMatrix4(toModel);
+    }
+    tri.set(p[0], p[1], p[2]);
+    if (tri.getArea() < 1e-12) continue;
+    tri.getNormal(n);
+    const keys = [key(p[0]), key(p[1]), key(p[2])];
+    for (let k = 0; k < 3; k++) {
+      const ka = keys[k];
+      const kb = keys[(k + 1) % 3];
+      if (ka === kb) continue;
+      const twin = open.get(`${kb}_${ka}`);
+      if (twin) {
+        open.delete(`${kb}_${ka}`);
+        const crease = n.dot(twin.n) <= cosCrease;
+        const outline = spec.frontOutline && (n.z >= cosFront) !== (twin.n.z >= cosFront);
+        if (crease || outline) push(twin.a, twin.b);
+      } else {
+        open.set(`${ka}_${kb}`, { a: p[k].clone(), b: p[(k + 1) % 3].clone(), n: n.clone() });
+      }
+    }
+  }
+  if (spec.borders !== false) for (const e of open.values()) push(e.a, e.b);
+  return new Float32Array(out);
+}
+
+/**
+ * Hard-edge segments of a loaded model, in the model root's frame. Computed
+ * once per model and shared by every instance.
+ * @param {THREE.Object3D} root
+ * @param {{ threshold: number, frontOutline?: boolean, borders?: boolean }} spec
+ * @returns {Float32Array}
+ */
+export function modelEdgePositions(root, spec) {
+  root.updateMatrixWorld(true);
+  const inv = root.matrixWorld.clone().invert();
+  const chunks = [];
+  let total = 0;
+  root.traverse((o) => {
+    if (!o.isMesh || !o.geometry?.getAttribute?.("position")) return;
+    const seg = featureEdges(o.geometry, inv.clone().multiply(o.matrixWorld), spec);
+    chunks.push(seg);
+    total += seg.length;
+  });
+  const all = new Float32Array(total);
+  let at = 0;
+  for (const c of chunks) {
+    all.set(c, at);
+    at += c.length;
+  }
+  return all;
+}
+
+/**
+ * Segments moved by a matrix (model frame -> host mesh frame).
+ * @param {Float32Array} positions
+ * @param {THREE.Matrix4} matrix
+ */
+export function transformPositions(positions, matrix) {
+  const out = new Float32Array(positions.length);
+  const v = new THREE.Vector3();
+  for (let i = 0; i < positions.length; i += 3) {
+    v.set(positions[i], positions[i + 1], positions[i + 2]).applyMatrix4(matrix);
+    out[i] = v.x;
+    out[i + 1] = v.y;
+    out[i + 2] = v.z;
+  }
+  return out;
+}
+
 /** Rocker press: how far the rocker tips, and for how long. */
 export const ROCKER_TILT_RAD = (2.5 * Math.PI) / 180;
 export const ROCKER_PRESS_MS = 220;
@@ -117,6 +233,8 @@ export function createFixtureModels(opts) {
   const looks = new Map();
   /** @type {{ pivot: THREE.Object3D, sign: number, t0: number }[]} */
   const presses = [];
+  /** model → edge segments in the model frame (computed once). */
+  const edgeCache = new Map();
   let mode = "solid";
   /** @type {THREE.Plane[] | null} */
   let planes = null;
@@ -175,6 +293,13 @@ export function createFixtureModels(opts) {
     const world = new THREE.Matrix4().compose(pose.position, pose.quaternion, new THREE.Vector3(1, 1, 1));
     const local = host.matrixWorld.clone().invert().multiply(world);
     local.decompose(holder.position, holder.quaternion, holder.scale);
+    // Edge lines: the host's own edge overlay (edges.js) draws these instead
+    // of the box outline, so they follow edge mode, clipping and resolution
+    // like every other part. One overlay per fixture, built at refresh time.
+    if (!edgeCache.has(rule.model)) {
+      edgeCache.set(rule.model, modelEdgePositions(scene, MODEL_EDGES[rule.model] || { threshold: 30 }));
+    }
+    host.userData.bpModelEdgePositions = transformPositions(edgeCache.get(rule.model), local);
     const diffusers = [];
     const rockers = new Map();
     model.traverse((o) => {
@@ -265,8 +390,9 @@ export function createFixtureModels(opts) {
           mesh.material = hiddenMaterial();
           if (prev && !Array.isArray(prev) && prev.userData?.bpAssetHidden) prev.dispose();
         }
+        // Box edges become the model's edges (edges.js, bpModelEdgePositions).
         for (const child of mesh.children) {
-          if (child.userData?.isEdgeOverlay || child.userData?.isSectionCap) child.visible = !show;
+          if (child.userData?.isSectionCap) child.visible = !show;
         }
       }
     }

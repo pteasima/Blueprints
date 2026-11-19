@@ -753,8 +753,28 @@ function visibleEdgePositions(mesh, label, groutLinesWorld) {
   return hard;
 }
 
+/**
+ * Fixed segments (a fixture model's edges): no cut lines, the line
+ * material's clipping planes trim them.
+ */
+function setOverlayPositions(overlay, packed) {
+  if (overlay.bpPackedSource === packed) return;
+  overlay.bpPackedSource = packed;
+  const geom = new LineSegmentsGeometry();
+  const prev = overlay.geometry;
+  if (packed.length >= 6) {
+    geom.setPositions(packed);
+    overlay.geometry = geom;
+    overlay.computeLineDistances();
+  } else {
+    overlay.geometry = geom;
+  }
+  prev?.dispose?.();
+}
+
 function rebuildOverlayGeometry(mesh, overlay, worldPlanes, label, groutLinesWorld) {
   mesh.updateWorldMatrix(true, false);
+  overlay.bpPackedSource = null;
   const hard = visibleEdgePositions(mesh, label, groutLinesWorld);
   const localPlanes = worldPlanesToLocal(worldPlanes, mesh.matrixWorld);
   const cut = cutEdgeSegmentPositions(mesh.geometry, localPlanes);
@@ -824,8 +844,10 @@ export function syncEdgeOverlays(partsMap, enabled, opts = {}) {
         }
       }
 
-      // A real fixture model (fixtureModels.js) is drawn instead of this box.
-      if (!enabled || mesh.userData.bpModelReplaced) {
+      // A real fixture model (fixtureModels.js) is drawn instead of this box:
+      // its host mesh carries the model's edges; other box meshes draw none.
+      const modelEdges = mesh.userData.bpModelReplaced ? mesh.userData.bpModelEdgePositions : null;
+      if (!enabled || (mesh.userData.bpModelReplaced && !(modelEdges instanceof Float32Array))) {
         if (overlay) disposeOverlay(overlay);
         continue;
       }
@@ -880,7 +902,8 @@ export function syncEdgeOverlays(partsMap, enabled, opts = {}) {
         }
       }
       overlay.layers.set(EDGE_LAYER);
-      rebuildOverlayGeometry(mesh, /** @type {any} */ (overlay), planes, label, groutLinesWorld);
+      if (modelEdges instanceof Float32Array) setOverlayPositions(overlay, modelEdges);
+      else rebuildOverlayGeometry(mesh, /** @type {any} */ (overlay), planes, label, groutLinesWorld);
     }
   }
 }

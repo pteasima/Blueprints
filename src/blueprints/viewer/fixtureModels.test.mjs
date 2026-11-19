@@ -4,7 +4,7 @@
  */
 import assert from "node:assert/strict";
 import * as THREE from "three";
-import { mountPose, refDirectionOf, ruleFor } from "./fixtureModels.js";
+import { featureEdges, modelEdgePositions, mountPose, refDirectionOf, ruleFor, transformPositions } from "./fixtureModels.js";
 
 // Rules: object type, narrowed by plan symbol / product note.
 {
@@ -53,6 +53,29 @@ const yAxis = (q) => new THREE.Vector3(0, 1, 0).applyQuaternion(q);
   const pose = mountPose("ceiling", [1, 0], box);
   near(pose.position, new THREE.Vector3(0, 2.565, 0), "origin at the ceiling");
   near(zAxis(pose.quaternion), new THREE.Vector3(0, -1, 0), "+Z down");
+}
+
+// Model edges: creases over the threshold, open borders, and the front
+// outline (where the surface turns past 45 degrees from +Z).
+{
+  const I = new THREE.Matrix4();
+  const segs = (a) => a.length / 6;
+  const box = new THREE.BoxGeometry(0.08, 0.08, 0.02);
+  assert.equal(segs(featureEdges(box, I, { threshold: 20 })), 12, "a box has 12 creases");
+  assert.equal(segs(featureEdges(box, I, { threshold: 120 })), 0, "no crease is sharper than 120");
+  assert.equal(segs(featureEdges(box, I, { threshold: 120, frontOutline: true })), 4, "the front face outline only");
+  const plane = new THREE.PlaneGeometry(1, 1);
+  assert.equal(segs(featureEdges(plane, I, { threshold: 20 })), 4, "open borders draw");
+  assert.equal(segs(featureEdges(plane, I, { threshold: 20, borders: false })), 0);
+  // Positions come out in the model frame and follow the host transform.
+  const root = new THREE.Group();
+  const mesh = new THREE.Mesh(plane);
+  mesh.position.set(0, 0, 0.5);
+  root.add(mesh);
+  const pos = modelEdgePositions(root, { threshold: 20 });
+  for (let i = 2; i < pos.length; i += 3) assert.ok(Math.abs(pos[i] - 0.5) < 1e-9);
+  const moved = transformPositions(pos, new THREE.Matrix4().makeTranslation(1, 0, 0));
+  assert.ok(Math.abs(moved[0] - pos[0] - 1) < 1e-9);
 }
 
 console.log("fixtureModels.test.mjs ok");
