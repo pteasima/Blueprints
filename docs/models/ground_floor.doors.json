@@ -571,6 +571,27 @@
     "bend": 0.3
   },
   {
+    "id": "SF-I500a-DOOR1",
+    "kind": "hinged",
+    "element": "SF-I500a-DOOR1",
+    "center": [
+      20.577,
+      0.505,
+      -13.55
+    ],
+    "hinge": [
+      20.568,
+      0.505,
+      -13.7985
+    ],
+    "axis": [
+      0,
+      1,
+      0
+    ],
+    "sign": -1
+  },
+  {
     "id": "SF-I600a-D1",
     "kind": "drawer",
     "element": "SF-I600a-D1",
@@ -706,6 +727,177 @@
     ]
   },
   {
+    "id": "SF-I300-D1",
+    "kind": "drawer",
+    "element": "SF-I300-D1",
+    "center": [
+      20.828,
+      0.505,
+      -11.4525
+    ],
+    "slide": [
+      -0.501,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "id": "SF-E600a-DOOR1",
+    "kind": "hinged",
+    "element": "SF-E600a-DOOR1",
+    "center": [
+      21.731,
+      0.505,
+      -13.507
+    ],
+    "hinge": [
+      21.74,
+      0.505,
+      -13.7985
+    ],
+    "axis": [
+      0,
+      1,
+      0
+    ],
+    "sign": 1
+  },
+  {
+    "id": "SF-E600b-D1",
+    "kind": "drawer",
+    "element": "SF-E600b-D1",
+    "center": [
+      21.48,
+      0.86,
+      -12.9105
+    ],
+    "slide": [
+      0.501,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "id": "SF-E600b-D2",
+    "kind": "drawer",
+    "element": "SF-E600b-D2",
+    "center": [
+      21.48,
+      0.76,
+      -12.9105
+    ],
+    "slide": [
+      0.501,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "id": "SF-E600b-D3",
+    "kind": "drawer",
+    "element": "SF-E600b-D3",
+    "center": [
+      21.48,
+      0.405,
+      -12.9105
+    ],
+    "slide": [
+      0.501,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "id": "SF-E600c-D1",
+    "kind": "drawer",
+    "element": "SF-E600c-D1",
+    "center": [
+      21.48,
+      0.86,
+      -12.3035
+    ],
+    "slide": [
+      0.501,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "id": "SF-E600c-D2",
+    "kind": "drawer",
+    "element": "SF-E600c-D2",
+    "center": [
+      21.48,
+      0.76,
+      -12.3035
+    ],
+    "slide": [
+      0.501,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "id": "SF-E600c-D3",
+    "kind": "drawer",
+    "element": "SF-E600c-D3",
+    "center": [
+      21.48,
+      0.405,
+      -12.3035
+    ],
+    "slide": [
+      0.501,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "id": "SF-E700-D1",
+    "kind": "drawer",
+    "element": "SF-E700-D1",
+    "center": [
+      21.48,
+      0.86,
+      -11.65
+    ],
+    "slide": [
+      0.501,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "id": "SF-E700-D2",
+    "kind": "drawer",
+    "element": "SF-E700-D2",
+    "center": [
+      21.48,
+      0.76,
+      -11.65
+    ],
+    "slide": [
+      0.501,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "id": "SF-E700-D3",
+    "kind": "drawer",
+    "element": "SF-E700-D3",
+    "center": [
+      21.48,
+      0.405,
+      -11.65
+    ],
+    "slide": [
+      0.501,
+      0.0,
+      0.0
+    ]
+  },
+  {
     "id": "SF-A250-D1",
     "kind": "drawer",
     "element": "SF-A250-D1",
@@ -749,6 +941,642 @@
       0.0,
       0.0
     ]
+  },
+  {
+    "id": "SF-F052-DOOR1",
+    "kind": "hinged",
+    "element": "SF-F052-DOOR1",
+    "center": [
+      22.3,
+      0.455,
+      -15.159
+    ],
+    "hinge": [
+      22.4485,
+      0.455,
+      -15.15
+    ],
+    "axis": [
+      0,
+      1,
+      0
+    ],
+    "sign": 1
+  },
+  {
+    "id": "SF-DN-S1-D1",
+    "kind": "drawer",
+    "element": "SF-DN-S1-D1",
+    "center": [
+      22.75,
+      0.81,
+      -15.3425
+    ],
+    "slide": [
+      0.0,
+      0.0,
+      0.366
+    ]
+  },
+  {
+    "id": "SF-DN-S1-D2",
+    "kind": "drawer",
+    "element": "SF-DN-S1-D2",
+    "center": [
+      22.75,
+      0.56,
+      -15.3425
+    ],
+    "slide": [
+      0.0,
+      0.0,
+      0.366
+    ]
+  },
+  {
+    "id": "SF-DN-S1-D3",
+    "kind": "drawer",
+    "element": "SF-DN-S1-D3",
+    "center": [
+      22.75,
+      0.205,
+      -15.3425
+    ],
+    "slide": [
+      0.0,
+      0.0,
+      0.366
+    ]
+  },
+  {
+    "id": "SF-DN-S2-D1",
+    "kind": "drawer",
+    "element": "SF-DN-S2-D1",
+    "center": [
+      23.35,
+      0.81,
+      -15.3425
+    ],
+    "slide": [
+      0.0,
+      0.0,
+      0.366
+    ]
+  },
+  {
+    "id": "SF-DN-S2-D2",
+    "kind": "drawer",
+    "element": "SF-DN-S2-D2",
+    "center": [
+      23.35,
+      0.56,
+      -15.3425
+    ],
+    "slide": [
+      0.0,
+      0.0,
+      0.366
+    ]
+  },
+  {
+    "id": "SF-DN-S2-D3",
+    "kind": "drawer",
+    "element": "SF-DN-S2-D3",
+    "center": [
+      23.35,
+      0.205,
+      -15.3425
+    ],
+    "slide": [
+      0.0,
+      0.0,
+      0.366
+    ]
+  },
+  {
+    "id": "SF-DN-S3-D1",
+    "kind": "drawer",
+    "element": "SF-DN-S3-D1",
+    "center": [
+      23.8,
+      0.455,
+      -15.3425
+    ],
+    "slide": [
+      0.0,
+      0.0,
+      0.366
+    ]
+  },
+  {
+    "id": "SF-DN-S4-D1",
+    "kind": "drawer",
+    "element": "SF-DN-S4-D1",
+    "center": [
+      24.25,
+      0.81,
+      -15.3425
+    ],
+    "slide": [
+      0.0,
+      0.0,
+      0.366
+    ]
+  },
+  {
+    "id": "SF-DN-S4-D2",
+    "kind": "drawer",
+    "element": "SF-DN-S4-D2",
+    "center": [
+      24.25,
+      0.56,
+      -15.3425
+    ],
+    "slide": [
+      0.0,
+      0.0,
+      0.366
+    ]
+  },
+  {
+    "id": "SF-DN-S4-D3",
+    "kind": "drawer",
+    "element": "SF-DN-S4-D3",
+    "center": [
+      24.25,
+      0.205,
+      -15.3425
+    ],
+    "slide": [
+      0.0,
+      0.0,
+      0.366
+    ]
+  },
+  {
+    "id": "SF-DN-S5-D1",
+    "kind": "drawer",
+    "element": "SF-DN-S5-D1",
+    "center": [
+      24.85,
+      0.81,
+      -15.3425
+    ],
+    "slide": [
+      0.0,
+      0.0,
+      0.366
+    ]
+  },
+  {
+    "id": "SF-DN-S5-D2",
+    "kind": "drawer",
+    "element": "SF-DN-S5-D2",
+    "center": [
+      24.85,
+      0.56,
+      -15.3425
+    ],
+    "slide": [
+      0.0,
+      0.0,
+      0.366
+    ]
+  },
+  {
+    "id": "SF-DN-S5-D3",
+    "kind": "drawer",
+    "element": "SF-DN-S5-D3",
+    "center": [
+      24.85,
+      0.205,
+      -15.3425
+    ],
+    "slide": [
+      0.0,
+      0.0,
+      0.366
+    ]
+  },
+  {
+    "id": "SF-F053-DOOR1",
+    "kind": "hinged",
+    "element": "SF-F053-DOOR1",
+    "center": [
+      25.3,
+      0.455,
+      -15.159
+    ],
+    "hinge": [
+      25.4485,
+      0.455,
+      -15.15
+    ],
+    "axis": [
+      0,
+      1,
+      0
+    ],
+    "sign": 1
+  },
+  {
+    "id": "SF-LB-S1-D1",
+    "kind": "drawer",
+    "element": "SF-LB-S1-D1",
+    "center": [
+      25.818571,
+      0.84,
+      -15.3425
+    ],
+    "slide": [
+      0.0,
+      0.0,
+      0.366
+    ]
+  },
+  {
+    "id": "SF-LB-S1-DOOR1",
+    "kind": "hinged",
+    "element": "SF-LB-S1-DOOR1",
+    "center": [
+      25.818571,
+      0.385,
+      -15.159
+    ],
+    "hinge": [
+      25.5215,
+      0.385,
+      -15.15
+    ],
+    "axis": [
+      0,
+      1,
+      0
+    ],
+    "sign": -1
+  },
+  {
+    "id": "SF-LB-S2-D1",
+    "kind": "drawer",
+    "element": "SF-LB-S2-D1",
+    "center": [
+      26.415714,
+      0.84,
+      -15.3425
+    ],
+    "slide": [
+      0.0,
+      0.0,
+      0.366
+    ]
+  },
+  {
+    "id": "SF-LB-S2-DOOR1",
+    "kind": "hinged",
+    "element": "SF-LB-S2-DOOR1",
+    "center": [
+      26.415714,
+      0.385,
+      -15.159
+    ],
+    "hinge": [
+      26.712786,
+      0.385,
+      -15.15
+    ],
+    "axis": [
+      0,
+      1,
+      0
+    ],
+    "sign": 1
+  },
+  {
+    "id": "SF-LB-S3-D1",
+    "kind": "drawer",
+    "element": "SF-LB-S3-D1",
+    "center": [
+      27.012857,
+      0.84,
+      -15.3425
+    ],
+    "slide": [
+      0.0,
+      0.0,
+      0.366
+    ]
+  },
+  {
+    "id": "SF-LB-S3-DOOR1",
+    "kind": "hinged",
+    "element": "SF-LB-S3-DOOR1",
+    "center": [
+      27.012857,
+      0.385,
+      -15.159
+    ],
+    "hinge": [
+      26.715786,
+      0.385,
+      -15.15
+    ],
+    "axis": [
+      0,
+      1,
+      0
+    ],
+    "sign": -1
+  },
+  {
+    "id": "SF-LB-S4-D1",
+    "kind": "drawer",
+    "element": "SF-LB-S4-D1",
+    "center": [
+      27.61,
+      0.84,
+      -15.3425
+    ],
+    "slide": [
+      0.0,
+      0.0,
+      0.366
+    ]
+  },
+  {
+    "id": "SF-LB-S4-DOOR1",
+    "kind": "hinged",
+    "element": "SF-LB-S4-DOOR1",
+    "center": [
+      27.61,
+      0.385,
+      -15.159
+    ],
+    "hinge": [
+      27.907071,
+      0.385,
+      -15.15
+    ],
+    "axis": [
+      0,
+      1,
+      0
+    ],
+    "sign": 1
+  },
+  {
+    "id": "SF-LB-S5-D1",
+    "kind": "drawer",
+    "element": "SF-LB-S5-D1",
+    "center": [
+      28.207143,
+      0.84,
+      -15.3425
+    ],
+    "slide": [
+      0.0,
+      0.0,
+      0.366
+    ]
+  },
+  {
+    "id": "SF-LB-S5-DOOR1",
+    "kind": "hinged",
+    "element": "SF-LB-S5-DOOR1",
+    "center": [
+      28.207143,
+      0.385,
+      -15.159
+    ],
+    "hinge": [
+      27.910071,
+      0.385,
+      -15.15
+    ],
+    "axis": [
+      0,
+      1,
+      0
+    ],
+    "sign": -1
+  },
+  {
+    "id": "SF-LB-S6-D1",
+    "kind": "drawer",
+    "element": "SF-LB-S6-D1",
+    "center": [
+      28.804286,
+      0.84,
+      -15.3425
+    ],
+    "slide": [
+      0.0,
+      0.0,
+      0.366
+    ]
+  },
+  {
+    "id": "SF-LB-S6-DOOR1",
+    "kind": "hinged",
+    "element": "SF-LB-S6-DOOR1",
+    "center": [
+      28.804286,
+      0.385,
+      -15.159
+    ],
+    "hinge": [
+      29.101357,
+      0.385,
+      -15.15
+    ],
+    "axis": [
+      0,
+      1,
+      0
+    ],
+    "sign": 1
+  },
+  {
+    "id": "SF-LB-S7-D1",
+    "kind": "drawer",
+    "element": "SF-LB-S7-D1",
+    "center": [
+      29.401429,
+      0.84,
+      -15.3425
+    ],
+    "slide": [
+      0.0,
+      0.0,
+      0.366
+    ]
+  },
+  {
+    "id": "SF-LB-S7-DOOR1",
+    "kind": "hinged",
+    "element": "SF-LB-S7-DOOR1",
+    "center": [
+      29.401429,
+      0.385,
+      -15.159
+    ],
+    "hinge": [
+      29.104357,
+      0.385,
+      -15.15
+    ],
+    "axis": [
+      0,
+      1,
+      0
+    ],
+    "sign": -1
+  },
+  {
+    "id": "SF-DH-S1-DOOR1",
+    "kind": "hinged",
+    "element": "SF-DH-S1-DOOR1",
+    "center": [
+      22.675,
+      2.005,
+      -15.259
+    ],
+    "hinge": [
+      22.4515,
+      2.005,
+      -15.25
+    ],
+    "axis": [
+      0,
+      1,
+      0
+    ],
+    "sign": -1
+  },
+  {
+    "id": "SF-DH-S1-DOOR2",
+    "kind": "hinged",
+    "element": "SF-DH-S1-DOOR2",
+    "center": [
+      23.125,
+      2.005,
+      -15.259
+    ],
+    "hinge": [
+      23.3485,
+      2.005,
+      -15.25
+    ],
+    "axis": [
+      0,
+      1,
+      0
+    ],
+    "sign": 1
+  },
+  {
+    "id": "SF-DH-S2-DOOR1",
+    "kind": "hinged",
+    "element": "SF-DH-S2-DOOR1",
+    "center": [
+      23.575,
+      2.005,
+      -15.259
+    ],
+    "hinge": [
+      23.3515,
+      2.005,
+      -15.25
+    ],
+    "axis": [
+      0,
+      1,
+      0
+    ],
+    "sign": -1
+  },
+  {
+    "id": "SF-DH-S2-DOOR2",
+    "kind": "hinged",
+    "element": "SF-DH-S2-DOOR2",
+    "center": [
+      24.025,
+      2.005,
+      -15.259
+    ],
+    "hinge": [
+      24.2485,
+      2.005,
+      -15.25
+    ],
+    "axis": [
+      0,
+      1,
+      0
+    ],
+    "sign": 1
+  },
+  {
+    "id": "SF-DH-S3-DOOR1",
+    "kind": "hinged",
+    "element": "SF-DH-S3-DOOR1",
+    "center": [
+      24.475,
+      2.005,
+      -15.259
+    ],
+    "hinge": [
+      24.2515,
+      2.005,
+      -15.25
+    ],
+    "axis": [
+      0,
+      1,
+      0
+    ],
+    "sign": -1
+  },
+  {
+    "id": "SF-DH-S3-DOOR2",
+    "kind": "hinged",
+    "element": "SF-DH-S3-DOOR2",
+    "center": [
+      24.925,
+      2.005,
+      -15.259
+    ],
+    "hinge": [
+      25.1485,
+      2.005,
+      -15.25
+    ],
+    "axis": [
+      0,
+      1,
+      0
+    ],
+    "sign": 1
+  },
+  {
+    "id": "SF-TC-DOOR1",
+    "kind": "hinged",
+    "element": "SF-TC-DOOR1",
+    "center": [
+      29.8,
+      1.575,
+      -15.159
+    ],
+    "hinge": [
+      29.8985,
+      1.575,
+      -15.15
+    ],
+    "axis": [
+      0,
+      1,
+      0
+    ],
+    "sign": 1
   },
   {
     "id": "SF-AH850-LIFT",
@@ -1304,6 +2132,138 @@
       0
     ],
     "sign": 1
+  },
+  {
+    "id": "SF-T2-D1",
+    "kind": "drawer",
+    "element": "SF-T2-D1",
+    "center": [
+      20.758,
+      0.71,
+      -15.2675
+    ],
+    "slide": [
+      0.0,
+      0.0,
+      0.516
+    ]
+  },
+  {
+    "id": "SF-T2-D2",
+    "kind": "drawer",
+    "element": "SF-T2-D2",
+    "center": [
+      20.758,
+      0.305,
+      -15.2675
+    ],
+    "slide": [
+      0.0,
+      0.0,
+      0.516
+    ]
+  },
+  {
+    "id": "SF-T3-DOOR1",
+    "kind": "hinged",
+    "element": "SF-T3-DOOR1",
+    "center": [
+      21.358,
+      2.1765,
+      -15.009
+    ],
+    "hinge": [
+      21.0595,
+      2.1765,
+      -15.0
+    ],
+    "axis": [
+      0,
+      1,
+      0
+    ],
+    "sign": -1
+  },
+  {
+    "id": "SF-T3-D1",
+    "kind": "drawer",
+    "element": "SF-T3-D1",
+    "center": [
+      21.358,
+      0.71,
+      -15.2675
+    ],
+    "slide": [
+      0.0,
+      0.0,
+      0.516
+    ]
+  },
+  {
+    "id": "SF-T3-D2",
+    "kind": "drawer",
+    "element": "SF-T3-D2",
+    "center": [
+      21.358,
+      0.305,
+      -15.2675
+    ],
+    "slide": [
+      0.0,
+      0.0,
+      0.516
+    ]
+  },
+  {
+    "id": "SF-T4-DOOR1",
+    "kind": "hinged",
+    "element": "SF-T4-DOOR1",
+    "center": [
+      21.908,
+      1.68,
+      -15.009
+    ],
+    "hinge": [
+      22.1565,
+      1.68,
+      -15.0
+    ],
+    "axis": [
+      0,
+      1,
+      0
+    ],
+    "sign": 1
+  },
+  {
+    "id": "SF-T4-D1",
+    "kind": "drawer",
+    "element": "SF-T4-D1",
+    "center": [
+      21.908,
+      0.71,
+      -15.2675
+    ],
+    "slide": [
+      0.0,
+      0.0,
+      0.516
+    ]
+  },
+  {
+    "id": "SF-T4-D2",
+    "kind": "drawer",
+    "element": "SF-T4-D2",
+    "center": [
+      21.908,
+      0.305,
+      -15.2675
+    ],
+    "slide": [
+      0.0,
+      0.0,
+      0.516
+    ]
   },
   {
     "id": "SF-TF-DOOR1",
