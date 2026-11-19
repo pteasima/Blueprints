@@ -28,7 +28,7 @@ viewer edits ─▶ localStorage ─▶ Export JSON ─▶ Cody
 2. Re-export the model (`python -m blueprints.export ground_floor`) and open a PR with the overrides file and the exports, as for any model change.
 3. After the deploy, the viewer compares each saved edit with the new model. An edit whose target position, schedule values, addition or deletion the model now has is dropped from `localStorage`, so it is not applied twice. If the model moved a fixture somewhere else in the meantime, Petr's absolute target still wins.
 
-Every room device YAML is loaded through `blueprints.fixture_overrides.load_fixture_document` (`models/bedroom_111.py` `load_document`, and `models/ground_floor.py` `ifc_index` for every document it indexes). A new room's device file has to be loaded the same way, or its edits will not reach the export. An override whose id is not in a document is ignored there.
+Every room device YAML is loaded through `blueprints.fixture_overrides.load_fixture_document` (`models/bedroom_111.py` `load_document`, `models/electrical_rooms.py` `load_document` for every `electrical-<room>.yaml` ([Rooms.md](Rooms.md)), and `models/ground_floor.py` `ifc_index` for every document it indexes). A new room's device file has to be loaded the same way, or its edits will not reach the export. An override whose id is not in a document is ignored there.
 
 ## Overrides file
 

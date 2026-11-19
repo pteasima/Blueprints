@@ -51,6 +51,24 @@ These letters are the device column of the cable schedule, not printed as a bloc
 
 `A` is used on a few rows of the schedule and has no legend line in that column.
 
+## Green plan marks are cable type and cable number
+
+Each device on the plan carries a handwritten green mark such as `2(011)`. The number in brackets is the cable (Soupis column Číslo kabelu). The digit in front is the cable type from sheet Kabelaz, not the panel:
+
+| Digit | Cable (Kabelaz) |
+| --- | --- |
+| 1 | UTP Cat6a |
+| 2 | CYKY 4x1.5 |
+| 3 | CYKY 4x2.5 |
+| 4 | CYKY 3x1.5 (Kabelaz: gutter heating, through the floor to the nearest panel's relay) |
+| 5 | CYKY 2x1.5 |
+| 6 | CYKY 4x6 |
+| 7 | CYKY 2x2.5 |
+
+Every mark on the plan fits this reading: buttons, radars and contacts are `1(…)`, indoor lights `2(…)` or `3(…)`, exterior lamps `5(…)` or `7(…)`, gutters `4(…)`. The bedroom device file used to call the digit the panel (`panel(cable)`); that was a misreading and its header is corrected (2026-11-19, all-rooms fixture work). The panel stored in `Pset_YamlIfc.Panel` was always the Soupis column Rozvaděč, so no stored value changes.
+
+One contradiction stays open: the plan marks the blinds `4(…)` (CYKY 3x1.5), Soupis lists them as CYKY 4x1.5. The stored `CableSpec` is the Soupis value. See [Questions.md](Questions.md).
+
 ## Indoor lights are CCT on 4-core cable
 
 Source: Petr, Cody chat, 2026-11-11: "Surely there's no indoor light on a 2 core cable, all indoor lights are CCT and have 4 core cables (two cores used for V+, one for cool white, one for warm white)."

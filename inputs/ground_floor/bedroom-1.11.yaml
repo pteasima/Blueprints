@@ -7,9 +7,10 @@
 # Sources, not the permit electrical PDFs:
 #   FixturePlan.pdf — Petr's marks on a floor-plan screenshot.
 #   CableSchedule.xlsx, sheet Soupis (legend in column A) and sheet Kabelaz.
-# The green mark on the plan is panel(cable), zero-padded, for example
-# 2(011) is panel 2, cable 11. The Soupis panel is what is stored. A mark
-# whose first digit did not read as that panel is named below.
+# The green mark on the plan is cabletype(cable), zero-padded, for example
+# 2(011) is a CYKY 4x1.5 cable, number 11 (digit = Kabelaz cable type; it was
+# misread as the panel before 2026-11-19, see PlanNotes.md "Green plan marks").
+# The Soupis panel (Rozvaděč) is what is stored.
 #
 # Id is C<cable>-<device code>, plus -1/-2 when one cable has two of the
 # same code. CableNumber and Panel are Pset_YamlIfc. Home will join on the
