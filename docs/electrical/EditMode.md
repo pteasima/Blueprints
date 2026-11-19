@@ -13,6 +13,8 @@ Source: Petr, 2026-11-19 (Cody chat): "I need an edit mode where I can drag repl
 7. **Cable schedule** edits Číslo kabelu, Zařízení, Specifikace, Délka, Rozvaděč and Poznámka for the fixture. **Add copy on cable** places a copy of the fixture 10 cm along its wall, with id `C<cable>-<code>-<n>` (see [Naming.md](Naming.md)). **Delete** hides the fixture and marks it for removal, and **Restore** brings it back. **Revert** drops every edit on that fixture.
 8. **Export** shows the edits as JSON. **Share** opens the native share sheet with the JSON itself as text, compact (one line) and with no title, so it can go straight to Cody in a chat app (Petr, 2026-11-19: "can you let me share it with the native share dialog? Ill send it straight to you."). The first version shared a `.json` file with a title, and on Petr's iPhone the Grok Bot app received only the title, so text is now the default. **Share file** (shown only where the browser can share files) sends `FixtureEdits-YYYYMMDD-HHMM.json` (`application/json`) for apps that take attachments. Without a share sheet neither Share button shows. **Copy** puts the JSON on the clipboard, and **Download** saves the same file. **Discard all** clears every edit on this device.
 
+9. The **Cables** tab edits the cable routes: select a route, then slide a segment or move a vertex with the same arrows, fields and − / + ([CableRoutes.md](CableRoutes.md#editing-in-the-viewer)).
+
 Edits stay in the browser's `localStorage` (`blueprints.fixtureEdits.<model>`). They show in the model outside edit mode too, and they survive a reload. Nothing reaches the repo until a bot commits the export.
 
 ## Round trip into the repo
@@ -32,19 +34,24 @@ Every room device YAML is loaded through `blueprints.fixture_overrides.load_fixt
 
 ## Overrides file
 
-`inputs/ground_floor/fixture_overrides.json`, keyed by the YAML `id`. Version 1:
+`inputs/ground_floor/fixture_overrides.json`, fixtures keyed by the YAML `id`, cable routes by the route id of `inputs/ground_floor/cable-routes.yaml`. Version 2:
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "fixtures": {
     "C10-V": { "Origin": [0.45, 8.2355], "Elevation": 1.3145, "CableLength": 9 },
     "C7-S": { "Move": [0.0, 0.05, 0.0] },
     "SOCK-N2": { "delete": true },
     "C10-V-1": { "add": { "list": "switchingDevices", "id": "C10-V-1", "ContainedInStructure": "SP-1.11", "Origin": [0.45, 8.1], "Elevation": 1.3145, "...": "..." } }
+  },
+  "cables": {
+    "C10": { "points": [[6.335, 10.055, 2.1], [6.335, 10.055, 2.56], "...", [0.45, 8.2355, 1.35]] }
   }
 }
 ```
+
+Version 1 (PR 119) is the same without `cables`. Files and exports in version 1 are still read, and the viewer still loads version 1 edits from `localStorage`.
 
 | Key | Meaning |
 | --- | --- |
@@ -55,6 +62,7 @@ Every room device YAML is loaded through `blueprints.fixture_overrides.load_fixt
 | `list` | Moves the element to another yaml-ifc list (for example `sensors`). |
 | `delete: true` | Drops the element. |
 | `add: {…}` | A whole new YAML element plus its `list`. It lands in the document whose `spaces` define its `ContainedInStructure`. |
+| `cables.<route>.points` | The whole route polyline, absolute house metres. `merge` replaces the route; `{"reset": true}` in a patch removes it. Applied by `blueprints.cable_routes` ([CableRoutes.md](CableRoutes.md)). |
 
 ### Why a layer over the YAML
 

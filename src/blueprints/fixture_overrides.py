@@ -11,18 +11,26 @@ so the next export moves, changes, adds or deletes those fixtures in the
 IFC index, the GLB, and the 2D plans. The whole round trip, the file format,
 and why it is a layer over the YAML: ``docs/electrical/EditMode.md``.
 
-Format (version 1), keyed by the YAML ``id``::
+Format (version 2), fixtures keyed by the YAML ``id``, cable routes keyed by
+the route id of ``inputs/ground_floor/cable-routes.yaml``::
 
     {
-      "version": 1,
+      "version": 2,
       "fixtures": {
         "C10-V": {"Origin": [0.45, 8.3], "Elevation": 1.3145},
         "C7-S": {"Move": [0.0, 0.05, 0.0]},
         "C12-S": {"CableNumber": 12, "CableSpec": "CYKY 4x2.5"},
         "SOCK-N2": {"delete": true},
         "C6-V-1": {"add": {"list": "switchingDevices", "id": "C6-V-1", ...}}
+      },
+      "cables": {
+        "C10": {"points": [[6.07, 10.055, 2.1], [6.07, 10.055, 2.6], ...]}
       }
     }
+
+Version 1 is the same without ``cables``; files and patches in version 1 are
+still read. A cable entry is the whole polyline in absolute house metres
+(``blueprints.cable_routes`` applies it), so ``merge`` replaces it.
 """
 
 from __future__ import annotations
@@ -63,17 +71,25 @@ PATH_Y = ("Y0", "YC", "Y1")
 OFFSET_KEYS = ("OffsetX", "OffsetY", "OffsetZ")
 
 
+VERSION = 2
+# Readable formats: 1 (fixtures only, edit mode PR 119) and 2 (+ cables).
+SUPPORTED_VERSIONS = (1, 2)
+
+
 def load_overrides(path: Path | None = None) -> dict[str, Any]:
     source = path or OVERRIDES_PATH
     if not source.is_file():
-        return {"version": 1, "fixtures": {}}
+        return {"version": VERSION, "fixtures": {}, "cables": {}}
     data = json.loads(source.read_text(encoding="utf-8"))
-    if data.get("version") != 1:
+    if data.get("version") not in SUPPORTED_VERSIONS:
         raise ValueError(f"{source}: unsupported fixture overrides version {data.get('version')!r}")
     fixtures = data.get("fixtures") or {}
     if not isinstance(fixtures, dict):
         raise ValueError(f"{source}: 'fixtures' must be an object keyed by YAML id")
-    return {"version": 1, "fixtures": fixtures}
+    cables = data.get("cables") or {}
+    if not isinstance(cables, dict):
+        raise ValueError(f"{source}: 'cables' must be an object keyed by route id")
+    return {"version": VERSION, "fixtures": fixtures, "cables": cables}
 
 
 def _pset(element: dict) -> dict:
@@ -215,9 +231,22 @@ def merge(current: dict, patch: dict) -> dict:
     ``add`` replace the whole entry; a later edit to an added fixture
     updates its ``add`` element.
     """
-    if patch.get("version") != 1:
+    if patch.get("version") not in SUPPORTED_VERSIONS:
         raise ValueError(f"unsupported patch version {patch.get('version')!r}")
-    out = {"version": 1, "fixtures": copy.deepcopy(current.get("fixtures") or {})}
+    out = {
+        "version": VERSION,
+        "fixtures": copy.deepcopy(current.get("fixtures") or {}),
+        "cables": copy.deepcopy(current.get("cables") or {}),
+    }
+    for route_id, entry in (patch.get("cables") or {}).items():
+        if entry.get("reset"):
+            out["cables"].pop(route_id, None)
+            continue
+        points = entry.get("points")
+        if not isinstance(points, list) or len(points) < 2:
+            raise ValueError(f"cable {route_id}: points needs at least two [x, y, z]")
+        out["cables"][route_id] = {"points": [[_round(v) for v in list(p)[:3]] for p in points]}
+    out["cables"] = dict(sorted(out["cables"].items()))
     for fixture_id, entry in (patch.get("fixtures") or {}).items():
         old = out["fixtures"].get(fixture_id) or {}
         if entry.get("delete"):
@@ -258,7 +287,7 @@ def merge(current: dict, patch: dict) -> dict:
 
 def write_overrides(data: dict, path: Path | None = None) -> Path:
     dest = path or OVERRIDES_PATH
-    payload = {"version": 1, "fixtures": data.get("fixtures") or {}}
+    payload = {"version": VERSION, "fixtures": data.get("fixtures") or {}, "cables": data.get("cables") or {}}
     dest.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return dest
 
@@ -271,9 +300,16 @@ def main(argv: list[str] | None = None) -> int:
     patch = json.loads(Path(args[1]).read_text(encoding="utf-8"))
     merged = merge(load_overrides(), patch)
     dest = write_overrides(merged)
-    print(f"{dest.relative_to(REPO_ROOT)}: {len(merged['fixtures'])} fixtures")
+    print(f"{dest.relative_to(REPO_ROOT)}: {len(merged['fixtures'])} fixtures, {len(merged['cables'])} cable routes")
     for fixture_id in sorted((patch.get("fixtures") or {})):
         print(f"  {fixture_id}: {json.dumps(merged['fixtures'].get(fixture_id), ensure_ascii=False)}")
+    for route_id in sorted((patch.get("cables") or {})):
+        entry = merged["cables"].get(route_id)
+        print(f"  cable {route_id}: {len(entry['points']) if entry else 0} points" + ("" if entry else " (reset)"))
+    # The viewer's cable layer reads the merged routes (docs/electrical/CableRoutes.md).
+    from blueprints.cable_routes import write_viewer_json
+
+    print(f"{write_viewer_json().relative_to(REPO_ROOT)}: rewritten")
     return 0
 
 

@@ -125,6 +125,8 @@ from blueprints.scenes import cad_mm_to_gltf_m
 MODEL_NAME = "ground_floor"
 MODEL_LABEL = "RD Šíma 1.NP"
 EXPORT_KIND = "solid"
+# Cable routes: inputs/ground_floor/cable-routes.yaml → docs/models/ground_floor.cables.json.
+CABLE_ROUTES = True
 
 SOURCE_REPO = "pteasima/yaml-ifc"
 SOURCE_COMMIT = "0f96c26"

@@ -6,6 +6,8 @@ All process for this repo lives in this file. Humans are agents too. Do not add 
 
 Treat developer-experience friction (especially Cloud Agent onboarding) as part of the work. If setup, docs, or the export loop wastes time, fix it in-repo or propose the environment change — do not only work around it for one session. A one-off workaround leaves the next session with the same break.
 
+Petr's long-term plans (layers and IFC groups, edit mode and the inspector, cleanup) are in [docs/Roadmap.md](docs/Roadmap.md). Check it before a refactor, and link the PR there when one of them starts.
+
 ## Pull requests
 
 Open every pull request as a draft. A draft means agents are still working. Ready for review means it is the repo owner's turn. Mark a pull request ready only when CI is green and you have reviewed the diff yourself. If another agent launched you, leave the pull request as a draft and report back to that agent instead.
