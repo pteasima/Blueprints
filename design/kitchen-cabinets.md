@@ -24,9 +24,11 @@ Petr, 2026-11-12:
 | `KR-TALL-W` | SF-T1 | Alone between the west wall and the fridge, so a monoblock of one. |
 | `KR-TALL` | SF-T2, SF-T3, SF-T4 | SF-T3 is the oven column: microwave over steam oven, in niches (see “Fronts and interiors”). |
 | `KR-TALL-F` | SF-TF | The cabinet over the fridge, between SF-T1 and SF-T2: a monoblock of one, no worktop, no plinth. New 2026-11-12. |
-| `KR-LB` | SF-LB | The living-room counter behind the sofa: one oak body (`Carcass: Box`) under an oak-veneer top at 930. New 2026-11-13 (see “Living-room counter”). |
+| `KR-LB` | SF-LB | The living-room counter behind the sofa under an oak-veneer top at 930. New 2026-11-13 (see “Living-room counter”); an oak carcass in seven sections since 2026-11-19. |
+| `KR-DH` | SF-DH | The oak wall cabinet over the dining run, three sections of door pairs. New 2026-11-19. |
+| `KR-TC` | SF-TC | The oak tall corner cabinet, one door over a fixed slab. New 2026-11-19. |
 
-The other living-room oak pieces (SF-DH, SF-TC, the bookshelf FN-BK) are not kitchen runs and stay the boxes in [furnishings.md](furnishings.md). The dining bases are `KR-DN` and the counter behind the sofa is `KR-LB`, both `Carcass: Box` runs.
+The bookshelf FN-BK is not a kitchen run and stays the box in [furnishings.md](furnishings.md). The dining bases are `KR-DN` and the counter behind the sofa is `KR-LB`, both `Carcass: Box` runs: a bay with fronts in such a run is a carcass of its own, a bay without stays one body (see “Fronts everywhere”).
 
 ### What is shared
 
@@ -53,9 +55,9 @@ The bay boxes in the yaml did not move or change size (until the Gridfinity chan
 | SF-I500b | **481** (was 500, Gridfinity) | 464 | 463 | −1 |
 | SF-I600b | **607** (was 600, Gridfinity) | 564 | 589 | +25 |
 | SF-I300 | **305** (was 300, Gridfinity) | 264 | 278 | +14 (south end) |
-| SF-E600a | 600 | 564 | 573 | +9 (north end) |
-| SF-E600b | 600 | 564 | 582 | +18 |
-| SF-E600c | 600 | 564 | 582 | +18 |
+| SF-E600a | **586** (was 600, 2026-11-19) | 564 | 559 | −5 (north end) |
+| SF-E600b | **607** (was 600, Gridfinity, 2026-11-19) | 564 | 589 | +25 |
+| SF-E600c | **607** (was 600, Gridfinity, 2026-11-19) | 564 | 589 | +25 |
 | SF-E700 | 700 | 664 | 673 | +9 (south end) |
 | SF-C850 | 850 | 814 | 823 | +9 (south end) |
 | SF-B800 | 800 | 764 | 782 | +18 |
@@ -430,6 +432,7 @@ A bay's `Pset_Fronts.Layout` lists its bands top to bottom, split by `|`. Each b
 | `niche` | An appliance niche. The height is the clear niche height. A board goes under it. | `clear=` (metres) narrows the opening with a packer on each side |
 | `front` | One slab front (a band the plan does not describe). | — |
 | `none` | Nothing. | — |
+| `Sections` (with `Layout<N>`, `Contents<N>`) | Splits the bay into side-by-side sections with 18 dividers, each its own layout (see “Fronts everywhere”). | `"7"`, `"0.6 0.6 0.3 0.6 0.6"` |
 
 - A board separates two bands unless both are drawers.
 - Drawer and pull-out boxes stop 10 mm under any obstacle above them: a sink bowl, a disposer, or 8 mm under the hob (`ObstacleClearance`, `guess:`). The box records how much was cut (`Trimmed`).
@@ -447,8 +450,8 @@ The quoted notes are the yellow sticky notes next to each bay on KitchenPlan.jpg
 | SF-I600a | „noze / naradi (lis na cesnek, hmozdir, vaha, ..) / dole nevim 🤷“ | knives / tools (garlic press, mortar, scales …) / bottom: don't know | Three drawers, **100 / 100 / rest (610)** since 2026-11-13 (Gridfinity drawers). Fronts 604 × 97 / 97 / 607. |
 | SF-I500b | „koreni / oleje, octy, mouky, cukry, dochucovadla / hrnce“ | spices / oils, vinegars, flours, sugars, seasonings / pots | Three drawers, **100 / 100 / rest (610)** since 2026-11-13. Fronts 478 × 97 / 97 / 607. Boxes 78 / 78 / 500 high. **`open:` oil and vinegar bottles now go in a 100 drawer (a 78 box); they did not stand in the old 90 box either.** |
 | SF-I600b (hob) | „pribory / varecky, sterky, naberacky / panve“ | cutlery / wooden spoons, spatulas, ladles / pans | Three drawers, **200 / 100 / rest (510)** since 2026-11-13. Fronts 604 × 197 / 97 / 507. The top box (MAXIMERA medium, 713–857) stays under the hob limit (879 − 8 = 871). |
-| SF-I300 | „alobal, folie, spejle, pytliky“ | foil, cling film, skewers, bags | Slab front, `Contents` only. `open:` one bullet, so one drawer or a pull-out? |
-| SF-E600a … SF-E700 (island east row) | Black card: „Jak vyresit detail spodniho soklu vs. dock pro robota? …“ (in full under “Island east row”) | Questions only | Unchanged. `open:` everything (see below). |
+| SF-I300 | „alobal, folie, spejle, pytliky“ | foil, cling film, skewers, bags | Since 2026-11-19 a full-height pull-out with three baskets (`guess:`; see “Fronts everywhere”). |
+| SF-E600a … SF-E700 (island east row) | Black card: „Jak vyresit detail spodniho soklu vs. dock pro robota? …“ (in full under “Island east row”) | Questions only | Since 2026-11-19: a door over a shelf (north, for the vacuum sealer) and three Gridfinity drawer bays (see “Fronts everywhere”). The dock and the plinth questions stay `open:`. |
 | SF-A250 | Note A: „dole vlevo suplik uklid (mycka, jar, odmastovac, houbicky)“ | bottom left: cleaning drawer (dishwasher tabs, washing-up liquid, degreaser, sponges) | A full-height pull-out (front 247 × 807) with 3 baskets. The basket count is `guess:`. |
 | SF-A600 | Note A: „dole vpravo mycka“ | bottom right: dishwasher | Unchanged: the niche for the Bosch SBD6ECX12E. |
 | SF-B800 (west sink) | Note B: „800 / dole vlevo kos, vpravo kompost / nahore talire / kose se musi vyhnout drtici, to se proste bude resit az skrinky budou“ | 800 / bottom left: bin, right: compost / top: plates / the bins must avoid the disposer, that will be solved once the cabinets exist | One full-height pull-out (front 797 × 807) with two bins (`guess:` one pull-out for both). The disposer `EA-EVO3-W` hangs under the bowl. The pull-out box stops 10 under it, so it is only **207 high (493 cut)**. Tap `SN-TAP-W` is modelled. `open:` the bin-vs-disposer conflict. Petr's own note defers it, and EcoMaster's manual suggests the disposer between two bins or a lower bin under it. |
@@ -473,11 +476,11 @@ Translation:
 
 > How to solve the plinth detail versus the robot dock? Probably best to have this whole side of cabinets down to the floor, see picture. / On the other side there must be a plinth, high enough for the robot (~10, to be confirmed). If the island is clad in stone, the architect will surely forbid a cut-out for the plinth, so dirt will collect there. / Will there be narrow cabinets with doors everywhere, or drawers? If cabinets, we need to put the vacuum sealer somewhere; otherwise it can go in one of the drawers. / The robot near the sink waste; maybe the middle looks best?
 
-It is all questions. The east row is unchanged: four slab fronts on the 100 legs.
-- `open:` east fronts down to the floor.
+It is all questions. Until 2026-11-19 the east row was four slab fronts on the 100 legs; it now has drawers and one door (best effort, see “Fronts everywhere”).
+- `open:` east fronts down to the floor (they stay on the 100 legs).
 - `open:` the dock place.
-- `open:` doors or drawers.
-- `open:` the vacuum sealer.
+- `open:` doors or drawers: drawers, `guess:`.
+- `open:` the vacuum sealer: behind SF-E600a's door, `guess:`.
 
 The red bay numbers on this row are hidden under the cards. The card (and the link on the SF-T4 note) shows the **Dreame X40 Master**, while “Plinth: open legs” above has Petr's robot as the X60 Pro Master. **These do not match.** Nothing was changed.
 
@@ -567,17 +570,15 @@ No carcass size or position changed. These are the fronts:
 
 `open:`
 - The HF open pose: the lower front's −15° at 116° and the lever pivot and fixing are read off Blum's planning sketch, not published figures, so the −8° and the 1991 edge at the 88° stop follow from that guess (see “Opening in the viewer”).
-- SF-DH's fronts and fitting: 2700 wide is over AVENTOS's 1800, so one HF pair would not do; it would need splitting into bays (for example 2 × 1350, each an HF pair). Kept as the plain box with no fronts.
+- SF-DH's fitting: since 2026-11-19 three sections of hinged door pairs (AVENTOS HF at 88° wants 28 over the top; the soffit is 20 over it).
 - The Silestone / oak-veneer joint at x 25.52 and the oak top's thickness.
 - The lever's real shape: drawn as a straight 16 × 16 bar, 6 in front of the shelves.
-- SF-I500a front type, the boards/strainer split, the towel bar and the sBox.
-- SF-I300: drawer or pull-out.
+- SF-I500a: the boards/strainer split, the towel bar and the sBox (the door since 2026-11-19 is `guess:`).
+- SF-I300: a pull-out since 2026-11-19 (`guess:`).
 - Oil bottles in SF-I500b's 100 drawer.
 - The bin-vs-disposer conflict in SF-B800.
-- SF-T2 lower band.
-- SF-T3 top and bottom bands, and the combi-microwave idea.
-- SF-T4 opening, width and keg fridge.
-- The island east row (plinth vs. robot dock, doors or drawers, vacuum sealer, dock position).
+- SF-T2 lower band, SF-T3 top and bottom bands, SF-T4 opening: best effort since 2026-11-19 (see “Fronts everywhere”). The combi-microwave idea, SF-T4's width and the keg fridge stay open.
+- The island east row: plinth vs. robot dock, dock position (fronts best effort since 2026-11-19).
 - Coffee machine model, grinders 2–3, the upper dining cabinets “o dost vejs” (much higher) than in the study (SF-DH moved to 1560 with the kitchen wall cabinets on 2026-11-13; whether that is what the note meant is still open), and where bread, supplements and medicines go.
 - Countertop items on the west run: „na pultu vlevo odkapavac, vpravo robot, nezaraditelnej bordel z mycky“ (on the counter, left a drip rack, right the food processor, unsortable dishwasher clutter). Not modelled.
 
@@ -698,3 +699,69 @@ Petr, 2026-11-13:
 - The 110 mm strip of SF-DN70 that showed above the old base is gone.
 - In the viewer the oak top uses the oak material (label `oak`), not the stone.
 - No plinth or legs: like the dining bodies, SF-LB stands on the floor. `open:` (same as KR-DN).
+
+## Fronts everywhere (2026-11-19)
+
+Petr, 2026-11-19:
+
+> Add the rest of the drawers, hinged doors, etc. to the whole kitchen and living room on a best effort basis. We'll adjust details later.
+
+Every cabinet on the plan and in the living room that had no fronts or interior got them, from the existing drawer, door and pull-out machinery, so doors swing and drawers slide in the viewer (`ground_floor.doors.json`, the same `hinged` and `drawer` records). Where the plan says nothing, the sizes are IKEA METOD / MAXIMERA defaults (18 boards and fronts, 3 mm gaps, the drawer deductions) and everything else is `guess:`. The ceiling line (2450) and the 100 mm open legs are unchanged; nothing new reaches above 2450 and no new lift front was added.
+
+### New: sections in one bay
+
+A bay wider than one cabinet keeps its yaml box and id and is split into side-by-side sections: `Pset_Fronts.Sections` is a count of equal sections (`"7"`) or widths in metres, left to right as you face it, with at most one `*` (`"0.6 0.6 0.3 0.6 0.6"`). An 18 mm divider (`<bay>-SDIV<k>`) stands between two sections, centred on the section line, from the bottom board to under the rails / top. Each section reads `Layout<N>` (else `Layout`) and `Contents<N>`, and its parts are `<bay>-S<N>-…` (for example `SF-DN-S1-D1`, `SF-LB-S2-DOOR1`). All of them join the bay's group, so “Hide all others” still shows the whole bay. Change the bay width or the section widths and the dividers, fronts, drawer boxes and shelves follow.
+
+In a `Carcass: Box` run (KR-DN, KR-LB) a bay with `Pset_Fronts` or `Pset_Drawers` is built as a carcass of its own (two end sides, bottom, back, front and back rails under the top) on the run's plinth; a bay without stays one oak body (SF-DN70). Both runs set `PlinthHeight: 0`: the boxes still stand on the floor, as before (`open:` legs or a plinth there).
+
+### Per unit
+
+| Unit | Before | Now | Sizes |
+| --- | --- | --- | --- |
+| SF-I500a (island sink) | slab 497 × 807 | one door hinged L (the island's north end), no shelf (bowl and disposer) | door 497 × 807 |
+| SF-I300 | slab 302 × 807 | full-height pull-out, 3 baskets | front 302 × 807, box 700 high, inside 194 × 463 |
+| SF-E600a | slab 597 × 807, 600 × 600 | door hinged R (north end) with one shelf, for the vacuum sealer | **586 × 586** bay, door 583 × 807 |
+| SF-E600b, SF-E600c | slab 597 × 807, 600 × 600 | three drawers 100 / 100 / rest, Gridfinity 12 × 11 | **607 × 586** bays, fronts 604 × 97 / 97 / 607, boxes 78 / 78 / 500, inside 505 × 463 |
+| SF-E700 | slab 697 × 807, 700 × 600 | three drawers 100 / 100 / rest, Gridfinity 14 × 11 | **700 × 586**, fronts 697 × 97 / 97 / 607, inside 589 × 463 |
+| SF-T2 lower band | slab 597 × 807 | two drawers 400 + 410 | fronts 597 × 397 / 407, boxes 290 / 300 |
+| SF-T3 top band | slab 597 × 544 | door hinged L (the SF-T2 side), one shelf | 597 × 544 |
+| SF-T3 bottom band | slab 597 × 807 | two drawers 400 + 410 | as SF-T2 |
+| SF-T4 | slab 497 × 2347 | door hinged R (the pier side) with 4 shelves over two drawers 400 + 410, in line with SF-T2 / SF-T3 (“mozna suplik?”) | door 497 × 1537 |
+| SF-F052, SF-F053 (fillers at the piers) | oak bodies 300 × 200 | shallow cupboards, one door hinged R with two shelves | door 297 × 907 |
+| SF-DN (dining base, 2700) | oak body | five sections, west to east 600 / 600 / 300 / 600 / 600: drawers 200 / 300 / rest in each 600, a pull-out with three baskets in the 300 | fronts 597 × 197 / 297 / 407, pull-out 297 × 907; drawer boxes 144 / 212 / 300, inside 489 × 328 |
+| SF-DN70 | oak body | unchanged (70 wide) | — |
+| SF-LB (living counter, 4180) | oak body | seven equal sections (597): a 140 drawer over a door with one shelf, hinges alternating L / R | drawer fronts 594 × 137 (771–909), boxes 78 high from 773; doors 594 × 767 |
+| SF-DH (dining wall cabinet, 2700) | plain oak box | run `KR-DH`, three 900 sections, each a pair of doors (L, R) with two shelves; “nahore hrnky” (mugs) | leaves 447 × 887 |
+| SF-TC (tall corner, 200) | plain oak box | run `KR-TC`: one door hinged R (the east wall) with four shelves from 700 up, a fixed 700 slab under it | door 197 × 1747, slab 197 × 697 |
+
+Materials (`inputs/materials/catalogue.yaml`): every part of KR-DN, KR-LB, KR-DH and KR-TC is the Kaplan natural oak; the kitchen fronts selector now also covers doors, banded fronts (`FRONT1` …) and fillers (they fell back to the white carcass before).
+
+### Dimension changes
+
+- **Island east row: depth 600 → 586** (the Gridfinity rule: depth rounds down). The central back stays at x 21.154, so **the east face moves 14 west, x 21.754 → 21.740.** The island body is **2500 × 1172** (was 1186) and the worktop **2540 × 1212** (was 1226), x 20.548–21.760. The end cladding follows.
+- **Island east row widths (north → south): 600 / 600 / 600 / 700 → 586 / 607 / 607 / 700**, so that the drawer insides are whole cells (inside n × 42 + 1, MAXIMERA deductions). SF-E700 was already exact (14 × 42 + 1 = 589). The door bay SF-E600a takes the remainder. Origins: SF-E600a [21.74, 13.214], SF-E600b [21.74, 12.607], SF-E600c [21.74, 12.0], SF-E700 [21.74, 11.3].
+- The table FN-GATTA did not move: it is now 7 mm east of the centre of the island-to-sofa gap (1347 to the island, 1333 to the sofa).
+- No other box changed: SF-DN, SF-LB, SF-DH and SF-TC keep their outer sizes and ids, and SF-DH / SF-TC moved from plain boxes into runs of their own (`KR-DH`, `KR-TC`). In IFC they are now bay groups of those runs, not loose products.
+
+### guess: and open: (2026-11-19)
+
+`guess:`
+- Every front type and count above: Petr's notes name none of them.
+- Drawer heights: the island's east row copies the west row (MAXIMERA low 100 + 100 + rest); the tall run's lower bands 400 + 410; SF-DN 200 / 300 / rest (METOD-like); SF-LB 140 over the sofa back.
+- Section widths: SF-DN 600 / 600 / 300 / 600 / 600 (IKEA widths), SF-LB seven equal, SF-DH three 900.
+- Hinge sides: SF-I500a L and SF-E600a R (towards the island ends), SF-T3 L, SF-T4 R, SF-F052 / SF-F053 R (SF-T4 stands 150 proud west of SF-F052), SF-LB alternating, SF-TC R.
+- Shelf counts (1 per base door, 2 in the fillers and SF-DH, 4 in SF-T4 and SF-TC) and basket counts (3).
+- The vacuum sealer in SF-E600a.
+
+`open:`
+- **SF-LB's doors are behind the sofa back (760 high, against the counter front): they only open with the sofa pulled away. The drawers above clear it (box from 773).**
+- SF-TC's lowest 700 is a fixed slab because the sofa's east arm (660) stands in front of it.
+- SF-DN: where bread, supplements and medicines go (“pecivo / doplnky stravy / leky”, no bay named); the coffee machine's water and drain (no model named).
+- Legs or a plinth under the oak runs (they stand on the floor, as before).
+- SF-DH as AVENTOS: HF at the 81° stop would need 0 above (Blum), but the swept fronts rise about 18 under the 2470 soffit; not tried.
+
+### Left untouched
+
+- **FN-BK**, the bookshelf: open shelves by design (“Open bookshelf”), no fronts to add.
+- **SF-DN70**: 70 mm wide, too narrow for a front; stays one oak body.
+- The sofa, table, chairs and rug are not cabinets.

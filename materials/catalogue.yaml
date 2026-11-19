@@ -48,12 +48,16 @@
       dining chairs, the bookshelf with its lamella back, the north dining run
       bodies (KR-DN), the low base behind the sofa (KR-LB) and its oak-veneer
       counter (Petr, 2026-11-13), the tall corner cabinet and the oak-front
-      wall cabinet over the dining run. Everything
+      wall cabinet over the dining run, with their fronts, doors, drawers and
+      carcasses since 2026-11-19. Everything
       `Pset_Finish.Material: natural oak` in furnishings.yaml.
     selectors:
       - {label: oak}
       - {label: cabinet, id_pattern: "-BODY$"}
       - {label: cabinet, ids: [SF-LB, SF-TC, SF-DH]}
+      # Every part of the oak runs (2026-11-19: their fronts, doors, drawers,
+      # shelves and carcasses): KR-DN, KR-LB, KR-DH, KR-TC.
+      - {label: cabinet, id_pattern: "^(SF-(DN|F05[23]|LB|DH|TC)|KR-(DN|LB|DH|TC))-"}
   base_color: "#aa7e60"
   roughness: 0.45
   metalness: 0.0
@@ -114,7 +118,9 @@
       boards of the kitchen runs (island, west run, tall runs, west wall
       cabinets), and the integrated dishwasher's door panel.
     selectors:
-      - {label: cabinet, id_pattern: "-(FRONT|D[0-9]+|LIFT[0-9]*|END-[NSEW]|PLINTH-[NSEW])$"}
+      # Not the oak runs' parts (oak-natural-kaplan). Doors, banded fronts
+      # (FRONT1 …) and fillers too since 2026-11-19.
+      - {label: cabinet, id_pattern: "^(?!SF-(DN|F05[23]|LB|DH|TC)-|KR-(DN|LB|DH|TC)-).*-(FRONT[0-9]*|D[0-9]+|DOOR[0-9]+|FILLER[0-9]*|LIFT[0-9]*|END-[NSEW]|PLINTH-[NSEW])$"}
       - {label: appliance, ids: [EA-SBD6ECX]}
   base_color: "#e9e0d2"
   roughness: 0.35
