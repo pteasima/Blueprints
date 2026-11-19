@@ -43,3 +43,30 @@ export function identityOf(obj) {
   }
   return { part: part || "part", element: null };
 }
+
+/**
+ * The name GLTFLoader gives a node: three.js PropertyBinding.sanitizeNodeName
+ * turns whitespace into `_` and drops `[ ] . : /`. A yaml id with a dot
+ * (`SOCK-1.12-W`) arrives as `SOCK-112-W`.
+ * @param {string} id
+ * @returns {string}
+ */
+export function gltfNodeKey(id) {
+  return String(id).replace(/\s/g, "_").replace(/[[\]\.:/]/g, "");
+}
+
+/**
+ * Map a node-name key back to the yaml id for every id GLTFLoader would
+ * rename, so meshes of dotted ids still find their element.
+ * @param {Iterable<string>} ids
+ * @returns {Map<string, string>}
+ */
+export function nodeKeyMap(ids) {
+  const map = new Map();
+  for (const id of ids) {
+    if (!id) continue;
+    const key = gltfNodeKey(id);
+    if (key !== id && !map.has(key)) map.set(key, String(id));
+  }
+  return map;
+}

@@ -82,7 +82,7 @@ import {
   switchTargetCenters,
 } from "./tapTargets.js";
 import { createEditMode } from "./editMode.js";
-import { identityOf, meshIdentity } from "./meshIdentity.js";
+import { identityOf, meshIdentity, nodeKeyMap } from "./meshIdentity.js";
 import { attachPivotNav } from "./pivotNav.js";
 import { cadMmToGltf, createAnnotations } from "./annotations.js";
 import { DRAW_H, DRAW_W, downloadBlob, plateFromCanvas } from "./drawing.js";
@@ -135,6 +135,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   /** Window panes: which open and how (`<id>.windows.json`, windows.js). */
   const windowRecords = Array.isArray(options.windows) ? options.windows : [];
   const ifcIndex = normalizeIndex(options.ifc);
+  /** Node-name key → yaml id for ids GLTFLoader renamed (dots dropped). */
+  const idForNodeKey = nodeKeyMap(Object.values(ifcIndex.elements || {}).map((element) => element?.id));
   /** yaml id → meshes. Filled when the GLB arrives. */
   const meshesByKey = new Map();
   /** @type {(pt: { clientX: number, clientY: number }) => void} */
@@ -447,6 +449,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         if (!obj.isMesh) return;
         // The node is `masonry__W-001__`; the mesh under it is just `masonry`.
         const ident = identityOf(obj);
+        if (ident.element) ident.element = idForNodeKey.get(ident.element) || ident.element;
         obj.userData.bpPart = ident.part;
         obj.userData.bpElementKey = ident.element;
         if (ident.element) {
