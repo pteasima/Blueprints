@@ -150,12 +150,12 @@ Petr, 2026-11-12: “Ok, 100mm it is.” He wants the lowest plinth his robot va
 | Dreame X60 Pro Master (Petr's), lidar retracted | 89 | [Dreame](https://global.dreametech.com/products/x60-pro-master) |
 | Roborock Saros 10 / 10R / Z70 | 79.8 | [Roborock](https://support.roborock.com/hc/en-us/articles/48039533143321) |
 
-- The island and the west run stand on **open legs, 100 high, with no kick board** (`PlinthKind: Legs`), so the robot drives under. The carcass bottom is at 100, which leaves 11 mm over the Dreame.
+- (Until 2026-11-20 b; since then a kickboard covers the legs, see “Batch 2026-11-20 b”.) The island and the west run stand on **open legs, 100 high, with no kick board** (`PlinthKind: Legs`), so the robot drives under. The carcass bottom is at 100, which leaves 11 mm over the Dreame.
 - Legs: Ø40, adjustable, IKEA-like. Each row has a front and a back leg on every wall line, under each end side and each shared divider. The front leg centre is 50 behind the carcass front (68 behind the front face) and the back one is 50 before the back. `guess:` IKEA puts 4 legs under each cabinet; a monoblock shares them at the dividers. Island: 22 legs. West run: 8 legs.
 - The stone end cladding (island and west run) still runs from the floor to the worktop underside, so the robot gets in from the long sides only.
 - The dishwasher slot (SF-A600) has no carcass: floor to worktop underside is **910**, unchanged by the plinth. The Bosch SBD6ECX12E is the XXL model (865 high) and takes a 865–925 niche ([Bosch spec sheet](https://media3.bosch-home.com/Documents/specsheet/de-DE/SBD6ECX12E.pdf)), so 910 fits. The usual 815–875 niche is the 815-high SMD model, not this one. The robot does not get under the dishwasher.
 - The hob is unchanged: carcass top 910, hob underside 879. SF-I600b has three drawers under it (see “Gridfinity drawers”); the top box (a MAXIMERA medium, 713–857) stays 22 under the hob, more than Miele's 8.
-- The north dining run (`KR-DN`) has no plinth parameter: its oak bodies stand on the floor (`Carcass: Box`). `open:` should they get legs too?
+- (Resolved 2026-11-20 b: a 100 flush kickboard.) The north dining run (`KR-DN`) has no plinth parameter: its oak bodies stand on the floor (`Carcass: Box`). `open:` should they get legs too?
 - `open:` the drawer and door fronts stop 1.5 above the carcass bottom (101.5), with no kick board behind. Check the look and toe space with Petr.
 
 ## Fronts, boxes, slides (island drawers)
@@ -933,3 +933,73 @@ Guesses (Petr: "I actually got that completely wrong, and this new screenshot sh
 - `guess:` Blum's 28 is used with no extra tolerance (0 margin). The drawn sweep has 11.5.
 
 Renders (box only): `/workspace/renders/soffit2/sf-dh-section.png` and `sf-dh-section-detail.png` (section with dimensions), `sf-dh-iso-closed.png` / `sf-dh-iso-open.png` (seen from below), `north-wall-elevation.png` and `north-wall-elevation-dining.png` (elevations with dimensions). Labels are in Czech and English.
+
+## Batch 2026-11-20 b
+
+Petr, 2026-11-20 (verbatim):
+
+> - add kickboard (cover) to the existing plinth / toe-kick areas
+> - in the dining area there's no recessed toe-kick, but there still is a bottom fixed kickboard with the same 100mm height (flush with the cabinet fronts).
+> - the little shallow cupboards where the stuctural columns stay with hinged doors (except the western on, near kitchen, should switch hinge direction).
+> - also note from previous screenshot that above these shallow cabinets the countertop is actually an oak piece (the silestone stays only in the dining area)
+> - the dining area base cabinets are split into 4 sections, each has a full height drawer (starting above that 100mm flush plinth) and uses that merivobox inner drawer technology.
+> - the westmost dining area cabinet has a Dreame X60 Master station at its base, which makes its drawer a little less tall and leaves a little dead space on the east side of that cabinet
+> - also change the accoustic oak panelling so it has an oak veneer background (as is apparent from screenshots), not plaster showing through.
+
+Petr's clarification on the worktop, relayed (not verbatim): the dining area keeps its Silestone worktop exactly as modelled. Only the worktop above the two shallow column cupboards changes to oak. At the western column it is a small separate oak piece. At the eastern column it is part of the living-room oak counter (that counter extends over the cupboard).
+
+### 1. Kickboards on the toe-kicks (island, west run)
+
+- `KR-ISL` and `KR-WEST` keep their 100 legs and get a kickboard: `Pset_KitchenRun.Kickboard: true` with `PlinthKind: Legs`. The board is 18 thick, 0–100 high, **50 behind the fronts' face** (c 50–68), like IKEA METOD's plinth (`guess:` the 50; METOD clips the plinth to the legs). Parts `KR-ISL-PLINTH-W`, `KR-ISL-PLINTH-E`, `KR-WEST-PLINTH-E`.
+- The west run's kickboard runs on across the dishwasher slot (`SF-A600-PLINTH-E`, a 250–850 along the run), like a plinth across an integrated dishwasher (`guess:`).
+- **The front legs moved 30 back** so the board clears them: `LegInset` 50 → 80 on both runs (leg centre 98 behind the face, leg c 78–118, 10 clear of the board's back; `guess:`). Back legs unchanged.
+- The ends stay closed by the Silestone cladding from the floor.
+- `open:` the robot vacuum no longer drives under the island or the west run (the 100 plinth was chosen on 2026-11-12 so it could). Does Petr want the kickboard anyway, or a removable/robot-height gap?
+- `open:` the dishwasher is a plain 598 × 550 × 865 box from the wall, so its front is at c 50 and it overlaps the kickboard by 18. The real appliance has a recessed foot and an adjustable plinth; not modelled.
+
+### 2. The dining run's flush kickboard
+
+- `KR-DN` now has `PlinthHeight: 0.10`, `PlinthKind: Flush` (new kind): a fixed 18 board **in the fronts' plane** (c 0–18), 0–100, under every bay with fronts (SF-F052, SF-DN, SF-F053). Parts `KR-DN-PLINTH-S-<bay>` (plinth ids now carry the block's tag, so several blocks in one run don't clash).
+- **Changed:** the carcasses with fronts stand on it: carcass bottom 0 → 100, fronts were 1.5–908.5, now **101.5–908.5**. SF-DN70 (70 strip, a body) still runs from the floor.
+- `guess:` the flush kickboard also runs under the two column cupboards (Petr named the dining area).
+
+### 3. The column cupboards: hinges
+
+- SF-F052 (west, near the kitchen) **hinge R → L** (`SF-F052-DOOR1`). SF-F053 stays R. Both keep their two shelves.
+- `open:` hinge L puts the door's opening edge on the east and the leaf swings toward SF-T4's east side, which stands 150 proud of SF-F052's front: the 296 door stops at about 90° against it (the reason it was R).
+
+### 4. Oak over the column cupboards
+
+- **SF-F052:** its own oak-veneer piece, `SF-F052-WORKTOP`, 20 thick, 20 front overhang, x 22.150–22.450, y 15.130–15.350, top 930 (`Pset_KitchenBay.WorktopMaterial`, new per-bay override).
+- **SF-F053:** under KR-LB's oak counter: `KR-LB-WORKTOP` now also covers x 25.150–25.450 (200 deep + 20) and, `guess:`, the 70 strip SF-DN70 (x 25.450–25.520, 450 + 20) so the oak runs on unbroken (`Pset_KitchenBay.WorktopRun: KR-LB`, new; the part's `Covers` lists both).
+- **SF-DN:** Silestone Blanco Maple, unchanged (`KR-DN-WORKTOP`, x 22.450–25.150). The Silestone–oak joints are at x 22.450 and 25.150, over the cupboard sides.
+
+### 5. Dining base: four sections, full-height drawers, MERIVOBOX inner drawers
+
+- `SF-DN` `Sections: "4"`: **675 / 675 / 675 / 675** (2700 / 4), was 600 / 600 / 300 / 600 / 600. Fronts 672 wide (3 gap).
+- Each section: one full-height front above the kickboard, **101.5–908.5 (807)**, on an outer drawer with a low **K (128)** box (`box=K`). Behind the front, **two Blum MERIVOBOX inner drawers**: **M (90) at the top over K (128)** (`inner=M,K`; Petr's M = 90, K = 128). The top one is 30 under the rail (`InnerTopGap`, `guess:`), the lower one halfway between it and the outer box. Count and heights are `guess:`.
+- **Blum ZI7.0M07 driver set ("unašeč")** on the top inner drawer: the driver clips onto the middle of the inner drawer's front piece; its housing is drilled into the inside of the front; it opens with the front, and pressing the housing releases it (it can then be closed alone; turning it 180° disables it). For 90 and 128 sides ([lignoshop.de](https://www.lignoshop.de/zi70m07-legrabox-mitnehmer-set-innenschubkasten.html), [Häfele/JAF](https://hafele.jafholz.cz/sada-unasece-blum-legrabox-a-merivobox-pro-vnitrni-zasuvky-a-vysuvy-55074790)). Modelled as a 25 × 13 housing in the front's back and a small driver block (`guess:` sizes), fused into the drawer part with the top inner drawer, so they move with the front. Props on the drawer: `InnerDrawers`, `InnerSystem: Blum MERIVOBOX`, `Latch: Blum ZI7.0M07`, `OuterBoxSide`.
+- The lower inner drawer is its own part (`SF-DN-S<k>-D1-I2`, role `InnerDrawer`) with its own slide in the viewer. The viewer does not tie it to the front.
+- `guess:` the inner drawers take the outer box's plan; real MERIVOBOX inner drawers are a little narrower.
+- The pull-out with three baskets (old section 3) is gone. `open:` “pecivo / doplnky stravy / leky” still names no section.
+
+### 6. Section 1: the Dreame X60 Master station
+
+- **Dreame X60 Master base station: 416 × 443 × 249 (W × D × H)** ([Dreame HK](https://www.dreametech.com.hk/products/dreame-x60-master), [Dreame VN](https://dreametech.com.vn/products/robot-hut-bui-lau-san-chuyen-dung-dreame-x60-master)); 9.95 kg; the water refill and drain hookup is built in. Robot 350 × 350 × 79.5 (102.8 with the VersaLift sensor up). Element `EA-DREAME-X60M` (`Pset_BuiltIn Kind: Dock`, `Bay: SF-DN-S1`, `Zone: 2`), placed by the run on the floor, centred in the opening, front on the fronts' plane (c 0–443).
+- `SF-DN-S1` `Layout1: "drawer * box=K inner=M | dock 0.16 width=0.44 side=L"`. New band kind `dock`: an opening from the floor to a fixed board at **260–278**. That is the 249 station + 11 (`DockClearance` 10 checked, `guess:`). The opening is **440 wide on the west side** (x 22.468–22.908: 416 + 12 each side, `guess:`). The kickboard, the carcass bottom and the back are cut away over it (back open for the hoses, `guess:`).
+- **The drawer is shorter from below:** front **261.5–908.5 (647)** on a K outer box standing on the board, one M inner drawer with the ZI7.0M07 (`guess:`, the K inner one no longer fits).
+- **Dead space east of the station:** a side board at the opening's edge (x 22.908–22.926) and a fixed front panel `SF-DN-S1-DEAD`, 101.5–258.5, x 22.910–23.124.
+- `open:` docking ramp/approach: the station's ramp sits on the floor in the opening; does it need a reveal, frame or extra width for the robot to dock?
+- `open:` service access to the station (dust bag, cleaning-solution box, mop tray) with only 11 over it: does it slide out, or does the board need to be removable?
+- `open:` water and drain hookup route (here through the open back) and a socket.
+- `open:` the robot (79.5 / 102.8) parks in the station; the opening is 260 high, so it clears either way.
+
+### 7. Slat panelling: oak-veneer backing
+
+- `CV-SLAT-W052`, `CV-SLAT-W053`: a **6 mm oak-veneer backing board** (`Pset_Slats.BackingThickness: 0.006`, `BackingMaterial: oak veneer`, `guess:` 6) the full width and height behind the slats, so oak, not plaster, shows between them. Built in `living_geometry._slats`.
+- **Changed:** depth 20 → 26 and origin y 15.330 → 15.324: the slats stay 20 thick and the column face (y 15.350) stays, so **the slats' faces moved 6 mm south** (y 15.324). Width, height (930–2450) and the five 40 slats 20 apart unchanged. No other `SlatCladding` exists.
+
+### Tests
+
+`tests/test_kitchen_cabinet.py` (four sections, inner drawers, the dock, the flush and the leg kickboards, the hinges, the oak pieces) and `tests/test_furnishings.py` (the slat backing).
+

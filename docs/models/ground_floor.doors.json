@@ -852,12 +852,12 @@
     "element": "SF-F052-DOOR1",
     "center": [
       22.3,
-      0.455,
+      0.505,
       -15.159
     ],
     "hinge": [
-      22.4485,
-      0.455,
+      22.1515,
+      0.505,
       -15.15
     ],
     "axis": [
@@ -865,45 +865,15 @@
       1,
       0
     ],
-    "sign": 1
+    "sign": -1
   },
   {
     "id": "SF-DN-S1-D1",
     "kind": "drawer",
     "element": "SF-DN-S1-D1",
     "center": [
-      22.75,
-      0.81,
-      -15.3425
-    ],
-    "slide": [
-      0.0,
-      0.0,
-      0.366
-    ]
-  },
-  {
-    "id": "SF-DN-S1-D2",
-    "kind": "drawer",
-    "element": "SF-DN-S1-D2",
-    "center": [
-      22.75,
-      0.56,
-      -15.3425
-    ],
-    "slide": [
-      0.0,
-      0.0,
-      0.366
-    ]
-  },
-  {
-    "id": "SF-DN-S1-D3",
-    "kind": "drawer",
-    "element": "SF-DN-S1-D3",
-    "center": [
-      22.75,
-      0.205,
+      22.7875,
+      0.585,
       -15.3425
     ],
     "slide": [
@@ -917,8 +887,8 @@
     "kind": "drawer",
     "element": "SF-DN-S2-D1",
     "center": [
-      23.35,
-      0.81,
+      23.4625,
+      0.505,
       -15.3425
     ],
     "slide": [
@@ -928,28 +898,13 @@
     ]
   },
   {
-    "id": "SF-DN-S2-D2",
+    "id": "SF-DN-S2-D1-I2",
     "kind": "drawer",
-    "element": "SF-DN-S2-D2",
+    "element": "SF-DN-S2-D1-I2",
     "center": [
-      23.35,
-      0.56,
-      -15.3425
-    ],
-    "slide": [
-      0.0,
-      0.0,
-      0.366
-    ]
-  },
-  {
-    "id": "SF-DN-S2-D3",
-    "kind": "drawer",
-    "element": "SF-DN-S2-D3",
-    "center": [
-      23.35,
-      0.205,
-      -15.3425
+      23.4625,
+      0.5105,
+      -15.3515
     ],
     "slide": [
       0.0,
@@ -962,9 +917,24 @@
     "kind": "drawer",
     "element": "SF-DN-S3-D1",
     "center": [
-      23.8,
-      0.455,
+      24.1375,
+      0.505,
       -15.3425
+    ],
+    "slide": [
+      0.0,
+      0.0,
+      0.366
+    ]
+  },
+  {
+    "id": "SF-DN-S3-D1-I2",
+    "kind": "drawer",
+    "element": "SF-DN-S3-D1-I2",
+    "center": [
+      24.1375,
+      0.5105,
+      -15.3515
     ],
     "slide": [
       0.0,
@@ -977,8 +947,8 @@
     "kind": "drawer",
     "element": "SF-DN-S4-D1",
     "center": [
-      24.25,
-      0.81,
+      24.8125,
+      0.505,
       -15.3425
     ],
     "slide": [
@@ -988,73 +958,13 @@
     ]
   },
   {
-    "id": "SF-DN-S4-D2",
+    "id": "SF-DN-S4-D1-I2",
     "kind": "drawer",
-    "element": "SF-DN-S4-D2",
+    "element": "SF-DN-S4-D1-I2",
     "center": [
-      24.25,
-      0.56,
-      -15.3425
-    ],
-    "slide": [
-      0.0,
-      0.0,
-      0.366
-    ]
-  },
-  {
-    "id": "SF-DN-S4-D3",
-    "kind": "drawer",
-    "element": "SF-DN-S4-D3",
-    "center": [
-      24.25,
-      0.205,
-      -15.3425
-    ],
-    "slide": [
-      0.0,
-      0.0,
-      0.366
-    ]
-  },
-  {
-    "id": "SF-DN-S5-D1",
-    "kind": "drawer",
-    "element": "SF-DN-S5-D1",
-    "center": [
-      24.85,
-      0.81,
-      -15.3425
-    ],
-    "slide": [
-      0.0,
-      0.0,
-      0.366
-    ]
-  },
-  {
-    "id": "SF-DN-S5-D2",
-    "kind": "drawer",
-    "element": "SF-DN-S5-D2",
-    "center": [
-      24.85,
-      0.56,
-      -15.3425
-    ],
-    "slide": [
-      0.0,
-      0.0,
-      0.366
-    ]
-  },
-  {
-    "id": "SF-DN-S5-D3",
-    "kind": "drawer",
-    "element": "SF-DN-S5-D3",
-    "center": [
-      24.85,
-      0.205,
-      -15.3425
+      24.808,
+      0.5105,
+      -15.3515
     ],
     "slide": [
       0.0,
@@ -1068,12 +978,12 @@
     "element": "SF-F053-DOOR1",
     "center": [
       25.3,
-      0.455,
+      0.505,
       -15.159
     ],
     "hinge": [
       25.4485,
-      0.455,
+      0.505,
       -15.15
     ],
     "axis": [

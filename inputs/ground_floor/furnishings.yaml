@@ -773,17 +773,26 @@ systemFurniture:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-DN
+          # Petr, 2026-11-20 b: "above these shallow cabinets the countertop
+          # is actually an oak piece (the silestone stays only in the dining
+          # area)"; relayed clarification: at the western column a small
+          # separate oak piece (SF-F052-WORKTOP), 20 thick, 20 overhang.
+          WorktopMaterial: "oak veneer"
       # Petr, 2026-11-20: "don't touch dining area bottom cabinets geometry yet, Im undecided. But make them cream color like kitchen, all the way through dining area into living room (behind couch)."
       - Name: Pset_Finish
         Properties:
           Material: "kitchen cream (RAL 9001 matt)"
           Form: "lacquered or laminate, like the kitchen fronts"
       # 2026-11-19 (best effort, see SF-T2): a shallow cupboard, one door
-      # hinged R with two shelves (guess:). Hinged R because SF-T4 stands
-      # 150 proud on the west of SF-F052.
+      # with two shelves (guess:). Was hinged R because SF-T4 stands 150
+      # proud on the west of SF-F052; Petr, 2026-11-20 b: "the little
+      # shallow cupboards where the stuctural columns stay with hinged doors
+      # (except the western on, near kitchen, should switch hinge
+      # direction)" -> hinge L (on the SF-T4 side). The door now opens
+      # toward SF-T4's 150 proud east side, so it stops at about 90° (open:).
       - Name: Pset_Fronts
         Properties:
-          Layout: "door * hinge=R shelves=2"
+          Layout: "door * hinge=L shelves=2"
   - id: SF-DN
     Name: "Jídelna spodní"
     Description: "Dining base between W-052 and W-053. 450 deep, front y=15.15, counter 930, the kitchen counter height. Butts both piers. Cream like the kitchen (natural oak until 2026-11-20)."
@@ -803,16 +812,29 @@ systemFurniture:
         Properties:
           Material: "kitchen cream (RAL 9001 matt)"
           Form: "lacquered or laminate, like the kitchen fronts"
-      # 2026-11-19 (Petr, 2026-11-19: "Add the rest of the drawers, hinged doors, etc. to the whole kitchen and living room on a best effort basis. We'll adjust details later.")
-      # Five sections, west to east 600 / 600 / 300 / 600 / 600 (IKEA widths,
-      # guess:): drawers 200 / 300 / rest in the 600s, a 300 pull-out with
-      # three baskets in the middle. The note's "pecivo / doplnky stravy /
-      # leky" names no bay; not assigned (open:).
+      # Petr, 2026-11-20 b: "the dining area base cabinets are split into 4
+      # sections, each has a full height drawer (starting above that 100mm
+      # flush plinth) and uses that merivobox inner drawer technology."
+      # Four equal sections, 2700 / 4 = 675 each. One full-height front per
+      # section; behind it the outer drawer is a low K box (128) and two
+      # Blum MERIVOBOX inner drawers, M (90) at the top over K (128)
+      # (count and heights guess:). The top inner drawer is coupled to the
+      # front by a Blum ZI7.0M07 ("unašeč"): it opens with the front.
+      # (Until 2026-11-20 b: 600 / 600 / 300 / 600 / 600, drawers 200 / 300 /
+      # rest, a 300 pull-out in the middle.) "pecivo / doplnky stravy /
+      # leky" still names no section (open:).
+      # Section 1 (westmost): "has a Dreame X60 Master station at its base,
+      # which makes its drawer a little less tall and leaves a little dead
+      # space on the east side of that cabinet". A 160 dock band over the
+      # 100 kickboard zone: the opening is from the floor to the board at
+      # 260 (station 249 + 10 clearance, guess:), 440 wide on the west side
+      # (416 + 12 each side, guess:); the kickboard, carcass bottom and back
+      # are cut away over it; east of it a fixed dead-space panel.
       - Name: Pset_Fronts
         Properties:
-          Sections: "0.6 0.6 0.3 0.6 0.6"
-          Layout: "drawer 0.2 | drawer 0.3 | drawer *"
-          Layout3: "pullout * items=shelves n=3"
+          Sections: "4"
+          Layout: "drawer * box=K inner=M,K"
+          Layout1: "drawer * box=K inner=M | dock 0.16 width=0.44 side=L"
   - id: SF-F053
     Name: "Výplň W-053"
     Description: "Shallow filler in front of pier W-053. 300 wide, 200 deep, front flush at y=15.15. Still west of the sofa, counter 930. Cream like the kitchen (natural oak until 2026-11-20)."
@@ -827,6 +849,10 @@ systemFurniture:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-DN
+          # Petr, 2026-11-20 b (relayed clarification): at the eastern column
+          # the oak top is part of the living-room oak counter; KR-LB's
+          # oak-veneer worktop extends over this cupboard (and SF-DN70).
+          WorktopRun: KR-LB
       # Petr, 2026-11-20: "don't touch dining area bottom cabinets geometry yet, Im undecided. But make them cream color like kitchen, all the way through dining area into living room (behind couch)."
       - Name: Pset_Finish
         Properties:
@@ -851,6 +877,9 @@ systemFurniture:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-DN
+          # The 70 strip between SF-F053 and SF-LB: under the same oak
+          # (guess:, so the living-room counter runs on unbroken to x 25.15).
+          WorktopRun: KR-LB
       # Petr, 2026-11-20: "don't touch dining area bottom cabinets geometry yet, Im undecided. But make them cream color like kitchen, all the way through dining area into living room (behind couch)."
       - Name: Pset_Finish
         Properties:
@@ -1129,6 +1158,28 @@ electricAppliances:
           NicheHeightMin: 0.35
           NicheHeightMax: 0.362
           NicheDepth: 0.31
+  # Petr, 2026-11-20 b: "the westmost dining area cabinet has a Dreame X60
+  # Master station at its base, which makes its drawer a little less tall
+  # and leaves a little dead space on the east side of that cabinet".
+  - id: EA-DREAME-X60M
+    Name: "Dreame X60 Master (base station)"
+    Description: "Robot vacuum base station with built-in water refill and drain hookup, on the floor in the dock band of SF-DN-S1 (the westmost dining section), on the west side, front on the fronts' plane. Station 416 × 443 × 249 (W × D × H, Dreame, dreametech.com.hk / dreametech.com.vn spec tables); robot 350 × 350 × 79.5 (102.8 with the VersaLift sensor up)."
+    PredefinedType: USERDEFINED
+    ObjectType: RobotVacuumStation
+    ContainedInStructure: SP-1.02
+    PropertySets:
+      - Name: Pset_ManufacturerTypeInformation
+        Properties:
+          Manufacturer: "Dreame"
+          ModelLabel: "X60 Master"
+      - Name: Pset_BuiltIn
+        Properties:
+          Kind: Dock
+          Bay: SF-DN-S1
+          Zone: 2
+          Width: 0.416
+          Depth: 0.443
+          Height: 0.249
   - id: EA-EVO3-W
     Name: "EcoMaster STANDARD EVO3"
     Description: "Food waste disposer under the west sink SN-RS15 (card on KitchenPlan.jpg). 368 high, 145 diameter (EcoMaster). Hangs from the bowl's drain, centred on the bowl: guess:."
@@ -1239,9 +1290,15 @@ furniture:
           WorktopMaterial: "Silestone Blanco Maple"
           CladEnds: true
           # Petr, 2026-11-12: "Ok, 100mm it is." Lowest plinth the robot
-          # vacuum fits under (Dreame X60 Pro Master 89 mm); open legs, no kick board.
+          # vacuum fits under (Dreame X60 Pro Master 89 mm); open legs.
+          # Petr, 2026-11-20 b: "add kickboard (cover) to the existing plinth
+          # / toe-kick areas": a kickboard clipped to the legs, set back 50
+          # like IKEA METOD (guess:); the front legs move back to clear it
+          # (LegInset 50 -> 80, guess:). The robot no longer drives under (open:).
           PlinthHeight: 0.10
           PlinthKind: Legs
+          Kickboard: true
+          LegInset: 0.08
   - id: KR-WEST
     Name: "Západní linka"
     Description: "West-wall base monoblock between OP24 and OP25: C850, B800, A250 and the dishwasher slot. Silestone worktop, 20 mm overhang at the front, Silestone cladding on both ends, 12 mm Silestone backsplash."
@@ -1255,9 +1312,15 @@ furniture:
           WorktopOverhang: 0.02
           WorktopMaterial: "Silestone Blanco Maple"
           # Petr, 2026-11-12: "Ok, 100mm it is." Lowest plinth the robot
-          # vacuum fits under (Dreame X60 Pro Master 89 mm); open legs, no kick board.
+          # vacuum fits under (Dreame X60 Pro Master 89 mm); open legs.
+          # Petr, 2026-11-20 b: "add kickboard (cover) to the existing plinth
+          # / toe-kick areas": a kickboard clipped to the legs, set back 50
+          # like IKEA METOD (guess:); the front legs move back to clear it
+          # (LegInset 50 -> 80, guess:). The robot no longer drives under (open:).
           PlinthHeight: 0.10
           PlinthKind: Legs
+          Kickboard: true
+          LegInset: 0.08
           # Petr, 2026-11-12: "back wall for both west and north". 12 mm
           # Silestone from the brief; up to the wall cabinets (derived).
           Backsplash: true
@@ -1284,9 +1347,14 @@ furniture:
           WorktopThickness: 0.02
           WorktopOverhang: 0.02
           WorktopMaterial: "Silestone Blanco Maple"
-          # Bays with fronts (2026-11-19) get a carcass; no plinth, they
-          # stand on the floor like the bodies (open:).
-          PlinthHeight: 0.0
+          # Petr, 2026-11-20 b: "in the dining area there's no recessed
+          # toe-kick, but there still is a bottom fixed kickboard with the
+          # same 100mm height (flush with the cabinet fronts)." The carcasses
+          # with fronts stand on it (fronts from 101.5); the kickboard is in
+          # the fronts' plane, 18 thick. Also under the two column cupboards
+          # (guess:). Until 2026-11-20 b no plinth (fronts from the floor).
+          PlinthHeight: 0.10
+          PlinthKind: Flush
   - id: KR-LB
     Name: "Obývák linka"
     Description: "Living-room counter behind the sofa: SF-LB. Cream body (oak until 2026-11-20) under a 20 mm oak-veneer top, 20 mm front overhang like the stone runs, top 930 like the dining run. The joint with KR-DN's Silestone at x 25.52 is open (Petr, 2026-11-13)."
@@ -1838,14 +1906,14 @@ coverings:
           Material: "Silestone Blanco Maple"
   - id: CV-SLAT-W052
     Name: "Dubové lamely pilíře W-052"
-    Description: "Vertical oak slats on W-052's front face (the concrete column), x 22.150–22.462 (from SF-T4's east face over the 12 mm stone return in the niche), from the worktop (930) to the ceiling line (2450). 40 wide, 20 apart, 20 thick (guess:). Replaces the stone piece CV-BS-P052 (2026-11-20)."
+    Description: "Vertical oak slats on W-052's front face (the concrete column), x 22.150–22.462 (from SF-T4's east face over the 12 mm stone return in the niche), from the worktop (930) to the ceiling line (2450). 40 wide, 20 apart, 20 thick (guess:), on a 6 mm oak-veneer backing (2026-11-20 b, guess:), 26 overall, y 15.324–15.350. Replaces the stone piece CV-BS-P052 (2026-11-20)."
     PredefinedType: CLADDING
     ObjectType: SlatCladding
     ContainedInStructure: SP-1.02
-    Origin: [22.15, 15.33]
+    Origin: [22.15, 15.324]
     Elevation: 0.93
     Width: 0.312
-    Depth: 0.02
+    Depth: 0.026
     Height: 1.52
     PropertySets:
       # Petr, 2026-11-20: "Im attaching screenshot of all material details in
@@ -1864,16 +1932,22 @@ coverings:
         Properties:
           SlatWidth: 0.04
           SlatGap: 0.02
+          # Petr, 2026-11-20 b: "change the accoustic oak panelling so it has
+          # an oak veneer background (as is apparent from screenshots), not
+          # plaster showing through." A 6 mm oak-veneer board (guess:) behind
+          # the slats on the column face; the slats stay 20 thick in front.
+          BackingThickness: 0.006
+          BackingMaterial: "oak veneer"
   - id: CV-SLAT-W053
     Name: "Dubové lamely pilíře W-053"
-    Description: "Vertical oak slats on W-053's front face (the concrete column), x 25.138–25.462 (over the 12 mm stone returns on both sides), from the worktop (930) to the ceiling line (2450). 40 wide, 20 apart, 20 thick (guess:). Replaces the stone piece CV-BS-P053 (2026-11-20)."
+    Description: "Vertical oak slats on W-053's front face (the concrete column), x 25.138–25.462 (over the 12 mm stone returns on both sides), from the worktop (930) to the ceiling line (2450). 40 wide, 20 apart, 20 thick (guess:), on a 6 mm oak-veneer backing (2026-11-20 b, guess:), 26 overall, y 15.324–15.350. Replaces the stone piece CV-BS-P053 (2026-11-20)."
     PredefinedType: CLADDING
     ObjectType: SlatCladding
     ContainedInStructure: SP-1.02
-    Origin: [25.138, 15.33]
+    Origin: [25.138, 15.324]
     Elevation: 0.93
     Width: 0.324
-    Depth: 0.02
+    Depth: 0.026
     Height: 1.52
     PropertySets:
       # Petr, 2026-11-20: "Im attaching screenshot of all material details in
@@ -1892,6 +1966,12 @@ coverings:
         Properties:
           SlatWidth: 0.04
           SlatGap: 0.02
+          # Petr, 2026-11-20 b: "change the accoustic oak panelling so it has
+          # an oak veneer background (as is apparent from screenshots), not
+          # plaster showing through." A 6 mm oak-veneer board (guess:) behind
+          # the slats on the column face; the slats stay 20 thick in front.
+          BackingThickness: 0.006
+          BackingMaterial: "oak veneer"
   - id: CV-BS-R053E
     Name: "Obklad boku pilíře W-053 východ"
     Description: "Return on W-053's east face above SF-DN70. No wall cabinet above: open: top height, 1560. guess: the stone wraps the pier."

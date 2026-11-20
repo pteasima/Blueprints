@@ -504,18 +504,49 @@ def test_dining_run_box_bodies_under_stone():
     # SF-DN70 (70 wide) stays a body; the bays with fronts are carcasses (2026-11-19).
     assert run.part("SF-DN70-BODY").boxes[0][5] == pytest.approx(910.0)
     assert run.carcass_z1 == pytest.approx(910.0)
+    # 2026-11-20 b: the Silestone stays only over SF-DN; SF-F052 gets its
+    # own oak piece, SF-F053 and SF-DN70 go under KR-LB's oak counter.
     slabs = run.part("KR-DN-WORKTOP").boxes
-    assert len(slabs) == 4 and all(s[5] == pytest.approx(930.0) and s[2] == pytest.approx(-20.0) for s in slabs)
+    assert len(slabs) == 1 and slabs[0][:2] == (pytest.approx(300.0), pytest.approx(3000.0))
+    assert all(s[5] == pytest.approx(930.0) and s[2] == pytest.approx(-20.0) for s in slabs)
+    own = run.part("SF-F052-WORKTOP")
+    assert own.label == "oak" and own.boxes == [(0.0, 300.0, -20.0, 200.0, 910.0, 930.0)]
+    lb = _runs()["KR-LB"].part("KR-LB-WORKTOP")
+    assert lb.label == "oak" and lb.props["Covers"] == "SF-F053,SF-DN70"
+    assert sorted((round(b[0]), round(b[1]), round(b[3])) for b in lb.boxes[1:]) == [(-370, -70, 200), (-70, 0, 450)]
     assert not [p for p in run.parts if p.role == "Cladding"]
 
 
-def test_open_legs_no_kick_board():
+def test_dining_flush_kickboard():
+    # Petr, 2026-11-20 b: "a bottom fixed kickboard with the same 100mm
+    # height (flush with the cabinet fronts)".
+    run = _runs()["KR-DN"]
+    kick = [p for p in run.parts if p.role == "Plinth"]
+    assert {p.id for p in kick} == {"KR-DN-PLINTH-S-SF-F052", "KR-DN-PLINTH-S-SF-DN", "KR-DN-PLINTH-S-SF-F053"}
+    assert all((b[2], b[3], b[4], b[5]) == (0.0, 18.0, 0.0, 100.0) for p in kick for b in p.boxes)
+    assert run.part("SF-F052-DOOR1").boxes[0][4] == pytest.approx(101.5)
+    # Petr: the western cupboard switches hinge direction; the eastern stays.
+    assert run.part("SF-F052-DOOR1").props["Hinge"] == "L"
+    assert run.part("SF-F053-DOOR1").props["Hinge"] == "R"
+
+
+def test_legs_behind_a_kickboard():
+    # Petr, 2026-11-20 b: "add kickboard (cover) to the existing plinth /
+    # toe-kick areas": legs plus a kickboard 50 behind the fronts.
     runs = _runs()
-    for rid, legs in (("KR-ISL", 22), ("KR-WEST", 8)):
+    for rid, legs, boards in (("KR-ISL", 22, 2), ("KR-WEST", 8, 2)):
         run = runs[rid]
-        assert not [p for p in run.parts if p.role == "Plinth"]
+        kick = [p for p in run.parts if p.role == "Plinth"]
+        assert len(kick) == boards
+        assert all(p.props["Setback"] == pytest.approx(0.05) and b[3] - b[2] == pytest.approx(18.0)
+                   for p in kick for b in p.boxes)
         found = [p for p in run.parts if p.role == "Leg"]
         assert len(found) == legs and all(p.boxes[0][5] == pytest.approx(100.0) for p in found)
+    # The west run's kickboard runs on across the dishwasher slot.
+    assert runs["KR-WEST"].part("SF-A600-PLINTH-E").boxes[0][:4] == (250.0, 850.0, 50.0, 68.0)
+    # Front legs clear the board (c 50–68): LegInset 80 from the fronts' back.
+    leg = runs["KR-ISL"].part("KR-ISL-LEG-SF-I500a-N-F").boxes[0]
+    assert leg[2] == pytest.approx(78.0)
     assert runs["KR-TALL"].carcass_z1 == pytest.approx(2450.0)
 
 
@@ -525,16 +556,26 @@ def test_wide_bays_split_into_sections():
     runs = _runs()
     dn = runs["KR-DN"]
     bay = dn.bay("SF-DN")
-    dividers = sorted(dn.part(f"SF-DN-SDIV{k}").boxes[0][0] + 9.0 - bay.a0 for k in range(1, 5))
-    assert dividers == pytest.approx([600.0, 1200.0, 1500.0, 2100.0])
-    assert all(f"SF-DN-SDIV{k}" in bay.members for k in range(1, 5))
-    assert dn.part("SF-DN-S3-D1").role == "PullOut"
-    fronts = [round(dn.part(f"SF-DN-S1-D{i}").drawer.front[5] - dn.part(f"SF-DN-S1-D{i}").drawer.front[4])
-              for i in (1, 2, 3)]
-    assert fronts == [197, 297, 407]
-    # Each section's front is its width less the 3 mm gap.
-    s1 = dn.part("SF-DN-S1-D1").drawer.front
-    assert s1[1] - s1[0] == pytest.approx(597.0)
+    # Petr, 2026-11-20 b: four sections, one full-height drawer each.
+    dividers = sorted(dn.part(f"SF-DN-SDIV{k}").boxes[0][0] + 9.0 - bay.a0 for k in range(1, 4))
+    assert dividers == pytest.approx([675.0, 1350.0, 2025.0])
+    assert all(f"SF-DN-SDIV{k}" in bay.members for k in range(1, 4))
+    for k in (2, 3, 4):
+        d = dn.part(f"SF-DN-S{k}-D1")
+        assert d.drawer.front[1] - d.drawer.front[0] == pytest.approx(672.0)
+        assert (d.drawer.front[4], d.drawer.front[5]) == (pytest.approx(101.5), pytest.approx(908.5))
+        assert d.props["InnerDrawers"] == "M,K" and d.props["Latch"] == "Blum ZI7.0M07"
+        inner = dn.part(f"SF-DN-S{k}-D1-I2")
+        assert inner.role == "InnerDrawer" and inner.props["SideHeight"] == pytest.approx(0.128)
+    # Section 1: the Dreame X60 Master station under a shorter drawer.
+    d1 = dn.part("SF-DN-S1-D1")
+    assert d1.drawer.front[4] == pytest.approx(261.5)
+    dock = dn.part("EA-DREAME-X60M")
+    a0, a1, _c0, c1, z0, z1 = dock.boxes[0]
+    assert (a1 - a0, c1, z0, z1) == (pytest.approx(416.0), pytest.approx(443.0), 0.0, pytest.approx(249.0))
+    kick = dn.part("KR-DN-PLINTH-S-SF-DN").boxes
+    assert all(b[1] <= a0 or b[0] >= a1 for b in kick)  # open over the station
+    assert dn.part("SF-DN-S1-DEAD").props["Fixed"] is True
     # Petr, 2026-11-20: "remove living room drawers behind couch. Those
     # cabinets are dead space": seven blank fixed fronts, nothing moves.
     lb = runs["KR-LB"]

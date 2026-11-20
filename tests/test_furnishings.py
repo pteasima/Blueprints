@@ -539,6 +539,9 @@ def test_pier_slats_are_vertical_oak_battens():
         assert e["Elevation"] == pytest.approx(0.93) and e["Elevation"] + e["Height"] == pytest.approx(2.45)
         detail = living_detail(e, e["Width"] * 1000.0, e["Depth"] * 1000.0, e["Height"] * 1000.0, 1.0)
         boxes = [s.bounding_box() for s in detail.solids()]
+        # 2026-11-20 b: an oak-veneer backing at the back (+y), then 5 slats.
+        backing, boxes = boxes[0], boxes[1:]
+        assert backing.min.Y >= 19.5 and backing.size.X > 300.0
         assert len(boxes) == 5
         assert all(b.size.X == pytest.approx(40.0) for b in boxes)
         assert boxes[1].min.X - boxes[0].max.X == pytest.approx(20.0)

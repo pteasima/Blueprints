@@ -16,6 +16,10 @@ Assumed part sizes (millimetres), not on the plan:
   piers, 2026-11-20): vertical battens the box's full depth and height,
   ``Pset_Slats.SlatWidth`` wide and ``SlatGap`` apart (metres; default the
   bookshelf lamella 40 / 20), centred across the width, an even count.
+  ``Pset_Slats.BackingThickness`` (metres, 2026-11-20 b) adds an oak-veneer
+  board the full width and height at the back of the box (the wall side,
+  the box's +y face), so oak, not plaster, shows between the slats; the
+  slats stand in front of it.
 """
 
 from __future__ import annotations
@@ -152,16 +156,21 @@ def _bookshelf(width: float, depth: float, height: float, gap: float, shelves: i
     return [part for part in parts if part is not None]
 
 
-def _slats(width: float, depth: float, height: float, gap: float, slat: float, space: float):
+def _slats(width: float, depth: float, height: float, gap: float, slat: float, space: float,
+           backing: float = 0.0):
     """Vertical battens across ``width``, each ``slat`` wide, ``space``
-    apart, centred; the full depth and height of the box (mm)."""
+    apart, centred; the full depth and height of the box (mm), in front of
+    a ``backing`` board at the box's back (+y) face when it is > 0."""
     lo = gap / 2.0
+    parts = []
+    if backing > 0:
+        parts.append(_box(lo, depth - backing, lo, width - lo, depth - lo, height - lo))
+        depth -= backing
     span0, span1 = lo, width - lo
     pitch = slat + space
     count = max(1, int((span1 - span0 + space) // pitch))
     used = count * slat + (count - 1) * space
     cursor = span0 + (span1 - span0 - used) / 2.0
-    parts = []
     for _index in range(count):
         parts.append(_box(cursor, lo, lo, cursor + slat, depth - lo, height - lo))
         cursor += pitch
@@ -187,7 +196,8 @@ def living_detail(element: dict, width: float, depth: float, height: float, gap:
     elif kind == "SlatCladding":
         slat = float(_prop(element, "Pset_Slats", "SlatWidth", _LAMELLA_W / 1000.0)) * 1000.0
         space = float(_prop(element, "Pset_Slats", "SlatGap", _LAMELLA_GAP / 1000.0)) * 1000.0
-        parts = _slats(width, depth, height, gap, slat, space)
+        backing = float(_prop(element, "Pset_Slats", "BackingThickness", 0.0)) * 1000.0
+        parts = _slats(width, depth, height, gap, slat, space, backing)
     else:
         return None
     if not parts:
