@@ -113,3 +113,24 @@ The grate solid is a nominal 8 mm (yaml-ifc’s default when `Height` is omitted
 The membrane is described as covering the whole floor, 100–150 mm up the walls, at least 2 m up in the drain corner, taped at the door. No thickness is measured, so it is not extruded. Source: `MEM-1.20`.
 
 Grout is recessed 0.5 mm behind the tile face so the joint reads in the viewer. The joint width is the layout width. Source: `bathroom_120.py` module note.
+
+## IFC elements
+
+Every solid the two bathroom modules draw belongs to a yaml-ifc product in `bathroom-1.20.yaml` or `bathroom-1.07.yaml`, and every product is contained in its `IfcSpace` (SP-1.20, SP-1.07) through `ContainedInStructure`, which yaml-ifc writes as `IfcRelContainedInSpatialStructure`. The solid carries the product's yaml id (`element_id`), so the ground-floor GLB node is `<part>__<id>__` and the viewer's inspector, Hide, Hide all others and space filters reach it. Source: Petr, 2026-11-19 (Cody chat): "make sure bathrooms are modeled well in ifc (no geometry changes, just annotate well with ifc so they participate in hiding etc.)". `tests/test_bathroom_ifc.py` checks it.
+
+| Solids (part label) | IFC element |
+| --- | --- |
+| Floor tiles (`floor_tile`) and their joints (`grout`) | The floor `IfcCovering FLOORING`: FLR-1.20; in 1.07 FLR-LEVEL and FLR-SHOWER |
+| Wall tiles (`wall_tile`) and their joints (`grout`) | The wall's `IfcCovering CLADDING` (CLAD-…) |
+| 1.07 vanity shelf tiles | CLAD-PW: they are cut from that wall's layout |
+| 1.07 niche lining tiles | CLAD-NS, the shower pre-wall tiles |
+| Drains (`drain`) | `IfcWasteTerminal FLOORTRAP` DRAIN-1.20, DRAIN-1.07 |
+| 1.07 tub and basins (`fixture`) | `IfcSanitaryTerminal` BATH-1.07, BASIN-W, BASIN-E |
+| 1.07 pre-walls, shelf, soffit, glass, cabinet, top, mixers, supply pipes, tiled tub front | Their `furniture` rows (`IfcFurniture USERDEFINED`, by ObjectType) |
+| 1.07 stainless shower edge profiles (`profile`) | `IfcCovering MOLDING` PROF-SH-W, PROF-SH-E (added 2026-11-19, annotation only) |
+
+Grout is not its own element. It is part of the tile covering it joins, so hiding a wall's tiles hides its joints too, while the `grout` part label still toggles all joints at once.
+
+Yaml ids must be unique across the ground floor: the viewer keys meshes by yaml id, and a GlobalId is a pure function of it ([Home.md](../Home.md), Stable GlobalIds). Both bathrooms used CLAD-E, CLAD-S and CLAD-W, so the ground-floor index kept only one of each pair (the 1.20 ones, carrying a 1.07 description), and 1.07's east, south and west wall tiles had no element. On 2026-11-19 the 1.07 three became CLAD-E-1.07, CLAD-S-1.07 and CLAD-W-1.07, new GlobalIds; 1.20 keeps its ids and GlobalIds. The bathroom spaces are named like the electrical room files ("1.20 Koupelna", LongName "Koupelna"), so the two no longer show as two identical "Koupelna" rows.
+
+Not modelled as their own IFC classes: mixers would be `IfcValve` (MIXING) and supply pipes `IfcPipeSegment`, the glass an `IfcPlate`, the masonry pre-walls an `IfcWall`. yaml-ifc (vendored at `0f96c26`) has no list for those classes yet, so they stay `IfcFurniture` with an ObjectType.
