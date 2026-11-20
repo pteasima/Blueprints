@@ -57,7 +57,39 @@ Realistic draws fewer meshes per moving frame than Shaded in both builds (no edg
 
 Screenshots of the same views before and after (Shaded, Realistic, living-kitchen, bathroom plan, pick, room isolate (since removed), walls at 40 % and 0 %, doors open, edit mode, walk, Gridfinity) were identical pixel for pixel on desktop. On the iPhone profile they differ only by the pixel ratio.
 
+**Final build, baseplates on by default** (no URL flag, fresh storage; the numbers in the PR 133 report): desktop Shaded 2,796 meshes, 2,354 draws per frame, 17.5 ms CPU frame, 31 MB heap; iPhone profile Shaded 2,354 draws, 103 ms CPU frame (4× throttle), 31 MB heap, 1.5× pixel ratio.
+
 `BlueprintsViewer.mergeStats` (meshes before and after the merge) and `BlueprintsViewer.rendererInfo` (three.js `renderer.info` and the pixel ratio) are there for these checks.
+
+## Modeling rules and budget
+
+Petr, 2026-11-20: "make sure perf doesn't deteriorate after Bob or other agents change or add furniture."
+
+The merge happens at load, so a model needs no extra work to get one draw per element. What still costs on a phone, and what anyone adding or changing furniture or other elements should keep in mind:
+
+- **Triangles per element.** Tessellation follows the CAD shape (`_stl_tolerance` in `export_utils.py`). Fillets, small chamfers, thread, knurls, text and dense splines multiply triangles; model them only where they are visible at room scale. Today the heaviest element in `ground_floor.glb` has 900 triangles (the oak bookcase); keep a single element under 5,000.
+- **CAD faces per element.** Each face is still a glTF primitive in the file (parse time, accessors, the per-face edge pass at load). The bookcase has 450 faces; keep one element under 1,000. Fuse solids that are one real part (`fuse()`), and do not split a flat panel into many faces.
+- **Few, shared materials.** The merge makes one mesh per element **and material**, so an element with five materials draws five times. Use the shared palette materials and one material per element where the real object is one finish; do not give each face its own colour or a near-duplicate material.
+- **No needless tiny elements.** Every element node is at least one draw, one edge overlay, a pick target and an IFC row. Screws, hinges, cable ties, feet that nobody needs to select: leave them out or fold them into their host. Real separate products (a fixture, a cabinet, a drawer front) stay separate elements.
+- **Moving parts are their own nodes.** Doors, drawers and sliding panes move as one node (`doors.js`, `windows.js`). Keep each moving part its own element node; do not fuse a drawer front into the carcass, and keep each window pane its own node (operable windows skip the merge, see Guards).
+- **Heavy repeated geometry goes in its own layer.** Gridfinity baseplates (11.8k faces) live in `ground_floor.gridfinity.glb`, an on-demand layer (`write_lazy_layers`), so the first picture does not wait for them and `?gridfinity=0` skips them. Do the same for any similar bulk detail (tiles as solids, slats, perforations, stacked items).
+- **Textures.** Realistic textures come from `docs/materials` and are capped on phones (`qualityBudget` in `realistic.js`). Do not embed textures in the GLB.
+
+**Automated budget.** `node scripts/model_budget.mjs` reads the exported GLBs' JSON and fails when `ground_floor.glb` or `ground_floor.gridfinity.glb` is over its limit. The `model-budget` workflow runs it on every pull request that changes those GLBs (Node only, it pulls only those two files from LFS). Run it after an export. Limits, about 1.5× today's numbers (2026-11-20):
+
+| limit | `ground_floor.glb` today / max | `ground_floor.gridfinity.glb` today / max |
+| --- | ---: | ---: |
+| nodes | 1,231 / 1,900 | 19 / 40 |
+| element meshes (mesh nodes) | 1,229 / 1,900 | 18 / 40 |
+| draws after the merge (element × material) | 1,229 / 1,900 | 18 / 40 |
+| CAD faces (glTF primitives) | 8,850 / 13,500 | 11,823 / 18,000 |
+| triangles | 35,608 / 55,000 | 37,704 / 57,000 |
+| materials | 25 / 40 | 1 / 4 |
+| file size | 6.2 / 10 MB | 7.75 / 12 MB |
+| triangles in the heaviest element | 900 / 5,000 | 2,476 / 5,000 |
+| faces in the element with the most | 450 / 1,000 | 776 / 1,200 |
+
+When the check fails it names the element with the most triangles and the most faces. Simplify that first. Raise a limit only on purpose, in the same pull request as the model change, and say why in the pull request description (the house is finite; a real new room or kitchen run may need it).
 
 ## Not done (options if devices are still slow)
 
