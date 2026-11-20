@@ -571,7 +571,11 @@ def test_dining_run_box_bodies_under_stone():
     # 2026-11-20 c: SF-DN70 (the 70 sliver east of the pier) is gone; the
     # bays with fronts are carcasses (2026-11-19).
     assert not [p for p in run.parts if "SF-DN70" in p.id]
-    assert run.carcass_z1 == pytest.approx(910.0)
+    # Petr, 2026-11-20 h: "the dining part has 20 silestone and 20 oak below
+    # it": the top stays 930, the carcass stops at 890.
+    assert run.carcass_z1 == pytest.approx(890.0)
+    under = run.part("KR-DN-UNDERLAY")
+    assert under.label == "oak" and under.boxes == [(300.0, 3000.0, 0.0, 450.0, 890.0, 910.0)]
     # 2026-11-20 b: the Silestone stays only over SF-DN; SF-F052 gets its
     # own oak piece, SF-F053 goes under KR-LB's oak counter.
     slabs = run.part("KR-DN-WORKTOP").boxes
@@ -580,8 +584,10 @@ def test_dining_run_box_bodies_under_stone():
     assert all(s[5] == pytest.approx(930.0) and s[2] == pytest.approx(0.0) and s[3] == pytest.approx(450.0)
                for s in slabs)
     own = run.part("SF-F052-WORKTOP")
-    assert own.label == "oak" and own.boxes == [(0.0, 300.0, 0.0, 200.0, 910.0, 930.0)]
+    assert own.label == "oak" and own.boxes == [(0.0, 300.0, 0.0, 200.0, 890.0, 930.0)]
     lb = _runs()["KR-LB"].part("KR-LB-WORKTOP")
+    # "the living room counter is the same thickness as the bookshelves, which is 40"
+    assert all((b[4], b[5]) == (pytest.approx(890.0), pytest.approx(930.0)) for b in lb.boxes)
     assert lb.label == "oak" and lb.props["Covers"] == "SF-F053"
     assert sorted((round(b[0]), round(b[1]), round(b[3])) for b in lb.boxes) == [(-300, 0, 200), (0, 4150, 450)]
     assert not [p for p in run.parts if p.role == "Cladding"]
@@ -638,7 +644,7 @@ def test_wide_bays_split_into_sections():
     for k in (2, 3, 4):
         d = dn.part(f"SF-DN-S{k}-D1")
         assert d.drawer.front[1] - d.drawer.front[0] == pytest.approx(672.0)
-        assert (d.drawer.front[4], d.drawer.front[5]) == (pytest.approx(101.5), pytest.approx(908.5))
+        assert (d.drawer.front[4], d.drawer.front[5]) == (pytest.approx(101.5), pytest.approx(888.5))  # 890 carcass, 2026-11-20 h
         assert d.props["InnerDrawers"] == "M,K" and d.props["Latch"] == "Blum ZI7.0M07"
         inner = dn.part(f"SF-DN-S{k}-D1-I2")
         assert inner.role == "InnerDrawer" and inner.props["SideHeight"] == pytest.approx(0.128)
@@ -723,7 +729,13 @@ def test_tall_run_east_side_kickboard():
     side = run.part("KR-TALL-PLINTH-E")
     (box,) = side.boxes
     a_hi = run.bays[-1].a1
-    assert (box[0], box[1]) == (pytest.approx(a_hi - 68.0), pytest.approx(a_hi - 50.0))  # 18 board, 50 in
+    # Petr, 2026-11-20 h: "Needs to be flush with the cabinet side."
+    assert (box[0], box[1]) == (pytest.approx(a_hi - 18.0), pytest.approx(a_hi))  # 18 board, flush
+    end = run.part("KR-TALL-END-E").boxes[0]
+    assert (end[0], end[1]) == (pytest.approx(box[0]), pytest.approx(box[1]))
     assert (box[2], box[3]) == (pytest.approx(68.0), pytest.approx(592.0))  # front board's back to the carcass back
     assert (box[4], box[5]) == (0.0, pytest.approx(100.0))
-    assert side.id in run.bays[-1].members and side.props["Setback"] == pytest.approx(0.05)
+    assert side.id in run.bays[-1].members and side.props["Setback"] == pytest.approx(0.0)
+    # It meets the dining kickboard face to face at x 22.150.
+    dn = _runs()["KR-DN"].part("KR-DN-PLINTH-S").boxes[0]
+    assert run.frame.world(box[1], 0.0, 0.0)[0] == pytest.approx(_runs()["KR-DN"].frame.world(dn[0], 0.0, 0.0)[0])

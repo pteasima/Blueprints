@@ -44,6 +44,8 @@ PSET_PART = "Pset_KitchenPart"
 # kinds of furniture part a kitchen body is made of. Drawers have no IFC enum.
 PART_CLASS = {
     "Worktop": ("IfcSystemFurnitureElement", "WORKSURFACE"),
+    # The oak layer under the dining run's stone (2026-11-20 f).
+    "Underlay": ("IfcSystemFurnitureElement", "WORKSURFACE"),
     "Cladding": ("IfcCovering", "CLADDING"),
     "Backsplash": ("IfcCovering", "CLADDING"),
     "Drawer": ("IfcSystemFurnitureElement", "USERDEFINED"),

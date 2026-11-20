@@ -93,7 +93,7 @@ Oak-front wall cabinets follow the kitchen wall cabinet: depth 350, bottom 1560,
 
 The bookshelf is above the sofa, x 25.52–29.70, depth 250 (front y = 15.35, the pier face, so it does not pass the piers). Bottom **980**, 50 mm above the 930 counter, top 2450. Three shelf boards. Oak lamella on the back. **Its bottom was 850 (50 over the old 800 base); the 930 counter would have cut 80 into it, so it was raised and is 130 shorter (1600 → 1470). Petr did not ask for this.**
 
-`guess:` bookshelf sides, top and shelves 20 mm; slats 40 wide, 20 apart, 12 thick. The branch says these thicknesses are not on the plan.
+Bookshelf sides, top and shelves **40** (Petr, 2026-11-20 h: “the living room counter is the same thickness as the bookshelves, which is 40”; `Pset_Bookshelf.BoardThickness`, the living counter links to it; 20, `guess:`, before). `guess:` slats 40 wide, 20 apart, 12 thick. The branch says these thicknesses are not on the plan.
 
 ### Sofa
 

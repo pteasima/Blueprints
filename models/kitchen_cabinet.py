@@ -55,6 +55,9 @@ IKEA_DEFAULTS_MM = {
     "WorktopThickness": 38.0,  # IKEA worktops; the island run sets 20 (Silestone)
     "WorktopOverhang": 0.0,  # past the front faces; Petr gave 20 for Silestone (2026-11-13)
     "CladdingThickness": 0.0,  # 0 = same as the worktop
+    # A layer under the stone (box runs, ``UnderlayMaterial``): Petr,
+    # 2026-11-20 f, the dining run is 20 Silestone on 20 oak.
+    "UnderlayThickness": 0.0,
     "PlinthHeight": 92.0,  # METOD legs 80–100
     "PlinthSetback": 50.0,  # plinth board behind the front face (guess)
     # Inner drawers (Pset_Fronts drawer ``inner=``), Blum MERIVOBOX / LEGRABOX
@@ -642,6 +645,8 @@ class _Builder:
         if str(_prop(run.element, PSET_RUN, "Carcass", "")) == CARCASS_BOX:
             self._box_run(cabinets, z_base, height, wt)
             return
+        if p["UnderlayThickness"] > 0:
+            raise ValueError(f"{run.id}: UnderlayThickness is only modelled for Carcass: Box runs")
         z0 = z_base + p["PlinthHeight"]
         z1 = z_base + height - wt
         run.carcass_z0, run.carcass_z1 = z0, z1
@@ -708,19 +713,30 @@ class _Builder:
         the front overhang; clad ends add the cladding thickness.
         """
         run, p = self.run, self.p
-        run.carcass_z0, run.carcass_z1 = z_base, z_base + height - wt
+        ul = p["UnderlayThickness"]
+        run.carcass_z0, run.carcass_z1 = z_base, z_base + height - wt - ul
         material = _prop(run.element, PSET_RUN, "BodyMaterial")
         z0 = z_base + p["PlinthHeight"]
 
+        def own_top(bay):
+            return (_prop(bay.element, PSET_BAY, "WorktopRun") is not None
+                    or _prop(bay.element, PSET_BAY, "WorktopMaterial") is not None)
+
         def bay_wt(bay):
             # A bay topped with its own piece may have its own thickness
-            # (Pset_KitchenBay.WorktopThickness, metres): 2026-11-20 e, the
-            # oak tops of the column cupboards could differ from the stone.
+            # (Pset_KitchenBay.WorktopThickness, metres): the column
+            # cupboards' oak tops are 40 since 2026-11-20 f.
             own = _prop(bay.element, PSET_BAY, "WorktopThickness")
             return wt if own is None else float(own) * 1000.0
 
+        def bay_stack(bay):
+            # Everything over the carcass: the bay's own top, or the stone
+            # plus the underlay (``UnderlayThickness``). The finished top
+            # stays at the bay's height (930).
+            return bay_wt(bay) if own_top(bay) else wt + ul
+
         for bay in bays:
-            z1 = z_base + height - bay_wt(bay)
+            z1 = z_base + height - bay_stack(bay)
             if has_fronts(bay.element):
                 # A bay with fronts is a carcass of its own (end sides,
                 # bottom, back, rails) with its fronts, on the run's plinth.
@@ -766,8 +782,17 @@ class _Builder:
         if slabs:
             self.add(Part(f"{run.id}-WORKTOP", "Pracovní deska", "Worktop", slabs, label=_worktop_label(material),
                           material=material))
+            if ul > 0:
+                # The same footprint, under the stone (Petr, 2026-11-20 f:
+                # "the dining part has 20 silestone and 20 oak below it").
+                under = _prop(run.element, PSET_RUN, "UnderlayMaterial")
+                if under is None:
+                    raise ValueError(f"{run.id}: UnderlayThickness needs an UnderlayMaterial")
+                self.add(Part(f"{run.id}-UNDERLAY", "Podložení pracovní desky", "Underlay",
+                              [(s[0], s[1], s[2], s[3], s[4] - ul, s[4]) for s in slabs],
+                              label=_worktop_label(under), material=under, props={"Material": under}))
         if clad:
-            self._cladding(_rows(run.bays), z_base, z_base + height - wt)
+            self._cladding(_rows(run.bays), z_base, z_base + height - wt - ul)
 
     def _pairs(self, rows):
         """Back-to-back rows: a row facing c0 whose back plane is another row's back plane."""
@@ -876,10 +901,17 @@ class _Builder:
         # south-north direction (the side of the tall kitchen cabinet has a
         # hole with no kickboard)".
         sides = str(_prop(self.run.element, PSET_RUN, "SideKickboards", "") or "").split()
+        # ``SideKickboardSetback`` (metres) sets how far in from the end face
+        # the return sits; default ``PlinthSetback``. KR-TALL's is 0, flush
+        # with the side panel's outer face (Petr, 2026-11-20 h: "Youve made
+        # it recessed, which is clearly wrong. Needs to be flush with the
+        # cabinet side.").
         if kind != "Flush" and sides:
             t, sb = p["BoardThickness"], p["PlinthSetback"]
-            ends = {self._end_name(-1.0): (row[0], a_lo + sb, a_lo + sb + t),
-                    self._end_name(1.0): (row[-1], a_hi - sb - t, a_hi - sb)}
+            own = _prop(self.run.element, PSET_RUN, "SideKickboardSetback")
+            se = sb if own is None else float(own) * 1000.0
+            ends = {self._end_name(-1.0): (row[0], a_lo + se, a_lo + se + t),
+                    self._end_name(1.0): (row[-1], a_hi - se - t, a_hi - se)}
             for name in sides:
                 if name not in ends:
                     raise ValueError(f"{self.run.id}: SideKickboards {name!r} is not a run end ({', '.join(ends)})")
@@ -887,7 +919,7 @@ class _Builder:
                 k0, k1 = self.c_range(end_bay, sb + t, back_y)
                 self.add(Part(f"{self.run.id}-PLINTH-{name}{tag}", f"Soklová lišta {name}", "Plinth",
                               [(s0, s1, k0, k1, end_bay.z_base, end_bay.z_base + p["PlinthHeight"])],
-                              props={"Kind": "Kickboard", "Side": name, "Setback": round(sb / 1000.0, 6)}),
+                              props={"Kind": "Kickboard", "Side": name, "Setback": round(se / 1000.0, 6)}),
                          end_bay)
 
     def _join_flush_kickboards(self, bays):

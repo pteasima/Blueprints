@@ -827,6 +827,12 @@ systemFurniture:
           # area)"; relayed clarification: at the western column a small
           # separate oak piece (SF-F052-WORKTOP), 20 thick, 20 overhang.
           WorktopMaterial: "oak veneer"
+      # 2026-11-20 f: the oak piece is as thick as the stone + oak stack
+      # next to it (40), so the cupboard drops with the dining boxes (guess:
+      # one 40 oak piece, Petr gave the stack only for "the dining part").
+      - Name: Pset_Links
+        Properties:
+          Pset_KitchenBay.WorktopThickness: "KR-DN.Pset_KitchenRun.WorktopThickness + KR-DN.Pset_KitchenRun.UnderlayThickness"
       # Petr, 2026-11-20: "don't touch dining area bottom cabinets geometry yet, Im undecided. But make them cream color like kitchen, all the way through dining area into living room (behind couch)."
       - Name: Pset_Finish
         Properties:
@@ -915,6 +921,10 @@ systemFurniture:
           # oak-veneer worktop extends over this cupboard (SF-DN70, the 70 strip
           # it also covered until 2026-11-20 c, is gone: SF-LB runs to the pier).
           WorktopRun: KR-LB
+      # 2026-11-20 f: that counter's thickness (40, the bookshelf boards').
+      - Name: Pset_Links
+        Properties:
+          Pset_KitchenBay.WorktopThickness: "KR-LB.Pset_KitchenRun.WorktopThickness"
       # Petr, 2026-11-20: "don't touch dining area bottom cabinets geometry yet, Im undecided. But make them cream color like kitchen, all the way through dining area into living room (behind couch)."
       - Name: Pset_Finish
         Properties:
@@ -1027,6 +1037,13 @@ systemFurniture:
           # minimum internal depth LT 264 (Blum catalogue 2024/25 p. 20). Kept
           # and listed as OutsideBlumRange so the architect can resolve it
           # (fitting or depth), not redesigned here.
+          # open: FOR THE WOODWORKER (Petr, 2026-11-20 h: "keep that too
+          # shallow top dining cabinets for blum lift up hinge issue well
+          # documented for the woodworker. Its not part of the model but
+          # we'll resolve it in due time"). 276 deep = 250 inside; Blum
+          # AVENTOS HF needs LT >= 264 (catalogue 2024/25 p. 20). Options:
+          # another fitting or more depth. The model deliberately keeps 276;
+          # see the box at the top of docs/design/kitchen-cabinets.md.
           BlumRangeOverride: "Petr, 2026-11-20 f: \"dining area top cabinets as well as living room shelves are exactly the delth of columns + accoustic cladding\" (276 deep, 250 inside < HF LT 264, open:)"
           Contents1: "hrnky"
           Contents2: "hrnky"
@@ -1450,6 +1467,13 @@ furniture:
           # bottom cabinets." Also SF-F052's own oak top (same run).
           WorktopOverhang: 0.0
           WorktopMaterial: "Silestone Blanco Maple"
+          # Petr, 2026-11-20 f: "oh and btw, per the sketchup screenshot I sent earlier, the living room counter is the same thickness as the bookshelves, which is 40, and the dining part has 20 silestone and 20 oak below it. That makes all the base cabinets a bit less tall."
+          # 20 oak under the 20 stone, the same 450 flush footprint; the
+          # finished top stays at 930 (guess: invariant), so the carcasses
+          # drop 20 (910 -> 890); the 100 plinth stays. Oak species/finish
+          # guess: the natural oak of the dining furniture.
+          UnderlayThickness: 0.02
+          UnderlayMaterial: "natural oak"
           # Petr, 2026-11-20 b: "in the dining area there's no recessed
           # toe-kick, but there still is a bottom fixed kickboard with the
           # same 100mm height (flush with the cabinet fronts)." The carcasses
@@ -1460,7 +1484,7 @@ furniture:
           PlinthKind: Flush
   - id: KR-LB
     Name: "Obývák linka"
-    Description: "Living-room counter behind the sofa: SF-LB. Cream body (oak until 2026-11-20) under a 20 mm oak-veneer top, flush with the fronts like the dining top (overhang linked to KR-DN's, 0; 20 until 2026-11-20 f), top 930 like the dining run. The joint with KR-DN's Silestone at x 25.52 is open (Petr, 2026-11-13)."
+    Description: "Living-room counter behind the sofa: SF-LB. Cream body (oak until 2026-11-20) under a 40 mm oak-veneer top (the bookshelf boards' thickness, linked; 20 until 2026-11-20 f), flush with the fronts like the dining top (overhang linked to KR-DN's, 0; 20 until 2026-11-20 f), top 930 like the dining run. The joint with KR-DN's Silestone at x 25.52 is open (Petr, 2026-11-13)."
     PredefinedType: USERDEFINED
     ObjectType: KitchenRun
     ContainedInStructure: SP-1.02
@@ -1471,7 +1495,6 @@ furniture:
           # Cream like the kitchen since 2026-11-20 (was natural oak); the
           # oak-veneer top stays.
           BodyMaterial: "kitchen cream"
-          WorktopThickness: 0.02
           WorktopMaterial: "oak veneer"
           # The under-storage (2026-11-19) stands on the floor like the body did (open:).
           PlinthHeight: 0.0
@@ -1481,6 +1504,9 @@ furniture:
       - Name: Pset_Links
         Properties:
           Pset_KitchenRun.WorktopOverhang: "KR-DN.Pset_KitchenRun.WorktopOverhang"
+          # Petr, 2026-11-20 f: "the living room counter is the same
+          # thickness as the bookshelves, which is 40" (20 until then).
+          Pset_KitchenRun.WorktopThickness: "FN-BK.Pset_Bookshelf.BoardThickness"
   - id: KR-DH
     Name: "Jídelna horní"
     Description: "The oak wall cabinet over the dining run (SF-DH), a monoblock of one: three sections of doors (2026-11-19), two AVENTOS HF sections since 2026-11-20, 844 high under the oak soffit lining SF-DH-LINING."
@@ -1543,6 +1569,13 @@ furniture:
           # of the tall kitchen cabinet has a hole with no kickboard)". The
           # east end (SF-T4) stands 150 proud of the dining fronts.
           SideKickboards: "E"
+          # Petr, 2026-11-20 h: "that little kickboard I asked you to add on
+          # the side of the tall kitchen cabinet where it meets the column
+          # area. Youve made it recessed, which is clearly wrong. Needs to be
+          # flush with the cabinet side." 0 = its outer face in the end
+          # panel's outer face (it follows the run's east end); was the 50
+          # PlinthSetback.
+          SideKickboardSetback: 0.0
   - id: KR-TALL-F
     Name: "Nad lednicí"
     Description: "The cabinet over the fridge (SF-TF), a monoblock of one between KR-TALL-W and KR-TALL."
@@ -1778,7 +1811,7 @@ furniture:
           PartOf: SF-DH
   - id: FN-BK
     Name: "Knihovna"
-    Description: "Open bookshelf above the sofa, from W-053's east face to SF-TC (linked, x 25.45–29.60; was 25.52–29.70). Depth 276, front flush with the pier's slat face (linked; 250 until 2026-11-20 f), standing on the oak counter (930, linked; was 980, 50 above it), up to the oak top board SF-DH-LINING (2432, linked; was 2450). Lamella back on a 6 mm oak-veneer backing (2026-11-20 c). Three shelves. Oak lamella back, slats 40 / gap 20 / thick 12. Sides, top and shelves 20."
+    Description: "Open bookshelf above the sofa, from W-053's east face to SF-TC (linked, x 25.45–29.60; was 25.52–29.70). Depth 276, front flush with the pier's slat face (linked; 250 until 2026-11-20 f), standing on the oak counter (930, linked; was 980, 50 above it), up to the oak top board SF-DH-LINING (2432, linked; was 2450). Lamella back on a 6 mm oak-veneer backing (2026-11-20 c). Three shelves. Oak lamella back, slats 40 / gap 20 / thick 12. Sides, top and shelves 40 (Petr, 2026-11-20 f; 20 until then)."
     PredefinedType: SHELF
     ObjectType: Bookshelf
     ContainedInStructure: SP-1.02
@@ -1796,6 +1829,10 @@ furniture:
           # piers) behind the lamella, so nothing shows through.
           BackingThickness: 0.006
           BackingMaterial: "oak veneer"
+          # Petr, 2026-11-20 f: "the living room counter is the same
+          # thickness as the bookshelves, which is 40". Sides, top and
+          # shelves (20, guess:, until then); the living counter links here.
+          BoardThickness: 0.04
       # Petr, 2026-11-20 c: "that whole bookshelf area and base cabinets
       # below it need to be tightened, the connection to the column is weird,
       # these and extra thin sliver of panels and some gaps." Side to the

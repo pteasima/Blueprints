@@ -10,7 +10,8 @@ Assumed part sizes (millimetres), not on the plan:
   set in 80. Catalog height is the box.
 * Chair legs 40 square, seat board 36, back board 20. Seat top 450,
   back top is the box.
-* Bookshelf sides and top 20, shelf boards 20, three shelves in four
+* Bookshelf sides, top and shelf boards ``Pset_Bookshelf.BoardThickness``
+  (default 20; FN-BK 40, Petr 2026-11-20 f), three shelves in four
   equal openings. Lamella slats 40 wide, 20 gap, 12 thick, on the back.
 * Slat cladding (``ObjectType: SlatCladding``, the oak slats on the dining
   piers, 2026-11-20): vertical battens the box's full depth and height,
@@ -174,12 +175,13 @@ def _lining(element: dict, width: float, depth: float, height: float, gap: float
     return [solid]
 
 
-def _bookshelf(width: float, depth: float, height: float, gap: float, shelves: int, backing: float = 0.0):
+def _bookshelf(width: float, depth: float, height: float, gap: float, shelves: int, backing: float = 0.0,
+               board_t: float = _CASE_T):
     lo = gap / 2.0
     x1, y1, z1 = width - lo, depth - lo, height - lo
-    side = _CASE_T
-    top_t = _CASE_T
-    board = _CASE_T
+    side = board_t
+    top_t = board_t
+    board = board_t
     count = shelves if shelves and shelves > 0 else _SHELVES
     parts = [
         _box(lo, lo, lo, lo + side, y1, z1),
@@ -247,7 +249,8 @@ def living_detail(element: dict, width: float, depth: float, height: float, gap:
     elif kind == "Bookshelf":
         raw = _prop(element, "Pset_Bookshelf", "ShelfCount", _SHELVES)
         backing = float(_prop(element, "Pset_Bookshelf", "BackingThickness", 0.0)) * 1000.0
-        parts = _bookshelf(width, depth, height, gap, int(raw), backing)
+        board_t = float(_prop(element, "Pset_Bookshelf", "BoardThickness", _CASE_T / 1000.0)) * 1000.0
+        parts = _bookshelf(width, depth, height, gap, int(raw), backing, board_t)
     elif kind == "CabinetLining":
         parts = _lining(element, width, depth, height, gap)
         if parts is None:

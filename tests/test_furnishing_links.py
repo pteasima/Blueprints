@@ -111,7 +111,9 @@ def test_bookshelf_has_the_oak_veneer_backing():
     parts = living_geometry.living_detail(bk, w, d, h, 0.0)
     boxes = [p.bounding_box() for p in parts]
     back = [b for b in boxes if b.max.Y == pytest.approx(d) and b.size.Y == pytest.approx(6.0)]
-    assert len(back) == 1 and back[0].size.X == pytest.approx(w - 2 * 20.0, abs=1.0)  # between the 20 case sides
+    # Between the case sides, 40 since 2026-11-20 h (BoardThickness).
+    assert props["BoardThickness"] == pytest.approx(0.04)
+    assert len(back) == 1 and back[0].size.X == pytest.approx(w - 2 * 40.0, abs=1.0)
 
 
 def test_silestone_thickness_comes_from_the_catalogue():
