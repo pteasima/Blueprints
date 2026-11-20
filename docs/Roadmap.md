@@ -4,7 +4,7 @@ Petr's long-term plans for this repo. Source: Petr, 2026-11-19 (Cody chat, revie
 
 None of these is scheduled. When one starts, link its PR here and move it to Done when it merges.
 
-1. **Merge the visibility layers with the IFC groups.** The viewer's layer sliders (part groups such as Electrical › switch, sensor, outlet, actuator, cables) and the IFC inspector's groups become one tree. Started 2026-11-19 with remembered visibility, the Enclosure group and generic locks ([viewer/VisibilityState.md](viewer/VisibilityState.md)); the combined two-axis panel is not scheduled.
+1. **Merge the visibility layers with the IFC groups.** The viewer's layer sliders (part groups such as Electrical › switch, sensor, outlet, actuator, cables) and the IFC inspector's groups become one tree. Started 2026-11-19 with remembered visibility, the Enclosure group and generic locks ([viewer/VisibilityState.md](viewer/VisibilityState.md)) and the room isolate ([viewer/RoomIsolate.md](viewer/RoomIsolate.md)); the combined two-axis panel is not scheduled.
 2. **Merge edit mode with the IFC inspector.** One panel to inspect, select and edit an element ([electrical/EditMode.md](electrical/EditMode.md), [electrical/CableRoutes.md](electrical/CableRoutes.md)).
 3. **Remove unused scenes and features** from the viewer and the model modules. Partly done: the ground floor keeps one scene per detailed room ([PR 129](https://github.com/pteasima/Blueprints/pull/129), [design/ground-floor.md](design/ground-floor.md#scenes)). The standalone models' scenes and unused viewer features remain.
 4. **Remove unused models** (`models/`, `docs/models/`, the hub).

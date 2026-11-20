@@ -132,6 +132,59 @@ canvas {
 }
 
 .chrome-btn:active { transform: scale(0.96); }
+
+/* Room isolate chip (roomIsolate.js): the room the view is in, and its
+   "Only this room" / "Show all rooms" toggle. 44 pt tall like the buttons. */
+.room-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  height: 2.75rem;
+  padding: 0 0.2rem 0 0.95rem;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: var(--glass);
+  color: var(--fg);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  box-shadow: var(--shadow);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(1.6);
+  backdrop-filter: blur(var(--blur)) saturate(1.6);
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.room-chip[hidden] { display: none; }
+.room-chip-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.room-chip-toggle {
+  appearance: none;
+  flex: 0 0 auto;
+  height: 2.35rem;
+  margin-left: 0.4rem;
+  padding: 0 0.8rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--fill);
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.room-chip.is-active {
+  box-shadow: inset 0 0 0 1.5px var(--accent), var(--shadow);
+}
+.room-chip.is-active .room-chip-toggle {
+  background: var(--accent);
+  color: #fff;
+}
 .chrome-btn:disabled { opacity: 0.55; cursor: wait; }
 .chrome-btn.is-active {
   background: var(--glass-strong);
