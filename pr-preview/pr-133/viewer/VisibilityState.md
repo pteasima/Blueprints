@@ -14,12 +14,11 @@ The viewer keeps one `localStorage` entry per model, `blueprints.visibility.<mod
 
 - every Parts leaf's opacity (cables and on-demand layers such as Gridfinity included), the leaves detached from their group slider, and the group sliders' last values;
 - the locks;
-- the IFC inspector's hides ("Hide", "Hide all others");
-- the room isolate ([RoomIsolate.md](RoomIsolate.md)).
+- the IFC inspector's hides ("Hide", "Hide all others").
 
-It is written a moment after each change and on page hide, and put back when the model loads. Nothing goes into the URL. An explicit `?cables=1` / `?cables=0` / `?gridfinity=1` still wins on load, and `?scene=` still applies its scene on top. A different viewer version that changes the shape bumps `v` and the old entry is ignored.
+It is written a moment after each change and on page hide, and put back when the model loads. Nothing goes into the URL. An explicit `?cables=1` / `?cables=0` / `?gridfinity=0` still wins on load, and `?scene=` still applies its scene on top. A viewer version that changes the shape bumps `v`; an unknown version is ignored. Version 2 (2026-11-20) dropped the room isolate (Petr: "remove "only this room feature", not needed anymore with how fast this is") and starts on-demand layers on; a version-1 entry still loads, minus its on-demand layer opacities (they were 0 only because version 1 started those layers off).
 
-**Reset visibility** (button at the bottom of Parts) clears the entry and restores the defaults: every part on, cables and Gridfinity off, no inspector hides, no room isolate, and only the model's default locks.
+**Reset visibility** (button at the bottom of Parts) clears the entry and restores the defaults: every part on including Gridfinity, cables off, no inspector hides, and only the model's default locks.
 
 ## Enclosure
 
@@ -39,6 +38,6 @@ A locked row's slider is dimmed and does not respond. In the IFC inspector, a lo
 
 Why a padlock per row: it is the familiar layer-lock from CAD and design tools (AutoCAD, Figma, Illustrator), it sits where the eye already is (the row being protected), it needs no extra mode or screen, and the three states read at a glance. A separate "locked items" list was considered and rejected: one more place to look for a feature Petr sets once.
 
-**Meaning.** A lock freezes visibility. A locked item keeps the opacity it had when locked, and nothing else changes it: not its group's slider, not a scene, not Iso/Front/Side/Top, not the inspector's Hide or Hide all others, not room isolate. Its own slider is disabled until it is unlocked. Only Reset overrides locks (it puts the defaults back). Locks persist with the rest of the state.
+**Meaning.** A lock freezes visibility. A locked item keeps the opacity it had when locked, and nothing else changes it: not its group's slider, not a scene, not Iso/Front/Side/Top, not the inspector's Hide or Hide all others. Its own slider is disabled until it is unlocked. Only Reset overrides locks (it puts the defaults back). Locks persist with the rest of the state.
 
 Implementation: a locked Parts leaf is skipped by `setPartOpacity` (unless `force`), `setGroupOpacity`, Sync and the built-in views. `ifcHide.createVisibility` takes `isLocked` and never adds a locked element; `applyInspectorVisibility` also keeps any element with a mesh on a locked leaf drawn, so a lock taken after a hide brings it back.
