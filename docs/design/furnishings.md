@@ -4,6 +4,8 @@ Two documents, and they are not the same generation.
 
 The kitchen and the living room are both in `inputs/ground_floor/furnishings.yaml`. The living-room sofa, table, television and north run came from PR #83 (`cursor/living-room-sp102-8b74`); the history below keeps that branch's sources. Placing a new piece from the wall-to-wall middle will miss the false ridge; that rule is in [obyvak.md](obyvak.md).
 
+Adding or changing a piece: keep the viewer within its performance budget ([modeling rules](../viewer/Performance.md#modeling-rules-and-budget), `node scripts/model_budget.mjs`).
+
 The wave study uses a third layout. See [acoustics.md](acoustics.md).
 
 ## Frame the kitchen was traced in

@@ -87,6 +87,10 @@ Only those `src` values are rewritten to a public artifact URL. **Do not** put `
 
 After a 3D export, still write `{model}_3d.usdz` into `/opt/cursor/artifacts/`. Do not attach STEP unless the user asks.
 
+### Viewer performance budget (required after changing the ground floor)
+
+The viewer must stay fast on an iPhone. Before you add or change furniture, fixtures or other elements, read the modeling rules in [docs/viewer/Performance.md](docs/viewer/Performance.md#modeling-rules-and-budget): triangles and faces per element, few shared materials, no needless tiny elements, moving parts as their own nodes, heavy repeated detail in its own on-demand layer. After an export, run `node scripts/model_budget.mjs`; the `model-budget` workflow runs it on pull requests too and fails when the GLB is over budget. Raise a limit only on purpose and say why in the pull request.
+
 ### Preview site from chat (required after every 3D change)
 
 Cursor chat cannot open a USDZ tile or an artifact path. Export updates the Pages **inputs** (not the live site by itself):
