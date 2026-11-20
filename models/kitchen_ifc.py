@@ -179,6 +179,21 @@ class _Writer:
             Depth=z1 - z0,
         )
 
+    def prism(self, tri, c0, c1):
+        """A mitre cut: the run-frame (a, z) triangle extruded through c0..c1 (mm, +1)."""
+        pts = [(a / 1000.0, z / 1000.0) for a, z in tri]
+        pts.append(pts[0])
+        profile = self.m.create_entity(
+            "IfcArbitraryClosedProfileDef", ProfileType="AREA",
+            OuterCurve=self.m.create_entity(
+                "IfcPolyline", Points=[self.m.create_entity("IfcCartesianPoint", Coordinates=p) for p in pts]),
+        )
+        # Local x = a, local z = -c, so local y = z (up).
+        pos = self.m.create_entity("IfcAxis2Placement3D", Location=self.point(0.0, (c1 + 1.0) / 1000.0, 0.0),
+                                   Axis=self.direction(0.0, -1.0, 0.0), RefDirection=self.direction(1.0, 0.0, 0.0))
+        return self.m.create_entity("IfcExtrudedAreaSolid", SweptArea=profile, Position=pos,
+                                    ExtrudedDirection=self.direction(0.0, 0.0, 1.0), Depth=(c1 - c0 + 2.0) / 1000.0)
+
     def cylinder(self, box):
         a0, a1, c0, c1, z0, z1 = (v / 1000.0 for v in box)
         profile = self.m.create_entity(
@@ -213,11 +228,23 @@ class _Writer:
             return self.m.create_entity("IfcProductDefinitionShape", Representations=[rep])
         items = [self.extrusion(b, v) for b, v in _layers(part.boxes[0], part.voids)]
         items += [self.extrusion(b) for b in part.boxes[1:]]
+        kind = "SweptSolid"
+        if part.cuts:
+            # Mitre cuts (the island's 45 degree joints): each item less
+            # every triangular prism.
+            c0, c1 = part.boxes[0][2], part.boxes[0][3]
+            cut_items = []
+            for item in items:
+                for tri in part.cuts:
+                    item = self.m.create_entity("IfcBooleanResult", Operator="DIFFERENCE",
+                                                FirstOperand=item, SecondOperand=self.prism(tri, c0, c1))
+                cut_items.append(item)
+            items, kind = cut_items, "CSG"
         rep = self.m.create_entity(
             "IfcShapeRepresentation",
             ContextOfItems=self.body,
             RepresentationIdentifier="Body",
-            RepresentationType="SweptSolid",
+            RepresentationType=kind,
             Items=items,
         )
         return self.m.create_entity("IfcProductDefinitionShape", Representations=[rep])

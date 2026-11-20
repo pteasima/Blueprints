@@ -78,6 +78,7 @@ from build123d import (
     Cylinder,
     Face,
     Plane,
+    Polygon,
     Pos,
     RectangleRounded,
     Rot,
@@ -328,6 +329,13 @@ def _void_solid(void, z0: float, z1: float):
     return pos * Box(w, d, z1 - z0, align=(Align.CENTER, Align.CENTER, Align.MIN))
 
 
+def _cut_solid(tri, c0: float, c1: float):
+    """A mitre cut (``Part.cuts``): the (a, z) triangle through c0..c1 (+1 mm)."""
+    plane = Plane(origin=(0.0, c1 + 1.0, 0.0), x_dir=(1.0, 0.0, 0.0), z_dir=(0.0, -1.0, 0.0))
+    # Explicit direction: the face normal flips with the triangle's winding.
+    return extrude(plane * Polygon(*tri, align=None), amount=c1 - c0 + 2.0, dir=(0.0, -1.0, 0.0))
+
+
 def _run_box(box, shrink: float):
     a0, a1, c0, c1, z0, z1 = box
     return Pos(a0 + shrink, c0 + shrink, z0 + shrink) * Box(
@@ -393,6 +401,8 @@ def _kitchen_run_parts(run, motions=None, layers: dict | None = None) -> list:
             for void in part.voids:
                 bottom = z0 - 1.0 if not void.depth else z1 - void.depth
                 solid = solid - _void_solid(void, bottom, z1 + 1.0)
+            for cut in part.cuts:
+                solid = solid - _cut_solid(cut, part.boxes[0][2], part.boxes[0][3])
         label = {"worktop": LABEL_WORKTOP, "hob": LABEL_HOB, "appliance": LABEL_APPLIANCE,
                  "sink": LABEL_SINK, "oak": LABEL_OAK}.get(part.label, LABEL_CABINET)
         list_key = {"appliance": "electricAppliances", "sink": "sanitaryTerminals"}.get(part.label, "systemFurniture")

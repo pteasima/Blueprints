@@ -112,3 +112,31 @@ def test_bookshelf_has_the_oak_veneer_backing():
     boxes = [p.bounding_box() for p in parts]
     back = [b for b in boxes if b.max.Y == pytest.approx(d) and b.size.Y == pytest.approx(6.0)]
     assert len(back) == 1 and back[0].size.X == pytest.approx(w - 2 * 20.0, abs=1.0)  # between the 20 case sides
+
+
+def test_silestone_thickness_comes_from_the_catalogue():
+    # 2026-11-20 f: one source (silestone-blanco-maple.thickness_m) for every
+    # Silestone part; the returns and slats follow.
+    from ground_floor import load_furnishings
+
+    doc = load_furnishings()
+    by = {e["id"]: e for k in ("furniture", "systemFurniture", "coverings") for e in doc.get(k) or []}
+    t = furnishing_links.material_thickness("silestone-blanco-maple")
+    assert t == pytest.approx(0.02)
+    for rid in ("KR-ISL", "KR-WEST", "KR-DN"):
+        run = next(p["Properties"] for p in by[rid]["PropertySets"] if p["Name"] == "Pset_KitchenRun")
+        assert run["WorktopThickness"] == pytest.approx(t)
+    assert by["CV-BS-DN"]["Depth"] == pytest.approx(t)
+    assert by["CV-BS-DN"]["Origin"][1] + t == pytest.approx(15.60)
+    assert by["CV-BS-R052"]["Width"] == pytest.approx(t)
+    assert by["CV-SLAT-W052"]["Origin"][0] + by["CV-SLAT-W052"]["Width"] == pytest.approx(22.45 + t)
+    assert by["CV-SLAT-W053"]["Origin"][0] == pytest.approx(25.15 - t)
+    # Pier + slat cladding depth (Petr, 2026-11-20 f).
+    for eid in ("SF-DH", "FN-BK"):
+        assert by[eid]["Origin"][1] == pytest.approx(15.324)
+        assert by[eid]["Depth"] == pytest.approx(0.276)
+
+
+def test_unknown_material_link_stops():
+    with pytest.raises(furnishing_links.LinkError):
+        furnishing_links.material_thickness("no-such-stone")

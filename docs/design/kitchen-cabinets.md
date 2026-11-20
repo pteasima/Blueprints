@@ -404,7 +404,7 @@ Alternative, only the top drawer shallow (not built): SF-I600a and SF-I500b 100 
 
 ## Parametric rule
 
-Everything above is computed in `kitchen_cabinet.runs` from the bay boxes (`Origin`, `RefDirection`, `Width`, `Depth`, `Height`, `Elevation`), the run's `Pset_KitchenRun` (any `IKEA_DEFAULTS_MM` key, in metres, plus `WorktopMaterial`, `CladEnds`, `Carcass` (`Box` for whole-body bays), `BodyMaterial`, `PlinthKind` (`Legs` or `Board`), `Backsplash`, `BacksplashThickness`, `BacksplashTop`, `BacksplashMaterial`) and each bay's `Pset_Fronts` (`Layout`, `Contents`: see “Fronts and interiors”) or the older `Pset_Drawers` (`NominalHeights` in metres top to bottom, one `*` for the rest; `Contents` separated by `;`), plus the built-ins' `Pset_BuiltIn`. A bay may override the drawer and front values in its own `Pset_KitchenCabinet`. Change a bay's width and its dividers move, both neighbours' clear widths and drawer boxes follow (drawer insides are the clear width and side depth less the MAXIMERA deductions, Gridfinity baseplates follow the inside), and the worktop grows; change the counter height or the worktop thickness and the carcass, the `*` drawer and the cladding follow. Rows that stand back to back (same back plane, fronts facing away) share one central back; a run with `CladEnds` gets stone on both ends. A sink's cut-out comes from its `Pset_Sink` and follows the sink box. A hob follows its bay (`Pset_Hob`): move or widen the bay and the cut-out, rebate, glass and housing move with it. The model stops the export if the hob comes closer than `MinBackEdge` to the far edge. A backsplash runs the worktop's length, from the worktop top up to the lowest box hanging over it. A `lift` band takes its cabinet height, width and depth from the bay and is checked against Blum's ranges for its fitting; change the bay and the fronts, mechanisms, weight, power factor and open clearance follow.
+Everything above is computed in `kitchen_cabinet.runs` from the bay boxes (`Origin`, `RefDirection`, `Width`, `Depth`, `Height`, `Elevation`), the run's `Pset_KitchenRun` (any `IKEA_DEFAULTS_MM` key, in metres, plus `WorktopMaterial`, `WorktopOverhang<N|E|S|W>` (one edge, 2026-11-20 f), `CladEnds`, `CladdingMaterial`, `MitreEnds` (45° top/end joints), `Carcass` (`Box` for whole-body bays), `BodyMaterial`, `PlinthKind` (`Legs` or `Board`), `Backsplash`, `BacksplashThickness`, `BacksplashTop`, `BacksplashMaterial`) and each bay's `Pset_Fronts` (`Layout`, `Contents`: see “Fronts and interiors”) or the older `Pset_Drawers` (`NominalHeights` in metres top to bottom, one `*` for the rest; `Contents` separated by `;`), plus the built-ins' `Pset_BuiltIn`. A bay may override the drawer and front values in its own `Pset_KitchenCabinet`. Change a bay's width and its dividers move, both neighbours' clear widths and drawer boxes follow (drawer insides are the clear width and side depth less the MAXIMERA deductions, Gridfinity baseplates follow the inside), and the worktop grows; change the counter height or the worktop thickness and the carcass, the `*` drawer and the cladding follow. Rows that stand back to back (same back plane, fronts facing away) share one central back; a run with `CladEnds` gets stone on both ends. A sink's cut-out comes from its `Pset_Sink` and follows the sink box. A hob follows its bay (`Pset_Hob`): move or widen the bay and the cut-out, rebate, glass and housing move with it. The model stops the export if the hob comes closer than `MinBackEdge` to the far edge. A backsplash runs the worktop's length, from the worktop top up to the lowest box hanging over it. A `lift` band takes its cabinet height, width and depth from the bay and is checked against Blum's ranges for its fitting; change the bay and the fronts, mechanisms, weight, power factor and open clearance follow.
 
 ## Tap to open
 
@@ -1238,3 +1238,175 @@ stay open, unchanged.
   flush, 18 × 100, x 22.150–25.450, member of all three bays. It is still
   split only at the Dreame opening: two pieces, x 22.150–22.5675 and
   23.0075–25.450.
+
+## Batch 2026-11-20 f
+
+### Silestone thickness: 12 mm proposed, no-go, 20 mm for everything
+
+> “all silestone is just 12mm thick including coutertop. Apparently the manufacturer allows it”
+
+Petr, 2026-11-20, relaying the architect. Then:
+
+> “if anything doesnt pass then we dont want the change. So check the cooktop, sinks, etc. for their documentation.”
+
+> “can you estimate the price difference in czk between doing everything in 12 vs 20 vs 30? The architect wants the vertical ones to be the same thickness.”
+
+> “ok, lets use 20mm for everything (we currently have 12 for vertical).”
+
+The source for Silestone is Cosentino's *Silestone Countertops Design and
+Installation* manual, in the repo as
+[sources/SilestoneCountertopsDesignInstallation.pdf](sources/SilestoneCountertopsDesignInstallation.pdf).
+Page numbers below are the manual's printed spread numbers.
+
+**12 mm was a no-go.** Each line gives the manufacturer's text first. The
+conclusion after the arrow is ours.
+
+- **Hob.** Miele KM 8665 FL is flush-fit. Miele's installation manual
+  ([PDF](https://media.miele.com/downloads/02/8d/02_C7F1383814AE1FD185F64AE5A947028D.pdf),
+  p. 29, “Installation dimensions for flush-fit installation”) gives a
+  stepped cut-out for natural stone: rebate 12 wide and **5.5 (+0.5) deep**.
+  Cosentino p. 10|11, “Types of placement → Leveling”, says the recess is
+  **“≤ 1/3 espesor”** (a third of the thickness).
+  → At 12 mm the limit is 4 mm, against Miele's 5.5–6. It fails. At 20 mm
+  the limit is 6.7 mm, so 6 fits.
+- **Sinks.** Teka RS15 / FLEXLINEA RS15 (BE LINEA R15 / RS15 sheet) are
+  fixed with **ø10 bushings 16 mm deep** in the stone. Cosentino p. 10,
+  “Types of sinks”, says “Under counter (with plate) … Fixation: insert +
+  screw … **Thickness ≥ 30 mm**”. The glued version, “Under countertop
+  (glued) … Fixation: Recommended adhesive”, has no thickness limit.
+  → The plate and bushing method is not allowed below 30 mm. A 16 mm
+  bushing in 12 mm stone is impossible. At 20 mm the sinks are a **glued
+  undermount**: the Teka bushings are not used, and the rims are glued to
+  the underside of the stone, which is how the model already shows them.
+- **Supports.** Cosentino p. 20, “Distance between two supports”: “A1
+  Without fitting ≤ 900 mm (12) / ≤ 1,200 mm (20); A2 With Recess ≤ 600 mm
+  (12) / ≤ 800 mm (20); **B Cabinet width ≤ 700 mm**” (one value for both
+  thicknesses), and “If the cabinet supporting the countertop does not meet
+  the distances between supports, it must be reinforced”.
+  → SF-B800 (800) and SF-C850 (850) in the west run are over 700, at
+  20 mm as well. **open:** those two need reinforcement (support bars, the
+  same page) or a width change. Not redesigned here.
+- **Joints near the fittings.** Cosentino p. 10|11: “(D) Joint-fit
+  distance: ≥ 150 mm | Silestone 12 mm. ≥ 100 mm | Silestone 20, 30 mm.”
+  → There are no joints in the tops (one piece per run), so this rule
+  doesn't come into play.
+
+**Now.** `silestone-blanco-maple.thickness_m: 0.020` in
+`inputs/materials/catalogue.yaml` is the one source for Silestone
+thickness. Every Silestone part links to it with
+`mat:silestone-blanco-maple.Thickness` (`models/furnishing_links.py`):
+the three runs' `Pset_KitchenRun.WorktopThickness`, KR-WEST's
+`BacksplashThickness`, `CV-BS-DN.Depth`, `CV-BS-R052.Width` and
+`CV-BS-R053W.Width`. The island end panels take the worktop thickness. The
+worktop top stays at 930 and the 2450 line is unchanged. The horizontal
+stone was already 20, so no carcass height moves. Changes, old → new:
+
+| Part | Old | New |
+|---|---|---|
+| KR-WEST-BACKSPLASH | 12 thick, run c 588–600 | **20**, c 580–600 (the top in front of it: 608 → 600 visible) |
+| CV-BS-DN | 12, y 15.588–15.600 | **20**, y 15.580–15.600 (wall face kept) |
+| CV-BS-R052 | 12 × 238, x 22.450–22.462 | **20 × 230**, x 22.450–22.470 |
+| CV-BS-R053W | 12 × 238, x 25.138–25.150 | **20 × 230**, x 25.130–25.150 |
+| CV-SLAT-W052 | x 22.150–22.462 (312) | x 22.150–**22.470** (320), linked to the return |
+| CV-SLAT-W053 | x 25.138–25.450 (312) | x **25.130**–25.450 (320), linked to the return |
+| SF-DH-LINING notches | x 22.15–22.462 / 25.138–25.45 | 22.15–22.47 / 25.13–25.45 (linked to the slats) |
+
+### Zero overhang: dining run and island east edge
+
+> “dining area and east island side have zero overhang”
+
+> “btw, in dining area, no overhang means the top and the cabinets are both 450mm deep. Only 430mm of the countertop depth is visible because theres a 20mm backdrop. This way, we can just about fit the Dreame base station into the bottom cabinets.”
+
+- **KR-DN** `WorktopOverhang` goes 0.02 → **0**. KR-DN-WORKTOP was 470
+  deep (y 15.130–15.600) and is now **450** (y 15.150–15.600), flush with
+  the drawer fronts. CV-BS-DN (20) stands on its back 20, so 430 is
+  visible. SF-DN's boxes were already 450, front face y 15.150 to the
+  wall at 15.600, so the carcass, drawers and dock don't change. SF-F052's
+  own oak top is in the same run, so it went 220 → 200 (front
+  15.130 → 15.150). The oak strip over SF-F053 comes from this run too
+  and is also flush (front 15.150). **open:** KR-LB's own oak counter over
+  SF-LB keeps its 20 overhang (living room, not asked), so the one oak
+  part now steps by 20 at x 25.45, where SF-F053 meets SF-LB.
+- **Dreame X60 station** (416 × 443 × 249; the dock band is unchanged):
+  - Width: the opening is x 22.5675–23.0075, 440, so 12 clear each side.
+  - Height: the board is at 260, so 11 over the station.
+  - Depth: the front plane is at 0 (its notched front), and the station is
+    443 deep in the 450 front-to-wall depth, so **7 mm** to the wall. The
+    bottom and back are cut away over it. `DockClearance` 10 is not met
+    behind the station (guess: 10). **open:** confirm the wall face, and
+    any skirting or socket behind it.
+- **MERIVOBOX and Gridfinity are unchanged.** The side depth stays 414 − 18,
+  so the NL stays **400** (needs 403 ≤ the inside depth). The inside is
+  597/606 × 358, so the Gridfinity stays **14 × 8** (slack +8/+17 by +21,
+  as before).
+- **KR-ISL** has a new `Pset_KitchenRun.WorktopOverhangE: 0`. The edge
+  facing a compass side takes `WorktopOverhang<side>` when given, else
+  `WorktopOverhang` (`_Builder._overhang`). The island top went
+  2540 × 1212 → **2540 × 1192**. The east edge moved x 21.692 → **21.672**,
+  flush with the east fronts. The west 20 overhang is kept. The end panels
+  follow the top: 1212 → 1192 deep. The hob's back edge to the far (east)
+  edge went 642 → 622; Miele needs ≥ 50.
+
+### West run end panels: cream wood
+
+> “sides of western cabinet are cream color wood, not silestone (sides of island stay silestone)”
+
+KR-WEST has a new `CladdingMaterial: "kitchen cream"` and
+`CladdingThickness: 0.02`. The 20 is a guess, kept so the stone top's ends
+don't move, and it is no longer linked to the stone. KR-WEST-CLAD-N and
+KR-WEST-CLAD-S are 20 × 620 × 910 as before. They are now
+`kitchen-front-cream` (label `cabinet`), not Silestone. The top still
+covers them.
+
+### Island: 45° mitre between the top and the end panels
+
+> “island top and sides use a 45 degree joint”
+
+KR-ISL has a new `MitreEnds: true`. Each end panel now runs up to the
+worktop top (z 0–930, was 0–910). The top's end and the panel's top edge
+are both bevelled on one 45° plane, from the outer top corner (outer
+face, 930) to the inner bottom corner (inner face, 910). The model checks
+that the panel and the top have the same thickness (20 = 20) and stops
+otherwise. In the model, `Part.cuts` holds the (a, z) triangle each piece
+loses. The GLB subtracts a prism through the whole depth
+(`ground_floor._cut_solid`). The IFC uses an `IfcBooleanResult`
+DIFFERENCE (representation `CSG`). Cosentino p. 18|19 (side waterfalls):
+“Preparation: Gluing mitered pieces to the furniture structure. Valid
+only for waterfalls that are 100% attached to the furniture”, and “The
+side waterfall MUST NOT lift the countertop off the cabinet”. Its
+“Recommended thicknesses” table lists 12, 20 and 30 mm for both kinds.
+→ The panels are glued to the island's end sides (`open:`: the fixing
+detail).
+
+### Upper cabinets and bookshelf: pier + slat depth
+
+> “dining area top cabinets as well as living room shelves are exactly the delth of columns + accoustic cladding”
+
+The piers run from y 15.35 (face) to the north wall at 15.60. The slats
+are 20 + 6 backing, front at **15.324**, linked as `15.35 − Depth`. So
+pier + cladding is **276**.
+
+| Element | Old | New |
+|---|---|---|
+| SF-DH (dining wall cabinet) | y 15.250–15.600, **350** deep (324 inside) | y 15.324–15.600, **276** (250 inside), `Y = CV-SLAT-W052.Y`, `Depth = 15.60 − CV-SLAT-W052.Y` |
+| SF-DH-RET-W / -E | y 15.270–15.600 (330) | y 15.344–15.600 (256), `Y = SF-DH.Y + 0.02` |
+| FN-BK (bookshelf) | y 15.350–15.600, **250** | y 15.324–15.600, **276**, `Y = CV-SLAT-W053.Y` |
+
+Clashes and open points:
+- **Blum AVENTOS HF needs an internal depth LT ≥ 264** (catalogue
+  2024/25 p. 20). SF-DH now has **250** (276 − 18 front − 8 back). The
+  export would stop on it. SF-DH's `Pset_Fronts.BlumRangeOverride` quotes
+  Petr's depth, so it is kept and listed (`OutsideBlumRange`). **open:**
+  for the architect: another fitting, or the depth.
+- **SF-DH-LINING** (the oak board under the soffit) still runs to the
+  soffit face (y 15.15, 450 deep). It now stands **174** proud of SF-DH's
+  front (was 100). The HF sweep and its 28 above are unchanged, because
+  the height is the same.
+- The 2450 line and the soffit are untouched. SF-DH stays 1560–2404.
+
+### SF-TC cream
+
+> “Only make SF-TC cream, nothing else.”
+
+SF-TC (KR-TC, every part) goes `oak-natural-kaplan` → `kitchen-front-cream`
+(catalogue selectors and `Pset_Finish`). No other material changes.

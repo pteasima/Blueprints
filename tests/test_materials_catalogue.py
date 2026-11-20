@@ -12,8 +12,12 @@ def test_specific_selectors_win():
     assert resolve(cat, "cabinet", "SF-I600a-FRONT") == ["kitchen-front-cream"]
     assert resolve(cat, "cabinet", "KR-ISL-LEG-SF-E700-S-F") == ["stainless-brushed"]
     # Oak furniture fronts and carcasses (2026-11-19); kitchen doors are cream.
-    for mesh in ("SF-DH-S1-LIFT1", "SF-DH-BOTTOM", "SF-TC-DOOR1"):
+    for mesh in ("SF-DH-S1-LIFT1", "SF-DH-BOTTOM"):
         assert resolve(cat, "cabinet", mesh) == ["oak-natural-kaplan"], mesh
+    # Petr, 2026-11-20 f: SF-TC is cream; the west run's end panels are
+    # cream wood (the island's stay stone).
+    for mesh in ("SF-TC-DOOR1", "SF-TC", "KR-TC-END-W", "KR-WEST-CLAD-N", "KR-WEST-CLAD-S"):
+        assert resolve(cat, "cabinet", mesh) == ["kitchen-front-cream"], mesh
     # Petr, 2026-11-20: the dining and living bases are cream like the
     # kitchen, fronts and carcasses; the oak-veneer counter and the pier
     # slats are oak.

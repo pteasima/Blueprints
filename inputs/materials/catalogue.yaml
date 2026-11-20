@@ -47,7 +47,8 @@
       Solid and veneered natural oak furniture: the Gatta dining table, the six
       dining chairs, the bookshelf with its lamella back, the oak-veneer
       counter on the low base behind the sofa (KR-LB, Petr, 2026-11-13), the
-      tall corner cabinet and the oak-front wall cabinet over the dining run,
+      oak-front wall cabinet over the dining run (the tall corner cabinet
+      SF-TC is cream since 2026-11-20 f),
       with their fronts, doors, lift fronts and carcasses, and the vertical oak
       slats on the dining piers (2026-11-20). The dining and living bases
       (KR-DN, KR-LB) are cream since 2026-11-20. Everything
@@ -55,11 +56,11 @@
     selectors:
       - {label: oak}
       - {label: cabinet, id_pattern: "^(?!SF-(DN|DN70|F05[23]|LB)-|KR-(DN|LB)-).*-BODY$"}
-      - {label: cabinet, ids: [SF-TC, SF-DH]}
-      # Every part of the oak runs (2026-11-19: their fronts, doors, drawers,
-      # shelves and carcasses): KR-DH, KR-TC. KR-DN and KR-LB are cream
-      # since 2026-11-20 (kitchen-front-cream).
-      - {label: cabinet, id_pattern: "^(SF-(DH|TC)|KR-(DH|TC))-"}
+      - {label: cabinet, ids: [SF-DH]}
+      # Every part of the oak run (2026-11-19: its fronts, doors, drawers,
+      # shelves and carcass): KR-DH. KR-DN and KR-LB are cream since
+      # 2026-11-20, KR-TC (SF-TC) since 2026-11-20 f (kitchen-front-cream).
+      - {label: cabinet, id_pattern: "^(SF-DH|KR-DH)-"}
   base_color: "#aa7e60"
   roughness: 0.45
   metalness: 0.0
@@ -128,7 +129,11 @@
       # (FRONT1 …) and fillers too since 2026-11-19.
       - {label: cabinet, id_pattern: "^(?!SF-(DN|F05[23]|LB|DH|TC)-|KR-(DN|LB|DH|TC)-).*-(FRONT[0-9]*|D[0-9]+|DOOR[0-9]+|FILLER[0-9]*|LIFT[0-9]*|END-[NSEW]|PLINTH-[NSEW])$"}
       # The dining and living bases, every part (2026-11-20).
-      - {label: cabinet, id_pattern: "^(SF-(DN|DN70|F05[23]|LB)|KR-(DN|LB))-"}
+      - {label: cabinet, id_pattern: "^(SF-(DN|DN70|F05[23]|LB|TC)|KR-(DN|LB|TC))-"}
+      # The west run's end panels (Petr, 2026-11-20 f: "sides of western
+      # cabinet are cream color wood, not silestone") and the tall corner
+      # cabinet SF-TC, every part (2026-11-20 f, was natural oak).
+      - {label: cabinet, ids: [KR-WEST-CLAD-N, KR-WEST-CLAD-S, SF-TC]}
       - {label: appliance, ids: [EA-SBD6ECX]}
   base_color: "#e9e0d2"
   roughness: 0.35
@@ -173,10 +178,19 @@
 
 - id: silestone-blanco-maple
   name: Silestone Blanco Maple, 20 mm
+  # Petr, 2026-11-20 f: "ok, lets use 20mm for everything (we currently have
+  # 12 for vertical)". 12 mm (the architect's proposal) was a no-go: the
+  # Miele flush hob and the Teka sink fixings need more than 12 mm
+  # (kitchen-cabinets.md, "Batch 2026-11-20 f"). Every Silestone part,
+  # horizontal and vertical, links its thickness here
+  # (mat:silestone-blanco-maple.Thickness, models/furnishing_links.py).
+  thickness_m: 0.020
   applies_to:
     description: >-
       Kitchen worktops (island, west run, north dining run), the island end
-      cladding, and the Silestone backsplashes (west and north walls).
+      panels (mitred to the top), and the Silestone backsplashes and pier
+      returns (west and north walls), all 20 mm. Not the west run's end
+      panels (cream wood since 2026-11-20 f).
     selectors:
       - {label: worktop}
   base_color: "#ede8dd"

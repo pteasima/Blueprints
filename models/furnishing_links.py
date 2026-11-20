@@ -18,7 +18,11 @@ property of one of the element's own property sets). Expressions are
 arithmetic (``+ - * / ( )``, numbers) over references ``<id>.<attr>`` with
 attr ``X Y Width Depth Height Elevation East North Top`` (metres), or a
 bare attr of the element itself. ``East``/``North`` need an unrotated box
-(no ``RefDirection`` or ``[1, 0]``).
+(no ``RefDirection`` or ``[1, 0]``). Also ``<id>.<Pset>.<Property>`` (a
+number in another element's property set) and ``mat:<material-id>.Thickness``
+(``thickness_m`` of a material in inputs/materials/catalogue.yaml, metres;
+2026-11-20 f: every Silestone part takes its 20 mm from
+``silestone-blanco-maple``).
 
 Everything resolves in dependency order; a cycle or a missing reference
 stops the load. The YAML file stays a valid yaml-ifc document (linked
@@ -36,6 +40,8 @@ PSET = "Pset_Links"
 ATTRS = ("X", "Y", "Width", "Depth", "Height", "Elevation", "East", "North", "Top")
 LISTS = ("furniture", "systemFurniture", "electricAppliances", "sanitaryTerminals", "coverings")
 _REF = re.compile(r"\b([A-Z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)+)\.(X|Y|Width|Depth|Height|Elevation|East|North|Top)\b")
+_PREF = re.compile(r"\b([A-Z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)+)\.(Pset_[A-Za-z0-9_]+)\.([A-Za-z0-9_]+)\b")
+_MAT = re.compile(r"\bmat:([a-z0-9]+(?:-[a-z0-9]+)*)\.Thickness\b")
 _SELF = re.compile(r"(?<![\w.-])(X|Y|Width|Depth|Height|Elevation|East|North|Top)\b")
 _OPS = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul, ast.Div: operator.truediv,
         ast.USub: operator.neg, ast.UAdd: operator.pos}
@@ -92,12 +98,51 @@ def _attr(e: dict, attr: str) -> float | None:
     raise LinkError(f"unknown attribute {attr}")
 
 
+_CATALOGUE: dict | None = None
+
+
+def material_thickness(material_id: str) -> float:
+    """``thickness_m`` of a catalogue material (metres)."""
+    global _CATALOGUE
+    if _CATALOGUE is None:
+        from blueprints.materials import load_catalogue
+
+        _CATALOGUE = {m["id"]: m for m in load_catalogue()}
+    m = _CATALOGUE.get(material_id)
+    if m is None:
+        raise LinkError(f"mat:{material_id}: not in the materials catalogue")
+    if m.get("thickness_m") is None:
+        raise LinkError(f"mat:{material_id}: the catalogue gives no thickness_m")
+    return float(m["thickness_m"])
+
+
+def _pset_prop(e: dict, pset_name: str, prop: str):
+    for pset in e.get("PropertySets") or []:
+        if pset.get("Name") == pset_name:
+            return (pset.get("Properties") or {}).get(prop)
+    return None
+
+
 def evaluate(expr, element: dict, by_id: dict) -> float | None:
     """The value of one link expression, or None while a reference is unresolved."""
     if isinstance(expr, (int, float)):
         return float(expr)
     text = str(expr)
     missing = False
+    text = _MAT.sub(lambda m: repr(material_thickness(m.group(1))), text)
+
+    def pref(match):
+        rid, pset_name, prop = match.groups()
+        if rid not in by_id:
+            raise LinkError(f"{element['id']}: {rid} is not an element")
+        v = _pset_prop(by_id[rid], pset_name, prop)
+        if v is None:
+            raise LinkError(f"{element['id']}: {rid} has no {pset_name}.{prop}")
+        if isinstance(v, str):
+            raise LinkError(f"{element['id']}: {rid}.{pset_name}.{prop} is not a number")
+        return repr(float(v))
+
+    text = _PREF.sub(pref, text)
 
     def ref(match):
         nonlocal missing
@@ -166,7 +211,12 @@ def resolve(doc: dict) -> dict:
 
     def blocks(e, expr):
         # Unresolved targets an expression reads (by id, attr) block it.
-        text = str(expr)
+        text = _MAT.sub("0", str(expr))
+        for rid, pset_name, prop in _PREF.findall(text):
+            o = by_id.get(rid)
+            if o is not None and (id(o), f"{pset_name}.{prop}") in pending:
+                return True
+        text = _PREF.sub("0", text)
         for rid, attr in _REF.findall(text):
             o = by_id.get(rid)
             if o is None:

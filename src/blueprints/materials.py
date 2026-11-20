@@ -30,7 +30,9 @@ MODELS_DIR = REPO_ROOT / "docs" / "models"
 COVERED_MODELS = ("ground_floor", "bathroom_107", "bathroom_120")
 
 REQUIRED = ("id", "name", "applies_to", "base_color", "roughness", "metalness", "tile_size_m", "status", "source", "notes")
-OPTIONAL = ("transmission", "opacity", "ior", "maps", "rotation_deg")
+# thickness_m: the stock thickness, for parts linked to it
+# (``mat:<id>.Thickness`` in models/furnishing_links.py).
+OPTIONAL = ("transmission", "opacity", "ior", "maps", "rotation_deg", "thickness_m")
 MAP_KEYS = ("color", "normal", "roughness", "ao")
 STATUSES = ("known", "assumed")
 ID_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
