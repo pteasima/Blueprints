@@ -10,7 +10,10 @@ the bass traps start and the pocket doors and tall cabinets stop
 furnishing or a kitchen part reaches above it. ``check_open_envelopes``
 stops it if an open lift front (its swept path and its Blum clearance box)
 would meet a bass trap, the soffit over the north cabinets or the sloped
-ceiling, and returns the margins for the notes.
+ceiling, and returns the margins for the notes. A bay whose
+``Pset_Fronts.AcceptOpenClash`` gives a reason (Petr's quote) is modelled
+anyway: the overlap is a note and an ``OpenClash`` property on its lift
+fronts instead of an error (SF-DH, 2026-11-20).
 
 The obývák model's frame: X eave to eave, 0 at the south eave and
 ``room_width`` at the cabinet (north) eave; Y gable to gable, 0 at the living
@@ -110,8 +113,22 @@ def swept_points(run) -> dict:
     return out
 
 
+def _accepted(run, bid: str):
+    """The bay's ``Pset_Fronts.AcceptOpenClash`` (a section ``<bay>-S<N>``
+    reads its bay's), or None."""
+    for bay in run.bays:
+        if bid == bay.id or (bid.startswith(bay.id + "-S") and bid[len(bay.id) + 2:].isdigit()):
+            for pset in bay.element.get("PropertySets") or []:
+                if pset.get("Name") == "Pset_Fronts":
+                    reason = (pset.get("Properties") or {}).get("AcceptOpenClash")
+                    if reason:
+                        return str(reason)
+    return None
+
+
 def check_open_envelopes(runs: list, room: tuple) -> list:
-    """Notes with each lift front's margins; raises on an overlap."""
+    """Notes with each lift front's margins; raises on an overlap unless the
+    bay accepts it (``AcceptOpenClash``), then the overlap is in the notes."""
     obs = obstacles(room)
     notes, hits = [], []
     for run in runs:
@@ -127,10 +144,18 @@ def check_open_envelopes(runs: list, room: tuple) -> list:
             zs = [q[2] for q in pts]
             ex = (min(xs), max(xs), min(ys), max(ys), min(zs), max(zs))
             margins = []
+            accepted = _accepted(run, bid)
             for name, ox0, ox1, oy0, oy1, oz0, oz1 in obs:
                 apart = max(ox0 - ex[1], ex[0] - ox1, oy0 - ex[3], ex[2] - oy1, oz0 - ex[5], ex[4] - oz1)
                 if apart < -TOL:
-                    hits.append(f"{group} open meets the {name}")
+                    if accepted:
+                        clash = f"{-apart:.0f} mm into the {name} (swept fronts and Blum's clearance box)"
+                        notes.append(f"open: {group} open meets the {name}, {clash}; modelled anyway: {accepted}")
+                        for p in run.parts:
+                            if p.lift is not None and p.lift.group == group:
+                                p.props["OpenClash"] = clash
+                    else:
+                        hits.append(f"{group} open meets the {name}")
                 margins.append(f"{apart:.0f} from the {name}")
             head = min(ceiling_z(room, q[1]) - q[2] for q in pts)
             if head < TOL:
