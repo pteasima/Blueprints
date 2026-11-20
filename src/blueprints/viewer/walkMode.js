@@ -28,6 +28,7 @@ import {
   saveWalkHeight,
   snapHeightCm,
   stepPlayer,
+  bodyFits,
 } from "./walkPhysics.js";
 
 /** Radians of turn per pixel of locked mouse movement. */
@@ -267,7 +268,32 @@ export function createWalkMode(opts) {
 
   // --- Enter / exit ---
   /**
-   * @param {{ lock?: boolean }} [o]
+   * @param {unknown} v
+   * @returns {THREE.Vector3 | null}
+   */
+  function readVec3(v) {
+    if (!v) return null;
+    if (v.isVector3) return v.clone();
+    if (Array.isArray(v) && v.length >= 3) {
+      const x = Number(v[0]);
+      const y = Number(v[1]);
+      const z = Number(v[2]);
+      if (Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(z)) {
+        return new THREE.Vector3(x, y, z);
+      }
+    } else if (typeof v === "object") {
+      const x = Number(v.x);
+      const y = Number(v.y);
+      const z = Number(v.z);
+      if (Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(z)) {
+        return new THREE.Vector3(x, y, z);
+      }
+    }
+    return null;
+  }
+
+  /**
+   * @param {{ lock?: boolean, pose?: { feet?: unknown, yaw?: number, pitch?: number } }} [o]
    * @returns {boolean}
    */
   function enter(o = {}) {
@@ -278,13 +304,23 @@ export function createWalkMode(opts) {
     if (!w) return false;
     const camera = opts.getCamera();
     camera.updateMatrixWorld();
-    const spot = findSpawn(w, spawnRay(camera, w.bounds), heightCm);
+    const poseFeet = readVec3(o.pose?.feet);
+    let spot = poseFeet && bodyFits(w, poseFeet, heightCm) ? poseFeet : null;
+    if (!spot) {
+      spot = findSpawn(w, spawnRay(camera, w.bounds), heightCm);
+    }
     if (!spot) {
       showHint("walk.noSpot", 3000);
       return false;
     }
-    const { yaw } = yawPitchOf(camera);
-    player = createPlayer({ feet: spot, yaw, pitch: -0.08, heightCm });
+    const fromCam = yawPitchOf(camera);
+    const yaw = Number.isFinite(o.pose?.yaw) ? o.pose.yaw : fromCam.yaw;
+    const pitch = Number.isFinite(o.pose?.pitch)
+      ? o.pose.pitch
+      : poseFeet
+        ? fromCam.pitch
+        : -0.08;
+    player = createPlayer({ feet: spot, yaw, pitch, heightCm });
     eyeY = spot.y + eyeHeightM(heightCm);
     active = true;
     lastNow = 0;
