@@ -510,7 +510,11 @@ systemFurniture:
       # slack across (11 cells, open:).
       - Name: Pset_Fronts
         Properties:
-          Layout: "drawer * box=F"
+          # Petr, 2026-11-20 d: "I can't see the merivobox drawer on kitchen
+          # island east, please double check that you've added them." Two
+          # MERIVOBOX inner drawers behind the front (M coupled, K), as in
+          # the dining run; the F box stays at the bottom.
+          Layout: "drawer * box=F inner=M,K"
       - Name: Pset_Drawers
         Properties:
           Gridfinity: true
@@ -542,7 +546,11 @@ systemFurniture:
       # Was three drawers 100 / 100 / rest (2026-11-19).
       - Name: Pset_Fronts
         Properties:
-          Layout: "drawer * box=F"
+          # Petr, 2026-11-20 d: "I can't see the merivobox drawer on kitchen
+          # island east, please double check that you've added them." Two
+          # MERIVOBOX inner drawers behind the front (M coupled, K), as in
+          # the dining run; the F box stays at the bottom.
+          Layout: "drawer * box=F inner=M,K"
       - Name: Pset_Drawers
         Properties:
           Gridfinity: true
@@ -574,7 +582,11 @@ systemFurniture:
       # Was three drawers 100 / 100 / rest (2026-11-19).
       - Name: Pset_Fronts
         Properties:
-          Layout: "drawer * box=F"
+          # Petr, 2026-11-20 d: "I can't see the merivobox drawer on kitchen
+          # island east, please double check that you've added them." Two
+          # MERIVOBOX inner drawers behind the front (M coupled, K), as in
+          # the dining run; the F box stays at the bottom.
+          Layout: "drawer * box=F inner=M,K"
       - Name: Pset_Drawers
         Properties:
           Gridfinity: true
@@ -606,7 +618,11 @@ systemFurniture:
       # Was three drawers 100 / 100 / rest (2026-11-19).
       - Name: Pset_Fronts
         Properties:
-          Layout: "drawer * box=F"
+          # Petr, 2026-11-20 d: "I can't see the merivobox drawer on kitchen
+          # island east, please double check that you've added them." Two
+          # MERIVOBOX inner drawers behind the front (M coupled, K), as in
+          # the dining run; the F box stays at the bottom.
+          Layout: "drawer * box=F inner=M,K"
       - Name: Pset_Drawers
         Properties:
           Gridfinity: true
@@ -1469,6 +1485,11 @@ furniture:
           WorktopThickness: 0.0
           # 100 like the bases (Petr, 2026-11-12); total stays 2450, carcass 2350.
           PlinthHeight: 0.10
+          # Petr, 2026-11-20 d: "Please add a bit of kickboard between the
+          # kitchen and dining areas in the south-north direction (the side
+          # of the tall kitchen cabinet has a hole with no kickboard)". The
+          # east end (SF-T4) stands 150 proud of the dining fronts.
+          SideKickboards: "E"
   - id: KR-TALL-F
     Name: "Nad lednicí"
     Description: "The cabinet over the fridge (SF-TF), a monoblock of one between KR-TALL-W and KR-TALL."

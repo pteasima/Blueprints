@@ -76,6 +76,14 @@ def test_island_east_row_drawers_are_on_the_gridfinity_grid():
     grids = {}
     for bay_id in ("SF-E600a", "SF-E600b", "SF-E600c", "SF-E700"):
         assert not any(p.id == f"{bay_id}-D2" for p in run.parts)
+        # Petr, 2026-11-20 d: "I can't see the merivobox drawer on kitchen
+        # island east": the F box plus two inner drawers, M (coupled) and K.
+        i1, i2 = run.part(f"{bay_id}-D1-I1"), run.part(f"{bay_id}-D1-I2")
+        assert (i1.role, i2.role) == ("InnerDrawer", "InnerDrawer")
+        assert (i1.drawer.box[4], i1.drawer.box[5]) == (pytest.approx(772.0), pytest.approx(862.0))
+        assert (i2.drawer.box[4], i2.drawer.box[5]) == (pytest.approx(510.5), pytest.approx(638.5))
+        assert i1.props["Latched"] and not i2.props.get("Latched")
+        assert i1.drawer.grid == i2.drawer.grid == (13, 12)
         d = run.part(f"{bay_id}-D1").drawer
         assert round(d.front[5] - d.front[4]) == 807
         n, m = d.grid
@@ -411,7 +419,10 @@ def test_drawer_motions_in_model():
         assert m["slide"] == pytest.approx([-0.501, 0.0, 0.0])
     east = [m for m in drawers if m["id"].startswith("SF-E")]
     # MERIVOBOX NL 550 since 2026-11-20 c.
-    assert len(east) == 4 and all(m["slide"] == pytest.approx([EAST_SLIDE, 0.0, 0.0]) for m in east)
+    assert len(east) == 12 and all(m["slide"] == pytest.approx([EAST_SLIDE, 0.0, 0.0]) for m in east)
+    # 2026-11-20 d: each east front has two MERIVOBOX inner drawers.
+    assert sorted(m["id"] for m in east if m.get("parent")) == sorted(
+        f"{b}-D1-I{k}" for b in ("SF-E600a", "SF-E600b", "SF-E600c", "SF-E700") for k in (1, 2))
     # SF-I600a spans y 12.693–13.300 (607 since the Gridfinity widths).
     assert [m["center"][2] for m in island[:3]] == pytest.approx([-12.9965] * 3, abs=1e-6)
     west = [m for m in drawers if m["id"] in ("SF-A250-D1", "SF-B800-D1", "SF-C850-D1")]
@@ -541,8 +552,13 @@ def test_dining_flush_kickboard():
     # height (flush with the cabinet fronts)".
     run = _runs()["KR-DN"]
     kick = [p for p in run.parts if p.role == "Plinth"]
-    assert {p.id for p in kick} == {"KR-DN-PLINTH-S-SF-F052", "KR-DN-PLINTH-S-SF-DN", "KR-DN-PLINTH-S-SF-F053"}
+    # Petr, 2026-11-20 d: "theres no reason there should be a split in the
+    # kickboard where each column meets the dining are, it can just be one
+    # continous kickboard": one part, split only by the Dreame opening.
+    assert [p.id for p in kick] == ["KR-DN-PLINTH-S"]
+    assert [(b[0], b[1]) for b in kick[0].boxes] == [(0.0, pytest.approx(417.5)), (pytest.approx(857.5), 3300.0)]
     assert all((b[2], b[3], b[4], b[5]) == (0.0, 18.0, 0.0, 100.0) for p in kick for b in p.boxes)
+    assert all(kick[0].id in b.members for b in run.bays)
     assert run.part("SF-F052-DOOR1").boxes[0][4] == pytest.approx(101.5)
     # Petr: the western cupboard switches hinge direction; the eastern stays.
     assert run.part("SF-F052-DOOR1").props["Hinge"] == "L"
@@ -592,7 +608,7 @@ def test_wide_bays_split_into_sections():
     dock = dn.part("EA-DREAME-X60M")
     a0, a1, _c0, c1, z0, z1 = dock.boxes[0]
     assert (a1 - a0, c1, z0, z1) == (pytest.approx(416.0), pytest.approx(443.0), 0.0, pytest.approx(249.0))
-    kick = dn.part("KR-DN-PLINTH-S-SF-DN").boxes
+    kick = dn.part("KR-DN-PLINTH-S").boxes
     assert all(b[1] <= a0 or b[0] >= a1 for b in kick)  # open over the station
     # Petr, 2026-11-20 c: "lets center the dreame x60 station on its
     # cabinet. The rectangles left on the left and right in front of the
@@ -657,3 +673,17 @@ def test_dining_drawers_merivobox_and_gridfinity():
             assert bool(inner.props.get("Latched")) == (i == 1)
             plate = inner.drawer.items[0]
             assert plate[1] - plate[0] == pytest.approx(14 * p["GridfinityPitch"])
+
+
+def test_tall_run_east_side_kickboard():
+    # Petr, 2026-11-20 d: "Please add a bit of kickboard between the kitchen
+    # and dining areas in the south-north direction (the side of the tall
+    # kitchen cabinet has a hole with no kickboard)".
+    run = _runs()["KR-TALL"]
+    side = run.part("KR-TALL-PLINTH-E")
+    (box,) = side.boxes
+    a_hi = run.bays[-1].a1
+    assert (box[0], box[1]) == (pytest.approx(a_hi - 68.0), pytest.approx(a_hi - 50.0))  # 18 board, 50 in
+    assert (box[2], box[3]) == (pytest.approx(68.0), pytest.approx(592.0))  # front board's back to the carcass back
+    assert (box[4], box[5]) == (0.0, pytest.approx(100.0))
+    assert side.id in run.bays[-1].members and side.props["Setback"] == pytest.approx(0.05)

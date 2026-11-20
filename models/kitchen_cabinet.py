@@ -713,6 +713,7 @@ class _Builder:
             self.add(Part(f"{bay.id}-BODY", bay.element.get("Name") or bay.id, "Body",
                           [(bay.a0, bay.a1, bay.c0, bay.c1, z_base, z_base + height - wt)], material=material), bay)
         self._dock_appliances(bays)
+        self._join_flush_kickboards(bays)
         if wt <= 0:
             return
         oh = p["WorktopOverhang"]
@@ -851,6 +852,57 @@ class _Builder:
                       [(a_lo, a_hi, c0, c1, bay.z_base, bay.z_base + p["PlinthHeight"])],
                       props={"Kind": "Kickboard", "Setback": round((0.0 if kind == "Flush" else p["PlinthSetback"]) / 1000.0, 6)}),
                  *row)
+        # A run end left open to the room gets a return kickboard along
+        # the depth, ``PlinthSetback`` in from that end face, from the
+        # front kickboard to the back (``Pset_KitchenRun.SideKickboards``:
+        # "W", "E" or "W E" by compass). Petr, 2026-11-20 d: "Please add a
+        # bit of kickboard between the kitchen and dining areas in the
+        # south-north direction (the side of the tall kitchen cabinet has a
+        # hole with no kickboard)".
+        sides = str(_prop(self.run.element, PSET_RUN, "SideKickboards", "") or "").split()
+        if kind != "Flush" and sides:
+            t, sb = p["BoardThickness"], p["PlinthSetback"]
+            ends = {self._end_name(-1.0): (row[0], a_lo + sb, a_lo + sb + t),
+                    self._end_name(1.0): (row[-1], a_hi - sb - t, a_hi - sb)}
+            for name in sides:
+                if name not in ends:
+                    raise ValueError(f"{self.run.id}: SideKickboards {name!r} is not a run end ({', '.join(ends)})")
+                end_bay, s0, s1 = ends[name]
+                k0, k1 = self.c_range(end_bay, sb + t, back_y)
+                self.add(Part(f"{self.run.id}-PLINTH-{name}{tag}", f"Soklová lišta {name}", "Plinth",
+                              [(s0, s1, k0, k1, end_bay.z_base, end_bay.z_base + p["PlinthHeight"])],
+                              props={"Kind": "Kickboard", "Side": name, "Setback": round(sb / 1000.0, 6)}),
+                         end_bay)
+
+    def _join_flush_kickboards(self, bays):
+        """One flush kickboard along a box run (Petr, 2026-11-20 d: "theres
+        no reason there should be a split in the kickboard where each column
+        meets the dining are, it can just be one continous kickboard"): the
+        bays' boards in one front plane become one part, their touching
+        pieces one piece; only a dock opening still splits it."""
+        run = self.run
+        kick = [q for q in run.parts if q.role == "Plinth" and q.props.get("Kind") == "Kickboard"
+                and float(q.props.get("Setback") or 0.0) == 0.0]
+        if len(kick) < 2:
+            return
+        planes = {(round(b[2], 3), round(b[3], 3), round(b[4], 3), round(b[5], 3)) for q in kick for b in q.boxes}
+        if len(planes) != 1:
+            return  # not one front plane: leave them
+        boxes = sorted((b for q in kick for b in q.boxes), key=lambda b: b[0])
+        merged = [list(boxes[0])]
+        for b in boxes[1:]:
+            if b[0] <= merged[-1][1] + TOL:
+                merged[-1][1] = max(merged[-1][1], b[1])
+            else:
+                merged.append(list(b))
+        face = run.frame.compass(0.0, -1.0 if bays[0].front_low else 1.0)
+        ids = {q.id for q in kick}
+        run.parts[:] = [q for q in run.parts if q.id not in ids]
+        self.ids -= ids
+        for bay in run.bays:
+            bay.members[:] = [m for m in bay.members if m not in ids]
+        self.add(Part(f"{run.id}-PLINTH-{face}", f"Soklová lišta {face}", "Plinth", [tuple(b) for b in merged],
+                      props={**kick[0].props}), *bays)
 
     def _legs(self, row, back_y):
         """Open legs, no kick board (Petr, 2026-11-12: the robot vacuum
