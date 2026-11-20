@@ -64,6 +64,21 @@ IKEA_DEFAULTS_MM = {
     # ceiling (guess:); the others spread evenly below it.
     "InnerSideM": 90.0,
     "InnerSideK": 128.0,
+    # Blum MERIVOBOX system heights E and F (Blum MERIVOBOX instructions: N
+    # 68.5, M 91, K 129, E 192, F 256; M and K as Petr gave them, above).
+    "InnerSideE": 192.0,
+    "InnerSideF": 256.0,
+    # Blum MERIVOBOX (Pset_Drawers.System: MERIVOBOX, 2026-11-20 c): the
+    # 16 mm chipboard base and back are LW − 51 wide, LW the cabinet's inside
+    # width (Blum MERIVOBOX planning, TD-069 / installation sheet); the
+    # inside width is taken as that base width (guess: the side profiles'
+    # inner faces). Nominal lengths NL in 50 steps from 270; the cabinet
+    # needs NL + 3 inside depth (Blum); the base is NL − 26 long with a
+    # chipboard back, the inside depth that less the 16 back (guess:).
+    "MerivoboxWidthDeduction": 51.0,
+    "MerivoboxDepthClearance": 3.0,
+    "MerivoboxBaseDeduction": 26.0,
+    "MerivoboxBackThickness": 16.0,
     "InnerTopGap": 30.0,
     # Blum ZI7.0M07 driver set ("unašeč", LEGRABOX/MERIVOBOX inner drawers,
     # for 90 / 128 sides): the driver clips on the middle of the inner
@@ -241,7 +256,8 @@ def section_widths(element: dict, width: float) -> list[float] | None:
 
 def section_element(element: dict, number: int) -> dict:
     """The yaml element one section reads its fronts from: ``Layout<N>``
-    (else ``Layout``), ``Contents<N>`` (else none), ``Gridfinity``."""
+    (else ``Layout``), ``Contents<N>`` (else none), ``Gridfinity``, and the
+    bay's ``Pset_Drawers``."""
     props = next((ps.get("Properties") or {} for ps in element.get("PropertySets") or []
                   if ps.get("Name") == PSET_FRONTS), {})
     layout = props.get(f"Layout{number}", props.get("Layout"))
@@ -253,8 +269,14 @@ def section_element(element: dict, number: int) -> dict:
             sub["Contents"] = props[key]
     if props.get("Gridfinity") is not None:
         sub["Gridfinity"] = props["Gridfinity"]
+    psets = [{"Name": PSET_FRONTS, "Properties": sub}]
+    # The bay's Pset_Drawers (Gridfinity, System) holds for every section.
+    drawers = next((ps.get("Properties") for ps in element.get("PropertySets") or []
+                    if ps.get("Name") == PSET_DRAWERS), None)
+    if drawers:
+        psets.append({"Name": PSET_DRAWERS, "Properties": dict(drawers)})
     return {"id": f"{element['id']}-S{number}", "Name": f"{element.get('Name', element['id'])} {number}",
-            "PropertySets": [{"Name": PSET_FRONTS, "Properties": sub}]}
+            "PropertySets": psets}
 
 
 def section_elements(element: dict) -> list[dict]:
@@ -958,7 +980,10 @@ class _Builder:
                              carcass_z0=z0, top_limit=(z1 - t) if top_zone else None,
                              on_board=board_below)
                 name = ("Výsuv" if zone.kind == "pullout" else "Šuplík") + f" {drawer_no} {dr.content}"
-                props = dict(base, Extension=round(dr.extension / 1000.0, 6),
+                system = drawer_system(bay.element)
+                props = dict(base, System=("Blum MERIVOBOX" if system == "MERIVOBOX" else "MAXIMERA-like"),
+                             NominalLength=(round(merivobox_nl(p, back_y - tf) / 1000.0, 6) if system == "MERIVOBOX" else None),
+                             Extension=round(dr.extension / 1000.0, 6),
                              BoxWidth=round((dr.box[1] - dr.box[0]) / 1000.0, 6),
                              BoxDepth=round(abs(dr.box[3] - dr.box[2]) / 1000.0, 6),
                              BoxHeight=round((dr.box[5] - dr.box[4]) / 1000.0, 6),
@@ -987,23 +1012,36 @@ class _Builder:
                                  Latch="Blum ZI7.0M07" if latch == "top" else None,
                                  OuterBoxSide=round((dr.box[5] - dr.box[4]) / 1000.0, 6))
                 if latch == "top":
-                    # Blum ZI7.0M07: the top inner drawer opens with the front;
-                    # it rides on the front's drawer (one mesh, one motion).
-                    ib = inner_boxes[0]
-                    boxes += inner_drawer_boxes(p, ib, dr.out)
-                    boxes += latch_boxes(p, dr, ib)
-                self.add(Part(f"{bay.id}-D{drawer_no}", name.strip(), "Drawer" if zone.kind == "drawer" else "PullOut",
-                              boxes, drawer=dr, props=props), bay)
+                    # Blum ZI7.0M07: its housing is drilled into the back of
+                    # the front (rides with the front); the driver clips on the
+                    # top inner drawer (rides with that drawer, below).
+                    boxes += latch_boxes(p, dr, inner_boxes[0])[:1]
+                outer = self.add(Part(f"{bay.id}-D{drawer_no}", name.strip(), "Drawer" if zone.kind == "drawer" else "PullOut",
+                                      boxes, drawer=dr, props=props), bay)
+                # Inner drawers (2026-11-20 c): each its own part and motion,
+                # opening only with the front open (``Parent``); the coupled
+                # top one (ZI7.0M07) opens with the front, the front closing
+                # closes them all (viewer: doors.js).
                 for k, ib in enumerate(inner_boxes, start=1):
-                    if k == 1 and latch == "top":
-                        continue
-                    idr = replace(dr, front=inner_drawer_boxes(p, ib, dr.out)[0], box=ib, items=[], baseplate=[],
-                                  grid=None, floor_z=ib[4] + p["BoxBottomThickness"],
-                                  inside=(dr.inside[0], dr.inside[1], ib[5] - ib[4] - p["BoxBottomThickness"]))
+                    coupled = k == 1 and latch == "top"
+                    ifloor = ib[4] + p["BoxBottomThickness"]
+                    iboxes = inner_drawer_boxes(p, ib, dr.out)
+                    igrid, iplate = None, []
+                    if dr.grid:
+                        ic0, ic1 = ib[2] + p["BoxWall"], ib[3] - p["BoxWall"]
+                        igrid = dr.grid
+                        iplate = gridfinity_baseplate(p, igrid[0], igrid[1], (ib[0] + ib[1]) / 2.0, (ic0 + ic1) / 2.0, ifloor)
+                    if coupled:
+                        iboxes += latch_boxes(p, dr, ib)[1:]
+                    idr = replace(dr, front=iboxes[0], box=ib, items=list(iplate), baseplate=list(iplate),
+                                  grid=igrid, floor_z=ifloor,
+                                  inside=(dr.inside[0], dr.inside[1], ib[5] - ifloor))
                     self.add(Part(f"{bay.id}-D{drawer_no}-I{k}", f"Vnitřní šuplík {k}", "InnerDrawer",
-                                  inner_drawer_boxes(p, ib, dr.out), drawer=idr,
+                                  iboxes + iplate, drawer=idr,
                                   props={"Zone": zone.index, "Kind": "inner", "System": "Blum MERIVOBOX",
-                                         "SideHeight": round((ib[5] - ib[4]) / 1000.0, 6), "Latched": False}), bay)
+                                         "SideHeight": round((ib[5] - ib[4]) / 1000.0, 6), "Latched": coupled,
+                                         "Latch": "Blum ZI7.0M07" if coupled else None, "Parent": outer.id,
+                                         "Gridfinity": f"{igrid[0]}x{igrid[1]}" if igrid else None}), bay)
             elif zone.kind in ("door", "doors"):
                 leaves = _leaves(bay, p, zone, front_box)
                 for hinge, a0, a1 in leaves["doors"]:
@@ -1056,11 +1094,14 @@ class _Builder:
     def _dock(self, bay: Bay, p: dict, zone: Zone, front_box: tuple, back_y: float, z0: float):
         """A ``dock`` band at the bottom of a bay: an opening from the floor
         for a floor-standing appliance (a robot-vacuum station), ``width=``
-        (metres) on the ``side=L|R`` (as you face it, default L) of the
-        band. The kickboard and the carcass bottom (and back) are cut away
-        over the opening; the rest of the band is dead space behind a fixed
-        panel, closed by a side board at the opening's edge. The board over
-        the band (``board_below`` of the band above) is the opening's top."""
+        (metres) on the ``side=L|R|C`` (as you face it, default L; C centred
+        on the bay's front) of the band. The kickboard and the carcass bottom
+        (and back) are cut away over the opening; side boards close it off
+        from the dead space beside it. The dead space is behind a fixed
+        panel, or with ``front=notch`` behind the drawer front above, carried
+        down to the kickboard either side of the opening (one notched front;
+        Petr, 2026-11-20 c). The board over the band (``board_below`` of the
+        band above) is the opening's top."""
         t, tf = p["BoardThickness"], p["FrontThickness"]
         g = p["FrontGap"] / 2.0
         if zone.slot_z0 > z0 + TOL:
@@ -1070,22 +1111,46 @@ class _Builder:
         lo, hi = bay.clear_lo, bay.clear_hi
         if width <= 0 or width > hi - lo - t + TOL:
             raise ValueError(f"{bay.id}: dock width {width:.0f} does not fit the {hi - lo:.0f} opening")
-        # Left as you face it: low a when the front is the c0 face.
-        at_lo = (side == "L") == bay.front_low
-        o0, o1 = (lo, lo + width) if at_lo else (hi - width, hi)
+        dc0, dc1 = self.c_range(bay, tf, back_y)
+        fc0, fc1 = self.c_range(bay, 0.0, tf)
+        if side == "C":
+            am = (bay.a0 + bay.a1) / 2.0
+            o0, o1 = am - width / 2.0, am + width / 2.0
+            if o0 < lo + t - TOL or o1 > hi - t + TOL:
+                raise ValueError(f"{bay.id}: a centred {width:.0f} dock leaves no room for its side boards")
+            sides = [(o0 - t, o0), (o1, o1 + t)]
+            dead = [(bay.a0 + g, o0), (o1, bay.a1 - g)]
+        else:
+            # Left as you face it: low a when the front is the c0 face.
+            at_lo = (side == "L") == bay.front_low
+            o0, o1 = (lo, lo + width) if at_lo else (hi - width, hi)
+            sides = [(o1, o1 + t)] if at_lo else [(o0 - t, o0)]
+            dead = [(o1 + g, bay.a1 - g)] if at_lo else [(bay.a0 + g, o0 - g)]
         floor = self.run.bays[0].z_base
         oc0, oc1 = self.c_range(bay, 0.0, back_y)
         zone.dock = (o0, o1, oc0, oc1, floor, zone.slot_z1)
-        # Side board between the opening and the dead space, and the panel.
-        s0, s1 = (o1, o1 + t) if at_lo else (o0 - t, o0)
-        dc0, dc1 = self.c_range(bay, tf, back_y)
-        self.add(Part(f"{bay.id}-DOCKSIDE", "Bok niky stanice", "Board", [(s0, s1, dc0, dc1, z0 + t, zone.slot_z1)],
-                     props={"Zone": zone.index}), bay)
-        f0, f1 = (o1 + g, bay.a1 - g) if at_lo else (bay.a0 + g, o0 - g)
-        fc0, fc1 = self.c_range(bay, 0.0, tf)
-        self.add(Part(f"{bay.id}-DEAD", "Pevný panel (mrtvý prostor)", "Front",
-                      [(f0, f1, fc0, fc1, front_box[4], front_box[5])],
-                      props={"Zone": zone.index, "Kind": "dead space", "Fixed": True}), bay)
+        for k, (s0, s1) in enumerate(sides, start=1):
+            sid = f"{bay.id}-DOCKSIDE" if len(sides) == 1 else f"{bay.id}-DOCKSIDE{k}"
+            self.add(Part(sid, "Bok niky stanice", "Board", [(s0, s1, dc0, dc1, z0 + t, zone.slot_z1)],
+                         props={"Zone": zone.index}), bay)
+        if str(zone.opts.get("front", "panel")) == "notch":
+            # The drawer front over the band runs down either side of the
+            # opening to the kickboard: one front with a notch.
+            above = next((q for q in self.run.parts if q.drawer is not None and q.role in ("Drawer", "PullOut")
+                          and q.id in bay.members and q.props.get("Zone") == zone.index - 1), None)
+            if above is None:
+                raise ValueError(f"{bay.id}: front=notch needs a drawer in the band above the dock")
+            legs = [(f0, f1, fc0, fc1, front_box[4], above.drawer.front[4]) for f0, f1 in dead if f1 - f0 > TOL]
+            above.boxes[1:1] = legs
+            above.props.update(FrontNotch=round((o1 - o0) / 1000.0, 6),
+                               FrontNotchHeight=round((above.drawer.front[4] - front_box[4]) / 1000.0, 6),
+                               FrontBottom=round(front_box[4] / 1000.0, 6))
+        else:
+            for k, (f0, f1) in enumerate(dead, start=1):
+                did = f"{bay.id}-DEAD" if len(dead) == 1 else f"{bay.id}-DEAD{k}"
+                self.add(Part(did, "Pevný panel (mrtvý prostor)", "Front",
+                              [(f0, f1, fc0, fc1, front_box[4], front_box[5])],
+                              props={"Zone": zone.index, "Kind": "dead space", "Fixed": True}), bay)
         # Cut the opening out of the kickboard, the carcass bottom and back.
         for part in self.run.parts:
             if part.role not in ("Plinth", "Bottom", "Back") or part.id not in bay.members:
@@ -1778,10 +1843,34 @@ def box_side_height(p: dict, kind: str, nominal: float) -> float:
     return max(p["BoxMinHeight"], min(p["MaximeraLowHeight"], nominal - (p["MaximeraLowBand"] - p["MaximeraLowHeight"])))
 
 
+MERIVOBOX_NL = (270.0, 300.0, 350.0, 400.0, 450.0, 500.0, 550.0, 600.0)  # Blum nominal lengths
+
+
+def drawer_system(element: dict) -> str:
+    """``MAXIMERA`` (default, IKEA-like) or ``MERIVOBOX`` (Blum), from Pset_Drawers.System."""
+    v = str(_prop(element, PSET_DRAWERS, "System", "MAXIMERA")).upper()
+    if v not in ("MAXIMERA", "MERIVOBOX"):
+        raise ValueError(f"{element['id']}: Pset_Drawers.System is MAXIMERA or MERIVOBOX, got {v}")
+    return v
+
+
+def merivobox_nl(p: dict, side_depth: float) -> float:
+    """The longest Blum MERIVOBOX nominal length that fits (NL + 3 <= inside depth)."""
+    fits = [nl for nl in MERIVOBOX_NL if nl + p["MerivoboxDepthClearance"] <= side_depth + TOL]
+    if not fits:
+        raise ValueError(f"no MERIVOBOX nominal length fits {side_depth:.0f} mm")
+    return fits[-1]
+
+
 def drawer_inside(bay: Bay, p: dict, back_y: float) -> tuple[float, float]:
     """Drawer inside width and depth (mm): the bay's clear width and side
-    depth less the MAXIMERA deductions (kitchen-cabinets.md)."""
+    depth less the MAXIMERA deductions (kitchen-cabinets.md), or for a
+    MERIVOBOX bay LW − 51 by NL − 26 − 16 (Blum, see ``IKEA_DEFAULTS_MM``)."""
     side_depth = back_y - p["FrontThickness"]
+    if drawer_system(bay.element) == "MERIVOBOX":
+        nl = merivobox_nl(p, side_depth)
+        return (bay.clear_width - p["MerivoboxWidthDeduction"],
+                nl - p["MerivoboxBaseDeduction"] - p["MerivoboxBackThickness"])
     return bay.clear_width - p["DrawerInnerWidthDeduction"], side_depth - p["DrawerInnerDepthDeduction"]
 
 

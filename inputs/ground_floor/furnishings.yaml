@@ -494,9 +494,7 @@ systemFurniture:
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
-    Origin: [21.672, 13.214]
     RefDirection: [0, 1]
-    Width: 0.586
     Depth: 0.586
     Height: 0.93
     PropertySets:
@@ -512,19 +510,26 @@ systemFurniture:
       # slack across (11 cells, open:).
       - Name: Pset_Fronts
         Properties:
-          Layout: "drawer *"
+          Layout: "drawer * box=F"
       - Name: Pset_Drawers
         Properties:
           Gridfinity: true
+          # Petr, 2026-11-20 c: "Also, give them Merivobox drawers." Blum
+          # MERIVOBOX, box height F (256, the tallest; a MAXIMERA-like 700
+          # box until now). Inside LW − 51 by NL − 42 (kitchen-cabinets.md).
+          System: MERIVOBOX
+      - Name: Pset_Links
+        Properties:
+          X: "SF-E600b.X"
+          Y: "SF-E600b.Y + SF-E600b.Width"
+          Width: "SF-E600b.Width"
   - id: SF-E600b
     Name: "Ostrov východ 600"
     Description: "Island, east row. Second module, 607 (was 600) for whole Gridfinity cells. One full-height drawer (2026-11-20). Faces east."
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
-    Origin: [21.672, 12.607]
     RefDirection: [0, 1]
-    Width: 0.607
     Depth: 0.586
     Height: 0.93
     PropertySets:
@@ -537,19 +542,26 @@ systemFurniture:
       # Was three drawers 100 / 100 / rest (2026-11-19).
       - Name: Pset_Fronts
         Properties:
-          Layout: "drawer *"
+          Layout: "drawer * box=F"
       - Name: Pset_Drawers
         Properties:
           Gridfinity: true
+          # Petr, 2026-11-20 c: "Also, give them Merivobox drawers." Blum
+          # MERIVOBOX, box height F (256, the tallest; a MAXIMERA-like 700
+          # box until now). Inside LW − 51 by NL − 42 (kitchen-cabinets.md).
+          System: MERIVOBOX
+      - Name: Pset_Links
+        Properties:
+          X: "SF-E600c.X"
+          Y: "SF-E600c.Y + SF-E600c.Width"
+          Width: "SF-E600c.Width"
   - id: SF-E600c
     Name: "Ostrov východ 600"
     Description: "Island, east row. Third module, 607 (was 600) for whole Gridfinity cells. One full-height drawer (2026-11-20). Faces east."
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
-    Origin: [21.672, 12.0]
     RefDirection: [0, 1]
-    Width: 0.607
     Depth: 0.586
     Height: 0.93
     PropertySets:
@@ -562,19 +574,26 @@ systemFurniture:
       # Was three drawers 100 / 100 / rest (2026-11-19).
       - Name: Pset_Fronts
         Properties:
-          Layout: "drawer *"
+          Layout: "drawer * box=F"
       - Name: Pset_Drawers
         Properties:
           Gridfinity: true
+          # Petr, 2026-11-20 c: "Also, give them Merivobox drawers." Blum
+          # MERIVOBOX, box height F (256, the tallest; a MAXIMERA-like 700
+          # box until now). Inside LW − 51 by NL − 42 (kitchen-cabinets.md).
+          System: MERIVOBOX
+      - Name: Pset_Links
+        Properties:
+          X: "SF-E700.X"
+          Y: "SF-E700.Y + SF-E700.Width"
+          Width: "SF-E700.Width"
   - id: SF-E700
     Name: "Ostrov východ 700"
     Description: "Island, east row, south end. The remaining 700. One full-height drawer (2026-11-20). Faces east."
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
-    Origin: [21.672, 11.3]
     RefDirection: [0, 1]
-    Width: 0.7
     Depth: 0.586
     Height: 0.93
     PropertySets:
@@ -587,10 +606,24 @@ systemFurniture:
       # Was three drawers 100 / 100 / rest (2026-11-19).
       - Name: Pset_Fronts
         Properties:
-          Layout: "drawer *"
+          Layout: "drawer * box=F"
       - Name: Pset_Drawers
         Properties:
           Gridfinity: true
+          # Petr, 2026-11-20 c: "Also, give them Merivobox drawers." Blum
+          # MERIVOBOX, box height F (256, the tallest; a MAXIMERA-like 700
+          # box until now). Inside LW − 51 by NL − 42 (kitchen-cabinets.md).
+          System: MERIVOBOX
+      # Petr, 2026-11-20 c: "East island cabinets are 694,604,604,583 wide,
+      # they should be the same width. Three of these should fit gridfinity,
+      # the fourth can be slightly differnt." Four equal bays: a quarter of
+      # the island (the west row's span), 625. With MERIVOBOX (inside LW − 51)
+      # the end bays are 13 cells exact, the middle two 13 with 9 over.
+      - Name: Pset_Links
+        Properties:
+          X: "0.0 + 21.672"
+          Y: "(SF-I300.Y - SF-I300.Width)"
+          Width: "(SF-I500a.Y - (SF-I300.Y - SF-I300.Width)) / 4"
   - id: SF-A250
     Name: "Západ 250 úklid"
     Description: "Section A, south side. Cleaning pull-out, 250. Left when facing the west wall."
@@ -830,11 +863,23 @@ systemFurniture:
       # 260 (station 249 + 10 clearance, guess:), 440 wide on the west side
       # (416 + 12 each side, guess:); the kickboard, carcass bottom and back
       # are cut away over it; east of it a fixed dead-space panel.
+      # Petr, 2026-11-20 c: "Changed my mind, lets center the dreame x60
+      # station on its cabinet. The rectangles left on the left and right in
+      # front of the dead space can actually be part of the drawer front
+      # face, no extra cuts needed." Section 1's opening is centred on the
+      # section; its drawer front runs down to the kickboard either side of
+      # it (one front, notched); dead space behind on both sides.
+      # Petr, 2026-11-20 c: "Give gridfinity to the dining area cabinets
+      # too." Baseplates in every outer and inner drawer.
+      - Name: Pset_Drawers
+        Properties:
+          Gridfinity: true
+          System: MERIVOBOX
       - Name: Pset_Fronts
         Properties:
           Sections: "4"
           Layout: "drawer * box=K inner=M,K"
-          Layout1: "drawer * box=K inner=M | dock 0.16 width=0.44 side=L"
+          Layout1: "drawer * box=K inner=M,K | dock 0.16 width=0.44 side=C front=notch"
   - id: SF-F053
     Name: "Výplň W-053"
     Description: "Shallow filler in front of pier W-053. 300 wide, 200 deep, front flush at y=15.15. Still west of the sofa, counter 930. Cream like the kitchen (natural oak until 2026-11-20)."
@@ -851,7 +896,8 @@ systemFurniture:
           Run: KR-DN
           # Petr, 2026-11-20 b (relayed clarification): at the eastern column
           # the oak top is part of the living-room oak counter; KR-LB's
-          # oak-veneer worktop extends over this cupboard (and SF-DN70).
+          # oak-veneer worktop extends over this cupboard (SF-DN70, the 70 strip
+          # it also covered until 2026-11-20 c, is gone: SF-LB runs to the pier).
           WorktopRun: KR-LB
       # Petr, 2026-11-20: "don't touch dining area bottom cabinets geometry yet, Im undecided. But make them cream color like kitchen, all the way through dining area into living room (behind couch)."
       - Name: Pset_Finish
@@ -863,28 +909,6 @@ systemFurniture:
       - Name: Pset_Fronts
         Properties:
           Layout: "door * hinge=R shelves=2"
-  - id: SF-DN70
-    Name: "Jídelna 70"
-    Description: "70 mm between W-053 (x=25.45) and the sofa (x=25.52). Full 450 depth, counter 930, so the dining run reaches the sofa with no gap. Cream like the kitchen (natural oak until 2026-11-20)."
-    PredefinedType: USERDEFINED
-    ObjectType: BaseCabinet
-    ContainedInStructure: SP-1.02
-    Origin: [25.45, 15.15]
-    Width: 0.07
-    Depth: 0.45
-    Height: 0.93
-    PropertySets:
-      - Name: Pset_KitchenBay
-        Properties:
-          Run: KR-DN
-          # The 70 strip between SF-F053 and SF-LB: under the same oak
-          # (guess:, so the living-room counter runs on unbroken to x 25.15).
-          WorktopRun: KR-LB
-      # Petr, 2026-11-20: "don't touch dining area bottom cabinets geometry yet, Im undecided. But make them cream color like kitchen, all the way through dining area into living room (behind couch)."
-      - Name: Pset_Finish
-        Properties:
-          Material: "kitchen cream (RAL 9001 matt)"
-          Form: "lacquered or laminate, like the kitchen fronts"
   # Petr, 2026-11-13: "I want the living room part of the counter (behind
   # sofa) to continue at the same 930 height as the dining area. It will be
   # oak veneer, not silestone. We'll work out the details of where the two
@@ -893,12 +917,10 @@ systemFurniture:
   # bodies stop at 910), 30 front overhang like KR-DN.
   - id: SF-LB
     Name: "Obývák nízká"
-    Description: "Low base behind the sofa, x 25.52–29.70. 450 deep, front y=15.15. Counter 930, the dining-run height (was 800), oak veneer top. 170 mm above the 760 sofa back. Cream like the kitchen since 2026-11-20 (was natural oak); dead space behind blank fronts since 2026-11-20."
+    Description: "Low base behind the sofa, from W-053's east face (x 25.45, the face of SF-F053) to SF-TC's west face (x 29.60), both linked (2026-11-20 c; was x 25.52–29.70 with the 70 strip SF-DN70 at the pier). 450 deep, front y=15.15. Counter 930, the dining-run height (was 800), oak veneer top. 170 mm above the 760 sofa back. Cream like the kitchen since 2026-11-20 (was natural oak); dead space behind blank fronts since 2026-11-20."
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
-    Origin: [25.52, 15.15]
-    Width: 4.18
     Depth: 0.45
     Height: 0.93
     PropertySets:
@@ -923,6 +945,16 @@ systemFurniture:
         Properties:
           Sections: "7"
           Layout: "front *"
+      # Petr, 2026-11-20 c: "that whole bookshelf area and base cabinets
+      # below it need to be tightened, the connection to the column is weird,
+      # these and extra thin sliver of panels and some gaps." The 70 strip
+      # SF-DN70 is gone; SF-LB itself runs to the pier (SF-F053's east face)
+      # and to SF-TC, whose width is the sofa arm's.
+      - Name: Pset_Links
+        Properties:
+          X: "SF-F053.East"
+          Y: "SF-F053.Y"
+          East: "SF-TC.X"
   - id: SF-DH
     Name: "Jídelna horní"
     Description: "Oak-front wall cabinet over the dining bay, x 22.45–25.15. Depth 350, bottom 1560 (Petr, 2026-11-13: top cabinets start at 1560), height 844, top 2404: 28 under the oak lining SF-DH-LINING (2432–2450), Blum AVENTOS HF's space above at the 88° stop. The ceiling line at 2450 is an invariant. Not carried across the piers. Its own run KR-DH. Two 1350 sections, each a Blum AVENTOS HF bi-fold at 88°, like the kitchen wall cabinets (2026-11-20)."
@@ -971,12 +1003,10 @@ systemFurniture:
           Contents2: "hrnky"
   - id: SF-TC
     Name: "Rohová vysoká"
-    Description: "Tall corner cabinet, east end of the north wall. 200 wide, one sofa armrest, x 29.70–29.90. 450 deep, front y=15.15. Height 2450, the kitchen tall height. Natural oak."
+    Description: "Tall corner cabinet, east end of the north wall. As wide as the sofa's east armrest FN-ARME (linked: 300, x 29.60–29.90; was 200, x 29.70–29.90), its east face on the arm's. 450 deep, front y=15.15. Height 2450, the kitchen tall height. Natural oak."
     PredefinedType: USERDEFINED
     ObjectType: TallCabinet
     ContainedInStructure: SP-1.02
-    Origin: [29.7, 15.15]
-    Width: 0.2
     Depth: 0.45
     Height: 2.45
     PropertySets:
@@ -988,12 +1018,21 @@ systemFurniture:
         Properties:
           Run: KR-TC
       # 2026-11-19 (Petr, 2026-11-19: "Add the rest of the drawers, hinged doors, etc. to the whole kitchen and living room on a best effort basis. We'll adjust details later.")
-      # One 197 door hinged R (the east wall side) with four shelves, from
+      # One door (197 until 2026-11-20 c, now the cabinet width less the 3
+      # gap) hinged R (the east wall side) with four shelves, from
       # 700 up; the sofa's east arm (660 high) stands in front of the
       # bottom, so the lowest 700 is a fixed slab. All guess:.
       - Name: Pset_Fronts
         Properties:
           Layout: "door * hinge=R shelves=4 | front 0.7"
+      # Petr, 2026-11-20 c: "That tall corner cabinet in living room should
+      # be the exact width of the couch armrest." Width and east face from
+      # the arm (FN-ARME), front on the arm's back end (the sofa back line).
+      - Name: Pset_Links
+        Properties:
+          Width: "FN-ARME.Width"
+          East: "FN-ARME.East"
+          Y: "FN-ARME.North"
 sanitaryTerminals:
   - id: SN-RS15
     Name: "Teka BE LINEA RS15 71.40"
@@ -1331,7 +1370,7 @@ furniture:
           CladEnds: true
   - id: KR-DN
     Name: "Jídelní linka"
-    Description: "North dining base run: SF-F052, SF-DN, SF-F053, SF-DN70. Cream boxes (oak until 2026-11-20) under a 20 mm Silestone Blanco Maple worktop, 20 mm front overhang, top 930. No exposed ends: west abuts SF-T4, east abuts SF-LB (KR-LB, oak-veneer top, also 930)."
+    Description: "North dining base run: SF-F052, SF-DN, SF-F053 (SF-DN70 removed 2026-11-20 c). Cream boxes (oak until 2026-11-20) under a 20 mm Silestone Blanco Maple worktop, 20 mm front overhang, top 930. No exposed ends: west abuts SF-T4, east abuts SF-LB (KR-LB, oak-veneer top, also 930)."
     PredefinedType: USERDEFINED
     ObjectType: KitchenRun
     ContainedInStructure: SP-1.02
@@ -1584,13 +1623,12 @@ furniture:
   # HF fronts are checked against it (models/ceiling_line.py).
   - id: SF-DH-LINING
     Name: "Jídelna horní, dubový podhled"
-    Description: "Oak lining under the soffit: SF-DH's top carried forward to the soffit face (y 15.15) and back to the wall (15.60), x 22.45–25.15 between the piers, 18 thick, 2432–2450. guess: thickness, the 20 gap to the soffit's GKB above."
+    Description: "Oak top board under the soffit, one piece from W-052 (x 22.45) to SF-TC (linked, x 29.60; was x 22.45–25.15 between the piers, 2026-11-20 c): front flush with the soffit's room face (y 15.15) back to the wall (15.60), notched round the pier slats (from their front face back), 18 thick, 2432–2450 under the 2450 line. guess: thickness, the 20 gap to the soffit's GKB above."
     PredefinedType: USERDEFINED
     ObjectType: CabinetLining
     ContainedInStructure: SP-1.02
     Origin: [22.45, 15.15]
     Elevation: 2.432
-    Width: 2.7
     Depth: 0.45
     Height: 0.018
     PropertySets:
@@ -1601,6 +1639,19 @@ furniture:
       - Name: Pset_CabinetLining
         Properties:
           PartOf: SF-DH
+      # Petr, 2026-11-20 c: "That oak top board above the dining area should
+      # be flush with soffit and extend all the way to the living room in one
+      # piece." East end on SF-TC's west face; notched round both pier slat
+      # panels (their x range, from their front face back to the wall).
+      - Name: Pset_Links
+        Properties:
+          East: "SF-TC.X"
+          Pset_CabinetLining.Notch1X0: "CV-SLAT-W052.X"
+          Pset_CabinetLining.Notch1X1: "CV-SLAT-W052.East"
+          Pset_CabinetLining.Notch1Y: "CV-SLAT-W052.Y"
+          Pset_CabinetLining.Notch2X0: "CV-SLAT-W053.X"
+          Pset_CabinetLining.Notch2X1: "CV-SLAT-W053.East"
+          Pset_CabinetLining.Notch2Y: "CV-SLAT-W053.Y"
   # End returns: SF-DH's oak sides carried up to the lining, closing the
   # 28 band over the cabinet at both ends (the screenshot's oak frame).
   # From 2 behind the fronts' inner face (y 15.27, guess:) to the wall, so
@@ -1645,15 +1696,11 @@ furniture:
           PartOf: SF-DH
   - id: FN-BK
     Name: "Knihovna"
-    Description: "Open bookshelf above the sofa, x 25.52–29.70. Depth 250, bottom 980 (50 above the 930 counter; was 850 over the old 800 base), top 2450. Three shelves. Oak lamella back, slats 40 / gap 20 / thick 12. Sides, top and shelves 20."
+    Description: "Open bookshelf above the sofa, from W-053's east face to SF-TC (linked, x 25.45–29.60; was 25.52–29.70). Depth 250, standing on the oak counter (930, linked; was 980, 50 above it), up to the oak top board SF-DH-LINING (2432, linked; was 2450). Lamella back on a 6 mm oak-veneer backing (2026-11-20 c). Three shelves. Oak lamella back, slats 40 / gap 20 / thick 12. Sides, top and shelves 20."
     PredefinedType: SHELF
     ObjectType: Bookshelf
     ContainedInStructure: SP-1.02
-    Origin: [25.52, 15.35]
-    Elevation: 0.98
-    Width: 4.18
     Depth: 0.25
-    Height: 1.47
     PropertySets:
       - Name: Pset_Finish
         Properties:
@@ -1662,6 +1709,24 @@ furniture:
       - Name: Pset_Bookshelf
         Properties:
           ShelfCount: 3
+          # Petr, 2026-11-20 c: "Also, living room bookshelf needs the same
+          # accoustic backpanel (yours is still seethrough with no oak veneer
+          # backing)". The CV-SLAT backing: 6 mm oak veneer (guess:, like the
+          # piers) behind the lamella, so nothing shows through.
+          BackingThickness: 0.006
+          BackingMaterial: "oak veneer"
+      # Petr, 2026-11-20 c: "that whole bookshelf area and base cabinets
+      # below it need to be tightened, the connection to the column is weird,
+      # these and extra thin sliver of panels and some gaps." Side to the
+      # pier (with the base), east to SF-TC, on the counter, up to the oak
+      # top board: no 70 gap at the pier, no 50 gap over the counter.
+      - Name: Pset_Links
+        Properties:
+          X: "SF-LB.X"
+          Y: "0.0 + 15.35"
+          East: "SF-TC.X"
+          Elevation: "SF-LB.Top"
+          Top: "SF-DH-LINING.Elevation"
   # The table stays the Gatta. open: the plan's card says "STUL LIBRA"
   # (kaplan1934.cz) and its note "Spravne je: 120x240, s prodlouzenim na
   # 340", against this 1100 × 2400 Gatta. Not changed here; see
@@ -1940,13 +2005,12 @@ coverings:
           BackingMaterial: "oak veneer"
   - id: CV-SLAT-W053
     Name: "Dubové lamely pilíře W-053"
-    Description: "Vertical oak slats on W-053's front face (the concrete column), x 25.138–25.462 (over the 12 mm stone returns on both sides), from the worktop (930) to the ceiling line (2450). 40 wide, 20 apart, 20 thick (guess:), on a 6 mm oak-veneer backing (2026-11-20 b, guess:), 26 overall, y 15.324–15.350. Replaces the stone piece CV-BS-P053 (2026-11-20)."
+    Description: "Vertical oak slats on W-053's front face (the concrete column), x 25.138–25.450 (over the 12 mm stone return on the niche side; to the pier's east face, linked, where the living base and bookshelf now meet it, 2026-11-20 c; was to 25.462 over the removed east return CV-BS-R053E), from the worktop (930) to the ceiling line (2450). 40 wide, 20 apart, 20 thick (guess:), on a 6 mm oak-veneer backing (2026-11-20 b, guess:), 26 overall, y 15.324–15.350. Replaces the stone piece CV-BS-P053 (2026-11-20)."
     PredefinedType: CLADDING
     ObjectType: SlatCladding
     ContainedInStructure: SP-1.02
     Origin: [25.138, 15.324]
     Elevation: 0.93
-    Width: 0.324
     Depth: 0.026
     Height: 1.52
     PropertySets:
@@ -1972,36 +2036,9 @@ coverings:
           # the slats on the column face; the slats stay 20 thick in front.
           BackingThickness: 0.006
           BackingMaterial: "oak veneer"
-  - id: CV-BS-R053E
-    Name: "Obklad boku pilíře W-053 východ"
-    Description: "Return on W-053's east face above SF-DN70. No wall cabinet above: open: top height, 1560. guess: the stone wraps the pier."
-    PredefinedType: CLADDING
-    ObjectType: Backsplash
-    ContainedInStructure: SP-1.02
-    Origin: [25.45, 15.35]
-    Elevation: 0.93
-    Width: 0.012
-    Depth: 0.238
-    Height: 0.63
-    PropertySets:
-      - Name: Pset_Finish
+      - Name: Pset_Links
         Properties:
-          Material: "Silestone Blanco Maple"
-  - id: CV-BS-DN70
-    Name: "Obklad stěny nad DN70"
-    Description: "Strip on the north wall above SF-DN70, from the return to the bookshelf (x 25.462–25.52). No wall cabinet above: open: top height, 1560."
-    PredefinedType: CLADDING
-    ObjectType: Backsplash
-    ContainedInStructure: SP-1.02
-    Origin: [25.462, 15.588]
-    Elevation: 0.93
-    Width: 0.058
-    Depth: 0.012
-    Height: 0.63
-    PropertySets:
-      - Name: Pset_Finish
-        Properties:
-          Material: "Silestone Blanco Maple"
+          East: "SF-F053.East"
   - id: CV-RUG
     Name: "Koberec"
     Description: "Rug 2800 × 3780 × 10. x 26.65–29.45, y 11.37–15.15, from Petr's markup. Seats are not lifted onto it."

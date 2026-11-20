@@ -79,12 +79,19 @@ def test_island_east_row_drawers_are_on_the_gridfinity_grid():
         d = run.part(f"{bay_id}-D1").drawer
         assert round(d.front[5] - d.front[4]) == 807
         n, m = d.grid
-        # inside = n x 42 + 1 (MAXIMERA deductions; the depth rounded down to 586).
-        slack = 12.0 if bay_id == "SF-E600a" else 0.0  # 2500 leaves 12 over in four bays
-        assert d.inside[0] == pytest.approx(n * 42.0 + 1.0 + slack) and d.inside[1] == pytest.approx(m * 42.0 + 1.0)
+        # Petr, 2026-11-20 c: "East island cabinets are 694,604,604,583
+        # wide, they should be the same width. Three of these should fit
+        # gridfinity, the fourth can be slightly differnt. Also, give them
+        # Merivobox drawers." Four x 625; MERIVOBOX inside = clear - 51,
+        # NL 550 - 26 - 16. The end bays (clear 598) are whole cells, the
+        # middle ones (clear 607) 9 over.
+        slack = 9.0 if bay_id in ("SF-E600b", "SF-E600c") else 0.0
+        assert d.inside[0] == pytest.approx(n * 42.0 + 1.0 + slack) and d.inside[1] == pytest.approx(m * 42.0 + 1.0 + 3.0)
+        part = run.part(f"{bay_id}-D1")
+        assert part.props["System"] == "Blum MERIVOBOX" and part.props["NominalLength"] == pytest.approx(0.55)
         grids[bay_id] = d.grid
-    assert grids == {"SF-E600a": (11, 11), "SF-E600b": (12, 11), "SF-E600c": (12, 11), "SF-E700": (14, 11)}
-    assert all(b.depth == pytest.approx(586.0) for b in run.bays)
+    assert grids == {b: (13, 12) for b in ("SF-E600a", "SF-E600b", "SF-E600c", "SF-E700")}
+    assert [run.bay(b).width for b in ("SF-E700", "SF-E600c", "SF-E600b", "SF-E600a")] == pytest.approx([625.0] * 4)
     assert sum(b.width for b in run.bays if not b.front_low) == pytest.approx(2500.0)
 
 
@@ -273,7 +280,7 @@ def test_island_clear_widths():
     clear = {b["id"]: b["clear"] for b in kc.bay_summary(run)}
     assert clear == {
         "SF-I500a": 473.0, "SF-I600a": 589.0, "SF-I500b": 463.0, "SF-I600b": 589.0, "SF-I300": 278.0,
-        "SF-E600a": 559.0, "SF-E600b": 589.0, "SF-E600c": 589.0, "SF-E700": 673.0,
+        "SF-E600a": 598.0, "SF-E600b": 607.0, "SF-E600c": 607.0, "SF-E700": 598.0,
     }
 
 
@@ -387,6 +394,10 @@ def test_ifc_groups_and_assembly():
     assert "Nad lednicí 908" in child_names
 
 
+EAST_SLIDE = 0.546  # MERIVOBOX NL 550: inside 508 + 2 x 19 (2026-11-20 c)
+DN_SLIDE = 0.396  # MERIVOBOX NL 400: inside 358 + 2 x 19 (2026-11-20 c)
+
+
 def test_drawer_motions_in_model():
     _shape, meta = build()
     drawers = [m for m in meta["door_motions"] if m["kind"] == "drawer"]
@@ -399,7 +410,8 @@ def test_drawer_motions_in_model():
     for m in island:
         assert m["slide"] == pytest.approx([-0.501, 0.0, 0.0])
     east = [m for m in drawers if m["id"].startswith("SF-E")]
-    assert len(east) == 4 and all(m["slide"] == pytest.approx([0.501, 0.0, 0.0]) for m in east)
+    # MERIVOBOX NL 550 since 2026-11-20 c.
+    assert len(east) == 4 and all(m["slide"] == pytest.approx([EAST_SLIDE, 0.0, 0.0]) for m in east)
     # SF-I600a spans y 12.693–13.300 (607 since the Gridfinity widths).
     assert [m["center"][2] for m in island[:3]] == pytest.approx([-12.9965] * 3, abs=1e-6)
     west = [m for m in drawers if m["id"] in ("SF-A250-D1", "SF-B800-D1", "SF-C850-D1")]
@@ -407,7 +419,12 @@ def test_drawer_motions_in_model():
     # Dining base drawers slide south (glTF +z). The living counter is dead
     # space since 2026-11-20 (no drawers).
     found = [m for m in drawers if m["id"].startswith("SF-DN-S")]
-    assert found and all(m["slide"] == pytest.approx([0.0, 0.0, 0.366]) for m in found)
+    assert found and all(m["slide"] == pytest.approx([0.0, 0.0, DN_SLIDE]) for m in found)
+    # Petr, 2026-11-20 c: "Let me close the Merivobox drawers by tapping":
+    # every inner drawer is its own record, tied to its front's drawer.
+    inner = [m for m in found if "-I" in m["id"]]
+    assert len(inner) == 8 and all(m["parent"] == m["id"].rsplit("-I", 1)[0] for m in inner)
+    assert [m["coupled"] for m in inner] == [True, False] * 4
     assert not [m for m in drawers if m["id"].startswith("SF-LB")]
 
 
@@ -470,10 +487,11 @@ def test_gridfinity_drawers_fit_the_grid():
             plate = d.items[0]
             assert plate[1] - plate[0] == pytest.approx(n * p["GridfinityPitch"])
             assert plate[4] == pytest.approx(d.floor_z)
-    # The east row's 2500 cannot be whole cells in four bays: SF-E600a keeps
-    # 12 mm slack across (2026-11-20), the only off-grid drawer.
+    # 2026-11-20 c: four equal 625 east bays; the middle two are 9 over
+    # across, and the MERIVOBOX NL 550 depth 3 over, in all four.
     assert [n for n in run.notes if "Gridfinity" in n] == [
-        "open: SF-E600a-D1 inside 475 x 463 is +12 / +0 off the Gridfinity 11x11 size (scripts/gridfinity_fit.py)"]
+        f"open: {b}-D1 inside {w} x 508 is +{w - 547} / +3 off the Gridfinity 13x12 size (scripts/gridfinity_fit.py)"
+        for b, w in (("SF-E600a", 547), ("SF-E600b", 556), ("SF-E600c", 556), ("SF-E700", 547))]
 
 
 def test_drawers_under_the_hob_clear_it():
@@ -501,19 +519,20 @@ def test_west_run_ends_clad():
 
 def test_dining_run_box_bodies_under_stone():
     run = _runs()["KR-DN"]
-    # SF-DN70 (70 wide) stays a body; the bays with fronts are carcasses (2026-11-19).
-    assert run.part("SF-DN70-BODY").boxes[0][5] == pytest.approx(910.0)
+    # 2026-11-20 c: SF-DN70 (the 70 sliver east of the pier) is gone; the
+    # bays with fronts are carcasses (2026-11-19).
+    assert not [p for p in run.parts if "SF-DN70" in p.id]
     assert run.carcass_z1 == pytest.approx(910.0)
     # 2026-11-20 b: the Silestone stays only over SF-DN; SF-F052 gets its
-    # own oak piece, SF-F053 and SF-DN70 go under KR-LB's oak counter.
+    # own oak piece, SF-F053 goes under KR-LB's oak counter.
     slabs = run.part("KR-DN-WORKTOP").boxes
     assert len(slabs) == 1 and slabs[0][:2] == (pytest.approx(300.0), pytest.approx(3000.0))
     assert all(s[5] == pytest.approx(930.0) and s[2] == pytest.approx(-20.0) for s in slabs)
     own = run.part("SF-F052-WORKTOP")
     assert own.label == "oak" and own.boxes == [(0.0, 300.0, -20.0, 200.0, 910.0, 930.0)]
     lb = _runs()["KR-LB"].part("KR-LB-WORKTOP")
-    assert lb.label == "oak" and lb.props["Covers"] == "SF-F053,SF-DN70"
-    assert sorted((round(b[0]), round(b[1]), round(b[3])) for b in lb.boxes[1:]) == [(-370, -70, 200), (-70, 0, 450)]
+    assert lb.label == "oak" and lb.props["Covers"] == "SF-F053"
+    assert sorted((round(b[0]), round(b[1]), round(b[3])) for b in lb.boxes) == [(-300, 0, 200), (0, 4150, 450)]
     assert not [p for p in run.parts if p.role == "Cladding"]
 
 
@@ -575,7 +594,19 @@ def test_wide_bays_split_into_sections():
     assert (a1 - a0, c1, z0, z1) == (pytest.approx(416.0), pytest.approx(443.0), 0.0, pytest.approx(249.0))
     kick = dn.part("KR-DN-PLINTH-S-SF-DN").boxes
     assert all(b[1] <= a0 or b[0] >= a1 for b in kick)  # open over the station
-    assert dn.part("SF-DN-S1-DEAD").props["Fixed"] is True
+    # Petr, 2026-11-20 c: "lets center the dreame x60 station on its
+    # cabinet. The rectangles left on the left and right in front of the
+    # dead space can actually be part of the drawer front face": centred on
+    # section 1, one front with a notch, no fixed panels.
+    s1 = (d1.drawer.front[0] + d1.drawer.front[1]) / 2.0
+    assert (a0 + a1) / 2.0 == pytest.approx(s1)
+    assert not [p for p in dn.parts if "DEAD" in p.id]
+    legs = d1.boxes[1:3]
+    assert [(b[4], b[5]) for b in legs] == [(pytest.approx(101.5), pytest.approx(261.5))] * 2
+    assert legs[0][0] == pytest.approx(d1.drawer.front[0]) and legs[1][1] == pytest.approx(d1.drawer.front[1])
+    assert d1.props["FrontNotch"] == pytest.approx(0.44) and d1.props["FrontNotchHeight"] == pytest.approx(0.16)
+    assert {f"SF-DN-S1-DOCKSIDE{k}" for k in (1, 2)} <= {p.id for p in dn.parts}
+    assert d1.props["InnerDrawers"] == "M,K"
     # Petr, 2026-11-20: "remove living room drawers behind couch. Those
     # cabinets are dead space": seven blank fixed fronts, nothing moves.
     lb = runs["KR-LB"]
@@ -607,3 +638,22 @@ def test_sections_grammar():
     assert [kc.zone_spec(e)[0][0] for e in subs] == ["doors", "drawer"]
     assert kc.zone_contents(subs[1]) == ["a"]
     assert kc.has_drawers(el)
+
+
+def test_dining_drawers_merivobox_and_gridfinity():
+    # Petr, 2026-11-20 c: "Give gridfinity to the dining area cabinets too."
+    # The sections take the bay's Pset_Drawers (MERIVOBOX, Gridfinity).
+    run = _runs()["KR-DN"]
+    p = run.params
+    for k, inside in ((1, 597.0), (2, 606.0), (3, 606.0), (4, 597.0)):
+        outer = run.part(f"SF-DN-S{k}-D1")
+        d = outer.drawer
+        assert outer.props["System"] == "Blum MERIVOBOX" and outer.props["NominalLength"] == pytest.approx(0.4)
+        assert d.inside[:2] == pytest.approx((inside, 358.0)) and d.grid == (14, 8)
+        for i in (1, 2):
+            inner = run.part(f"SF-DN-S{k}-D1-I{i}")
+            assert inner.role == "InnerDrawer" and inner.drawer.grid == (14, 8)
+            assert inner.props["Parent"] == outer.id
+            assert bool(inner.props.get("Latched")) == (i == 1)
+            plate = inner.drawer.items[0]
+            assert plate[1] - plate[0] == pytest.approx(14 * p["GridfinityPitch"])

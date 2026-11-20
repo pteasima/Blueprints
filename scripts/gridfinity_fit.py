@@ -29,6 +29,7 @@ import yaml
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "models"))
+import furnishing_links  # noqa: E402
 import kitchen_cabinet as kc  # noqa: E402
 
 
@@ -37,7 +38,7 @@ def main() -> None:
     ap.add_argument("--yaml", default=str(ROOT / "inputs/ground_floor/furnishings.yaml"))
     ap.add_argument("--absorb", default="SF-I300", help="bay that takes the run-length difference")
     a = ap.parse_args()
-    doc = yaml.safe_load(open(a.yaml))
+    doc = furnishing_links.resolve(yaml.safe_load(open(a.yaml)))  # linked widths (Pset_Links)
     for run in kc.runs(doc):
         grid_bays = [b for b in run.bays if kc.wants_gridfinity(b.element)]
         if not grid_bays:

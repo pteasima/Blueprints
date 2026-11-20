@@ -32,6 +32,8 @@ import {
   sampleSeries,
   sectionalTrack,
   sectionalTravel,
+  linkDrawerTree,
+  toggleDrawerTree,
 } from "./doors.js";
 import { readFileSync } from "node:fs";
 import { pickSurface } from "./pivotNav.js";
@@ -896,3 +898,45 @@ function near1(a, b, msg) {
 }
 
 console.log("doors.test.mjs ok");
+
+// Inner drawers (Blum MERIVOBOX behind a full-height front, 2026-11-20 c):
+// they open only with the front open, the coupled one (ZI7.0M07) with the
+// front, and shutting the front shuts them all.
+{
+  const mk = (id, parentId = null, coupled = false) => ({
+    id, kind: "drawer", goal: 0, anim: null, parentId, coupledDefault: coupled, coupled, parent: null, children: [],
+  });
+  const front = mk("SF-DN-S2-D1");
+  const top = mk("SF-DN-S2-D1-I1", "SF-DN-S2-D1", true);
+  const low = mk("SF-DN-S2-D1-I2", "SF-DN-S2-D1", false);
+  linkDrawerTree([front, top, low]);
+  assert.equal(top.parent, front);
+  assert.deepEqual(front.children, [top, low]);
+  // A tap on the lower inner drawer while the front is shut opens the front.
+  let changed = toggleDrawerTree(low, 0).map(([b]) => b.id);
+  assert.deepEqual(changed, ["SF-DN-S2-D1", "SF-DN-S2-D1-I1"]);
+  assert.equal(low.goal, 0);
+  assert.equal(top.goal, 1);
+  const t1 = DOOR_SWING_MS * 2;
+  assert.equal(sampleDoor(front, t1), 1);
+  assert.equal(sampleDoor(top, t1), 1);
+  // Now the lower one opens on its own; the coupled one is released and shut.
+  toggleDrawerTree(low, t1);
+  assert.equal(low.goal, 1);
+  toggleDrawerTree(top, t1);
+  assert.equal(top.goal, 0);
+  assert.equal(top.coupled, false);
+  // Shutting the front shuts every inner drawer and re-couples the top one.
+  const t2 = t1 * 2;
+  changed = toggleDrawerTree(front, t2).map(([b]) => b.id);
+  assert.deepEqual(changed, ["SF-DN-S2-D1", "SF-DN-S2-D1-I2"]);
+  assert.equal(low.goal, 0);
+  assert.equal(top.coupled, true);
+  // The model's records carry the tree.
+  const recs = JSON.parse(
+    readFileSync(new URL("../../../docs/models/ground_floor.doors.json", import.meta.url), "utf8"),
+  );
+  const list = Array.isArray(recs) ? recs : recs.motions || Object.values(recs).flat();
+  const inner = list.filter((r) => r && r.parent === "SF-DN-S2-D1");
+  assert.deepEqual(inner.map((r) => [r.id, r.coupled]).sort(), [["SF-DN-S2-D1-I1", true], ["SF-DN-S2-D1-I2", false]]);
+}
