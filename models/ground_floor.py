@@ -366,9 +366,11 @@ def _kitchen_run_parts(run, motions=None, layers: dict | None = None) -> list:
             inward = -dr.out * half
             solid = Pos(0.0, inward, 0.0) * solid
             if plate:
-                plate_solid = _run_box(plate[0], 0.0)
-                for box in plate[1:]:
-                    plate_solid = plate_solid + _run_box(box, 0.0)
+                # The floor and ribs as one compound, not fused: the same
+                # picture (one material, the overlaps are inside) at about a
+                # fifth of the faces (2026-11-20 d: with the inner drawers'
+                # plates the fused layer was over its budget, Performance.md).
+                plate_solid = Compound(obj=[_run_box(box, 0.0) for box in plate])
                 plate_solid = Pos(0.0, inward, 0.0) * plate_solid
                 layers.setdefault(LABEL_GRIDFINITY, []).append(
                     _tag(_paint(plane * plate_solid, LABEL_GRIDFINITY), part.id, "systemFurniture")
