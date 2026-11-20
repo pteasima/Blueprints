@@ -1003,3 +1003,197 @@ Petr's clarification on the worktop, relayed (not verbatim): the dining area kee
 
 `tests/test_kitchen_cabinet.py` (four sections, inner drawers, the dock, the flush and the leg kickboards, the hinges, the oak pieces) and `tests/test_furnishings.py` (the slat backing).
 
+
+## Batch 2026-11-20 c
+
+Petr's review of PR #136 (2026-11-20, 14:14 and 14:16 CET). This section
+supersedes the earlier notes above where they differ (SF-DN70, the stone
+returns at W-053, the Dreame DEAD panels, the east-row widths).
+
+Resolved, no change:
+
+> “Robot doesn't need to go under island, just clean the toe-kick area.”
+
+The island and west-run kickboards (batch b, item 1) stay.
+
+> “90deg opening of the shallow column cabinet is fine.”
+
+SF-F052 keeps its left hinge and 90°.
+
+Everything below is parametric; the 2450 ceiling line is unchanged
+(`models/ceiling_line.py` still passes). Drawings and renders come from the
+model (`kitchen_cabinet.runs`, `living_geometry`).
+
+### Linked sizes: `Pset_Links` (new)
+
+An element can leave out a placement or size and say where it comes from,
+so a number lives in one place (`models/furnishing_links.py`, resolved by
+`ground_floor.load_furnishings` and the inspector index). Targets `X`, `Y`,
+`Width`, `Depth`, `Height`, `Elevation`, `East` (the +x face), `Top`, and
+`<Pset>.<Property>`; expressions are `+ - * / ( )` over `<id>.<attr>`. A
+cycle or a missing id stops the load. `scripts/gridfinity_fit.py` resolves
+them too.
+
+### 1. Dreame X60 station centred, one notched front
+
+> “Changed my mind, lets center the dreame x60 station on its cabinet. The rectangles left on the left and right in front of the dead space can actually be part of the drawer front face, no extra cuts needed.”
+
+- `Layout1` of SF-DN: `dock 0.16 width=0.44 side=C front=notch`. `side=C`
+  centres the 440 opening on section 1; `front=notch` runs the drawer front
+  above down either side of it to the kickboard: one front with a
+  440 × 160 notch at the bottom middle (props `FrontNotch 0.44`,
+  `FrontNotchHeight 0.16`, `FrontBottom 0.1015`).
+- SF-DN-S1-D1 front 672 × 647 (z 261.5–908.5) → the same plus two legs,
+  each 116 × 160 (z 101.5–261.5), a0 301.5–417.5 and 857.5–973.5 in the run.
+- SF-DN-S1-DEAD (the fixed panel) → removed. Two 18 niche sides,
+  SF-DN-S1-DOCKSIDE1/2 (a0 399.5–417.5 and 857.5–875.5, z 118–260).
+- Station: run a0 330–746 → 430–846 (world x 22.48–22.90 → 22.58–23.00),
+  centred on the section (centre 637.5). The kickboard cut follows (now a0 418–858).
+- Dead space behind the legs: about 82 (west) and 91 (east) clear, open
+  to nothing, behind the notched front.
+- Inner drawers: section 1's front now starts at 261.5, so it takes the same
+  pair as the others: MERIVOBOX M (90, z 772–862, coupled by ZI7.0M07) and
+  K (128, z 526.5–654.5) over its own box K (z 281–409).
+
+### 2. Island east row: four equal bays, MERIVOBOX
+
+> “East island cabinets are 694,604,604,583 wide, they should be the same width. Three of these should fit gridfinity, the fourth can be slightly differnt. Also, give them Merivobox drawers.”
+
+- Bay widths (S→N): SF-E700 700 → 625, SF-E600c 607 → 625, SF-E600b 607 →
+  625, SF-E600a 586 → 625. Linked: `Width = (SF-I500a.Y − (SF-I300.Y −
+  SF-I300.Width)) / 4`, each `Y` the previous bay's end. Total 2500
+  unchanged (y 11.300–13.800). Fronts 694/604/604/583 → 622 × 4.
+- y origins: SF-E700 11.300 (same), SF-E600c 12.000 → 11.925, SF-E600b
+  12.607 → 12.550, SF-E600a 13.214 → 13.175.
+- MERIVOBOX (Blum planning sheet): inside width LW − 51, inside length
+  NL − 26 − 16 (chipboard back), NL from 270 to 600 in 50s with NL + 3 inside
+  depth. Island NL 550 → inside 508 deep → 12 cells, +3.
+- End bays (clear 598, a 18 end side) → inside 547 = 13 × 42 + 1, exact.
+  Middle bays (clear 607) → 556 = 13 cells, +9. So two are exact and two are
+  +9, but four equal widths was the stronger ask; whole cells in three bays
+  need unequal widths (alternatives below).
+- Grid 11×11 / 12×11 / 12×11 / 14×11 → 13×12 in all four.
+- Box: the full-height 807 front now carries a MERIVOBOX F box (256 high,
+  z 121–377); before it was a 700-high MAXIMERA-like box. `open:` a front
+  this tall on a 256 box needs a BOXCAP or a gallery rail kit from Blum to
+  hold the contents; not modelled.
+- Slide 0.501 → 0.546.
+
+Alternatives (not done):
+
+| Variant | Widths S→N | Gridfinity | Spread |
+| --- | --- | --- | --- |
+| **chosen** | 625 / 625 / 625 / 625 | ends exact, middles +9 | 0 |
+| middles exact | 634 / 616 / 616 / 634 | middles exact, ends +9 | 18 |
+| three exact | 625 / 616 / 616 / 643 | three exact, north end +18 | 27 |
+
+### 3. Gridfinity in the dining drawers
+
+> “Give gridfinity to the dining area cabinets too.”
+
+- SF-DN `Pset_Drawers`: `Gridfinity: true`, `System: Blum MERIVOBOX`. The
+  sections take the bay's `Pset_Drawers` now (a fix in `section_element`:
+  before, only `Pset_Fronts` reached them, so the dining drawers were still
+  sized as MAXIMERA).
+- Side depth 424 → NL 400 (needs 403) → inside 358 deep.
+- Widths unchanged (not asked).
+
+| Drawer | Inside | Grid | Slack across / deep |
+| --- | --- | --- | --- |
+| SF-DN-S1-D1, -I1, -I2 | 597 × 358 | 14 × 8 | +8 / +21 |
+| SF-DN-S2-D1, -I1, -I2 | 606 × 358 | 14 × 8 | +17 / +21 |
+| SF-DN-S3-D1, -I1, -I2 | 606 × 358 | 14 × 8 | +17 / +21 |
+| SF-DN-S4-D1, -I1, -I2 | 597 × 358 | 14 × 8 | +8 / +21 |
+| SF-E600a / SF-E700 -D1 | 547 × 508 | 13 × 12 | +0 / +3 |
+| SF-E600b / SF-E600c -D1 | 556 × 508 | 13 × 12 | +9 / +3 |
+
+- Slide 0.366 → 0.396.
+- `open:` the +21 deep is the NL step (450 would need 453, the carcass has
+  424). A 9th row would need a 445 inside depth.
+
+### 4. The oak top board: one piece to the living room
+
+> “That oak top board above the dining area should be flush with soffit and extend all the way to the living room in one piece.”
+
+- SF-DH-LINING: Width 2.70 → 7.15 (x 22.45–25.15 → 22.45–29.60), linked
+  `East = SF-TC.X`. Same depth (450, y 15.15–15.60), same height (z
+  2432–2450), still one board. Notched round both pier slat panels
+  (`Pset_CabinetLining.Notch1*` / `Notch2*`, linked to CV-SLAT-W052 /
+  W053): over x 22.150–22.462 and 25.138–25.450 it stops at y 15.324.
+- Its front at y 15.150 is the soffit's room face, so it is flush in plan.
+- **Reading: “flush with soffit” is taken as flush with the soffit's room
+  face (in plan), which it already was. If Petr meant closing the 20 mm
+  shadow gap up to the soffit underside (2450 → 2470), that crosses the 2450
+  ceiling line and is not done.**
+- **The soffit ends at x 29.450; the board runs 150 past it to meet SF-TC
+  (29.600), under the plain ceiling there.**
+- `open:` a 7150 mm single oak board is longer than usual stock (about
+  2.8–4.1 m); a hidden joint may be needed.
+- FN-BK now ends under it (item 8).
+
+### 5. SF-TC: the armrest's width
+
+> “That tall corner cabinet in living room should be the exact width of the couch armrest.”
+
+- SF-TC `Pset_Links`: `Width = FN-ARME.Width`, `East = FN-ARME.East`,
+  `Y = FN-ARME.North`. Width 200 → 300 (x 29.70–29.90 → 29.60–29.90); door
+  197 → 297. East face and depth unchanged.
+- Neighbours that moved (linked to SF-TC.X): SF-LB's east end 29.70 →
+  29.60, FN-BK's east end 29.70 → 29.60, the oak board's east end (item 4).
+
+### 6. Tapping the inner drawers
+
+> “Let me close the Merivobox drawers by tapping, right now only the full height drawer is interactive.”
+
+- Every inner drawer is its own part and motion record
+  (`SF-DN-S{k}-D1-I1`, `-I2`; `parent` the front's drawer, `coupled` true
+  for I1, the one with the ZI7.0M07 driver).
+- Viewer (`doors.js` `toggleDrawerTree`): an inner drawer moves only while
+  its front is open (a tap on it when the front is shut opens the front);
+  the coupled one opens with the front; a tap on an open coupled one
+  releases and shuts it alone; shutting the front shuts all of them and
+  re-couples I1.
+- The housing sits on the front drawer, the driver on I1; I1 no longer
+  rides inside the front's mesh.
+
+### 7. Bookshelf: the acoustic oak back
+
+> “Also, living room bookshelf needs the same accoustic backpanel (yours is still seethrough with no oak veneer backing)”
+
+- FN-BK `Pset_Bookshelf`: `BackingThickness 0.006`, `BackingMaterial: oak
+  veneer`. A 6 mm oak-veneer back between the case sides, full height, at
+  the wall; the lamella (40 / 20 gap / 12) sits in front of it as on
+  CV-SLAT. Shelves stop in front of the lamella. Nothing is see-through.
+
+### 8. The bookshelf and living bases at W-053
+
+> “Also, that whole bookshelf area and base cabinets below it need to be tightened, the connection to the column is weird, these and extra thin sliver of panels and some gaps.”
+
+Removed:
+
+- SF-DN70, the 70 × 450 oak body east of the pier (x 25.45–25.52).
+- CV-BS-R053E, the 12 mm stone return on W-053's east face (x 25.450–25.462).
+- CV-BS-DN70, the 58 mm stone strip over SF-DN70 (x 25.462–25.52).
+
+Changed (all linked now, so they stay closed):
+
+| Part | Before | After |
+| --- | --- | --- |
+| SF-LB | x 25.52–29.70 (4180) | x 25.45–29.60 (4150), `X = SF-F053.East`, `East = SF-TC.X` |
+| KR-LB-WORKTOP | over SF-F053 and SF-DN70, from x 25.15 | over SF-F053 (300 × 200) and SF-LB (4150 × 450), the joint at the pier face 25.45 |
+| FN-BK | x 25.52–29.70, z 980–2450 (1470), a 50 gap over the counter | x 25.45–29.60, z 930–2432 (1502): on the counter, up to the oak board |
+| CV-SLAT-W053 | 324 wide, x 25.138–25.462 (12 past the pier) | 312, x 25.138–25.450, `East = SF-F053.East` |
+| SF-DH-LINING | ended at 25.15 | runs on over the bookshelf (item 4) |
+
+- The junction now: pier W-053 (25.15–25.45) with its slat panel in front,
+  SF-F053 and its oak top under it, then SF-LB, its counter, and FN-BK all
+  start at 25.45 and end at SF-TC. No slivers left.
+- Gaps left on purpose: the 20 mm shadow gap under the soffit (2450–2470,
+  the ceiling line); FN-BK has no bottom board of its own, as before (it
+  stands on the oak counter).
+
+### Tests and renders
+
+- `tests/test_furnishing_links.py` (new), plus updated
+  `tests/test_kitchen_cabinet.py`, `tests/test_furnishings.py`,
+  `tests/test_materials_catalogue.py`, and `doors.test.mjs`.
