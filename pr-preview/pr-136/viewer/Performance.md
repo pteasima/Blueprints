@@ -89,6 +89,8 @@ The merge happens at load, so a model needs no extra work to get one draw per el
 | triangles in the heaviest element | 900 / 5,000 | 2,476 / 5,000 |
 | faces in the element with the most | 450 / 1,000 | 776 / 1,200 |
 
+2026-11-20 d: the island's MERIVOBOX inner drawers brought the layer to 33 plates and over its face, triangle and size limits (21,723 faces, 69,276 triangles, 14.2 MB). The plates are now exported as one unfused compound of the floor and ribs each (same look, one material) instead of a fused solid: 5,166 faces, 10,332 triangles, 3.2 MB. No limit was raised. Nodes are 34 / 40.
+
 When the check fails it names the element with the most triangles and the most faces. Simplify that first. Raise a limit only on purpose, in the same pull request as the model change, and say why in the pull request description (the house is finite; a real new room or kitchen run may need it).
 
 ## Not done (options if devices are still slow)
