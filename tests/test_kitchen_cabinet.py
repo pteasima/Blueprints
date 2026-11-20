@@ -227,20 +227,23 @@ def test_nothing_above_the_ceiling_line():
     doc = load_furnishings()
     runs = list(_runs(doc).values())
     ceiling_line.check_ceiling_line(doc, FURNISHING_LISTS, runs)
-    notes = ceiling_line.check_open_envelopes(runs, (ROOM_X0, ROOM_X1, ROOM_Y0, ROOM_Y1))
-    # Three west wall cabinets and SF-DH's two HF sections (2026-11-20),
-    # whose open clearance meets the soffit: kept, as Petr asked, with a note.
-    clashes = [n for n in notes if n.startswith("open: SF-DH-S")]
-    assert len(notes) == 7 and len(clashes) == 2
-    assert all("8 mm into the soffit over the north cabinets" in n for n in clashes)
+    room = (ROOM_X0, ROOM_X1, ROOM_Y0, ROOM_Y1)
+    lining = ceiling_line.lining_obstacles(doc, FURNISHING_LISTS)
+    assert [o[0] for o in lining] == ["SF-DH-LINING", "SF-DH-RET-W", "SF-DH-RET-E"]
+    notes = ceiling_line.check_open_envelopes(runs, room, lining)
+    # Three west wall cabinets and SF-DH's two HF sections. Since the oak
+    # lining (Petr, 2026-11-20) SF-DH is 844 high, so its open fronts get
+    # Blum's 28 under the lining (2432) and nothing clashes.
+    assert len(notes) == 5 and not [n for n in notes if n.startswith("open:")]
+    assert all("0 from the SF-DH-LINING" in n and "38 from the soffit" in n for n in notes if n.startswith("SF-DH-S"))
     dh = next(r for r in runs if r.id == "KR-DH")
-    assert dh.part("SF-DH-S1-LIFT1").props["OpenClash"].startswith("8 mm")
-    # Without the bay's AcceptOpenClash the export stops.
+    assert "OpenClash" not in dh.part("SF-DH-S1-LIFT1").props
+    assert dh.part("SF-DH-S1-LIFT1").props["BlumOpenAbove"] == pytest.approx(0.028)
+    # The old 890 cabinet's open fronts would meet the lining: the export stops.
     doc2 = copy.deepcopy(doc)
-    for pset in next(e for e in doc2["systemFurniture"] if e["id"] == "SF-DH")["PropertySets"]:
-        (pset.get("Properties") or {}).pop("AcceptOpenClash", None)
-    with pytest.raises(ValueError, match="SF-DH-S1-LIFT open meets the soffit"):
-        ceiling_line.check_open_envelopes(list(_runs(doc2).values()), (ROOM_X0, ROOM_X1, ROOM_Y0, ROOM_Y1))
+    next(e for e in doc2["systemFurniture"] if e["id"] == "SF-DH")["Height"] = 0.89
+    with pytest.raises(ValueError, match="SF-DH-S1-LIFT open meets the SF-DH-LINING"):
+        ceiling_line.check_open_envelopes(list(_runs(doc2).values()), room, lining)
     doc = copy.deepcopy(doc)
     next(e for e in doc["systemFurniture"] if e["id"] == "SF-DH")["Height"] = 0.9
     with pytest.raises(ValueError, match="ceiling line"):
@@ -547,7 +550,8 @@ def test_wide_bays_split_into_sections():
         assert up.props["FittingCode"] == "HF" and up.props["OpeningAngle"] == 88.0
         assert up.lift is not None and low.lift is not None
         assert up.boxes[0][1] - up.boxes[0][0] == pytest.approx(1347.0)
-    assert max(b[5] for p in dh.parts for b in p.boxes) == pytest.approx(2450.0)
+    # 844 high under the oak lining since 2026-11-20 (top 2404 = 2450 − 18 − 28).
+    assert max(b[5] for p in dh.parts for b in p.boxes) == pytest.approx(2404.0)
     tc = runs["KR-TC"]
     assert tc.part("SF-TC-DOOR1").boxes[0][4] > 660.0  # over the sofa's east arm
 

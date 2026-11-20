@@ -547,7 +547,8 @@ def _furnishing_parts(doc: dict, motions: list | None = None, layers: dict | Non
     # Petr, 2026-11-13: the ceiling line is an invariant (models/ceiling_line.py).
     ceiling_line.check_ceiling_line(doc, FURNISHING_LISTS, runs)
     for run in runs:
-        run.notes.extend(ceiling_line.check_open_envelopes([run], (ROOM_X0, ROOM_X1, ROOM_Y0, ROOM_Y1)))
+        run.notes.extend(ceiling_line.check_open_envelopes(
+            [run], (ROOM_X0, ROOM_X1, ROOM_Y0, ROOM_Y1), ceiling_line.lining_obstacles(doc, FURNISHING_LISTS)))
     written = set(kitchen_ifc.apply(model, doc, runs).values())
     errors = validation_errors(model)
     if errors:

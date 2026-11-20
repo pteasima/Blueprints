@@ -896,7 +896,7 @@ systemFurniture:
           Layout: "front *"
   - id: SF-DH
     Name: "Jídelna horní"
-    Description: "Oak-front wall cabinet over the dining bay, x 22.45–25.15. Kitchen wall-cabinet size: depth 350, bottom 1560, height 890, top 2450 (Petr, 2026-11-13: top cabinets start at 1560; the ceiling line at 2450 is an invariant). Not carried across the piers. Its own run KR-DH. Since 2026-11-20 two 1350 sections, each a Blum AVENTOS HF bi-fold at 88°, like the kitchen wall cabinets; the open fronts reach into the soffit (modelled anyway, for the architect)."
+    Description: "Oak-front wall cabinet over the dining bay, x 22.45–25.15. Depth 350, bottom 1560 (Petr, 2026-11-13: top cabinets start at 1560), height 844, top 2404: 28 under the oak lining SF-DH-LINING (2432–2450), Blum AVENTOS HF's space above at the 88° stop. The ceiling line at 2450 is an invariant. Not carried across the piers. Its own run KR-DH. Two 1350 sections, each a Blum AVENTOS HF bi-fold at 88°, like the kitchen wall cabinets (2026-11-20)."
     PredefinedType: USERDEFINED
     ObjectType: WallCabinet
     ContainedInStructure: SP-1.02
@@ -904,7 +904,14 @@ systemFurniture:
     Elevation: 1.56
     Width: 2.7
     Depth: 0.35
-    Height: 0.89
+    # 0.89 until Petr, 2026-11-20: "I actually got that completely wrong,
+    # and this new screenshot shows how the cabinet top extends past the
+    # cabinets on the underside of the soffit. It also means that you do
+    # need to worry about the room for the flip up cabinet door." The oak
+    # top (SF-DH-LINING, 18, 2432–2450) lines the soffit's underside out to
+    # its face; HF at 88° needs 28 above the cabinet top (Blum), so the top
+    # is 2450 − 18 − 28 = 2404 and the cabinet 844. Bottom stays 1560.
+    Height: 0.844
     PropertySets:
       - Name: Pset_Finish
         Properties:
@@ -922,14 +929,15 @@ systemFurniture:
       # out opening as kitchen top cabinets, same 88deg setting. If it hits
       # the soffit, still model it (so I have screenshots for the architect
       # to resolve this issue." Two 1350 sections (18 divider), each an
-      # AVENTOS HF bi-fold at angle=88 like SF-AH850. The soffit is 20 over
-      # the top; the sweep goes into it (docs/design/kitchen-cabinets.md
-      # "Dining wall cabinet: HF and the soffit").
+      # AVENTOS HF bi-fold at angle=88 like SF-AH850. Since the oak lining
+      # (above) the fronts have Blum's 28 under it and the drawn sweep
+      # 11.5, so AcceptOpenClash is gone: the export stops again if they
+      # meet the lining or the soffit (docs/design/kitchen-cabinets.md
+      # "Batch 2026-11-20", section 8).
       - Name: Pset_Fronts
         Properties:
           Sections: "2"
           Layout: "lift * fitting=HF angle=88 shelves=2"
-          AcceptOpenClash: "Petr, 2026-11-20: If it hits the soffit, still model it (so I have screenshots for the architect to resolve this issue."
           Contents1: "hrnky"
           Contents2: "hrnky"
   - id: SF-TC
@@ -1299,7 +1307,7 @@ furniture:
           PlinthHeight: 0.0
   - id: KR-DH
     Name: "Jídelna horní"
-    Description: "The oak wall cabinet over the dining run (SF-DH), a monoblock of one: three sections of doors (2026-11-19), two AVENTOS HF sections since 2026-11-20."
+    Description: "The oak wall cabinet over the dining run (SF-DH), a monoblock of one: three sections of doors (2026-11-19), two AVENTOS HF sections since 2026-11-20, 844 high under the oak soffit lining SF-DH-LINING."
     PredefinedType: USERDEFINED
     ObjectType: KitchenRun
     ContainedInStructure: SP-1.02
@@ -1495,6 +1503,78 @@ furniture:
     Width: 0.86
     Depth: 0.3
     Height: 0.66
+  # The oak top of SF-DH, carried forward under the soffit. Petr,
+  # 2026-11-20: "I actually got that completely wrong, and this new
+  # screenshot shows how the cabinet top extends past the cabinets on the
+  # underside of the soffit. It also means that you do need to worry about
+  # the room for the flip up cabinet door. Please adjust it and I'll send it
+  # to the architect for approval (his model was too simplified)." Part of
+  # the cabinet (oak, furniture), not the drywall. 18 thick like the
+  # carcass board (guess:), top on the 2450 ceiling line, so the 20 gap to
+  # the GKB underside (2470) stays (guess: a shadow gap or a scribe). Out to
+  # the soffit face y 15.15, back to the wall, between the piers. The open
+  # HF fronts are checked against it (models/ceiling_line.py).
+  - id: SF-DH-LINING
+    Name: "Jídelna horní, dubový podhled"
+    Description: "Oak lining under the soffit: SF-DH's top carried forward to the soffit face (y 15.15) and back to the wall (15.60), x 22.45–25.15 between the piers, 18 thick, 2432–2450. guess: thickness, the 20 gap to the soffit's GKB above."
+    PredefinedType: USERDEFINED
+    ObjectType: CabinetLining
+    ContainedInStructure: SP-1.02
+    Origin: [22.45, 15.15]
+    Elevation: 2.432
+    Width: 2.7
+    Depth: 0.45
+    Height: 0.018
+    PropertySets:
+      - Name: Pset_Finish
+        Properties:
+          Material: "natural oak"
+          Form: "solid or veneer"
+      - Name: Pset_CabinetLining
+        Properties:
+          PartOf: SF-DH
+  # End returns: SF-DH's oak sides carried up to the lining, closing the
+  # 28 band over the cabinet at both ends (the screenshot's oak frame).
+  # From 2 behind the fronts' inner face (y 15.27, guess:) to the wall, so
+  # the open fronts' sweep (to y 15.268) passes in front of them.
+  - id: SF-DH-RET-W
+    Name: "Jídelna horní, dubový bok západ"
+    Description: "West end return: SF-DH's oak side carried up from the cabinet top (2404) to the lining (2432), x 22.450–22.468, y 15.27–15.60. guess: the frame detail."
+    PredefinedType: USERDEFINED
+    ObjectType: CabinetLining
+    ContainedInStructure: SP-1.02
+    Origin: [22.45, 15.27]
+    Elevation: 2.404
+    Width: 0.018
+    Depth: 0.33
+    Height: 0.028
+    PropertySets:
+      - Name: Pset_Finish
+        Properties:
+          Material: "natural oak"
+          Form: "solid or veneer"
+      - Name: Pset_CabinetLining
+        Properties:
+          PartOf: SF-DH
+  - id: SF-DH-RET-E
+    Name: "Jídelna horní, dubový bok východ"
+    Description: "East end return: SF-DH's oak side carried up from the cabinet top (2404) to the lining (2432), x 25.132–25.150, y 15.27–15.60. guess: the frame detail."
+    PredefinedType: USERDEFINED
+    ObjectType: CabinetLining
+    ContainedInStructure: SP-1.02
+    Origin: [25.132, 15.27]
+    Elevation: 2.404
+    Width: 0.018
+    Depth: 0.33
+    Height: 0.028
+    PropertySets:
+      - Name: Pset_Finish
+        Properties:
+          Material: "natural oak"
+          Form: "solid or veneer"
+      - Name: Pset_CabinetLining
+        Properties:
+          PartOf: SF-DH
   - id: FN-BK
     Name: "Knihovna"
     Description: "Open bookshelf above the sofa, x 25.52–29.70. Depth 250, bottom 980 (50 above the 930 counter; was 850 over the old 800 base), top 2450. Three shelves. Oak lamella back, slats 40 / gap 20 / thick 12. Sides, top and shelves 20."

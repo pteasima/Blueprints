@@ -13,7 +13,9 @@ would meet a bass trap, the soffit over the north cabinets or the sloped
 ceiling, and returns the margins for the notes. A bay whose
 ``Pset_Fronts.AcceptOpenClash`` gives a reason (Petr's quote) is modelled
 anyway: the overlap is a note and an ``OpenClash`` property on its lift
-fronts instead of an error (SF-DH, 2026-11-20).
+fronts instead of an error. Furniture that lines the soffit
+(``ObjectType: CabinetLining``, SF-DH's oak top since 2026-11-20) is an
+obstacle too (``lining_obstacles``).
 
 The obývák model's frame: X eave to eave, 0 at the south eave and
 ``room_width`` at the cabinet (north) eave; Y gable to gable, 0 at the living
@@ -54,6 +56,27 @@ def obstacles(room: tuple) -> list:
         # between the bass traps, room face to the wall, from the underside up.
         ("soffit over the north cabinets", _S["x0"], _S["x1"], _S["y_face"], y1, _S["z_under"], top),
     ]
+
+
+LINING_TYPES = ("CabinetLining",)
+
+
+def lining_obstacles(doc: dict, lists) -> list:
+    """Furniture boxes the open fronts must stay under (``LINING_TYPES``),
+    (name, x0, x1, y0, y1, z0, z1) in ground-floor CAD mm. Axis-aligned
+    elements only (no RefDirection), Origin the minimum corner."""
+    out = []
+    for key in lists:
+        for e in doc.get(key) or []:
+            if e.get("ObjectType") not in LINING_TYPES:
+                continue
+            if e.get("RefDirection") not in (None, [1, 0], [1.0, 0.0]):
+                raise ValueError(f"{e['id']}: a CabinetLining must be axis-aligned")
+            x, y = (float(v) * 1000.0 for v in e["Origin"])
+            z = float(e.get("Elevation") or 0.0) * 1000.0
+            w, d, h = (float(e[k]) * 1000.0 for k in ("Width", "Depth", "Height"))
+            out.append((e["id"], x, x + w, y, y + d, z, z + h))
+    return out
 
 
 def ceiling_z(room: tuple, y: float) -> float:
@@ -130,10 +153,10 @@ def _accepted(run, bid: str):
     return None
 
 
-def check_open_envelopes(runs: list, room: tuple) -> list:
+def check_open_envelopes(runs: list, room: tuple, extra: list = ()) -> list:
     """Notes with each lift front's margins; raises on an overlap unless the
     bay accepts it (``AcceptOpenClash``), then the overlap is in the notes."""
-    obs = obstacles(room)
+    obs = obstacles(room) + list(extra)
     notes, hits = [], []
     for run in runs:
         clear = {bid: box for bid, box in run.clearances}

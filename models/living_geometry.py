@@ -23,7 +23,8 @@ from __future__ import annotations
 from build123d import Align, Box, Compound, Pos
 
 # Object types drawn as oak rather than upholstery.
-OAK_TYPES = frozenset({"DiningTable", "DiningChair", "Bookshelf", "SlatCladding"})
+# CabinetLining: SF-DH's oak top under the soffit and its end returns (2026-11-20), plain boxes.
+OAK_TYPES = frozenset({"DiningTable", "DiningChair", "Bookshelf", "SlatCladding", "CabinetLining"})
 
 _CHAIR_SEAT_MM = 450.0
 _CHAIR_SEAT_T = 36.0
