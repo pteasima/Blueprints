@@ -383,7 +383,7 @@ What it means here:
 
 ### Baseplates
 
-Each Gridfinity drawer carries an n × m baseplate on its inside floor, centred. It is drawn as a 1 mm floor plus a 5 mm rib on every grid line (`GridfinityHeight` 5, `GridfinityFloor` 1, `GridfinityRib` 2.5, all `guess:`; a standard plate is about 5 high). It is part of the drawer's IFC shape, like a pull-out's bins. In the viewer it is, for now, its own on-demand layer (**Interior › Gridfinity baseplates**, off by default, `ground_floor.gridfinity.glb`) hung on the drawer, so it slides with it; see [Roadmap](../Roadmap.md) "Temporary: performance". The drawer's `Pset_KitchenFront` has `Gridfinity` (for example `12x11`), `InsideWidth`, `InsideDepth`, `InsideHeight` and the slack.
+Each Gridfinity drawer carries an n × m baseplate on its inside floor, centred. It is drawn as a 1 mm floor plus a 5 mm rib on every grid line (`GridfinityHeight` 5, `GridfinityFloor` 1, `GridfinityRib` 2.5, all `guess:`; a standard plate is about 5 high). It is part of the drawer's IFC shape, like a pull-out's bins. In the viewer it is its own layer (**Interior › Gridfinity baseplates**, on by default, `ground_floor.gridfinity.glb`, fetched right after the model) hung on the drawer, so it slides with it; see [viewer/Performance.md](../viewer/Performance.md). The drawer's `Pset_KitchenFront` has `Gridfinity` (for example `12x11`), `InsideWidth`, `InsideDepth`, `InsideHeight` and the slack.
 
 ### Height in Gridfinity units (7 mm), above the baseplate
 
