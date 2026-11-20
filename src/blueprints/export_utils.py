@@ -1430,7 +1430,8 @@ def rewrite_glb_element_names(glb_path: Path, shape: Shape | Compound) -> int:
 def write_lazy_layers(model_name: str, layers: dict, models_dir: Path) -> list[Path]:
     """Write on-demand viewer layers: ``<model>.<label>.glb`` per label and
     ``<model>.layers.json`` listing them. The viewer shows each as a Parts
-    leaf, off by default, and fetches its GLB only when it is switched on
+    leaf, on by default, and fetches its GLB after the main model (or only
+    when it is switched on, if it starts off)
     (src/blueprints/viewer/README.md "On-demand layers"). Nodes are named
     like the main GLB's (``gridfinity__SF-E700-D1__``), in the same frame.
     With no layers, the manifest and the GLBs it listed are removed.
