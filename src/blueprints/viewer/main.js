@@ -72,6 +72,17 @@ import {
 } from "./homeLive.js";
 import { mountIfcInspector } from "./ifcInspector.js";
 import { createVisibility } from "./ifcHide.js";
+import {
+  IFC_LOCK_PREFIX,
+  clearVisibility,
+  defaultLocks,
+  ifcElementLocked,
+  loadVisibility,
+  lockStates,
+  lockedLeafIds,
+  saveVisibility,
+  urlLayerSwitch,
+} from "./visibilityState.js";
 import { normalizeIndex, subtreeIds } from "./ifcTree.js";
 import { isSceneSolid } from "./interactions.js";
 import {
@@ -193,13 +204,26 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   // hidden by default but I can show them without going to edit"); views and
   // scenes leave it alone, and ?cables=1 starts with it on.
   const hasCables = Array.isArray(options.cables?.routes) && options.cables.routes.length > 0;
+  // Remembered visibility (visibilityState.js; Petr, 2026-11-19: "remember
+  // state locally (doesn't get reflected in URL ...)"). Per model, in
+  // localStorage; an explicit `?cables=1` / `?<layer>=1` still wins.
+  /** @type {Storage | null} */
+  let visStorage = null;
+  try {
+    visStorage = typeof localStorage !== "undefined" ? localStorage : null;
+  } catch {
+    visStorage = null;
+  }
+  const visModelId = String(options.modelId || "").trim();
+  const savedVis = visModelId ? loadVisibility(visStorage, visModelId) : null;
+  /** Layer leaf on at start: URL switch, else remembered, else off. */
+  const layerOnAtStart = (id) => {
+    const fromUrl = urlLayerSwitch(typeof location !== "undefined" ? location.search : "", id);
+    if (fromUrl != null) return fromUrl;
+    return (savedVis?.opacity?.[id] ?? 0) > 1e-3;
+  };
   if (hasCables) {
-    let on = false;
-    try {
-      on = new URLSearchParams(window.location.search).get("cables") === "1";
-    } catch {
-      on = false;
-    }
+    const on = layerOnAtStart(CABLE_LEAF);
     partOpacity.set(CABLE_LEAF, on ? 1 : 0);
     partLastNonZero.set(CABLE_LEAF, 1);
   }
@@ -218,12 +242,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     const url = String(entry?.url || "").trim();
     if (!id || !url || id === CABLE_LEAF || lazyLayers.has(id)) continue;
     lazyLayers.set(id, { url, state: "idle", promise: null });
-    let on = false;
-    try {
-      on = new URLSearchParams(window.location.search).get(id) === "1";
-    } catch {
-      on = false;
-    }
+    const on = layerOnAtStart(id);
     partOpacity.set(id, on ? 1 : 0);
     partLastNonZero.set(id, 1);
     if (on) lazyAtStart.push(id);
@@ -247,6 +266,19 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   const leafSyncButtons = new Map();
   /** Expanded disclosure group ids. */
   const expandedGroups = new Set();
+  /**
+   * Lock ids: Parts group/leaf ids and `ifc:<GlobalId>` inspector rows
+   * (visibilityState.js). null until the Parts outline exists, then the
+   * model's default locks (`"locked": true` in parts.json).
+   * @type {Set<string> | null}
+   */
+  let partLocks = savedVis?.locks ? new Set(savedVis.locks) : null;
+  /** Leaf ids locked directly or through a group (derived from partLocks). */
+  let lockedLeaves = new Set();
+  /** GlobalIds locked from the inspector (derived from partLocks). */
+  let ifcLocks = new Set();
+  /** @type {Map<string, { row: HTMLElement, btn: HTMLButtonElement, label: string }>} */
+  const lockButtons = new Map();
 
   /** @type {ReturnType<typeof initSheetChrome> | null} */
   let chromeApi = null;
@@ -641,6 +673,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       frameIso();
       buildMaterialToggle();
       buildEdgesToggle();
+      restoreSavedOpacities();
       buildPartToggles();
       buildLocaleToggle();
       // Resolve ?scene= / options.scene before building View buttons so the
@@ -658,6 +691,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       // Real fixture models (fixtureModels.js); boxes until they arrive.
       void fixtureModels.install();
       for (const id of lazyAtStart) void loadLazyLayer(id);
+      restoreSavedSession();
       if (initialSpec) applyScene(initialSpec);
       syncSceneUrl();
       chromeApi?.refreshPartialHeight();
@@ -1083,11 +1117,12 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   /** Iso and the other builtin views show every part. */
   function resetDefaultOpacities() {
     for (const name of parts.keys()) {
-      if (lazyLayers.has(name)) continue;
+      if (lazyLayers.has(name) || lockedLeaves.has(name)) continue;
       partOpacity.set(name, 1);
       partLastNonZero.set(name, 1);
       applyOpacityToMeshes(parts.get(name) || [], 1, { edgeMode });
     }
+    scheduleVisibilitySave();
     updateBox();
     syncPartOpacityUi();
   }
@@ -1275,12 +1310,15 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
    * @param {{ skipUi?: boolean, detach?: boolean, skipClip?: boolean }} [opts]
    */
   function setPartOpacity(name, opacity, opts = {}) {
+    // A locked leaf keeps its visibility until it is unlocked (or Reset).
+    if (!opts.force && lockedLeaves.has(name)) return;
     const o = Math.max(0, Math.min(1, Number(opacity) || 0));
     partOpacity.set(name, o);
     if (o > 0) partLastNonZero.set(name, o);
     if (opts.detach) detachedLeaves.add(name);
     if (o > 0 && lazyLayers.get(name)?.state === "idle") void loadLazyLayer(name);
     applyOpacityToMeshes(parts.get(name) || [], o, { edgeMode });
+    scheduleVisibilitySave();
     if (opts.skipClip) return;
     updateBox();
     if (!opts.skipUi) syncPartOpacityUi();
@@ -1295,11 +1333,12 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     const o = Math.max(0, Math.min(1, Number(opacity) || 0));
     if (groupId) groupSliderOpacity.set(groupId, o);
     for (const id of leafIds) {
-      if (detachedLeaves.has(id)) continue;
+      if (detachedLeaves.has(id) || lockedLeaves.has(id)) continue;
       partOpacity.set(id, o);
       if (o > 0) partLastNonZero.set(id, o);
       applyOpacityToMeshes(parts.get(id) || [], o, { edgeMode });
     }
+    scheduleVisibilitySave();
     updateBox();
     syncPartOpacityUi();
   }
@@ -1311,12 +1350,14 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
    * @param {string[]} groupLeafIds
    */
   function syncLeafToGroup(leafId, groupId, groupLeafIds) {
+    if (lockedLeaves.has(leafId)) return;
     detachedLeaves.delete(leafId);
     const attached = groupLeafIds.filter((id) => !detachedLeaves.has(id));
     const o = groupDisplayOpacity(groupId, attached);
     partOpacity.set(leafId, o);
     if (o > 0) partLastNonZero.set(leafId, o);
     applyOpacityToMeshes(parts.get(leafId) || [], o, { edgeMode });
+    scheduleVisibilitySave();
     updateBox();
     syncPartOpacityUi();
   }
@@ -1581,10 +1622,12 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         `${node.label} opacity`,
         (partOpacity.get(node.id) ?? 1) * 100,
         () => partLastNonZero.get(node.id) ?? 1,
-        (o) =>
+        (o) => {
+          if (lockedLeaves.has(node.id)) return;
           setPartOpacity(node.id, o, {
             detach: Boolean(parentGroup),
-          }),
+          });
+        },
       );
       range.el.dataset.leaf = node.id;
       leafOpacityRanges.set(node.id, range);
@@ -1611,8 +1654,9 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         leafSyncButtons.set(node.id, syncBtn);
       }
 
-      if (syncBtn) row.append(spacer, nameEl, wrap, syncBtn);
-      else row.append(spacer, nameEl, wrap);
+      const lockBtn = makeLockButton(node.id, node.label, row);
+      if (syncBtn) row.append(spacer, nameEl, wrap, syncBtn, lockBtn);
+      else row.append(spacer, nameEl, wrap, lockBtn);
       parent.append(row);
       return;
     }
@@ -1648,6 +1692,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       groupDisplayOpacity(node.id, leafIds) * 100,
       () => groupLastNonZero,
       (o) => {
+        if (lockStates(partOutline, partLocks || []).has(node.id)) return;
         if (o > 0) groupLastNonZero = o;
         setGroupOpacity(leafIds, o, node.id);
       },
@@ -1698,7 +1743,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       }
     });
 
-    row.append(disclosure, nameEl, wrap);
+    const lockBtn = makeLockButton(node.id, node.label, row);
+    row.append(disclosure, nameEl, wrap, lockBtn);
     groupWrap.append(row, children);
     parent.append(groupWrap);
 
@@ -1732,10 +1778,229 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       ? resolvePartOutline([...parts.keys(), ...lazyIds, CABLE_LEAF], withCableLeaf(partGroups), tr)
       : resolvePartOutline([...parts.keys(), ...lazyIds], partGroups, tr);
     partOutline = outline;
+    if (!partLocks) partLocks = new Set(defaultLocks(outline));
+    recomputeLocks();
+    lockButtons.clear();
     for (const node of outline) {
       appendOutlineNode(node, host, 0, null);
     }
+    const footer = document.createElement("div");
+    footer.className = "parts-footer";
+    const resetBtn = document.createElement("button");
+    resetBtn.type = "button";
+    resetBtn.id = "parts-reset";
+    resetBtn.className = "parts-reset";
+    resetBtn.textContent = tr("ui.resetVisibility");
+    resetBtn.addEventListener("click", () => resetVisibility());
+    footer.append(resetBtn);
+    host.append(footer);
+    syncLockUi();
     requestAnimationFrame(() => relayoutPartNameColumn());
+  }
+
+  // ---- Locks and remembered visibility (visibilityState.js) ----
+
+  const PADLOCK_CLOSED =
+    '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M7 10V7a5 5 0 0 1 10 0v3h1a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h1zm2 0h6V7a3 3 0 0 0-6 0v3z"/></svg>';
+  const PADLOCK_OPEN =
+    '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M8 11V7a4 4 0 0 1 7.75-1.4"/><rect x="5" y="11" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
+
+  /**
+   * Padlock on a Parts row (44 pt target). Tap locks or unlocks that row;
+   * a row locked by its group shows a dimmed closed padlock and is inert.
+   * @param {string} id
+   * @param {string} label
+   * @param {HTMLElement} row
+   */
+  function makeLockButton(id, label, row) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "part-lock";
+    btn.dataset.lock = id;
+    btn.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      if (btn.disabled) return;
+      toggleLock(id);
+    });
+    btn.addEventListener("pointerdown", (ev) => ev.stopPropagation());
+    lockButtons.set(id, { row, btn, label });
+    return btn;
+  }
+
+  function recomputeLocks() {
+    const locks = partLocks || new Set();
+    lockedLeaves = lockedLeafIds(partOutline, locks);
+    ifcLocks = new Set(
+      [...locks].filter((id) => id.startsWith(IFC_LOCK_PREFIX)).map((id) => id.slice(IFC_LOCK_PREFIX.length)),
+    );
+  }
+
+  function syncLockUi() {
+    const states = lockStates(partOutline, partLocks || []);
+    for (const [id, { row, btn, label }] of lockButtons) {
+      const state = states.get(id) || null;
+      row.classList.toggle("is-locked", Boolean(state));
+      row.classList.toggle("is-lock-inherited", state === "inherited");
+      btn.classList.toggle("is-on", state === "self");
+      btn.classList.toggle("is-inherited", state === "inherited");
+      btn.disabled = state === "inherited";
+      btn.setAttribute("aria-pressed", state ? "true" : "false");
+      const verb = state === "inherited" ? tr("ui.lockedByGroup") : state ? tr("ui.unlock") : tr("ui.lock");
+      btn.setAttribute("aria-label", `${verb} ${label}`);
+      btn.title = verb;
+      btn.innerHTML = state ? PADLOCK_CLOSED : PADLOCK_OPEN;
+    }
+  }
+
+  /** @param {string} id Parts group/leaf id or `ifc:<GlobalId>` */
+  function toggleLock(id) {
+    if (!partLocks) partLocks = new Set(defaultLocks(partOutline));
+    if (partLocks.has(id)) partLocks.delete(id);
+    else partLocks.add(id);
+    recomputeLocks();
+    syncLockUi();
+    // Locked meshes come back if a session hide or room isolate had them.
+    applyInspectorVisibility();
+    ifcUiRef?.refresh();
+    scheduleVisibilitySave();
+  }
+
+  /** True when this yaml id (mesh key) has a mesh on a locked leaf. */
+  function keyLocked(key) {
+    if (!key || !lockedLeaves.size) return false;
+    for (const mesh of meshesByKey.get(key) || []) {
+      if (lockedLeaves.has(mesh.userData.bpPart)) return true;
+    }
+    return false;
+  }
+
+  /** Inspector-side lock: an IFC lock, or any of its meshes on a locked leaf. */
+  function elementLocked(globalId) {
+    if (ifcElementLocked(ifcIndex, globalId, ifcLocks)) return true;
+    const element = ifcIndex.elements?.[globalId];
+    return Boolean(element?.id && keyLocked(element.id));
+  }
+
+  /** @type {{ refresh: () => void } | null} */
+  let ifcUiRef = null;
+  /** @type {ReturnType<typeof createVisibility> | null} */
+  let ifcVisibilityRef = null;
+  /**
+   * GlobalIds hidden by something other than the inspector (room isolate).
+   * Kept apart from the inspector's own hides so "Show all" there and the
+   * room toggle do not undo each other.
+   * @type {Set<string>}
+   */
+  let extraHiddenGlobalIds = new Set();
+  /** Bumped whenever applyInspectorVisibility runs (content signature). */
+  let visibilitySigRevision = 0;
+  /** Hooks that add to the saved state / reset (room isolate). */
+  const visibilityExtras = [];
+  let visSaveTimer = 0;
+  let visRestoring = false;
+
+  function collectVisibilityState() {
+    /** @type {Record<string, number>} */
+    const opacity = {};
+    for (const [k, v] of partOpacity) opacity[k] = Number(Number(v).toFixed(3));
+    /** @type {Record<string, number>} */
+    const groupSlider = {};
+    for (const [k, v] of groupSliderOpacity) groupSlider[k] = Number(Number(v).toFixed(3));
+    const state = {
+      v: 1,
+      opacity,
+      groupSlider,
+      detached: [...detachedLeaves],
+      locks: partLocks ? [...partLocks] : null,
+      ifcHidden: ifcVisibilityRef ? ifcVisibilityRef.hiddenIds() : [],
+    };
+    for (const extra of visibilityExtras) extra.collect?.(state);
+    return state;
+  }
+
+  function flushVisibilitySave() {
+    if (visSaveTimer) clearTimeout(visSaveTimer);
+    visSaveTimer = 0;
+    if (!visModelId || visRestoring || !root) return;
+    saveVisibility(visStorage, visModelId, collectVisibilityState());
+  }
+
+  function scheduleVisibilitySave() {
+    if (!visModelId || visRestoring) return;
+    if (visSaveTimer) clearTimeout(visSaveTimer);
+    visSaveTimer = setTimeout(flushVisibilitySave, 300);
+  }
+
+  if (typeof window !== "undefined") {
+    window.addEventListener("pagehide", () => {
+      if (visSaveTimer) flushVisibilitySave();
+    });
+  }
+
+  /** Put the remembered opacities back before the Parts panel is built. */
+  function restoreSavedOpacities() {
+    if (!savedVis) return;
+    visRestoring = true;
+    try {
+      for (const name of parts.keys()) {
+        if (isLayerLeaf(name)) continue;
+        const v = savedVis.opacity[name];
+        if (v == null) continue;
+        setPartOpacity(name, v, { force: true, skipUi: true, skipClip: true });
+      }
+      for (const id of savedVis.detached) detachedLeaves.add(id);
+      for (const [k, v] of Object.entries(savedVis.groupSlider)) groupSliderOpacity.set(k, v);
+    } finally {
+      visRestoring = false;
+    }
+  }
+
+  /** Inspector hides and extras (room isolate), once the inspector exists. */
+  function restoreSavedSession() {
+    if (!savedVis) return;
+    visRestoring = true;
+    try {
+      if (ifcVisibilityRef && savedVis.ifcHidden.length) {
+        ifcVisibilityRef.restore(savedVis.ifcHidden.filter((id) => ifcIndex.elements?.[id]));
+      }
+      for (const extra of visibilityExtras) extra.restore?.(savedVis);
+    } finally {
+      visRestoring = false;
+    }
+    applyInspectorVisibility();
+    ifcUiRef?.refresh();
+  }
+
+  /**
+   * Parts panel Reset: everything on except the layer leaves (cables,
+   * Gridfinity), no inspector hides, no room isolate, the model's default
+   * locks. Clears the remembered entry.
+   */
+  function resetVisibility() {
+    if (visSaveTimer) clearTimeout(visSaveTimer);
+    visSaveTimer = 0;
+    clearVisibility(visStorage, visModelId);
+    visRestoring = true;
+    try {
+      detachedLeaves.clear();
+      groupSliderOpacity.clear();
+      partLocks = new Set(defaultLocks(partOutline));
+      recomputeLocks();
+      const ids = new Set([...parts.keys(), ...lazyLayers.keys()]);
+      if (hasCables) ids.add(CABLE_LEAF);
+      for (const name of ids) {
+        setPartOpacity(name, isLayerLeaf(name) ? 0 : 1, { force: true, skipUi: true, skipClip: true });
+        partLastNonZero.set(name, 1);
+      }
+      ifcVisibilityRef?.showAll();
+      for (const extra of visibilityExtras) extra.reset?.();
+    } finally {
+      visRestoring = false;
+    }
+    updateBox();
+    buildPartToggles();
+    applyInspectorVisibility();
+    ifcUiRef?.refresh();
   }
 
   /** @type {string | null} */
@@ -2745,6 +3010,25 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     get walk() {
       return walk;
     },
+    /** Remembered visibility and locks (visibilityState.js); headless checks. */
+    visibility: {
+      state: () => collectVisibilityState(),
+      reset: () => resetVisibility(),
+      toggleLock: (id) => toggleLock(id),
+      lockedLeaves: () => [...lockedLeaves],
+      elementLocked: (globalId) => elementLocked(globalId),
+      /** Same as the inspector row menu's "Hide all others". */
+      hideOthers: (globalId) => {
+        ifcVisibility.hideOthers(globalId);
+        applyInspectorVisibility();
+        ifcUi.refresh();
+      },
+      hiddenMeshCount: () => {
+        let n = 0;
+        for (const meshes of meshesByKey.values()) for (const m of meshes) if (m.userData.bpIfcHidden) n++;
+        return n;
+      },
+    },
   };
   window.BlueprintsViewer = api;
 
@@ -2774,7 +3058,11 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   /** @type {{ meshes: object[], clones: object[], t0: number } | null} */
   let pulse = null;
 
-  const ifcVisibility = createVisibility(ifcIndex);
+  const ifcVisibility = createVisibility(ifcIndex, {
+    // Locked rows and leaves never go hidden from the inspector.
+    isLocked: (id) => elementLocked(id),
+  });
+  ifcVisibilityRef = ifcVisibility;
   const ifcRaycaster = new THREE.Raycaster();
   const ifcPointer = new THREE.Vector2();
   const ifcUi = mountIfcInspector({
@@ -2792,12 +3080,18 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       else pulseElement(id);
     },
     onVisibility: () => applyInspectorVisibility(),
+    locks: {
+      isLocked: (id) => elementLocked(id),
+      isLockedSelf: (id) => Boolean(partLocks?.has(IFC_LOCK_PREFIX + id)),
+      toggle: (id) => toggleLock(IFC_LOCK_PREFIX + id),
+    },
     actionsFor: (element) => actionsForElement(element),
     liveLines: (element) => {
       const device = home?.lastKnown(element.globalId);
       return device ? deviceLines(device, tr) : [];
     },
   });
+  ifcUiRef = ifcUi;
 
   function elementFromMesh(obj) {
     let node = obj;
@@ -2992,7 +3286,11 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   function applyInspectorVisibility() {
     const hiddenKeys = new Set();
     for (const element of Object.values(ifcIndex.elements)) {
-      if (ifcVisibility.isHidden(element.globalId) && element.id) hiddenKeys.add(element.id);
+      if (!element.id) continue;
+      if (ifcVisibility.isHidden(element.globalId) || extraHiddenGlobalIds.has(element.globalId)) {
+        // A locked element stays drawn whatever hid it.
+        if (!elementLocked(element.globalId)) hiddenKeys.add(element.id);
+      }
     }
     for (const [key, meshes] of meshesByKey) {
       const hidden = hiddenKeys.has(key);
@@ -3017,6 +3315,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       applyOpacityToMeshes(meshes, partOpacity.get(name) ?? 1, { edgeMode });
     }
     viewDirty = true;
+    visibilitySigRevision += 1;
+    scheduleVisibilitySave();
   }
 
   function eachMaterial(mesh, fn) {
@@ -3656,6 +3956,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     // a session hide flips mesh visibility, or the old triangles stay drawn.
     const hidden = ifcVisibility.hiddenIds();
     bits.push(hidden.length ? hidden.slice().sort().join(",") : "-");
+    // Room isolate and locks flip mesh visibility the same way.
+    bits.push(`x${visibilitySigRevision}`);
     return bits.join("|");
   }
 
