@@ -63,7 +63,7 @@ Swatches (0.3 m crops of each colour map, or the flat `base_color`): [`docs/prev
 | **White melamine carcass (kitchen interiors)** `kitchen-carcass-white` | `#eeece6` | 0.5 / 0.0 | none | `cabinet` | [1](https://github.com/pteasima/Blueprints/blob/main/docs/design/kitchen-cabinets.md) |
 | **Tile grout, sand beige, 2 mm** `grout-sand` | `#bbab93` | 0.85 / 0.0 | none | `grout` | none |
 | **Poured polyurethane floor, garage grey** `floor-pu-garage` | `#8f9294` | 0.4 / 0.0 | color, roughness | pending | [1](https://github.com/pteasima/Blueprints/blob/main/scripts/export_podlaha_eps.py) |
-| **Interior plaster, white paint** `paint-interior-white` | `#f3f2ee` | 0.9 / 0.0 | normal, roughness | `masonry`; `prewall`; pending | [1](https://ambientcg.com/view?id=Plaster001) |
+| **Interior plaster, white paint** `paint-interior-white` | `#f3f2ee` | 0.9 / 0.0 | normal, roughness | `masonry`; `prewall`; `soffit_naturheld_140`; `soffit_gkb`; pending | [1](https://ambientcg.com/view?id=Plaster001) |
 | **Exterior render, off-white** `facade-render-white` | `#eceae4` | 0.95 / 0.0 | normal | pending | none |
 | **Sectional garage doors, anthracite** `garage-door-anthracite` | `#383e42` | 0.5 / 0.0 | none | `door` D-OP49, D-OP50 | none |
 | **Exterior blinds and blind motors, anthracite** `blind-anthracite` | `#383e42` | 0.45 / 0.0 | none | `actuator`; pending | none |

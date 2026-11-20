@@ -56,6 +56,7 @@ export const SOLID_COLORS = {
   soffit_mineral_wool: [0, 210, 155],
   soffit_ud: [120, 120, 130],
   soffit_gkf: [230, 230, 235],
+  soffit_gkb: [230, 230, 235],
   soffit_cd: [120, 120, 130],
   soffit_nonius: [90, 90, 100],
   soffit_duct: [168, 176, 188],
@@ -92,6 +93,7 @@ export const LAYER_DEPTH_BIAS = {
   bass_gkb: 4,
   slope_gkf: 4,
   soffit_gkf: 4,
+  soffit_gkb: 4,
   furniture: 6,
   cabinet: 6,
   gridfinity: 7,
@@ -633,6 +635,12 @@ export const SHADED_PRESETS = {
     map: "metal",
   },
   soffit_gkf: {
+    color: [230, 230, 235],
+    roughness: 0.88,
+    metalness: 0.0,
+    map: "plaster",
+  },
+  soffit_gkb: {
     color: [230, 230, 235],
     roughness: 0.88,
     metalness: 0.0,

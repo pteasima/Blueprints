@@ -25,6 +25,13 @@
     ]
   },
   {
+    "id": "soffit",
+    "children": [
+      "soffit_naturheld_140",
+      "soffit_gkb"
+    ]
+  },
+  {
     "id": "bathroom",
     "children": [
       "floor_tile",

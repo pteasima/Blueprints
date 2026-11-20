@@ -113,6 +113,7 @@ from bathroom_120 import (
 )
 from living_geometry import OAK_TYPES, living_detail
 import ceiling_line
+import soffit
 import kitchen_cabinet
 import kitchen_ifc
 from blueprints.export_utils import SECTION_LAYERS
@@ -569,6 +570,21 @@ def _furnishing_parts(doc: dict, motions: list | None = None, layers: dict | Non
                 label = LABEL_WORKTOP
             parts.extend(_solid_from_product(product, label, key, element, motions))
     return parts
+
+
+def soffit_solids() -> list:
+    """The soffit over the north cabinets: its NaturHeld face and GKB
+    underside (models/soffit.py), one mesh each, inset by the mesh gap."""
+    out = []
+    half = MESH_GAP_MM / 2.0
+    for eid, label, x0, x1, y0, y1, z0, z1 in soffit.boxes((ROOM_X0, ROOM_X1, ROOM_Y0, ROOM_Y1), ROOM_PIERS_M):
+        solid = Pos(x0 + half, y0 + half, z0 + half) * Box(
+            x1 - x0 - MESH_GAP_MM, y1 - y0 - MESH_GAP_MM, z1 - z0 - MESH_GAP_MM,
+            align=(Align.MIN, Align.MIN, Align.MIN))
+        painted = _paint(solid, label)
+        painted.element_id = eid
+        out.append(painted)
+    return out
 
 
 def _color(label: str) -> Color:
@@ -1452,6 +1468,10 @@ def build(
     parts.extend(bed_parts)
     room_device_parts = electrical_rooms_parts()
     parts.extend(room_device_parts)
+    # Petr, 2026-11-20: "lets get the soffit modeled so I see how it works
+    # out with the top cabinets." From the obývák model (models/soffit.py).
+    soffit_parts = soffit_solids()
+    parts.extend(soffit_parts)
     bath107 = bathroom_107_figures()
 
     assembly = Compound(obj=parts, children=parts, label=MODEL_NAME)
@@ -1481,6 +1501,7 @@ def build(
             "bathroom_107_screed_drain_mm": round(bath107["screed_drain_mm"], 3),
             "bedroom_111": len(bed_parts),
             "electrical_rooms": len(room_device_parts),
+            "soffit_parts": len(soffit_parts),
         },
         "footprints_omitted": omitted,
         "openings_cut": cut_ids,
@@ -1570,6 +1591,11 @@ def part_groups() -> list[dict]:
                 LABEL_RUG,
                 LABEL_LIGHT,
             ],
+        },
+        # The soffit over the north cabinets (2026-11-20), its own toggle.
+        {
+            "id": "soffit",
+            "children": [soffit.LABEL_FACE, soffit.LABEL_UNDERSIDE],
         },
         {
             "id": "bathroom",

@@ -814,7 +814,7 @@ Knock-on effects:
 
 So the modelled four-bar (pivot on the front's inner face, a guess) misses the soffit by 3.5 mm, but Blum's planning figure, which the export checks, needs 28 over the 2450 top and the soffit leaves 20: **8 mm short, along the full 2700 width of both sections, in the strip from the cabinet front (y 15.25) back towards the wall where the top hinge rises.** The 81° stop (Blum Y = 0) would clear it; a 2442 cabinet top (8 lower) or a 2478 soffit would too. `open:` for the architect.
 
-Renders: `dh-soffit-section.png` and `dh-soffit-section-zoom.png` (side section, shut / sweep / open, the soffit edge, the 2478 Blum line), `dh-soffit-iso-closed.png` / `dh-soffit-iso-open.png` and `dh-soffit-side-closed.png` / `dh-soffit-side-open.png`. The soffit is drawn in those renders only; the ground-floor model has no soffit solid (it is in the obývák model and in `ceiling_line.obstacles`).
+Renders: `dh-soffit-section.png` and `dh-soffit-section-zoom.png` (side section, shut / sweep / open, the soffit edge, the 2478 Blum line), `dh-soffit-iso-closed.png` / `dh-soffit-iso-open.png` and `dh-soffit-side-closed.png` / `dh-soffit-side-open.png`. Since the soffit change below, the soffit is a solid in the ground-floor model (`models/soffit.py`); `ceiling_line.obstacles` reads the same extents.
 
 ### 3. Dining and living bases: cream
 
@@ -823,7 +823,7 @@ Renders: `dh-soffit-section.png` and `dh-soffit-section-zoom.png` (side section,
 - **KR-DN** (SF-F052, SF-DN, SF-F053, SF-DN70) and **KR-LB** (SF-LB): every part, carcasses and fronts, is now the kitchen cream (`kitchen-front-cream`, RAL 9001 matt), was natural oak. `BodyMaterial` and the bays' `Pset_Finish` say so. No geometry changed.
 - Kept: KR-DN's Silestone Blanco Maple worktop and the stone backsplash in the niche (`CV-BS-DN`, `CV-BS-R052`, `CV-BS-R053W`, `CV-BS-R053E`, `CV-BS-DN70`), KR-LB's oak-veneer top, the Gatta table and chairs (oak, “dining table stays wooden”), SF-DH and SF-TC (oak), the bookshelf FN-BK (oak).
 - **The concrete columns (piers W-052, W-053): vertical oak slats** on their front faces, from the worktop (930) to the ceiling line (2450): `CV-SLAT-W052` (x 22.150–22.462) and `CV-SLAT-W053` (x 25.138–25.462), `ObjectType: SlatCladding`, 20 thick (y 15.330–15.350), slats 40 wide 20 apart (the bookshelf lamella, `guess:`), five on each, centred, built by `living_geometry` from `Pset_Slats`. They replace the 12 mm stone pieces `CV-BS-P052` / `CV-BS-P053` (930–1560).
-- The screenshot did not reach the bot that made this change; it was described to it as: cream/white bases continuing into the living room, oak SF-DH, vertical oak slats on the columns, an oak top band above, oak bookshelf, light stone worktop and backsplash, cream tall units, the table wooden despite showing white. `open:` the oak top band: the soffit is not a solid in the ground-floor model, so its fascia has no material here. `open:` slats on the piers' sides (W-053's east face keeps its stone return) and below the worktop (the cream fillers cover that).
+- The screenshot did not reach the bot that made this change; it was described to it as: cream/white bases continuing into the living room, oak SF-DH, vertical oak slats on the columns, an oak top band above, oak bookshelf, light stone worktop and backsplash, cream tall units, the table wooden despite showing white. `open:` the oak top band: the soffit is modelled now (section 7) with its face painted white plaster as asked; an oak fascia on it would be a separate change. `open:` slats on the piers' sides (W-053's east face keeps its stone return) and below the worktop (the cream fillers cover that).
 
 ### 4. Island east side
 
@@ -842,3 +842,35 @@ SF-LB keeps its seven 597 sections and dividers; each is one fixed blank front a
 ### Tests and checks
 
 `tests/test_kitchen_cabinet.py`, `tests/test_furnishings.py` (plus a pier-slat test), `tests/test_materials_catalogue.py` and `src/blueprints/viewer/doors.test.mjs` (SF-DH's two HF linkages) updated for the new positions, the HF sections, the accepted clash, the east drawers, the blank SF-LB fronts and the cream bases.
+
+### 7. The soffit, modelled
+
+> lets get the soffit modeled so I see how it works out with the top cabinets.
+
+The soffit over the north cabinets is now geometry in the ground-floor model and its exports (`models/soffit.py`, `ground_floor.soffit_solids`), with its own viewer group **Soffit / Podhled** (`soffit`: `soffit_naturheld_140`, `soffit_gkb`), so it can be toggled. Both labels use the existing `paint-interior-white` plaster material. The NaturHeld face has a StoSilent acoustic plaster finish; it gets its own material once one is picked (`pending` in the catalogue). It is derived and not typed in: every number comes from `obyvak_geom.ObyvakParams` / `ObyvakLayout`, the obývák model's soffit (docs/design/obyvak.md, the box frame on CD profiles), mapped with x = 29.900 − Y, y = 10.250 + X. The room checks against it: 11 100 × 5 350 in both models, and it stops if they differ.
+
+| Part | Ground floor (m / mm) | Source |
+|---|---|---|
+| Along the north wall | x 18.990 – 29.450 (10 460) | `y_furn0` / `y_furn1`: between the living-gable bass trap (450, `predstena_living`) and the kitchen-gable one (190, `predstena_kitchen`) |
+| Room face, `soffit_naturheld_140` | y 15.150 – 15.194 (44 thick), z 2470 – 3287.5 | `furniture_width` 450 from the north plaster face; `t_soffit_face` = NaturHeld 40 + StoSilent Top Basic 2 + Top Finish 2; up to the GKF lid on the wall plate (`z_soffit_lid`) |
+| Underside, `soffit_gkb` | y 15.194 – 15.600, z 2470 – 2482.5 | `furniture_height` 2450 + `furniture_gap` 20 (`z_nabeh_bot`); `soffit_bottom_t` 12.5 plain GKB |
+| Round the piers | the underside stops at W-052 (x 22.15–22.45) and W-053 (x 25.15–25.45) from y 15.35, in 5 pieces | ground-floor piers (`ROOM_PIERS_M`) |
+
+Not drawn: the mineral wool, CD frame, ducts and lid behind the face (they are in the obývák model), and the bass traps themselves. `ceiling_line.obstacles` now reads the soffit box from `soffit.extents`. The numbers are the same as the old hand-typed 450 band, so no margin changed.
+
+**Where it meets top cabinets** (nothing else moved):
+
+| Cabinet | Relation to the soffit | HF at 88°: drawn sweep | HF at 88°: Blum Y = 28 (2478) |
+|---|---|---|---|
+| SF-DH-S1 / S2 (dining, x 22.45–23.80 / 23.80–25.15, top 2450, front y 15.250) | under the underside, the closed front 100 behind the face | peak 2466.5 at y 15.268, under the GKB: **3.5 mm clear** | **8 mm into the soffit**, the full 2700. The `AcceptOpenClash` note is kept (`open:` for the architect) |
+| SF-AH850 / BH800 / CH850 (kitchen wall cabinets, west wall, y 13.0–13.85) | not under it: their north end is 1300 / 2150 / 2950 short of the face (y 15.150). They sit under the kitchen-gable bass trap and its 2450 line | peak 2466.5, 1300+ from the soffit | 1300 / 2150 / 2950 from the soffit; 142 from the kitchen bass trap |
+| KR-TALL-W / -F / KR-TALL (tall units, y 15.0–15.6, top 2450, hinged doors) | 20 under the underside; the 600 carcasses stand 150 proud of the face (by design, 2026-11-06). x 18.80–18.99 is under the kitchen bass trap | no lift fronts | — |
+| SF-TC, FN-BK (living, top 2450) | 20 under it up to x 29.45, then under the living bass trap | no lift fronts | — |
+
+Guesses:
+
+- `guess:` the face runs to the lid height of the obývák model (3287.5), above the ground-floor walls (3000, `DEFAULT_WALL_HEIGHT_M`). The slope and lid are not drawn here. Petr: "lets get the soffit modeled so I see how it works out with the top cabinets."
+- `guess:` the GKB underside stops at the piers' faces (y 15.35, their ground-floor depth). The obývák model puts 300 × 300 columns there and runs the board through them. Petr: "lets get the soffit modeled so I see how it works out with the top cabinets."
+- `guess:` the soffit ends square at both bass-trap linings (no return, no shadow gap). Petr: "lets get the soffit modeled so I see how it works out with the top cabinets."
+
+Renders (box only, not in the repo): `/workspace/renders/soffit/north-wall-iso-{closed,open}.png`, `kitchen-wall-cabinets-iso-{closed,open}.png`, `sf-dh-section.png`, `sf-dh-section-zoom.png`.

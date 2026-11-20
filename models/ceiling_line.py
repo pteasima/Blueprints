@@ -26,6 +26,7 @@ from __future__ import annotations
 import math
 
 from obyvak_geom import ObyvakLayout, ObyvakParams
+import soffit
 
 _P = ObyvakParams()
 _L = ObyvakLayout(_P)
@@ -45,10 +46,13 @@ def obstacles(room: tuple) -> list:
     sloped ceiling as a function of y (``ceiling_z``)."""
     x0, x1, y0, y1 = _room(room)
     top = 1e6
+    _S = soffit.extents(room)
     return [
         ("kitchen-gable bass trap", x0, x0 + _P.predstena_kitchen, y0, y1, _P.predstena_bottom_z, top),
         ("living-gable bass trap", x1 - _P.predstena_living, x1, y0, y1, _P.predstena_bottom_z, top),
-        ("soffit over the north cabinets", x0, x1, y1 - _P.furniture_width, y1, _L.z_nabeh_bot, top),
+        # The modelled soffit (models/soffit.py, from the obývák model):
+        # between the bass traps, room face to the wall, from the underside up.
+        ("soffit over the north cabinets", _S["x0"], _S["x1"], _S["y_face"], y1, _S["z_under"], top),
     ]
 
 
