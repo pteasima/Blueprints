@@ -322,9 +322,14 @@
     selectors:
       - {label: masonry}
       - {label: prewall}
+      # The soffit over the north cabinets of room 1.02 (2026-11-20): the
+      # StoSilent-finished NaturHeld face and the GKB underside, both painted.
+      - {label: soffit_naturheld_140}
+      - {label: soffit_gkb}
     pending: >-
       Ceilings (CEIL-1.07, CEIL-1.20, SOFFIT-SH and the house ceilings) once
-      they are built.
+      they are built. The StoSilent face gets its own acoustic-plaster
+      material once one is picked; white paint until then.
   base_color: "#f3f2ee"
   roughness: 0.9
   metalness: 0.0
