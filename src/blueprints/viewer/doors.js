@@ -17,6 +17,13 @@
  * the cabinet's element node) and a `slide` vector, glTF metres, the full
  * extension. Tapping a drawer slides it out along that vector and back. The
  * model derives both from the cabinet's parameters (models/kitchen_cabinet.py).
+ * An inner drawer (Blum MERIVOBOX behind a full-height front) also names
+ * its front's drawer in `parent` and may be `coupled` (Blum ZI7.0M07): it
+ * opens only while the front is open (a tap on it while the front is shut
+ * opens the front), a coupled one opens with the front, and shutting the
+ * front shuts them all and re-couples them. Tapping an open coupled one
+ * releases and shuts it alone, like pressing the driver's housing
+ * (`toggleDrawerTree`).
  *
  * Sliding and pocket doors are records with kind "sliding": the leaf's jamb
  * ends `start` and `end` (glTF metres) and `panels`, each a fraction `span`
@@ -392,6 +399,11 @@ export function bindDrawer(host, record) {
     sign: 1,
     goal: 0,
     anim: null,
+    parentId: record.parent ? String(record.parent) : null,
+    coupledDefault: Boolean(record.coupled),
+    coupled: Boolean(record.coupled),
+    parent: null,
+    children: [],
   };
   const tag = (obj) => {
     obj.userData.bpDoor = binding;
@@ -879,6 +891,64 @@ export function toggleDoor(binding, now) {
 }
 
 /**
+ * Link inner drawers to their front's drawer (`parentId` → `parent`,
+ * `children`). Unknown parents are left unlinked (the drawer then moves
+ * alone, as before).
+ * @param {object[]} bindings
+ */
+export function linkDrawerTree(bindings) {
+  const byId = new Map(bindings.map((b) => [b.id, b]));
+  for (const b of bindings) {
+    if (!b.parentId) continue;
+    const parent = byId.get(b.parentId);
+    if (!parent || parent === b) continue;
+    b.parent = parent;
+    parent.children = parent.children || [];
+    if (!parent.children.includes(b)) parent.children.push(b);
+  }
+}
+
+/**
+ * Drive one drawer of a front + inner drawers group; returns the bindings
+ * that changed as [binding, from, to].
+ * @param {object} binding
+ * @param {number} now
+ * @returns {[object, number, number][]}
+ */
+export function toggleDrawerTree(binding, now) {
+  const changes = [];
+  const drive = (b, to) => {
+    const from = sampleDoor(b, now);
+    if (b.goal === to && !b.anim && Math.abs(from - to) < 1e-6) return;
+    b.goal = to;
+    b.anim = { from, to, t0: now };
+    changes.push([b, from, to]);
+  };
+  const parent = binding.parent;
+  if (parent) {
+    if (!(parent.goal > 0.5)) return toggleDrawerTree(parent, now);
+    if (binding.goal > 0.5) {
+      binding.coupled = false; // released (the ZI7.0M07 housing pressed)
+      drive(binding, 0);
+    } else {
+      drive(binding, 1);
+    }
+    return changes;
+  }
+  const opening = !(binding.goal > 0.5);
+  drive(binding, opening ? 1 : 0);
+  for (const child of binding.children || []) {
+    if (opening) {
+      if (child.coupled) drive(child, 1);
+    } else {
+      drive(child, 0);
+      child.coupled = child.coupledDefault;
+    }
+  }
+  return changes;
+}
+
+/**
  * Swing shut. A door that is already closing stays on that animation.
  * @param {{ goal: number, anim: { from: number, to: number, t0: number } | null }} binding
  * @param {number} now
@@ -1131,6 +1201,10 @@ export function createDoorController(opts) {
       const open = sampleDoor(binding, now) > OPENING_LIVE;
       const run = () => {
         const t = ctx.now ?? performance.now();
+        if (binding.kind === "drawer" && (binding.parent || binding.children?.length)) {
+          for (const [b, from, to] of toggleDrawerTree(binding, t)) report(b, from, to);
+          return;
+        }
         const from = sampleDoor(binding, t);
         toggleDoor(binding, t);
         report(binding, from, binding.goal);
@@ -1206,6 +1280,7 @@ export function createDoorController(opts) {
       binding.proxy = obb ? proxyMeshFromObb(obb, `opening:${binding.id}`) : null;
       bindings.push(binding);
     }
+    linkDrawerTree(bindings);
     const used = new Set();
     for (const record of records) {
       if (!isLinkageRecord(record)) continue;

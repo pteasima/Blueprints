@@ -48,6 +48,8 @@ PART_CLASS = {
     "Backsplash": ("IfcCovering", "CLADDING"),
     "Drawer": ("IfcSystemFurnitureElement", "USERDEFINED"),
     "PullOut": ("IfcSystemFurnitureElement", "USERDEFINED"),
+    # A Blum MERIVOBOX inner drawer behind a full-height front (2026-11-20 b).
+    "InnerDrawer": ("IfcSystemFurnitureElement", "USERDEFINED"),
     # A Blum AVENTOS lift mechanism on a side panel (fitting hardware).
     "LiftMechanism": ("IfcSystemFurnitureElement", "USERDEFINED"),
     "LiftArm": ("IfcSystemFurnitureElement", "USERDEFINED"),
@@ -60,7 +62,7 @@ PART_CLASS = {
 NOT_AGGREGATED = frozenset({"Hob"})
 PSET_FRONT = "Pset_KitchenFront"
 PSET_BUILTIN_LAYOUT = "Pset_KitchenBuiltIn"
-FRONT_ROLES = frozenset({"Front", "Door", "Lift", "LiftMechanism", "LiftArm", "Drawer", "PullOut", "Filler", "Shelf", "Board",
+FRONT_ROLES = frozenset({"Front", "Door", "Lift", "LiftMechanism", "LiftArm", "Drawer", "PullOut", "InnerDrawer", "Filler", "Shelf", "Board",
                          "Packer"})
 FURNITURE_GROUP_ID = "GRP-FURNITURE"
 ELECTRICAL_GROUP_ID = "GRP-ELECTRICAL"

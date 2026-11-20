@@ -18,7 +18,7 @@ def test_specific_selectors_win():
     # kitchen, fronts and carcasses; the oak-veneer counter and the pier
     # slats are oak.
     for mesh in ("SF-T1-DOOR1", "SF-E600b-D1", "SF-T1-FILLER1", "SF-DN-S1-D1", "SF-LB-S2-FRONT1",
-                 "SF-F052-SH1-1", "KR-DN-END-W-SF-DN", "SF-DN70-BODY", "SF-DN-BOTTOM"):
+                 "SF-F052-SH1-1", "KR-DN-END-W-SF-DN", "SF-DN-S1-DOCKSIDE1", "SF-DN-BOTTOM"):
         assert resolve(cat, "cabinet", mesh) == ["kitchen-front-cream"], mesh
     assert resolve(cat, "oak", "KR-LB-WORKTOP") == ["oak-natural-kaplan"]
     assert resolve(cat, "oak", "CV-SLAT-W052") == ["oak-natural-kaplan"]

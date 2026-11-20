@@ -16,6 +16,18 @@ Assumed part sizes (millimetres), not on the plan:
   piers, 2026-11-20): vertical battens the box's full depth and height,
   ``Pset_Slats.SlatWidth`` wide and ``SlatGap`` apart (metres; default the
   bookshelf lamella 40 / 20), centred across the width, an even count.
+  ``Pset_Slats.BackingThickness`` (metres, 2026-11-20 b) adds an oak-veneer
+  board the full width and height at the back of the box (the wall side,
+  the box's +y face), so oak, not plaster, shows between the slats; the
+  slats stand in front of it.
+* Cabinet lining (``ObjectType: CabinetLining``) is a plain board, or one
+  notched board when ``Pset_CabinetLining`` gives ``Notch<N>X0`` /
+  ``Notch<N>X1`` / ``Notch<N>Y`` (world metres, usually linked to the pier
+  slat panels): over that x range the board stops at y (2026-11-20 c, the
+  oak top board run past W-053 in one piece). See ``lining_segments``.
+* Bookshelf ``Pset_Bookshelf.BackingThickness`` (2026-11-20 c): the same
+  oak-veneer backing behind the lamella as the pier slats, full width and
+  height inside the case, so nothing shows through.
 """
 
 from __future__ import annotations
@@ -119,7 +131,50 @@ def _table(width: float, depth: float, height: float, gap: float):
     return [part for part in parts if part is not None]
 
 
-def _bookshelf(width: float, depth: float, height: float, gap: float, shelves: int):
+def lining_segments(element: dict, width: float, depth: float, height: float) -> list[tuple]:
+    """A lining board as boxes (x0, y0, x1, y1) in local mm, cut back to the
+    notch's y over each notch's x range (see the module notes)."""
+    props = {}
+    for pset in element.get("PropertySets") or []:
+        if pset.get("Name") == "Pset_CabinetLining":
+            props = pset.get("Properties") or {}
+    ox, oy = (float(v) * 1000.0 for v in element.get("Origin") or (0.0, 0.0))
+    notches = []
+    n = 1
+    while f"Notch{n}X0" in props:
+        x0 = float(props[f"Notch{n}X0"]) * 1000.0 - ox
+        x1 = float(props[f"Notch{n}X1"]) * 1000.0 - ox
+        y = float(props[f"Notch{n}Y"]) * 1000.0 - oy
+        x0, x1 = max(0.0, x0), min(width, x1)
+        if x1 > x0 and 0.0 < y < depth:
+            notches.append((x0, x1, y))
+        n += 1
+    cuts = sorted({0.0, width, *[v for x0, x1, _y in notches for v in (x0, x1)]})
+    out = []
+    for a, b in zip(cuts, cuts[1:]):
+        if b - a <= 0.0:
+            continue
+        mid = (a + b) / 2.0
+        y_end = min([y for x0, x1, y in notches if x0 <= mid <= x1] or [depth])
+        out.append((a, 0.0, b, y_end))
+    return out
+
+
+def _lining(element: dict, width: float, depth: float, height: float, gap: float):
+    segs = lining_segments(element, width, depth, height)
+    if len(segs) == 1:
+        return None  # a plain board: the converter's box
+    lo = gap / 2.0
+    boxes = [_box(x0 + (lo if x0 <= 0 else 0.0), y0 + lo, lo, x1 - (lo if x1 >= width else 0.0), y1 - lo, height - lo)
+             for x0, y0, x1, y1 in segs]
+    boxes = [b for b in boxes if b is not None]
+    solid = boxes[0]
+    for b in boxes[1:]:
+        solid = solid + b  # one piece
+    return [solid]
+
+
+def _bookshelf(width: float, depth: float, height: float, gap: float, shelves: int, backing: float = 0.0):
     lo = gap / 2.0
     x1, y1, z1 = width - lo, depth - lo, height - lo
     side = _CASE_T
@@ -137,7 +192,7 @@ def _bookshelf(width: float, depth: float, height: float, gap: float, shelves: i
     for _index in range(count):
         z += opening
         parts.append(
-            _box(lo + side + 0.5, lo, z, x1 - side - 0.5, y1 - _LAMELLA_T - 0.5, z + board)
+            _box(lo + side + 0.5, lo, z, x1 - side - 0.5, y1 - backing - _LAMELLA_T - 0.5, z + board)
         )
         z += board
     slat_pitch = _LAMELLA_W + _LAMELLA_GAP
@@ -146,22 +201,30 @@ def _bookshelf(width: float, depth: float, height: float, gap: float, shelves: i
     count_slats = max(1, int(round((span1 - span0 + _LAMELLA_GAP) / slat_pitch)))
     used = count_slats * _LAMELLA_W + (count_slats - 1) * _LAMELLA_GAP
     cursor = span0 + max(0.0, (span1 - span0 - used) / 2.0)
+    back = y1 - backing
     for _index in range(count_slats):
-        parts.append(_box(cursor, y1 - _LAMELLA_T, lo, cursor + _LAMELLA_W, y1, z1 - top_t))
+        parts.append(_box(cursor, back - _LAMELLA_T, lo, cursor + _LAMELLA_W, back, z1 - top_t))
         cursor += slat_pitch
+    if backing > 0:
+        parts.append(_box(lo + side, back, lo, x1 - side, y1, z1 - top_t))
     return [part for part in parts if part is not None]
 
 
-def _slats(width: float, depth: float, height: float, gap: float, slat: float, space: float):
+def _slats(width: float, depth: float, height: float, gap: float, slat: float, space: float,
+           backing: float = 0.0):
     """Vertical battens across ``width``, each ``slat`` wide, ``space``
-    apart, centred; the full depth and height of the box (mm)."""
+    apart, centred; the full depth and height of the box (mm), in front of
+    a ``backing`` board at the box's back (+y) face when it is > 0."""
     lo = gap / 2.0
+    parts = []
+    if backing > 0:
+        parts.append(_box(lo, depth - backing, lo, width - lo, depth - lo, height - lo))
+        depth -= backing
     span0, span1 = lo, width - lo
     pitch = slat + space
     count = max(1, int((span1 - span0 + space) // pitch))
     used = count * slat + (count - 1) * space
     cursor = span0 + (span1 - span0 - used) / 2.0
-    parts = []
     for _index in range(count):
         parts.append(_box(cursor, lo, lo, cursor + slat, depth - lo, height - lo))
         cursor += pitch
@@ -183,11 +246,17 @@ def living_detail(element: dict, width: float, depth: float, height: float, gap:
         parts = _table(width, depth, height, gap)
     elif kind == "Bookshelf":
         raw = _prop(element, "Pset_Bookshelf", "ShelfCount", _SHELVES)
-        parts = _bookshelf(width, depth, height, gap, int(raw))
+        backing = float(_prop(element, "Pset_Bookshelf", "BackingThickness", 0.0)) * 1000.0
+        parts = _bookshelf(width, depth, height, gap, int(raw), backing)
+    elif kind == "CabinetLining":
+        parts = _lining(element, width, depth, height, gap)
+        if parts is None:
+            return None
     elif kind == "SlatCladding":
         slat = float(_prop(element, "Pset_Slats", "SlatWidth", _LAMELLA_W / 1000.0)) * 1000.0
         space = float(_prop(element, "Pset_Slats", "SlatGap", _LAMELLA_GAP / 1000.0)) * 1000.0
-        parts = _slats(width, depth, height, gap, slat, space)
+        backing = float(_prop(element, "Pset_Slats", "BackingThickness", 0.0)) * 1000.0
+        parts = _slats(width, depth, height, gap, slat, space, backing)
     else:
         return None
     if not parts:

@@ -92,6 +92,8 @@ from yaml_ifc.supported import FURNISHINGS, PSET_NAME
 from yaml_ifc.to_ifc import build_ifc
 from yaml_ifc.yamlio import load as load_yaml_ifc
 
+import furnishing_links
+
 from bathroom_107 import (
     figures as bathroom_107_figures,
     parts as bathroom_107_parts,
@@ -221,7 +223,8 @@ def load_furnishings(path: Path | None = None) -> dict:
     source = path or FURNISHINGS_PATH
     if not source.is_file():
         return {}
-    return load_yaml_ifc(source)
+    # Pset_Links: placements and sizes derived from other elements (2026-11-20 c).
+    return furnishing_links.resolve(load_yaml_ifc(source))
 
 
 def furnishing_records(doc: dict | None = None) -> list[dict]:
@@ -363,9 +366,11 @@ def _kitchen_run_parts(run, motions=None, layers: dict | None = None) -> list:
             inward = -dr.out * half
             solid = Pos(0.0, inward, 0.0) * solid
             if plate:
-                plate_solid = _run_box(plate[0], 0.0)
-                for box in plate[1:]:
-                    plate_solid = plate_solid + _run_box(box, 0.0)
+                # The floor and ribs as one compound, not fused: the same
+                # picture (one material, the overlaps are inside) at about a
+                # fifth of the faces (2026-11-20 d: with the inner drawers'
+                # plates the fused layer was over its budget, Performance.md).
+                plate_solid = Compound(obj=[_run_box(box, 0.0) for box in plate])
                 plate_solid = Pos(0.0, inward, 0.0) * plate_solid
                 layers.setdefault(LABEL_GRIDFINITY, []).append(
                     _tag(_paint(plane * plate_solid, LABEL_GRIDFINITY), part.id, "systemFurniture")
@@ -410,15 +415,19 @@ def _kitchen_run_parts(run, motions=None, layers: dict | None = None) -> list:
         moved = frame.world(a, c + dr.out * dr.extension, z)
         cg = cad_mm_to_gltf_m(centre)
         mg = cad_mm_to_gltf_m(moved)
-        motions.append(
-            {
-                "id": part.id,
-                "kind": "drawer",
-                "element": part.id,
-                "center": [round(v, 6) for v in cg],
-                "slide": [round(q - p, 6) + 0.0 for p, q in zip(cg, mg)],
-            }
-        )
+        record = {
+            "id": part.id,
+            "kind": "drawer",
+            "element": part.id,
+            "center": [round(v, 6) for v in cg],
+            "slide": [round(q - p, 6) + 0.0 for p, q in zip(cg, mg)],
+        }
+        if part.props.get("Parent"):
+            # An inner drawer (2026-11-20 c): opens only with its front open;
+            # ``coupled`` (Blum ZI7.0M07) opens with the front. doors.js.
+            record["parent"] = part.props["Parent"]
+            record["coupled"] = bool(part.props.get("Latched"))
+        motions.append(record)
     if motions is not None:
         for group, members in linkages.items():
             motions.append(_linkage_motion(frame, group, members))
@@ -1639,7 +1648,11 @@ def ifc_index() -> dict:
         if path.is_file():
             # Edit-mode overrides touch only the fixture ids they name, so
             # every document goes through them (docs/electrical/EditMode.md).
-            docs.append(load_fixture_document(path))
+            doc = load_fixture_document(path)
+            if path == FURNISHINGS_PATH:
+                # Linked sizes (Pset_Links, models/furnishing_links.py).
+                doc = furnishing_links.resolve(doc)
+            docs.append(doc)
     return index_documents(docs, transform=kitchen_ifc.apply)
 
 

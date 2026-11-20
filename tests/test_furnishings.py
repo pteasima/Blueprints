@@ -147,10 +147,10 @@ KITCHEN = (
     ("SF-I500b", "systemFurniture", "BaseCabinet", [20.5, 12.693], [0.0, -1.0], 0.481, 0.586, 0.93, None, None),
     ("SF-I600b", "systemFurniture", "BaseCabinet", [20.5, 12.212], [0.0, -1.0], 0.607, 0.586, 0.93, None, None),
     ("SF-I300", "systemFurniture", "BaseCabinet", [20.5, 11.605], [0.0, -1.0], 0.305, 0.586, 0.93, None, None),
-    ("SF-E600a", "systemFurniture", "BaseCabinet", [21.672, 13.214], [0.0, 1.0], 0.586, 0.586, 0.93, None, None),
-    ("SF-E600b", "systemFurniture", "BaseCabinet", [21.672, 12.607], [0.0, 1.0], 0.607, 0.586, 0.93, None, None),
-    ("SF-E600c", "systemFurniture", "BaseCabinet", [21.672, 12.0], [0.0, 1.0], 0.607, 0.586, 0.93, None, None),
-    ("SF-E700", "systemFurniture", "BaseCabinet", [21.672, 11.3], [0.0, 1.0], 0.7, 0.586, 0.93, None, None),
+    ("SF-E600a", "systemFurniture", "BaseCabinet", [21.672, 13.175], [0.0, 1.0], 0.625, 0.586, 0.93, None, None),
+    ("SF-E600b", "systemFurniture", "BaseCabinet", [21.672, 12.55], [0.0, 1.0], 0.625, 0.586, 0.93, None, None),
+    ("SF-E600c", "systemFurniture", "BaseCabinet", [21.672, 11.925], [0.0, 1.0], 0.625, 0.586, 0.93, None, None),
+    ("SF-E700", "systemFurniture", "BaseCabinet", [21.672, 11.3], [0.0, 1.0], 0.625, 0.586, 0.93, None, None),
     ("SF-A250", "systemFurniture", "BaseCabinet", [19.4, 13.0], [0.0, 1.0], 0.25, 0.6, 0.93, None, None),
     ("SF-AH850", "systemFurniture", "WallCabinet", [19.15, 13.0], [0.0, 1.0], 0.85, 0.35, 0.89, None, 1.56),
     ("SF-B800", "systemFurniture", "BaseCabinet", [19.4, 12.2], [0.0, 1.0], 0.8, 0.6, 0.93, None, None),
@@ -488,7 +488,7 @@ def test_living_room_boxes_follow_plan_v3():
     assert table[5] - table[2] == pytest.approx(0.76, abs=1e-6)
 
     # Full-depth bases stay out of the piers. Fillers stop on the pier face.
-    full_depth = ("SF-DN", "SF-DN70", "SF-TC", "SF-DH")
+    full_depth = ("SF-DN", "SF-TC", "SF-DH")  # SF-DN70 removed 2026-11-20 c
     for pier in ROOM_PIERS_M:
         px0, px1, py0, py1 = (value * 1000.0 for value in pier)
         for item in full_depth:
@@ -539,6 +539,9 @@ def test_pier_slats_are_vertical_oak_battens():
         assert e["Elevation"] == pytest.approx(0.93) and e["Elevation"] + e["Height"] == pytest.approx(2.45)
         detail = living_detail(e, e["Width"] * 1000.0, e["Depth"] * 1000.0, e["Height"] * 1000.0, 1.0)
         boxes = [s.bounding_box() for s in detail.solids()]
+        # 2026-11-20 b: an oak-veneer backing at the back (+y), then 5 slats.
+        backing, boxes = boxes[0], boxes[1:]
+        assert backing.min.Y >= 19.5 and backing.size.X > 300.0
         assert len(boxes) == 5
         assert all(b.size.X == pytest.approx(40.0) for b in boxes)
         assert boxes[1].min.X - boxes[0].max.X == pytest.approx(20.0)
