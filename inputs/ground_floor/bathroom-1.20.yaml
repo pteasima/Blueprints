@@ -77,8 +77,8 @@ storey:
   Elevation: 0
 spaces:
   - id: SP-1.20
-    Name: Koupelna
-    LongName: "1.20"
+    Name: "1.20 Koupelna"
+    LongName: Koupelna
     PredefinedType: INTERNAL
 walls: []
 openings: []
