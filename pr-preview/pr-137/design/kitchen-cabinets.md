@@ -6,6 +6,14 @@ Code: `models/kitchen_cabinet.py` (layout), `models/kitchen_ifc.py` (IFC structu
 
 Labels: **Petr** is a fact Petr gave, with the date or document. **IKEA** is an IKEA METOD / MAXIMERA default, used because Petr said “when unsure of details and margins, default to IKEA METOD measurements” (2026-11-11). These cabinets are custom made, so every IKEA number can change. `guess:` is a number with no source at all. **Cosentino** is from the maker's colour page.
 
+> **`open:` for the woodworker: SF-DH (the dining wall cabinet) is too shallow for its Blum AVENTOS HF lift-up fittings. Unresolved.**
+>
+> - SF-DH is **276** deep, linked to the pier + acoustic cladding depth (Petr, 2026-11-20 f: “dining area top cabinets as well as living room shelves are exactly the delth of columns + accoustic cladding”). That leaves **250** inside (276 − 18 front − 8 back).
+> - Blum AVENTOS HF needs an internal depth **LT ≥ 264** ([Blum catalogue 2024/25, p. 20](https://publications.blum.com/2024/catalogue/en/20/); the HF planning sketch gives the mechanism 264 deep). **14 short.**
+> - Options: a different lift fitting (or hinged doors, as before 2026-11-20) that fits a 250 interior, or more depth (deeper than the cladding line, i.e. proud of the slats).
+> - The model **deliberately keeps 276** and still draws HF; `Pset_Fronts.BlumRangeOverride` on SF-DH records why, and the export lists it as `OutsideBlumRange`.
+> - Petr, 2026-11-20 h: “keep that too shallow top dining cabinets for blum lift up hinge issue well documented for the woodworker. Its not part of the model but we'll resolve it in due time”.
+
 ## Monoblocks
 
 Petr, 2026-11-12:
@@ -404,7 +412,7 @@ Alternative, only the top drawer shallow (not built): SF-I600a and SF-I500b 100 
 
 ## Parametric rule
 
-Everything above is computed in `kitchen_cabinet.runs` from the bay boxes (`Origin`, `RefDirection`, `Width`, `Depth`, `Height`, `Elevation`), the run's `Pset_KitchenRun` (any `IKEA_DEFAULTS_MM` key, in metres, plus `WorktopMaterial`, `WorktopOverhang<N|E|S|W>` (one edge, 2026-11-20 f), `CladEnds`, `CladdingMaterial`, `MitreEnds` (45° top/end joints), `Carcass` (`Box` for whole-body bays), `BodyMaterial`, `PlinthKind` (`Legs` or `Board`), `Backsplash`, `BacksplashThickness`, `BacksplashTop`, `BacksplashMaterial`) and each bay's `Pset_Fronts` (`Layout`, `Contents`: see “Fronts and interiors”) or the older `Pset_Drawers` (`NominalHeights` in metres top to bottom, one `*` for the rest; `Contents` separated by `;`), plus the built-ins' `Pset_BuiltIn`. A bay may override the drawer and front values in its own `Pset_KitchenCabinet`. Change a bay's width and its dividers move, both neighbours' clear widths and drawer boxes follow (drawer insides are the clear width and side depth less the MAXIMERA deductions, Gridfinity baseplates follow the inside), and the worktop grows; change the counter height or the worktop thickness and the carcass, the `*` drawer and the cladding follow. Rows that stand back to back (same back plane, fronts facing away) share one central back; a run with `CladEnds` gets stone on both ends. A sink's cut-out comes from its `Pset_Sink` and follows the sink box. A hob follows its bay (`Pset_Hob`): move or widen the bay and the cut-out, rebate, glass and housing move with it. The model stops the export if the hob comes closer than `MinBackEdge` to the far edge. A backsplash runs the worktop's length, from the worktop top up to the lowest box hanging over it. A `lift` band takes its cabinet height, width and depth from the bay and is checked against Blum's ranges for its fitting; change the bay and the fronts, mechanisms, weight, power factor and open clearance follow.
+Everything above is computed in `kitchen_cabinet.runs` from the bay boxes (`Origin`, `RefDirection`, `Width`, `Depth`, `Height`, `Elevation`), the run's `Pset_KitchenRun` (any `IKEA_DEFAULTS_MM` key, in metres, plus `WorktopMaterial`, `WorktopOverhang<N|E|S|W>` (one edge, 2026-11-20 f), `CladEnds`, `CladdingMaterial`, `MitreEnds` (45° top/end joints), `Carcass` (`Box` for whole-body bays), `BodyMaterial`, `PlinthKind` (`Legs` or `Board`), `Backsplash`, `BacksplashThickness`, `BacksplashTop`, `BacksplashMaterial`, `UnderlayThickness` + `UnderlayMaterial` (a layer under the stone, box runs, 2026-11-20 h), `SideKickboards`, `SideKickboardSetback` (2026-11-20 h)) and each bay's `Pset_Fronts` (`Layout`, `Contents`: see “Fronts and interiors”) or the older `Pset_Drawers` (`NominalHeights` in metres top to bottom, one `*` for the rest; `Contents` separated by `;`), plus the built-ins' `Pset_BuiltIn`. A bay may override the drawer and front values in its own `Pset_KitchenCabinet`. Change a bay's width and its dividers move, both neighbours' clear widths and drawer boxes follow (drawer insides are the clear width and side depth less the MAXIMERA deductions, Gridfinity baseplates follow the inside), and the worktop grows; change the counter height or the worktop thickness and the carcass, the `*` drawer and the cladding follow. Rows that stand back to back (same back plane, fronts facing away) share one central back; a run with `CladEnds` gets stone on both ends. A sink's cut-out comes from its `Pset_Sink` and follows the sink box. A hob follows its bay (`Pset_Hob`): move or widen the bay and the cut-out, rebate, glass and housing move with it. The model stops the export if the hob comes closer than `MinBackEdge` to the far edge. A backsplash runs the worktop's length, from the worktop top up to the lowest box hanging over it. A `lift` band takes its cabinet height, width and depth from the bay and is checked against Blum's ranges for its fitting; change the bay and the fronts, mechanisms, weight, power factor and open clearance follow.
 
 ## Tap to open
 
@@ -1228,7 +1236,7 @@ stay open, unchanged.
 - New `Pset_KitchenRun.SideKickboards: "E"` on KR-TALL → part
   `KR-TALL-PLINTH-E`: 18 board, `PlinthSetback` 50 in from the east end
   face (x 22.082–22.100), from the front kickboard's back (y 15.068) to the
-  carcass back (y 15.592), z 0–100.
+  carcass back (y 15.592), z 0–100. **Flush with the side since 2026-11-20 h** (x 22.132–22.150, see that batch).
 
 ### 3. One continuous dining kickboard
 
@@ -1418,3 +1426,83 @@ Clashes and open points:
 
 SF-TC (KR-TC, every part) goes `oak-natural-kaplan` → `kitchen-front-cream`
 (catalogue selectors and `Pset_Finish`). No other material changes.
+
+## Batch 2026-11-20 h
+
+### Worktop build-ups: living 40, dining 20 + 20
+
+Petr, 2026-11-20:
+
+> “oh and btw, per the sketchup screenshot I sent earlier, the living room counter is the same thickness as the bookshelves, which is 40, and the dining part has 20 silestone and 20 oak below it. That makes all the base cabinets a bit less tall.”
+
+Bob could not find that SketchUp screenshot (not in the attachments, the
+transcripts or memory), so the numbers come from the message alone.
+
+- The finished top stays at **930** everywhere (`guess:` invariant: no
+  source gives a new counter height). The **carcasses** get shorter, not
+  the plinths: a `Carcass: Box` run's bodies stop at `930 − (stone + underlay)`
+  (or a bay's own top), so that is the parametric place. The dining run's
+  100 flush kickboard and KR-LB's 0 plinth are unchanged.
+- **KR-LB** (living counter): `WorktopThickness` is now a link to
+  `FN-BK.Pset_Bookshelf.BoardThickness`, which is new and **40** (sides,
+  top and shelves; it was a hard-coded 20, `guess:`, in
+  `models/living_geometry.py`). Top 890–930 (was 910–930). The oak strip it
+  lends over SF-F053 follows (`Pset_KitchenBay.WorktopThickness` linked to
+  KR-LB).
+- **KR-DN** (dining): 20 Silestone (catalogue link) on a new 20 oak layer,
+  `Pset_KitchenRun.UnderlayThickness: 0.02`, `UnderlayMaterial: "natural oak"`
+  (`guess:` the species/finish) → part `KR-DN-UNDERLAY`, the stone's
+  footprint (450 deep, flush), 890–910. Stone 910–930.
+- **SF-F052**'s own oak top: 40 (890–930), linked to stone + underlay, so
+  that cupboard drops with the dining boxes (`guess:` one 40 oak piece).
+- `open:` **the kitchen runs (KR-WEST, KR-ISL, KR-TALL) are not changed.**
+  “all the base cabinets” could include them, but without the screenshot it
+  is not clear that the kitchen stone also sits on 20 oak. They keep 20
+  stone on a 910 carcass.
+
+| Element | Old | New |
+|---|---|---|
+| KR-LB top (oak) | 20, 910–930 | **40**, 890–930, linked to FN-BK boards |
+| SF-LB carcass top / fronts | 910 / fronts 1.5–908.5 | 890 / fronts 1.5–888.5 |
+| KR-DN stone | 20, 910–930 | 20, 910–930 (unchanged) |
+| KR-DN-UNDERLAY | — | 20 oak, 890–910, 450 deep |
+| SF-DN carcass top | 910 | 890 |
+| SF-DN tall drawer fronts | 261.5–908.5 (647) | 261.5–888.5 (627) |
+| SF-DN inner drawers I1 (M) / I2 (K) | 772–862 / 526.5–654.5 (S1) | 752–842 / 516.5–644.5 (S1); same 30 under the rail |
+| SF-F052 / SF-F053 tops | 20 oak, 910–930 | 40 oak, 890–930 |
+| SF-F052 / SF-F053 carcass, door | 910, door to 908.5 | 890, door to 888.5 |
+| FN-BK boards | 20 | 40; still stands on 930 (`Elevation = SF-LB.Top`) and tops out at 2450 |
+
+Knock-ons checked:
+- MERIVOBOX: still M + K over the F/K box in every SF-DN section; the build
+  checks the heights and passed. The dock zone (Dreame) is set from the
+  bottom, so the dock board stays at 260 over the 249 station: **11 above,
+  unchanged**; sides 12, wall 7 unchanged.
+- SF-TC stays 2450 high (it is not part of these runs).
+- The bookshelf's inside is 20 narrower each side and its three shelves
+  are 40 thick, so the openings are smaller (four openings in 1470 − 40 top
+  − 3 × 40).
+
+### SF-DH and the Blum HF depth (for the woodworker)
+
+> “keep that too shallow top dining cabinets for blum lift up hinge issue well documented for the woodworker. Its not part of the model but we'll resolve it in due time”
+
+See the `open:` box at the top of this file. No geometry change.
+
+### KR-TALL's side kickboard flush
+
+> “that little kickboard I asked you to add on the side of the tall kitchen cabinet where it meets the column area. Youve made it recessed, which is clearly wrong. Needs to be flush with the cabinet side.”
+
+New `Pset_KitchenRun.SideKickboardSetback` (metres, default
+`PlinthSetback`); KR-TALL's is 0, so `KR-TALL-PLINTH-E` sits in the end
+panel's plane and follows the run's east end.
+
+| | Old | New |
+|---|---|---|
+| KR-TALL-PLINTH-E | x 22.082–22.100 (50 in from the side) | **x 22.132–22.150**, flush with `KR-TALL-END-E` (22.132–22.150) |
+| y, z | 15.068–15.592, 0–100 | unchanged |
+
+It now meets `KR-DN-PLINTH-S` (x 22.150–22.5675, y 15.150–15.168) face
+to face at x 22.150: no gap, no overlap. Its front end still butts the
+back of `KR-TALL-PLINTH-S` (y 15.068).
+
