@@ -47,11 +47,12 @@ import {
 import { createDepthPeelRenderer, isSeeThroughOpacity } from "./depthPeel.js";
 import { createRealistic } from "./realistic.js";
 import { createMeasureTool } from "./measure.js";
-import { createWalkMode } from "./walkMode.js";
+import { createWalkMode, yawPitchOf } from "./walkMode.js";
 import {
   HEIGHT_DETENTS_CM,
   HEIGHT_MAX_CM,
   HEIGHT_MIN_CM,
+  eyeHeightM,
   snapHeightCm,
 } from "./walkPhysics.js";
 import { createDoorController, swingAngle } from "./doors.js";
@@ -84,6 +85,11 @@ import {
   urlLayerSwitch,
   VISIBILITY_VERSION,
 } from "./visibilityState.js";
+import {
+  CAMERA_VERSION,
+  loadCamera,
+  saveCamera,
+} from "./cameraState.js";
 import { normalizeIndex, subtreeIds } from "./ifcTree.js";
 import { isSceneSolid } from "./interactions.js";
 import {
@@ -742,7 +748,9 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       void fixtureModels.install();
       for (const id of lazyAtStart) void loadLazyLayer(id);
       restoreSavedSession();
+      cameraReady = true;
       if (initialSpec) applyScene(initialSpec);
+      else restoreSavedCamera();
       syncSceneUrl();
       chromeApi?.refreshPartialHeight();
       showArButton();
@@ -1162,6 +1170,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       controls.update();
     });
     maybeSpawnDraftFromCamera();
+    scheduleCameraSave();
   }
 
   /** Iso and the other builtin views show every part. */
@@ -1215,6 +1224,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       controls.update();
     });
     maybeSpawnDraftFromCamera();
+    scheduleCameraSave();
   }
 
   /**
@@ -1344,6 +1354,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     }
 
     maybeSpawnDraftFromCamera();
+    scheduleCameraSave();
     const edge = spec.edges;
     if (edge === "none" || edge === "transparent" || edge === "opaque") {
       edgeMode = edge;
@@ -1939,6 +1950,10 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   let visibilitySigRevision = 0;
   let visSaveTimer = 0;
   let visRestoring = false;
+  let camSaveTimer = 0;
+  let camRestoring = false;
+  /** False until the initial scene or remembered camera has been applied. */
+  let cameraReady = false;
 
   function collectVisibilityState() {
     /** @type {Record<string, number>} */
@@ -1971,9 +1986,70 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     visSaveTimer = setTimeout(flushVisibilitySave, 300);
   }
 
+  function cameraBounds() {
+    updateBox();
+    return {
+      min: [box.min.x, box.min.y, box.min.z],
+      max: [box.max.x, box.max.y, box.max.z],
+    };
+  }
+
+  function collectCameraState() {
+    return {
+      v: CAMERA_VERSION,
+      mode: walk?.active ? "walk" : "orbit",
+      position: [camera.position.x, camera.position.y, camera.position.z],
+      target: [controls.target.x, controls.target.y, controls.target.z],
+      heightCm: walk?.heightCm,
+    };
+  }
+
+  function flushCameraSave() {
+    if (camSaveTimer) clearTimeout(camSaveTimer);
+    camSaveTimer = 0;
+    if (!visModelId || camRestoring || !cameraReady || !root) return;
+    saveCamera(visStorage, visModelId, collectCameraState());
+  }
+
+  function scheduleCameraSave() {
+    if (!visModelId || camRestoring || !cameraReady) return;
+    if (camSaveTimer) clearTimeout(camSaveTimer);
+    camSaveTimer = setTimeout(flushCameraSave, 300);
+  }
+
+  function restoreSavedCamera() {
+    if (!visModelId || !root) return;
+    const saved = loadCamera(visStorage, visModelId, cameraBounds());
+    if (!saved) return;
+    camRestoring = true;
+    try {
+      withSuppressedCameraChange(() => {
+        camera.position.set(saved.position[0], saved.position[1], saved.position[2]);
+        controls.target.set(saved.target[0], saved.target[1], saved.target[2]);
+        camera.lookAt(controls.target);
+        updateCameraClipPlanes();
+        controls.update();
+      });
+      if (saved.mode === "walk" && walk) {
+        if (saved.heightCm != null) walk.setHeight(saved.heightCm);
+        const eye = eyeHeightM(walk.heightCm);
+        const feet = [
+          saved.position[0],
+          saved.position[1] - eye,
+          saved.position[2],
+        ];
+        const look = yawPitchOf(camera);
+        walk.enter({ pose: { feet, yaw: look.yaw, pitch: look.pitch }, lock: false });
+      }
+    } finally {
+      camRestoring = false;
+    }
+  }
+
   if (typeof window !== "undefined") {
     window.addEventListener("pagehide", () => {
       if (visSaveTimer) flushVisibilitySave();
+      flushCameraSave();
     });
   }
 
@@ -2416,6 +2492,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     peelPointerDown = false;
     if (suppressCameraChange) return;
     maybeSpawnDraftFromCamera();
+    flushCameraSave();
   });
 
   /** Animated safe-area framing: shift into uncovered rect + slight zoom-out. */
@@ -2904,6 +2981,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       controls.enabled = false;
       syncWalkButton();
       realisticCtl?.stage.markDirty();
+      scheduleCameraSave();
     },
     onExit: (pose) => {
       controls.enabled = true;
@@ -2917,10 +2995,12 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       }
       syncWalkButton();
       realisticCtl?.stage.markDirty();
+      flushCameraSave();
     },
     onCamera: (target) => controls.target.copy(target),
     onChange: () => {
       viewDirty = true;
+      scheduleCameraSave();
     },
     t: tr,
   });
@@ -3055,6 +3135,11 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     /** First-person walk mode (walkMode.js). */
     get walk() {
       return walk;
+    },
+    /** Remembered camera (cameraState.js); headless checks. */
+    cameraState: {
+      state: () => collectCameraState(),
+      flush: () => flushCameraSave(),
     },
     /** Remembered visibility and locks (visibilityState.js); headless checks. */
     visibility: {
@@ -3256,6 +3341,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       requestAnimationFrame(() => {
         suppressCameraChange = false;
       });
+      scheduleCameraSave();
     }
   }
 
