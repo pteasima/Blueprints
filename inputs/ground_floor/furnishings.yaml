@@ -1460,7 +1460,7 @@ furniture:
           PlinthKind: Flush
   - id: KR-LB
     Name: "Obývák linka"
-    Description: "Living-room counter behind the sofa: SF-LB. Cream body (oak until 2026-11-20) under a 20 mm oak-veneer top, 20 mm front overhang like the stone runs, top 930 like the dining run. The joint with KR-DN's Silestone at x 25.52 is open (Petr, 2026-11-13)."
+    Description: "Living-room counter behind the sofa: SF-LB. Cream body (oak until 2026-11-20) under a 20 mm oak-veneer top, flush with the fronts like the dining top (overhang linked to KR-DN's, 0; 20 until 2026-11-20 f), top 930 like the dining run. The joint with KR-DN's Silestone at x 25.52 is open (Petr, 2026-11-13)."
     PredefinedType: USERDEFINED
     ObjectType: KitchenRun
     ContainedInStructure: SP-1.02
@@ -1472,10 +1472,15 @@ furniture:
           # oak-veneer top stays.
           BodyMaterial: "kitchen cream"
           WorktopThickness: 0.02
-          WorktopOverhang: 0.02
           WorktopMaterial: "oak veneer"
           # The under-storage (2026-11-19) stands on the floor like the body did (open:).
           PlinthHeight: 0.0
+      # Petr, 2026-11-20 f: "living room overhang also goes away". The oak
+      # top is flush with the fronts like the dining top: its overhang is
+      # linked to KR-DN's (0, was 20).
+      - Name: Pset_Links
+        Properties:
+          Pset_KitchenRun.WorktopOverhang: "KR-DN.Pset_KitchenRun.WorktopOverhang"
   - id: KR-DH
     Name: "Jídelna horní"
     Description: "The oak wall cabinet over the dining run (SF-DH), a monoblock of one: three sections of doors (2026-11-19), two AVENTOS HF sections since 2026-11-20, 844 high under the oak soffit lining SF-DH-LINING."
