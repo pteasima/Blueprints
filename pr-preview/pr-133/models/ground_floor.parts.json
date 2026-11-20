@@ -1,0 +1,50 @@
+[
+  {
+    "id": "enclosure",
+    "locked": true,
+    "children": [
+      "masonry",
+      "glazing",
+      "door"
+    ]
+  },
+  {
+    "id": "interior",
+    "children": [
+      "cabinet",
+      "gridfinity",
+      "worktop",
+      "oak",
+      "appliance",
+      "hob",
+      "sink",
+      "upholstery",
+      "furniture",
+      "rug",
+      "light"
+    ]
+  },
+  {
+    "id": "bathroom",
+    "children": [
+      "floor_tile",
+      "wall_tile",
+      "grout",
+      "drain",
+      "fixture",
+      "prewall",
+      "screen",
+      "profile",
+      "vanity"
+    ]
+  },
+  {
+    "id": "electrical",
+    "children": [
+      "switch",
+      "sensor",
+      "outlet",
+      "actuator"
+    ]
+  }
+]
