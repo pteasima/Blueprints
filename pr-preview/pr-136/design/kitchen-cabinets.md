@@ -1197,3 +1197,44 @@ Changed (all linked now, so they stay closed):
 - `tests/test_furnishing_links.py` (new), plus updated
   `tests/test_kitchen_cabinet.py`, `tests/test_furnishings.py`,
   `tests/test_materials_catalogue.py`, and `doors.test.mjs`.
+
+## Batch 2026-11-20 d
+
+> “All points taken, you don't need to act on any of them. This is almost merge ready.”
+
+Petr, 2026-11-20 (15:50 CET), on the batch c report. The `open:` items above
+stay open, unchanged.
+
+### 1. Island east: MERIVOBOX inner drawers
+
+> “I can't see the merivobox drawer on kitchen island east, please double check that you've added them.”
+
+- Found: batch c gave each east bay one MERIVOBOX F box (256, z 121–377)
+  at the bottom of the 807 front, exported in the GLB with the front. There
+  were no inner drawers: unlike the dining run, nothing showed behind
+  the tall front except that low box.
+- Now `Layout: "drawer * box=F inner=M,K"` on SF-E700, SF-E600c, SF-E600b,
+  SF-E600a: per bay `{bay}-D1-I1` (MERIVOBOX M, 90, z 772–862, coupled by
+  ZI7.0M07) and `{bay}-D1-I2` (K, 128, z 510.5–638.5) over the F box, each
+  with a 13 × 12 Gridfinity baseplate. They are their own viewer records
+  (tap to open/close, as in the dining run). The F box stays.
+
+### 2. Return kickboard at the tall run's east end
+
+> “Please add a bit of kickboard between the kitchen and dining areas in the south-north direction (the side of the tall kitchen cabinet has a hole with no kickboard)”
+
+- SF-T4 (KR-TALL) stands 150 proud of the dining fronts (y 15.00 vs
+  15.15), so its toe-kick was open to the east.
+- New `Pset_KitchenRun.SideKickboards: "E"` on KR-TALL → part
+  `KR-TALL-PLINTH-E`: 18 board, `PlinthSetback` 50 in from the east end
+  face (x 22.082–22.100), from the front kickboard's back (y 15.068) to the
+  carcass back (y 15.592), z 0–100.
+
+### 3. One continuous dining kickboard
+
+> “theres no reason there should be a split in the kickboard where each column meets the dining are, it can just be one continous kickboard”
+
+- KR-DN-PLINTH-S-SF-F052, -SF-DN and -SF-F053 → one part `KR-DN-PLINTH-S`,
+  flush, 18 × 100, x 22.150–25.450, member of all three bays. It is still
+  split only at the Dreame opening: two pieces, x 22.150–22.5675 and
+  23.0075–25.450.

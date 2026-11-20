@@ -757,6 +757,40 @@
     ]
   },
   {
+    "id": "SF-E600a-D1-I1",
+    "kind": "drawer",
+    "element": "SF-E600a-D1-I1",
+    "center": [
+      21.3805,
+      0.817,
+      -13.483
+    ],
+    "slide": [
+      0.546,
+      0.0,
+      0.0
+    ],
+    "parent": "SF-E600a-D1",
+    "coupled": true
+  },
+  {
+    "id": "SF-E600a-D1-I2",
+    "kind": "drawer",
+    "element": "SF-E600a-D1-I2",
+    "center": [
+      21.3805,
+      0.5745,
+      -13.483
+    ],
+    "slide": [
+      0.546,
+      0.0,
+      0.0
+    ],
+    "parent": "SF-E600a-D1",
+    "coupled": false
+  },
+  {
     "id": "SF-E600b-D1",
     "kind": "drawer",
     "element": "SF-E600b-D1",
@@ -770,6 +804,40 @@
       0.0,
       0.0
     ]
+  },
+  {
+    "id": "SF-E600b-D1-I1",
+    "kind": "drawer",
+    "element": "SF-E600b-D1-I1",
+    "center": [
+      21.3805,
+      0.817,
+      -12.8625
+    ],
+    "slide": [
+      0.546,
+      0.0,
+      0.0
+    ],
+    "parent": "SF-E600b-D1",
+    "coupled": true
+  },
+  {
+    "id": "SF-E600b-D1-I2",
+    "kind": "drawer",
+    "element": "SF-E600b-D1-I2",
+    "center": [
+      21.3805,
+      0.5745,
+      -12.8625
+    ],
+    "slide": [
+      0.546,
+      0.0,
+      0.0
+    ],
+    "parent": "SF-E600b-D1",
+    "coupled": false
   },
   {
     "id": "SF-E600c-D1",
@@ -787,6 +855,40 @@
     ]
   },
   {
+    "id": "SF-E600c-D1-I1",
+    "kind": "drawer",
+    "element": "SF-E600c-D1-I1",
+    "center": [
+      21.3805,
+      0.817,
+      -12.2375
+    ],
+    "slide": [
+      0.546,
+      0.0,
+      0.0
+    ],
+    "parent": "SF-E600c-D1",
+    "coupled": true
+  },
+  {
+    "id": "SF-E600c-D1-I2",
+    "kind": "drawer",
+    "element": "SF-E600c-D1-I2",
+    "center": [
+      21.3805,
+      0.5745,
+      -12.2375
+    ],
+    "slide": [
+      0.546,
+      0.0,
+      0.0
+    ],
+    "parent": "SF-E600c-D1",
+    "coupled": false
+  },
+  {
     "id": "SF-E700-D1",
     "kind": "drawer",
     "element": "SF-E700-D1",
@@ -800,6 +902,40 @@
       0.0,
       0.0
     ]
+  },
+  {
+    "id": "SF-E700-D1-I1",
+    "kind": "drawer",
+    "element": "SF-E700-D1-I1",
+    "center": [
+      21.3805,
+      0.817,
+      -11.617
+    ],
+    "slide": [
+      0.546,
+      0.0,
+      0.0
+    ],
+    "parent": "SF-E700-D1",
+    "coupled": true
+  },
+  {
+    "id": "SF-E700-D1-I2",
+    "kind": "drawer",
+    "element": "SF-E700-D1-I2",
+    "center": [
+      21.3805,
+      0.5745,
+      -11.617
+    ],
+    "slide": [
+      0.546,
+      0.0,
+      0.0
+    ],
+    "parent": "SF-E700-D1",
+    "coupled": false
   },
   {
     "id": "SF-A250-D1",
