@@ -31,6 +31,8 @@ What changed: the baseplates are no longer fused into their drawers in `ground_f
 
 Undo when primitives merge per mesh (one draw per element and material, not per face): set `GRIDFINITY_ON_DEMAND = False` in `models/ground_floor.py` and export. The plates are fused into the drawers again and the layer files are removed.
 
+**Primitives now merge per element at load** (2026-11-20, [viewer/Performance.md](viewer/Performance.md)): with the merge the baseplates cost ~36 meshes, ~2 MB heap and ~4 MB GPU geometry (plus the 8.1 MB download), so the undo below is cheap now. Left on demand until Petr decides.
+
 Other heavy groups on main (bb58c41), primitives: bathroom grout 1,182 (5.7 %; 13 % once the plates are out), cabinet carcasses 870, cabinet drawers 852, lights 822, oak furniture 762 (the bookcase alone 450), outlets 708. None is a tenth of the baseplates' cost, so none is hidden.
 
 ## Done

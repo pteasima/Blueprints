@@ -9,6 +9,7 @@ import { LineSegments2 } from "three/addons/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js";
 import { LineMaterial } from "three/addons/lines/LineMaterial.js";
 import { LOG_DEPTH_DEFINED } from "./materials.js";
+import { primitiveGeometries } from "./mergePrimitives.js";
 import {
   cutEdgeSegmentPositions,
   worldPlanesToLocal,
@@ -148,10 +149,35 @@ export function isEdgeOverlay(obj) {
 }
 
 /**
+ * Hard edges per source CAD face. A merged mesh (mergePrimitives.js) is
+ * walked face by face, so its strokes match the per-face meshes it replaced:
+ * every face outline, seams included.
+ * @param {THREE.BufferGeometry} meshGeometry
+ * @returns {Float32Array[]}
+ */
+function hardEdgeParts(meshGeometry) {
+  return primitiveGeometries(meshGeometry).map((g) => faceHardEdgePositions(g));
+}
+
+/** @param {Float32Array[]} arrays */
+function concatAll(arrays) {
+  if (arrays.length === 1) return arrays[0];
+  let n = 0;
+  for (const a of arrays) n += a.length;
+  const out = new Float32Array(n);
+  let o = 0;
+  for (const a of arrays) {
+    out.set(a, o);
+    o += a.length;
+  }
+  return out;
+}
+
+/**
  * @param {THREE.BufferGeometry} meshGeometry
  * @returns {Float32Array}
  */
-function hardEdgePositions(meshGeometry) {
+function faceHardEdgePositions(meshGeometry) {
   const src = meshGeometry?.getAttribute?.("position");
   if (!src || !src.count) return new Float32Array(0);
   const edges = new THREE.EdgesGeometry(meshGeometry, EDGE_THRESHOLD_DEG);
@@ -737,20 +763,40 @@ export function applyEdgeClipping(root, planes) {
  * @returns {Float32Array} mesh-local segments
  */
 function visibleEdgePositions(mesh, label, groutLinesWorld) {
-  let hard = mesh.userData.bpHardEdgePositions;
-  if (!(hard instanceof Float32Array)) {
-    hard = hardEdgePositions(mesh.geometry);
-    mesh.userData.bpHardEdgePositions = hard;
-  }
+  const parts = cachedHardEdgeParts(mesh);
   if (label === "grout") {
     // Centreline only. The recessed box's own edges are the ISO rectangles.
-    return groutCenterlines(hard);
+    return concatAll(parts.map((hard) => groutCenterlines(hard)));
   }
   if (label === "tile" || label === "floor_tile" || label === "wall_tile") {
-    if (!isExposedTileCap(mesh.geometry)) return new Float32Array(0);
-    return dropEdgesNearGrout(hard, mesh, groutLinesWorld);
+    // Per CAD face: only the exposed caps draw (a merged tile mesh holds all
+    // six faces, mergePrimitives.js).
+    let capMask = mesh.userData.bpTileCapMask;
+    if (!Array.isArray(capMask) || capMask.length !== parts.length) {
+      capMask = primitiveGeometries(mesh.geometry).map((g) => isExposedTileCap(g));
+      mesh.userData.bpTileCapMask = capMask;
+    }
+    const caps = parts.filter((_, i) => capMask[i]);
+    if (!caps.length) return new Float32Array(0);
+    return dropEdgesNearGrout(concatAll(caps), mesh, groutLinesWorld);
   }
-  return hard;
+  return concatAll(parts);
+}
+
+/**
+ * Per-face hard edges, cached on the mesh.
+ * @param {THREE.Mesh} mesh
+ * @returns {Float32Array[]}
+ */
+function cachedHardEdgeParts(mesh) {
+  let parts = mesh.userData.bpHardEdgeParts;
+  if (!Array.isArray(parts) || mesh.userData.bpHardEdgeGeometry !== mesh.geometry) {
+    parts = hardEdgeParts(mesh.geometry);
+    mesh.userData.bpHardEdgeParts = parts;
+    delete mesh.userData.bpTileCapMask;
+    mesh.userData.bpHardEdgeGeometry = mesh.geometry;
+  }
+  return parts;
 }
 
 /**
@@ -811,12 +857,7 @@ function collectGroutLinesWorld(partsMap) {
   const meshes = partsMap.get("grout") || [];
   for (const mesh of meshes) {
     if (!mesh || !mesh.isMesh || !mesh.geometry) continue;
-    let hard = mesh.userData.bpHardEdgePositions;
-    if (!(hard instanceof Float32Array)) {
-      hard = hardEdgePositions(mesh.geometry);
-      mesh.userData.bpHardEdgePositions = hard;
-    }
-    const local = groutCenterlines(hard);
+    const local = concatAll(cachedHardEdgeParts(mesh).map((hard) => groutCenterlines(hard)));
     if (local.length < 6) continue;
     const world = toWorldPositions(mesh, local);
     for (let i = 0; i < world.length; i++) chunks.push(world[i]);

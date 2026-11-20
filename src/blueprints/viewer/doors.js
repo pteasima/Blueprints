@@ -265,7 +265,9 @@ export function collectDoorHosts(root, records = []) {
     host.traverse((obj) => {
       if (obj.isMesh) meshes.push(obj);
     });
-    if (meshes.length === 1) {
+    // A mesh merged from the node's CAD faces (mergePrimitives.js) is the
+    // whole element, as its faces were before: it moves as one host.
+    if (meshes.length === 1 && !meshes[0].userData.bpMergedPrimitives) {
       const parts = splitDisconnectedMesh(meshes[0]);
       if (parts.length > 1) {
         hosts.push(...parts);

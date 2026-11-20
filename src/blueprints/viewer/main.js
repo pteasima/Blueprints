@@ -55,7 +55,7 @@ import {
   snapHeightCm,
 } from "./walkPhysics.js";
 import { createDoorController, swingAngle } from "./doors.js";
-import { createWindowSlides } from "./windows.js";
+import { createWindowSlides, windowOperable } from "./windows.js";
 import { createFeedbackLayer, rotateAboutY } from "./feedback.js";
 import { registerElementActions } from "./elementActions.js";
 import {
@@ -96,6 +96,7 @@ import {
 import { createEditMode } from "./editMode.js";
 import { createFixtureModels } from "./fixtureModels.js";
 import { identityOf, meshIdentity, nodeKeyMap } from "./meshIdentity.js";
+import { gltfPrimitiveTest, mergeSiblingPrimitives } from "./mergePrimitives.js";
 import { attachPivotNav } from "./pivotNav.js";
 import { cadMmToGltf, createAnnotations } from "./annotations.js";
 import { DRAW_H, DRAW_W, downloadBlob, plateFromCanvas } from "./drawing.js";
@@ -292,6 +293,18 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     if (parts.size) refreshMaterials();
   });
 
+  /**
+   * Drawing-buffer scale. Phones (coarse pointer, short side ≤ 500 CSS px)
+   * stop at 1.5: an iPhone at 2× is 780×1688 with 4× MSAA plus the
+   * full-size peel targets, and iOS Safari reloads the tab when GPU memory
+   * runs out. Everything else stops at 2. docs/viewer/Performance.md.
+   */
+  function viewerPixelRatio() {
+    const dpr = window.devicePixelRatio || 1;
+    const coarse = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
+    const shortSide = Math.min(window.screen?.width || 1e4, window.screen?.height || 1e4);
+    return Math.min(dpr, coarse && shortSide <= 500 ? 1.5 : 2);
+  }
   const renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: true,
@@ -304,7 +317,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     // 24-bit buffer — coplanar CAD faces otherwise flicker while orbiting.
     logarithmicDepthBuffer: true,
   });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setPixelRatio(viewerPixelRatio());
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
@@ -611,6 +624,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       .then((gltf) => {
         if (!root) throw new Error("model not loaded");
         const holder = gltf.scene;
+        // One draw per element and material, not per CAD face (mergePrimitives.js).
+        mergeSiblingPrimitives(holder, { isPrimitive: gltfPrimitiveTest(gltf) });
         // Same parent and frame as the main model's scene.
         zScaleGroup.add(holder);
         holder.updateMatrixWorld(true);
@@ -662,12 +677,31 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     return layer.promise;
   }
 
+  /**
+   * Windows with a pane that opens keep one mesh per face: windows.js sorts
+   * meshes into panes by their centre, and a merged node spanning two panes
+   * would slide whole. (Today every pane is its own node, so this is a guard
+   * for future models, ~70 extra draws.)
+   * @param {THREE.Object3D} node
+   */
+  function keepFacesSeparate(node) {
+    const raw = meshIdentity(node.name || "").element;
+    if (!raw) return false;
+    const key = idForNodeKey.get(raw) || raw;
+    const record = windowRecords.find((r) => String(r?.id ?? "") === key);
+    return Boolean(record) && windowOperable(record);
+  }
+  /** Meshes before/after mergeSiblingPrimitives (exposed for perf checks). */
+  let mergeStats = { before: 0, after: 0 };
   const loader = new GLTFLoader();
   loader.parse(
     glbBuffer,
     "",
     (gltf) => {
       root = gltf.scene;
+      // One draw per element and material, not per CAD face: 8,850 meshes →
+      // 1,299 on ground_floor (mergePrimitives.js, docs/viewer/Performance.md).
+      mergeStats = mergeSiblingPrimitives(root, { isPrimitive: gltfPrimitiveTest(gltf), keepSeparate: keepFacesSeparate });
       zScaleGroup.add(root);
       doorCtrl.bind(root);
       root.traverse(registerMesh);
@@ -2996,6 +3030,14 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     controls,
     parts,
     partOpacity,
+    /** Meshes before/after the per-face primitive merge (mergePrimitives.js). */
+    get mergeStats() {
+      return { ...mergeStats };
+    },
+    /** renderer.info for perf checks (draws, triangles, GPU geometries/textures). */
+    get rendererInfo() {
+      return { render: { ...renderer.info.render }, memory: { ...renderer.info.memory }, programs: renderer.info.programs?.length || 0, pixelRatio: renderer.getPixelRatio() };
+    },
     cuts,
     scenes: customScenes,
     setPartOpacity,

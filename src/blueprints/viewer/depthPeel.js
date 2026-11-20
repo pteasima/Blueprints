@@ -1084,6 +1084,9 @@ export function createDepthPeelRenderer(renderer) {
     // Safe default: materials already have transparent + opacity + depthWrite
     // off from applyOpacityToMeshes — one standard sorted-alpha render.
     if (!wantPeel) {
+      // Nothing see-through any more: hand back the peel targets (full-size
+      // float buffers, ~100 MB on a phone) and the merged batches.
+      releaseIdlePeel();
       peelStageUniform.value = 0;
       renderFacesThenEdges(scene, camera, root, { reuseDepth: true });
       return false;
@@ -1474,6 +1477,14 @@ export function createDepthPeelRenderer(renderer) {
     renderAnnotations(scene, camera, root);
     renderer.autoClear = prevAutoClear;
     return true;
+  }
+
+  /** Free peel-only GPU memory once no part is see-through. */
+  function releaseIdlePeel() {
+    if (opaqueRT || transBatches.meshes.length || opaqueBatches.meshes.length || edgeBatchLines.length) {
+      disposePeelBatches();
+      disposeTargets();
+    }
   }
 
   function dispose() {
