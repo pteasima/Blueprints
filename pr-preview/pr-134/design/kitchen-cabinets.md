@@ -812,7 +812,7 @@ Knock-on effects:
 | Highest point the drawn fronts pass (the upper front's top outer edge at 88°, at y 15.268, 82 behind the soffit face) | **2466.5** | **3.5 under: the drawn sweep clears it** |
 | Blum's space above the cabinet at the 88° stop (Y = 28, catalogue 2024/25 p. 22–24) | **2478** | **8 mm into the soffit** |
 
-So the modelled four-bar (pivot on the front's inner face, a guess) misses the soffit by 3.5 mm, but Blum's planning figure, which the export checks, needs 28 over the 2450 top and the soffit leaves 20: **8 mm short, along the full 2700 width of both sections, in the strip from the cabinet front (y 15.25) back towards the wall where the top hinge rises.** The 81° stop (Blum Y = 0) would clear it; a 2442 cabinet top (8 lower) or a 2478 soffit would too. `open:` for the architect.
+Superseded by section 8 (SF-DH is 844 under an oak lining, and nothing clashes). What follows is the 890 state. The modelled four-bar (pivot on the front's inner face, a guess) misses the soffit by 3.5 mm, but Blum's planning figure, which the export checks, needs 28 over the 2450 top and the soffit leaves 20: **8 mm short, along the full 2700 width of both sections, in the strip from the cabinet front (y 15.25) back towards the wall where the top hinge rises.** The 81° stop (Blum Y = 0) would clear it; a 2442 cabinet top (8 lower) or a 2478 soffit would too. `open:` for the architect.
 
 Renders: `dh-soffit-section.png` and `dh-soffit-section-zoom.png` (side section, shut / sweep / open, the soffit edge, the 2478 Blum line), `dh-soffit-iso-closed.png` / `dh-soffit-iso-open.png` and `dh-soffit-side-closed.png` / `dh-soffit-side-open.png`. Since the soffit change below, the soffit is a solid in the ground-floor model (`models/soffit.py`); `ceiling_line.obstacles` reads the same extents.
 
@@ -823,7 +823,7 @@ Renders: `dh-soffit-section.png` and `dh-soffit-section-zoom.png` (side section,
 - **KR-DN** (SF-F052, SF-DN, SF-F053, SF-DN70) and **KR-LB** (SF-LB): every part, carcasses and fronts, is now the kitchen cream (`kitchen-front-cream`, RAL 9001 matt), was natural oak. `BodyMaterial` and the bays' `Pset_Finish` say so. No geometry changed.
 - Kept: KR-DN's Silestone Blanco Maple worktop and the stone backsplash in the niche (`CV-BS-DN`, `CV-BS-R052`, `CV-BS-R053W`, `CV-BS-R053E`, `CV-BS-DN70`), KR-LB's oak-veneer top, the Gatta table and chairs (oak, “dining table stays wooden”), SF-DH and SF-TC (oak), the bookshelf FN-BK (oak).
 - **The concrete columns (piers W-052, W-053): vertical oak slats** on their front faces, from the worktop (930) to the ceiling line (2450): `CV-SLAT-W052` (x 22.150–22.462) and `CV-SLAT-W053` (x 25.138–25.462), `ObjectType: SlatCladding`, 20 thick (y 15.330–15.350), slats 40 wide 20 apart (the bookshelf lamella, `guess:`), five on each, centred, built by `living_geometry` from `Pset_Slats`. They replace the 12 mm stone pieces `CV-BS-P052` / `CV-BS-P053` (930–1560).
-- The screenshot did not reach the bot that made this change; it was described to it as: cream/white bases continuing into the living room, oak SF-DH, vertical oak slats on the columns, an oak top band above, oak bookshelf, light stone worktop and backsplash, cream tall units, the table wooden despite showing white. Resolved, the oak top band (Petr, 2026-11-20): “sorry, thats a confusion in the screenshot. The screenshot hides the soffit, so you see the oak top face of the top cabinet. But in reality thats covered by the soffit, which stays plastered.” The band is SF-DH's oak top, under the soffit. The soffit (section 7) stays white plaster, with no oak fascia. `open:` slats on the piers' sides (W-053's east face keeps its stone return) and below the worktop (the cream fillers cover that).
+- The screenshot did not reach the bot that made this change; it was described to it as: cream/white bases continuing into the living room, oak SF-DH, vertical oak slats on the columns, an oak top band above, oak bookshelf, light stone worktop and backsplash, cream tall units, the table wooden despite showing white. The oak top band (Petr, 2026-11-20, after a second screenshot): “I actually got that completely wrong, and this new screenshot shows how the cabinet top extends past the cabinets on the underside of the soffit. It also means that you do need to worry about the room for the flip up cabinet door. Please adjust it and I'll send it to the architect for approval (his model was too simplified).” So the oak does show: SF-DH's oak top runs forward under the soffit to its face (section 8). The soffit's vertical face stays plastered. This replaces his earlier “thats a confusion in the screenshot … the soffit, which stays plastered”, which said the oak was hidden. `open:` slats on the piers' sides (W-053's east face keeps its stone return) and below the worktop (the cream fillers cover that).
 
 ### 4. Island east side
 
@@ -862,7 +862,7 @@ Not drawn: the mineral wool, CD frame, ducts and lid behind the face (they are i
 
 | Cabinet | Relation to the soffit | HF at 88°: drawn sweep | HF at 88°: Blum Y = 28 (2478) |
 |---|---|---|---|
-| SF-DH-S1 / S2 (dining, x 22.45–23.80 / 23.80–25.15, top 2450, front y 15.250) | under the underside, the closed front 100 behind the face | peak 2466.5 at y 15.268, under the GKB: **3.5 mm clear** | **8 mm into the soffit**, the full 2700. The `AcceptOpenClash` note is kept (`open:` for the architect) |
+| SF-DH-S1 / S2 (dining, x 22.45–23.80 / 23.80–25.15, front y 15.250) | 890 and top 2450 when this section was written: peak 2466.5, 3.5 mm clear; Blum 8 mm into the soffit. **Since section 8**: 844 high, top 2404, under the oak lining (2432) | 844: peak 2420.5, **11.5 mm clear** of the lining, 38 under the soffit | 844: 2432, **0 mm, it fits** under the lining. `AcceptOpenClash` removed |
 | SF-AH850 / BH800 / CH850 (kitchen wall cabinets, west wall, y 13.0–13.85) | not under it: their north end is 1300 / 2150 / 2950 short of the face (y 15.150). They sit under the kitchen-gable bass trap and its 2450 line | peak 2466.5, 1300+ from the soffit | 1300 / 2150 / 2950 from the soffit; 142 from the kitchen bass trap |
 | KR-TALL-W / -F / KR-TALL (tall units, y 15.0–15.6, top 2450, hinged doors) | 20 under the underside; the 600 carcasses stand 150 proud of the face (by design, 2026-11-06). x 18.80–18.99 is under the kitchen bass trap | no lift fronts | — |
 | SF-TC, FN-BK (living, top 2450) | 20 under it up to x 29.45, then under the living bass trap | no lift fronts | — |
@@ -874,3 +874,62 @@ Guesses:
 - `guess:` the soffit ends square at both bass-trap linings (no return, no shadow gap). Petr: "lets get the soffit modeled so I see how it works out with the top cabinets."
 
 Renders (box only, not in the repo): `/workspace/renders/soffit/north-wall-iso-{closed,open}.png`, `kitchen-wall-cabinets-iso-{closed,open}.png`, `sf-dh-section.png`, `sf-dh-section-zoom.png`.
+
+### 8. SF-DH under the oak lining
+
+> I actually got that completely wrong, and this new screenshot shows how the cabinet top extends past the cabinets on the underside of the soffit. It also means that you do need to worry about the room for the flip up cabinet door. Please adjust it and I'll send it to the architect for approval (his model was too simplified).
+
+The screenshot did not reach the bot that made this change; it was described to it. In SketchUp, SF-DH's oak carcass forms a frame: its top panel runs forward past the fronts under the soffit, out to the soffit face, so the soffit's underside reads as oak; the soffit's vertical face stays plastered; an oak side frames the left end; slats on the right; the bookshelf beyond.
+
+**What was built**
+
+- **`SF-DH-LINING`** (furniture, `ObjectType: CabinetLining`, natural oak, `Pset_CabinetLining.PartOf: SF-DH`): x 22.45–25.15 (between the piers, SF-DH's run), y 15.15–15.60 (from the soffit face to the wall), z 2432–2450. It is part of the cabinet, not the drywall. 100 of it is ahead of the fronts (front face y 15.25).
+- **End returns `SF-DH-RET-W` / `SF-DH-RET-E`** (same type): SF-DH's 18 oak sides carried up from the cabinet top (2404) to the lining (2432). x 22.450–22.468 and 25.132–25.150, y 15.27–15.60. They close the 28 band at both ends, behind the fronts (the open fronts sweep to y 15.268, so 2 clear). West of W-052 and east of W-053 the soffit underside stays plaster.
+- **SF-DH is shorter from the top. The bottom stays at 1560**, Petr's sourced line (2026-11-13), which the kitchen wall cabinets and the backsplash also use. Nothing moved up. The 2450 ceiling line holds: the lining's top is on it.
+- The open fronts are now checked against the lining too (`ceiling_line.lining_obstacles`: every `CabinetLining` is an obstacle), and nothing clashes, so **`AcceptOpenClash` is gone** from SF-DH. The mechanism stays in `ceiling_line` for later use. Back at 890, the export stops with "SF-DH-S1-LIFT open meets the SF-DH-LINING" (tested).
+
+**Dimension changes**
+
+| | old | new |
+|---|---|---|
+| SF-DH height (`Height`) | 890 | **844** |
+| SF-DH top | 2450 | **2404** (2450 − 18 lining − 28 Blum) |
+| SF-DH bottom | 1560 | 1560 |
+| Fronts per section (two, bi-fold) | 442 + 442 | **419 + 419** (1347 wide) |
+| Front weight per section | 15.0 kg | 14.2 kg |
+| Blum power factor LF | 13 353 | 12 004 (HF 2700–19 300) |
+| Highest point of the drawn sweep | 2466.5 | 2420.5 |
+| Blum's space at 88° (top + 28) | 2478 | 2432 |
+| Lowest point of the open fronts | 1991 | 1969 |
+| Oak lining | — | 2432–2450, y 15.15–15.60, x 22.45–25.15 |
+| Oak end returns | — | 2404–2432, 18 × 330 |
+| Soffit, piers, slats, SF-DN, backsplash | — | unchanged |
+
+**Options** (both under the same 18 lining at 2432–2450; computed from the model with only SF-DH's height and stop changed):
+
+| | 88°, 844 (**built**) | 81°, 872 | 81°, 855.5 | 81°, 890 (current height) |
+|---|---|---|---|---|
+| Cabinet height / top | 844 / 2404 | 872 / 2432 | 855.5 / 2415.5 | 890 / 2450 |
+| Height lost | 46 | 18 | 34.5 | 0 |
+| Fronts (×2 per section) | 419 | 433 | 425 | 442 |
+| Blum's space above (Y) / clearance to the lining | 28 / **0, fits** | 0 / **0, fits** | 0 / 16.5 | 0 / **−18, top above the lining** |
+| Drawn sweep peak / clearance | 2420.5 / **11.5** | 2448.3 / **−16.3** | 2431.8 / 0.2 | 2466.3 / −34.3 |
+| Lower edge when open (z), ahead of the fronts | 1969, 363 | 1929, 378 | 1922, 371 | 1937, 386 |
+| Open fronts project (from the front face) | 420 | 429 | 421 | 438 |
+
+- **88° at 844** is the smallest loss at 88° with Blum's 28 and the drawn sweep both clear. Built.
+- **81° at 872** loses only 18 and fits on Blum's numbers (Y = 0 at 81°). But the drawn four-bar still rises about 16 above the cabinet top before the stop, so the export's check (sweep or Blum, whichever is larger) would stop it. The four-bar's pivot is a `guess:`; Blum's Y says the real fitting does not rise at 81°. If the architect or Blum confirms that, 872 at 81° is the better option. Otherwise 855.5 at 81° clears both and loses 34.5. 81° also leaves a slightly lower edge, which is easier to reach.
+- **81° keeping 890 does not work.** The top would be 2450, 18 above the lining's underside. To keep 890 the lining would have to sit in the 20 gap (2450–2468), above the 2450 ceiling line, and even then the drawn sweep (2466) would reach it.
+
+**Reach.** The open fronts' lowest point at 88° is 1969, 363 ahead of the fronts, so 263 ahead of the SF-DN counter front (y 15.15). `guess:` a 174 cm person's standing grip reach is about 2080 (about 1.2 × stature, from anthropometric tables, not measured), so the edge is about 110 below the reach, over the counter.
+
+Guesses (Petr: "I actually got that completely wrong, and this new screenshot shows how the cabinet top extends past the cabinets on the underside of the soffit. It also means that you do need to worry about the room for the flip up cabinet door."):
+
+- `guess:` the lining is 18 thick, the carcass board (`BoardThickness`).
+- `guess:` the lining's top is on the 2450 ceiling line, which leaves the 20 gap to the GKB underside (2470) as a shadow gap or for a scribe. If the architect lets the oak touch the GKB (2452–2470), SF-DH can be 20 taller (864 at 88°).
+- `guess:` the end returns: the sides carried up behind the fronts, 2 back from the fronts' inner face. The screenshot's "oak side panel at the left end" is read as SF-DH's own side, framed by the return. Nothing was added in front of the piers.
+- `guess:` the lining stops at the piers' faces (x 22.45 and 25.15), so it is SF-DH's width, not carried in front of the piers.
+- `guess:` the bottom stays at 1560 and the height is lost at the top. The alternative of raising the bottom (keeping the top) cannot give the 28 above the fronts.
+- `guess:` Blum's 28 is used with no extra tolerance (0 margin). The drawn sweep has 11.5.
+
+Renders (box only): `/workspace/renders/soffit2/sf-dh-section.png` and `sf-dh-section-detail.png` (section with dimensions), `sf-dh-iso-closed.png` / `sf-dh-iso-open.png` (seen from below), `north-wall-elevation.png` and `north-wall-elevation-dining.png` (elevations with dimensions). Labels are in Czech and English.
