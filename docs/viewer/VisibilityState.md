@@ -1,4 +1,4 @@
-# Remembered visibility, the Enclosure group and locks
+# Remembered visibility, camera, the Enclosure group and locks
 
 Source: Petr, 2026-11-19 (Cody chat, after the visibility plan):
 
@@ -6,7 +6,7 @@ Source: Petr, 2026-11-19 (Cody chat, after the visibility plan):
 - "add an "enclosure" group (or whatever you would call it) that includes, walls, windows, doors"
 - "I also envision a lock feature where I can e.g. lock the enclosure group from being hidden. Im not sure how the UI would look, suggest something. For now, my usecase would be locking enclosure group and leaving it so forever, but make this generic if you can."
 
-Code: `src/blueprints/viewer/visibilityState.js` (pure, tested in `visibilityState.test.mjs`), wired in `main.js`, `ifcHide.js` and `ifcInspector.js`.
+Code: `src/blueprints/viewer/visibilityState.js` (pure, tested in `visibilityState.test.mjs`) and `cameraState.js` (tested in `cameraState.test.mjs`), wired in `main.js`, `ifcHide.js` and `ifcInspector.js`.
 
 ## Remembered state
 
@@ -19,6 +19,18 @@ The viewer keeps one `localStorage` entry per model, `blueprints.visibility.<mod
 It is written a moment after each change and on page hide, and put back when the model loads. Nothing goes into the URL. An explicit `?cables=1` / `?cables=0` / `?gridfinity=0` still wins on load, and `?scene=` still applies its scene on top. A viewer version that changes the shape bumps `v`; an unknown version is ignored. Version 2 (2026-11-20) dropped the room isolate (Petr: "remove "only this room feature", not needed anymore with how fast this is") and starts on-demand layers on; a version-1 entry still loads, minus its on-demand layer opacities (they were 0 only because version 1 started those layers off).
 
 **Reset visibility** (button at the bottom of Parts) clears the entry and restores the defaults: every part on including Gridfinity, cables off, no inspector hides, and only the model's default locks.
+
+## Remembered camera
+
+The viewer also keeps one `localStorage` entry per model, `blueprints.camera.<model>`, on that device and browser (Petr, 2026-11-20: "make it remember last camera position locally. No need for a reset button, as I can use scenes to reset."):
+
+- the camera position and orbit target;
+- the mode (orbit or first-person walk) and, in walk mode, the person height.
+
+It is written when an orbit or pan ends, a moment after other camera moves, and on page hide, and put back when the model loads. Nothing goes into the URL. An explicit `?scene=` that names a known scene still wins on load and applies that scene's camera; with no such parameter the remembered pose is used, falling back to the default isometric view. Applying a scene or a built-in view (Iso, Front, Side, Top) just moves the camera, and that new pose then becomes the remembered one. Corrupt values, an unknown version, or a pose far outside the model are ignored.
+
+There is no reset button for the camera: pick a scene or a built-in view to go back to a known pose. Reset visibility does not clear the camera entry.
+
 
 ## Enclosure
 
