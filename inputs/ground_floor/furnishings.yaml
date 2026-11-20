@@ -827,6 +827,12 @@ systemFurniture:
           # area)"; relayed clarification: at the western column a small
           # separate oak piece (SF-F052-WORKTOP), 20 thick, 20 overhang.
           WorktopMaterial: "oak veneer"
+      # 2026-11-20 f: the oak piece is as thick as the stone + oak stack
+      # next to it (40), so the cupboard drops with the dining boxes (guess:
+      # one 40 oak piece, Petr gave the stack only for "the dining part").
+      - Name: Pset_Links
+        Properties:
+          Pset_KitchenBay.WorktopThickness: "KR-DN.Pset_KitchenRun.WorktopThickness + KR-DN.Pset_KitchenRun.UnderlayThickness"
       # Petr, 2026-11-20: "don't touch dining area bottom cabinets geometry yet, Im undecided. But make them cream color like kitchen, all the way through dining area into living room (behind couch)."
       - Name: Pset_Finish
         Properties:
@@ -915,6 +921,10 @@ systemFurniture:
           # oak-veneer worktop extends over this cupboard (SF-DN70, the 70 strip
           # it also covered until 2026-11-20 c, is gone: SF-LB runs to the pier).
           WorktopRun: KR-LB
+      # 2026-11-20 f: that counter's thickness (40, the bookshelf boards').
+      - Name: Pset_Links
+        Properties:
+          Pset_KitchenBay.WorktopThickness: "KR-LB.Pset_KitchenRun.WorktopThickness"
       # Petr, 2026-11-20: "don't touch dining area bottom cabinets geometry yet, Im undecided. But make them cream color like kitchen, all the way through dining area into living room (behind couch)."
       - Name: Pset_Finish
         Properties:
@@ -973,14 +983,13 @@ systemFurniture:
           East: "SF-TC.X"
   - id: SF-DH
     Name: "Jídelna horní"
-    Description: "Oak-front wall cabinet over the dining bay, x 22.45–25.15. Depth 350, bottom 1560 (Petr, 2026-11-13: top cabinets start at 1560), height 844, top 2404: 28 under the oak lining SF-DH-LINING (2432–2450), Blum AVENTOS HF's space above at the 88° stop. The ceiling line at 2450 is an invariant. Not carried across the piers. Its own run KR-DH. Two 1350 sections, each a Blum AVENTOS HF bi-fold at 88°, like the kitchen wall cabinets (2026-11-20)."
+    Description: "Oak-front wall cabinet over the dining bay, x 22.45–25.15. Depth 276 (350 until 2026-11-20 f): the pier plus its slat cladding, front flush with the slats at y 15.324 (linked), bottom 1560 (Petr, 2026-11-13: top cabinets start at 1560), height 844, top 2404: 28 under the oak lining SF-DH-LINING (2432–2450), Blum AVENTOS HF's space above at the 88° stop. The ceiling line at 2450 is an invariant. Not carried across the piers. Its own run KR-DH. Two 1350 sections, each a Blum AVENTOS HF bi-fold at 88°, like the kitchen wall cabinets (2026-11-20)."
     PredefinedType: USERDEFINED
     ObjectType: WallCabinet
     ContainedInStructure: SP-1.02
-    Origin: [22.45, 15.25]
+    Origin: [22.45, 0]
     Elevation: 1.56
     Width: 2.7
-    Depth: 0.35
     # 0.89 until Petr, 2026-11-20: "I actually got that completely wrong,
     # and this new screenshot shows how the cabinet top extends past the
     # cabinets on the underside of the soffit. It also means that you do
@@ -990,6 +999,14 @@ systemFurniture:
     # is 2450 − 18 − 28 = 2404 and the cabinet 844. Bottom stays 1560.
     Height: 0.844
     PropertySets:
+      # Petr, 2026-11-20 f: "dining area top cabinets as well as living room
+      # shelves are exactly the delth of columns + accoustic cladding".
+      # Front flush with W-052's slat face, back on the north wall (y
+      # 15.60, the wall line, not an element): 276 deep (350 until then).
+      - Name: Pset_Links
+        Properties:
+          Y: "CV-SLAT-W052.Y"
+          Depth: "15.60 - CV-SLAT-W052.Y"
       - Name: Pset_Finish
         Properties:
           Material: "natural oak"
@@ -1015,21 +1032,35 @@ systemFurniture:
         Properties:
           Sections: "2"
           Layout: "lift * fitting=HF angle=88 shelves=2"
+          # open: 2026-11-20 f, the 276 depth Petr set (pier + slat cladding)
+          # leaves 250 inside (276 - 18 front - 8 back), under Blum's HF
+          # minimum internal depth LT 264 (Blum catalogue 2024/25 p. 20). Kept
+          # and listed as OutsideBlumRange so the architect can resolve it
+          # (fitting or depth), not redesigned here.
+          # open: FOR THE WOODWORKER (Petr, 2026-11-20 h: "keep that too
+          # shallow top dining cabinets for blum lift up hinge issue well
+          # documented for the woodworker. Its not part of the model but
+          # we'll resolve it in due time"). 276 deep = 250 inside; Blum
+          # AVENTOS HF needs LT >= 264 (catalogue 2024/25 p. 20). Options:
+          # another fitting or more depth. The model deliberately keeps 276;
+          # see the box at the top of docs/design/kitchen-cabinets.md.
+          BlumRangeOverride: "Petr, 2026-11-20 f: \"dining area top cabinets as well as living room shelves are exactly the delth of columns + accoustic cladding\" (276 deep, 250 inside < HF LT 264, open:)"
           Contents1: "hrnky"
           Contents2: "hrnky"
   - id: SF-TC
     Name: "Rohová vysoká"
-    Description: "Tall corner cabinet, east end of the north wall. As wide as the sofa's east armrest FN-ARME (linked: 300, x 29.60–29.90; was 200, x 29.70–29.90), its east face on the arm's. 450 deep, front y=15.15. Height 2450, the kitchen tall height. Natural oak."
+    Description: "Tall corner cabinet, east end of the north wall. As wide as the sofa's east armrest FN-ARME (linked: 300, x 29.60–29.90; was 200, x 29.70–29.90), its east face on the arm's. 450 deep, front y=15.15. Height 2450, the kitchen tall height. Kitchen cream (natural oak until 2026-11-20 f)."
     PredefinedType: USERDEFINED
     ObjectType: TallCabinet
     ContainedInStructure: SP-1.02
     Depth: 0.45
     Height: 2.45
     PropertySets:
+      # Petr, 2026-11-20 f: "Only make SF-TC cream, nothing else."
       - Name: Pset_Finish
         Properties:
-          Material: "natural oak"
-          Form: "solid or veneer"
+          Material: "kitchen cream (RAL 9001 matt)"
+          Form: "lacquered or laminate, like the kitchen fronts"
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-TC
@@ -1333,17 +1364,28 @@ furniture:
   # docs/design/kitchen-cabinets.md.
   - id: KR-ISL
     Name: "Ostrov"
-    Description: "Island monoblock: west row (5 bays) and east row (4 bays) back to back on one shared central back. Silestone Blanco Maple worktop, 20 mm overhang on both long fronts, Silestone cladding on both ends."
+    Description: "Island monoblock: west row (5 bays) and east row (4 bays) back to back on one shared central back. Silestone Blanco Maple worktop (20 mm, linked to the catalogue), 20 mm overhang on the west front, flush with the east row's fronts (2026-11-20 f), Silestone cladding on both ends, 45 degree mitre joints between the top and the end panels (2026-11-20 f)."
     PredefinedType: USERDEFINED
     ObjectType: KitchenRun
     ContainedInStructure: SP-1.02
     PropertySets:
+      - Name: Pset_Links
+        Properties:
+          # Petr, 2026-11-20 f: "ok, lets use 20mm for everything (we currently
+          # have 12 for vertical)". Every Silestone thickness links to
+          # silestone-blanco-maple in inputs/materials/catalogue.yaml.
+          Pset_KitchenRun.WorktopThickness: "mat:silestone-blanco-maple.Thickness"
       - Name: Pset_KitchenRun
         Properties:
-          WorktopThickness: 0.02
           WorktopOverhang: 0.02
+          # Petr, 2026-11-20 f: "dining area and east island side have zero
+          # overhang". The east edge is flush with the east row's fronts.
+          WorktopOverhangE: 0.0
           WorktopMaterial: "Silestone Blanco Maple"
           CladEnds: true
+          # Petr, 2026-11-20 f: "island top and sides use a 45 degree joint"
+          # (sides of island stay silestone).
+          MitreEnds: true
           # Petr, 2026-11-12: "Ok, 100mm it is." Lowest plinth the robot
           # vacuum fits under (Dreame X60 Pro Master 89 mm); open legs.
           # Petr, 2026-11-20 b: "add kickboard (cover) to the existing plinth
@@ -1356,14 +1398,20 @@ furniture:
           LegInset: 0.08
   - id: KR-WEST
     Name: "Západní linka"
-    Description: "West-wall base monoblock between OP24 and OP25: C850, B800, A250 and the dishwasher slot. Silestone worktop, 20 mm overhang at the front, Silestone cladding on both ends, 12 mm Silestone backsplash."
+    Description: "West-wall base monoblock between OP24 and OP25: C850, B800, A250 and the dishwasher slot. Silestone worktop, 20 mm overhang at the front, cream wood end panels on both ends (Silestone until 2026-11-20 f), 20 mm Silestone backsplash (12 until 2026-11-20 f)."
     PredefinedType: USERDEFINED
     ObjectType: KitchenRun
     ContainedInStructure: SP-1.02
     PropertySets:
+      - Name: Pset_Links
+        Properties:
+          # Petr, 2026-11-20 f: "ok, lets use 20mm for everything (we currently
+          # have 12 for vertical)". Every Silestone thickness links to
+          # silestone-blanco-maple in inputs/materials/catalogue.yaml.
+          Pset_KitchenRun.WorktopThickness: "mat:silestone-blanco-maple.Thickness"
+          Pset_KitchenRun.BacksplashThickness: "mat:silestone-blanco-maple.Thickness"
       - Name: Pset_KitchenRun
         Properties:
-          WorktopThickness: 0.02
           WorktopOverhang: 0.02
           WorktopMaterial: "Silestone Blanco Maple"
           # Petr, 2026-11-12: "Ok, 100mm it is." Lowest plinth the robot
@@ -1376,21 +1424,33 @@ furniture:
           PlinthKind: Legs
           Kickboard: true
           LegInset: 0.08
-          # Petr, 2026-11-12: "back wall for both west and north". 12 mm
-          # Silestone from the brief; up to the wall cabinets (derived).
+          # Petr, 2026-11-12: "back wall for both west and north". 20 mm
+          # since 2026-11-20 f (12 before; linked above); up to the wall
+          # cabinets (derived).
           Backsplash: true
-          BacksplashThickness: 0.012
           BacksplashMaterial: "Silestone Blanco Maple"
           # Petr, 2026-11-12: "do the sides of the west run of cabinets".
           # Both ends are free (door openings OP24 / OP25), so both are clad.
+          # Petr, 2026-11-20 f: "sides of western cabinet are cream color
+          # wood, not silestone (sides of island stay silestone)". The
+          # kitchen cream; 20 thick so the stone top's ends stay put (guess:
+          # the panel thickness, not linked to the stone any more).
           CladEnds: true
+          CladdingThickness: 0.02
+          CladdingMaterial: "kitchen cream"
   - id: KR-DN
     Name: "Jídelní linka"
-    Description: "North dining base run: SF-F052, SF-DN, SF-F053 (SF-DN70 removed 2026-11-20 c). Cream boxes (oak until 2026-11-20) under a 20 mm Silestone Blanco Maple worktop, 20 mm front overhang, top 930. No exposed ends: west abuts SF-T4, east abuts SF-LB (KR-LB, oak-veneer top, also 930)."
+    Description: "North dining base run: SF-F052, SF-DN, SF-F053 (SF-DN70 removed 2026-11-20 c). Cream boxes (oak until 2026-11-20) under a 20 mm Silestone Blanco Maple worktop, no front overhang (20 until 2026-11-20 f): top and boxes both 450 deep, 430 of the top visible in front of the 20 mm backsplash, top 930. No exposed ends: west abuts SF-T4, east abuts SF-LB (KR-LB, oak-veneer top, also 930)."
     PredefinedType: USERDEFINED
     ObjectType: KitchenRun
     ContainedInStructure: SP-1.02
     PropertySets:
+      - Name: Pset_Links
+        Properties:
+          # Petr, 2026-11-20 f: "ok, lets use 20mm for everything (we currently
+          # have 12 for vertical)". Every Silestone thickness links to
+          # silestone-blanco-maple in inputs/materials/catalogue.yaml.
+          Pset_KitchenRun.WorktopThickness: "mat:silestone-blanco-maple.Thickness"
       # Petr, 2026-11-12: "do the north cabinets (in the dining area in
       # the same silestone)". Carcass Box: each oak box stays one body,
       # cut to 910 under the stone (kitchen-cabinets.md).
@@ -1399,9 +1459,21 @@ furniture:
           Carcass: Box
           # Cream like the kitchen since 2026-11-20 (was natural oak).
           BodyMaterial: "kitchen cream"
-          WorktopThickness: 0.02
-          WorktopOverhang: 0.02
+          # Petr, 2026-11-20 f: "dining area and east island side have zero
+          # overhang", and "btw, in dining area, no overhang means the top
+          # and the cabinets are both 450mm deep. Only 430mm of the
+          # countertop depth is visible because theres a 20mm backdrop. This
+          # way, we can just about fit the Dreame base station into the
+          # bottom cabinets." Also SF-F052's own oak top (same run).
+          WorktopOverhang: 0.0
           WorktopMaterial: "Silestone Blanco Maple"
+          # Petr, 2026-11-20 f: "oh and btw, per the sketchup screenshot I sent earlier, the living room counter is the same thickness as the bookshelves, which is 40, and the dining part has 20 silestone and 20 oak below it. That makes all the base cabinets a bit less tall."
+          # 20 oak under the 20 stone, the same 450 flush footprint; the
+          # finished top stays at 930 (guess: invariant), so the carcasses
+          # drop 20 (910 -> 890); the 100 plinth stays. Oak species/finish
+          # guess: the natural oak of the dining furniture.
+          UnderlayThickness: 0.02
+          UnderlayMaterial: "natural oak"
           # Petr, 2026-11-20 b: "in the dining area there's no recessed
           # toe-kick, but there still is a bottom fixed kickboard with the
           # same 100mm height (flush with the cabinet fronts)." The carcasses
@@ -1412,7 +1484,7 @@ furniture:
           PlinthKind: Flush
   - id: KR-LB
     Name: "Obývák linka"
-    Description: "Living-room counter behind the sofa: SF-LB. Cream body (oak until 2026-11-20) under a 20 mm oak-veneer top, 20 mm front overhang like the stone runs, top 930 like the dining run. The joint with KR-DN's Silestone at x 25.52 is open (Petr, 2026-11-13)."
+    Description: "Living-room counter behind the sofa: SF-LB. Cream body (oak until 2026-11-20) under a 40 mm oak-veneer top (the bookshelf boards' thickness, linked; 20 until 2026-11-20 f), flush with the fronts like the dining top (overhang linked to KR-DN's, 0; 20 until 2026-11-20 f), top 930 like the dining run. The joint with KR-DN's Silestone at x 25.52 is open (Petr, 2026-11-13)."
     PredefinedType: USERDEFINED
     ObjectType: KitchenRun
     ContainedInStructure: SP-1.02
@@ -1423,11 +1495,18 @@ furniture:
           # Cream like the kitchen since 2026-11-20 (was natural oak); the
           # oak-veneer top stays.
           BodyMaterial: "kitchen cream"
-          WorktopThickness: 0.02
-          WorktopOverhang: 0.02
           WorktopMaterial: "oak veneer"
           # The under-storage (2026-11-19) stands on the floor like the body did (open:).
           PlinthHeight: 0.0
+      # Petr, 2026-11-20 f: "living room overhang also goes away". The oak
+      # top is flush with the fronts like the dining top: its overhang is
+      # linked to KR-DN's (0, was 20).
+      - Name: Pset_Links
+        Properties:
+          Pset_KitchenRun.WorktopOverhang: "KR-DN.Pset_KitchenRun.WorktopOverhang"
+          # Petr, 2026-11-20 f: "the living room counter is the same
+          # thickness as the bookshelves, which is 40" (20 until then).
+          Pset_KitchenRun.WorktopThickness: "FN-BK.Pset_Bookshelf.BoardThickness"
   - id: KR-DH
     Name: "Jídelna horní"
     Description: "The oak wall cabinet over the dining run (SF-DH), a monoblock of one: three sections of doors (2026-11-19), two AVENTOS HF sections since 2026-11-20, 844 high under the oak soffit lining SF-DH-LINING."
@@ -1441,7 +1520,7 @@ furniture:
           PlinthHeight: 0.0
   - id: KR-TC
     Name: "Rohová vysoká"
-    Description: "The oak tall corner cabinet (SF-TC), a monoblock of one (2026-11-19). On the floor like before."
+    Description: "The tall corner cabinet (SF-TC), a monoblock of one (2026-11-19), cream since 2026-11-20 f (was oak). On the floor like before."
     PredefinedType: USERDEFINED
     ObjectType: KitchenRun
     ContainedInStructure: SP-1.02
@@ -1490,6 +1569,13 @@ furniture:
           # of the tall kitchen cabinet has a hole with no kickboard)". The
           # east end (SF-T4) stands 150 proud of the dining fronts.
           SideKickboards: "E"
+          # Petr, 2026-11-20 h: "that little kickboard I asked you to add on
+          # the side of the tall kitchen cabinet where it meets the column
+          # area. Youve made it recessed, which is clearly wrong. Needs to be
+          # flush with the cabinet side." 0 = its outer face in the end
+          # panel's outer face (it follows the run's east end); was the 50
+          # PlinthSetback.
+          SideKickboardSetback: 0.0
   - id: KR-TALL-F
     Name: "Nad lednicí"
     Description: "The cabinet over the fridge (SF-TF), a monoblock of one between KR-TALL-W and KR-TALL."
@@ -1679,16 +1765,20 @@ furniture:
   # the open fronts' sweep (to y 15.268) passes in front of them.
   - id: SF-DH-RET-W
     Name: "Jídelna horní, dubový bok západ"
-    Description: "West end return: SF-DH's oak side carried up from the cabinet top (2404) to the lining (2432), x 22.450–22.468, y 15.27–15.60. guess: the frame detail."
+    Description: "West end return: SF-DH's oak side carried up from the cabinet top (2404) to the lining (2432), x 22.450–22.468, y 15.344–15.60 (linked to SF-DH; 15.27 until 2026-11-20 f). guess: the frame detail."
     PredefinedType: USERDEFINED
     ObjectType: CabinetLining
     ContainedInStructure: SP-1.02
-    Origin: [22.45, 15.27]
+    Origin: [22.45, 0]
     Elevation: 2.404
     Width: 0.018
-    Depth: 0.33
     Height: 0.028
     PropertySets:
+      # 2026-11-20 f: follows SF-DH's front (2 behind the fronts' inner face).
+      - Name: Pset_Links
+        Properties:
+          Y: "SF-DH.Y + 0.02"
+          Depth: "15.60 - Y"
       - Name: Pset_Finish
         Properties:
           Material: "natural oak"
@@ -1698,16 +1788,20 @@ furniture:
           PartOf: SF-DH
   - id: SF-DH-RET-E
     Name: "Jídelna horní, dubový bok východ"
-    Description: "East end return: SF-DH's oak side carried up from the cabinet top (2404) to the lining (2432), x 25.132–25.150, y 15.27–15.60. guess: the frame detail."
+    Description: "East end return: SF-DH's oak side carried up from the cabinet top (2404) to the lining (2432), x 25.132–25.150, y 15.344–15.60 (linked to SF-DH; 15.27 until 2026-11-20 f). guess: the frame detail."
     PredefinedType: USERDEFINED
     ObjectType: CabinetLining
     ContainedInStructure: SP-1.02
-    Origin: [25.132, 15.27]
+    Origin: [25.132, 0]
     Elevation: 2.404
     Width: 0.018
-    Depth: 0.33
     Height: 0.028
     PropertySets:
+      # 2026-11-20 f: follows SF-DH's front (2 behind the fronts' inner face).
+      - Name: Pset_Links
+        Properties:
+          Y: "SF-DH.Y + 0.02"
+          Depth: "15.60 - Y"
       - Name: Pset_Finish
         Properties:
           Material: "natural oak"
@@ -1717,11 +1811,10 @@ furniture:
           PartOf: SF-DH
   - id: FN-BK
     Name: "Knihovna"
-    Description: "Open bookshelf above the sofa, from W-053's east face to SF-TC (linked, x 25.45–29.60; was 25.52–29.70). Depth 250, standing on the oak counter (930, linked; was 980, 50 above it), up to the oak top board SF-DH-LINING (2432, linked; was 2450). Lamella back on a 6 mm oak-veneer backing (2026-11-20 c). Three shelves. Oak lamella back, slats 40 / gap 20 / thick 12. Sides, top and shelves 20."
+    Description: "Open bookshelf above the sofa, from W-053's east face to SF-TC (linked, x 25.45–29.60; was 25.52–29.70). Depth 276, front flush with the pier's slat face (linked; 250 until 2026-11-20 f), standing on the oak counter (930, linked; was 980, 50 above it), up to the oak top board SF-DH-LINING (2432, linked; was 2450). Lamella back on a 6 mm oak-veneer backing (2026-11-20 c). Three shelves. Oak lamella back, slats 40 / gap 20 / thick 12. Sides, top and shelves 40 (Petr, 2026-11-20 f; 20 until then)."
     PredefinedType: SHELF
     ObjectType: Bookshelf
     ContainedInStructure: SP-1.02
-    Depth: 0.25
     PropertySets:
       - Name: Pset_Finish
         Properties:
@@ -1736,6 +1829,10 @@ furniture:
           # piers) behind the lamella, so nothing shows through.
           BackingThickness: 0.006
           BackingMaterial: "oak veneer"
+          # Petr, 2026-11-20 f: "the living room counter is the same
+          # thickness as the bookshelves, which is 40". Sides, top and
+          # shelves (20, guess:, until then); the living counter links here.
+          BoardThickness: 0.04
       # Petr, 2026-11-20 c: "that whole bookshelf area and base cabinets
       # below it need to be tightened, the connection to the column is weird,
       # these and extra thin sliver of panels and some gaps." Side to the
@@ -1743,8 +1840,13 @@ furniture:
       # top board: no 70 gap at the pier, no 50 gap over the counter.
       - Name: Pset_Links
         Properties:
+          # Petr, 2026-11-20 f: "dining area top cabinets as well as living room
+          # shelves are exactly the delth of columns + accoustic cladding".
+          # Front flush with W-053's slat face, back on the north wall
+          # (15.60): 276 deep (250, front on the pier face 15.35, until then).
           X: "SF-LB.X"
-          Y: "0.0 + 15.35"
+          Y: "CV-SLAT-W053.Y"
+          Depth: "15.60 - CV-SLAT-W053.Y"
           East: "SF-TC.X"
           Elevation: "SF-LB.Top"
           Top: "SF-DH-LINING.Elevation"
@@ -1938,7 +2040,10 @@ furniture:
           SeatHeight: 0.6
 coverings:
   # North backsplash. Petr, 2026-11-12: "back wall for both west and
-  # north". 12 mm Silestone Blanco Maple (thickness from the brief), from
+  # north". Silestone Blanco Maple, 20 mm since Petr, 2026-11-20 f: "ok,
+  # lets use 20mm for everything (we currently have 12 for vertical)"
+  # (12 from the brief before). The thickness links to the catalogue; the
+  # panel keeps the wall face (15.60), the returns follow its front. From
   # the 930 counter (the oak bases' top) to 1560, the underside of SF-DH
   # (1550 until Petr, 2026-11-13: "top cabinets to start at 1560mm").
   # North wall inner face y=15.60, pier faces y=15.35, piers W-052
@@ -1947,16 +2052,19 @@ coverings:
   # the bookshelf's oak lamella back is there from 850.
   - id: CV-BS-DN
     Name: "Obklad stěny jídelna"
-    Description: "Main panel on the north wall behind SF-DN, between the piers. Up to the underside of SF-DH (1560)."
+    Description: "Main panel on the north wall behind SF-DN, between the piers, 20 mm (12 until 2026-11-20 f), y 15.58–15.60, standing on the 450 deep top. Up to the underside of SF-DH (1560)."
     PredefinedType: CLADDING
     ObjectType: Backsplash
     ContainedInStructure: SP-1.02
-    Origin: [22.45, 15.588]
+    Origin: [22.45, 0]
     Elevation: 0.93
     Width: 2.7
-    Depth: 0.012
     Height: 0.63
     PropertySets:
+      - Name: Pset_Links
+        Properties:
+          Depth: "mat:silestone-blanco-maple.Thickness"
+          Y: "15.60 - Depth"
       - Name: Pset_Finish
         Properties:
           Material: "Silestone Blanco Maple"
@@ -1968,10 +2076,12 @@ coverings:
     ContainedInStructure: SP-1.02
     Origin: [22.45, 15.35]
     Elevation: 0.93
-    Width: 0.012
-    Depth: 0.238
     Height: 0.63
     PropertySets:
+      - Name: Pset_Links
+        Properties:
+          Width: "mat:silestone-blanco-maple.Thickness"
+          Depth: "CV-BS-DN.Y - 15.35"
       - Name: Pset_Finish
         Properties:
           Material: "Silestone Blanco Maple"
@@ -1981,27 +2091,35 @@ coverings:
     PredefinedType: CLADDING
     ObjectType: Backsplash
     ContainedInStructure: SP-1.02
-    Origin: [25.138, 15.35]
+    Origin: [0, 15.35]
     Elevation: 0.93
-    Width: 0.012
-    Depth: 0.238
     Height: 0.63
     PropertySets:
+      - Name: Pset_Links
+        Properties:
+          Width: "mat:silestone-blanco-maple.Thickness"
+          East: "25.15"
+          Depth: "CV-BS-DN.Y - 15.35"
       - Name: Pset_Finish
         Properties:
           Material: "Silestone Blanco Maple"
   - id: CV-SLAT-W052
     Name: "Dubové lamely pilíře W-052"
-    Description: "Vertical oak slats on W-052's front face (the concrete column), x 22.150–22.462 (from SF-T4's east face over the 12 mm stone return in the niche), from the worktop (930) to the ceiling line (2450). 40 wide, 20 apart, 20 thick (guess:), on a 6 mm oak-veneer backing (2026-11-20 b, guess:), 26 overall, y 15.324–15.350. Replaces the stone piece CV-BS-P052 (2026-11-20)."
+    Description: "Vertical oak slats on W-052's front face (the concrete column), x 22.150–22.470 (from SF-T4's east face over the 20 mm stone return in the niche, linked; 22.462 over the 12 mm one until 2026-11-20 f), from the worktop (930) to the ceiling line (2450). 40 wide, 20 apart, 20 thick (guess:), on a 6 mm oak-veneer backing (2026-11-20 b, guess:), 26 overall, y 15.324–15.350. Replaces the stone piece CV-BS-P052 (2026-11-20)."
     PredefinedType: CLADDING
     ObjectType: SlatCladding
     ContainedInStructure: SP-1.02
-    Origin: [22.15, 15.324]
+    Origin: [22.15, 0]
     Elevation: 0.93
-    Width: 0.312
     Depth: 0.026
     Height: 1.52
     PropertySets:
+      # 2026-11-20 f: linked. The slats stand on the pier's front face
+      # (y 15.35) and run over the (now 20 mm) stone return's edge.
+      - Name: Pset_Links
+        Properties:
+          Y: "15.35 - Depth"
+          East: "CV-BS-R052.East"
       # Petr, 2026-11-20: "Im attaching screenshot of all material details in
       # this area, so please adjust the concrete column cladding and
       # everything too (dining table stays wooden though)." The screenshot,
@@ -2026,11 +2144,11 @@ coverings:
           BackingMaterial: "oak veneer"
   - id: CV-SLAT-W053
     Name: "Dubové lamely pilíře W-053"
-    Description: "Vertical oak slats on W-053's front face (the concrete column), x 25.138–25.450 (over the 12 mm stone return on the niche side; to the pier's east face, linked, where the living base and bookshelf now meet it, 2026-11-20 c; was to 25.462 over the removed east return CV-BS-R053E), from the worktop (930) to the ceiling line (2450). 40 wide, 20 apart, 20 thick (guess:), on a 6 mm oak-veneer backing (2026-11-20 b, guess:), 26 overall, y 15.324–15.350. Replaces the stone piece CV-BS-P053 (2026-11-20)."
+    Description: "Vertical oak slats on W-053's front face (the concrete column), x 25.130–25.450 (over the 20 mm stone return on the niche side, linked; 25.138 over the 12 mm one until 2026-11-20 f; to the pier's east face, linked, where the living base and bookshelf now meet it, 2026-11-20 c; was to 25.462 over the removed east return CV-BS-R053E), from the worktop (930) to the ceiling line (2450). 40 wide, 20 apart, 20 thick (guess:), on a 6 mm oak-veneer backing (2026-11-20 b, guess:), 26 overall, y 15.324–15.350. Replaces the stone piece CV-BS-P053 (2026-11-20)."
     PredefinedType: CLADDING
     ObjectType: SlatCladding
     ContainedInStructure: SP-1.02
-    Origin: [25.138, 15.324]
+    Origin: [0, 0]
     Elevation: 0.93
     Depth: 0.026
     Height: 1.52
@@ -2059,6 +2177,10 @@ coverings:
           BackingMaterial: "oak veneer"
       - Name: Pset_Links
         Properties:
+          # 2026-11-20 f: from the (20 mm) stone return's face, on the
+          # pier's front face (y 15.35).
+          X: "CV-BS-R053W.X"
+          Y: "15.35 - Depth"
           East: "SF-F053.East"
   - id: CV-RUG
     Name: "Koberec"

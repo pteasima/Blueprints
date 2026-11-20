@@ -55,6 +55,9 @@ IKEA_DEFAULTS_MM = {
     "WorktopThickness": 38.0,  # IKEA worktops; the island run sets 20 (Silestone)
     "WorktopOverhang": 0.0,  # past the front faces; Petr gave 20 for Silestone (2026-11-13)
     "CladdingThickness": 0.0,  # 0 = same as the worktop
+    # A layer under the stone (box runs, ``UnderlayMaterial``): Petr,
+    # 2026-11-20 f, the dining run is 20 Silestone on 20 oak.
+    "UnderlayThickness": 0.0,
     "PlinthHeight": 92.0,  # METOD legs 80–100
     "PlinthSetback": 50.0,  # plinth board behind the front face (guess)
     # Inner drawers (Pset_Fronts drawer ``inner=``), Blum MERIVOBOX / LEGRABOX
@@ -256,7 +259,8 @@ def section_widths(element: dict, width: float) -> list[float] | None:
 
 def section_element(element: dict, number: int) -> dict:
     """The yaml element one section reads its fronts from: ``Layout<N>``
-    (else ``Layout``), ``Contents<N>`` (else none), ``Gridfinity``, and the
+    (else ``Layout``), ``Contents<N>`` (else none), ``Gridfinity``,
+    ``BlumRangeOverride``, and the
     bay's ``Pset_Drawers``."""
     props = next((ps.get("Properties") or {} for ps in element.get("PropertySets") or []
                   if ps.get("Name") == PSET_FRONTS), {})
@@ -269,6 +273,9 @@ def section_element(element: dict, number: int) -> dict:
             sub["Contents"] = props[key]
     if props.get("Gridfinity") is not None:
         sub["Gridfinity"] = props["Gridfinity"]
+    # A bay's Blum override holds for each of its sections (2026-11-20 f).
+    if props.get("BlumRangeOverride") is not None:
+        sub["BlumRangeOverride"] = props["BlumRangeOverride"]
     psets = [{"Name": PSET_FRONTS, "Properties": sub}]
     # The bay's Pset_Drawers (Gridfinity, System) holds for every section.
     drawers = next((ps.get("Properties") for ps in element.get("PropertySets") or []
@@ -462,6 +469,10 @@ class Part:
     drawer: Drawer | None = None
     material: str | None = None
     shape: str = "box"  # "cylinder": one vertical cylinder inscribed in boxes[0] (legs)
+    # Mitre cuts: each a triangle [(a, z), (a, z), (a, z)] in the run frame,
+    # cut through the part's whole depth (c). The island top and its end
+    # panels meet at 45 degrees (Petr, 2026-11-20 f, ``MitreEnds``).
+    cuts: list = field(default_factory=list)
     door: Leaf | None = None
     props: dict = field(default_factory=dict)  # Pset_KitchenFront / Pset_BuiltIn values for IFC
     builtin: dict | None = None  # a yaml appliance laid out here (its own IFC product)
@@ -634,6 +645,8 @@ class _Builder:
         if str(_prop(run.element, PSET_RUN, "Carcass", "")) == CARCASS_BOX:
             self._box_run(cabinets, z_base, height, wt)
             return
+        if p["UnderlayThickness"] > 0:
+            raise ValueError(f"{run.id}: UnderlayThickness is only modelled for Carcass: Box runs")
         z0 = z_base + p["PlinthHeight"]
         z1 = z_base + height - wt
         run.carcass_z0, run.carcass_z1 = z0, z1
@@ -700,23 +713,42 @@ class _Builder:
         the front overhang; clad ends add the cladding thickness.
         """
         run, p = self.run, self.p
-        run.carcass_z0, run.carcass_z1 = z_base, z_base + height - wt
+        ul = p["UnderlayThickness"]
+        run.carcass_z0, run.carcass_z1 = z_base, z_base + height - wt - ul
         material = _prop(run.element, PSET_RUN, "BodyMaterial")
         z0 = z_base + p["PlinthHeight"]
+
+        def own_top(bay):
+            return (_prop(bay.element, PSET_BAY, "WorktopRun") is not None
+                    or _prop(bay.element, PSET_BAY, "WorktopMaterial") is not None)
+
+        def bay_wt(bay):
+            # A bay topped with its own piece may have its own thickness
+            # (Pset_KitchenBay.WorktopThickness, metres): the column
+            # cupboards' oak tops are 40 since 2026-11-20 f.
+            own = _prop(bay.element, PSET_BAY, "WorktopThickness")
+            return wt if own is None else float(own) * 1000.0
+
+        def bay_stack(bay):
+            # Everything over the carcass: the bay's own top, or the stone
+            # plus the underlay (``UnderlayThickness``). The finished top
+            # stays at the bay's height (930).
+            return bay_wt(bay) if own_top(bay) else wt + ul
+
         for bay in bays:
+            z1 = z_base + height - bay_stack(bay)
             if has_fronts(bay.element):
                 # A bay with fronts is a carcass of its own (end sides,
                 # bottom, back, rails) with its fronts, on the run's plinth.
-                self._block("single", ([bay],), z0, z_base + height - wt)
-                self._bay_parts(bay, z0, z_base + height - wt, shared_back=False)
+                self._block("single", ([bay],), z0, z1)
+                self._bay_parts(bay, z0, z1, shared_back=False)
                 continue
             self.add(Part(f"{bay.id}-BODY", bay.element.get("Name") or bay.id, "Body",
-                          [(bay.a0, bay.a1, bay.c0, bay.c1, z_base, z_base + height - wt)], material=material), bay)
+                          [(bay.a0, bay.a1, bay.c0, bay.c1, z_base, z1)], material=material), bay)
         self._dock_appliances(bays)
         self._join_flush_kickboards(bays)
         if wt <= 0:
             return
-        oh = p["WorktopOverhang"]
         clad = _prop(run.element, PSET_RUN, "CladEnds")
         ct = p["CladdingThickness"] or wt
         a_lo, a_hi = min(b.a0 for b in bays), max(b.a1 for b in bays)
@@ -724,11 +756,11 @@ class _Builder:
         for bay in sorted(bays, key=lambda b: b.a0):
             a0 = bay.a0 - (ct if clad and _near(bay.a0, a_lo) else 0.0)
             a1 = bay.a1 + (ct if clad and _near(bay.a1, a_hi) else 0.0)
-            c0 = bay.c0 - (oh if bay.front_low else 0.0)
-            c1 = bay.c1 + (0.0 if bay.front_low else oh)
-            slabs.append((a0, a1, c0, c1, z_base + height - wt, z_base + height))
+            c0 = bay.c0 - (self._overhang(True) if bay.front_low else 0.0)
+            c1 = bay.c1 + (0.0 if bay.front_low else self._overhang(False))
+            slabs.append((a0, a1, c0, c1, z_base + height - bay_wt(bay), z_base + height))
         run.worktop = (min(s[0] for s in slabs), max(s[1] for s in slabs),
-                       min(s[2] for s in slabs), max(s[3] for s in slabs), slabs[0][4], slabs[0][5])
+                       min(s[2] for s in slabs), max(s[3] for s in slabs), z_base + height - wt, z_base + height)
         material = _prop(run.element, PSET_RUN, "WorktopMaterial")
         # A bay may top itself with its own piece (Pset_KitchenBay.WorktopMaterial)
         # or with another run's counter (WorktopRun: its slab joins that run's
@@ -750,8 +782,17 @@ class _Builder:
         if slabs:
             self.add(Part(f"{run.id}-WORKTOP", "Pracovní deska", "Worktop", slabs, label=_worktop_label(material),
                           material=material))
+            if ul > 0:
+                # The same footprint, under the stone (Petr, 2026-11-20 f:
+                # "the dining part has 20 silestone and 20 oak below it").
+                under = _prop(run.element, PSET_RUN, "UnderlayMaterial")
+                if under is None:
+                    raise ValueError(f"{run.id}: UnderlayThickness needs an UnderlayMaterial")
+                self.add(Part(f"{run.id}-UNDERLAY", "Podložení pracovní desky", "Underlay",
+                              [(s[0], s[1], s[2], s[3], s[4] - ul, s[4]) for s in slabs],
+                              label=_worktop_label(under), material=under, props={"Material": under}))
         if clad:
-            self._cladding(_rows(run.bays), z_base, z_base + height - wt)
+            self._cladding(_rows(run.bays), z_base, z_base + height - wt - ul)
 
     def _pairs(self, rows):
         """Back-to-back rows: a row facing c0 whose back plane is another row's back plane."""
@@ -860,10 +901,17 @@ class _Builder:
         # south-north direction (the side of the tall kitchen cabinet has a
         # hole with no kickboard)".
         sides = str(_prop(self.run.element, PSET_RUN, "SideKickboards", "") or "").split()
+        # ``SideKickboardSetback`` (metres) sets how far in from the end face
+        # the return sits; default ``PlinthSetback``. KR-TALL's is 0, flush
+        # with the side panel's outer face (Petr, 2026-11-20 h: "Youve made
+        # it recessed, which is clearly wrong. Needs to be flush with the
+        # cabinet side.").
         if kind != "Flush" and sides:
             t, sb = p["BoardThickness"], p["PlinthSetback"]
-            ends = {self._end_name(-1.0): (row[0], a_lo + sb, a_lo + sb + t),
-                    self._end_name(1.0): (row[-1], a_hi - sb - t, a_hi - sb)}
+            own = _prop(self.run.element, PSET_RUN, "SideKickboardSetback")
+            se = sb if own is None else float(own) * 1000.0
+            ends = {self._end_name(-1.0): (row[0], a_lo + se, a_lo + se + t),
+                    self._end_name(1.0): (row[-1], a_hi - se - t, a_hi - se)}
             for name in sides:
                 if name not in ends:
                     raise ValueError(f"{self.run.id}: SideKickboards {name!r} is not a run end ({', '.join(ends)})")
@@ -871,7 +919,7 @@ class _Builder:
                 k0, k1 = self.c_range(end_bay, sb + t, back_y)
                 self.add(Part(f"{self.run.id}-PLINTH-{name}{tag}", f"Soklová lišta {name}", "Plinth",
                               [(s0, s1, k0, k1, end_bay.z_base, end_bay.z_base + p["PlinthHeight"])],
-                              props={"Kind": "Kickboard", "Side": name, "Setback": round(sb / 1000.0, 6)}),
+                              props={"Kind": "Kickboard", "Side": name, "Setback": round(se / 1000.0, 6)}),
                          end_bay)
 
     def _join_flush_kickboards(self, bays):
@@ -1639,8 +1687,26 @@ class _Builder:
                 voids.append(hob.rebate)
         run.worktop = (a0, a1, c0, c1, zb, zt)
         material = _prop(run.element, PSET_RUN, "WorktopMaterial")
+        cuts = []
+        if self._mitred():
+            cuts = [_mitre_cut(a0, a0 + (zt - zb), zb, zt, "top"), _mitre_cut(a1, a1 - (zt - zb), zb, zt, "top")]
         self.add(Part(f"{run.id}-WORKTOP", "Pracovní deska", "Worktop", [run.worktop],
-                      label="worktop", voids=voids, material=material))
+                      label="worktop", voids=voids, material=material, cuts=cuts))
+
+    def _mitred(self) -> bool:
+        """``MitreEnds``: the worktop and the clad ends meet at 45 degrees
+        (the top's end and the panel's top edge both bevelled, outer faces
+        meeting at the top's outer corner). Needs equal thicknesses."""
+        run, p = self.run, self.p
+        if not _prop(run.element, PSET_RUN, "MitreEnds"):
+            return False
+        if not _prop(run.element, PSET_RUN, "CladEnds"):
+            raise ValueError(f"{run.id}: MitreEnds needs CladEnds")
+        ct = p["CladdingThickness"] or p["WorktopThickness"]
+        if not _near(ct, p["WorktopThickness"]):
+            raise ValueError(f"{run.id}: a 45 degree mitre needs the cladding as thick as the worktop "
+                             f"({ct} vs {p['WorktopThickness']})")
+        return True
 
     def _cladding(self, rows, zb, zt):
         run, p = self.run, self.p
@@ -1651,12 +1717,20 @@ class _Builder:
             c0, c1 = min(b.c0 for b in run.bays), max(b.c1 for b in run.bays)
         a0 = min(b.a0 for b in run.bays)
         a1 = max(b.a1 for b in run.bays)
-        material = _prop(run.element, PSET_RUN, "WorktopMaterial")
+        # Petr, 2026-11-20 f: the west run's sides are cream wood, the
+        # island's stay Silestone (CladdingMaterial, default the worktop's).
+        material = _prop(run.element, PSET_RUN, "CladdingMaterial") or _prop(run.element, PSET_RUN, "WorktopMaterial")
+        stone = _prop(run.element, PSET_RUN, "CladdingMaterial") is None
+        mitre = self._mitred()
+        wt = p["WorktopThickness"]
+        top = zt + wt if mitre else zt
         for da, a_range, edge in ((-1, (a0 - ct, a0), a0), (1, (a1, a1 + ct), a1)):
             name = self._end_name(da)
             touching = [b for b in run.bays if _near(b.a0 if da < 0 else b.a1, edge)]
+            cuts = [_mitre_cut(edge + da * ct, edge, zt, top, "clad")] if mitre else []
             self.add(Part(f"{run.id}-CLAD-{name}", f"Obklad boku {name}", "Cladding",
-                          [(*a_range, c0, c1, zb, zt)], label="worktop", material=material), *touching)
+                          [(*a_range, c0, c1, zb, top)], label="worktop" if stone else "cabinet",
+                          material=material, cuts=cuts), *touching)
 
     def _hob_layout(self, bay: Bay, zt: float) -> Hob:
         """The hob of one bay from its Pset_Hob (metres), run frame mm.
@@ -1707,14 +1781,22 @@ class _Builder:
         return Hob(hid, name, mounting, cutout, rebate, glass, housing, underside, back_edge,
                    mm("MinDrawerGap", 8.0))
 
+    def _overhang(self, front_low: bool) -> float:
+        """Front overhang of the edge a row facing c0 (``front_low``) or c1
+        has: ``WorktopOverhang<compass>`` (metres, e.g. ``WorktopOverhangE``)
+        for that edge, else ``WorktopOverhang``. Petr, 2026-11-20 f: the
+        island's east edge is flush with the east row's fronts."""
+        face = self.run.frame.compass(0.0, -1.0 if front_low else 1.0)
+        own = _prop(self.run.element, PSET_RUN, f"WorktopOverhang{face}")
+        return self.p["WorktopOverhang"] if own is None else float(own) * 1000.0
+
     def _worktop_c(self, bays) -> tuple[float, float]:
         c0 = min(b.c0 for b in bays)
         c1 = max(b.c1 for b in bays)
-        oh = self.p["WorktopOverhang"]
         if any(b.front_low and _near(b.c0, c0) for b in bays):
-            c0 -= oh
+            c0 -= self._overhang(True)
         if any((not b.front_low) and _near(b.c1, c1) for b in bays):
-            c1 += oh
+            c1 += self._overhang(False)
         return c0, c1
 
     def _backsplash(self, rows, pairs, zt):
@@ -1748,6 +1830,22 @@ class _Builder:
             face = run.frame.compass(0.0, 1.0 if row[0].front_low else -1.0)
             self.add(Part(f"{run.id}-BACKSPLASH", f"Obklad stěny {face}", "Backsplash",
                           [(a0, a1, c0, c1, zt, top)], label="worktop", material=material), *row)
+
+
+def _mitre_cut(outer: float, inner: float, zb: float, zt: float, piece: str) -> list:
+    """The triangle (a, z) cut off one end of a 45 degree mitre joint.
+
+    The joint plane runs from the outer top corner (``outer``, ``zt``) to the
+    inner bottom one (``inner``, ``zb``): the worktop loses the triangle
+    under it (``piece="top"``), the end panel the triangle over it
+    (``"clad"``). Corners run 1 mm past the faces along the joint line so
+    the boolean cut is clean."""
+    s = 1.0 if inner > outer else -1.0  # from the outer face inwards
+    o_top = (outer - s, zt + 1.0)
+    i_bot = (inner + s, zb - 1.0)
+    if piece == "top":
+        return [o_top, (outer - s, zb - 1.0), i_bot]
+    return [o_top, (inner + s, zt + 1.0), i_bot]
 
 
 def _worktop_label(material) -> str:
