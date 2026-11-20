@@ -1326,7 +1326,15 @@ stone was already 20, so no carcass height moves. Changes, old → new:
   15.130 → 15.150). The oak strip over SF-F053 comes from this run too
   and is also flush (front 15.150). **open:** KR-LB's own oak counter over
   SF-LB keeps its 20 overhang (living room, not asked), so the one oak
-  part now steps by 20 at x 25.45, where SF-F053 meets SF-LB.
+  part now steps by 20 at x 25.45, where SF-F053 meets SF-LB. Then Petr:
+  “living room overhang also goes away”. So KR-LB's `WorktopOverhang` is
+  linked to KR-DN's (`Pset_Links`: `KR-DN.Pset_KitchenRun.WorktopOverhang`,
+  now 0, was 20). The oak top over SF-LB went 470 → **450** deep (front y
+  15.130 → 15.150), flush with SF-LB's fronts and with SF-TC's front. The
+  step at x 25.45 is gone. Nothing else moves: SF-TC, FN-BK and the sofa
+  have no links to the top's depth. The sofa's north backs (y 14.85–15.15,
+  top 760) now meet the counter's front plane with no gap, as SF-LB's
+  boxes already did.
 - **Dreame X60 station** (416 × 443 × 249; the dock band is unchanged):
   - Width: the opening is x 22.5675–23.0075, 440, so 12 clear each side.
   - Height: the board is at 260, so 11 over the station.
