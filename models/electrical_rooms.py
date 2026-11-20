@@ -22,7 +22,6 @@ from yaml_ifc import validation_errors
 from yaml_ifc.to_ifc import build_ifc
 
 from blueprints.fixture_overrides import load_fixture_document
-from blueprints.scenes import cad_mm_to_gltf_m
 
 from bedroom_111 import _LIST_CLASS, _axis_box, _pset_props, _solid_from_product
 
@@ -125,81 +124,4 @@ def parts() -> list:
     found = []
     for path in source_paths():
         found.extend(room_parts(path))
-    return found
-
-
-def _extent(doc: dict) -> tuple[float, float, float, float] | None:
-    xs: list[float] = []
-    ys: list[float] = []
-    for record in device_records(doc):
-        origin = record.get("Origin")
-        if origin is not None:
-            xs.append(float(origin[0]))
-            ys.append(float(origin[1]))
-        for run in strip_runs(record):
-            for x, y, _z in run:
-                xs.append(x)
-                ys.append(y)
-    if not xs:
-        return None
-    return min(xs), min(ys), max(xs), max(ys)
-
-
-def _top(doc: dict) -> float:
-    top = 0.0
-    for record in device_records(doc):
-        if record.get("Elevation") is not None:
-            top = max(top, float(record["Elevation"]) + float(record.get("Height") or 0.0))
-        for run in strip_runs(record):
-            top = max(top, max(z for _x, _y, z in run) + STRIP_SIZE)
-    return top
-
-
-# Clear height per room, from the ground-floor.yaml header (heights-notes.txt,
-# column s.v.). A plan cut above the ceiling shows the slab instead of the
-# room, so the cut stops 5 mm under the ceiling (a cut exactly on the ceiling
-# plane let the slab hide ceiling lights from taps); gutter strips higher up are cut off
-# there (the PNG preview in docs/previews/electrical shows them). 1.02 has a
-# sloped ceiling and is cut above its highest device.
-CEILING_M = {
-    **{r: 2.50 for r in ("1.03", "1.04", "1.05", "1.06", "1.07", "1.08", "1.09", "1.10")},
-    **{r: 2.55 for r in ("1.01", "1.19", "1.20", "1.21", "1.22", "1.23")},
-    "1.16": 2.75,
-    "1.17": 2.75,
-    **{r: 3.00 for r in ("1.12", "1.13", "1.14", "1.15")},
-}
-
-
-def scenes() -> list[dict]:
-    """A top view per room, framing its devices (exterior ones included)."""
-    found = []
-    for path in source_paths():
-        doc = load_document(path)
-        box = _extent(doc)
-        if box is None:
-            continue
-        room = room_of(path)
-        name = (doc.get("spaces") or [{}])[0].get("Name") or room
-        x0, y0, x1, y1 = box
-        cut_z = max(2.6, _top(doc) + 0.05)
-        if room in CEILING_M:
-            cut_z = min(cut_z, CEILING_M[room] - 0.005)
-        cx, cy = (x0 + x1) / 2.0, (y0 + y1) / 2.0
-        half_x = max((x1 - x0) / 2.0 + 0.8, 1.6)
-        half_y = max((y1 - y0) / 2.0 + 0.8, 1.6)
-        found.append(
-            {
-                "id": f"plan-{room}",
-                "projection": "ortho",
-                "title": {"en": f"{name}, top", "cs": f"{name}, půdorys"},
-                "project": "RD Šíma 1.NP",
-                "cuts": [{"normal": [0.0, -1.0, 0.0], "anchor": [cx * MM, cy * MM, cut_z * MM]}],
-                "camera": {
-                    "target": cad_mm_to_gltf_m((cx * MM, cy * MM, 0.0)),
-                    "position": cad_mm_to_gltf_m((cx * MM, cy * MM, 30.0 * MM)),
-                    "up": [0.0, 0.0, -1.0],
-                    "orthoFit": [half_x, half_y],
-                },
-            }
-        )
     return found

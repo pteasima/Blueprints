@@ -33,8 +33,6 @@ WALLS_PATH = SOURCE_PATH.with_name("ground-floor.yaml")
 
 MM = 1000.0
 MESH_GAP_MM = 1.0
-# Top of the plan cut sits above the ceiling access point (top at 2.50 m).
-PLAN_CUT_Z_M = 2.55
 
 # Viewer label per YAML list. lightFixtures is a furnishing list; the rest
 # are the electrical lists. Distribution boards and cables are not placed.
@@ -300,14 +298,7 @@ def parts(path: Path | None = None) -> list:
 
 
 def scenes() -> list[dict]:
-    """A phone glance into 1.11, and a top view of the whole L."""
-    # Outer margin includes the facade blinds and the hallway face of OP09.
-    west, east = -0.2, 6.0
-    south, north = 2.65, 9.75
-    cx = (west + east) / 2.0
-    cy = (south + north) / 2.0
-    half_x = (east - west) / 2.0
-    half_y = (north - south) / 2.0
+    """A phone glance into 1.11, the bedroom's ground-floor scene."""
     # Inside the south-west corner, looking toward the bed, the lamp, and the pendant.
     eye = (1.05, 3.45, 1.65)
     target = (2.7, 6.15, 1.35)
@@ -321,24 +312,6 @@ def scenes() -> list[dict]:
                 "target": cad_mm_to_gltf_m(tuple(value * MM for value in target)),
                 "position": cad_mm_to_gltf_m(tuple(value * MM for value in eye)),
                 "up": [0.0, 1.0, 0.0],
-            },
-        },
-        {
-            "id": "plan-1.11",
-            "projection": "ortho",
-            "title": {"en": "1.11 bedroom, top", "cs": "1.11 ložnice, půdorys"},
-            "project": "RD Šíma 1.NP",
-            "cuts": [
-                {
-                    "normal": [0.0, -1.0, 0.0],
-                    "anchor": [cx * MM, cy * MM, PLAN_CUT_Z_M * MM],
-                }
-            ],
-            "camera": {
-                "target": cad_mm_to_gltf_m((cx * MM, cy * MM, 0.0)),
-                "position": cad_mm_to_gltf_m((cx * MM, cy * MM, 30.0 * MM)),
-                "up": [0.0, 0.0, -1.0],
-                "orthoFit": [half_x, half_y],
             },
         },
     ]

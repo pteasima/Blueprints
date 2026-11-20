@@ -9,7 +9,6 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "models"))
 
 from bedroom_111 import (  # noqa: E402
-    PLAN_CUT_Z_M,
     SOURCE_PATH,
     device_records,
     load_document,
@@ -262,12 +261,5 @@ def test_ground_floor_carries_the_bedroom_plan():
     assert unboxed == _NO_BOX
     glance = next(scene for scene in scenes() if scene["id"] == "bedroom-1.11")
     assert glance["camera"]["up"] == [0.0, 1.0, 0.0]
-    plan = next(scene for scene in scenes() if scene["id"] == "plan-1.11")
-    assert plan["projection"] == "ortho"
-    assert plan["cuts"][0]["anchor"][2] == pytest.approx(PLAN_CUT_Z_M * 1000.0)
-    assert plan["camera"]["up"] == [0.0, 0.0, -1.0]
-    half_x, half_y = plan["camera"]["orthoFit"]
-    faces = room_faces()
-    assert half_x > (faces["east"] - faces["west"]) / 2.0
-    assert half_y > (faces["north"] - faces["south"]) / 2.0
+    assert [scene["id"] for scene in scenes()] == ["bedroom-1.11"]
     assert load_document()["spaces"][0]["id"] == "SP-1.11"
