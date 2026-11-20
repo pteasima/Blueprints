@@ -55,7 +55,7 @@ import {
   snapHeightCm,
 } from "./walkPhysics.js";
 import { createDoorController, swingAngle } from "./doors.js";
-import { createWindowSlides } from "./windows.js";
+import { createWindowSlides, windowOperable } from "./windows.js";
 import { createFeedbackLayer, rotateAboutY } from "./feedback.js";
 import { registerElementActions } from "./elementActions.js";
 import {
@@ -72,7 +72,6 @@ import {
 } from "./homeLive.js";
 import { mountIfcInspector } from "./ifcInspector.js";
 import { createVisibility } from "./ifcHide.js";
-import { hiddenForRoom, pickRoom, roomAt, worldToPlan } from "./roomIsolate.js";
 import {
   IFC_LOCK_PREFIX,
   clearVisibility,
@@ -83,6 +82,7 @@ import {
   lockedLeafIds,
   saveVisibility,
   urlLayerSwitch,
+  VISIBILITY_VERSION,
 } from "./visibilityState.js";
 import { normalizeIndex, subtreeIds } from "./ifcTree.js";
 import { isSceneSolid } from "./interactions.js";
@@ -96,6 +96,7 @@ import {
 import { createEditMode } from "./editMode.js";
 import { createFixtureModels } from "./fixtureModels.js";
 import { identityOf, meshIdentity, nodeKeyMap } from "./meshIdentity.js";
+import { gltfPrimitiveTest, mergeSiblingPrimitives } from "./mergePrimitives.js";
 import { attachPivotNav } from "./pivotNav.js";
 import { cadMmToGltf, createAnnotations } from "./annotations.js";
 import { DRAW_H, DRAW_W, downloadBlob, plateFromCanvas } from "./drawing.js";
@@ -158,6 +159,12 @@ function withCableLeaf(groups) {
   return walk(src);
 }
 
+/**
+ * On-demand layers start on (Petr, 2026-11-20: "put back gridfinity
+ * baseplates"; cheap since mergePrimitives.js, docs/viewer/Performance.md).
+ */
+const LAZY_LAYER_DEFAULT_ON = true;
+
 export function mountViewer(canvas, glbBuffer, options = {}) {
   /** Custom named scenes (model-specific); shown alongside Iso/Front/Side/Top. */
   const customScenes = Array.isArray(options.scenes) ? options.scenes : [];
@@ -217,11 +224,16 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   }
   const visModelId = String(options.modelId || "").trim();
   const savedVis = visModelId ? loadVisibility(visStorage, visModelId) : null;
-  /** Layer leaf on at start: URL switch, else remembered, else off. */
-  const layerOnAtStart = (id) => {
+  /**
+   * Layer leaf on at start: URL switch, else remembered, else `fallback`.
+   * `ignoreV1` skips an opacity remembered by a v1 entry (on-demand layers
+   * were off by default then, so its 0 was rarely a choice).
+   */
+  const layerOnAtStart = (id, fallback = false, ignoreV1 = false) => {
     const fromUrl = urlLayerSwitch(typeof location !== "undefined" ? location.search : "", id);
     if (fromUrl != null) return fromUrl;
-    return (savedVis?.opacity?.[id] ?? 0) > 1e-3;
+    const saved = ignoreV1 && savedVis?.fromVersion === 1 ? undefined : savedVis?.opacity?.[id];
+    return saved == null ? fallback : saved > 1e-3;
   };
   if (hasCables) {
     const on = layerOnAtStart(CABLE_LEAF);
@@ -229,21 +241,23 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     partLastNonZero.set(CABLE_LEAF, 1);
   }
   // On-demand layers (README "On-demand layers"; `<model>.layers.json`):
-  // a Parts leaf whose meshes live in their own GLB, fetched, parsed and
-  // uploaded only when the leaf is first switched on. Off by default, and,
-  // like the cables, outside group sliders, views and scenes; `?<id>=1`
-  // starts with it on. ground_floor's Gridfinity baseplates are one,
-  // temporarily, for the iPhone/iPad crash (docs/Roadmap.md "Performance").
+  // a Parts leaf whose meshes live in their own GLB, fetched and parsed
+  // after the main model so the first picture does not wait for it. On by
+  // default (Petr, 2026-11-20, after the per-element merge: "put back
+  // gridfinity baseplates"); `?<id>=0` or a remembered off skips the fetch
+  // until the leaf is switched on. Like the cables, outside group sliders,
+  // views and scenes. ground_floor's Gridfinity baseplates are the one
+  // layer (docs/viewer/Performance.md).
   /** @type {Map<string, { url: string, state: "idle" | "loading" | "loaded" | "failed", promise: Promise<void> | null }>} */
   const lazyLayers = new Map();
-  /** Lazy leaves to load as soon as the model is in (`?<id>=1`). */
+  /** Lazy leaves to load as soon as the model is in (default, `?<id>=1`). */
   const lazyAtStart = [];
   for (const entry of Array.isArray(options.lazyLayers) ? options.lazyLayers : []) {
     const id = String(entry?.id || "").trim();
     const url = String(entry?.url || "").trim();
     if (!id || !url || id === CABLE_LEAF || lazyLayers.has(id)) continue;
     lazyLayers.set(id, { url, state: "idle", promise: null });
-    const on = layerOnAtStart(id);
+    const on = layerOnAtStart(id, LAZY_LAYER_DEFAULT_ON, true);
     partOpacity.set(id, on ? 1 : 0);
     partLastNonZero.set(id, 1);
     if (on) lazyAtStart.push(id);
@@ -252,6 +266,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   let lazyRevision = 0;
   /** Cables and on-demand layers: leaves no group slider, view or scene drives. */
   const isLayerLeaf = (name) => name === CABLE_LEAF || lazyLayers.has(name);
+  /** Reset / first-load opacity of a layer leaf: cables off, on-demand layers on. */
+  const layerDefaultOpacity = (name) => (lazyLayers.has(name) ? (LAZY_LAYER_DEFAULT_ON ? 1 : 0) : 0);
   /** Last opacity written via a group slider (when children diverge). */
   const groupSliderOpacity = new Map();
   /**
@@ -292,6 +308,18 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     if (parts.size) refreshMaterials();
   });
 
+  /**
+   * Drawing-buffer scale. Phones (coarse pointer, short side ≤ 500 CSS px)
+   * stop at 1.5: an iPhone at 2× is 780×1688 with 4× MSAA plus the
+   * full-size peel targets, and iOS Safari reloads the tab when GPU memory
+   * runs out. Everything else stops at 2. docs/viewer/Performance.md.
+   */
+  function viewerPixelRatio() {
+    const dpr = window.devicePixelRatio || 1;
+    const coarse = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
+    const shortSide = Math.min(window.screen?.width || 1e4, window.screen?.height || 1e4);
+    return Math.min(dpr, coarse && shortSide <= 500 ? 1.5 : 2);
+  }
   const renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: true,
@@ -304,7 +332,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     // 24-bit buffer — coplanar CAD faces otherwise flicker while orbiting.
     logarithmicDepthBuffer: true,
   });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setPixelRatio(viewerPixelRatio());
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
@@ -611,6 +639,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       .then((gltf) => {
         if (!root) throw new Error("model not loaded");
         const holder = gltf.scene;
+        // One draw per element and material, not per CAD face (mergePrimitives.js).
+        mergeSiblingPrimitives(holder, { isPrimitive: gltfPrimitiveTest(gltf) });
         // Same parent and frame as the main model's scene.
         zScaleGroup.add(holder);
         holder.updateMatrixWorld(true);
@@ -662,12 +692,31 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     return layer.promise;
   }
 
+  /**
+   * Windows with a pane that opens keep one mesh per face: windows.js sorts
+   * meshes into panes by their centre, and a merged node spanning two panes
+   * would slide whole. (Today every pane is its own node, so this is a guard
+   * for future models, ~70 extra draws.)
+   * @param {THREE.Object3D} node
+   */
+  function keepFacesSeparate(node) {
+    const raw = meshIdentity(node.name || "").element;
+    if (!raw) return false;
+    const key = idForNodeKey.get(raw) || raw;
+    const record = windowRecords.find((r) => String(r?.id ?? "") === key);
+    return Boolean(record) && windowOperable(record);
+  }
+  /** Meshes before/after mergeSiblingPrimitives (exposed for perf checks). */
+  let mergeStats = { before: 0, after: 0 };
   const loader = new GLTFLoader();
   loader.parse(
     glbBuffer,
     "",
     (gltf) => {
       root = gltf.scene;
+      // One draw per element and material, not per CAD face: 8,850 meshes →
+      // 1,299 on ground_floor (mergePrimitives.js, docs/viewer/Performance.md).
+      mergeStats = mergeSiblingPrimitives(root, { isPrimitive: gltfPrimitiveTest(gltf), keepSeparate: keepFacesSeparate });
       zScaleGroup.add(root);
       doorCtrl.bind(root);
       root.traverse(registerMesh);
@@ -1860,7 +1909,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     else partLocks.add(id);
     recomputeLocks();
     syncLockUi();
-    // Locked meshes come back if a session hide or room isolate had them.
+    // Locked meshes come back if a session hide had them.
     applyInspectorVisibility();
     ifcUiRef?.refresh();
     scheduleVisibilitySave();
@@ -1886,26 +1935,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   let ifcUiRef = null;
   /** @type {ReturnType<typeof createVisibility> | null} */
   let ifcVisibilityRef = null;
-  /**
-   * GlobalIds hidden by something other than the inspector (room isolate).
-   * Kept apart from the inspector's own hides so "Show all" there and the
-   * room toggle do not undo each other.
-   * @type {Set<string>}
-   */
-  let extraHiddenGlobalIds = new Set();
-  /**
-   * Meshes with no IFC element that room isolate hides by position (the
-   * bathroom tiles, grout and fixtures until they carry IFC ids), and the
-   * ones applyInspectorVisibility last flagged.
-   * @type {Set<THREE.Object3D>}
-   */
-  let looseHiddenMeshes = new Set();
-  /** @type {Set<THREE.Object3D>} */
-  let looseHiddenApplied = new Set();
   /** Bumped whenever applyInspectorVisibility runs (content signature). */
   let visibilitySigRevision = 0;
-  /** Hooks that add to the saved state / reset (room isolate). */
-  const visibilityExtras = [];
   let visSaveTimer = 0;
   let visRestoring = false;
 
@@ -1917,14 +1948,13 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     const groupSlider = {};
     for (const [k, v] of groupSliderOpacity) groupSlider[k] = Number(Number(v).toFixed(3));
     const state = {
-      v: 1,
+      v: VISIBILITY_VERSION,
       opacity,
       groupSlider,
       detached: [...detachedLeaves],
       locks: partLocks ? [...partLocks] : null,
       ifcHidden: ifcVisibilityRef ? ifcVisibilityRef.hiddenIds() : [],
     };
-    for (const extra of visibilityExtras) extra.collect?.(state);
     return state;
   }
 
@@ -1965,7 +1995,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     }
   }
 
-  /** Inspector hides and extras (room isolate), once the inspector exists. */
+  /** Inspector hides, once the inspector exists. */
   function restoreSavedSession() {
     if (!savedVis) return;
     visRestoring = true;
@@ -1973,7 +2003,6 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       if (ifcVisibilityRef && savedVis.ifcHidden.length) {
         ifcVisibilityRef.restore(savedVis.ifcHidden.filter((id) => ifcIndex.elements?.[id]));
       }
-      for (const extra of visibilityExtras) extra.restore?.(savedVis);
     } finally {
       visRestoring = false;
     }
@@ -1982,9 +2011,9 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   }
 
   /**
-   * Parts panel Reset: everything on except the layer leaves (cables,
-   * Gridfinity), no inspector hides, no room isolate, the model's default
-   * locks. Clears the remembered entry.
+   * Parts panel Reset: every part and on-demand layer (Gridfinity) on,
+   * cables off, no inspector hides, the model's default locks. Clears the
+   * remembered entry.
    */
   function resetVisibility() {
     if (visSaveTimer) clearTimeout(visSaveTimer);
@@ -1999,11 +2028,10 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       const ids = new Set([...parts.keys(), ...lazyLayers.keys()]);
       if (hasCables) ids.add(CABLE_LEAF);
       for (const name of ids) {
-        setPartOpacity(name, isLayerLeaf(name) ? 0 : 1, { force: true, skipUi: true, skipClip: true });
+        setPartOpacity(name, isLayerLeaf(name) ? layerDefaultOpacity(name) : 1, { force: true, skipUi: true, skipClip: true });
         partLastNonZero.set(name, 1);
       }
       ifcVisibilityRef?.showAll();
-      for (const extra of visibilityExtras) extra.reset?.();
     } finally {
       visRestoring = false;
     }
@@ -2996,6 +3024,14 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     controls,
     parts,
     partOpacity,
+    /** Meshes before/after the per-face primitive merge (mergePrimitives.js). */
+    get mergeStats() {
+      return { ...mergeStats };
+    },
+    /** renderer.info for perf checks (draws, triangles, GPU geometries/textures). */
+    get rendererInfo() {
+      return { render: { ...renderer.info.render }, memory: { ...renderer.info.memory }, programs: renderer.info.programs?.length || 0, pixelRatio: renderer.getPixelRatio() };
+    },
     cuts,
     scenes: customScenes,
     setPartOpacity,
@@ -3027,14 +3063,6 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       toggleLock: (id) => toggleLock(id),
       lockedLeaves: () => [...lockedLeaves],
       elementLocked: (globalId) => elementLocked(globalId),
-      /** Room isolate (roomIsolate.js). */
-      room: () => ({
-        space: currentRoom?.space || null,
-        isolate: roomIsolateOn,
-        hidden: extraHiddenGlobalIds.size,
-        looseHidden: looseHiddenApplied.size,
-      }),
-      setRoomIsolate: (on) => setRoomIsolate(on),
       /** Same as the inspector row menu's "Hide all others". */
       hideOthers: (globalId) => {
         ifcVisibility.hideOthers(globalId);
@@ -3110,170 +3138,6 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     },
   });
   ifcUiRef = ifcUi;
-
-  // ---- Room isolate (roomIsolate.js; docs/viewer/RoomIsolate.md) ----
-  // Petr, 2026-11-19: "Proceed on "hide/show other rooms" shortcut. Either
-  // based on camera position or camera target." A chip in the top bar names
-  // the room the view is in and toggles "Only this room" / "Show all rooms".
-  const roomRecords = Array.isArray(options.ifc?.rooms) ? options.ifc.rooms : [];
-  /** yaml space id → IFC name ("1.11 Ložnice"). */
-  const roomNames = new Map();
-  for (const el of Object.values(ifcIndex.elements || {})) {
-    if (el?.type === "IfcSpace" && el.id) roomNames.set(el.id, el.name || el.id);
-  }
-  let roomIsolateOn = false;
-  /** @type {object | null} */
-  let currentRoom = null;
-  /** Last pick, applied once two checks in a row agree (debounce). */
-  let pendingRoomId = null;
-  let roomCheckAt = 0;
-  let roomCamDirty = true;
-  /** @type {Map<string, number[] | null>} plan centre per GlobalId */
-  const roomCentreCache = new Map();
-  const roomCentreBox = new THREE.Box3();
-  const roomMeshBox = new THREE.Box3();
-  const roomCentreVec = new THREE.Vector3();
-  const roomRaycaster = new THREE.Raycaster();
-
-  function roomCentreOf(globalId) {
-    if (roomCentreCache.has(globalId)) return roomCentreCache.get(globalId);
-    const element = ifcIndex.elements?.[globalId];
-    const meshes = element?.id ? meshesByKey.get(element.id) || [] : [];
-    roomCentreBox.makeEmpty();
-    for (const mesh of meshes) {
-      if (!mesh.geometry) continue;
-      if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
-      roomMeshBox.copy(mesh.geometry.boundingBox).applyMatrix4(mesh.matrixWorld);
-      roomCentreBox.union(roomMeshBox);
-    }
-    const out = roomCentreBox.isEmpty() ? null : worldToPlan(roomCentreBox.getCenter(roomCentreVec));
-    roomCentreCache.set(globalId, out);
-    return out;
-  }
-
-  /** Plan point of the first drawn surface under the screen centre. */
-  function roomCentreHit() {
-    if (!root) return null;
-    roomRaycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-    for (const hit of roomRaycaster.intersectObject(root, true)) {
-      if (isRenderedHit(hit)) return worldToPlan(hit.point);
-    }
-    return null;
-  }
-
-  const roomChip = document.createElement("div");
-  roomChip.id = "room-chip";
-  roomChip.className = "room-chip";
-  roomChip.hidden = true;
-  const roomChipName = document.createElement("span");
-  roomChipName.className = "room-chip-name";
-  const roomChipToggle = document.createElement("button");
-  roomChipToggle.type = "button";
-  roomChipToggle.className = "room-chip-toggle";
-  roomChipToggle.addEventListener("click", () => setRoomIsolate(!roomIsolateOn));
-  roomChip.append(roomChipName, roomChipToggle);
-  document.querySelector("#top-chrome .top-chrome-start")?.append(roomChip);
-
-  function syncRoomChip() {
-    roomChip.hidden = !root || !roomRecords.length || !currentRoom;
-    if (!currentRoom) return;
-    roomChipName.textContent = roomNames.get(currentRoom.space) || currentRoom.name || currentRoom.space;
-    roomChipToggle.textContent = tr(roomIsolateOn ? "ui.showAllRooms" : "ui.onlyThisRoom");
-    roomChipToggle.setAttribute("aria-pressed", roomIsolateOn ? "true" : "false");
-    roomChip.classList.toggle("is-active", roomIsolateOn);
-  }
-
-  /** @type {Map<THREE.Object3D, number[] | null>} */
-  const looseCentreCache = new Map();
-  /** Meshes on no IFC element whose plan centre is outside `room`. */
-  function looseMeshesOutside(room) {
-    const keyed = new Set();
-    for (const meshes of meshesByKey.values()) for (const m of meshes) keyed.add(m);
-    /** @type {Set<THREE.Object3D>} */
-    const out = new Set();
-    for (const meshes of parts.values()) {
-      for (const mesh of meshes) {
-        if (keyed.has(mesh)) continue;
-        let c = looseCentreCache.get(mesh);
-        if (c === undefined) {
-          c = null;
-          if (mesh.geometry) {
-            if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
-            roomMeshBox.copy(mesh.geometry.boundingBox).applyMatrix4(mesh.matrixWorld);
-            c = worldToPlan(roomMeshBox.getCenter(roomCentreVec));
-          }
-          looseCentreCache.set(mesh, c);
-        }
-        if (c && !roomAt([room], c[0], c[1])) out.add(mesh);
-      }
-    }
-    return out;
-  }
-
-  function applyRoomIsolate() {
-    const on = roomIsolateOn && currentRoom;
-    extraHiddenGlobalIds = on ? hiddenForRoom(ifcIndex, currentRoom, roomCentreOf) : new Set();
-    looseHiddenMeshes = on ? looseMeshesOutside(currentRoom) : new Set();
-    applyInspectorVisibility();
-  }
-
-  function setRoomIsolate(on) {
-    roomIsolateOn = Boolean(on);
-    if (roomIsolateOn && !currentRoom) trackRoom(performance.now(), true);
-    applyRoomIsolate();
-    syncRoomChip();
-  }
-
-  /**
-   * Which room the view is in, every 250 ms while the camera moves. Walk
-   * mode uses the eye; orbit uses the target, then the screen-centre hit,
-   * then the nearest room. A new room takes over once two checks agree.
-   */
-  function trackRoom(now, force = false) {
-    if (!root || !roomRecords.length) return;
-    if (!force && (now - roomCheckAt < 250 || !roomCamDirty)) return;
-    roomCheckAt = now;
-    roomCamDirty = false;
-    const picked = pickRoom(roomRecords, {
-      walk: Boolean(walk?.active),
-      eye: worldToPlan(camera.position),
-      target: worldToPlan(controls.target),
-      centreHit: roomCentreHit,
-    });
-    const id = picked?.room.space || null;
-    if (!force && id !== pendingRoomId) {
-      pendingRoomId = id;
-      roomCamDirty = true; // look again next check
-      return;
-    }
-    pendingRoomId = id;
-    if (id === (currentRoom?.space || null)) return;
-    currentRoom = picked?.room || null;
-    if (roomIsolateOn) applyRoomIsolate();
-    syncRoomChip();
-  }
-
-  onLocaleChange(() => syncRoomChip());
-  visibilityExtras.push({
-    collect(state) {
-      state.roomIsolate = roomIsolateOn;
-    },
-    restore(saved) {
-      roomIsolateOn = Boolean(saved.roomIsolate) && roomRecords.length > 0;
-      if (roomIsolateOn && root) {
-        trackRoom(performance.now(), true);
-        extraHiddenGlobalIds = currentRoom ? hiddenForRoom(ifcIndex, currentRoom, roomCentreOf) : new Set();
-        looseHiddenMeshes = currentRoom ? looseMeshesOutside(currentRoom) : new Set();
-      }
-      syncRoomChip();
-    },
-    reset() {
-      roomIsolateOn = false;
-      extraHiddenGlobalIds = new Set();
-      looseHiddenMeshes = new Set();
-      syncRoomChip();
-    },
-  });
 
   function elementFromMesh(obj) {
     let node = obj;
@@ -3469,7 +3333,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     const hiddenKeys = new Set();
     for (const element of Object.values(ifcIndex.elements)) {
       if (!element.id) continue;
-      if (ifcVisibility.isHidden(element.globalId) || extraHiddenGlobalIds.has(element.globalId)) {
+      if (ifcVisibility.isHidden(element.globalId)) {
         // A locked element stays drawn whatever hid it.
         if (!elementLocked(element.globalId)) hiddenKeys.add(element.id);
       }
@@ -3484,14 +3348,6 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
           }
         }
       }
-    }
-    // Meshes with no IFC element (room isolate decides them by position).
-    for (const mesh of looseHiddenApplied) mesh.userData.bpIfcHidden = false;
-    looseHiddenApplied = new Set();
-    for (const mesh of looseHiddenMeshes) {
-      if (lockedLeaves.has(mesh.userData.bpPart)) continue;
-      mesh.userData.bpIfcHidden = true;
-      looseHiddenApplied.add(mesh);
     }
     for (const binding of doorCtrl.bindings) {
       // A linkage moves several parts; each hides with its own element.
@@ -4146,7 +4002,7 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     // a session hide flips mesh visibility, or the old triangles stay drawn.
     const hidden = ifcVisibility.hiddenIds();
     bits.push(hidden.length ? hidden.slice().sort().join(",") : "-");
-    // Room isolate and locks flip mesh visibility the same way.
+    // Locks flip mesh visibility the same way.
     bits.push(`x${visibilitySigRevision}`);
     return bits.join("|");
   }
@@ -4199,8 +4055,6 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       controls.target.distanceToSquared(peelCamTarget) > 1e-8;
     peelCamPos.copy(camera.position);
     peelCamTarget.copy(controls.target);
-    if (camMoved) roomCamDirty = true;
-    trackRoom(now);
 
     const contentNow = readContentSig();
     const contentChanged = contentNow !== contentSig;

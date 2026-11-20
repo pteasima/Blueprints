@@ -1,0 +1,42 @@
+# Performance budget for the ground-floor model: fails when the exported GLBs grow
+# past the limits in scripts/model_budget.mjs (docs/viewer/Performance.md,
+# "Modeling rules and budget"). Node only, so it runs while the pytest workflow
+# is paused. Pulls only the two GLBs from LFS.
+name: model-budget
+
+on:
+  pull_request:
+    paths:
+      - "docs/models/ground_floor*.glb"
+      - "scripts/model_budget*.mjs"
+      - ".github/workflows/model-budget.yml"
+  push:
+    branches: [main]
+    paths:
+      - "docs/models/ground_floor*.glb"
+      - "scripts/model_budget*.mjs"
+      - ".github/workflows/model-budget.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  budget:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          lfs: false
+
+      - name: Pull the ground-floor GLBs from LFS
+        run: git lfs pull --include="docs/models/ground_floor.glb,docs/models/ground_floor.gridfinity.glb"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Budget script tests
+        run: node scripts/model_budget.test.mjs
+
+      - name: Ground-floor model within budget
+        run: node scripts/model_budget.mjs

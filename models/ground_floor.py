@@ -166,11 +166,12 @@ LABEL_GLAZING = "glazing"
 LABEL_DOOR = "door"
 LABEL_CABINET = "cabinet"
 # Gridfinity baseplates in the drawers (kitchen-cabinets.md "Gridfinity
-# drawers"). Temporary (Petr, 2026-11-19, the viewer crashed on iPhone and
-# iPad): they are not in ground_floor.glb but in their own
-# ground_floor.gridfinity.glb, which the viewer loads only when the
-# Gridfinity layer is switched on (docs/Roadmap.md "Performance"). Back to
-# one GLB once primitives merge per mesh: set GRIDFINITY_ON_DEMAND = False.
+# drawers"). They are not in ground_floor.glb but in their own
+# ground_floor.gridfinity.glb (Petr, 2026-11-19, when the viewer crashed on
+# iPhone and iPad). Since the viewer merges primitives per element
+# (docs/viewer/Performance.md) it loads that layer right after the model,
+# on by default (Petr, 2026-11-20: "put back gridfinity baseplates").
+# GRIDFINITY_ON_DEMAND = False would fuse them into the drawers again.
 LABEL_GRIDFINITY = "gridfinity"
 GRIDFINITY_ON_DEMAND = True
 LABEL_APPLIANCE = "appliance"
@@ -1544,7 +1545,7 @@ def scenes() -> list[dict]:
 def part_groups() -> list[dict]:
     return [
         # Enclosure: walls, windows and doors toggle together; locked by
-        # default so room isolate, scenes and inspector hide-others leave
+        # default so scenes and inspector hide-others leave
         # them standing (Petr, 2026-11-19: "add an 'enclosure' group ...
         # that includes walls, windows, doors"; "my usecase would be
         # locking enclosure group and leaving it so forever").
@@ -1612,15 +1613,7 @@ def ifc_index() -> dict:
             # Edit-mode overrides touch only the fixture ids they name, so
             # every document goes through them (docs/electrical/EditMode.md).
             docs.append(load_fixture_document(path))
-    index = index_documents(docs, transform=kitchen_ifc.apply)
-    # Room floor outlines for the viewer's room isolate; no IFC geometry
-    # (models/ground_floor_rooms.py, docs/viewer/RoomIsolate.md).
-    from ground_floor_rooms import outlines as room_outlines
-
-    index["rooms"] = room_outlines(
-        [SOURCE_PATH, FURNISHINGS_PATH, BEDROOM, BATH_120, BATH_107, *electrical_room_paths()]
-    )["rooms"]
-    return index
+    return index_documents(docs, transform=kitchen_ifc.apply)
 
 
 if __name__ == "__main__":

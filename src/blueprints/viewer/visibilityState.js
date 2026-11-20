@@ -3,19 +3,27 @@
  * locally (doesn't get reflected in URL, as that would be super verbose)").
  *
  * One localStorage entry per model holds the Parts opacities, the leaves
- * detached from their group, inspector hides, locks and the room isolate.
+ * detached from their group, inspector hides and locks.
  * Nothing here touches the URL; an explicit `?cables=1` / `?<layer>=1`
  * still wins on load (main.js). The Parts panel's Reset clears the entry.
  *
  * Locks (docs/viewer/VisibilityState.md): a lock id is a Parts group or
  * leaf id, or `ifc:<GlobalId>` for an inspector row. A locked item keeps
- * whatever visibility it had: group toggles, scenes, inspector
- * hide-others and room isolate leave it alone, and its own control is
+ * whatever visibility it had: group toggles, scenes and inspector
+ * hide-others leave it alone, and its own control is
  * disabled until it is unlocked.
  */
 
 export const VISIBILITY_STORAGE_PREFIX = "blueprints.visibility.";
-export const VISIBILITY_VERSION = 1;
+/**
+ * 2 (2026-11-20): on-demand layers (Gridfinity) start on, and the room
+ * isolate is gone. A v1 entry still loads, with `fromVersion: 1` so main.js
+ * can drop its on-demand layer opacities (they were 0 only because v1
+ * started those layers off).
+ */
+export const VISIBILITY_VERSION = 2;
+/** Older entry versions that still load (see VISIBILITY_VERSION). */
+const READABLE_VERSIONS = new Set([1, VISIBILITY_VERSION]);
 /** Prefix of lock ids that name an IFC element or group (inspector rows). */
 export const IFC_LOCK_PREFIX = "ifc:";
 
@@ -61,7 +69,6 @@ export function sanitizeState(raw) {
     detached: strings(src.detached),
     locks: Array.isArray(src.locks) ? strings(src.locks) : null,
     ifcHidden: strings(src.ifcHidden),
-    roomIsolate: Boolean(src.roomIsolate),
   };
 }
 
@@ -76,8 +83,8 @@ export function loadVisibility(storage, modelId) {
     const text = storage.getItem(storageKey(modelId));
     if (!text) return null;
     const raw = JSON.parse(text);
-    if (!raw || typeof raw !== "object" || raw.v !== VISIBILITY_VERSION) return null;
-    return sanitizeState(raw);
+    if (!raw || typeof raw !== "object" || !READABLE_VERSIONS.has(raw.v)) return null;
+    return { ...sanitizeState(raw), fromVersion: raw.v };
   } catch {
     return null;
   }

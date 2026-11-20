@@ -41,11 +41,17 @@ function memoryStorage() {
   assert.deepEqual(got.detached, ["door"]);
   assert.deepEqual(got.locks, ["enclosure"]);
   assert.deepEqual(got.ifcHidden, ["abc"]);
-  assert.equal(got.roomIsolate, true);
+  assert.equal("roomIsolate" in got, false, "room isolate removed (2026-11-20)");
+  assert.equal(got.fromVersion, 2);
   assert.equal(loadVisibility(s, "obyvak"), null);
   assert.ok(s.map.has(storageKey("ground_floor")));
   clearVisibility(s, "ground_floor");
   assert.equal(loadVisibility(s, "ground_floor"), null);
+  // A v1 entry still loads and says so (main.js drops its on-demand layer opacities).
+  s.setItem(storageKey("old"), JSON.stringify({ v: 1, opacity: { gridfinity: 0, masonry: 0.5 }, roomIsolate: true }));
+  const old = loadVisibility(s, "old");
+  assert.equal(old.fromVersion, 1);
+  assert.deepEqual(old.opacity, { gridfinity: 0, masonry: 0.5 });
   // A different version or garbage is ignored, not thrown.
   s.setItem(storageKey("x"), JSON.stringify({ v: 99, opacity: {} }));
   assert.equal(loadVisibility(s, "x"), null);
