@@ -876,7 +876,9 @@ function slabFor(record, size, name) {
   const lifts = records.filter((r) => r.kind === "linkage");
   assert.deepEqual(
     lifts.map((r) => r.id),
-    ["SF-AH850-LIFT", "SF-BH800-LIFT", "SF-CH850-LIFT"],
+    // SF-DH's two sections since 2026-11-20 (Petr: "same flip out opening as
+    // kitchen top cabinets, same 88deg setting").
+    ["SF-DH-S1-LIFT", "SF-DH-S2-LIFT", "SF-AH850-LIFT", "SF-BH800-LIFT", "SF-CH850-LIFT"],
   );
   for (const r of lifts) {
     assert.ok(isLinkageRecord(r), r.id);

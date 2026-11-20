@@ -45,19 +45,21 @@
   applies_to:
     description: >-
       Solid and veneered natural oak furniture: the Gatta dining table, the six
-      dining chairs, the bookshelf with its lamella back, the north dining run
-      bodies (KR-DN), the low base behind the sofa (KR-LB) and its oak-veneer
-      counter (Petr, 2026-11-13), the tall corner cabinet and the oak-front
-      wall cabinet over the dining run, with their fronts, doors, drawers and
-      carcasses since 2026-11-19. Everything
+      dining chairs, the bookshelf with its lamella back, the oak-veneer
+      counter on the low base behind the sofa (KR-LB, Petr, 2026-11-13), the
+      tall corner cabinet and the oak-front wall cabinet over the dining run,
+      with their fronts, doors, lift fronts and carcasses, and the vertical oak
+      slats on the dining piers (2026-11-20). The dining and living bases
+      (KR-DN, KR-LB) are cream since 2026-11-20. Everything
       `Pset_Finish.Material: natural oak` in furnishings.yaml.
     selectors:
       - {label: oak}
-      - {label: cabinet, id_pattern: "-BODY$"}
-      - {label: cabinet, ids: [SF-LB, SF-TC, SF-DH]}
+      - {label: cabinet, id_pattern: "^(?!SF-(DN|DN70|F05[23]|LB)-|KR-(DN|LB)-).*-BODY$"}
+      - {label: cabinet, ids: [SF-TC, SF-DH]}
       # Every part of the oak runs (2026-11-19: their fronts, doors, drawers,
-      # shelves and carcasses): KR-DN, KR-LB, KR-DH, KR-TC.
-      - {label: cabinet, id_pattern: "^(SF-(DN|F05[23]|LB|DH|TC)|KR-(DN|LB|DH|TC))-"}
+      # shelves and carcasses): KR-DH, KR-TC. KR-DN and KR-LB are cream
+      # since 2026-11-20 (kitchen-front-cream).
+      - {label: cabinet, id_pattern: "^(SF-(DH|TC)|KR-(DH|TC))-"}
   base_color: "#aa7e60"
   roughness: 0.45
   metalness: 0.0
@@ -116,11 +118,17 @@
     description: >-
       Kitchen door, drawer and lift-up (AVENTOS) fronts, the visible end sides and plinth
       boards of the kitchen runs (island, west run, tall runs, west wall
-      cabinets), and the integrated dishwasher's door panel.
+      cabinets), and the integrated dishwasher's door panel. Since 2026-11-20
+      every part of the dining and living bases, KR-DN and KR-LB (fronts and
+      carcasses, Petr: "make them cream color like kitchen, all the way
+      through dining area into living room (behind couch)"); KR-LB's
+      oak-veneer counter stays oak.
     selectors:
       # Not the oak runs' parts (oak-natural-kaplan). Doors, banded fronts
       # (FRONT1 …) and fillers too since 2026-11-19.
       - {label: cabinet, id_pattern: "^(?!SF-(DN|F05[23]|LB|DH|TC)-|KR-(DN|LB|DH|TC)-).*-(FRONT[0-9]*|D[0-9]+|DOOR[0-9]+|FILLER[0-9]*|LIFT[0-9]*|END-[NSEW]|PLINTH-[NSEW])$"}
+      # The dining and living bases, every part (2026-11-20).
+      - {label: cabinet, id_pattern: "^(SF-(DN|DN70|F05[23]|LB)|KR-(DN|LB))-"}
       - {label: appliance, ids: [EA-SBD6ECX]}
   base_color: "#e9e0d2"
   roughness: 0.35
@@ -137,8 +145,9 @@
     matt laminate (roughness 0.35, no texture, fronts are flat). If the shade
     should be whiter, RAL 9010 (#f1ece1) is the next step. The dishwasher
     (Bosch SBD6ECX12E) is fully integrated, so its door is a front.
-    The oak furniture (Kaplan table, chairs, bookshelf, dining run) is
-    unchanged.
+    The oak furniture (Kaplan table, chairs, bookshelf, dining wall
+    cabinet, tall corner) is unchanged; the dining and living bases became
+    cream on 2026-11-20.
 
 - id: kitchen-carcass-white
   name: White melamine carcass (kitchen interiors)
@@ -313,9 +322,14 @@
     selectors:
       - {label: masonry}
       - {label: prewall}
+      # The soffit over the north cabinets of room 1.02 (2026-11-20): the
+      # StoSilent-finished NaturHeld face and the GKB underside, both painted.
+      - {label: soffit_naturheld_140}
+      - {label: soffit_gkb}
     pending: >-
       Ceilings (CEIL-1.07, CEIL-1.20, SOFFIT-SH and the house ceilings) once
-      they are built.
+      they are built. The StoSilent face gets its own acoustic-plaster
+      material once one is picked; white paint until then.
   base_color: "#f3f2ee"
   roughness: 0.9
   metalness: 0.0

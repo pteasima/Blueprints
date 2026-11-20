@@ -12,6 +12,10 @@ Assumed part sizes (millimetres), not on the plan:
   back top is the box.
 * Bookshelf sides and top 20, shelf boards 20, three shelves in four
   equal openings. Lamella slats 40 wide, 20 gap, 12 thick, on the back.
+* Slat cladding (``ObjectType: SlatCladding``, the oak slats on the dining
+  piers, 2026-11-20): vertical battens the box's full depth and height,
+  ``Pset_Slats.SlatWidth`` wide and ``SlatGap`` apart (metres; default the
+  bookshelf lamella 40 / 20), centred across the width, an even count.
 """
 
 from __future__ import annotations
@@ -19,7 +23,8 @@ from __future__ import annotations
 from build123d import Align, Box, Compound, Pos
 
 # Object types drawn as oak rather than upholstery.
-OAK_TYPES = frozenset({"DiningTable", "DiningChair", "Bookshelf"})
+# CabinetLining: SF-DH's oak top under the soffit and its end returns (2026-11-20), plain boxes.
+OAK_TYPES = frozenset({"DiningTable", "DiningChair", "Bookshelf", "SlatCladding", "CabinetLining"})
 
 _CHAIR_SEAT_MM = 450.0
 _CHAIR_SEAT_T = 36.0
@@ -147,6 +152,22 @@ def _bookshelf(width: float, depth: float, height: float, gap: float, shelves: i
     return [part for part in parts if part is not None]
 
 
+def _slats(width: float, depth: float, height: float, gap: float, slat: float, space: float):
+    """Vertical battens across ``width``, each ``slat`` wide, ``space``
+    apart, centred; the full depth and height of the box (mm)."""
+    lo = gap / 2.0
+    span0, span1 = lo, width - lo
+    pitch = slat + space
+    count = max(1, int((span1 - span0 + space) // pitch))
+    used = count * slat + (count - 1) * space
+    cursor = span0 + (span1 - span0 - used) / 2.0
+    parts = []
+    for _index in range(count):
+        parts.append(_box(cursor, lo, lo, cursor + slat, depth - lo, height - lo))
+        cursor += pitch
+    return [part for part in parts if part is not None]
+
+
 def living_detail(element: dict, width: float, depth: float, height: float, gap: float):
     """Local solids in millimetres, or None for a plain box.
 
@@ -163,6 +184,10 @@ def living_detail(element: dict, width: float, depth: float, height: float, gap:
     elif kind == "Bookshelf":
         raw = _prop(element, "Pset_Bookshelf", "ShelfCount", _SHELVES)
         parts = _bookshelf(width, depth, height, gap, int(raw))
+    elif kind == "SlatCladding":
+        slat = float(_prop(element, "Pset_Slats", "SlatWidth", _LAMELLA_W / 1000.0)) * 1000.0
+        space = float(_prop(element, "Pset_Slats", "SlatGap", _LAMELLA_GAP / 1000.0)) * 1000.0
+        parts = _slats(width, depth, height, gap, slat, space)
     else:
         return None
     if not parts:

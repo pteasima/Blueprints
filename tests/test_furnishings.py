@@ -138,19 +138,19 @@ def _one_cabinet():
 # Type field is ObjectType for a cabinet and PredefinedType for an appliance or the sink.
 # File order within each list. sanitaryTerminals sits between the cabinets and the appliances.
 KITCHEN = (
-    ("SF-T1", "systemFurniture", "TallCabinet", [18.8, 15.0], None, 0.75, 0.6, 2.45, "L", None),
-    ("SF-T2", "systemFurniture", "TallCabinet", [20.458, 15.0], None, 0.6, 0.6, 2.45, "R", None),
-    ("SF-T3", "systemFurniture", "TallCabinet", [21.058, 15.0], None, 0.6, 0.6, 2.45, None, None),
-    ("SF-T4", "systemFurniture", "TallCabinet", [21.658, 15.0], None, 0.5, 0.6, 2.45, None, None),
-    ("SF-I500a", "systemFurniture", "BaseCabinet", [20.568, 13.8], [0.0, -1.0], 0.5, 0.586, 0.93, None, None),
-    ("SF-I600a", "systemFurniture", "BaseCabinet", [20.568, 13.3], [0.0, -1.0], 0.607, 0.586, 0.93, None, None),
-    ("SF-I500b", "systemFurniture", "BaseCabinet", [20.568, 12.693], [0.0, -1.0], 0.481, 0.586, 0.93, None, None),
-    ("SF-I600b", "systemFurniture", "BaseCabinet", [20.568, 12.212], [0.0, -1.0], 0.607, 0.586, 0.93, None, None),
-    ("SF-I300", "systemFurniture", "BaseCabinet", [20.568, 11.605], [0.0, -1.0], 0.305, 0.586, 0.93, None, None),
-    ("SF-E600a", "systemFurniture", "BaseCabinet", [21.74, 13.214], [0.0, 1.0], 0.586, 0.586, 0.93, None, None),
-    ("SF-E600b", "systemFurniture", "BaseCabinet", [21.74, 12.607], [0.0, 1.0], 0.607, 0.586, 0.93, None, None),
-    ("SF-E600c", "systemFurniture", "BaseCabinet", [21.74, 12.0], [0.0, 1.0], 0.607, 0.586, 0.93, None, None),
-    ("SF-E700", "systemFurniture", "BaseCabinet", [21.74, 11.3], [0.0, 1.0], 0.7, 0.586, 0.93, None, None),
+    ("SF-T1", "systemFurniture", "TallCabinet", [18.8, 15.0], None, 0.696, 0.6, 2.45, "L", None),
+    ("SF-T2", "systemFurniture", "TallCabinet", [20.404, 15.0], None, 0.6, 0.6, 2.45, "R", None),
+    ("SF-T3", "systemFurniture", "TallCabinet", [21.004, 15.0], None, 0.6, 0.6, 2.45, None, None),
+    ("SF-T4", "systemFurniture", "TallCabinet", [21.604, 15.0], None, 0.546, 0.6, 2.45, None, None),
+    ("SF-I500a", "systemFurniture", "BaseCabinet", [20.5, 13.8], [0.0, -1.0], 0.5, 0.586, 0.93, None, None),
+    ("SF-I600a", "systemFurniture", "BaseCabinet", [20.5, 13.3], [0.0, -1.0], 0.607, 0.586, 0.93, None, None),
+    ("SF-I500b", "systemFurniture", "BaseCabinet", [20.5, 12.693], [0.0, -1.0], 0.481, 0.586, 0.93, None, None),
+    ("SF-I600b", "systemFurniture", "BaseCabinet", [20.5, 12.212], [0.0, -1.0], 0.607, 0.586, 0.93, None, None),
+    ("SF-I300", "systemFurniture", "BaseCabinet", [20.5, 11.605], [0.0, -1.0], 0.305, 0.586, 0.93, None, None),
+    ("SF-E600a", "systemFurniture", "BaseCabinet", [21.672, 13.214], [0.0, 1.0], 0.586, 0.586, 0.93, None, None),
+    ("SF-E600b", "systemFurniture", "BaseCabinet", [21.672, 12.607], [0.0, 1.0], 0.607, 0.586, 0.93, None, None),
+    ("SF-E600c", "systemFurniture", "BaseCabinet", [21.672, 12.0], [0.0, 1.0], 0.607, 0.586, 0.93, None, None),
+    ("SF-E700", "systemFurniture", "BaseCabinet", [21.672, 11.3], [0.0, 1.0], 0.7, 0.586, 0.93, None, None),
     ("SF-A250", "systemFurniture", "BaseCabinet", [19.4, 13.0], [0.0, 1.0], 0.25, 0.6, 0.93, None, None),
     ("SF-AH850", "systemFurniture", "WallCabinet", [19.15, 13.0], [0.0, 1.0], 0.85, 0.35, 0.89, None, 1.56),
     ("SF-B800", "systemFurniture", "BaseCabinet", [19.4, 12.2], [0.0, 1.0], 0.8, 0.6, 0.93, None, None),
@@ -158,7 +158,7 @@ KITCHEN = (
     ("SF-C850", "systemFurniture", "BaseCabinet", [19.4, 11.35], [0.0, 1.0], 0.85, 0.6, 0.93, None, None),
     ("SF-CH850", "systemFurniture", "WallCabinet", [19.15, 11.35], [0.0, 1.0], 0.85, 0.35, 0.89, None, 1.56),
     ("SN-RS15", "sanitaryTerminals", "SINK", [19.32, 12.225], [0.0, 1.0], 0.75, 0.44, 0.2, None, 0.71),
-    ("EA-WQ9I", "electricAppliances", "FRIDGE_FREEZER", [19.55, 14.884], None, 0.908, 0.716, 1.876, None, None),
+    ("EA-WQ9I", "electricAppliances", "FRIDGE_FREEZER", [19.496, 14.884], None, 0.908, 0.716, 1.876, None, None),
     ("EA-SBD6ECX", "electricAppliances", "DISHWASHER", [19.35, 13.251], [0.0, 1.0], 0.598, 0.55, 0.865, None, None),
 )
 
@@ -249,19 +249,19 @@ def test_build_extrudes_walls_and_the_kitchen_boxes():
     assert "light" in labels
     # World plan of the placed solids, before the 1 mm inset. z0 is the base, z1 the top.
     expected_mm = {
-        "SF-T1": (18800, 19550, 15000, 15600, 0, 2450),
-        "SF-T2": (20458, 21058, 15000, 15600, 0, 2450),
-        "SF-T3": (21058, 21658, 15000, 15600, 0, 2450),
-        "SF-T4": (21658, 22158, 15000, 15600, 0, 2450),
-        "SF-I500a": (20568, 21154, 13300, 13800, 0, 930),
-        "SF-I600a": (20568, 21154, 12693, 13300, 0, 930),
-        "SF-I500b": (20568, 21154, 12212, 12693, 0, 930),
-        "SF-I600b": (20568, 21154, 11605, 12212, 0, 930),
-        "SF-I300": (20568, 21154, 11300, 11605, 0, 930),
-        "SF-E600a": (21154, 21740, 13214, 13800, 0, 930),
-        "SF-E600b": (21154, 21740, 12607, 13214, 0, 930),
-        "SF-E600c": (21154, 21740, 12000, 12607, 0, 930),
-        "SF-E700": (21154, 21740, 11300, 12000, 0, 930),
+        "SF-T1": (18800, 19496, 15000, 15600, 0, 2450),
+        "SF-T2": (20404, 21004, 15000, 15600, 0, 2450),
+        "SF-T3": (21004, 21604, 15000, 15600, 0, 2450),
+        "SF-T4": (21604, 22150, 15000, 15600, 0, 2450),
+        "SF-I500a": (20500, 21086, 13300, 13800, 0, 930),
+        "SF-I600a": (20500, 21086, 12693, 13300, 0, 930),
+        "SF-I500b": (20500, 21086, 12212, 12693, 0, 930),
+        "SF-I600b": (20500, 21086, 11605, 12212, 0, 930),
+        "SF-I300": (20500, 21086, 11300, 11605, 0, 930),
+        "SF-E600a": (21086, 21672, 13214, 13800, 0, 930),
+        "SF-E600b": (21086, 21672, 12607, 13214, 0, 930),
+        "SF-E600c": (21086, 21672, 12000, 12607, 0, 930),
+        "SF-E700": (21086, 21672, 11300, 12000, 0, 930),
         "SF-A250": (18800, 19400, 13000, 13250, 0, 930),
         "SF-AH850": (18800, 19150, 13000, 13850, 1560, 2450),
         "SF-B800": (18800, 19400, 12200, 13000, 0, 930),
@@ -269,7 +269,7 @@ def test_build_extrudes_walls_and_the_kitchen_boxes():
         "SF-C850": (18800, 19400, 11350, 12200, 0, 930),
         "SF-CH850": (18800, 19150, 11350, 12200, 1560, 2450),
         "SN-RS15": (18880, 19320, 12225, 12975, 730, 930),
-        "EA-WQ9I": (19550, 20458, 14884, 15600, 0, 1876),
+        "EA-WQ9I": (19496, 20404, 14884, 15600, 0, 1876),
         "EA-SBD6ECX": (18800, 19350, 13251, 13849, 0, 865),
     }
     # A drawer cabinet is several solids (carcass, drawers); check their union.
@@ -482,7 +482,8 @@ def test_living_room_boxes_follow_plan_v3():
     assert tv[5] - tv[2] == pytest.approx(1.277, abs=1e-6)
 
     table = _world_box(next(row for row in furnishing_records() if row["id"] == "FN-GATTA"))
-    assert table[0] - 21.754 == pytest.approx(1.333, abs=1e-6)
+    # The island moved 68 west on 2026-11-20 (east face 21.672); the table did not.
+    assert table[0] - 21.672 == pytest.approx(1.415, abs=1e-6)
     assert 25.52 - table[3] == pytest.approx(1.333, abs=1e-6)
     assert table[5] - table[2] == pytest.approx(0.76, abs=1e-6)
 
@@ -522,3 +523,22 @@ def test_kitchen_scene_is_the_whole_kitchen_from_the_sofa():
     assert "projection" not in scene
     assert scene["camera"]["up"] == [0.0, 1.0, 0.0]
     assert scene["hFovDeg"] == 52
+
+
+def test_pier_slats_are_vertical_oak_battens():
+    # Petr, 2026-11-20: "please adjust the concrete column cladding and
+    # everything too": vertical oak slats on the dining piers' fronts.
+    from living_geometry import OAK_TYPES, living_detail
+
+    doc = load_furnishings()
+    slats = {e["id"]: e for e in doc["coverings"] if e.get("ObjectType") == "SlatCladding"}
+    assert set(slats) == {"CV-SLAT-W052", "CV-SLAT-W053"}
+    assert "SlatCladding" in OAK_TYPES
+    assert not [e for e in doc["coverings"] if e["id"] in ("CV-BS-P052", "CV-BS-P053")]
+    for e in slats.values():
+        assert e["Elevation"] == pytest.approx(0.93) and e["Elevation"] + e["Height"] == pytest.approx(2.45)
+        detail = living_detail(e, e["Width"] * 1000.0, e["Depth"] * 1000.0, e["Height"] * 1000.0, 1.0)
+        boxes = [s.bounding_box() for s in detail.solids()]
+        assert len(boxes) == 5
+        assert all(b.size.X == pytest.approx(40.0) for b in boxes)
+        assert boxes[1].min.X - boxes[0].max.X == pytest.approx(20.0)

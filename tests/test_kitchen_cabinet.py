@@ -33,9 +33,10 @@ def test_drawer_and_pullout_bays():
     # Since 2026-11-19 (Petr: "Add the rest of the drawers, hinged doors,
     # etc. ... on a best effort basis"): the tall run's lower bands, the
     # island's 300 pull-out and east row, the dining base and the living
-    # counter too.
+    # counter too. 2026-11-20: the east row is four full-height drawers and
+    # the living counter is dead space (Petr).
     assert ids == ["SF-T2", "SF-T3", "SF-T4", "SF-I600a", "SF-I500b", "SF-I600b", "SF-I300",
-                   "SF-E600b", "SF-E600c", "SF-E700", "SF-A250", "SF-B800", "SF-C850", "SF-DN", "SF-LB"]
+                   "SF-E600a", "SF-E600b", "SF-E600c", "SF-E700", "SF-A250", "SF-B800", "SF-C850", "SF-DN"]
 
 
 def test_zone_spec_grammar():
@@ -61,26 +62,28 @@ def test_island_drawer_bays_follow_the_notes():
     fronts = {b: [round(run.part(f"{b}-D{i}").drawer.front[5] - run.part(f"{b}-D{i}").drawer.front[4])
                   for i in (1, 2, 3)] for b in ("SF-I600a", "SF-I500b", "SF-I600b")}
     assert fronts == {"SF-I600a": [97, 97, 607], "SF-I500b": [97, 97, 607], "SF-I600b": [197, 97, 507]}
-    # Best effort, 2026-11-19: the sink bay a door, the 300 a pull-out, the
-    # east row a door (north) and three Gridfinity drawer bays.
+    # Best effort, 2026-11-19: the sink bay a door, the 300 a pull-out.
+    # Petr, 2026-11-20: "east side of kitchen island are 4 large full height drawers".
     assert run.part("SF-I500a-DOOR1").door.hinge == "L"
     assert run.part("SF-I300-D1").role == "PullOut" and len(run.part("SF-I300-D1").drawer.items) == 3
-    assert run.part("SF-E600a-DOOR1").door.hinge == "R"
     assert not [p for p in run.parts if p.role == "Front"]
 
 
 def test_island_east_row_drawers_are_on_the_gridfinity_grid():
     run = _runs()["KR-ISL"]
+    # Petr, 2026-11-20: "east side of kitchen island are 4 large full height
+    # drawers": one drawer per bay, one front at the full 807.
     grids = {}
-    for bay_id in ("SF-E600b", "SF-E600c", "SF-E700"):
-        drawers = [run.part(f"{bay_id}-D{i}").drawer for i in (1, 2, 3)]
-        assert [d.nominal for d in drawers] == [100.0, 100.0, 610.0]
-        for d in drawers:
-            n, m = d.grid
-            # inside = n x 42 + 1 (MAXIMERA deductions; the depth rounded down to 586).
-            assert d.inside[0] == pytest.approx(n * 42.0 + 1.0) and d.inside[1] == pytest.approx(m * 42.0 + 1.0)
-        grids[bay_id] = drawers[0].grid
-    assert grids == {"SF-E600b": (12, 11), "SF-E600c": (12, 11), "SF-E700": (14, 11)}
+    for bay_id in ("SF-E600a", "SF-E600b", "SF-E600c", "SF-E700"):
+        assert not any(p.id == f"{bay_id}-D2" for p in run.parts)
+        d = run.part(f"{bay_id}-D1").drawer
+        assert round(d.front[5] - d.front[4]) == 807
+        n, m = d.grid
+        # inside = n x 42 + 1 (MAXIMERA deductions; the depth rounded down to 586).
+        slack = 12.0 if bay_id == "SF-E600a" else 0.0  # 2500 leaves 12 over in four bays
+        assert d.inside[0] == pytest.approx(n * 42.0 + 1.0 + slack) and d.inside[1] == pytest.approx(m * 42.0 + 1.0)
+        grids[bay_id] = d.grid
+    assert grids == {"SF-E600a": (11, 11), "SF-E600b": (12, 11), "SF-E600c": (12, 11), "SF-E700": (14, 11)}
     assert all(b.depth == pytest.approx(586.0) for b in run.bays)
     assert sum(b.width for b in run.bays if not b.front_low) == pytest.approx(2500.0)
 
@@ -224,8 +227,23 @@ def test_nothing_above_the_ceiling_line():
     doc = load_furnishings()
     runs = list(_runs(doc).values())
     ceiling_line.check_ceiling_line(doc, FURNISHING_LISTS, runs)
-    notes = ceiling_line.check_open_envelopes(runs, (ROOM_X0, ROOM_X1, ROOM_Y0, ROOM_Y1))
-    assert len(notes) == 3
+    room = (ROOM_X0, ROOM_X1, ROOM_Y0, ROOM_Y1)
+    lining = ceiling_line.lining_obstacles(doc, FURNISHING_LISTS)
+    assert [o[0] for o in lining] == ["SF-DH-LINING", "SF-DH-RET-W", "SF-DH-RET-E"]
+    notes = ceiling_line.check_open_envelopes(runs, room, lining)
+    # Three west wall cabinets and SF-DH's two HF sections. Since the oak
+    # lining (Petr, 2026-11-20) SF-DH is 844 high, so its open fronts get
+    # Blum's 28 under the lining (2432) and nothing clashes.
+    assert len(notes) == 5 and not [n for n in notes if n.startswith("open:")]
+    assert all("0 from the SF-DH-LINING" in n and "38 from the soffit" in n for n in notes if n.startswith("SF-DH-S"))
+    dh = next(r for r in runs if r.id == "KR-DH")
+    assert "OpenClash" not in dh.part("SF-DH-S1-LIFT1").props
+    assert dh.part("SF-DH-S1-LIFT1").props["BlumOpenAbove"] == pytest.approx(0.028)
+    # The old 890 cabinet's open fronts would meet the lining: the export stops.
+    doc2 = copy.deepcopy(doc)
+    next(e for e in doc2["systemFurniture"] if e["id"] == "SF-DH")["Height"] = 0.89
+    with pytest.raises(ValueError, match="SF-DH-S1-LIFT open meets the SF-DH-LINING"):
+        ceiling_line.check_open_envelopes(list(_runs(doc2).values()), room, lining)
     doc = copy.deepcopy(doc)
     next(e for e in doc["systemFurniture"] if e["id"] == "SF-DH")["Height"] = 0.9
     with pytest.raises(ValueError, match="ceiling line"):
@@ -381,24 +399,25 @@ def test_drawer_motions_in_model():
     for m in island:
         assert m["slide"] == pytest.approx([-0.501, 0.0, 0.0])
     east = [m for m in drawers if m["id"].startswith("SF-E")]
-    assert len(east) == 9 and all(m["slide"] == pytest.approx([0.501, 0.0, 0.0]) for m in east)
+    assert len(east) == 4 and all(m["slide"] == pytest.approx([0.501, 0.0, 0.0]) for m in east)
     # SF-I600a spans y 12.693–13.300 (607 since the Gridfinity widths).
     assert [m["center"][2] for m in island[:3]] == pytest.approx([-12.9965] * 3, abs=1e-6)
     west = [m for m in drawers if m["id"] in ("SF-A250-D1", "SF-B800-D1", "SF-C850-D1")]
     assert len(west) == 3 and all(m["slide"] == pytest.approx([0.516, 0.0, 0.0]) for m in west)
-    # Dining base and living counter drawers slide south (glTF +z).
-    for prefix in ("SF-DN-S", "SF-LB-S"):
-        found = [m for m in drawers if m["id"].startswith(prefix)]
-        assert found and all(m["slide"] == pytest.approx([0.0, 0.0, 0.366]) for m in found)
+    # Dining base drawers slide south (glTF +z). The living counter is dead
+    # space since 2026-11-20 (no drawers).
+    found = [m for m in drawers if m["id"].startswith("SF-DN-S")]
+    assert found and all(m["slide"] == pytest.approx([0.0, 0.0, 0.366]) for m in found)
+    assert not [m for m in drawers if m["id"].startswith("SF-LB")]
 
 
 def test_cabinet_door_motions_swing_outward():
     _shape, meta = build()
     doors = {m["id"]: m for m in meta["door_motions"] if m["kind"] == "hinged" and m["id"].startswith("SF-")}
     assert {"SF-T1-DOOR1", "SF-T2-DOOR1", "SF-TF-DOOR1", "SF-TF-DOOR2", "SF-T3-DOOR1", "SF-T4-DOOR1",
-            "SF-I500a-DOOR1", "SF-E600a-DOOR1", "SF-F052-DOOR1", "SF-F053-DOOR1", "SF-TC-DOOR1"} <= set(doors)
-    assert len([d for d in doors if d.startswith("SF-DH-S")]) == 6
-    assert len([d for d in doors if d.startswith("SF-LB-S")]) == 7
+            "SF-I500a-DOOR1", "SF-F052-DOOR1", "SF-F053-DOOR1", "SF-TC-DOOR1"} <= set(doors)
+    # SF-DH is AVENTOS HF since 2026-11-20; SF-LB dead space (no doors).
+    assert not [d for d in doors if d.startswith(("SF-DH", "SF-LB", "SF-E600a"))]
     # T1 hinges on its west edge and opens toward the room (south, glTF +z).
     t1 = doors["SF-T1-DOOR1"]
     assert t1["element"] == "SF-T1-DOOR1" and t1["axis"] == [0, 1, 0]
@@ -451,7 +470,10 @@ def test_gridfinity_drawers_fit_the_grid():
             plate = d.items[0]
             assert plate[1] - plate[0] == pytest.approx(n * p["GridfinityPitch"])
             assert plate[4] == pytest.approx(d.floor_z)
-    assert not [n for n in run.notes if "Gridfinity" in n]
+    # The east row's 2500 cannot be whole cells in four bays: SF-E600a keeps
+    # 12 mm slack across (2026-11-20), the only off-grid drawer.
+    assert [n for n in run.notes if "Gridfinity" in n] == [
+        "open: SF-E600a-D1 inside 475 x 463 is +12 / +0 off the Gridfinity 11x11 size (scripts/gridfinity_fit.py)"]
 
 
 def test_drawers_under_the_hob_clear_it():
@@ -513,16 +535,23 @@ def test_wide_bays_split_into_sections():
     # Each section's front is its width less the 3 mm gap.
     s1 = dn.part("SF-DN-S1-D1").drawer.front
     assert s1[1] - s1[0] == pytest.approx(597.0)
-    # The living counter: a drawer over the sofa back (760), a door under it.
+    # Petr, 2026-11-20: "remove living room drawers behind couch. Those
+    # cabinets are dead space": seven blank fixed fronts, nothing moves.
     lb = runs["KR-LB"]
-    for k in range(1, 8):
-        dr = lb.part(f"SF-LB-S{k}-D1").drawer
-        assert dr.box[4] > 760.0
-        door = lb.part(f"SF-LB-S{k}-DOOR1").door
-        assert door.hinge == ("L" if k % 2 else "R")
+    assert [p.role for p in lb.parts if p.id.startswith("SF-LB-S") and p.role in ("Front", "Drawer", "Door")] == ["Front"] * 7
+    assert all(p.drawer is None and p.door is None for p in lb.parts)
+    # Petr, 2026-11-20: "dining area top cabinets split in half, same flip
+    # out opening as kitchen top cabinets, same 88deg setting."
     dh = runs["KR-DH"]
-    assert [dh.part(f"SF-DH-S{k}-DOOR{i}").door.hinge for k in (1, 2, 3) for i in (1, 2)] == ["L", "R"] * 3
-    assert max(b[5] for p in dh.parts for b in p.boxes) == pytest.approx(2450.0)
+    div = dh.part("SF-DH-SDIV1").boxes[0]
+    assert (div[0] + div[1]) / 2.0 - dh.bay("SF-DH").a0 == pytest.approx(1350.0)
+    for k in (1, 2):
+        up, low = dh.part(f"SF-DH-S{k}-LIFT1"), dh.part(f"SF-DH-S{k}-LIFT2")
+        assert up.props["FittingCode"] == "HF" and up.props["OpeningAngle"] == 88.0
+        assert up.lift is not None and low.lift is not None
+        assert up.boxes[0][1] - up.boxes[0][0] == pytest.approx(1347.0)
+    # 844 high under the oak lining since 2026-11-20 (top 2404 = 2450 − 18 − 28).
+    assert max(b[5] for p in dh.parts for b in p.boxes) == pytest.approx(2404.0)
     tc = runs["KR-TC"]
     assert tc.part("SF-TC-DOOR1").boxes[0][4] > 660.0  # over the sofa's east arm
 
