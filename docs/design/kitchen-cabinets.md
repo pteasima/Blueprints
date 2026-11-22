@@ -1710,7 +1710,7 @@ Petr (t783u): “ok, assume laquered and add all the handles (voxtorp J style on
 
 ### Finish
 
-Every cream front, end panel, cladding and plinth (`kitchen-front-cream`) is **matt lacquered MDF**, RAL 9001 (`guess:` the shade, as before). Recorded on the runs as `Pset_KitchenRun.FrontFinish: matt lacquered MDF (RAL 9001 cream)` (KR-ISL, KR-WEST, KR-WEST-H, KR-DN, KR-LB, KR-TC, KR-TALL-W, KR-TALL, KR-TALL-F) and in the material catalogue. Carcass interiors stay white melamine. Lacquer is why the routed grip is possible: the groove is lacquered with the face (foil and melamine fronts cannot be routed after finishing).
+Every cream front, end panel, cladding and plinth (`kitchen-front-cream`) is **matt lacquered MDF**, RAL 9001 (`guess:` the shade, as before; RAL 1015 since 2026-11-22 g, below). Recorded on the runs as `Pset_KitchenRun.FrontFinish: matt lacquered MDF (RAL 9001 cream)` (KR-ISL, KR-WEST, KR-WEST-H, KR-DN, KR-LB, KR-TC, KR-TALL-W, KR-TALL, KR-TALL-F) and in the material catalogue. Carcass interiors stay white melamine. Lacquer is why the routed grip is possible: the groove is lacquered with the face (foil and melamine fronts cannot be routed after finishing).
 
 ### J grip (`FrontGrip: J`)
 
@@ -1852,4 +1852,13 @@ Petr, 2026-11-22 (t803u): “Ok, I want 1173. Make sure to keep distance of isla
 | Stone | island top 2540 × 1192 + 2 claddings 1192 × 930 | **2540 × 1173 + 2 × 1173 × 930**; the top still fits one 3270 × 1590 slab |
 
 - Not moved: the hob (its `FrontOffset` is from the west front), the hood shelf light C183-S, the electrical plan's island sockets SOCK-1.02-I1 (x 21.023) and I2 (x 20.896), both still inside the west row (x 20.500–21.058).
+
+## Cream more yellow: RAL 1015 (2026-11-22 g)
+
+Petr, 2026-11-22 (t806u): “lets make that cream color more yellowish. I don't have a precise color code for you, just try something reasonable.”
+
+- `kitchen-front-cream` (`inputs/materials/catalogue.yaml`): **RAL 9001 Cream `#e9e0d2` → RAL 1015 Light ivory `#e6d2b5`**. `guess:` the code; Petr gave none. RAL 1013 Oyster white (`#e3d9c6`) was the milder option, but it is hardly yellower than 9001 (blue/red 0.87 against 0.90), while 1015 clearly is (0.79) and stays a light cream (HSL lightness 0.81), not a beige.
+- One shared colour: every cream surface resolves to this one catalogue entry (fronts, doors, drawers, lift-ups, fillers, end sides, plinths, the west run's end panels, the integrated dishwasher door, and every part of KR-DN, KR-LB and KR-TC). Nothing else hard-codes the cream: the GLB carries label colours only, and the viewer's Realistic mode reads the catalogue at run time.
+- The free-text finish labels follow: `Pset_KitchenRun.FrontFinish` “matt lacquered MDF (RAL 1015 cream)” and `Pset_Finish.Material` “kitchen cream (RAL 1015 matt)”.
+- Not changed (`open:`): the kitchen carcass interiors stay white melamine (`kitchen-carcass-white`, `#eeece6`), including the **west wall cabinets' underside KR-WEST-H-BOTTOM**, which is visible from below (with the LED panels), and the tall runs' bottoms and tops. Say if those should be cream too.
 
