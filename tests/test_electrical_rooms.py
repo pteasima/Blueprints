@@ -52,7 +52,7 @@ def test_led_panel_lights_follow_the_wall_cabinets():
     lights = {r["id"]: r for r in doc["lightFixtures"]}
     west = panel_rects(lights["C181-S"])
     dining = panel_rects(lights["NC-1.02-S-2"])
-    assert len(west) == 3 and len(dining) == 2
+    assert len(west) == 1 and len(dining) == 1  # one panel per run (PR #138: "a single panel")
     for x0, y0, z0, x1, y1, z1 in west + dining:
         assert abs(z0 - 1.560) < 1e-9 and abs(z1 - 1.563) < 1e-9
     # Inside the west cabinets' plan (fronts x 19.150, wall x 18.800).

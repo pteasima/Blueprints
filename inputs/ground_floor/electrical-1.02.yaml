@@ -474,7 +474,7 @@ lightFixtures:
     # the cabinets); now the LED panel fields routed into the KR-WEST-H
     # cabinet bottoms (one per cabinet, one circuit). The id and GlobalId
     # are kept.
-    Description: "Plan mark 2(181). LED panels in the undersides of the west wall cabinets (KR-WEST-H: SF-CH850, SF-BH800, SF-AH850), one field per cabinet behind 3 mm opal diffusers, flush at 1560. Soupis: into a box in the pre-wall, position after the sliding-door work. No box; the viewer draws the diffusers from PanelRun (the kitchen model's LED fields). See kitchen-cabinets.md, LED panels under the wall cabinets."
+    Description: "Plan mark 2(181). LED panels in the undersides of the west wall cabinets (KR-WEST-H: SF-CH850, SF-BH800, SF-AH850), one continuous field across the run behind one 3 mm opal diffuser, flush at 1560 (Petr, PR #138: “a single panel even accross where the cabinets meet”). Soupis: into a box in the pre-wall, position after the sliding-door work. No box; the viewer draws the diffusers from PanelRun (the kitchen model's LED fields). See kitchen-cabinets.md, LED panels under the wall cabinets."
     PredefinedType: USERDEFINED
     ObjectType: LedPanel
     ContainedInStructure: SP-1.02
@@ -620,7 +620,7 @@ lightFixtures:
   # them some temporary cable names and I'll figure it out later".
   - id: NC-1.02-S-2
     Name: Světlo TEMP-1.02-DH
-    Description: "Not on the plan (added 2026-11-22 a). LED panels in the underside of the dining wall cabinet SF-DH (KR-DH), one field per section behind 3 mm opal diffusers, flush at 1560. Temporary cable name TEMP-1.02-DH; panel, spec and route are guesses. No box; the viewer draws the diffusers from PanelRun. See kitchen-cabinets.md, LED panels under the wall cabinets."
+    Description: "Not on the plan (added 2026-11-22 a). LED panels in the underside of the dining wall cabinet SF-DH (KR-DH), one continuous field behind one 3 mm opal diffuser, flush at 1560. Temporary cable name TEMP-1.02-DH; panel, spec and route are guesses. No box; the viewer draws the diffusers from PanelRun. See kitchen-cabinets.md, LED panels under the wall cabinets."
     PredefinedType: USERDEFINED
     ObjectType: LedPanel
     ContainedInStructure: SP-1.02

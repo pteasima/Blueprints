@@ -1529,9 +1529,13 @@ furniture:
           # Led* defaults in models/kitchen_cabinet.py).
           LedPanels: true
           BottomThickness: 0.030
-          # 2 play each side (the top of Petr's 1-2): the 1270 diffusers
-          # grow about 2.7 over 30 K (PMMA 70e-6/K); the west 770 keep 1.5.
-          LedRebatePlay: 0.002
+          # Petr, 2026-11-22 a (PR #138): "cant we make it a single panel
+          # even accross where the cabinets meet?" One bottom board, one
+          # pocket, one diffuser per run.
+          LedContinuous: true
+          # 3 play each end: the 2608 diffuser grows about 5.5 over 30 K
+          # (PMMA 70e-6/K).
+          LedRebatePlay: 0.003
   - id: KR-TC
     Name: "Rohová vysoká"
     Description: "The tall corner cabinet (SF-TC), a monoblock of one (2026-11-19), cream since 2026-11-20 f (was oak). On the floor like before."
@@ -1565,6 +1569,12 @@ furniture:
           # Led* defaults in models/kitchen_cabinet.py).
           LedPanels: true
           BottomThickness: 0.030
+          # Petr, 2026-11-22 a (PR #138): "cant we make it a single panel
+          # even accross where the cabinets meet?" One bottom board, one
+          # pocket, one diffuser per run.
+          LedContinuous: true
+          # 2.75 play each end: the 2408 diffuser grows about 5 over 30 K.
+          LedRebatePlay: 0.00275
   - id: KR-TALL-W
     Name: "Vysoká u zdi"
     Description: "Tall cabinet T1 between the west wall and the fridge, a monoblock of one."
