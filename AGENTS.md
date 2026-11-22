@@ -1,6 +1,8 @@
 # Agent notes
 
-Parametric 2D/3D models in Python ([build123d](https://github.com/gumyr/build123d)). Humans review geometry in chat, mostly from PNG previews.
+Parametric 2D/3D models in Python ([build123d](https://github.com/gumyr/build123d)).
+Humans review geometry on the live Pages preview, from a link sent as soon as
+it is up. Images in chat are optional follow-up, not the review path.
 
 All process for this repo lives in this file. Humans are agents too. Do not add a `CONTRIBUTING.md`; a second process file would drift from this one.
 
@@ -17,6 +19,7 @@ When a pull request branch is behind `main`, rebase that feature branch onto `ma
 ## One source of truth
 
 The 3D model is the source: 2D drawings and any derived outputs (exports, quantities, labels, tests) are cut, projected or computed from it, and get updated in the same PR when the model changes.
+Updating those drawings must not delay the preview link; they can land in a later commit on the same PR.
 
 ## Document the real world
 
@@ -62,9 +65,9 @@ Install also enables **Git LFS** (`docs/models/*.usdz`). Pull with LFS available
 
 `.cursor/environment.json` is the repo copy of that bootstrap. The dashboard environment may also need **Save** after an agent proposes an install change.
 
-## Export and PNG previews
+## Export and the preview link
 
-Always attach PNG previews in chat. After creating or changing a model:
+After creating or changing a model, export, push, and send the preview link as soon as it is live. Do not wait for 2D plans, renders, viewer drawings or other images before that message.
 
 ```bash
 source .venv/bin/activate
@@ -73,9 +76,13 @@ python -m blueprints.export <model>
 
 Example: `python -m blueprints.export hello_world`
 
-Solids land in `exports/<model>/` as STEP/STL plus USDZ/GLB/HTML for the viewer. 2D modules (`obyvak_section`, `obyvak_elevation`) still write layered SVG/DXF/PNG. Contractor plates — labels, dimensions, a named orthographic scene — come from the viewer **Drawing** button (PNG and PDF of that view). **A PNG of any changed 3D view is required** in the reply: capture the viewer drawing, not a hidden-line dump of the solid. The HTML viewer is a self-contained offline WebGL page (embedded GLB + custom Three.js shell) with part toggles, camera presets, and scene drawings; USDZ remains for Quick Look/AR.
+Solids land in `exports/<model>/` as STEP/STL plus USDZ/GLB/HTML for the viewer. 2D modules (`obyvak_section`, `obyvak_elevation`) still write layered SVG/DXF/PNG. The HTML viewer is a self-contained offline WebGL page (embedded GLB + custom Three.js shell) with part toggles, camera presets, and scene drawings; USDZ remains for Quick Look/AR. Contractor plates — labels, dimensions, a named orthographic scene — come from the viewer **Drawing** button (PNG and PDF of that view).
+
+The first reply after the preview is live is a plain explanation of what was done, plus the preview URL. If that explanation would benefit from extra images (2D plans, renders, a viewer drawing), say you are continuing to work on those. Unless he asks to cancel that work, send the images later. Images must never block the preview link. If you do later send a drawing, capture the viewer drawing, not a hidden-line dump of the solid.
 
 The viewer **Measure** tool (top bar, next to AR) is **experimental** and will be developed further — do not treat its current UX/snap behavior as a stable contract when changing the viewer. See `src/blueprints/viewer/README.md`.
+
+### Images in chat (after the preview link, and only if useful)
 
 Chat on iOS **and** web only *renders* `<img>` and `<video>`. Copy PNG (and optional orbit video) to `/opt/cursor/artifacts/` and embed with:
 
@@ -86,6 +93,8 @@ Chat on iOS **and** web only *renders* `<img>` and `<video>`. Copy PNG (and opti
 Only those `src` values are rewritten to a public artifact URL. **Do not** put `/opt/cursor/artifacts/…` in `<a href>` — the chat leaves the path as-is, the browser resolves it to `https://cursor.com/opt/cursor/artifacts/…`, and Cursor shows **404**. USDZ never appears as a tile.
 
 After a 3D export, still write `{model}_3d.usdz` into `/opt/cursor/artifacts/`. Do not attach STEP unless the user asks.
+
+A failed optional PNG or render does not block the preview link or the first reply. If a 2D module's own export fails, fix the export so the model is published, then send the link.
 
 ### Viewer performance budget (required after changing the ground floor)
 
@@ -113,7 +122,7 @@ https://pteasima.github.io/Blueprints/pr-preview/pr-<N>/
 
 Publishing is automatic. Pushing the PR branch, or opening or closing the PR, runs `pages-content`. That workflow writes `pr-preview/pr-<N>/` and deploys GitHub Pages. A push to `main` updates the production site. Closing or merging the PR deletes that preview. Export’s printed `preview_url` is still the production root (no PR context locally).
 
-The agent waits until `pages-content` has finished and the preview URL is actually serving the change, then tells the user that preview is ready:
+The agent waits until `pages-content` has finished and the preview URL is actually serving the change, then tells the user that preview is ready, with the explanation of what was done. Do not hold that message for images.
 
 ```text
 https://pteasima.github.io/Blueprints/pr-preview/pr-<N>/
@@ -138,8 +147,6 @@ Add more models later via more GLBs (+ USDZs) and manifest rows — one hub page
 USDZ is a zip **container** of a binary `.usdc` crate (`UsdUtils.CreateNewARKitUsdzPackage`). Quick Look opens the `.usdz` file itself — never unzip it. The **viewer** can generate a view-matched USDZ in-browser for Safari AR; the hub does not embed USDZ.
 
 Author USDZ in **metres** (`metersPerUnit = 1`) with the mesh sitting on Y=0. RealityKit often ignores `metersPerUnit`, so millimetre CAD numbers look like kilometres in AR (Object mode still auto-fits). Models whose real span exceeds 2 m are uniformly scaled to a ~0.45 m tabletop so iPad AR can find a plane; add Apple's `Preliminary_AnchoringAPI` (horizontal plane).
-
-If PNG export fails, fix that before considering the task done.
 
 ## Tests
 

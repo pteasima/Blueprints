@@ -36,7 +36,7 @@ exports/            # generated STEP / STL / SVG / DXF / PNG (gitignored binarie
 inputs/             # drop legacy DXF / notes from prior tools (next step)
 docs/               # design notes in docs/design/; split with Home in docs/Home.md
 scripts/            # Cloud Agent / local bootstrap
-AGENTS.md           # agent operating notes (PNG previews, env)
+AGENTS.md           # agent operating notes (preview link first, env)
 .cursor/            # cloud agent environment hints
 ```
 
@@ -46,8 +46,9 @@ Long-term plans: [docs/Roadmap.md](docs/Roadmap.md).
 
 1. Drop source material (DXF + prior Python) under `inputs/`.
 2. Ask the agent to port a design into a parametric `models/<name>.py`.
-3. Agent regenerates exports and attaches preview screenshots.
-4. Review on iOS (diffs + images) or MacBook (optional live viewer / remote desktop).
+3. Agent exports, pushes, and sends the Pages preview link with a short explanation of what changed.
+4. If extra images would help, the agent says it is still making them and sends them later unless asked to stop.
+5. Review on the preview link, or on iOS (diffs + any later images) or MacBook.
 
 ## Requirements
 
