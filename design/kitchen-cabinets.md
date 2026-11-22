@@ -32,7 +32,7 @@ Petr, 2026-11-12:
 | Run | Bays (in run order) | Notes |
 | --- | --- | --- |
 | `KR-ISL` island | west row SF-I500a, SF-I600a, SF-I500b, SF-I600b, SF-I300 (north → south); east row SF-E600a … SF-E700 | The two rows stand back to back on one shared central back. One end side at each end spans both rows. |
-| `KR-WEST` west-wall base | SF-C850, SF-B800, SF-A250, SF-A600 (south → north) | SF-A600 is the dishwasher slot (`Kind: Niche`): no carcass, worktop over it, SF-A250's end side is its south wall. |
+| `KR-WEST` west-wall base | SF-C850, SF-B800, SF-A250, SF-A600 (south → north) | SF-A600 is the dishwasher slot (`Kind: Niche`): no carcass, worktop over it, SF-A250's end side is its south wall, the 18 panel KR-WEST-NICHE-END-N its north wall (2026-11-22). |
 | `KR-WEST-H` west-wall wall cabinets | SF-CH850, SF-BH800, SF-AH850 | No plinth, no worktop; a top board per bay. Bottom 1560, top 2450 (the ceiling line), 890 high, Blum AVENTOS HF top bi-fold lift fronts (see “Wall cabinets: lift-up fronts”). |
 | `KR-TALL-W` | SF-T1 | Alone between the west wall and the fridge, so a monoblock of one. |
 | `KR-TALL` | SF-T2, SF-T3, SF-T4 | SF-T3 is the oven column: microwave over steam oven, in niches (see “Fronts and interiors”). |
@@ -74,7 +74,7 @@ The bay boxes in the yaml did not move or change size (until the Gridfinity chan
 | SF-E700 | 700 | 664 | 673 | +9 (south end) |
 | SF-C850 | 850 | 814 | 823 | +9 (south end) |
 | SF-B800 | 800 | 764 | 782 | +18 |
-| SF-A250 | 250 | 214 | 223 | +9 (end side to the dishwasher slot) |
+| SF-A250 | **232** (was 250, 2026-11-22 flush ends) | 196 | 205 | +9 (end side to the dishwasher slot) |
 | SF-CH850 / SF-BH800 / SF-AH850 | 850 / 800 / 850 | 814 / 764 / 814 | 823 / 782 / 823 | +9 / +18 / +9 |
 | SF-T1 | 750 | 714 | 714 | 0 (both sides are end sides) |
 | SF-T2 / SF-T3 / SF-T4 | 600 / 600 / 500 | 564 / 564 / 464 | 573 / 582 / 473 | +9 / +18 / +9 |
@@ -305,6 +305,8 @@ In IFC the worktop's rebate is a second extrusion layer. The slab is one 14.5 mm
 
 ## West run end cladding
 
+Superseded on 2026-11-22 by “West run flush ends” below: the claddings are gone. History:
+
 Petr, 2026-11-12: “Oh, and also do the sides of the west run of cabinets.”
 
 Both ends of `KR-WEST` are free: the south end is at OP24's north jamb (y 11.35), the north end at OP25's south jamb (y 13.85). Neither touches a wall or a tall cabinet. So `CladEnds: true`, the same rule as the island:
@@ -417,7 +419,7 @@ Alternative, only the top drawer shallow (not built): SF-I600a and SF-I500b 100 
 
 ## Parametric rule
 
-Everything above is computed in `kitchen_cabinet.runs` from the bay boxes (`Origin`, `RefDirection`, `Width`, `Depth`, `Height`, `Elevation`), the run's `Pset_KitchenRun` (any `IKEA_DEFAULTS_MM` key, in metres, plus `WorktopMaterial`, `WorktopOverhang<N|E|S|W>` (one edge, 2026-11-20 f), `CladEnds`, `CladdingMaterial`, `MitreEnds` (45° top/end joints), `Carcass` (`Box` for whole-body bays), `BodyMaterial`, `PlinthKind` (`Legs` or `Board`), `Backsplash`, `BacksplashThickness`, `BacksplashTop`, `BacksplashMaterial`, `UnderlayThickness` + `UnderlayMaterial` (a layer under the stone, box runs, 2026-11-20 h), `SideKickboards`, `SideKickboardSetback` (2026-11-20 h), `FrontGrip` (`J`: routed rounded J grips, `JGripLipTop`, `JGripCupDepth`, `JGripBackWall`, `JGripBowlRadius`, `JGripCrestRadius`, `JGripCornerRadius`, `JGripEdgeRadius`, per-band `grip=`), `FrontFinish`, `WallFrontOverhang` (2026-11-22 c)) and each bay's `Pset_Fronts` (`Layout`, `Contents`: see “Fronts and interiors”) or the older `Pset_Drawers` (`NominalHeights` in metres top to bottom, one `*` for the rest; `Contents` separated by `;`), plus the built-ins' `Pset_BuiltIn`. A bay may override the drawer and front values in its own `Pset_KitchenCabinet`. Change a bay's width and its dividers move, both neighbours' clear widths and drawer boxes follow (drawer insides are the clear width and side depth less the MAXIMERA deductions, Gridfinity baseplates follow the inside), and the worktop grows; change the counter height or the worktop thickness and the carcass, the `*` drawer and the cladding follow. Rows that stand back to back (same back plane, fronts facing away) share one central back; a run with `CladEnds` gets stone on both ends. A sink's cut-out comes from its `Pset_Sink` and follows the sink box. A hob follows its bay (`Pset_Hob`): move or widen the bay and the cut-out, rebate, glass and housing move with it. The model stops the export if the hob comes closer than `MinBackEdge` to the far edge. A backsplash runs the worktop's length, from the worktop top up to the lowest box hanging over it. A `lift` band takes its cabinet height, width and depth from the bay and is checked against Blum's ranges for its fitting; change the bay and the fronts, mechanisms, weight, power factor and open clearance follow.
+Everything above is computed in `kitchen_cabinet.runs` from the bay boxes (`Origin`, `RefDirection`, `Width`, `Depth`, `Height`, `Elevation`), the run's `Pset_KitchenRun` (any `IKEA_DEFAULTS_MM` key, in metres, plus `WorktopMaterial`, `WorktopOverhang<N|E|S|W>` (one edge, 2026-11-20 f), `CladEnds`, `CladdingMaterial`, `FlushEnds` (end sides as the end panels, top flush, an 18 panel past an end niche; 2026-11-22), `MitreEnds` (45° top/end joints), `Carcass` (`Box` for whole-body bays), `BodyMaterial`, `PlinthKind` (`Legs` or `Board`), `Backsplash`, `BacksplashThickness`, `BacksplashTop`, `BacksplashMaterial`, `UnderlayThickness` + `UnderlayMaterial` (a layer under the stone, box runs, 2026-11-20 h), `SideKickboards`, `SideKickboardSetback` (2026-11-20 h), `FrontGrip` (`J`: routed rounded J grips, `JGripLipTop`, `JGripCupDepth`, `JGripBackWall`, `JGripBowlRadius`, `JGripCrestRadius`, `JGripCornerRadius`, `JGripEdgeRadius`, per-band `grip=`), `FrontFinish`, `WallFrontOverhang` (2026-11-22 c)) and each bay's `Pset_Fronts` (`Layout`, `Contents`: see “Fronts and interiors”) or the older `Pset_Drawers` (`NominalHeights` in metres top to bottom, one `*` for the rest; `Contents` separated by `;`), plus the built-ins' `Pset_BuiltIn`. A bay may override the drawer and front values in its own `Pset_KitchenCabinet`. Change a bay's width and its dividers move, both neighbours' clear widths and drawer boxes follow (drawer insides are the clear width and side depth less the MAXIMERA deductions, Gridfinity baseplates follow the inside), and the worktop grows; change the counter height or the worktop thickness and the carcass, the `*` drawer and the cladding follow. Rows that stand back to back (same back plane, fronts facing away) share one central back; a run with `CladEnds` gets stone on both ends. A sink's cut-out comes from its `Pset_Sink` and follows the sink box. A hob follows its bay (`Pset_Hob`): move or widen the bay and the cut-out, rebate, glass and housing move with it. The model stops the export if the hob comes closer than `MinBackEdge` to the far edge. A backsplash runs the worktop's length, from the worktop top up to the lowest box hanging over it. A `lift` band takes its cabinet height, width and depth from the bay and is checked against Blum's ranges for its fitting; change the bay and the fronts, mechanisms, weight, power factor and open clearance follow.
 
 ## Tap to open
 
@@ -465,7 +467,7 @@ The quoted notes are the yellow sticky notes next to each bay on KitchenPlan.jpg
 | SF-I600b (hob) | „pribory / varecky, sterky, naberacky / panve“ | cutlery / wooden spoons, spatulas, ladles / pans | Three drawers, **200 / 100 / rest (510)** since 2026-11-13. Fronts 604 × 197 / 97 / 507. The top box (MAXIMERA medium, 713–857) stays under the hob limit (879 − 8 = 871). |
 | SF-I300 | „alobal, folie, spejle, pytliky“ | foil, cling film, skewers, bags | Since 2026-11-19 a full-height pull-out with three baskets (`guess:`; see “Fronts everywhere”). |
 | SF-E600a … SF-E700 (island east row) | Black card: „Jak vyresit detail spodniho soklu vs. dock pro robota? …“ (in full under “Island east row”) | Questions only | Since 2026-11-20 four full-height Gridfinity drawers, one per bay (see “Batch 2026-11-20”; a door and three drawer bays on 2026-11-19). The dock and the plinth questions stay `open:`. |
-| SF-A250 | Note A: „dole vlevo suplik uklid (mycka, jar, odmastovac, houbicky)“ | bottom left: cleaning drawer (dishwasher tabs, washing-up liquid, degreaser, sponges) | A full-height pull-out (front 247 × 807) with 3 baskets. The basket count is `guess:`. |
+| SF-A250 | Note A: „dole vlevo suplik uklid (mycka, jar, odmastovac, houbicky)“ | bottom left: cleaning drawer (dishwasher tabs, washing-up liquid, degreaser, sponges) | A full-height pull-out (front 229 × 807, 247 until 2026-11-22) with 3 baskets. The basket count is `guess:`. |
 | SF-A600 | Note A: „dole vpravo mycka“ | bottom right: dishwasher | Unchanged: the niche for the Bosch SBD6ECX12E. |
 | SF-B800 (west sink) | Note B: „800 / dole vlevo kos, vpravo kompost / nahore talire / kose se musi vyhnout drtici, to se proste bude resit az skrinky budou“ | 800 / bottom left: bin, right: compost / top: plates / the bins must avoid the disposer, that will be solved once the cabinets exist | One full-height pull-out (front 797 × 807) with two bins (`guess:` one pull-out for both). The disposer `EA-EVO3-W` hangs under the bowl. The pull-out box stops 10 under it, so it is only **207 high (493 cut)**. Tap `SN-TAP-W` is modelled. `open:` the bin-vs-disposer conflict. Petr's own note defers it, and EcoMaster's manual suggests the disposer between two bins or a lower bin under it. |
 | SF-C850 | Note C: „900 / dole trideny odpad“ | 900 / bottom: sorted waste | A full-height pull-out (front 847 × 807) with three bins. The bin count is `guess:`. |
@@ -531,7 +533,7 @@ No carcass size or position changed. These are the fronts:
 | --- | --- | --- |
 | SF-I500b | one slab 497 × 807 | three drawers 497 × 197 / 197 / 407 (2026-11-13: 478 × 97 / 97 / 607, see “Gridfinity drawers”) |
 | SF-I600b | one slab 597 × 807 | three drawers 597 × 197 / 197 / 407 (2026-11-13: 604 × 197 / 97 / 507) |
-| SF-A250 | slab 247 × 807 | pull-out (same front) with 3 baskets |
+| SF-A250 | slab 247 × 807 (229 × 807 since 2026-11-22) | pull-out (same front) with 3 baskets |
 | SF-B800 | slab 797 × 807 | pull-out (same front) with 2 bins, box 207 high under the disposer |
 | SF-C850 | slab 847 × 807 | pull-out (same front) with 3 bins |
 | SF-AH850, SF-CH850 | one slab 847 × 897 | two doors 422 × 897 (L, R), 2 shelves |
@@ -1862,3 +1864,29 @@ Petr, 2026-11-22 (t806u): “lets make that cream color more yellowish. I don't 
 - The free-text finish labels follow: `Pset_KitchenRun.FrontFinish` “matt lacquered MDF (RAL 1015 cream)” and `Pset_Finish.Material` “kitchen cream (RAL 1015 matt)”.
 - Not changed (`open:`): the kitchen carcass interiors stay white melamine (`kitchen-carcass-white`, `#eeece6`), including the **west wall cabinets' underside KR-WEST-H-BOTTOM**, which is visible from below (with the LED panels), and the tall runs' bottoms and tops. Say if those should be cream too.
 
+## West run flush ends (2026-11-22)
+
+The two 20 mm claddings KR-WEST-CLAD-S / -N and the worktop over them stood 20 mm into the pocket-door openings OP24 (y 10.25–11.35) and OP25 (y 13.85–14.95), and the south end legs 11 mm. Petr, 2026-11-22 (option 2): use the carcass end sides themselves as the cream (RAL 1015) end panels, flush with the wall segment y 11.35–13.85; nothing (end panels, worktop, legs, kickboard) in the door openings.
+
+New run flag `Pset_KitchenRun.FlushEnds` (excludes `CladEnds`): no cladding; a run end that is a carcass keeps its end side as the visible panel; a run end that is a niche gets an 18 panel `{run}-NICHE-END-{N/S}` (floor to the worktop underside, wall to the fronts' face) just outside the niche; the worktop and backsplash stop flush with the outer panel faces; the end legs sit with their face on the end side's outer face (centre at max(board, leg diameter) / 2 in from the end, was board / 2).
+
+The north end is the dishwasher slot, with no end side, and its 600 can't shrink. So the 18 panel came out of SF-A250, the only bay with spare width: **SF-A250's outer width changed, 250 → 232** (the brief said to keep the bays' outer widths). The 850 section A is now 232 + 600 + 18; SF-AH850 above still matches it.
+
+| What | Before | Now |
+| --- | --- | --- |
+| South end panel | KR-WEST-CLAD-S, 20 × 620 × 910, y 11.33–11.35 (in OP24) | **the carcass end side KR-WEST-END-S**, 18, y 11.350–11.368, z 100–910 (cream already, the `END-[NSEW]` selector) |
+| North end panel | KR-WEST-CLAD-N, 20 × 620 × 910, y 13.85–13.87 (in OP25) | **KR-WEST-NICHE-END-N**, 18 × 600 × 910, y 13.832–13.850, x 18.80–19.40, z 0–910, cream |
+| Worktop KR-WEST-WORKTOP | 2540, y 11.33–13.87 | **2500, y 11.35–13.85** (flush, front overhang 20 unchanged) |
+| Backsplash KR-WEST-BACKSPLASH | 2500, y 11.35–13.85 | 2500, y 11.35–13.85 (now over the north panel, same span) |
+| South end legs SF-C850-S-F / -B | y 11.339–11.379 (11 in OP24) | **y 11.350–11.390** |
+| SF-A250 width / clear inside / pull-out inside | 250 / 223 / 139 × 497 | **232 / 205 / 121 × 497** (front 247 → 229 × 807; 3 baskets, `guess:` as before) |
+| Dishwasher slot SF-A600 | y 13.25–13.85 | **y 13.232–13.832** (600 kept) |
+| Dishwasher EA-SBD6ECX Origin y | 13.251 | **13.233** (1 mm clear each side, as before) |
+| Kickboard | KR-WEST-PLINTH-E y 11.35–13.25, SF-A600-PLINTH-E 13.25–13.85 | y 11.35–13.232, **13.232–13.832** (ends behind the north panel) |
+| SF-B800, SF-C850 inside | 698 × 497, 739 × 497 | unchanged |
+
+- Wall cabinets KR-WEST-H: already y 11.35–13.85, nothing outside; unchanged.
+- No Gridfinity in KR-WEST; no drawer other than SF-A250-D1 changed.
+- Catalogue: the cream entry's explicit ids are now KR-WEST-END-S and KR-WEST-NICHE-END-N (the CLAD ids are gone).
+- `open:` the south end's leg zone (z 0–100 under KR-WEST-END-S) is open to the side now; the cladding used to cover it, and the kickboard has no return. Say if the end side should go to the floor (a cover panel) instead.
+- Not touched: the shelf light C182-S and the sockets.
