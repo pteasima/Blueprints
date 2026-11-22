@@ -583,15 +583,35 @@ def test_west_backsplash_up_to_wall_cabinets():
     assert box[1] - box[0] == pytest.approx(2500.0)
 
 
-def test_west_run_ends_clad():
+def test_west_run_ends_flush():
+    # Petr, 2026-11-22 (option 2): the carcass end sides are the cream end
+    # panels, flush with the wall segment y 11.35-13.85 between the pocket
+    # doors OP24 / OP25; no 20 mm claddings, the top stops flush.
     run = _runs()["KR-WEST"]
-    for name in ("KR-WEST-CLAD-N", "KR-WEST-CLAD-S"):
-        part = run.part(name)
-        (box,) = part.boxes
-        assert box[1] - box[0] == pytest.approx(20.0) and (box[4], box[5]) == (0.0, pytest.approx(910.0))
-        # Petr, 2026-11-20 f: cream wood, not Silestone; no mitre.
-        assert part.material == "kitchen cream" and part.label == "cabinet" and not part.cuts
-    assert run.worktop[1] - run.worktop[0] == pytest.approx(2540.0)
+    a0 = min(b.a0 for b in run.bays)  # y 11.35, the OP24 jamb
+    a1 = a0 + 2500.0  # y 13.85, the OP25 jamb
+    assert not [p for p in run.parts if p.role == "Cladding"]
+    assert run.worktop[:2] == (pytest.approx(a0), pytest.approx(a1))
+    (south,) = run.part("KR-WEST-END-S").boxes
+    assert south[:2] == (pytest.approx(a0), pytest.approx(a0 + 18.0))
+    # The dishwasher slot has no carcass: an 18 panel closes it, floor to
+    # the worktop underside, wall to the fronts' face.
+    panel = run.part("KR-WEST-NICHE-END-N")
+    (box,) = panel.boxes
+    assert box[:2] == (pytest.approx(a1 - 18.0), pytest.approx(a1))
+    assert (box[4], box[5]) == (0.0, pytest.approx(910.0)) and panel.label == "cabinet"
+    assert run.bay("SF-A600").a1 - run.bay("SF-A600").a0 == pytest.approx(600.0)
+    # Nothing of the run (legs, kickboard, top, backsplash) past either end.
+    for part in run.parts:
+        for b in part.boxes:
+            assert b[0] >= a0 - 1e-6 and b[1] <= a1 + 1e-6, part.id
+    # The wall cabinets above stay inside the same segment.
+    wall = _runs()["KR-WEST-H"]
+    a0 = min(b.a0 for b in wall.bays)
+    assert max(b.a1 for b in wall.bays) == pytest.approx(a0 + 2500.0)
+    for part in wall.parts:
+        for b in part.boxes:
+            assert b[0] >= a0 - 1e-6 and b[1] <= a0 + 2500.0 + 1e-6, part.id
 
 
 def test_dining_run_box_bodies_under_stone():
@@ -652,7 +672,11 @@ def test_legs_behind_a_kickboard():
         found = [p for p in run.parts if p.role == "Leg"]
         assert len(found) == legs and all(p.boxes[0][5] == pytest.approx(100.0) for p in found)
     # The west run's kickboard runs on across the dishwasher slot.
-    assert runs["KR-WEST"].part("SF-A600-PLINTH-E").boxes[0][:4] == (250.0, 850.0, 50.0, 68.0)
+    west = runs["KR-WEST"]
+    plinth = west.part("SF-A600-PLINTH-E").boxes[0][:4]
+    # The slot moved 18 south on 2026-11-22 (FlushEnds), 250-850 before.
+    assert tuple(round(v - min(b.a0 for b in west.bays), 3) for v in plinth[:2]) == (2482.0 - 600.0, 2482.0)
+    assert plinth[2:] == (50.0, 68.0)
     # Front legs clear the board (c 50–68): LegInset 80 from the fronts' back.
     leg = runs["KR-ISL"].part("KR-ISL-LEG-SF-I500a-N-F").boxes[0]
     assert leg[2] == pytest.approx(78.0)

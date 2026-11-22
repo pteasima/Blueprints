@@ -199,7 +199,7 @@ IKEA_DEFAULTS_MM = {
     "BinGap": 10.0,  # between bins in a pull-out
     "BinWall": 3.0,  # plastic bin wall
 }
-RUN_FLAGS = ("CladEnds", "Backsplash")
+RUN_FLAGS = ("CladEnds", "Backsplash", "FlushEnds")
 
 # Blum AVENTOS lift systems (``lift`` bands), from the Blum catalogue and
 # technical manual 2024/2025 (publications.blum.com/2024/catalogue/en/):
@@ -882,6 +882,8 @@ class _Builder:
             self._worktop(rows, z_base + height - wt, z_base + height)
         if _prop(run.element, PSET_RUN, "CladEnds"):
             self._cladding(rows, z_base, z_base + height - wt)
+        if self._flush_ends():
+            self._end_panels(z_base, z_base + height - wt)
         if wt > 0 and _prop(run.element, PSET_RUN, "Backsplash"):
             self._backsplash(rows, pairs, z_base + height)
         for bay_id, hob in run.hobs.items():
@@ -1158,9 +1160,12 @@ class _Builder:
         t, tf = p["BoardThickness"], p["FrontThickness"]
         d, inset = p["LegDiameter"], p["LegInset"]
         z0, z1 = row[0].z_base, row[0].z_base + p["PlinthHeight"]
-        lines = [(row[0].a0 + t / 2, (row[0],), f"{row[0].id}-{run.frame.compass(-1.0, 0.0)}")]
+        # An end leg sits under the end side but never past its outer face
+        # (2026-11-22: a free end next to a door opening, ``FlushEnds``).
+        end = max(t, d) / 2 if self._flush_ends() else t / 2
+        lines = [(row[0].a0 + end, (row[0],), f"{row[0].id}-{run.frame.compass(-1.0, 0.0)}")]
         lines += [(l.a1, (l, r), f"{l.id}-{r.id}") for l, r in zip(row, row[1:])]
-        lines.append((row[-1].a1 - t / 2, (row[-1],), f"{row[-1].id}-{run.frame.compass(1.0, 0.0)}"))
+        lines.append((row[-1].a1 - end, (row[-1],), f"{row[-1].id}-{run.frame.compass(1.0, 0.0)}"))
         for a, bays, tag in lines:
             for end, y in (("F", tf + inset), ("B", back_y - inset)):
                 c = sum(self.c_range(row[0], y, y)) / 2.0
@@ -2025,6 +2030,7 @@ class _Builder:
             ct = p["CladdingThickness"] or p["WorktopThickness"]
             a0 -= ct
             a1 += ct
+        a0, a1 = self._flush_span(a0, a1)
         voids = []
         for sink in self.sinks:
             hole = sink["cutout"]
@@ -2049,6 +2055,51 @@ class _Builder:
             cuts = [_mitre_cut(a0, a0 + (zt - zb), zb, zt, "top"), _mitre_cut(a1, a1 - (zt - zb), zb, zt, "top")]
         self.add(Part(f"{run.id}-WORKTOP", "Pracovní deska", "Worktop", [run.worktop],
                       label="worktop", voids=voids, material=material, cuts=cuts))
+
+    def _flush_ends(self) -> bool:
+        """``Pset_KitchenRun.FlushEnds`` (Petr, 2026-11-22, the west run
+        between the pocket doors OP24 / OP25): no cladding outside the bays;
+        a carcass end side is the visible end panel and the worktop and
+        backsplash stop flush with it. A run end that is a niche (the
+        dishwasher slot) has no end side, so it gets one ``BoardThickness``
+        panel just outside the niche (``_end_panels``), inside the run's
+        span on the wall; the top and backsplash run over it."""
+        v = _prop(self.run.element, PSET_RUN, "FlushEnds")
+        if v and _prop(self.run.element, PSET_RUN, "CladEnds"):
+            raise ValueError(f"{self.run.id}: FlushEnds and CladEnds exclude each other")
+        return bool(v)
+
+    def _niche_ends(self) -> list:
+        """(direction, edge) of each run end whose end bay is a niche."""
+        bays = self.run.bays
+        lo, hi = min(bays, key=lambda b: b.a0), max(bays, key=lambda b: b.a1)
+        return [(da, b.a0 if da < 0 else b.a1) for da, b in ((-1, lo), (1, hi)) if b.niche]
+
+    def _flush_span(self, a0: float, a1: float) -> tuple[float, float]:
+        """``a0``, ``a1`` grown over the ``FlushEnds`` niche end panels."""
+        if not self._flush_ends():
+            return a0, a1
+        t = self.p["BoardThickness"]
+        for da, _edge in self._niche_ends():
+            if da < 0:
+                a0 -= t
+            else:
+                a1 += t
+        return a0, a1
+
+    def _end_panels(self, zb, zt):
+        """The ``FlushEnds`` end panel beside an end niche: floor to the
+        worktop underside, wall to the fronts' face, ``BoardThickness``
+        thick, in the run's end-side material (cream)."""
+        run, p = self.run, self.p
+        t = p["BoardThickness"]
+        for da, edge in self._niche_ends():
+            name = self._end_name(da)
+            bay = next(b for b in run.bays if _near(b.a0 if da < 0 else b.a1, edge))
+            c0, c1 = self.c_range(bay, 0.0, bay.depth)
+            a_range = (edge - t, edge) if da < 0 else (edge, edge + t)
+            self.add(Part(f"{run.id}-NICHE-END-{name}", f"Bok {name} (u niky)", "EndSide",
+                          [(*a_range, c0, c1, zb, zt)], label="cabinet"), bay)
 
     def _mitred(self) -> bool:
         """``MitreEnds``: the worktop and the clad ends meet at 45 degrees
@@ -2165,7 +2216,7 @@ class _Builder:
         paired = {id(r) for pair in pairs for r in pair}
         # Wall to wall along the bays, not over the clad ends' extra 20
         # (those reach past the door jambs).
-        a0, a1 = min(b.a0 for b in run.bays), max(b.a1 for b in run.bays)
+        a0, a1 = self._flush_span(min(b.a0 for b in run.bays), max(b.a1 for b in run.bays))
         material = _prop(run.element, PSET_RUN, "BacksplashMaterial") or _prop(run.element, PSET_RUN, "WorktopMaterial")
         for row in rows:
             if id(row) in paired:
