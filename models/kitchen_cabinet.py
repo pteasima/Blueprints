@@ -124,27 +124,27 @@ IKEA_DEFAULTS_MM = {
     "BackThickness": 8.0,  # single-row back panel (guess)
     "FrontGap": 3.0,  # 600×200 grid front is 597×197
     # Integrated J grip (``Pset_KitchenRun.FrontGrip: J``; Petr, 2026-11-22 c:
-    # "voxtorp J style on drawers and hinged doors"; t786u: rounded like
-    # VOXTORP; t788u: "make the voxtorp shape (rounded J), yours is missing
-    # the lip"). In section (``grip_profile``): the front is notched at the
-    # gripped edge, ``JGripHeight`` along the face and ``JGripDepth`` into the
-    # front; below the notch the face material stays as a lip ``JGripLip``
-    # thick, and behind it the cut hooks on ``JGripHookDepth`` (15, a fingertip) further from the
-    # edge (an undercut pocket JGripDepth - JGripLip wide, its end a full round
-    # of ``JGripRadius``). The fingertips go in at the notch and curl behind
-    # the lip. The lip's top is rounded ``JGripLipRadius`` on both corners; the
-    # back wall's corner at the edge ``JGripEdgeRadius``. No sharp inner
-    # corners. guess: all of it (IKEA does not publish VOXTORP's section; its
-    # band reads about 20-25 on IKEA's photos; VOXTORP fronts are 22 thick,
-    # ours ``FrontThickness`` 18, so the back wall behind the pocket is 5).
-    # Which edge: ``_grip_edge``.
-    "JGripHeight": 22.0,
-    "JGripDepth": 13.0,
-    "JGripLip": 4.0,
-    "JGripHookDepth": 15.0,
-    "JGripRadius": 4.5,
-    "JGripLipRadius": 2.0,
-    "JGripEdgeRadius": 2.0,
+    # "voxtorp J style on drawers and hinged doors"; t789u, from a photo of a
+    # real VOXTORP edge: "Not as deep and a little different detail (looks
+    # like much larger radius on the inside of the outer handle part and only
+    # a very small radius on the visible face of the handle)"). In section
+    # (``grip_profile``): a plain slot ``JGripSlotWidth`` wide routed
+    # ``JGripSlotDepth`` into the gripped edge, parallel to the face, behind a
+    # front leaf ``JGripLeaf`` thick; the slot's end is a full round. The
+    # leaf's slot-side edge is rounded ``JGripInnerRadius`` (large), its
+    # visible face edge ``JGripFaceRadius`` (small); the back wall's edge
+    # ``JGripBackRadius``. ``JGripLeafDrop``: the leaf's top below the edge
+    # (0: flush). Fingers go into the slot and pull on the back of the leaf.
+    # guess: proportions from the photo as read by the bot (VOXTORP is 22
+    # thick: leaf ~40 %, slot ~37 %, depth ~0.55 x thickness), scaled to our
+    # ``FrontThickness`` 18. Which edge: ``_grip_edge``.
+    "JGripLeaf": 7.0,
+    "JGripSlotWidth": 7.0,
+    "JGripSlotDepth": 10.0,
+    "JGripInnerRadius": 5.0,
+    "JGripFaceRadius": 1.0,
+    "JGripBackRadius": 1.0,
+    "JGripLeafDrop": 0.0,
     # Wall (top) cabinets: the lowest front hangs this far below the carcass
     # bottom as the grip (Petr, 2026-11-22 c: "plain 1cm overhang on all top
     # cabinets"). The top edge does not move.
@@ -584,38 +584,37 @@ def _sample_segments(segs: list, step_deg: float = 10.0) -> list:
 
 
 def grip_profile(p: dict) -> list:
-    """The rounded J's cut-away region as segments in (d, u): d into the front
-    from its face, u from the gripped edge toward the middle of the front.
-    Overcut 1 past the face and the edge. See ``IKEA_DEFAULTS_MM``."""
-    gh, gd, tl, hd = p["JGripHeight"], p["JGripDepth"], p["JGripLip"], p["JGripHookDepth"]
-    rp, rl, re, e = p["JGripRadius"], p["JGripLipRadius"], p["JGripEdgeRadius"], 1.0
-    w, u_end = gd - tl, gh + hd
-    if not (0.0 < tl < gd < p["FrontThickness"]):
-        raise ValueError("J grip: 0 < JGripLip < JGripDepth < FrontThickness")
-    if not (0.0 < rp <= w / 2.0 and rp + rl <= hd and 0.0 < rl <= tl / 2.0 and 0.0 <= re <= p["FrontThickness"] - gd):
-        raise ValueError("J grip: radii do not fit (JGripRadius <= pocket/2, JGripLipRadius <= JGripLip/2, "
-                         "JGripRadius + JGripLipRadius <= JGripHookDepth, JGripEdgeRadius <= back wall)")
+    """The VOXTORP slot's cut-away region as segments in (d, u): d into the
+    front from its face, u from the gripped edge toward the middle of the
+    front. Overcut 1 past the edge (and the face above the leaf). See
+    ``IKEA_DEFAULTS_MM``."""
+    tl, w, sd = p["JGripLeaf"], p["JGripSlotWidth"], p["JGripSlotDepth"]
+    ri, rf, rb, ld, e = p["JGripInnerRadius"], p["JGripFaceRadius"], p["JGripBackRadius"], p["JGripLeafDrop"], 1.0
+    back, rs = p["FrontThickness"] - tl - w, w / 2.0
+    if not (tl > 0.0 and w > 0.0 and back > 0.0):
+        raise ValueError("J grip: JGripLeaf + JGripSlotWidth < FrontThickness")
+    if not (0.0 <= rf and 0.0 <= ri and rf + ri <= tl and 0.0 <= rb <= back and ld + ri <= sd - rs and ld >= 0.0):
+        raise ValueError("J grip: radii do not fit (JGripFaceRadius + JGripInnerRadius <= JGripLeaf, "
+                         "JGripBackRadius <= back wall, JGripLeafDrop + JGripInnerRadius <= JGripSlotDepth - slot/2)")
+    pi = math.pi
+
     def arc(cx, cy, r, t0, t1):
         tm = (t0 + t1) / 2.0
         return [(cx + r * math.cos(t), cy + r * math.sin(t)) for t in (t0, tm, t1)]
 
-    pi = math.pi
-    segs = [[(-e, -e), (gd + re, -e)]]
-    if re > 0:
-        segs += [[(gd + re, -e), (gd + re, 0.0)], arc(gd + re, re, re, 1.5 * pi, pi)]
-    segs.append([(gd, re), (gd, u_end - rp)])  # the back wall, down into the pocket
-    if rp >= w / 2.0 - 1e-9:  # the pocket's end, a full round
-        segs.append(arc(tl + rp, u_end - rp, rp, 0.0, pi))
-    else:
-        segs += [arc(gd - rp, u_end - rp, rp, 0.0, pi / 2.0), [(gd - rp, u_end), (tl + rp, u_end)],
-                 arc(tl + rp, u_end - rp, rp, pi / 2.0, pi)]
-    segs.append([(tl, u_end - rp), (tl, gh + rl)])  # the back of the lip
-    segs.append(arc(tl - rl, gh + rl, rl, 0.0, -pi / 2.0))  # the lip's top, back corner
-    if tl - 2.0 * rl > 1e-9:
-        segs.append([(tl - rl, gh), (rl, gh)])
-    segs.append(arc(rl, gh + rl, rl, -pi / 2.0, -pi))  # front corner, onto the face
-    segs += [[(0.0, gh + rl), (-e, gh + rl)], [(-e, gh + rl), (-e, -e)]]
-    # drop zero-length lines, make the segments chain
+    d_back = tl + w  # the back wall's slot face
+    segs = [[(-e, -e), (d_back + rb, -e)]]
+    if rb > 0:
+        segs += [[(d_back + rb, -e), (d_back + rb, 0.0)], arc(d_back + rb, rb, rb, 1.5 * pi, pi)]
+    segs.append([(d_back, rb), (d_back, sd - rs)])  # the back wall's slot face
+    segs.append(arc(tl + rs, sd - rs, rs, 0.0, pi))  # the slot's end, a full round
+    segs.append([(tl, sd - rs), (tl, ld + ri)])  # the back of the leaf
+    if ri > 0:
+        segs.append(arc(tl - ri, ld + ri, ri, 0.0, -pi / 2.0))  # the leaf's slot-side edge, large
+    segs.append([(tl - ri, ld), (rf, ld)])  # the leaf's top
+    if rf > 0:
+        segs.append(arc(rf, ld + rf, rf, -pi / 2.0, -pi))  # the leaf's visible face edge, small
+    segs += [[(0.0, ld + rf), (-e, ld + rf)], [(-e, ld + rf), (-e, -e)]]
     return [sg for sg in segs if len(sg) == 3 or math.hypot(sg[1][0] - sg[0][0], sg[1][1] - sg[0][1]) > 1e-9]
 
 
