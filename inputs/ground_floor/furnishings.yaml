@@ -1377,6 +1377,11 @@ furniture:
           Pset_KitchenRun.WorktopThickness: "mat:silestone-blanco-maple.Thickness"
       - Name: Pset_KitchenRun
         Properties:
+          # Petr, 2026-11-22 c: "ok, assume laquered and add all the handles
+          # (voxtorp J style on drawers and hinged doors, plain 1cm overhang
+          # on all top cabinets)".
+          FrontGrip: J
+          FrontFinish: matt lacquered MDF (RAL 9001 cream)
           WorktopOverhang: 0.02
           # Petr, 2026-11-20 f: "dining area and east island side have zero
           # overhang". The east edge is flush with the east row's fronts.
@@ -1412,6 +1417,11 @@ furniture:
           Pset_KitchenRun.BacksplashThickness: "mat:silestone-blanco-maple.Thickness"
       - Name: Pset_KitchenRun
         Properties:
+          # Petr, 2026-11-22 c: "ok, assume laquered and add all the handles
+          # (voxtorp J style on drawers and hinged doors, plain 1cm overhang
+          # on all top cabinets)".
+          FrontGrip: J
+          FrontFinish: matt lacquered MDF (RAL 9001 cream)
           WorktopOverhang: 0.02
           WorktopMaterial: "Silestone Blanco Maple"
           # Petr, 2026-11-12: "Ok, 100mm it is." Lowest plinth the robot
@@ -1456,6 +1466,11 @@ furniture:
       # cut to 910 under the stone (kitchen-cabinets.md).
       - Name: Pset_KitchenRun
         Properties:
+          # Petr, 2026-11-22 c: "ok, assume laquered and add all the handles
+          # (voxtorp J style on drawers and hinged doors, plain 1cm overhang
+          # on all top cabinets)".
+          FrontGrip: J
+          FrontFinish: matt lacquered MDF (RAL 9001 cream)
           Carcass: Box
           # Cream like the kitchen since 2026-11-20 (was natural oak).
           BodyMaterial: "kitchen cream"
@@ -1491,6 +1506,11 @@ furniture:
     PropertySets:
       - Name: Pset_KitchenRun
         Properties:
+          # Petr, 2026-11-22 c: "ok, assume laquered and add all the handles
+          # (voxtorp J style on drawers and hinged doors, plain 1cm overhang
+          # on all top cabinets)".
+          FrontGrip: J
+          FrontFinish: matt lacquered MDF (RAL 9001 cream)
           Carcass: Box
           # Cream like the kitchen since 2026-11-20 (was natural oak); the
           # oak-veneer top stays.
@@ -1516,6 +1536,12 @@ furniture:
     PropertySets:
       - Name: Pset_KitchenRun
         Properties:
+          # Petr, 2026-11-22 c: "ok, assume laquered and add all the handles
+          # (voxtorp J style on drawers and hinged doors, plain 1cm overhang
+          # on all top cabinets)".
+          # The lowest lift-up front hangs 10 below the carcass bottom; no
+          # routed grip (AVENTOS HF has no TIP-ON).
+          WallFrontOverhang: 0.010
           WorktopThickness: 0.0
           PlinthHeight: 0.0
           # Petr, 2026-11-22 a: "lets do the led panels like we discussed, on
@@ -1545,6 +1571,11 @@ furniture:
     PropertySets:
       - Name: Pset_KitchenRun
         Properties:
+          # Petr, 2026-11-22 c: "ok, assume laquered and add all the handles
+          # (voxtorp J style on drawers and hinged doors, plain 1cm overhang
+          # on all top cabinets)".
+          FrontGrip: J
+          FrontFinish: matt lacquered MDF (RAL 9001 cream)
           WorktopThickness: 0.0
           PlinthHeight: 0.0
   - id: KR-WEST-H
@@ -1556,6 +1587,13 @@ furniture:
     PropertySets:
       - Name: Pset_KitchenRun
         Properties:
+          # Petr, 2026-11-22 c: "ok, assume laquered and add all the handles
+          # (voxtorp J style on drawers and hinged doors, plain 1cm overhang
+          # on all top cabinets)".
+          # The lowest lift-up front hangs 10 below the carcass bottom; no
+          # routed grip (AVENTOS HF has no TIP-ON).
+          WallFrontOverhang: 0.010
+          FrontFinish: matt lacquered MDF (RAL 9001 cream)
           WorktopThickness: 0.0
           PlinthHeight: 0.0
           # Petr, 2026-11-22 a: "lets do the led panels like we discussed, on
@@ -1584,6 +1622,11 @@ furniture:
     PropertySets:
       - Name: Pset_KitchenRun
         Properties:
+          # Petr, 2026-11-22 c: "ok, assume laquered and add all the handles
+          # (voxtorp J style on drawers and hinged doors, plain 1cm overhang
+          # on all top cabinets)".
+          FrontGrip: J
+          FrontFinish: matt lacquered MDF (RAL 9001 cream)
           WorktopThickness: 0.0
           # 100 like the bases (Petr, 2026-11-12); total stays 2450, carcass 2350.
           PlinthHeight: 0.10
@@ -1596,6 +1639,11 @@ furniture:
     PropertySets:
       - Name: Pset_KitchenRun
         Properties:
+          # Petr, 2026-11-22 c: "ok, assume laquered and add all the handles
+          # (voxtorp J style on drawers and hinged doors, plain 1cm overhang
+          # on all top cabinets)".
+          FrontGrip: J
+          FrontFinish: matt lacquered MDF (RAL 9001 cream)
           WorktopThickness: 0.0
           # 100 like the bases (Petr, 2026-11-12); total stays 2450, carcass 2350.
           PlinthHeight: 0.10
@@ -1620,6 +1668,11 @@ furniture:
     PropertySets:
       - Name: Pset_KitchenRun
         Properties:
+          # Petr, 2026-11-22 c: "ok, assume laquered and add all the handles
+          # (voxtorp J style on drawers and hinged doors, plain 1cm overhang
+          # on all top cabinets)".
+          FrontGrip: J
+          FrontFinish: matt lacquered MDF (RAL 9001 cream)
           WorktopThickness: 0.0
           PlinthHeight: 0.0
   - id: FN-S2B

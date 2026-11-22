@@ -190,7 +190,7 @@ def test_wall_cabinets_have_hf_bifold_fronts_that_open_partly_folded():
         hang = math.degrees(upper.lift.angles[-1] + lower.lift.angles[-1])
         assert hang == pytest.approx(lower.props["OpenLowerAngle"], abs=0.1)
         assert -15.0 < hang < 0.0
-        assert lower.props["OpenBottomEdgeHeight"] == pytest.approx(1.991, abs=0.003)
+        assert lower.props["OpenBottomEdgeHeight"] == pytest.approx(1.980, abs=0.003)  # 1.991 before the 10 overhang (2026-11-22 c)
         # Space above: at least Blum's Y for the 88° stop (28).
         assert upper.props["OpenAbove"] >= upper.props["BlumOpenAbove"] == pytest.approx(0.028)
         mechs = [run.part(f"{bay.id}-LIFTMECH-{s}") for s in ("L", "R")]
@@ -773,3 +773,29 @@ def test_led_panels_routed_into_the_wall_cabinet_bottoms():
     assert [round(m[1] - m[0]) for m in fw.modules] == [495, 495, 495, 495, 416]
     (fd,) = dh.led_fields
     assert fd.diffuser[1] - fd.diffuser[0] == pytest.approx(2608.0)  # 3 play each end
+
+
+def test_j_grips_and_wall_front_overhang():
+    """Petr, 2026-11-22 c: VOXTORP-style J grips on drawers and hinged doors
+    (top edge; tall doors the latch edge), 10 mm overhang on the wall cabinets."""
+    import ground_floor
+    parts = {p.id: (r, p) for r in kc.runs(ground_floor.load_furnishings()) for p in r.parts}
+    _r, d = parts["SF-I600a-D1"]
+    (g,) = d.grips
+    assert d.props["Grip"] == "J top"
+    a0, a1, c0, c1, z0, z1 = g.bounds()
+    face = d.drawer.front[2]
+    assert z1 > d.drawer.front[5] and z0 == pytest.approx(d.drawer.front[5] - 28.0)  # the cup's bottom
+    assert c1 == pytest.approx(face + 14.0)  # up to the 4 back wall of the 18 front
+    assert any(len(sg) == 3 for sg in g.segments)  # rounded: arcs
+    # The lip: face material up to the crest, 21 below the edge; no undercut.
+    at_face = [q for q in g.profile if abs(q[0] - face) < 1e-6]
+    assert min(q[1] for q in at_face) == pytest.approx(d.drawer.front[5] - 22.0)  # crest 21 + R1
+    _r, door = parts["SF-T2-DOOR1"]
+    assert door.props["Grip"] == "J side"
+    g = door.grips[0].bounds()
+    assert g[1] - g[0] == pytest.approx(29.0) and g[4] < door.boxes[0][4]  # 28 cup + 1 overcut
+    assert not parts["SF-B800-D1"][1].grips and not parts["SF-LB-S1-FRONT"][1].grips
+    for lift in ("SF-BH800-LIFT2", "SF-DH-S1-LIFT2"):
+        assert parts[lift][1].boxes[0][4] == pytest.approx(1550.0)
+    assert parts["SF-BH800-LIFT1"][1].boxes[0][5] == pytest.approx(2448.5)

@@ -221,6 +221,20 @@ class _Writer:
             Depth=z1 - z0,
         )
 
+    def grip_prism(self, grip):
+        """A J grip (``kc.Grip``): its profile extruded along a or z."""
+        pts = [self.m.create_entity("IfcCartesianPoint", Coordinates=(float(x) / 1000.0, float(y) / 1000.0))
+               for x, y in grip.profile]
+        profile = self.m.create_entity("IfcArbitraryClosedProfileDef", ProfileType="AREA",
+                                       OuterCurve=self.m.create_entity("IfcPolyline", Points=pts + pts[:1]))
+        if grip.axis == "a":  # profile x = c, y = z; extrude along a
+            place = self.m.create_entity("IfcAxis2Placement3D", Location=self.point(grip.s0 / 1000.0, 0.0, 0.0),
+                                         Axis=self.direction(1.0, 0.0, 0.0), RefDirection=self.direction(0.0, 1.0, 0.0))
+        else:  # profile x = a, y = c; extrude along z
+            place = self.m.create_entity("IfcAxis2Placement3D", Location=self.point(0.0, 0.0, grip.s0 / 1000.0))
+        return self.m.create_entity("IfcExtrudedAreaSolid", SweptArea=profile, Position=place,
+                                    ExtrudedDirection=self.direction(0.0, 0.0, 1.0), Depth=(grip.s1 - grip.s0) / 1000.0)
+
     def shape(self, part: kc.Part):
         if part.shape == "cylinder":
             items = [self.cylinder(part.boxes[0])]
@@ -235,6 +249,14 @@ class _Writer:
         items = [self.extrusion(b, v) for b, v in _layers(part.boxes[0], part.voids)]
         items += [self.extrusion(b) for b in part.boxes[1:]]
         kind = "SweptSolid"
+        if part.grips:
+            # The routed J grip (FrontGrip): the front less each grip box.
+            front = items[0]
+            for grip in part.grips:
+                front = self.m.create_entity("IfcBooleanResult", Operator="DIFFERENCE",
+                                             FirstOperand=front, SecondOperand=self.grip_prism(grip))
+            items[0] = front
+            kind = "CSG"
         if part.cuts:
             # Mitre cuts (the island's 45 degree joints): each item less
             # every triangular prism.
