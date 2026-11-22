@@ -142,15 +142,15 @@ KITCHEN = (
     ("SF-T2", "systemFurniture", "TallCabinet", [20.404, 15.0], None, 0.6, 0.6, 2.45, "R", None),
     ("SF-T3", "systemFurniture", "TallCabinet", [21.004, 15.0], None, 0.6, 0.6, 2.45, None, None),
     ("SF-T4", "systemFurniture", "TallCabinet", [21.604, 15.0], None, 0.546, 0.6, 2.45, None, None),
-    ("SF-I500a", "systemFurniture", "BaseCabinet", [20.5, 13.8], [0.0, -1.0], 0.5, 0.586, 0.93, None, None),
-    ("SF-I600a", "systemFurniture", "BaseCabinet", [20.5, 13.3], [0.0, -1.0], 0.607, 0.586, 0.93, None, None),
-    ("SF-I500b", "systemFurniture", "BaseCabinet", [20.5, 12.693], [0.0, -1.0], 0.481, 0.586, 0.93, None, None),
-    ("SF-I600b", "systemFurniture", "BaseCabinet", [20.5, 12.212], [0.0, -1.0], 0.607, 0.586, 0.93, None, None),
-    ("SF-I300", "systemFurniture", "BaseCabinet", [20.5, 11.605], [0.0, -1.0], 0.305, 0.586, 0.93, None, None),
-    ("SF-E600a", "systemFurniture", "BaseCabinet", [21.672, 13.175], [0.0, 1.0], 0.625, 0.586, 0.93, None, None),
-    ("SF-E600b", "systemFurniture", "BaseCabinet", [21.672, 12.55], [0.0, 1.0], 0.625, 0.586, 0.93, None, None),
-    ("SF-E600c", "systemFurniture", "BaseCabinet", [21.672, 11.925], [0.0, 1.0], 0.625, 0.586, 0.93, None, None),
-    ("SF-E700", "systemFurniture", "BaseCabinet", [21.672, 11.3], [0.0, 1.0], 0.625, 0.586, 0.93, None, None),
+    ("SF-I500a", "systemFurniture", "BaseCabinet", [20.5, 13.8], [0.0, -1.0], 0.5, 0.567, 0.93, None, None),
+    ("SF-I600a", "systemFurniture", "BaseCabinet", [20.5, 13.3], [0.0, -1.0], 0.607, 0.567, 0.93, None, None),
+    ("SF-I500b", "systemFurniture", "BaseCabinet", [20.5, 12.693], [0.0, -1.0], 0.481, 0.567, 0.93, None, None),
+    ("SF-I600b", "systemFurniture", "BaseCabinet", [20.5, 12.212], [0.0, -1.0], 0.607, 0.567, 0.93, None, None),
+    ("SF-I300", "systemFurniture", "BaseCabinet", [20.5, 11.605], [0.0, -1.0], 0.305, 0.567, 0.93, None, None),
+    ("SF-E600a", "systemFurniture", "BaseCabinet", [21.653, 13.175], [0.0, 1.0], 0.625, 0.586, 0.93, None, None),
+    ("SF-E600b", "systemFurniture", "BaseCabinet", [21.653, 12.55], [0.0, 1.0], 0.625, 0.586, 0.93, None, None),
+    ("SF-E600c", "systemFurniture", "BaseCabinet", [21.653, 11.925], [0.0, 1.0], 0.625, 0.586, 0.93, None, None),
+    ("SF-E700", "systemFurniture", "BaseCabinet", [21.653, 11.3], [0.0, 1.0], 0.625, 0.586, 0.93, None, None),
     ("SF-A250", "systemFurniture", "BaseCabinet", [19.4, 13.0], [0.0, 1.0], 0.25, 0.6, 0.93, None, None),
     ("SF-AH850", "systemFurniture", "WallCabinet", [19.15, 13.0], [0.0, 1.0], 0.85, 0.35, 0.89, None, 1.56),
     ("SF-B800", "systemFurniture", "BaseCabinet", [19.4, 12.2], [0.0, 1.0], 0.8, 0.6, 0.93, None, None),
@@ -482,8 +482,9 @@ def test_living_room_boxes_follow_plan_v3():
     assert tv[5] - tv[2] == pytest.approx(1.277, abs=1e-6)
 
     table = _world_box(next(row for row in furnishing_records() if row["id"] == "FN-GATTA"))
-    # The island moved 68 west on 2026-11-20 (east face 21.672); the table did not.
-    assert table[0] - 21.672 == pytest.approx(1.415, abs=1e-6)
+    # The island moved 68 west on 2026-11-20 (east face 21.672) and its west
+    # row got 19 shallower on 2026-11-22 (t803u, east face 21.653); the table did not.
+    assert table[0] - 21.653 == pytest.approx(1.434, abs=1e-6)
     assert 25.52 - table[3] == pytest.approx(1.333, abs=1e-6)
     assert table[5] - table[2] == pytest.approx(0.76, abs=1e-6)
 
