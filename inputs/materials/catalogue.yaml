@@ -131,9 +131,12 @@
       # The dining and living bases, every part (2026-11-20).
       - {label: cabinet, id_pattern: "^(SF-(DN|DN70|F05[23]|LB|TC)|KR-(DN|LB|TC))-"}
       # The west run's end panels (Petr, 2026-11-20 f: "sides of western
-      # cabinet are cream color wood, not silestone") and the tall corner
-      # cabinet SF-TC, every part (2026-11-20 f, was natural oak).
-      - {label: cabinet, ids: [KR-WEST-CLAD-N, KR-WEST-CLAD-S, SF-TC]}
+      # cabinet are cream color wood, not silestone"): since 2026-11-22 the
+      # carcass end side and the dishwasher slot's end panel (the 20 mm
+      # claddings KR-WEST-CLAD-N/-S are gone). The END-[NSEW] pattern above
+      # catches them too; listed so a pattern change can't lose them. The
+      # tall corner cabinet SF-TC, every part (2026-11-20 f, was natural oak).
+      - {label: cabinet, ids: [KR-WEST-END-S, KR-WEST-NICHE-END-N, SF-TC]}
       - {label: appliance, ids: [EA-SBD6ECX]}
   base_color: "#e6d2b5"
   roughness: 0.35

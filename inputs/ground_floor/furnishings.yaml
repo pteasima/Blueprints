@@ -682,13 +682,15 @@ systemFurniture:
           Width: "(SF-I500a.Y - (SF-I300.Y - SF-I300.Width)) / 4"
   - id: SF-A250
     Name: "Západ 250 úklid"
-    Description: "Section A, south side. Cleaning pull-out, 250. Left when facing the west wall."
+    Description: "Section A, south side. Cleaning pull-out, 232 (250 until 2026-11-22: the dishwasher slot's 18 end panel came out of it). Left when facing the west wall."
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
     Origin: [19.4, 13.0]
     RefDirection: [0, 1]
-    Width: 0.25
+    # 2026-11-22 (FlushEnds): 250 -> 232, so the 600 dishwasher slot and its
+    # 18 end panel fit before the OP25 jamb (y 13.85).
+    Width: 0.232
     Depth: 0.6
     Height: 0.93
     PropertySets:
@@ -704,11 +706,11 @@ systemFurniture:
           Contents: "úklid (do myčky, jar, odmašťovač, houbičky)"
   - id: SF-A600
     Name: "Západ 600 myčka"
-    Description: "Section A, north side. The 600 dishwasher slot of the 850 section, y 13.25–13.85. No carcass of its own: the worktop runs over it and SF-A250's end side is its south wall. The Bosch SBD6ECX12E stands in it. Right when facing the west wall."
+    Description: "Section A, north side. The 600 dishwasher slot of the 850 section, y 13.232–13.832 (13.25–13.85 until 2026-11-22). No carcass of its own: the worktop runs over it, SF-A250's end side is its south wall and the 18 end panel KR-WEST-NICHE-END-N its north wall. The Bosch SBD6ECX12E stands in it. Right when facing the west wall."
     PredefinedType: USERDEFINED
     ObjectType: ApplianceNiche
     ContainedInStructure: SP-1.02
-    Origin: [19.4, 13.25]
+    Origin: [19.4, 13.232]
     RefDirection: [0, 1]
     Width: 0.6
     Depth: 0.6
@@ -1228,7 +1230,8 @@ electricAppliances:
     Description: "Fully integrated dishwasher, 598×550×865, in the north 600 of section A. Right when facing the west wall. Back on the wall, 1 mm clear of each side of the niche."
     PredefinedType: DISHWASHER
     ContainedInStructure: SP-1.02
-    Origin: [19.35, 13.251]
+    # 2026-11-22: 18 south with the slot (13.251 before).
+    Origin: [19.35, 13.233]
     RefDirection: [0, 1]
     Width: 0.598
     Depth: 0.55
@@ -1444,7 +1447,7 @@ furniture:
           LegInset: 0.08
   - id: KR-WEST
     Name: "Západní linka"
-    Description: "West-wall base monoblock between OP24 and OP25: C850, B800, A250 and the dishwasher slot. Silestone worktop, 20 mm overhang at the front, cream wood end panels on both ends (Silestone until 2026-11-20 f), 20 mm Silestone backsplash (12 until 2026-11-20 f)."
+    Description: "West-wall base monoblock between OP24 and OP25: C850, B800, A250 and the dishwasher slot. Silestone worktop, 20 mm overhang at the front, cream wood end panels on both ends (Silestone until 2026-11-20 f), flush with the OP24 / OP25 jambs since 2026-11-22: the carcass end side in the south, an 18 panel past the dishwasher slot in the north (20 mm claddings outside before), 20 mm Silestone backsplash (12 until 2026-11-20 f)."
     PredefinedType: USERDEFINED
     ObjectType: KitchenRun
     ContainedInStructure: SP-1.02
@@ -1481,14 +1484,14 @@ furniture:
           Backsplash: true
           BacksplashMaterial: "Silestone Blanco Maple"
           # Petr, 2026-11-12: "do the sides of the west run of cabinets".
-          # Both ends are free (door openings OP24 / OP25), so both are clad.
-          # Petr, 2026-11-20 f: "sides of western cabinet are cream color
-          # wood, not silestone (sides of island stay silestone)". The
-          # kitchen cream; 20 thick so the stone top's ends stay put (guess:
-          # the panel thickness, not linked to the stone any more).
-          CladEnds: true
-          CladdingThickness: 0.02
-          CladdingMaterial: "kitchen cream"
+          # Both ends are free (door openings OP24 / OP25). Petr, 2026-11-20 f:
+          # "sides of western cabinet are cream color wood, not silestone".
+          # Until 2026-11-22 two 20 mm claddings outside the bays, with the
+          # top 20 over each: they stood 20 into both pocket-door openings.
+          # Petr, 2026-11-22 (option 2): the carcass end sides are the cream
+          # end panels, flush with the wall segment y 11.35-13.85; the top
+          # stops flush. The dishwasher end gets an 18 panel (FlushEnds).
+          FlushEnds: true
   - id: KR-DN
     Name: "Jídelní linka"
     Description: "North dining base run: SF-F052, SF-DN, SF-F053 (SF-DN70 removed 2026-11-20 c). Cream boxes (oak until 2026-11-20) under a 20 mm Silestone Blanco Maple worktop, no front overhang (20 until 2026-11-20 f): top and boxes both 450 deep, 430 of the top visible in front of the 20 mm backsplash, top 930. No exposed ends: west abuts SF-T4, east abuts SF-LB (KR-LB, oak-veneer top, also 930)."
