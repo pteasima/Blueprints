@@ -50,7 +50,7 @@ def test_led_panel_lights_follow_the_wall_cabinets():
 
     doc = load_document(ROOT / "inputs" / "ground_floor" / "electrical-1.02.yaml")
     lights = {r["id"]: r for r in doc["lightFixtures"]}
-    west = panel_rects(lights["C181-S"])
+    west = panel_rects(lights["C180-S"])
     dining = panel_rects(lights["NC-1.02-S-2"])
     assert len(west) == 1 and len(dining) == 1  # one panel per run (PR #138: "a single panel")
     for x0, y0, z0, x1, y1, z1 in west + dining:

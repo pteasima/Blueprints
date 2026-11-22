@@ -445,17 +445,22 @@ lightFixtures:
           CableSpec: CYKY 4x1.5
           CableLength: 3
           Note: napojen na 178
+  # Petr, 2026-11-22 c: "theres a panel light very close by to the one you
+  # added in the kitchen. Can we remove the extra one and make sure the cable
+  # number is configured well?"
+  # The plan's "Panel 250x2400 (~200 W)", mark 3(180), is drawn exactly over
+  # the west wall cabinets (FixturePlan.pdf), and 250 x 2400 is their
+  # underside: it IS the under-cabinet LED panel. #120 read it as a ceiling
+  # panel (Origin 18.907, 11.36, Elevation 3.9214, 0.25 x 2.4 x 0.03, just
+  # above the cabinets); 2026-11-22 a then put the panel on cable 181 as well,
+  # so there were two. Now one light: this one, cable 180 (Soupis: CYKY
+  # 4x2.5, 4 m, panel 1), on the cabinets. The ceiling box is gone.
   - id: C180-S
     Name: Světlo 180
-    Description: "Plan mark 3(180). Plan symbol Panel 250x2400. Plan: \"Panel 250x2400 (~200 W)\". Flat box touching the sloped ceiling at its low end."
-    PredefinedType: POINTSOURCE
-    ObjectType: Panel
+    Description: "Plan mark 3(180). Plan: \"Panel 250x2400 (~200 W)\", drawn over the west wall cabinets: the LED panel in the underside of KR-WEST-H (SF-CH850, SF-BH800, SF-AH850), one continuous field behind one 3 mm opal diffuser, flush at 1560 (Petr, PR #138: “a single panel even accross where the cabinets meet”). Until 2026-11-22 c a ceiling panel at 3.92. No box; the viewer draws the diffuser from PanelRun (the kitchen model's LED field). See kitchen-cabinets.md, LED panels under the wall cabinets."
+    PredefinedType: USERDEFINED
+    ObjectType: LedPanel
     ContainedInStructure: SP-1.02
-    Origin: [18.907, 11.36]
-    Elevation: 3.9214
-    Width: 0.25
-    Depth: 2.4
-    Height: 0.03
     PropertySets:
       - Name: Pset_YamlIfc
         Properties:
@@ -464,19 +469,14 @@ lightFixtures:
           DeviceCode: "S"
           CableSpec: CYKY 4x2.5
           CableLength: 4
+          PanelRun: KR-WEST-H
+  # 2026-11-22 a moved this onto the cabinet bottoms; 2026-11-22 c gives the
+  # panel back to cable 180 (above) and this back its #120 plan strip.
   - id: C181-S
     Name: Světlo 181
-    # Petr, 2026-11-22 a: "lets do the led panels like we discussed, on the
-    # underside of the kitchen (west) top cabinets [...] (as far as I
-    # remember, the kitchen one might already exist but is placed wrong".
-    # Was a LedStrip on Path "19.430,11.310,1.530;19.430,13.780,1.530" (at
-    # the worktop front edge, 280 in front of the cabinet fronts, 30 under
-    # the cabinets); now the LED panel fields routed into the KR-WEST-H
-    # cabinet bottoms (one per cabinet, one circuit). The id and GlobalId
-    # are kept.
-    Description: "Plan mark 2(181). LED panels in the undersides of the west wall cabinets (KR-WEST-H: SF-CH850, SF-BH800, SF-AH850), one continuous field across the run behind one 3 mm opal diffuser, flush at 1560 (Petr, PR #138: “a single panel even accross where the cabinets meet”). Soupis: into a box in the pre-wall, position after the sliding-door work. No box; the viewer draws the diffusers from PanelRun (the kitchen model's LED fields). See kitchen-cabinets.md, LED panels under the wall cabinets."
+    Description: "Plan mark 2(181). The plan's strip line about 260 in front of the west wall cabinets (the worktop front edge); #120 put it at 1.530, under the cabinets. Not the under-cabinet panel (that is C180-S, 2026-11-22 c). Soupis: into a box in the pre-wall, position after the sliding-door work. No box; the viewer draws the legs from Path (x,y,z points; | separates runs)."
     PredefinedType: USERDEFINED
-    ObjectType: LedPanel
+    ObjectType: LedStrip
     ContainedInStructure: SP-1.02
     PropertySets:
       - Name: Pset_YamlIfc
@@ -487,7 +487,8 @@ lightFixtures:
           CableSpec: CYKY 4x1.5
           CableLength: 4
           Note: do krabice v predstene (pozice bude upresnena po realizaci soupacek), mozno vest podlahou ale omezit soubeh se zasuvkami
-          PanelRun: KR-WEST-H
+          Path: "19.430,11.310,1.530;19.430,13.780,1.530"
+          Question: "Cable 181: the plan's thin strip line about 260 in front of the west wall cabinets (the worktop's front edge). Now that the under-cabinet panel is cable 180, what is 181: a strip at the worktop front, a plinth strip like 182, or spare? Height 1.530 is #120's guess."
   - id: C182-S
     Name: Světlo 182
     Description: "Plan mark 2(182). Island strips on both long sides; Soupis: from a floor box. Plinth height 0.10 assumed. No box; the viewer draws the legs from Path (x,y,z points; | separates runs)."
@@ -620,7 +621,7 @@ lightFixtures:
   # them some temporary cable names and I'll figure it out later".
   - id: NC-1.02-S-2
     Name: Světlo TEMP-1.02-DH
-    Description: "Not on the plan (added 2026-11-22 a). LED panels in the underside of the dining wall cabinet SF-DH (KR-DH), one continuous field behind one 3 mm opal diffuser, flush at 1560. Temporary cable name TEMP-1.02-DH; panel, spec and route are guesses. No box; the viewer draws the diffusers from PanelRun. See kitchen-cabinets.md, LED panels under the wall cabinets."
+    Description: "Not on the plan (added 2026-11-22 a). LED panels in the underside of the dining wall cabinet SF-DH (KR-DH), one continuous field behind one 3 mm opal diffuser, flush at 1560. **MISSING CABLE: not in the Soupis, it was forgotten; to be added on site.** Temporary cable name TEMP-1.02-DH; panel, spec and route are guesses. No box; the viewer draws the diffusers from PanelRun. See kitchen-cabinets.md, LED panels under the wall cabinets."
     PredefinedType: USERDEFINED
     ObjectType: LedPanel
     ContainedInStructure: SP-1.02
@@ -630,10 +631,10 @@ lightFixtures:
           DeviceCode: "S"
           TempCable: TEMP-1.02-DH
           Panel: 1
-          CableSpec: CYKY 4x1.5
+          CableSpec: CYKY 4x2.5
           PanelRun: KR-DH
-          CableQuestion: No cable yet (temporary name TEMP-1.02-DH)
-          Question: "TEMP-1.02-DH, the LED panels under SF-DH: which cable, panel and route? (Guess: CYKY 4x1.5 from panel 1 like C181, e.g. into the deep box behind C185-V where 186-188 end.)"
+          CableQuestion: "MISSING CABLE, add on site before the pre-wall and cladding are closed (temporary name TEMP-1.02-DH; not in the Soupis)"
+          Question: "TEMP-1.02-DH, the LED panel under SF-DH, has no cable: it was forgotten and must be pulled on site. Guess: CYKY 4x2.5 like C180 (24 V, about the same 2.6 m panel, ~8 A), from panel 1 (or from the deep box behind C185-V where 186-188 end) to the Ø10 hole in the SF-DH bottom at x 23.800, y 15.544. Give it a Soupis number."
 switchingDevices:
   - id: C185-V
     Name: Vypínač 185
