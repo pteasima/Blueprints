@@ -547,6 +547,9 @@
       profiles.
     selectors:
       - {label: furniture, ids: [RAIL-S, RAIL-W]}
+      # The aluminium backing plates of the LED panels routed into the wall
+      # cabinet bottoms (2026-11-22 a); Petr glues the LED sheets onto them.
+      - {label: appliance, id_pattern: "-LED\\d+-PLATE$"}
   base_color: "#b9bbbd"
   roughness: 0.4
   metalness: 1.0
@@ -554,6 +557,22 @@
   status: assumed
   source: []
   notes: Assumed standard natural-anodised profiles; no product is named.
+
+- id: led-sheet-smd
+  name: Cuttable LED panel sheet (SMD dots on a white PCB)
+  applies_to:
+    description: >-
+      The LED sheets in the wall-cabinet bottoms (2026-11-22 a), seen only
+      with the opal diffuser off: Petr's sample panels, 245 x 495 (guess:).
+    selectors:
+      - {label: appliance, id_pattern: "-LED\\d+-SHEET$"}
+  base_color: "#ece8d8"
+  roughness: 0.5
+  metalness: 0.0
+  tile_size_m: [0.1, 0.1]
+  status: assumed
+  source: []
+  notes: No product is named; Petr has samples. Assumed a white PCB with yellow phosphor dots.
 
 # --------------------------------------------------------------- kitchen appliances, metal
 

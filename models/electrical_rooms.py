@@ -10,6 +10,12 @@ Boxed devices become the extrusions ``yaml_ifc`` writes, as in
 their runs as ``x,y,z;x,y,z`` points, runs separated by ``|``, and the viewer
 gets one thin box per leg.
 
+LED panels under the wall cabinets (2026-11-22 a) have no box either:
+``Pset_YamlIfc.PanelRun`` names the kitchen run whose cabinet bottoms carry
+the LED fields (``Pset_KitchenRun.LedPanels``), and the light is drawn as
+those fields' opal diffusers, so it follows the cabinets
+(``models/kitchen_cabinet.py``, ``LedField``).
+
     python -m blueprints.export ground_floor
 """
 
@@ -80,6 +86,45 @@ def strip_runs(element: dict) -> list[list[tuple[float, float, float]]]:
     return runs
 
 
+_RUNS: dict | None = None
+
+
+def _kitchen_runs() -> dict:
+    global _RUNS
+    if _RUNS is None:
+        import ground_floor  # late: ground_floor imports this module
+        import kitchen_cabinet as kc
+
+        _RUNS = {r.id: r for r in kc.runs(ground_floor.load_furnishings())}
+    return _RUNS
+
+
+def panel_rects(element: dict) -> list[tuple[float, float, float, float, float, float]]:
+    """World boxes (x0, y0, z0, x1, y1, z1, metres) of the diffusers of a
+    ``PanelRun`` light, one per LED field. Empty when there is no PanelRun."""
+    run_id = _pset_props(element).get("PanelRun")
+    if not run_id:
+        return []
+    run = _kitchen_runs().get(str(run_id))
+    if run is None:
+        raise ValueError(f"{element['id']}: PanelRun {run_id} is not a kitchen run")
+    if not run.led_fields:
+        raise ValueError(f"{element['id']}: kitchen run {run_id} has no LED fields (Pset_KitchenRun.LedPanels)")
+    out = []
+    for f in run.led_fields:
+        a0, a1, c0, c1, z0, z1 = f.diffuser
+        pts = [run.frame.world(a, c, 0.0)[:2] for a in (a0, a1) for c in (c0, c1)]
+        xs = [q[0] for q in pts]
+        ys = [q[1] for q in pts]
+        out.append((min(xs) / MM, min(ys) / MM, z0 / MM, max(xs) / MM, max(ys) / MM, z1 / MM))
+    return out
+
+
+def _panel_parts(element: dict) -> list:
+    return [_axis_box((x0, y0, z0), (1.0, 0.0), (x1 - x0, y1 - y0, z1 - z0), element["id"])
+            for x0, y0, z0, x1, y1, z1 in panel_rects(element)]
+
+
 def _strip_parts(element: dict) -> list:
     """One thin box per leg, centred on the leg. Legs are level (one z)."""
     found = []
@@ -117,6 +162,7 @@ def room_parts(path: Path) -> list:
                 found.append(part)
     for element in doc.get("lightFixtures") or []:
         found.extend(_strip_parts(element))
+        found.extend(_panel_parts(element))
     return found
 
 

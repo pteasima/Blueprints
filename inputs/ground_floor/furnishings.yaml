@@ -1518,6 +1518,24 @@ furniture:
         Properties:
           WorktopThickness: 0.0
           PlinthHeight: 0.0
+          # Petr, 2026-11-22 a: "lets do the led panels like we discussed, on
+          # the underside of the kitchen (west) top cabinets, and the dining
+          # (north) top cabinets. [...] I want the underside of the cabinet to
+          # be a full led panel, with some reasonable padding. [...] Use the
+          # right thickness cabinet bottom so the panel can be routed into
+          # it." A 30 bottom (was 18), the panel field routed into its
+          # underside, underside unchanged at 1560 (see kitchen-cabinets.md
+          # "LED panels under the wall cabinets"; layer sizes are the
+          # Led* defaults in models/kitchen_cabinet.py).
+          LedPanels: true
+          BottomThickness: 0.030
+          # Petr, 2026-11-22 a (PR #138): "cant we make it a single panel
+          # even accross where the cabinets meet?" One bottom board, one
+          # pocket, one diffuser per run.
+          LedContinuous: true
+          # 3 play each end: the 2608 diffuser grows about 5.5 over 30 K
+          # (PMMA 70e-6/K).
+          LedRebatePlay: 0.003
   - id: KR-TC
     Name: "Rohová vysoká"
     Description: "The tall corner cabinet (SF-TC), a monoblock of one (2026-11-19), cream since 2026-11-20 f (was oak). On the floor like before."
@@ -1540,6 +1558,23 @@ furniture:
         Properties:
           WorktopThickness: 0.0
           PlinthHeight: 0.0
+          # Petr, 2026-11-22 a: "lets do the led panels like we discussed, on
+          # the underside of the kitchen (west) top cabinets, and the dining
+          # (north) top cabinets. [...] I want the underside of the cabinet to
+          # be a full led panel, with some reasonable padding. [...] Use the
+          # right thickness cabinet bottom so the panel can be routed into
+          # it." A 30 bottom (was 18), the panel field routed into its
+          # underside, underside unchanged at 1560 (see kitchen-cabinets.md
+          # "LED panels under the wall cabinets"; layer sizes are the
+          # Led* defaults in models/kitchen_cabinet.py).
+          LedPanels: true
+          BottomThickness: 0.030
+          # Petr, 2026-11-22 a (PR #138): "cant we make it a single panel
+          # even accross where the cabinets meet?" One bottom board, one
+          # pocket, one diffuser per run.
+          LedContinuous: true
+          # 2.75 play each end: the 2408 diffuser grows about 5 over 30 K.
+          LedRebatePlay: 0.00275
   - id: KR-TALL-W
     Name: "Vysoká u zdi"
     Description: "Tall cabinet T1 between the west wall and the fridge, a monoblock of one."

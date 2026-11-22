@@ -739,3 +739,37 @@ def test_tall_run_east_side_kickboard():
     # It meets the dining kickboard face to face at x 22.150.
     dn = _runs()["KR-DN"].part("KR-DN-PLINTH-S").boxes[0]
     assert run.frame.world(box[1], 0.0, 0.0)[0] == pytest.approx(_runs()["KR-DN"].frame.world(dn[0], 0.0, 0.0)[0])
+
+
+def test_led_panels_routed_into_the_wall_cabinet_bottoms():
+    # Petr, 2026-11-22 a: "I want the underside of the cabinet to be a full
+    # led panel, with some reasonable padding. [...] Use the right thickness
+    # cabinet bottom so the panel can be routed into it." And on PR #138:
+    # "cant we make it a single panel even accross where the cabinets meet?"
+    runs_ = _runs()
+    west, dh = runs_["KR-WEST-H"], runs_["KR-DH"]
+    assert len(west.led_fields) == 1 and len(dh.led_fields) == 1
+    for run in (west, dh):
+        assert run.carcass_z0 == pytest.approx(1560.0)  # the underside does not move
+        (f,) = run.led_fields
+        bottoms = [p for p in run.parts if p.role == "Bottom"]
+        assert len(bottoms) == 1  # one board under the whole run
+        lo = min(b[4] for b in bottoms[0].boxes)
+        hi = max(b[5] for b in bottoms[0].boxes)
+        assert (lo, hi) == (pytest.approx(1560.0), pytest.approx(1590.0))  # 30 bottom
+        assert f.diffuser[4:] == (pytest.approx(1560.0), pytest.approx(1563.0))  # flush, 3 mm
+        assert f.pocket[5] == pytest.approx(1575.0)  # 15 deep, 15 web left
+        assert all(f.plate[0] - 1e-6 <= m[0] and m[1] <= f.plate[1] + 1e-6 for m in f.modules)
+        assert all(b[1] - b[0] <= 1000.0 + 1e-6 for b in f.plates)  # butted plates
+        assert sum(b[1] - b[0] for b in f.plates) == pytest.approx(f.plate[1] - f.plate[0])
+        # The dividers stand on the bottom; the end sides run down past it.
+        for p in run.parts:
+            if p.role == "Divider":
+                assert p.boxes[0][4] == pytest.approx(1590.0), p.id
+            if p.role == "EndSide":
+                assert p.boxes[0][4] == pytest.approx(1560.0), p.id
+    (fw,) = west.led_fields
+    assert fw.diffuser[1] - fw.diffuser[0] == pytest.approx(2408.5)  # 2.75 play each end
+    assert [round(m[1] - m[0]) for m in fw.modules] == [495, 495, 495, 495, 416]
+    (fd,) = dh.led_fields
+    assert fd.diffuser[1] - fd.diffuser[0] == pytest.approx(2608.0)  # 3 play each end

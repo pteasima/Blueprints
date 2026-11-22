@@ -57,6 +57,10 @@ PART_CLASS = {
     "LiftArm": ("IfcSystemFurnitureElement", "USERDEFINED"),
     # Door, Lift (a lift-up front), Shelf, Board, Filler, Packer: PANEL (DEFAULT_CLASS).
     "Body": ("IfcSystemFurnitureElement", "USERDEFINED"),  # a whole box bay (Carcass: Box)
+    # LED panel parts in a wall-cabinet bottom (2026-11-22 a): the aluminium
+    # plate and the LED sheet. The diffuser is the room's IfcLightFixture.
+    "LedPlate": ("IfcSystemFurnitureElement", "USERDEFINED"),
+    "LedModule": ("IfcSystemFurnitureElement", "USERDEFINED"),
     # The hob is an appliance, not a piece of the carcass: it is contained in
     # the room like the dishwasher and only joins its bay's group.
     "Hob": ("IfcElectricAppliance", "ELECTRICCOOKER"),
