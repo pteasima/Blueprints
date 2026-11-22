@@ -11,6 +11,11 @@ exactly n × 42 + 1 by m × 42 + 1:
 - width: the nearest n (a shared divider moves, so the clear width and the
   inside change 1:1 with the bay width);
 - depth: always round down (floor m): the bay gets shallower, never deeper.
+  A bay with ``Pset_Drawers.GridfinityFitDepth`` cuts its box instead.
+
+Then, as modelled: every drawer with a baseplate (main drawers, or the
+inner drawers where ``GridfinityMain`` is false), its box length, inside,
+cells and leftover.
 
 It writes nothing. Change the yaml bay boxes by hand with its numbers (and
 let the absorbing bays named on the command line take the difference), then
@@ -60,13 +65,28 @@ def main() -> None:
             dd = m * pitch + play - idp
             total += dw
             depth_cuts.append(dd)
-            ok = "ok" if abs(dw) < 0.5 and abs(dd) < 0.5 else "CHANGE"
+            cut_box = kc.gridfinity_fit_depth(bay.element)
+            ok = "ok" if abs(dw) < 0.5 and (abs(dd) < 0.5 or cut_box) else "CHANGE"
+            if cut_box and abs(dd) >= 0.5:
+                ok += f" (box cut {dd:+g}, GridfinityFitDepth)"
+                dd = 0.0
             print(f"  {bay.id:9} width {bay.width:6.1f} inside {iw:6.1f} x {idp:6.1f} -> {n:2d} x {m:2d} "
                   f"needs {n * pitch + play:g} x {m * pitch + play:g}: bay width {dw:+g}, depth {dd:+g}  {ok}")
         if abs(total) >= 0.5:
             print(f"  run length {total:+g}: {a.absorb} takes {-total:+g}")
         if depth_cuts and len({round(d, 3) for d in depth_cuts}) > 1:
             print("  depth cuts differ between bays; use the deepest cut for the row")
+        # As modelled (2026-11-22 e): which drawers carry a baseplate, box
+        # length, inside, cells and the slack left over.
+        print("  as modelled (baseplate drawers):")
+        for part in run.parts:
+            dr = part.drawer
+            if dr is None or not dr.grid:
+                continue
+            n, sw = kc.gridfinity_cells(p, dr.inside[0])
+            m, sd = kc.gridfinity_cells(p, dr.inside[1])
+            print(f"    {part.id:16} {part.role:11} box {abs(dr.box[3] - dr.box[2]):5.0f} deep, inside "
+                  f"{dr.inside[0]:5.0f} x {dr.inside[1]:5.0f} -> {n:2d} x {m:2d}, slack {sw:+.0f} / {sd:+.0f}")
 
 
 if __name__ == "__main__":

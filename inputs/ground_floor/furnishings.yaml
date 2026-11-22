@@ -392,6 +392,10 @@ systemFurniture:
         Properties:
           NominalHeights: "0.1 0.1 *"
           Gridfinity: true
+          # Petr, 2026-11-22 (t795u): "for the island west side, there are no inner
+          # drawers, so the drawer depth can match gridfinity." The box is cut to
+          # a whole number of 42 cells deep (inside m x 42 + 1).
+          GridfinityFitDepth: true
           Contents: "nože; nářadí; dole nevím"
   - id: SF-I500b
     Name: "Ostrov západ 500"
@@ -416,6 +420,10 @@ systemFurniture:
         Properties:
           NominalHeights: "0.1 0.1 *"
           Gridfinity: true
+          # Petr, 2026-11-22 (t795u): "for the island west side, there are no inner
+          # drawers, so the drawer depth can match gridfinity." The box is cut to
+          # a whole number of 42 cells deep (inside m x 42 + 1).
+          GridfinityFitDepth: true
           Contents: "koření; oleje, octy, mouky, cukry, dochucovadla; hrnce"
   - id: SF-I600b
     Name: "Ostrov západ 600 varná deska"
@@ -439,6 +447,10 @@ systemFurniture:
         Properties:
           NominalHeights: "0.2 0.1 *"
           Gridfinity: true
+          # Petr, 2026-11-22 (t795u): "for the island west side, there are no inner
+          # drawers, so the drawer depth can match gridfinity." The box is cut to
+          # a whole number of 42 cells deep (inside m x 42 + 1).
+          GridfinityFitDepth: true
           Contents: "příbory; vařečky, stěrky, naběračky; pánve"
       # Miele KM 8665 FL (Petr, 2026-11-11). Sizes: Miele installation
       # manual pp. 23, 29, see kitchen-cabinets.md "Induction hob".
@@ -518,6 +530,10 @@ systemFurniture:
       - Name: Pset_Drawers
         Properties:
           Gridfinity: true
+          # Petr, 2026-11-22 (t795u): "for the island east side, we want gridfinity on
+          # the inner drawer, the bottom main one doesnt need gridfinity (remove the
+          # gridfinity plate too)".
+          GridfinityMain: false
           # Petr, 2026-11-20 c: "Also, give them Merivobox drawers." Blum
           # MERIVOBOX, box height F (256, the tallest; a MAXIMERA-like 700
           # box until now). Inside LW − 51 by NL − 42 (kitchen-cabinets.md).
@@ -554,6 +570,10 @@ systemFurniture:
       - Name: Pset_Drawers
         Properties:
           Gridfinity: true
+          # Petr, 2026-11-22 (t795u): "for the island east side, we want gridfinity on
+          # the inner drawer, the bottom main one doesnt need gridfinity (remove the
+          # gridfinity plate too)".
+          GridfinityMain: false
           # Petr, 2026-11-20 c: "Also, give them Merivobox drawers." Blum
           # MERIVOBOX, box height F (256, the tallest; a MAXIMERA-like 700
           # box until now). Inside LW − 51 by NL − 42 (kitchen-cabinets.md).
@@ -590,6 +610,10 @@ systemFurniture:
       - Name: Pset_Drawers
         Properties:
           Gridfinity: true
+          # Petr, 2026-11-22 (t795u): "for the island east side, we want gridfinity on
+          # the inner drawer, the bottom main one doesnt need gridfinity (remove the
+          # gridfinity plate too)".
+          GridfinityMain: false
           # Petr, 2026-11-20 c: "Also, give them Merivobox drawers." Blum
           # MERIVOBOX, box height F (256, the tallest; a MAXIMERA-like 700
           # box until now). Inside LW − 51 by NL − 42 (kitchen-cabinets.md).
@@ -626,6 +650,10 @@ systemFurniture:
       - Name: Pset_Drawers
         Properties:
           Gridfinity: true
+          # Petr, 2026-11-22 (t795u): "for the island east side, we want gridfinity on
+          # the inner drawer, the bottom main one doesnt need gridfinity (remove the
+          # gridfinity plate too)".
+          GridfinityMain: false
           # Petr, 2026-11-20 c: "Also, give them Merivobox drawers." Blum
           # MERIVOBOX, box height F (256, the tallest; a MAXIMERA-like 700
           # box until now). Inside LW − 51 by NL − 42 (kitchen-cabinets.md).

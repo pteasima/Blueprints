@@ -157,7 +157,14 @@ IKEA_DEFAULTS_MM = {
     # and 80 wide. Our carcass loses the same from its own sides.
     "DrawerInnerWidthDeduction": 84.0,  # clear width between the sides − drawer inside width (IKEA)
     "DrawerInnerDepthDeduction": 96.0,  # side depth (front edge to the back) − drawer inside depth (IKEA)
-    "BoxWall": 19.0,  # drawn box side / front / back: (542 − 504) / 2, MAXIMERA box 542 deep (IKEA)
+    "BoxWall": 19.0,  # drawn box side / back: (542 − 504) / 2, MAXIMERA box 542 deep (IKEA)
+    # Petr, 2026-11-22 (t795u): "we remove the useless frame frontsides". A
+    # main drawer is sides + back + bottom; the decor front closes the box
+    # (clips onto the sides), so there is no box front board behind it
+    # (``BoxFrontPanel`` 0; 19 = the old drawn box front). The box keeps its
+    # length (side depth − 96 + 2 × 19, IKEA), so the inside gains the 19.
+    # Inner drawers keep their own low front piece (``inner_drawer_boxes``).
+    "BoxFrontPanel": 0.0,
     "BoxBottomThickness": 16.0,  # drawn box bottom (guess; MAXIMERA's is particleboard)
     "BoxBottomOffset": 3.0,  # band bottom (above the carcass bottom board for the lowest) to box bottom (guess)
     # MAXIMERA side heights by "system height" (the front band it is sold for):
@@ -1434,21 +1441,32 @@ class _Builder:
                     ifloor = ib[4] + p["BoxBottomThickness"]
                     iboxes = inner_drawer_boxes(p, ib, dr.out)
                     igrid, iplate = None, []
-                    if dr.grid:
+                    # Its own front piece and back: inside = box − 2 walls deep.
+                    iw, idp = dr.inside[0], abs(ib[3] - ib[2]) - 2 * p["BoxWall"]
+                    if zone.kind == "drawer" and wants_gridfinity(bay.element):
                         ic0, ic1 = ib[2] + p["BoxWall"], ib[3] - p["BoxWall"]
-                        igrid = dr.grid
+                        igrid = (gridfinity_cells(p, iw)[0], gridfinity_cells(p, idp)[0])
                         iplate = gridfinity_baseplate(p, igrid[0], igrid[1], (ib[0] + ib[1]) / 2.0, (ic0 + ic1) / 2.0, ifloor)
+                    if igrid:
+                        isw, isd = gridfinity_cells(p, iw)[1], gridfinity_cells(p, idp)[1]
+                        if abs(isw) > TOL or abs(isd) > TOL:
+                            self.run.notes.append(f"open: {bay.id}-D{drawer_no}-I{k} inside {iw:g} x {idp:g} is "
+                                                  f"{isw:+g} / {isd:+g} off the Gridfinity {igrid[0]}x{igrid[1]} size "
+                                                  f"(scripts/gridfinity_fit.py)")
                     if coupled:
                         iboxes += latch_boxes(p, dr, ib)[1:]
                     idr = replace(dr, front=iboxes[0], box=ib, items=list(iplate), baseplate=list(iplate),
                                   grid=igrid, floor_z=ifloor,
-                                  inside=(dr.inside[0], dr.inside[1], ib[5] - ifloor))
+                                  inside=(iw, idp, ib[5] - ifloor))
                     self.add(Part(f"{bay.id}-D{drawer_no}-I{k}", f"Vnitřní šuplík {k}", "InnerDrawer",
                                   iboxes + iplate, drawer=idr,
                                   props={"Zone": zone.index, "Kind": "inner", "System": "Blum MERIVOBOX",
                                          "SideHeight": round((ib[5] - ib[4]) / 1000.0, 6), "Latched": coupled,
                                          "Latch": "Blum ZI7.0M07" if coupled else None, "Parent": outer.id,
-                                         "Gridfinity": f"{igrid[0]}x{igrid[1]}" if igrid else None}), bay)
+                                         "InsideWidth": round(iw / 1000.0, 6), "InsideDepth": round(idp / 1000.0, 6),
+                                         "Gridfinity": f"{igrid[0]}x{igrid[1]}" if igrid else None,
+                                         "GridfinitySlackWidth": round(gridfinity_cells(p, iw)[1] / 1000.0, 6) if igrid else None,
+                                         "GridfinitySlackDepth": round(gridfinity_cells(p, idp)[1] / 1000.0, 6) if igrid else None}), bay)
             elif zone.kind in ("door", "doors"):
                 leaves = _leaves(bay, p, zone, front_box)
                 for hinge, a0, a1 in leaves["doors"]:
@@ -2360,7 +2378,34 @@ def drawer_inside(bay: Bay, p: dict, back_y: float) -> tuple[float, float]:
         nl = merivobox_nl(p, side_depth)
         return (bay.clear_width - p["MerivoboxWidthDeduction"],
                 nl - p["MerivoboxBaseDeduction"] - p["MerivoboxBackThickness"])
-    return bay.clear_width - p["DrawerInnerWidthDeduction"], side_depth - p["DrawerInnerDepthDeduction"]
+    return (bay.clear_width - p["DrawerInnerWidthDeduction"],
+            drawer_box_length(bay, p, back_y) - p["BoxWall"] - p["BoxFrontPanel"])
+
+
+def drawer_box_length(bay: Bay, p: dict, back_y: float) -> float:
+    """The drawn drawer box's length (mm), back of the decor front to the
+    box back: MAXIMERA side depth − 96 + 2 × BoxWall (the IKEA 542 box in a
+    600 frame), MERIVOBOX the Blum inside + 2 × BoxWall (as drawn before)."""
+    side_depth = back_y - p["FrontThickness"]
+    if drawer_system(bay.element) == "MERIVOBOX":
+        nl = merivobox_nl(p, side_depth)
+        return nl - p["MerivoboxBaseDeduction"] - p["MerivoboxBackThickness"] + 2 * p["BoxWall"]
+    return side_depth - p["DrawerInnerDepthDeduction"] + 2 * p["BoxWall"]
+
+
+def gridfinity_main(element: dict) -> bool:
+    """``Pset_Drawers.GridfinityMain`` (default true): false keeps the
+    baseplate out of a main drawer that carries inner drawers (they get it)."""
+    v = _prop(element, PSET_DRAWERS, "GridfinityMain", True)
+    return v is True or str(v).lower() == "true"
+
+
+def gridfinity_fit_depth(element: dict) -> bool:
+    """``Pset_Drawers.GridfinityFitDepth``: shorten the box so its inside is
+    exactly m × pitch + play deep (Petr, t795u: "for the island west side,
+    there are no inner drawers, so the drawer depth can match gridfinity")."""
+    v = _prop(element, PSET_DRAWERS, "GridfinityFitDepth", False)
+    return v is True or str(v).lower() == "true"
 
 
 def gridfinity_cells(p: dict, inside: float) -> tuple[int, float]:
@@ -2381,16 +2426,27 @@ def _drawer(bay: Bay, p: dict, zone: Zone, number: int, back_y: float, ceiling: 
             on_board: bool = False) -> Drawer:
     """One drawer or pull-out in its band, from the clear opening (mm).
 
-    The box is a MAXIMERA-like box: its inside is the clear width and side
-    depth less the MAXIMERA deductions, its walls ``BoxWall`` (front, back
-    and sides; the decor front is screwed to the box front), centred in the
+    The box is a MAXIMERA-like box: sides, back and bottom ``BoxWall`` /
+    ``BoxBottomThickness``, closed at the front by the decor front itself
+    (``BoxFrontPanel`` 0), ``drawer_box_length`` long, centred in the
     opening, full extension (travel = box length). See kitchen-cabinets.md.
     """
     tf, wall = p["FrontThickness"], p["BoxWall"]
     inner_w, inner_d = drawer_inside(bay, p, back_y)
     if inner_w <= 0 or inner_d <= 0:
         raise ValueError(f"{bay.id}: no room for a drawer ({inner_w} × {inner_d})")
-    length = inner_d + 2 * wall
+    length = drawer_box_length(bay, p, back_y)
+    has_inner = bool(str(zone.opts.get("inner", "")).strip())
+    # Gridfinity: in the main drawer unless it carries inner drawers (then in
+    # those; Petr, t795u: "for the island east side, we want gridfinity on
+    # the inner drawer, the bottom main one doesnt need gridfinity").
+    grid_here = (zone.kind == "drawer" and wants_gridfinity(bay.element)
+                 and not (has_inner and not gridfinity_main(bay.element)))
+    if grid_here and gridfinity_fit_depth(bay.element):
+        m, _sd = gridfinity_cells(p, inner_d)
+        cut = inner_d - (m * p["GridfinityPitch"] + p["GridfinityPlay"])
+        inner_d -= cut
+        length -= cut
     g = p["FrontGap"] / 2.0
     out_dir = -1.0 if bay.front_low else 1.0
     fc0, fc1 = _Builder.c_range(bay, 0.0, tf)
@@ -2424,11 +2480,12 @@ def _drawer(bay: Bay, p: dict, zone: Zone, number: int, back_y: float, ceiling: 
     floor_z = bz0 + p["BoxBottomThickness"]
     items = _items(p, zone, box, out_dir)
     grid = None
-    if zone.kind == "drawer" and wants_gridfinity(bay.element):
+    if grid_here:
         n, _sw = gridfinity_cells(p, inner_w)
         m, _sd = gridfinity_cells(p, inner_d)
         grid = (n, m)
-        ic0, ic1 = _Builder.c_range(bay, tf + wall, tf + wall + inner_d)
+        f0 = tf + p["BoxFrontPanel"]  # the inside starts at the back of the front (or the box front)
+        ic0, ic1 = _Builder.c_range(bay, f0, f0 + inner_d)
         baseplate = gridfinity_baseplate(p, n, m, mid, (ic0 + ic1) / 2.0, floor_z)
         items = items + baseplate
     else:
@@ -2570,23 +2627,22 @@ def _racks(bay: Bay, p: dict, span: tuple, front_box: tuple, n: int) -> list:
 
 
 def drawer_boxes(dr: Drawer, p: dict) -> list:
-    """Front plus the box (bottom, two sides, box front, back), run frame,
-    then anything riding in it (baskets, bins, a Gridfinity baseplate)."""
-    wall = p["BoxWall"]
+    """Front plus the box (bottom, two sides, back; a box front board only
+    when ``BoxFrontPanel`` > 0), run frame, then anything riding in it
+    (baskets, bins, a Gridfinity baseplate). The decor front closes the box."""
+    wall, fp = p["BoxWall"], p["BoxFrontPanel"]
     a0, a1, c0, c1, z0, z1 = dr.box
     back_lo = dr.out > 0  # pulls toward +c, so its back is the c0 end
-    lo_wall = (a0, a1, c0, c0 + wall, z0, z1)
-    hi_wall = (a0, a1, c1 - wall, c1, z0, z1)
-    back, box_front = (lo_wall, hi_wall) if back_lo else (hi_wall, lo_wall)
-    return [
+    back = (a0, a1, c0, c0 + wall, z0, z1) if back_lo else (a0, a1, c1 - wall, c1, z0, z1)
+    out = [
         dr.front,
         (a0, a1, c0, c1, z0, z0 + p["BoxBottomThickness"]),
         (a0, a0 + wall, c0, c1, z0, z1),
         (a1 - wall, a1, c0, c1, z0, z1),
-        box_front,
-        back,
-        *dr.items,
     ]
+    if fp > 0:
+        out.append((a0, a1, c1 - fp, c1, z0, z1) if back_lo else (a0, a1, c0, c0 + fp, z0, z1))
+    return [*out, back, *dr.items]
 
 
 def inner_drawer_boxes(p: dict, box: tuple, out: float) -> list:

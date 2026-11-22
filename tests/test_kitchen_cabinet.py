@@ -86,7 +86,12 @@ def test_island_east_row_drawers_are_on_the_gridfinity_grid():
         assert i1.drawer.grid == i2.drawer.grid == (13, 12)
         d = run.part(f"{bay_id}-D1").drawer
         assert round(d.front[5] - d.front[4]) == 807
-        n, m = d.grid
+        # Petr, 2026-11-22 (t795u): "the bottom main one doesnt need
+        # gridfinity (remove the gridfinity plate too)"; the grid is the inner
+        # drawers' (same Blum inside as the main box).
+        assert d.grid is None
+        n, m = i1.drawer.grid
+        assert tuple(i1.drawer.inside[:2]) == pytest.approx(tuple(d.inside[:2]))
         # Petr, 2026-11-20 c: "East island cabinets are 694,604,604,583
         # wide, they should be the same width. Three of these should fit
         # gridfinity, the fourth can be slightly differnt. Also, give them
@@ -97,7 +102,7 @@ def test_island_east_row_drawers_are_on_the_gridfinity_grid():
         assert d.inside[0] == pytest.approx(n * 42.0 + 1.0 + slack) and d.inside[1] == pytest.approx(m * 42.0 + 1.0 + 3.0)
         part = run.part(f"{bay_id}-D1")
         assert part.props["System"] == "Blum MERIVOBOX" and part.props["NominalLength"] == pytest.approx(0.55)
-        grids[bay_id] = d.grid
+        grids[bay_id] = i1.drawer.grid
     assert grids == {b: (13, 12) for b in ("SF-E600a", "SF-E600b", "SF-E600c", "SF-E700")}
     assert [run.bay(b).width for b in ("SF-E700", "SF-E600c", "SF-E600b", "SF-E600a")] == pytest.approx([625.0] * 4)
     assert sum(b.width for b in run.bays if not b.front_low) == pytest.approx(2500.0)
@@ -312,7 +317,9 @@ def test_sf_i600a_drawers():
     assert all((round(d.inside[0]), round(d.inside[1])) == (505, 463) for d in drawers)
     assert [round(d.box[5] - d.box[4]) for d in drawers] == [78, 78, 500]
     assert all(d.grid == (12, 11) for d in drawers)
-    assert all(d.extension == pytest.approx(463.0 + 2 * 19.0) for d in drawers)
+    # No box front (2026-11-22 e, t795u): the box is the inside + the 19
+    # back, cut to the 11 cells (GridfinityFitDepth).
+    assert all(d.extension == pytest.approx(463.0 + 19.0) for d in drawers)
     assert run.carcass_z1 - run.carcass_z0 == pytest.approx(810.0)
 
 
@@ -448,9 +455,10 @@ def test_drawer_motions_in_model():
         "SF-I300-D1"]
     for m in drawers:
         assert m["element"] == m["id"]
-    # The slide is the full extension (box length, 463 + 2 x 19 in the 586 island).
+    # The slide is the full extension (box length: 463 + 19 back in the 586
+    # island's grid bays, no box front since 2026-11-22 e; SF-I300 keeps 501).
     for m in island:
-        assert m["slide"] == pytest.approx([-0.501, 0.0, 0.0])
+        assert m["slide"] == pytest.approx([-0.501 if m["id"] == "SF-I300-D1" else -0.482, 0.0, 0.0])
     east = [m for m in drawers if m["id"].startswith("SF-E")]
     # MERIVOBOX NL 550 since 2026-11-20 c.
     assert len(east) == 12 and all(m["slide"] == pytest.approx([EAST_SLIDE, 0.0, 0.0]) for m in east)
@@ -534,9 +542,28 @@ def test_gridfinity_drawers_fit_the_grid():
             assert plate[4] == pytest.approx(d.floor_z)
     # 2026-11-20 c: four equal 625 east bays; the middle two are 9 over
     # across, and the MERIVOBOX NL 550 depth 3 over, in all four.
+    # Since 2026-11-22 e (t795u) the baseplates are in the inner drawers only.
     assert [n for n in run.notes if "Gridfinity" in n] == [
-        f"open: {b}-D1 inside {w} x 508 is +{w - 547} / +3 off the Gridfinity 13x12 size (scripts/gridfinity_fit.py)"
-        for b, w in (("SF-E600a", 547), ("SF-E600b", 556), ("SF-E600c", 556), ("SF-E700", 547))]
+        f"open: {b}-D1-I{k} inside {w} x 508 is +{w - 547} / +3 off the Gridfinity 13x12 size (scripts/gridfinity_fit.py)"
+        for b, w in (("SF-E600a", 547), ("SF-E600b", 556), ("SF-E600c", 556), ("SF-E700", 547)) for k in (1, 2)]
+
+
+def test_drawer_boxes_have_no_box_front_and_east_grid_is_inner_only():
+    """Petr, 2026-11-22 (t795u): "we remove the useless frame frontsides";
+    east: Gridfinity on the inner drawers, none in the main one."""
+    run = _runs()["KR-ISL"]
+    p = run.params
+    d = run.part("SF-I600a-D1")
+    # front, bottom, two sides, back, then the baseplate: no box front.
+    assert len(d.boxes) == 5 + len(d.drawer.items)
+    walls = [b for b in d.boxes[1:5] if b[1] - b[0] > 100 and abs(b[3] - b[2]) <= p["BoxWall"] + 1e-6]
+    assert len(walls) == 1  # only the back
+    main = run.part("SF-E600a-D1")
+    assert main.drawer.grid is None and not main.drawer.baseplate and main.props.get("Gridfinity") is None
+    inner = run.part("SF-E600a-D1-I1")
+    assert inner.drawer.grid == (13, 12) and inner.drawer.baseplate
+    ib = inner.drawer.box
+    assert inner.drawer.inside[1] == pytest.approx(abs(ib[3] - ib[2]) - 2 * p["BoxWall"])  # own front + back
 
 
 def test_drawers_under_the_hob_clear_it():
