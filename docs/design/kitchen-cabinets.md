@@ -16,7 +16,7 @@ Labels: **Petr** is a fact Petr gave, with the date or document. **IKEA** is an 
 
 > **`open:` for the woodworker: front thickness is his call.** The model draws **18** mm fronts (`FrontThickness`, METOD); **19–22** is possible and may be wanted for the rounded J grip (VOXTORP fronts are 22; ours leave a 4 back wall behind the cup; see “J grip”).
 >
-> - Thicker fronts are not a front-only change: they move the carcass depth / front offsets (the bay boxes keep their outside depth, so the carcass gets shallower or the fronts stand further out), the drawer box depths (MAXIMERA lengths), the **Gridfinity drawer inserts** (the grid fit in SF-I600a, SF-I500b, SF-I600b, SF-I300; rerun `scripts/gridfinity_fit.py`), and the **Blum** front weights and power factors (MAXIMERA, AVENTOS HF).
+> - Thicker fronts are not a front-only change: they move the carcass depth / front offsets (the bay boxes keep their outside depth, so the carcass gets shallower or the fronts stand further out), the drawer box depths (MAXIMERA lengths), the **Gridfinity drawer inserts** (the grid fit in the SF-I600a, SF-I500b and SF-I600b drawers, the east row's inner drawers and the dining drawers; rerun `scripts/gridfinity_fit.py`; the west boxes are cut to 11 cells deep and still fit 11 with a 22 front), and the **Blum** front weights and power factors (MAXIMERA, AVENTOS HF).
 > - Petr, 2026-11-22 (t787u): “if he chooses thicker fronts, it will affect cabinets and gridfinity in drawers etc.”
 
 ## Monoblocks
@@ -180,12 +180,12 @@ The drawer boxes are modelled after IKEA **MAXIMERA** (Petr, 2026-11-13, see “
 | Front thickness | 18 | **IKEA** METOD fronts |
 | Gap between fronts (and to the sides, 1.5 each) | 3 | **IKEA**: a 600×200 grid front is 597×197 |
 | Drawer inside width | clear width − **84** (`DrawerInnerWidthDeduction`) | **IKEA** MAXIMERA, see below |
-| Drawer inside depth | side depth − **96** (`DrawerInnerDepthDeduction`); the side depth is the divider's, carcass front edge to the back (the island's central back face) | **IKEA** MAXIMERA, see below |
-| Drawn box walls (sides, box front, back) | 19 (`BoxWall`) | (542 − 504) / 2: MAXIMERA box 542 deep, inside 504 (**IKEA**). The decor front screws to the box front |
+| Drawer inside depth | box length − 19 back (no box front since 2026-11-22 e); box length = side depth − 96 (`DrawerInnerDepthDeduction`) + 2 × 19; the side depth is the divider's, carcass front edge to the back (the island's central back face). Bays with `GridfinityFitDepth` cut the box to the grid | **IKEA** MAXIMERA, see below and “Drawer boxes without a box front” |
+| Drawn box walls (sides, back) | 19 (`BoxWall`); box front `BoxFrontPanel` **0** (was 19) | (542 − 504) / 2: MAXIMERA box 542 deep, inside 504 (**IKEA**). The decor front closes the box (2026-11-22 e) |
 | Drawn box bottom | 16 (`BoxBottomThickness`) | `guess:` |
 | Box side height | low **78** in a 100 band, medium **144** in 200, high **212** in 300; bands of 400 and more (and pull-outs): front − 110 | **IKEA** MAXIMERA product pages; the 400+ rule is `guess:` (a high box with side extensions) |
 | Box bottom | 3 above its band (the lowest box 3 above the 18 carcass bottom) | `guess:`; the top box must clear the 18 top rail (box top 891, rail from 892) |
-| Box length, extension | inside depth + 2 × 19, full extension (travel = box length) | **IKEA** MAXIMERA full extension |
+| Box length, extension | side depth − 96 + 2 × 19 (= inside + 19 back), full extension (travel = box length) | **IKEA** MAXIMERA full extension |
 | Carcass depth, island west row | **586** bay, so the side depth is 586 − 18 front − 9 (half the central back) = **559** | Gridfinity depth, see below. Was 600 / 573 |
 
 ### Drawers: MAXIMERA
@@ -1730,6 +1730,7 @@ Every cream front, end panel, cladding and plinth (`kitchen-front-cream`) is **m
   - drawers and doors up to 1200 high: **top edge** (horizontal);
   - doors over 1200 high: **the vertical edge away from the hinge** (side), full height, like IKEA's [VOXTORP “vertical handle” tall doors](https://www.ikea.com/de/en/p/voxtorp-door-oak-effect-vertical-handle-20648994/);
   - doors starting above 1400 (the upper doors of the tall cabinets, SF-T3-DOOR1 and SF-TF-DOOR1/2): **bottom edge**, `guess:` (in reach from below; they are neither low nor tall).
+- `open:` **inner drawer inside depth (woodworker).** The MERIVOBOX inner drawers (island east SF-E…-D1-I1/-I2, dining SF-DN-S1…S4-D1-I1/-I2) compute the same inside depth as their main drawers (508 east, 358 dining) despite their own inner front: the main drawer uses Blum's NL − 26 − 16, the inner drawer its box − 2 × 19. The woodworker to verify both against the Blum catalogue (MERIVOBOX inner drawer with front piece vs. drawer with the front fixed to the sides); the Gridfinity counts (13 × 12 east inner, 14 × 8 dining) follow from it. See “Drawer boxes without a box front (2026-11-22 e)”.
 - `open:` **grips around the fridge.** Petr, 2026-11-22 (t792u): “Im not sure about handle placement around the fridge (based on how much final chosen fridge model sticks out).” Undecided: where and which way the grips go on the fronts next to and over the fridge: SF-TF-DOOR1/2 over it (now bottom edge), SF-T1-DOOR1 west of it and SF-T2-DOOR1 east of it (now side, latch edge), the SF-T2 drawers under SF-T2-DOOR1 (top), and the filler SF-T1-FILLER1 (none). It depends on how far the final fridge model stands proud of the cabinet fronts (the model's Whirlpool WQ9I MO2L EF box is a placeholder): a proud fridge can cover a grip on the edge next to it or get in the fingers' way.
 - Not given a grip (`open:`, untouched): the full-height **pull-outs** SF-I300-D1, SF-A250-D1, SF-B800-D1, SF-C850-D1 (role `PullOut`; add `grip=top` to their band if wanted); the fixed **blank fronts** SF-LB-S1…S7-FRONT and SF-TC-FRONT2 (dead space, they do not open); the **filler** SF-T1-FILLER1; the **appliance fronts** (the integrated dishwasher's door panel is not a modelled front); the **lift-ups** (overhang below).
 
@@ -1769,3 +1770,55 @@ All wall (top) cabinets, KR-WEST-H (cream) and KR-DH (oak, SF-DH): `Pset_Kitchen
 | 33 drawer fronts and hinged doors | flat | J grip, routed (top 23, side 4, bottom 3; table above): first square 22 × 8, then 22 × 10 + 8 hook behind a 4 lip, then rounded scoop 22 × 8, R6 cove, R2 lip (t786u, no lip), then rounded J: notch 22 × 13, 4 lip, pocket 9 × 15 behind it, 5 back wall (t788u), now **VOXTORP J cup from Petr's sketch: crest 21 below the edge (R1), one R7 bowl to the bottom 28 below the edge, R4 into a 4 back wall up to the edge** (t791u) |
 | Lower HF leaves, west and SF-DH | bottom 1561.5 | **bottom 1550.0** (+11.5 taller) |
 | Pull-outs, blank fronts, filler, lift-ups' upper leaves | — | unchanged |
+
+## Drawer boxes without a box front (2026-11-22 e)
+
+Petr, 2026-11-22 (t793u): real MAXIMERA / LEGRABOX-style drawers have only sides, back and bottom; the outer front is structural (it clips onto the sides). Inner drawers behind a main front do need their own low front, so they are shallower inside. The plan (t795u):
+
+> - we remove the useless frame frontsides
+> - for the island west side, there are no inner drawers, so the drawer depth can match gridfinity.
+> - for the island east side, we want gridfinity on the inner drawer, the bottom main one doesnt need gridfinity (remove the gridfinity plate too)
+> - for the dining are base cabinets, the 450mm depth is given anyway, so we'll see how gridfinity works out (it doesnt have to match in the depth direction.
+
+- **Main drawers and pull-outs** (`drawer_boxes`, every kitchen run, the dining base and the living-room counters KR-LB / KR-TC, which use the same generator but have no drawers): sides, back, bottom; no box front (`BoxFrontPanel` 0; set 19 for the old drawing). The box keeps its length, so a MAXIMERA inside gains the 19. Blum MERIVOBOX insides stay Blum's (NL − 26 − 16); only the drawn box front is gone.
+- **Inner drawers** (`inner_drawer_boxes`): unchanged, their own low front piece and back; inside = box − 2 × 19.
+- **Island west** (SF-I600a, SF-I500b, SF-I600b; `Pset_Drawers.GridfinityFitDepth: true`): the box is cut to a whole number of cells deep. 12 rows would need a 505 inside, 23 more than the 482 the carcass now allows, so it stays **11 rows**; the box is **501 → 482** (19 shorter, 19 free at the back of the carcass), inside 463 (11 × 42 + 1), unchanged.
+- **Island east** (SF-E600a/b/c, SF-E700; `Pset_Drawers.GridfinityMain: false`): no baseplate in the main (bottom, F) drawer; the inner drawers (M and K, both) each have their own, sized to their inside: 13 × 12.
+- **Dining** (SF-DN S1–S4): depth unchanged; baseplates stay in the main and both inner drawers (2026-11-20 c: “Give gridfinity to the dining area cabinets too”), 14 × 8, 21 left over in depth.
+
+| Drawer | Box length old → new | Inside (w × d) old → new | Gridfinity old → new | Left over (w / d) |
+|---|---|---|---|---|
+| SF-I600a, SF-I600b D1–D3 | 501 → **482** | 505 × 463 → 505 × 463 | 12 × 11 → 12 × 11 | 0 / 0 |
+| SF-I500b D1–D3 | 501 → **482** | 379 × 463 → 379 × 463 | 9 × 11 → 9 × 11 | 0 / 0 |
+| SF-I300-D1 (pull-out) | 501 → 501 | 194 × 463 → 194 × **482** | — | — |
+| SF-E600a / SF-E700 D1 (main) | 546 → 546 | 547 × 508 (Blum) | 13 × 12 → **none** | — |
+| SF-E600b / SF-E600c D1 (main) | 546 → 546 | 556 × 508 (Blum) | 13 × 12 → **none** | — |
+| SF-E…-D1-I1, -I2 (inner) | 546 → 546 | 547 or 556 × 508 | 13 × 12 → 13 × 12 | 0 or 9 / 3 |
+| SF-DN-S1…S4-D1 and -I1, -I2 | 396 → 396 | 597 or 606 × 358 | 14 × 8 → 14 × 8 | 8 or 17 / 21 |
+| KR-WEST pull-outs SF-A250, SF-B800, SF-C850; KR-TALL drawers SF-T2/T3/T4-D1, -D2 | 516 → 516 | × 478 → × **497** | — | — |
+
+- **Suspicious / unclear, left as is:**
+  - **MERIVOBOX insides (east and dining) are Blum's NL − 26 − 16 for the main drawer and the box − 2 × 19 for the inner drawer, and both come out the same (508 east, 358 dining)**: the inner drawers are not shallower than the main ones in the model. Blum's real inner-drawer inside (with its front piece) and the main drawer's (front fixed to the sides) need the Blum catalogue.
+  - **Dining: 9 rows would need a 379 inside, 21 more than 358**; the main drawer as drawn (box 396 − 19 back) is 377, 2 short of 9 rows, but its inside is Blum's 358. Left at 8 rows, per Petr's “doesnt have to match in the depth direction”.
+  - Both east inner drawers (M and K) get a baseplate; Petr wrote “the inner drawer” (one). Left on both.
+  - Baskets and bins in pull-outs keep their positions (19 in from the box's front end).
+- The island's depth does not change (1192 overall, below).
+
+### Island depth (main = this change)
+
+Petr, 2026-11-22 (t796u): “let me know how deep the island will be (we've changed this slightly overtime)”. Nothing here changes it; the west Gridfinity fit is a drawer-box change inside the existing carcass.
+
+| Item | Depth (west → east, run frame c) |
+|---|---|
+| Worktop | 20 thick, c −20 … 1172: **1192 deep**, 2540 long (a −20 … 2520), top at 930 |
+| West front overhang | 20 (worktop past the west fronts) |
+| West fronts | 18 (c 0 … 18) |
+| West carcass | c 18 … 577 + half the shared back: bay 586 incl. front, 568 carcass incl. half the back |
+| Central back KR-ISL-BACK | 18, shared, c 577 … 595: the two sides are **back to back** |
+| East carcass | c 595 … 1154, mirror of the west: bay 586 incl. front |
+| East fronts | 18 (c 1154 … 1172), flush with the worktop (0 overhang) |
+| End claddings KR-ISL-CLAD-N / -S | 20 thick, full depth c −20 … 1172, floor to top (z 0 … 930) |
+| End overhang | 20 at the N and S ends, over the claddings (the worktop ends flush with them) |
+| Plinths | recessed 50 from each front (c 50 … 68 west, 1104 … 1122 east), 100 high |
+| Footprint | **2540 × 1192** |
+
