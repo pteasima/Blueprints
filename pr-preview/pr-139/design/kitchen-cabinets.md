@@ -1616,7 +1616,7 @@ New: a light can be `PanelRun: <kitchen run>` instead of a box or a `Path`; it i
 | Light | Was | Now |
 |---|---|---|
 | **`C180-S`** (cable 180, panel 1, **CYKY 4x2.5**, 4 m), GlobalId `1RcvK5MrXPgx45bpdubcog` (2026-11-22 c) | plan “Panel 250x2400 (~200 W)”, modelled as a ceiling panel at x 18.907, y 11.36, **z 3.92**, 0.25 × 2.4, right above the cabinets | `LedPanel`, `PanelRun: KR-WEST-H`: one diffuser 2408.5 × 268.5 at x 18.836–19.104, y 11.396–13.804, z 1.560–1.563 |
-| `C181-S` (cable 181, panel 1, CYKY 4x1.5), GlobalId `0Em9207ILL0AQyFYvB2qXE` | 2026-11-22 a/b: the west panel | back to its #120 `LedStrip`, Path 19.430, 11.310 → 13.780 at z 1.530 (the plan's strip line at the worktop front edge); `open:` what it is (Questions.md 14b) |
+| `C181-S` (cable 181, panel 1, CYKY 4x1.5), GlobalId `0Em9207ILL0AQyFYvB2qXE` | 2026-11-22 a/b: the west panel | back to its #120 `LedStrip`, Path 19.430, 11.310 → 13.780 at z 1.530 (the plan's strip line at the worktop front edge); since 2026-11-22 d unplaced, it stuck out in front of the cabinets; `open:` what it is (Questions.md 14b) |
 | `NC-1.02-S-2` (new), GlobalId `3kNrurCkTGufS7Cviy$JPc` | — | `LedPanel`, `PanelRun: KR-DH`: one diffuser 2608 × 194 at x 22.496–25.104, y 15.370–15.564, z 1.560–1.563 (2026-11-22 a: two, 1269 × 196). **⚠️ No cable: temporary `TEMP-1.02-DH`** (`Pset_YamlIfc.TempCable`, no `CableNumber`), panel 1 and CYKY 4x2.5 assumed (2026-11-22 c; was 4x1.5). See “Missing cable” below. Added to the room's `Controls` lists next to NC-1.02-S. |
 
 `open:` **`NC-1.02-S`** (the plan's “Panel 200x2500 (~160 W)” with no cable, at 2.99 by the north wall, x 22.515–25.015, y 15.343–15.543) lies exactly over SF-DH in plan. It may be the same dining light drawn on the plan at the ceiling. Not touched; question in [Questions.md](../electrical/Questions.md) item 14.
@@ -1687,6 +1687,7 @@ Tracked as [Questions.md](../electrical/Questions.md) item 14a.
 | **2026-11-22 c, one light, the right cable:** | | |
 | West panel light | `C181-S` (cable 181) on the cabinets **and** `C180-S` (cable 180) on the ceiling at z 3.92, right above it | **`C180-S` only**, on the cabinets (cable 180, CYKY 4x2.5); the ceiling panel is gone |
 | `C181-S` | the west panel | its #120 strip at the worktop front edge, `open:` |
+| **2026-11-22 d** `C181-S` (Petr: “the kitchen led panel is now sticking out”) | strip on Path x 19.430, y 11.310–13.780, **z 1.530**: in the air 275 in front of the wall-cabinet fronts (x 19.150) and 20 below their 1560 underside | **unplaced** (`PositionUnknown`, no body) until Petr says what cable 181 is (Questions.md 14b) |
 | TEMP-1.02-DH cable guess | CYKY 4x1.5 | **CYKY 4x2.5, MISSING, add on site** |
 
 ### Open (`open:`)
