@@ -472,9 +472,14 @@ lightFixtures:
           PanelRun: KR-WEST-H
   # 2026-11-22 a moved this onto the cabinet bottoms; 2026-11-22 c gives the
   # panel back to cable 180 (above) and this back its #120 plan strip.
+  # Petr, 2026-11-22 (t785u): "the kitchen led panel is now sticking out".
+  # The strip on #120's Path "19.430,11.310,1.530;19.430,13.780,1.530" hung
+  # in the air 275 in front of the wall-cabinet fronts (x 19.150) and 20
+  # under their 1560 underside, 2.47 long, beside the panel: unplaced
+  # (PositionUnknown) until Petr says what 181 is.
   - id: C181-S
     Name: Světlo 181
-    Description: "Plan mark 2(181). The plan's strip line about 260 in front of the west wall cabinets (the worktop front edge); #120 put it at 1.530, under the cabinets. Not the under-cabinet panel (that is C180-S, 2026-11-22 c). Soupis: into a box in the pre-wall, position after the sliding-door work. No box; the viewer draws the legs from Path (x,y,z points; | separates runs)."
+    Description: "Plan mark 2(181). The plan's strip line about 260 in front of the west wall cabinets (the worktop front edge); #120 put it at 1.530, under the cabinets. Not the under-cabinet panel (that is C180-S, 2026-11-22 c). Soupis: into a box in the pre-wall, position after the sliding-door work. Unplaced since 2026-11-22 d: #120's strip at 1.530 hung in the air in front of the wall cabinets. No position; no body."
     PredefinedType: USERDEFINED
     ObjectType: LedStrip
     ContainedInStructure: SP-1.02
@@ -487,8 +492,8 @@ lightFixtures:
           CableSpec: CYKY 4x1.5
           CableLength: 4
           Note: do krabice v predstene (pozice bude upresnena po realizaci soupacek), mozno vest podlahou ale omezit soubeh se zasuvkami
-          Path: "19.430,11.310,1.530;19.430,13.780,1.530"
-          Question: "Cable 181: the plan's thin strip line about 260 in front of the west wall cabinets (the worktop's front edge). Now that the under-cabinet panel is cable 180, what is 181: a strip at the worktop front, a plinth strip like 182, or spare? Height 1.530 is #120's guess."
+          PositionUnknown: true
+          Question: "Cable 181: the plan's thin strip line about 260 in front of the west wall cabinets (the worktop's front edge). Now that the under-cabinet panel is cable 180, what is 181: a strip at the worktop front, a plinth strip like 182, or spare? Unplaced: #120's strip at 1.530 floated 275 in front of the wall cabinets."
   - id: C182-S
     Name: Světlo 182
     Description: "Plan mark 2(182). Island strips on both long sides; Soupis: from a floor box. Plinth height 0.10 assumed. No box; the viewer draws the legs from Path (x,y,z points; | separates runs)."
