@@ -42,7 +42,7 @@ Swatches (0.3 m crops of each colour map, or the flat `base_color`): [`docs/prev
 | Material | Colour | Rough / metal | Textures | Viewer selectors | Sources |
 | --- | --- | --- | --- | --- | --- |
 | **Natural oak, matt lacquer (Kaplan 1934, Přírodní D 02)** `oak-natural-kaplan` | `#aa7e60` | 0.45 / 0.0 | color, normal, roughness | `oak`; `cabinet` /^(?!SF-(DN\|DN70\|F05[23]\|LB)-\|KR-(DN\|LB)-).*-BODY$/; `cabinet` SF-DH; `cabinet` /^(SF-DH\|KR-DH)-/ | [1](https://www.kaplan1934.cz/produkty/stoly/stul-gatta) [2](https://www.kaplan1934.cz/kolekce-gatta/) [3](https://polyhaven.com/a/oak_veneer_01) |
-| **Kitchen fronts, warm cream matt lacquered MDF (about RAL 9001)** `kitchen-front-cream` | `#e9e0d2` | 0.35 / 0.0 | none | `cabinet` /^(?!SF-(DN\|F05[23]\|LB\|DH\|TC)-\|KR-(DN\|LB\|DH\|TC)-).*-(FRONT[0-9]*\|D[0-9]+\|DOOR[0-9]+\|FILLER[0-9]*\|LIFT[0-9]*\|END-[NSEW]\|PLINTH-[NSEW])$/; `cabinet` /^(SF-(DN\|DN70\|F05[23]\|LB\|TC)\|KR-(DN\|LB\|TC))-/; `cabinet` KR-WEST-CLAD-N, KR-WEST-CLAD-S, SF-TC; `appliance` EA-SBD6ECX | [1](https://github.com/pteasima/Blueprints/blob/main/docs/design/kitchen-cabinets.md) |
+| **Kitchen fronts, warm cream matt lacquered MDF (about RAL 1015)** `kitchen-front-cream` | `#e6d2b5` | 0.35 / 0.0 | none | `cabinet` /^(?!SF-(DN\|F05[23]\|LB\|DH\|TC)-\|KR-(DN\|LB\|DH\|TC)-).*-(FRONT[0-9]*\|D[0-9]+\|DOOR[0-9]+\|FILLER[0-9]*\|LIFT[0-9]*\|END-[NSEW]\|PLINTH-[NSEW])$/; `cabinet` /^(SF-(DN\|DN70\|F05[23]\|LB\|TC)\|KR-(DN\|LB\|TC))-/; `cabinet` KR-WEST-CLAD-N, KR-WEST-CLAD-S, SF-TC; `appliance` EA-SBD6ECX | [1](https://github.com/pteasima/Blueprints/blob/main/docs/design/kitchen-cabinets.md) |
 | **Silestone Blanco Maple, 20 mm** `silestone-blanco-maple` | `#ede8dd` | 0.12 / 0.0 | color, roughness | `worktop` | [1](https://www.cosentino.com/en-ie/colours/silestone/blanco-maple) [2](https://www.stoneone.co.uk/product/silestone-blanco-maple/) [3](https://in2stone.co.uk/products/quartz/silestone-blanco-maple/) |
 | **ABK Poetry Stone Trani Beige, natural, rectified, 8.5 mm** `abk-poetry-stone-trani-beige` | `#e0d1bc` | 0.62 / 0.0 | color, normal, roughness | `floor_tile`; `wall_tile`; pending | [1](https://www.abkgroup.it/it/abk/area-download/minimali/poetry-stone/trani-beige/pf60010540-v100/) [2](https://www.ceramishop.it/abk-poetry-stone-trani-beige-nat-60x60-pf60010540.html) |
 | **Poured polyurethane floor, light beige with colour chips** `floor-pu-living` | `#d8cdbb` | 0.35 / 0.0 | color, roughness | pending | [1](https://github.com/pteasima/Blueprints/blob/main/scripts/export_podlaha_eps.py) |
@@ -86,7 +86,7 @@ Per-material reasoning and confidence are in each entry's `notes` in the catalog
 
 Petr answered the first round of open questions on 2026-11-12. The catalogue entries quote him.
 
-- **Kitchen fronts are cream** ("some sort of cream color (white-ish)"): `kitchen-front-cream`. The exact shade (RAL 9001) and the smooth matt lacquer or laminate are still our assumption. The oak stays on the Kaplan furniture and the dining run.
+- **Kitchen fronts are cream** ("some sort of cream color (white-ish)"): `kitchen-front-cream`. The exact shade (RAL 1015 Light ivory, #e6d2b5, since 2026-11-22; RAL 9001 before) and the smooth matt lacquer or laminate are still our assumption. Petr, 2026-11-22: "lets make that cream color more yellowish. I don't have a precise color code for you, just try something reasonable." The oak stays on the Kaplan furniture and the dining run.
 - **House floor: light beige PU with plastic colour chips**, chip colours our choice: `floor-pu-living` (beige, warm grey, off-white and a few taupe flakes, sparse). The garage was not included in that answer and stays a plain grey assumption (`floor-pu-garage`).
 - **Silestone: the cheaper basic finish**, which is the standard polished finish (Suede costs extra).
 - **Window frames: anthracite aluminium everywhere, inside too** (`aluminium-anthracite`).
@@ -103,7 +103,7 @@ Petr answered the first round of open questions on 2026-11-12. The catalogue ent
 
 ## Open questions for Petr
 
-1. **Exact cream shade and finish of the kitchen fronts.** Assumed RAL 9001 in a smooth matt finish. Should it be whiter (RAL 9010), and lacquer or laminate?
+1. **Exact cream shade and finish of the kitchen fronts.** Assumed RAL 1015 Light ivory (more yellow than the previous RAL 9001, Petr 2026-11-22, no precise code) in a smooth matt lacquer. The milder RAL 1013 Oyster white (#e3d9c6) or the old 9001 are the steps back if it reads too yellow.
 2. **PU chip colours.** We chose beige, warm grey, off-white and taupe. Change them when the supplier's chip blend is picked.
 3. **Garage floor.** Plain mid grey PU is assumed. Should it match the house's beige with chips?
 4. **Grout colour** for Trani Beige. Assumed a sand beige a shade darker than the tile.
