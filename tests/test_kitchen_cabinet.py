@@ -739,3 +739,32 @@ def test_tall_run_east_side_kickboard():
     # It meets the dining kickboard face to face at x 22.150.
     dn = _runs()["KR-DN"].part("KR-DN-PLINTH-S").boxes[0]
     assert run.frame.world(box[1], 0.0, 0.0)[0] == pytest.approx(_runs()["KR-DN"].frame.world(dn[0], 0.0, 0.0)[0])
+
+
+def test_led_panels_routed_into_the_wall_cabinet_bottoms():
+    # Petr, 2026-11-22 a: "I want the underside of the cabinet to be a full
+    # led panel, with some reasonable padding. [...] Use the right thickness
+    # cabinet bottom so the panel can be routed into it."
+    runs_ = _runs()
+    west, dh = runs_["KR-WEST-H"], runs_["KR-DH"]
+    assert [f.bay_id for f in west.led_fields] == ["SF-AH850", "SF-BH800", "SF-CH850"]
+    assert [(f.bay_id, f.index) for f in dh.led_fields] == [("SF-DH", 1), ("SF-DH", 2)]
+    for run in (west, dh):
+        assert run.carcass_z0 == pytest.approx(1560.0)  # the underside does not move
+        for f in run.led_fields:
+            bottom = run.part(f"{f.bay_id}-BOTTOM")
+            lo = min(b[4] for b in bottom.boxes)
+            hi = max(b[5] for b in bottom.boxes)
+            assert (lo, hi) == (pytest.approx(1560.0), pytest.approx(1590.0))  # 30 bottom
+            assert f.diffuser[4:] == (pytest.approx(1560.0), pytest.approx(1563.0))  # flush, 3 mm
+            assert f.pocket[5] == pytest.approx(1575.0)  # 15 deep, 15 web left
+            # 25 padding to the board, 1.5 play to the rebate.
+            assert f.diffuser[0] - f.rebate[0] == pytest.approx(2.0 if run is dh else 1.5)
+            assert all(f.plate[0] - 1e-6 <= m[0] and m[1] <= f.plate[1] + 1e-6 for m in f.modules)
+    f = west.led_fields[0]
+    assert (f.diffuser[1] - f.diffuser[0], f.diffuser[3] - f.diffuser[2]) == (pytest.approx(770.0), pytest.approx(271.0))
+    assert [(round(m[1] - m[0]), round(m[3] - m[2])) for m in f.modules] == [(495, 245), (260, 245)]
+    # The dining fields stop 25 short of the section divider, which stands on solid board.
+    div = dh.part("SF-DH-SDIV1").boxes[0]
+    assert div[4] == pytest.approx(1590.0)
+    assert dh.led_fields[0].rebate[1] == pytest.approx(div[0] - 25.0)

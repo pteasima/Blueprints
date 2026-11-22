@@ -1506,3 +1506,145 @@ It now meets `KR-DN-PLINTH-S` (x 22.150–22.5675, y 15.150–15.168) face
 to face at x 22.150: no gap, no overlap. Its front end still butts the
 back of `KR-TALL-PLINTH-S` (y 15.068).
 
+
+## LED panels under the wall cabinets (2026-11-22 a)
+
+Petr, 2026-11-22:
+
+> “lets do the led panels like we discussed, on the underside of the kitchen (west) top cabinets, and the dining (north) top cabinets. I already have some sample panels, they come in 245*495mm (I think) format, but they can be cut or combined to pretty much any dimension, so choose something reasonable. They will inevitably be too powerful and I'll have to dimm them, but thats fine, I want the underside of the cabinet to be a full led panel, with some reasonable padding. Feel free to add the lights configured in ifc and matter as Cody has been doing for the others. If you can't find existing lights and cables, fine to give them some temporary cable names and I'll figure it out later (as far as I remember, the kitchen one might already exist but is placed wrong, but the dining one we forgot, doesn't even have a cable yet). Model everything well and in a way that makes sense for the woodworker. Use the right thickness cabinet bottom so the panel can be routed into it. Or use regular cabinet bottom mdf plus some additional planks below it to frame the panel. Up to you.”
+
+From the earlier chat: the LED sheets are glued to an aluminium backing plate; the plate sits in a recess in the cabinet bottom behind a 3 mm opal acrylic diffuser, cut to size, flush with the underside in a rebate with 1–2 mm play; bare LED dots want 5–10 mm to the diffuser.
+
+Cabinets: the west wall cabinets `KR-WEST-H` (SF-CH850, SF-BH800, SF-AH850; fronts x 19.150, wall x 18.800, y 11.350–13.850) and the dining wall cabinet `KR-DH` (SF-DH, two sections; x 22.450–25.150, y 15.324–15.600). Both had an 18 bottom at 1560–1578.
+
+### Construction: a 30 bottom with the field routed into it
+
+Chosen: **one 30 mm bottom board per cabinet with a stepped pocket routed into its underside** (`Pset_KitchenRun.BottomThickness: 0.030`, `LedPanels: true` on both runs). Not the 18 bottom plus framing strips, because:
+
+- **The underside stays at 1560.** Strips under an 18 bottom would drop the underside by their thickness, and the AVENTOS HF lower fronts (1561.5–2003.5) end at the old underside: the strips would show under the fronts or the fronts would have to grow, which changes the HF cabinet height and its Blum check. With the routed bottom the fronts, the lift mechanisms, the 2450 top (2404 for SF-DH under the soffit) and the worktop clearance do not change.
+- One CNC-routed board per cabinet, no loose strips to glue and align. The board takes the rebate edge cleanly and the diffuser lies flush.
+- `guess:` the board: 30 MDF lacquered on the underside to the carcass colour (cream in KR-WEST-H, oak veneer for SF-DH), or two 15 boards glued. The woodworker chooses; 30 is the model's thickness.
+
+The interior loses 12 (the bottom's top goes from 1578 to 1590). The inside depth does not change, so **SF-DH stays 250 inside (276 deep)**: the AVENTOS HF depth note at the top of this file (250 < LT 264) is unchanged, neither better nor worse. The HF mechanisms sit at the top of the side panels, nowhere near the bottom; keep the junction box (below) at the bottom back, out of the HF fronts' swing.
+
+### Section detail (all `guess:` except the 3 mm opal and Petr's 245 × 495 module)
+
+Through a cabinet bottom, front to back (z in mm; the same in every cabinet):
+
+```
+z 1590 ┌───────────────────────────────────────────────────────────────┐  bottom top (inside)
+       │                    web 15 (board over the pocket)             │
+z 1575 │      ┌─────────────────── pocket ────────────────────┐        │
+       │      │ aluminium plate 2        1573–1575            │        │
+       │      │ LED sheet 2 (dots down)  1571–1573            │        │
+       │      │ air gap 8                1563–1571            │        │
+z 1563 │   ┌──┘ ledge 8                               ledge 8 └──┐     │
+       │   │ opal diffuser 3, flush        1560–1563             │     │
+z 1560 └───┘ play 1.5 (SF-DH 2)                 play 1.5 (SF-DH 2)└─────┘  underside
+       |←25→|  padding to the board edge
+```
+
+| Layer | Parameter (`Pset_KitchenRun`, metres) | Value | Source |
+|---|---|---|---|
+| Bottom board | `BottomThickness` | 30 (was 18) | `guess:` |
+| Padding, field to the board edges and to SF-DH's section divider | `LedPadding` | 25 | `guess:` (Petr: “some reasonable padding”) |
+| Rebate depth = diffuser | `LedDiffuserThickness` | 3 | earlier chat: 3 mm opal |
+| Diffuser play, each side | `LedRebatePlay` | 1.5 west, **2 SF-DH** | earlier chat: 1–2 mm |
+| Ledge the diffuser rests on, each side | `LedLedge` | 8 | `guess:` |
+| Air gap LED → diffuser | `LedAirGap` | 8 | earlier chat: 5–10 for bare dots |
+| LED sheet | `LedModuleThickness` | 2 | `guess:` |
+| Aluminium plate | `LedPlateThickness` | 2 | `guess:` |
+| Plate play in the pocket, each side | `LedPlatePlay` | 1 | `guess:` |
+| Board left over the pocket | `LedMinWeb` (check) | 15 (min 10) | `guess:` |
+| Module | `LedModuleWidth` × `LedModuleLength` | 245 × 495 | Petr, “(I think)”: **guess:** |
+
+SF-DH's play is 2 per side: its diffusers are 1269 long and PMMA grows about 70 µm/m·K (about 2.7 mm over 30 K); the west 770s keep 1.5.
+
+The parts per lit cabinet: `<bay>-BOTTOM` (the board: web, the frame round the rebate, the ledge), `<bay>-LED<k>-PLATE` (aluminium) and `<bay>-LED<k>-SHEET` (the LED pieces). The diffusers belong to the light fixtures (below). All of it follows the cabinet: change a bay's width, depth or a parameter and the fields, the cut list and the lights move with it (`models/kitchen_cabinet.py`, `_led_bottom`, `LedField`).
+
+Woodworker notes:
+- `open:` fixing the 30 bottom: the pocket takes the lower 15 of the board up to 25 from its edges, so confirmats or dowels into the bottom's edge should sit in the upper half (the web), or use the 25 frame only.
+- SF-DH: one board 2664 long with two fields; the section divider SDIV1 stands on the 68 solid strip between them (18 divider + 2 × 25).
+- `guess:` the diffuser is held by friction plus a few small magnets or clips in the ledge, so it comes out for service. The plate is screwed or taped to the web through the pocket.
+
+### Cut list (for Petr)
+
+Long side of the module along the cabinet; cut pieces at one end. Sizes in mm, length × depth.
+
+| Cabinet / field | Bottom board (30) | Rebate, 3 deep | Diffuser, 3 opal | Pocket, 12 deep over the ledge | Aluminium plate, 2 | LED pieces (from 245 × 495 modules) |
+|---|---|---|---|---|---|---|
+| SF-CH850 | 823 × 324 | 773 × 274 | **770 × 271** | 757 × 258 | 755 × 256 | 495 × 245 + 260 × 245 (field 755 × 245) |
+| SF-BH800 | 782 × 324 | 732 × 274 | **729 × 271** | 716 × 258 | 714 × 256 | 495 × 245 + 219 × 245 (field 714 × 245) |
+| SF-AH850 | 823 × 324 | 773 × 274 | **770 × 271** | 757 × 258 | 755 × 256 | 495 × 245 + 260 × 245 (field 755 × 245) |
+| SF-DH field 1 (west section) | 2664 × 250, one board for both fields | 1273 × 200 | **1269 × 196** | 1257 × 184 | 1255 × 182 | 495 × 182 + 495 × 182 + 265 × 182 (field 1255 × 182) |
+| SF-DH field 2 (east section) | (same board) | 1273 × 200 | **1269 × 196** | 1257 × 184 | 1255 × 182 | 495 × 182 + 495 × 182 + 265 × 182 |
+
+Totals: 5 diffusers, 5 plates. **12 modules**: west 3 whole + 3 cut to 260/219/260 long; dining 6 cut to 182 wide (4 × 495 long, 2 × 265 long). The west fields leave 5.5 of plate bare front and back (256 − 245); the dining pieces are cut down across the width. `open:` whether Petr's sheets can be cut to 182 across the module and to these lengths (cut lines, where the feed pads are), and how the pieces are joined.
+
+### Diffuser: what and where to buy
+
+3 mm opal PMMA made for LED backlighting, cut to the sizes above:
+
+- **Plexiglas LED White WH14**: about 47 % transmission, the brighter one. **Plexiglas LED White WH72**: about 31 %, more diffusion, whiter when off, hides the dots better. Cast PMMA, 3050 × 2030 sheets ([Plexiglas LED technical information 222-25](https://www.plexiglas.de/files/plexiglas-content/pdf/technische-informationen/222-25-EN-PLEXIGLAS-LED-back-lighting-white.pdf)). Petr will dim the panels anyway, so `guess:` **WH72** (no dots visible at 8 mm).
+- In the Czech Republic: [Zenit eshop](https://eshop.zenit.cz/desky/plexisklo-barevne/xt-plexiglas-3mm-opal-wn770/variant/2050-3050/?a21=118) (Plexiglas XT opal WN770, 45 %, cut to size at 12.10 CZK per metre of cut; ask them for WH14/WH72) or [Dencop](https://eshop.dencop.cz/plexisklo-opalove-3-mm/) (3 mm opal, 29–35 % grades, cut to size in Zlín).
+
+### Lights in IFC (and Matter)
+
+The house lights are yaml-ifc `lightFixtures` in `inputs/ground_floor/electrical-<room>.yaml`, one element per cable (`C<cable>-<code>`; a strip with several runs is still one element), `Pset_YamlIfc` with `CableNumber`, `Panel`, `DeviceCode`, `CableSpec`. Matter lives in the Home repo's `hardware.yaml`, keyed by each element's IFC GlobalId (one `ColorTemperatureLight` with warm and cool channels per light; Home covers room 1.11 only so far).
+
+New: a light can be `PanelRun: <kitchen run>` instead of a box or a `Path`; it is drawn as that run's diffusers (`models/electrical_rooms.py`, `panel_rects`), so it follows the cabinets. One light per run = one cable = one dimmable circuit (`guess:` that the three west cabinets, and the two SF-DH sections, share one circuit).
+
+| Light | Was | Now |
+|---|---|---|
+| `C181-S` (cable 181, panel 1, CYKY 4x1.5), GlobalId `0Em9207ILL0AQyFYvB2qXE` kept | `LedStrip`, Path 19.430, 11.310 → 13.780 at **z 1.530**: at the worktop's front edge, **280 in front of the cabinet fronts and 30 under the cabinets**, 2.47 long | `LedPanel`, `PanelRun: KR-WEST-H`: three diffusers 770/729/770 × 271 at x 18.8345–19.1055, y 11.3945–12.1645, 12.2355–12.9645, 13.0355–13.8055, z 1.560–1.563 |
+| `NC-1.02-S-2` (new), GlobalId `3kNrurCkTGufS7Cviy$JPc` | — | `LedPanel`, `PanelRun: KR-DH`: two diffusers 1269 × 196 at x 22.495–23.764 and 23.836–25.105, y 15.369–15.565, z 1.560–1.563. **Temporary cable `TEMP-1.02-DH`** (`Pset_YamlIfc.TempCable`, no `CableNumber`), panel 1 and CYKY 4x1.5 assumed. Added to the room's `Controls` lists next to NC-1.02-S. |
+
+`open:` **`NC-1.02-S`** (the plan's “Panel 200x2500 (~160 W)” with no cable, at 2.99 by the north wall, x 22.515–25.015, y 15.343–15.543) lies exactly over SF-DH in plan. It may be the same dining light drawn on the plan at the ceiling. Not touched; question in [Questions.md](../electrical/Questions.md) item 14.
+
+Matter, not done here (Home is a separate repo; `blueprints-1.02` would be a new entry in its `sources` and pins a Blueprints commit; it can only reference these GlobalIds after this is merged and the pin bumped). `guess:` records for Home's `hardware.yaml`, if Petr's sheets are CCT like every other indoor light (WiringOverview: 24 V, PWM, CCT on 4 cores):
+
+```yaml
+  "0Em9207ILL0AQyFYvB2qXE":
+    blueprintsId: C181-S
+    matter: { deviceType: ColorTemperatureLight, channels: [warm, cool] }
+    control: { esp32: null, driver: null, pins: null }
+    automations: {}
+    sources: [blueprints-1.02, plan-step1, wiring-lights, wiring-indoor-cct]
+  "3kNrurCkTGufS7Cviy$JPc":
+    blueprintsId: NC-1.02-S-2
+    matter: { deviceType: ColorTemperatureLight, channels: [warm, cool] }
+    control: { esp32: null, driver: null, pins: null }
+    automations: {}
+    sources: [blueprints-1.02, plan-step1, wiring-lights, wiring-indoor-cct]
+```
+
+### Cable and driver route (`guess:`, `open:`)
+
+- No driver in the cabinets if the sheets are 24 V: the house's 24 V constant-voltage supplies and the PWM dimming are in the panels (WiringOverview), and the 4-core cable goes straight to the LEDs (V+, V+, cool, warm). `open:` if Petr's sheets are 12 V, single-colour or need their own driver, a small one goes in the cabinet at the bottom back (it then needs air) and the cable type may change.
+- `open:` the power per module is not known, so the panel-1 supply cannot be sized yet (WiringOverview: size for every light at full output on both channels).
+- Each field has a **Ø10 hole through the web**, centred on the field, 15 in from the pocket's back edge (world: west x 18.856 at y 11.780 / 12.600 / 13.420; SF-DH y 15.544 at x 23.130 / 24.470). Inside, a small junction box at the bottom back of one cabinet; Ø10 holes through the dividers just above the bottom at the back link the next cabinets.
+- West (C181): the Soupis says “into a box in the pre-wall”; `guess:` that box behind SF-BH800 (the middle cabinet), the cable through its back panel.
+- Dining (TEMP-1.02-DH): `open:` where it comes from. One option: from panel 1 like C181, or a short run from the deep box behind C185-V (x 25.61, y 15.60, z 1.35, where 186–188 end “for later distribution in the furniture”), past pier W-053 into SF-DH's east section.
+
+### What changed (old → new)
+
+| Element | Old | New |
+|---|---|---|
+| Bottoms SF-CH850, SF-BH800, SF-AH850, SF-DH | 18, z 1560–1578, plain | **30, z 1560–1590**, LED pocket routed into the underside |
+| Their backs, SF-DH-SDIV1 | from 1578 | from 1590 |
+| West shelves (each cabinet) | 1850.7–1868.7, 2141.3–2159.3 | 1858.7–1876.7, 2145.3–2163.3 |
+| SF-DH shelves (both sections) | 1835.3–1853.3, 2110.7–2128.7 | 1843.3–1861.3, 2114.7–2132.7 |
+| Underside, fronts, HF mechanisms, tops | 1560, … | unchanged |
+| Clearance worktop (930) → wall cabinets | 630 (west and dining) | **630, unchanged** |
+| SF-DH inside depth | 250 | 250, unchanged (HF note still open) |
+| C181-S | strip at x 19.430, z 1.530 | the three west diffusers, z 1.560 |
+| NC-1.02-S-2 | — | the two SF-DH diffusers, cable TEMP-1.02-DH |
+
+### Open (`open:`)
+
+- Petr's module size (245 × 495 “I think”), its thickness, voltage, CCT or not, power, and whether it can be cut to the pieces above.
+- The air gap (8) depends on the LED pitch; denser dots can go closer.
+- Fixing the 30 bottom (fixings in the web), and how the diffuser is held.
+- TEMP-1.02-DH: cable number, panel and route. C181's pre-wall box position (after the sliding-door work, Soupis).
+- NC-1.02-S: the same light as the SF-DH panels, or something else?
+- Matter records in Home (above), after this is merged.

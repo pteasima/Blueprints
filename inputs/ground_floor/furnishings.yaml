@@ -1518,6 +1518,20 @@ furniture:
         Properties:
           WorktopThickness: 0.0
           PlinthHeight: 0.0
+          # Petr, 2026-11-22 a: "lets do the led panels like we discussed, on
+          # the underside of the kitchen (west) top cabinets, and the dining
+          # (north) top cabinets. [...] I want the underside of the cabinet to
+          # be a full led panel, with some reasonable padding. [...] Use the
+          # right thickness cabinet bottom so the panel can be routed into
+          # it." A 30 bottom (was 18), the panel field routed into its
+          # underside, underside unchanged at 1560 (see kitchen-cabinets.md
+          # "LED panels under the wall cabinets"; layer sizes are the
+          # Led* defaults in models/kitchen_cabinet.py).
+          LedPanels: true
+          BottomThickness: 0.030
+          # 2 play each side (the top of Petr's 1-2): the 1270 diffusers
+          # grow about 2.7 over 30 K (PMMA 70e-6/K); the west 770 keep 1.5.
+          LedRebatePlay: 0.002
   - id: KR-TC
     Name: "Rohová vysoká"
     Description: "The tall corner cabinet (SF-TC), a monoblock of one (2026-11-19), cream since 2026-11-20 f (was oak). On the floor like before."
@@ -1540,6 +1554,17 @@ furniture:
         Properties:
           WorktopThickness: 0.0
           PlinthHeight: 0.0
+          # Petr, 2026-11-22 a: "lets do the led panels like we discussed, on
+          # the underside of the kitchen (west) top cabinets, and the dining
+          # (north) top cabinets. [...] I want the underside of the cabinet to
+          # be a full led panel, with some reasonable padding. [...] Use the
+          # right thickness cabinet bottom so the panel can be routed into
+          # it." A 30 bottom (was 18), the panel field routed into its
+          # underside, underside unchanged at 1560 (see kitchen-cabinets.md
+          # "LED panels under the wall cabinets"; layer sizes are the
+          # Led* defaults in models/kitchen_cabinet.py).
+          LedPanels: true
+          BottomThickness: 0.030
   - id: KR-TALL-W
     Name: "Vysoká u zdi"
     Description: "Tall cabinet T1 between the west wall and the fridge, a monoblock of one."

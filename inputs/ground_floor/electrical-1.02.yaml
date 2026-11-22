@@ -466,9 +466,17 @@ lightFixtures:
           CableLength: 4
   - id: C181-S
     Name: Světlo 181
-    Description: "Plan mark 2(181). Under the wall cabinets (1560). Soupis: into a box in the pre-wall, position after the sliding-door work. No box; the viewer draws the legs from Path (x,y,z points; | separates runs)."
+    # Petr, 2026-11-22 a: "lets do the led panels like we discussed, on the
+    # underside of the kitchen (west) top cabinets [...] (as far as I
+    # remember, the kitchen one might already exist but is placed wrong".
+    # Was a LedStrip on Path "19.430,11.310,1.530;19.430,13.780,1.530" (at
+    # the worktop front edge, 280 in front of the cabinet fronts, 30 under
+    # the cabinets); now the LED panel fields routed into the KR-WEST-H
+    # cabinet bottoms (one per cabinet, one circuit). The id and GlobalId
+    # are kept.
+    Description: "Plan mark 2(181). LED panels in the undersides of the west wall cabinets (KR-WEST-H: SF-CH850, SF-BH800, SF-AH850), one field per cabinet behind 3 mm opal diffusers, flush at 1560. Soupis: into a box in the pre-wall, position after the sliding-door work. No box; the viewer draws the diffusers from PanelRun (the kitchen model's LED fields). See kitchen-cabinets.md, LED panels under the wall cabinets."
     PredefinedType: USERDEFINED
-    ObjectType: LedStrip
+    ObjectType: LedPanel
     ContainedInStructure: SP-1.02
     PropertySets:
       - Name: Pset_YamlIfc
@@ -479,7 +487,7 @@ lightFixtures:
           CableSpec: CYKY 4x1.5
           CableLength: 4
           Note: do krabice v predstene (pozice bude upresnena po realizaci soupacek), mozno vest podlahou ale omezit soubeh se zasuvkami
-          Path: "19.430,11.310,1.530;19.430,13.780,1.530"
+          PanelRun: KR-WEST-H
   - id: C182-S
     Name: Světlo 182
     Description: "Plan mark 2(182). Island strips on both long sides; Soupis: from a floor box. Plinth height 0.10 assumed. No box; the viewer draws the legs from Path (x,y,z points; | separates runs)."
@@ -606,7 +614,26 @@ lightFixtures:
         Properties:
           DeviceCode: "S"
           CableQuestion: No cable on the plan
-          Question: "1.02 \"Panel 200x2500\" by the north wall has no cable mark. Which cable?"
+          Question: "1.02 \"Panel 200x2500\" by the north wall has no cable mark. Which cable? Is it the same light as NC-1.02-S-2 (the LED panels under SF-DH, 2026-11-22 a), which it overlaps in plan?"
+  # Petr, 2026-11-22 a: "[...] and the dining (north) top cabinets. [...]
+  # the dining one we forgot, doesn't even have a cable yet". "fine to give
+  # them some temporary cable names and I'll figure it out later".
+  - id: NC-1.02-S-2
+    Name: Světlo TEMP-1.02-DH
+    Description: "Not on the plan (added 2026-11-22 a). LED panels in the underside of the dining wall cabinet SF-DH (KR-DH), one field per section behind 3 mm opal diffusers, flush at 1560. Temporary cable name TEMP-1.02-DH; panel, spec and route are guesses. No box; the viewer draws the diffusers from PanelRun. See kitchen-cabinets.md, LED panels under the wall cabinets."
+    PredefinedType: USERDEFINED
+    ObjectType: LedPanel
+    ContainedInStructure: SP-1.02
+    PropertySets:
+      - Name: Pset_YamlIfc
+        Properties:
+          DeviceCode: "S"
+          TempCable: TEMP-1.02-DH
+          Panel: 1
+          CableSpec: CYKY 4x1.5
+          PanelRun: KR-DH
+          CableQuestion: No cable yet (temporary name TEMP-1.02-DH)
+          Question: "TEMP-1.02-DH, the LED panels under SF-DH: which cable, panel and route? (Guess: CYKY 4x1.5 from panel 1 like C181, e.g. into the deep box behind C185-V where 186-188 end.)"
 switchingDevices:
   - id: C185-V
     Name: Vypínač 185
@@ -628,7 +655,7 @@ switchingDevices:
           DeviceCode: "V"
           CableSpec: UTP Cat6a
           CableLength: 15
-          Controls: C166-S-1, C166-S-2, C167-S-1, C167-S-2, C168-S-1, C168-S-2, C170-S-1, C170-S-2, C169-S-1, C169-S-2, C171-S-1, C171-S-2, C172-S, C174-S, C176-S, C178-S, C173-S, C175-S, C177-S, C179-S, C180-S, C181-S, C182-S, C183-S, C184-S, C186-S, C187-S, C188-S, NC-1.02-S
+          Controls: C166-S-1, C166-S-2, C167-S-1, C167-S-2, C168-S-1, C168-S-2, C170-S-1, C170-S-2, C169-S-1, C169-S-2, C171-S-1, C171-S-2, C172-S, C174-S, C176-S, C178-S, C173-S, C175-S, C177-S, C179-S, C180-S, C181-S, C182-S, C183-S, C184-S, C186-S, C187-S, C188-S, NC-1.02-S, NC-1.02-S-2
   - id: C88-V-1
     Name: Vypínač 88-1
     Description: Plan mark 1(088).
@@ -649,7 +676,7 @@ switchingDevices:
           DeviceCode: "V"
           CableSpec: UTP Cat6a
           CableLength: 6
-          Controls: C166-S-1, C166-S-2, C167-S-1, C167-S-2, C168-S-1, C168-S-2, C170-S-1, C170-S-2, C169-S-1, C169-S-2, C171-S-1, C171-S-2, C172-S, C174-S, C176-S, C178-S, C173-S, C175-S, C177-S, C179-S, C180-S, C181-S, C182-S, C183-S, C184-S, C186-S, C187-S, C188-S, NC-1.02-S
+          Controls: C166-S-1, C166-S-2, C167-S-1, C167-S-2, C168-S-1, C168-S-2, C170-S-1, C170-S-2, C169-S-1, C169-S-2, C171-S-1, C171-S-2, C172-S, C174-S, C176-S, C178-S, C173-S, C175-S, C177-S, C179-S, C180-S, C181-S, C182-S, C183-S, C184-S, C186-S, C187-S, C188-S, NC-1.02-S, NC-1.02-S-2
   - id: C88-V-2
     Name: Vypínač 88-2 venku
     Description: Plan mark 1(088). Terrace side.
@@ -690,7 +717,7 @@ switchingDevices:
           DeviceCode: "V"
           CableSpec: UTP Cat6a
           CableLength: 16
-          Controls: C166-S-1, C166-S-2, C167-S-1, C167-S-2, C168-S-1, C168-S-2, C170-S-1, C170-S-2, C169-S-1, C169-S-2, C171-S-1, C171-S-2, C172-S, C174-S, C176-S, C178-S, C173-S, C175-S, C177-S, C179-S, C180-S, C181-S, C182-S, C183-S, C184-S, C186-S, C187-S, C188-S, NC-1.02-S
+          Controls: C166-S-1, C166-S-2, C167-S-1, C167-S-2, C168-S-1, C168-S-2, C170-S-1, C170-S-2, C169-S-1, C169-S-2, C171-S-1, C171-S-2, C172-S, C174-S, C176-S, C178-S, C173-S, C175-S, C177-S, C179-S, C180-S, C181-S, C182-S, C183-S, C184-S, C186-S, C187-S, C188-S, NC-1.02-S, NC-1.02-S-2
   - id: C89-V-2
     Name: Vypínač 89-2 venku
     Description: Plan mark 1(089). Terrace side.
@@ -727,7 +754,7 @@ switchingDevices:
           CableLength: 15
           Note: tento a nize pridano 3.4.2026
           PositionUnknown: true
-          Controls: C166-S-1, C166-S-2, C167-S-1, C167-S-2, C168-S-1, C168-S-2, C170-S-1, C170-S-2, C169-S-1, C169-S-2, C171-S-1, C171-S-2, C172-S, C174-S, C176-S, C178-S, C173-S, C175-S, C177-S, C179-S, C180-S, C181-S, C182-S, C183-S, C184-S, C186-S, C187-S, C188-S, NC-1.02-S
+          Controls: C166-S-1, C166-S-2, C167-S-1, C167-S-2, C168-S-1, C168-S-2, C170-S-1, C170-S-2, C169-S-1, C169-S-2, C171-S-1, C171-S-2, C172-S, C174-S, C176-S, C178-S, C173-S, C175-S, C177-S, C179-S, C180-S, C181-S, C182-S, C183-S, C184-S, C186-S, C187-S, C188-S, NC-1.02-S, NC-1.02-S-2
 sensors:
   - id: C165-R
     Name: mmWave 165

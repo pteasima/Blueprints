@@ -17,7 +17,8 @@ Raised while placing every fixture from FixturePlan.pdf and the Soupis sheet. Ea
 11. **1.02** `C182-S`: C182 island strips: plinth (0.10 m) or under the worktop overhang?
 12. **1.02** `C183-S`: C183 panel in the shelf over the hood: what height is the shelf?
 13. **1.02** `C186-S`: C186 strip follows a drawn outline from the north wall round to x 29.1 (sofa?). Floor level assumed.
-14. **1.02** `NC-1.02-S`: 1.02 "Panel 200x2500" by the north wall has no cable mark. Which cable?
+14. **1.02** `NC-1.02-S`: 1.02 "Panel 200x2500" by the north wall has no cable mark. Which cable? Since 2026-11-22 a: is it the same light as `NC-1.02-S-2` (the LED panels under the dining wall cabinet SF-DH, temporary cable TEMP-1.02-DH)? It overlaps them in plan (x 22.515–25.015, y 15.343–15.543) but sits at 2.99. If it is, delete it; if not, what is it?
+14a. **1.02** `NC-1.02-S-2` (2026-11-22 a): the LED panels under SF-DH have no cable yet (Petr: "the dining one we forgot, doesn't even have a cable yet"). Temporary name **TEMP-1.02-DH**, CYKY 4x1.5 from panel 1 assumed. Which cable number, panel and route? See [kitchen-cabinets.md](../design/kitchen-cabinets.md), LED panels under the wall cabinets.
 15. **1.03** `C59-R`: Pantry radar is marked 1(061); Soupis 61 is the 1.12 blind and the R is on cable 59 (V,M,R). Modelled as C59-R on the ceiling.
 16. **1.05** `Q64-S`: Corridor-east lights marked 2(064) and 2(065): Soupis 64 and 65 are 1.03 pantry lights (also marked 2(064)/2(065) there). Which cables feed these two?
 17. **1.05** `Q66-R`: Corridor-east radar marked 1(066): Soupis 66 is the 1.13 blind (marked 4(66) there). Which cable?

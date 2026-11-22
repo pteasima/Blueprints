@@ -23,6 +23,7 @@ from electrical_rooms import (  # noqa: E402
     _pset_props,
     device_records,
     load_document,
+    panel_rects,
     room_of,
     source_paths,
     strip_runs,
@@ -162,6 +163,14 @@ def render_svg(room: str, doc: dict) -> str:
             x, y, z = runs[0][len(runs[0]) // 2]
             labels.append((sx(x), sy(y), record["id"], f"z {z:.2f}", colour))
             continue
+        rects = panel_rects(record)
+        if rects:
+            for x0, y0, _z0, x1, y1, _z1 in rects:
+                pts = " ".join(f"{sx(x):.1f},{sy(y):.1f}" for x, y in ((x0, y0), (x1, y0), (x1, y1), (x0, y1)))
+                out.append(f'<polygon points="{pts}" fill="{colour}" fill-opacity="0.85" stroke="#222" stroke-width="0.8"/>')
+            x0, y0, z0, x1, y1, _z1 = rects[len(rects) // 2]
+            labels.append((sx((x0 + x1) / 2), sy((y0 + y1) / 2), record["id"], f"z {z0:.3f}", colour))
+            continue
         fp = footprint(record)
         if fp is None:
             continue
@@ -250,6 +259,8 @@ def room_markdown(room: str, doc: dict) -> str:
             pos = (f"{x:.2f}", f"{y:.2f}", f"{centre_z(record):.2f}")
         elif strip_runs(record):
             pos = ("path", "", "")
+        elif panel_rects(record):
+            pos = (f"panels ({len(panel_rects(record))})", "", f"{panel_rects(record)[0][2]:.3f}")
         elif props.get("InSwitchBox"):
             pos = (f"in {props['InSwitchBox']}", "", "")
         else:

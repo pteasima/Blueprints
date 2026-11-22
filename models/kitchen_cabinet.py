@@ -58,6 +58,29 @@ IKEA_DEFAULTS_MM = {
     # A layer under the stone (box runs, ``UnderlayMaterial``): Petr,
     # 2026-11-20 f, the dining run is 20 Silestone on 20 oak.
     "UnderlayThickness": 0.0,
+    # Cabinet bottom thickness; 0 = BoardThickness. The wall cabinets with
+    # LED panels (``LedPanels``) take a 30 bottom with the panel routed into
+    # its underside (2026-11-22 a, see kitchen-cabinets.md "LED panels").
+    "BottomThickness": 0.0,
+    # LED panel field under a cabinet bottom (``Pset_KitchenRun.LedPanels``),
+    # from the underside up: a rebate for the opal diffuser (flush with the
+    # underside, ``LedRebatePlay`` all round), then a pocket ``LedLedge``
+    # smaller each side (the diffuser rests on that ledge) holding the air
+    # gap, the LED sheet and its aluminium plate. All guess: except Petr's
+    # 245 x 495 module ("I think") and the 3 mm opal acrylic.
+    "LedPadding": 25.0,  # field edge to the bottom board's edges (and to section dividers)
+    "LedRebatePlay": 1.5,  # diffuser to rebate, each side (1-2)
+    "LedDiffuserThickness": 3.0,  # opal PMMA, e.g. Plexiglas LED WH14 / WH72
+    "LedLedge": 8.0,  # diffuser seat, each side
+    "LedAirGap": 8.0,  # LED dots to diffuser (5-10 for bare dots)
+    "LedModuleThickness": 2.0,
+    "LedPlateThickness": 2.0,  # aluminium backing plate
+    "LedPlatePlay": 1.0,  # plate to pocket, each side
+    "LedModuleWidth": 245.0,  # Petr: "245*495mm (I think)"
+    "LedModuleLength": 495.0,
+    "LedMinCut": 50.0,  # narrower leftovers are left off (the field is centred)
+    "LedMinWeb": 10.0,  # board left over the pocket
+    "LedCableHole": 10.0,  # through the web into the cabinet, at the pocket's back
     "PlinthHeight": 92.0,  # METOD legs 80–100
     "PlinthSetback": 50.0,  # plinth board behind the front face (guess)
     # Inner drawers (Pset_Fronts drawer ``inner=``), Blum MERIVOBOX / LEGRABOX
@@ -529,12 +552,59 @@ class Run:
     builtins: list = field(default_factory=list)  # yaml appliance elements placed in this run
     clearances: list = field(default_factory=list)  # (bay id, run-frame box): space a lift front needs open
     notes: list = field(default_factory=list)  # derived facts for docs ("open:" ones too)
+    led_fields: list = field(default_factory=list)  # LedField per lit cabinet section
 
     def part(self, part_id: str) -> Part:
         return next(p for p in self.parts if p.id == part_id)
 
     def bay(self, bay_id: str) -> Bay:
         return next(b for b in self.bays if b.id == bay_id)
+
+
+@dataclass
+class LedField:
+    """One LED panel field routed into a cabinet bottom's underside (run
+    frame mm). Boxes are (a0, a1, c0, c1, z0, z1)."""
+    bay_id: str
+    index: int
+    rebate: tuple  # the opening in the underside
+    diffuser: tuple
+    pocket: tuple
+    plate: tuple
+    modules: list  # LED sheet pieces, each a box
+    hole: tuple  # (a, c) of the cable hole, through the web
+
+
+def _cuts(length: float, module: float, min_cut: float) -> list[float]:
+    """Module pieces along one side: whole modules, then one cut piece; a
+    leftover under ``min_cut`` is left off."""
+    whole = int(length // module)
+    out = [module] * whole
+    rest = length - whole * module
+    if rest >= min_cut - TOL:
+        out.append(rest)
+    if not out:
+        out = [length]  # narrower than one module: one cut piece
+    return out
+
+
+def _ring(outer: tuple, holes: list, z0: float, z1: float) -> list:
+    """``outer`` (a0, a1, c0, c1) less the ``holes`` (side by side along a,
+    inside outer), as boxes from z0 to z1."""
+    a0, a1, c0, c1 = outer
+    out = []
+    cursor = a0
+    for h0, h1, k0, k1 in sorted(holes):
+        if h0 > cursor + TOL:
+            out.append((cursor, h0, c0, c1, z0, z1))
+        if k0 > c0 + TOL:
+            out.append((h0, h1, c0, k0, z0, z1))
+        if c1 > k1 + TOL:
+            out.append((h0, h1, k1, c1, z0, z1))
+        cursor = h1
+    if a1 > cursor + TOL:
+        out.append((cursor, a1, c0, c1, z0, z1))
+    return out
 
 
 # --- layout ------------------------------------------------------------------
@@ -980,10 +1050,15 @@ class _Builder:
         lo, hi = bay.clear_lo, bay.clear_hi
         back_y = bay.depth - (t / 2 if shared_back else bt)
         c_in0, c_in1 = self.c_range(bay, tf, back_y)
-        self.add(Part(f"{bay.id}-BOTTOM", "Dno", "Bottom", [(lo, hi, c_in0, c_in1, z0, z0 + t)]), bay)
+        tb = p["BottomThickness"] or t
+        if _prop(run.element, PSET_RUN, "LedPanels"):
+            self._led_bottom(bay, p, lo, hi, c_in0, c_in1, z0, tb)
+        else:
+            self.add(Part(f"{bay.id}-BOTTOM", "Dno", "Bottom", [(lo, hi, c_in0, c_in1, z0, z0 + tb)],
+                          props={"Thickness": round(tb / 1000.0, 6)} if tb != t else {}), bay)
         if not shared_back:
             c0, c1 = self.c_range(bay, back_y, bay.depth)
-            self.add(Part(f"{bay.id}-BACK", "Záda", "Back", [(lo, hi, c0, c1, z0 + t, z1)]), bay)
+            self.add(Part(f"{bay.id}-BACK", "Záda", "Back", [(lo, hi, c0, c1, z0 + tb, z1)]), bay)
         hob = self.run.hobs.get(bay.id)
         if p["WorktopThickness"] > 0:
             if not self._has_sink(bay):
@@ -1004,6 +1079,82 @@ class _Builder:
         for sub in subs or [bay]:
             self._fronts(sub, p, z0, z1, back_y, ceiling)
 
+    def _led_bottom(self, bay: Bay, p: dict, lo: float, hi: float, c_in0: float, c_in1: float, z0: float, tb: float):
+        """A cabinet bottom with LED panel fields routed into its underside
+        (``Pset_KitchenRun.LedPanels``; Petr, 2026-11-22 a: "I want the
+        underside of the cabinet to be a full led panel, with some
+        reasonable padding"). One field per section (``Pset_Fronts.Sections``),
+        ``LedPadding`` from the board's edges and from the section dividers,
+        so each divider stands on solid board. Parts: the bottom (web over
+        the pocket, the frame round the rebate, the ledge), per field the
+        aluminium plate and the LED sheet pieces. The diffuser is the light
+        fixture's (``Pset_YamlIfc.PanelRun`` in the room's electrical YAML)."""
+        t = p["BoardThickness"]
+        pad, play, ledge = p["LedPadding"], p["LedRebatePlay"], p["LedLedge"]
+        dt, gap, mt, pt = p["LedDiffuserThickness"], p["LedAirGap"], p["LedModuleThickness"], p["LedPlateThickness"]
+        z_reb = z0 + dt
+        z_pocket = z_reb + gap + mt + pt
+        if z0 + tb - z_pocket < p["LedMinWeb"] - TOL:
+            raise ValueError(f"{bay.id}: LED pocket {z_pocket - z0:.0f} deep leaves under {p['LedMinWeb']:.0f} "
+                             f"of the {tb:.0f} bottom")
+        # Section edges (the dividers stand on the bottom).
+        spans = [(lo, hi)]
+        widths = section_widths(bay.element, bay.width)
+        if widths is not None:
+            if not bay.front_low:
+                widths = widths[::-1]
+            edges = [bay.a0]
+            for w in widths:
+                edges.append(edges[-1] + w)
+            inner = edges[1:-1]
+            cuts = [lo] + [x for e in inner for x in (e - t / 2, e + t / 2)] + [hi]
+            spans = list(zip(cuts[0::2], cuts[1::2]))
+        rebates, pockets = [], []
+        for k, (s0, s1) in enumerate(spans, start=1):
+            r = (s0 + pad, s1 - pad, c_in0 + pad, c_in1 - pad)
+            if r[1] - r[0] < 100 or r[3] - r[2] < 100:
+                raise ValueError(f"{bay.id}: LED field {k} under 100 mm")
+            d = (r[0] + play, r[1] - play, r[2] + play, r[3] - play)
+            pk = (r[0] + ledge, r[1] - ledge, r[2] + ledge, r[3] - ledge)
+            pl = (pk[0] + p["LedPlatePlay"], pk[1] - p["LedPlatePlay"], pk[2] + p["LedPlatePlay"], pk[3] - p["LedPlatePlay"])
+            # LED sheet: long side of the module along the run, cut pieces
+            # at the far end and the back; centred on the plate.
+            along = _cuts(pl[1] - pl[0], p["LedModuleLength"], p["LedMinCut"])
+            across = _cuts(pl[3] - pl[2], p["LedModuleWidth"], p["LedMinCut"])
+            a_start = (pl[0] + pl[1]) / 2 - sum(along) / 2
+            c_start = (pl[2] + pl[3]) / 2 - sum(across) / 2
+            z_led0 = z_reb + gap
+            modules = []
+            ca = a_start
+            for la in along:
+                cc = c_start
+                for lc in across:
+                    modules.append((ca, ca + la, cc, cc + lc, z_led0, z_led0 + mt))
+                    cc += lc
+                ca += la
+            back_c = pk[3] if bay.front_low else pk[2]
+            inward = -1.0 if bay.front_low else 1.0
+            hole = ((pk[0] + pk[1]) / 2, back_c + inward * (p["LedCableHole"] / 2 + 10.0))
+            f = LedField(bay.id, k, (*r, z0, z_reb), (*d, z0, z0 + dt), (*pk, z_reb, z_pocket),
+                         (*pl, z_led0 + mt, z_led0 + mt + pt), modules, hole)
+            self.run.led_fields.append(f)
+            rebates.append(r)
+            pockets.append(pk)
+            tag = f"{bay.id}-LED{k}"
+            self.add(Part(f"{tag}-PLATE", f"Hliníková deska LED {k}", "LedPlate", [f.plate], label="appliance",
+                          props={"Kind": "LedBackingPlate", "Size": f"{pl[1] - pl[0]:.0f} x {pl[3] - pl[2]:.0f} x {pt:.0f}"}), bay)
+            self.add(Part(f"{tag}-SHEET", f"LED panel {k}", "LedModule", modules, label="appliance",
+                          props={"Kind": "LedSheet", "Pieces": ", ".join(f"{m[1] - m[0]:.0f} x {m[3] - m[2]:.0f}" for m in modules),
+                                 "ModuleSize": f"{p['LedModuleWidth']:.0f} x {p['LedModuleLength']:.0f} (guess:)"}), bay)
+        board = (lo, hi, c_in0, c_in1)
+        boxes = [(lo, hi, c_in0, c_in1, z_pocket, z0 + tb)]  # the web over the pockets
+        boxes += _ring(board, rebates, z0, z_pocket)  # the frame round the rebates
+        for r, pk in zip(rebates, pockets):
+            boxes += _ring(r, [pk], z_reb, z_pocket)  # the ledge the diffuser sits on
+        self.add(Part(f"{bay.id}-BOTTOM", "Dno s frézovanou kapsou pro LED panel", "Bottom", boxes,
+                      props={"Thickness": round(tb / 1000.0, 6), "LedFields": len(rebates),
+                             "RebateDepth": round(dt / 1000.0, 6), "PocketDepth": round((z_pocket - z0) / 1000.0, 6)}), bay)
+
     def _sections(self, bay: Bay, p: dict, z0: float, z1: float, back_y: float) -> list | None:
         """A wide bay split into side-by-side sections (``Pset_Fronts.Sections``):
         an 18 mm divider between two sections, each section its own fronts
@@ -1014,6 +1165,7 @@ class _Builder:
         if widths is None:
             return None
         t, tf = p["BoardThickness"], p["FrontThickness"]
+        tb = p["BottomThickness"] or t
         # Left to right as you face the front: low a first when the front is the c0 face.
         if not bay.front_low:
             widths = widths[::-1]
@@ -1029,7 +1181,7 @@ class _Builder:
             first, last = k == 0, k == len(widths) - 1
             if not last:
                 self.add(Part(f"{bay.id}-SDIV{k + 1}", f"Přepážka sekcí {k + 1}", "Divider",
-                              [(a1 - t / 2, a1 + t / 2, dc0, dc1, z0 + t, z1 - t)]), bay)
+                              [(a1 - t / 2, a1 + t / 2, dc0, dc1, z0 + tb, z1 - t)]), bay)
             sub = replace(bay, id=f"{bay.id}-S{number}", element=section_element(bay.element, number),
                           a0=a0, a1=a1, clear_lo=bay.clear_lo if first else a0 + t / 2,
                           clear_hi=bay.clear_hi if last else a1 - t / 2, zones=[])
@@ -1069,7 +1221,8 @@ class _Builder:
                               props={"Zone": zone.index}), bay)
             # Clear interior of the band: above the board under it (or the
             # carcass bottom), below the board over it (or the top/rails).
-            in_z0 = zone.slot_z0 + t
+            # The lowest band stands on the carcass bottom (``BottomThickness``).
+            in_z0 = zone.slot_z0 + ((p["BottomThickness"] or t) if below is None else t)
             in_z1 = zone.slot_z1 - (t if top_zone else 0.0)
             front_box = (bay.a0 + g, bay.a1 - g, fc0, fc1, zone.slot_z0 + g, zone.slot_z1 - g)
             base = {"Zone": zone.index, "Kind": zone.kind, "NominalHeight": round(zone.nominal / 1000.0, 6),
