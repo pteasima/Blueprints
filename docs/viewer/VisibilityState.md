@@ -31,6 +31,9 @@ It is written when an orbit or pan ends, a moment after other camera moves, and 
 
 There is no reset button for the camera: pick a scene or a built-in view to go back to a known pose. Reset visibility does not clear the camera entry.
 
+## Fixture edits are not remembered
+
+Unlike visibility and the camera, fixture and cable-route edits in Edit mode are only for this visit (Petr, 2026-11-22: "Lets make it so that website refresh cancels edits. If possible, ask to confirm before leaving or refreshing the page" / "only ask where there are unsaved edits"). They are not written to `localStorage`. A refresh or a new visit shows the model as exported. If there are unsaved edits, the browser asks before leaving or refreshing. On load, any leftover `blueprints.fixtureEdits.*` keys from before this change are removed, so an old edit cannot move a fixture on top of a newer model. Visibility, locks and the camera are unchanged. Export, Share, Copy and Download still write the same JSON patch. See [docs/electrical/EditMode.md](../electrical/EditMode.md).
 
 ## Enclosure
 

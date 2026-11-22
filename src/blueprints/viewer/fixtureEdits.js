@@ -13,8 +13,10 @@
  * Positions are house coordinates in metres: x east, y north, z up from the
  * 1.NP floor, the same frame as the YAML `Origin` and `Elevation`.
  *
- * The round trip (localStorage → exported patch → repo overrides file →
- * export) is documented in docs/electrical/EditMode.md.
+ * The round trip (exported patch → repo overrides file → export) is
+ * documented in docs/electrical/EditMode.md. Edits are session-only; a
+ * refresh discards them and leftover `blueprints.fixtureEdits.*` keys
+ * are removed on load.
  */
 
 /** IFC class → yaml-ifc list key, for fixtures the viewer can duplicate. */
@@ -51,6 +53,52 @@ export const STORAGE_PREFIX = "blueprints.fixtureEdits.";
  * cableEdits.js); a version 1 store from before the cable routes still loads.
  */
 export const EDITS_VERSION = 2;
+
+/** True when the in-memory store has any fixture or cable-route edit. */
+export function storeHasEdits(store) {
+  if (!store) return false;
+  return Boolean(Object.keys(store.fixtures || {}).length || Object.keys(store.cables || {}).length);
+}
+
+/**
+ * Remove leftover `blueprints.fixtureEdits.*` keys. Edits are session-only
+ * (Petr, 2026-11-22: a refresh cancels unsaved edits), so a load must not
+ * restore them, and an older key must not move a fixture on a newer model.
+ * @param {Storage | null | undefined} storage
+ * @param {string} [prefix]
+ * @returns {string[]} keys removed
+ */
+export function discardLegacyEdits(storage, prefix = STORAGE_PREFIX) {
+  if (!storage) return [];
+  const removed = [];
+  try {
+    const keys = [];
+    for (let i = 0; i < storage.length; i++) {
+      const key = storage.key(i);
+      if (key && key.startsWith(prefix)) keys.push(key);
+    }
+    for (const key of keys) {
+      storage.removeItem(key);
+      removed.push(key);
+    }
+  } catch {
+    /* private mode */
+  }
+  return removed;
+}
+
+/**
+ * `beforeunload` handler body: arm the prompt only when there are unsaved
+ * edits (Petr, 2026-11-22: "only ask where there are unsaved edits").
+ * @param {Event & { returnValue?: string }} event
+ * @param {boolean} hasEdits
+ */
+export function onUnsavedLeave(event, hasEdits) {
+  if (!hasEdits) return false;
+  event.preventDefault();
+  event.returnValue = "";
+  return true;
+}
 
 /**
  * @param {object | null | undefined} element

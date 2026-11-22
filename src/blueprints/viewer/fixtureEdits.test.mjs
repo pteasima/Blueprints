@@ -10,9 +10,14 @@ import {
   fixtureRows,
   isFixture,
   nextFixtureId,
+  discardLegacyEdits,
+  emptyStore,
+  onUnsavedLeave,
   parseStore,
   pruneAbsorbed,
   snap,
+  storeHasEdits,
+  STORAGE_PREFIX,
 } from "./fixtureEdits.js";
 
 const yaml = (props) => ({ name: "yaml-ifc", properties: props });
@@ -144,5 +149,47 @@ assert.deepEqual(parseStore(JSON.stringify({ version: 3, fixtures: { a: {} } }),
 // A version 1 store from before the cable routes still loads, with no cable edits.
 assert.deepEqual(parseStore(JSON.stringify({ version: 1, fixtures: { a: {} } }), "m").cables, {});
 assert.equal(parseStore(JSON.stringify({ version: 1, fixtures: { a: {} } }), "m").version, 2);
+
+assert.equal(storeHasEdits(emptyStore("m")), false);
+assert.equal(storeHasEdits({ fixtures: { a: { target: [1, 0, 0] } }, cables: {} }), true);
+assert.equal(storeHasEdits({ fixtures: {}, cables: { C10: { points: [] } } }), true);
+
+function memoryStorage(init = {}) {
+  const data = { ...init };
+  return {
+    get length() { return Object.keys(data).length; },
+    key(i) { return Object.keys(data)[i] ?? null; },
+    getItem(k) { return Object.prototype.hasOwnProperty.call(data, k) ? data[k] : null; },
+    setItem(k, v) { data[k] = String(v); },
+    removeItem(k) { delete data[k]; },
+  };
+}
+
+const leftover = memoryStorage({
+  [`${STORAGE_PREFIX}ground_floor`]: JSON.stringify({ version: 2, fixtures: { "C181-S": { target: [0, 0, 0] } } }),
+  [`${STORAGE_PREFIX}other`]: "{}",
+  "blueprints.camera.ground_floor": "{}",
+  "blueprints.visibility.ground_floor": "{}",
+});
+assert.deepEqual(discardLegacyEdits(leftover).sort(), [
+  `${STORAGE_PREFIX}ground_floor`,
+  `${STORAGE_PREFIX}other`,
+]);
+assert.equal(leftover.getItem(`${STORAGE_PREFIX}ground_floor`), null);
+assert.equal(leftover.getItem("blueprints.camera.ground_floor"), "{}");
+assert.equal(leftover.getItem("blueprints.visibility.ground_floor"), "{}");
+assert.deepEqual(discardLegacyEdits(null), []);
+
+const armed = { prevented: false, returnValue: "keep" };
+armed.preventDefault = function preventDefault() { this.prevented = true; };
+assert.equal(onUnsavedLeave(armed, true), true);
+assert.equal(armed.prevented, true);
+assert.equal(armed.returnValue, "");
+
+const quiet = { prevented: false, returnValue: "keep" };
+quiet.preventDefault = function preventDefault() { this.prevented = true; };
+assert.equal(onUnsavedLeave(quiet, false), false);
+assert.equal(quiet.prevented, false);
+assert.equal(quiet.returnValue, "keep");
 
 console.log("fixtureEdits.test.mjs ok");

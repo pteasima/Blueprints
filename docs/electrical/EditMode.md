@@ -15,12 +15,14 @@ Source: Petr, 2026-11-19 (Cody chat): "I need an edit mode where I can drag repl
 
 9. The **Cables** tab edits the cable routes: select a route, then slide a segment or move a vertex with the same arrows, fields and − / + ([CableRoutes.md](CableRoutes.md#editing-in-the-viewer)).
 
-Edits stay in the browser's `localStorage` (`blueprints.fixtureEdits.<model>`). They show in the model outside edit mode too, and they survive a reload. Nothing reaches the repo until a bot commits the export.
+Edits stay for this visit only. They show in the model outside edit mode too, but a refresh or a new visit discards them and shows the exported model (Petr, 2026-11-22: "Lets make it so that website refresh cancels edits."). If there are unsaved edits, the browser asks to confirm before leaving or refreshing the page (Petr: "only ask where there are unsaved edits"). Export, Share, Copy and Download still write the same JSON patch. Nothing reaches the repo until a bot commits that export. Visibility, locks and the camera are remembered separately and are not affected.
+
+On load, any leftover `blueprints.fixtureEdits.*` keys from when edits used to persist are removed, so an old unsaved move cannot sit on top of a newer model.
 
 ## Round trip into the repo
 
 ```text
-viewer edits ─▶ localStorage ─▶ Export JSON ─▶ Cody
+viewer edits ─▶ Export JSON ─▶ Cody
   ─▶ python -m blueprints.fixture_overrides merge patch.json
   ─▶ inputs/ground_floor/fixture_overrides.json (commit, PR)
   ─▶ python -m blueprints.export ground_floor ─▶ GLB, ifc.json, plans
@@ -28,7 +30,7 @@ viewer edits ─▶ localStorage ─▶ Export JSON ─▶ Cody
 
 1. Save Petr's shared JSON (the one-line text from Share, or a `FixtureEdits-….json` file) as a file and run `python -m blueprints.fixture_overrides merge <file>`. That rewrites `inputs/ground_floor/fixture_overrides.json` and prints the merged entry of every fixture in the patch.
 2. Re-export the model (`python -m blueprints.export ground_floor`) and open a PR with the overrides file and the exports, as for any model change.
-3. After the deploy, the viewer compares each saved edit with the new model. An edit whose target position, schedule values, addition or deletion the model now has is dropped from `localStorage`, so it is not applied twice. If the model moved a fixture somewhere else in the meantime, Petr's absolute target still wins.
+3. After the deploy, a refresh (or a new visit) shows the new model. Unsaved edits do not survive the reload, so they cannot override a later export.
 
 Every room device YAML is loaded through `blueprints.fixture_overrides.load_fixture_document` (`models/bedroom_111.py` `load_document`, `models/electrical_rooms.py` `load_document` for every `electrical-<room>.yaml` ([Rooms.md](Rooms.md)), and `models/ground_floor.py` `ifc_index` for every document it indexes). A new room's device file has to be loaded the same way, or its edits will not reach the export. An override whose id is not in a document is ignored there.
 
@@ -51,7 +53,7 @@ Every room device YAML is loaded through `blueprints.fixture_overrides.load_fixt
 }
 ```
 
-Version 1 (PR 119) is the same without `cables`. Files and exports in version 1 are still read, and the viewer still loads version 1 edits from `localStorage`.
+Version 1 (PR 119) is the same without `cables`. Files and exports in version 1 are still read. The viewer no longer restores edits from `localStorage`; leftover keys are removed on load.
 
 | Key | Meaning |
 | --- | --- |
