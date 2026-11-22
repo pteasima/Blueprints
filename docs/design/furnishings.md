@@ -67,7 +67,7 @@ Wall cabinets: depth 350, height **890**, bottom **1560** (630 above the 930 cou
 
 Bosch SBD6ECX12E, 598 × 550 × 865, centred in the north 600 of A, back on the wall, 1 mm clear of each side of the niche.
 
-Teka BE LINEA RS15 71.40, undermount, overall 750 × 440, bowl 710 × 400 × 200, centred in the 800, rim glued under the 20 mm stone at 910 (model elevation 0.71), worktop cut-out 706 × 396 R13 (Teka). The EcoMaster EVO3 disposer and the Hansgrohe M71 tap are modelled ([kitchen-cabinets.md](kitchen-cabinets.md)).
+Teka BE LINEA RS15 71.40, undermount, overall 750 × 440, bowl 710 × 400 × 200, centred in the 800 and 60 mm toward the front since 2026-11-22 (rim at c 20, bowl c 40–440, 60 mm of stone from the worktop front edge to the inner bowl). Rim glued under the 20 mm stone at 910 (model elevation 0.71), worktop cut-out 706 × 396 R13 (Teka). The EcoMaster EVO3 hangs on the official drain (115 mm from the bowl back). The Hansgrohe M71 uses the official sizes (height 445, spout 333, reach 235) and sits 70 mm behind the bowl. See [kitchen-cabinets.md](kitchen-cabinets.md).
 
 Source for every row in this section: the header and the element `Description` fields of `furnishings.yaml`.
 

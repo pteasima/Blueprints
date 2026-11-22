@@ -249,9 +249,10 @@ Both sinks are Teka BE LINEA RS15 and both are **undermount** only (Teka: “Spo
 
 | Sink | Where | Overall | Bowl | Worktop cut-out | Rim top | Source |
 | --- | --- | --- | --- | --- | --- | --- |
-| `SN-RS15`, Teka BE LINEA RS15 71.40 X | west run, SF-B800, centred in the 800 | 750 × 440 | 710 × 400 × 200 | **706 × 396, R13** | 910 (`Elevation` 0.73 → **0.71**) | [Teka 115000004](https://www.teka.com/cs-cz/produkt/be-linea-rs15-71-40_115000004/) |
+| `SN-RS15`, Teka BE LINEA RS15 71.40 X | west run, SF-B800, centred in the 800, 60 mm toward the front since 2026-11-22 (rim c 20–460, bowl c 40–440) | 750 × 440 | 710 × 400 × 200 | **706 × 396, R13** | 910 (`Elevation` 0.73 → **0.71**) | [Teka 115000004](https://www.teka.com/cs-cz/produkt/be-linea-rs15-71-40_115000004/) |
 | `SN-RS1840`, Teka BE LINEA RS15 18.40 X | island, SF-I500a, centred on the bay | 440 × 220 | 400 × 180 × 140 | **396 × 176, R13** | 910 (`Elevation` 0.77) | [Teka 115000010](https://www.teka.com/cs-cz/produkt/be-linea-rs15-18-40-ss_115000010/); the card on [`KitchenPlan.jpg`](../../inputs/ground_floor/KitchenPlan.jpg) next to the island's green rectangle |
 
+- `SN-RS15` sat with its rim at c 80–520 (bowl c 100–500, 120 mm of stone in front of the inner bowl). Since 2026-11-22 (Petr, t819u) it sits 60 mm toward the front: rim c 20–460, bowl c 40–440, cut-out c 42–438. That leaves 60 mm from the worktop front edge (c −20) to the inner bowl and 62 mm to the cut-out, still above Cosentino's ≥ 50 mm from a worktop edge to a cut-out ([Silestone Design & Installation, Jan 2024](https://www.cosentino.com), “Cut-outs: Sink and tap”). The 20 mm rim stops 2 mm behind the inner face of the 18 mm front (`guess:` glue and clip play; the rim must not sit on the front). SF-B800 has no front rail. The Teka install sheet 61401450 wants a **min 65 mm** back band for a Ø35 hole; with the bowl back at c 440 there are 140 mm to the backsplash face (c 580). Drain centre is 115 mm from the inner bowl back, measured from the official to-scale plan (±3 mm for line thickness), stored as `Pset_Sink DrainOffsetFromBack: 0.115` (c 325).
 - `SN-RS1840`'s long side runs across the island (east–west), because the plan's green rectangle is a little longer that way. `guess:` Both ways fit: the clear width is 473 and 440 is the longest side.
 - `SN-RS1840` is centred on the bay depth (567 since 2026-11-22 f; 586 from 2026-11-13), so its cut-out runs 85.5–481.5 behind the bay front, 105.5–501.5 from the worktop's front edge (was 95–491 / 115–511). `guess:` The plan's rectangle sits a bit further forward. Its yaml `Origin` moved 7 mm east with the bay centre (2026-11-13) and 9.5 west (x 20.573 → 20.5635, 2026-11-22 f).
 - Without a manufacturer cut-out, `Pset_Sink` falls back to the bowl less 2 mm a side (`kitchen_cabinet.SINK_CUTOUT_INSET_MM`), which is the Teka pattern. `guess:`
@@ -505,8 +506,8 @@ Built-ins are yaml elements with no box: `electricAppliances` or `sanitaryTermin
 
 - `models/kitchen_cabinet.py` lays each one out:
   - `Kind: Niche` with `Bay` and `Zone`: centred in the niche, standing on its board. The fascia is on the fronts' plane and the body fills the niche.
-  - `Kind: Disposer` with `Sink`: a cylinder hung from the bowl's drain, centred on the bowl (`guess:`).
-  - `Kind: Tap` with `Sink`: a body 50 round, `HoleOffset` 40 behind the bowl, an arm to `SpoutReach`, and a nozzle down to `SpoutHeight` (`guess:` shape).
+  - `Kind: Disposer` with `Sink`: a cylinder hung from the bowl's drain. When `Pset_Sink DrainOffsetFromBack` is set, the cylinder is centred on that drain (west RS15: 115 mm from the inner bowl back, official Teka plan). Otherwise it is centred on the bowl (`guess:`; the island EVO3 is still this).
+  - `Kind: Tap` with `Sink`: a body 50 round, `HoleOffset` behind the *inner bowl back* (not the rim — until 2026-11-22 the offset was applied to the overall box, 20 mm too far back on these Teka sinks), an arm to `SpoutReach`, and a nozzle down to `SpoutHeight` (`guess:` shape).
 - The export stops if a niche falls outside the maker's `NicheHeightMin/Max` and `NicheWidthMin/Max`, or is shallower than `NicheDepth`.
 - In IFC the yaml product is kept (its class, PredefinedType, `Pset_ManufacturerTypeInformation` and room containment), not aggregated into the run. It gets the laid-out body and `Pset_KitchenBuiltIn`, and it joins its bay's group, as the hob does.
 
@@ -515,8 +516,8 @@ Built-ins are yaml elements with no box: `electricAppliances` or `sanitaryTermin
 | `EA-DGC7465` | Miele DGC 7465 HCX Pro, combi steam oven | 595 × 596 × 567. Niche 560–568 × 590–595 × 550. | [Miele data sheet](https://media.miele.com/downloads/e-/de/FS_12100360_DED_DE-de-DE.pdf), [miele.at](https://www.miele.at/product/12100360/dgc-7465-hcx-pro) |
 | `EA-M2230` | Miele M 2230 SC, built-in microwave, Obsidian black | 595 × 372 × 310. Niche 562–568 × 350–362 × 310. Door hinged on the left. | [Miele data sheet](https://media.miele.com/downloads/z-/cs/FS_11103410_CZC_CZ-cs.pdf), [miele.cz](https://www.miele.cz/product/11103410/vestavna-mikrovlnna-trouba-m-2230-sc-obsidian-cerna) |
 | `EA-EVO3-W`, `EA-EVO3-I` | EcoMaster STANDARD EVO3, food waste disposer | Ø145, 368 high. Sink hole Ø90. | [gastrozone.cz](https://www.gastrozone.cz/ecomaster-standard-evo3.html), [manual](https://www.nakuptedoma.cz/user/related_files/uzivatelsky-manual-em-evo3-cz-3.pdf) |
-| `SN-TAP-I` | Hansgrohe Aquno Select M81 170, pull-out spray, sBox (73831000) | 390 high, spout 165 high, reach 220, hole Ø35 at most 50 from the bowl back. | [hansgrohe.com](https://www.hansgrohe.com/articledetail-aquno-select-m81-kitchen-mixer-170-pull-out-spray-2jet-sbox-73831000) |
-| `SN-TAP-W` | Hansgrohe M71 M7117-H320, pull-out spray, sBox (73816000) | ComfortZone 320, hole Ø35. Total height 430 and reach 220 are `guess:` (not found). | [sanitino.cz](https://www.sanitino.cz/hansgrohe-m71-drezova-baterie-m7117h320-s-vysuvnou-sprskou-sbox-chrom-73816000) |
+| `SN-TAP-I` | Hansgrohe Aquno Select M81 170, pull-out spray, sBox (73831000) | 390 high, spout 165 high, reach 220, hole Ø35. `HoleOffset` 60 mm behind the bowl (was 40 when the offset was applied from the rim; the hole itself is unchanged). The “at most 50 mm from the bowl back” is this mixer's own planning note, not a rule for the M71. | [hansgrohe.com](https://www.hansgrohe.com/articledetail-aquno-select-m81-kitchen-mixer-170-pull-out-spray-2jet-sbox-73831000) |
+| `SN-TAP-W` | Hansgrohe M71 M7117-H320, pull-out spray, sBox (73816000) | Official dimensional drawing: total height **445**, spout **333**, reach **235**, hole Ø35. ComfortZone 320 is the name, not the spout height. `HoleOffset` **70** mm behind the bowl (was 40, and that 40 was applied from the rim, so the hole sat at c 560, 60 mm behind the bowl). 70 mm leaves 54 mm of stone between the cut-out and the hole (Cosentino ≥ 50) and 70 mm from the hole to the backsplash. Worktop thickness max 35 mm (60 mm with the extension); 20 mm is fine. The drawing states no bowl or wall setback. | [sanitino.cz](https://www.sanitino.cz/hansgrohe-m71-drezova-baterie-m7117h320-s-vysuvnou-sprskou-sbox-chrom-73816000), official drawing for 73816000 |
 | `EA-KT200` | Ninja KT200EU kettle, on SF-DN | 235 × 210 × 135 | [multitronic.fi](https://www.multitronic.fi/en/products/4424285) |
 | `EA-LIBRA` | Eureka Mignon Libra grinder, on SF-DN | 124 × 390 × 192 | [eureka.co.it](https://www.eureka.co.it/en/products/eureka+1920/prosumer+grinders/libra+range/117/) |
 
@@ -579,7 +580,7 @@ No carcass size or position changed. These are the fronts:
 - SF-T2 lower band height of 810 and the counts of 4 racks and 4 shelves.
 - SF-T3 niche order and heights (inside Miele's ranges), the 9 mm packers, and the fascia thickness of 18.
 - SF-TF's 50 gap over the fridge and its no-shelf interior.
-- Disposer and tap positions and shapes. The M71 height and reach.
+- Disposer and tap *shapes* (a 50 mm body, a 30 mm arm). The island disposer is still centred on the bowl (`guess:`). The west disposer drain (115 mm from the bowl back) and the official M71 height 445 / spout 333 / reach 235 are manufacturer figures, not guesses.
 - Kettle and grinder positions.
 - The IKEA-like rack, shelf and bin sizes.
 

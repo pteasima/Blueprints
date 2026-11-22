@@ -173,6 +173,43 @@ def test_disposers_and_taps_hang_on_their_sinks():
     assert len(pull.items) == 2
 
 
+def test_west_sink_sits_forward_on_teka_drain_and_official_m71():
+    """Petr, 2026-11-22 (t819u): move the west Teka 60 mm toward the front,
+    hang the disposer on the official drain, and use the official M71 sizes.
+    HoleOffset is measured from the inner bowl back (it used to be applied
+    from the rim, 20 mm too far back)."""
+    runs = _runs()
+    west = runs["KR-WEST"]
+    bay = west.bay("SF-B800")
+    sink_box = next(box for box, oid in bay.obstacles if oid == "SN-RS15")
+    assert sink_box[2:4] == pytest.approx((20.0, 460.0))
+    cut = next(v for v in west.part("KR-WEST-WORKTOP").voids if v.name == "SN-RS15")
+    assert (cut.c0, cut.c1) == pytest.approx((42.0, 438.0))
+    disp = west.part("EA-EVO3-W").boxes[0]
+    assert (disp[2] + disp[3]) / 2 == pytest.approx(325.0)
+    assert disp[2:4] == pytest.approx((252.5, 397.5))
+    tap = west.part("SN-TAP-W")
+    body, arm, nozzle = tap.boxes
+    hole = (body[2] + body[3]) / 2
+    assert hole == pytest.approx(510.0)
+    assert tap.props["HoleBehindBowl"] == pytest.approx(0.07)
+    assert body[5] - body[4] == pytest.approx(445.0)
+    # Reach from the hole centre to the spout tip (front of the arm).
+    assert arm[2] == pytest.approx(hole - 235.0)
+    assert nozzle[4] == pytest.approx(930.0 + 333.0)
+    # Island: disposer stays centred; HoleOffset 60 keeps the same hole
+    # now that the offset is measured from the bowl, not the rim.
+    isl = runs["KR-ISL"]
+    ibay = isl.bay("SF-I500a")
+    isink = next(box for box, oid in ibay.obstacles if oid == "SN-RS1840")
+    idisp = isl.part("EA-EVO3-I").boxes[0]
+    assert (idisp[2] + idisp[3]) / 2 == pytest.approx((isink[2] + isink[3]) / 2)
+    itap = isl.part("SN-TAP-I")
+    ihole = (itap.boxes[0][2] + itap.boxes[0][3]) / 2
+    assert ihole == pytest.approx(543.5)
+    assert itap.props["HoleBehindBowl"] == pytest.approx(0.06)
+
+
 def test_wall_cabinets_have_hf_bifold_fronts_that_open_partly_folded():
     """Petr, 2026-11-13: "I want this hinge for the top cabinets", "top
     cabinets to start at 1560mm", "don't move anything up, make it shorter in

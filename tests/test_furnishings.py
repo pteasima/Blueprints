@@ -157,7 +157,7 @@ KITCHEN = (
     ("SF-BH800", "systemFurniture", "WallCabinet", [19.15, 12.2], [0.0, 1.0], 0.8, 0.35, 0.89, None, 1.56),
     ("SF-C850", "systemFurniture", "BaseCabinet", [19.4, 11.35], [0.0, 1.0], 0.85, 0.6, 0.93, None, None),
     ("SF-CH850", "systemFurniture", "WallCabinet", [19.15, 11.35], [0.0, 1.0], 0.85, 0.35, 0.89, None, 1.56),
-    ("SN-RS15", "sanitaryTerminals", "SINK", [19.32, 12.225], [0.0, 1.0], 0.75, 0.44, 0.2, None, 0.71),
+    ("SN-RS15", "sanitaryTerminals", "SINK", [19.38, 12.225], [0.0, 1.0], 0.75, 0.44, 0.2, None, 0.71),
     ("EA-WQ9I", "electricAppliances", "FRIDGE_FREEZER", [19.496, 14.884], None, 0.908, 0.716, 1.876, None, None),
     ("EA-SBD6ECX", "electricAppliances", "DISHWASHER", [19.35, 13.233], [0.0, 1.0], 0.598, 0.55, 0.865, None, None),
 )
@@ -268,7 +268,7 @@ def test_build_extrudes_walls_and_the_kitchen_boxes():
         "SF-BH800": (18800, 19150, 12200, 13000, 1560, 2450),
         "SF-C850": (18800, 19400, 11350, 12200, 0, 930),
         "SF-CH850": (18800, 19150, 11350, 12200, 1560, 2450),
-        "SN-RS15": (18880, 19320, 12225, 12975, 730, 930),
+        "SN-RS15": (18940, 19380, 12225, 12975, 730, 930),
         "EA-WQ9I": (19496, 20404, 14884, 15600, 0, 1876),
         "EA-SBD6ECX": (18800, 19350, 13251, 13849, 0, 865),
     }
