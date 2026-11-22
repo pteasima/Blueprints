@@ -876,7 +876,7 @@ systemFurniture:
       # Petr, 2026-11-20: "don't touch dining area bottom cabinets geometry yet, Im undecided. But make them cream color like kitchen, all the way through dining area into living room (behind couch)."
       - Name: Pset_Finish
         Properties:
-          Material: "kitchen cream (RAL 9001 matt)"
+          Material: "kitchen cream (RAL 1015 matt)"
           Form: "lacquered or laminate, like the kitchen fronts"
       # 2026-11-19 (best effort, see SF-T2): a shallow cupboard, one door
       # with two shelves (guess:). Was hinged R because SF-T4 stands 150
@@ -905,7 +905,7 @@ systemFurniture:
       # Petr, 2026-11-20: "don't touch dining area bottom cabinets geometry yet, Im undecided. But make them cream color like kitchen, all the way through dining area into living room (behind couch)."
       - Name: Pset_Finish
         Properties:
-          Material: "kitchen cream (RAL 9001 matt)"
+          Material: "kitchen cream (RAL 1015 matt)"
           Form: "lacquered or laminate, like the kitchen fronts"
       # Petr, 2026-11-20 b: "the dining area base cabinets are split into 4
       # sections, each has a full height drawer (starting above that 100mm
@@ -968,7 +968,7 @@ systemFurniture:
       # Petr, 2026-11-20: "don't touch dining area bottom cabinets geometry yet, Im undecided. But make them cream color like kitchen, all the way through dining area into living room (behind couch)."
       - Name: Pset_Finish
         Properties:
-          Material: "kitchen cream (RAL 9001 matt)"
+          Material: "kitchen cream (RAL 1015 matt)"
           Form: "lacquered or laminate, like the kitchen fronts"
       # 2026-11-19 (best effort, see SF-T2): a shallow cupboard, one door
       # hinged R with two shelves (guess:). Hinged R like SF-F052.
@@ -996,7 +996,7 @@ systemFurniture:
       # Petr, 2026-11-20: "don't touch dining area bottom cabinets geometry yet, Im undecided. But make them cream color like kitchen, all the way through dining area into living room (behind couch)."
       - Name: Pset_Finish
         Properties:
-          Material: "kitchen cream (RAL 9001 matt)"
+          Material: "kitchen cream (RAL 1015 matt)"
           Form: "lacquered or laminate, like the kitchen fronts"
       # 2026-11-19 (Petr, 2026-11-19: "Add the rest of the drawers, hinged doors, etc. to the whole kitchen and living room on a best effort basis. We'll adjust details later.")
       # Under-storage in seven equal sections (597): a 140 drawer above the
@@ -1099,7 +1099,7 @@ systemFurniture:
       # Petr, 2026-11-20 f: "Only make SF-TC cream, nothing else."
       - Name: Pset_Finish
         Properties:
-          Material: "kitchen cream (RAL 9001 matt)"
+          Material: "kitchen cream (RAL 1015 matt)"
           Form: "lacquered or laminate, like the kitchen fronts"
       - Name: Pset_KitchenBay
         Properties:
@@ -1422,7 +1422,7 @@ furniture:
           # (voxtorp J style on drawers and hinged doors, plain 1cm overhang
           # on all top cabinets)".
           FrontGrip: J
-          FrontFinish: matt lacquered MDF (RAL 9001 cream)
+          FrontFinish: matt lacquered MDF (RAL 1015 cream)
           WorktopOverhang: 0.02
           # Petr, 2026-11-20 f: "dining area and east island side have zero
           # overhang". The east edge is flush with the east row's fronts.
@@ -1462,7 +1462,7 @@ furniture:
           # (voxtorp J style on drawers and hinged doors, plain 1cm overhang
           # on all top cabinets)".
           FrontGrip: J
-          FrontFinish: matt lacquered MDF (RAL 9001 cream)
+          FrontFinish: matt lacquered MDF (RAL 1015 cream)
           WorktopOverhang: 0.02
           WorktopMaterial: "Silestone Blanco Maple"
           # Petr, 2026-11-12: "Ok, 100mm it is." Lowest plinth the robot
@@ -1511,7 +1511,7 @@ furniture:
           # (voxtorp J style on drawers and hinged doors, plain 1cm overhang
           # on all top cabinets)".
           FrontGrip: J
-          FrontFinish: matt lacquered MDF (RAL 9001 cream)
+          FrontFinish: matt lacquered MDF (RAL 1015 cream)
           Carcass: Box
           # Cream like the kitchen since 2026-11-20 (was natural oak).
           BodyMaterial: "kitchen cream"
@@ -1551,7 +1551,7 @@ furniture:
           # (voxtorp J style on drawers and hinged doors, plain 1cm overhang
           # on all top cabinets)".
           FrontGrip: J
-          FrontFinish: matt lacquered MDF (RAL 9001 cream)
+          FrontFinish: matt lacquered MDF (RAL 1015 cream)
           Carcass: Box
           # Cream like the kitchen since 2026-11-20 (was natural oak); the
           # oak-veneer top stays.
@@ -1616,7 +1616,7 @@ furniture:
           # (voxtorp J style on drawers and hinged doors, plain 1cm overhang
           # on all top cabinets)".
           FrontGrip: J
-          FrontFinish: matt lacquered MDF (RAL 9001 cream)
+          FrontFinish: matt lacquered MDF (RAL 1015 cream)
           WorktopThickness: 0.0
           PlinthHeight: 0.0
   - id: KR-WEST-H
@@ -1634,7 +1634,7 @@ furniture:
           # The lowest lift-up front hangs 10 below the carcass bottom; no
           # routed grip (AVENTOS HF has no TIP-ON).
           WallFrontOverhang: 0.010
-          FrontFinish: matt lacquered MDF (RAL 9001 cream)
+          FrontFinish: matt lacquered MDF (RAL 1015 cream)
           WorktopThickness: 0.0
           PlinthHeight: 0.0
           # Petr, 2026-11-22 a: "lets do the led panels like we discussed, on
@@ -1667,7 +1667,7 @@ furniture:
           # (voxtorp J style on drawers and hinged doors, plain 1cm overhang
           # on all top cabinets)".
           FrontGrip: J
-          FrontFinish: matt lacquered MDF (RAL 9001 cream)
+          FrontFinish: matt lacquered MDF (RAL 1015 cream)
           WorktopThickness: 0.0
           # 100 like the bases (Petr, 2026-11-12); total stays 2450, carcass 2350.
           PlinthHeight: 0.10
@@ -1684,7 +1684,7 @@ furniture:
           # (voxtorp J style on drawers and hinged doors, plain 1cm overhang
           # on all top cabinets)".
           FrontGrip: J
-          FrontFinish: matt lacquered MDF (RAL 9001 cream)
+          FrontFinish: matt lacquered MDF (RAL 1015 cream)
           WorktopThickness: 0.0
           # 100 like the bases (Petr, 2026-11-12); total stays 2450, carcass 2350.
           PlinthHeight: 0.10
@@ -1713,7 +1713,7 @@ furniture:
           # (voxtorp J style on drawers and hinged doors, plain 1cm overhang
           # on all top cabinets)".
           FrontGrip: J
-          FrontFinish: matt lacquered MDF (RAL 9001 cream)
+          FrontFinish: matt lacquered MDF (RAL 1015 cream)
           WorktopThickness: 0.0
           PlinthHeight: 0.0
   - id: FN-S2B

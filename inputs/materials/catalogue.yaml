@@ -114,7 +114,7 @@
     (kitchen-front-cream).
 
 - id: kitchen-front-cream
-  name: Kitchen fronts, warm cream matt lacquered MDF (about RAL 9001)
+  name: Kitchen fronts, warm cream matt lacquered MDF (about RAL 1015)
   applies_to:
     description: >-
       Kitchen door, drawer and lift-up (AVENTOS) fronts, the visible end sides and plinth
@@ -135,7 +135,7 @@
       # cabinet SF-TC, every part (2026-11-20 f, was natural oak).
       - {label: cabinet, ids: [KR-WEST-CLAD-N, KR-WEST-CLAD-S, SF-TC]}
       - {label: appliance, ids: [EA-SBD6ECX]}
-  base_color: "#e9e0d2"
+  base_color: "#e6d2b5"
   roughness: 0.35
   metalness: 0.0
   tile_size_m: [1.0, 1.0]
@@ -151,7 +151,13 @@
     2026-11-22 c the finish is matt lacquered MDF (Petr: "ok, assume
     laquered and add all the handles"); the end panels, claddings and
     plinths in this material are lacquered the same. If the shade
-    should be whiter, RAL 9010 (#f1ece1) is the next step. The dishwasher
+    should be whiter, RAL 9010 (#f1ece1) is the next step. Petr,
+    2026-11-22 (t806u): "lets make that cream color more yellowish. I don't
+    have a precise color code for you, just try something reasonable." So
+    RAL 1015 Light ivory (sRGB about #e6d2b5) replaces RAL 9001 (#e9e0d2,
+    until 2026-11-22); RAL 1013 Oyster white (#e3d9c6) was the milder
+    option but reads barely yellower than 9001. The shade stays a guess
+    (no code from Petr). The dishwasher
     (Bosch SBD6ECX12E) is fully integrated, so its door is a front.
     The oak furniture (Kaplan table, chairs, bookshelf, dining wall
     cabinet, tall corner) is unchanged; the dining and living bases became
