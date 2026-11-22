@@ -496,7 +496,7 @@ lightFixtures:
           Question: "Cable 181: the plan's thin strip line about 260 in front of the west wall cabinets (the worktop's front edge). Now that the under-cabinet panel is cable 180, what is 181: a strip at the worktop front, a plinth strip like 182, or spare? Unplaced: #120's strip at 1.530 floated 275 in front of the wall cabinets."
   - id: C182-S
     Name: Světlo 182
-    Description: "Plan mark 2(182). Island strips on both long sides; Soupis: from a floor box. Plinth height 0.10 assumed. No box; the viewer draws the legs from Path (x,y,z points; | separates runs)."
+    Description: "Plan mark 2(182). Island strips on both long sides; Soupis: from a floor box. In the toe-kick, just under the carcass bottom behind the fronts (z 0.088–0.100), guess:. No box; the viewer draws the legs from Path (x,y,z points; | separates runs)."
     PredefinedType: USERDEFINED
     ObjectType: LedStrip
     ContainedInStructure: SP-1.02
@@ -509,7 +509,14 @@ lightFixtures:
           CableSpec: CYKY 4x1.5
           CableLength: 6
           Note: do krabice v podlaze, omezit soubeh se zasuvkami
-          Path: "20.328,11.310,0.100;20.328,13.780,0.100 | 21.299,11.310,0.100;21.299,13.780,0.100"
+          # 2026-11-22 (t809u): #120's legs at x 20.328 / 21.299 were left behind
+          # when the island moved (2026-11-20) and shrank (2026-11-22, east
+          # face 21.653): the west strip lay 172 in front of the island in the
+          # aisle, the east one inside the east row. Now in the toe-kick recess
+          # behind each long side's fronts (west fronts' back x 20.518, east
+          # 21.635; kickboards at 20.550 / 21.585), 12 mm strip centred 7 behind
+          # the fronts, top at the carcass bottom (0.100).
+          Path: "20.525,11.310,0.088;20.525,13.780,0.088 | 21.628,11.310,0.088;21.628,13.780,0.088"
           Question: "C182 island strips: plinth (0.10 m) or under the worktop overhang?"
   - id: C183-S
     Name: Světlo 183
