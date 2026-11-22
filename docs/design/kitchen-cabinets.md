@@ -186,7 +186,7 @@ The drawer boxes are modelled after IKEA **MAXIMERA** (Petr, 2026-11-13, see “
 | Box side height | low **78** in a 100 band, medium **144** in 200, high **212** in 300; bands of 400 and more (and pull-outs): front − 110 | **IKEA** MAXIMERA product pages; the 400+ rule is `guess:` (a high box with side extensions) |
 | Box bottom | 3 above its band (the lowest box 3 above the 18 carcass bottom) | `guess:`; the top box must clear the 18 top rail (box top 891, rail from 892) |
 | Box length, extension | side depth − 96 + 2 × 19 (= inside + 19 back), full extension (travel = box length) | **IKEA** MAXIMERA full extension |
-| Carcass depth, island west row | **586** bay, so the side depth is 586 − 18 front − 9 (half the central back) = **559** | Gridfinity depth, see below. Was 600 / 573 |
+| Carcass depth, island west row | **567** bay (since 2026-11-22 f, Petr: “Ok, I want 1173.”), so the side depth is 567 − 18 front − 9 (half the central back) = **540**; the MAXIMERA rule gives a 482 box, inside 463 = 11 Gridfinity rows with nothing left over | Gridfinity depth, see below. Was 600 / 573, then 586 / 559 (2026-11-13 to 2026-11-22) |
 
 ### Drawers: MAXIMERA
 
@@ -227,12 +227,12 @@ and on 2026-11-13:
 | Top | 930 | **Petr** |
 | Overhang past the front faces (fronts and drawer fronts) | **20 mm** (was 30) | **Petr**, 2026-11-13 (30 on 2026-11-12, corrected from 300). Every Silestone run: island, west run, north dining |
 | Overhang at the back of a wall run | 0 (against the wall) | `guess:` |
-| Island | one piece, **2540 × 1226** (was 2540 × 1260): the 2500 × 1186 body (west row 586 deep, east row 600), + 20 on both long fronts, + 20 at each end over the cladding | derived |
+| Island | one piece, **2540 × 1173** (x 20.480–21.653, y 11.280–13.820): the 2500 × 1153 body (west row 567 deep, east row 586), + 20 on the west front, 0 on the east front (flush, 2026-11-20 f), + 20 at each end over the cladding. Was 2540 × 1260, 1226, 1212, 1192 (until 2026-11-22 f) | derived |
 | West-wall run | one piece, **2540 × 620**, y 11.33–13.87 (over the dishwasher slot too, + 20 at each clad end), x 18.80–19.42 | derived |
 | North dining run | 20 mm, top 930, 20 front overhang, one slab per base (see “North dining run”) | **Petr**; derived |
 | Slab formats | 3270 × 1590 and 3060 × 1410 | **Cosentino**. The island top fits one 3270 × 1590 slab |
 | West run end cladding | same as the island ends, both ends (see “West run end cladding”) | **Petr** (“the sides of the west run”) |
-| Island end cladding | Silestone Blanco Maple, 20 thick (same as the worktop), floor to the worktop underside (0–910), full worktop depth **1226**, covering the leg zone at the ends | **Petr** (“sides … clad in the same silestone”); thickness and floor-to-underside `guess:` |
+| Island end cladding | Silestone Blanco Maple, 20 thick (same as the worktop), floor to the top (**0–930**), meeting the top in a 45° mitre (2026-11-20 f), full worktop depth **1173** (20 × 1173 × 930), covering the leg zone at the ends | **Petr** (“sides … clad in the same silestone”; “island top and sides use a 45 degree joint”); thickness `guess:` |
 | Worktop–cladding joint | the cladding sits under the worktop; the worktop runs 20 past the carcass end so its end is flush with the cladding face | `guess:` |
 | Sink cut-outs | the manufacturer's undermount cut-out, centred on the sink box; see “Sinks” | **Teka** |
 | Hob cut-out | flush-fit, stepped: 600 × 500 through, rebate 624 × 524 × 5.5; see “Induction hob” | **Miele** manual |
@@ -253,7 +253,7 @@ Both sinks are Teka BE LINEA RS15 and both are **undermount** only (Teka: “Spo
 | `SN-RS1840`, Teka BE LINEA RS15 18.40 X | island, SF-I500a, centred on the bay | 440 × 220 | 400 × 180 × 140 | **396 × 176, R13** | 910 (`Elevation` 0.77) | [Teka 115000010](https://www.teka.com/cs-cz/produkt/be-linea-rs15-18-40-ss_115000010/); the card on [`KitchenPlan.jpg`](../../inputs/ground_floor/KitchenPlan.jpg) next to the island's green rectangle |
 
 - `SN-RS1840`'s long side runs across the island (east–west), because the plan's green rectangle is a little longer that way. `guess:` Both ways fit: the clear width is 473 and 440 is the longest side.
-- `SN-RS1840` is centred on the bay depth (586 since 2026-11-13), so its cut-out runs 95–491 behind the bay front, 115–511 from the worktop's front edge. `guess:` The plan's rectangle sits a bit further forward. Its yaml `Origin` moved 7 mm east with the bay centre.
+- `SN-RS1840` is centred on the bay depth (567 since 2026-11-22 f; 586 from 2026-11-13), so its cut-out runs 85.5–481.5 behind the bay front, 105.5–501.5 from the worktop's front edge (was 95–491 / 115–511). `guess:` The plan's rectangle sits a bit further forward. Its yaml `Origin` moved 7 mm east with the bay centre (2026-11-13) and 9.5 west (x 20.573 → 20.5635, 2026-11-22 f).
 - Without a manufacturer cut-out, `Pset_Sink` falls back to the bowl less 2 mm a side (`kitchen_cabinet.SINK_CUTOUT_INSET_MM`), which is the Teka pattern. `guess:`
 - The rounded corners (R13) are in the IFC profile (chords, 6 per corner) and in the 3D model.
 - On the plan, the island has one sink card and one green rectangle. The two green circles in a rectangle on the second 600 were read as “two round bowls” before; they are the hob (see below).
@@ -289,7 +289,7 @@ The hob is on **SF-I600b**, the island's west row, second 600 from the north (y 
 | Mounting | **flush-fit**: the glass top is level with the worktop | `guess:` (Petr has not chosen). Flush-fit was trivial to model, so it is used |
 | Through cut-out | 600 × 500, centred on the bay along the run (the bay is 607, so 3.5 inside each bay line) | Miele |
 | Rebate | 624 × 524, 5.5 deep, around the cut-out | Miele |
-| Cut-out front edge | 50 behind the bay front face (70 from the worktop edge). It was the 500 cut-out centred on the 600 bay depth; the bay is 586 now and `FrontOffset` stayed 50 | `guess:` |
+| Cut-out front edge | 50 behind the bay front face (70 from the worktop edge). It was the 500 cut-out centred on the 600 bay depth; the bay is 567 now (586 until 2026-11-22 f) and `FrontOffset` stayed 50, so the cut-out is 50–550 in the 558 side depth and 603 from the worktop's east edge (was 622) | `guess:` |
 | Cut-out to the worktop's far (east) edge | **656** (was 680; ≥ 50 required) | derived, checked by the model |
 | Glass | 620 × 520 × 4, top at 930 | Miele |
 | Housing | 533 × 427, from 879 to 926 | Miele (51 installation height) |
@@ -1802,9 +1802,9 @@ Petr, 2026-11-22 (t793u): real MAXIMERA / LEGRABOX-style drawers have only sides
   - **Dining: 9 rows would need a 379 inside, 21 more than 358**; the main drawer as drawn (box 396 − 19 back) is 377, 2 short of 9 rows, but its inside is Blum's 358. Left at 8 rows, per Petr's “doesnt have to match in the depth direction”.
   - Both east inner drawers (M and K) get a baseplate; Petr wrote “the inner drawer” (one). Left on both.
   - Baskets and bins in pull-outs keep their positions (19 in from the box's front end).
-- The island's depth does not change (1192 overall, below).
+- The island's depth does not change (1192 overall, below). Since 2026-11-22 f it is 1173: see “Island 1173”.
 
-### Island depth (main = this change)
+### Island depth (main = this change; superseded by “Island 1173 (2026-11-22 f)”)
 
 Petr, 2026-11-22 (t796u): “let me know how deep the island will be (we've changed this slightly overtime)”. Nothing here changes it; the west Gridfinity fit is a drawer-box change inside the existing carcass.
 
@@ -1821,4 +1821,35 @@ Petr, 2026-11-22 (t796u): “let me know how deep the island will be (we've chan
 | End overhang | 20 at the N and S ends, over the claddings (the worktop ends flush with them) |
 | Plinths | recessed 50 from each front (c 50 … 68 west, 1104 … 1122 east), 100 high |
 | Footprint | **2540 × 1192** |
+
+## Island 1173 (2026-11-22 f)
+
+Petr, 2026-11-22 (t803u): “Ok, I want 1173. Make sure to keep distance of island from west cabinet run unchnaged (afaik it should be 1100, correct me if Im wrong).”
+
+- **West row 586 → 567** deep (SF-I500a, SF-I600a, SF-I500b, SF-I600b, SF-I300). Side depth 559 → 540; the MAXIMERA rule (side depth − 96 + 2 × 19) gives a 482 box, inside 463 = **11 rows, 0 left over**, and no unused depth behind the box (the 19 freed in 2026-11-22 e is gone). Behind the box: the 58 runner allowance (IKEA rule), then half the central back.
+- **East row unchanged**: 586, Blum MERIVOBOX NL 550 (needs 553, side depth 559), inner drawers 13 × 12 cells.
+- **The west face stays at x 20.500**: the island shrinks from its east side. The central back x 21.077–21.095 → **21.058–21.076**, the east face x 21.672 → **21.653** (the east bays' linked `X`).
+- **West aisle unchanged** (measured on main before the change): **1100 front to front** (west run fronts x 19.400 to island west fronts x 20.500) and **1060 worktop edge to worktop edge** (x 19.420 to 20.480), as in “1. West run, alley, island” (2026-11-20).
+- Total depth: 20 + 567 + 586 = **1173** (worktop c −20 … 1153).
+
+| What | Before | Now |
+| --- | --- | --- |
+| West bays SF-I… depth | 586 | **567** |
+| West side depth | 559 | **540** |
+| West drawer box / inside / rows | 482 / 463 / 11 (19 unused behind) | 482 / 463 / 11 (0 unused) |
+| SF-I300-D1 pull-out box / inside | 501 / 482 | **482 / 463** |
+| Central back KR-ISL-BACK | x 21.077–21.095 | **x 21.058–21.076** |
+| East face (fronts, worktop edge) | x 21.672 | **x 21.653** |
+| Worktop KR-ISL-WORKTOP | 2540 × 1192, x 20.480–21.672 | **2540 × 1173, x 20.480–21.653** |
+| End claddings KR-ISL-CLAD-N / -S | 20 × 1192 × 930 | **20 × 1173 × 930** |
+| Carcass end sides KR-ISL-END-N / -S | 18 × 1136 × 810, x 20.518–21.654 | **18 × 1117 × 810, x 20.518–21.635** |
+| Kickboard KR-ISL-PLINTH-E | x 21.604–21.622 | **x 21.585–21.603** (KR-ISL-PLINTH-W unchanged) |
+| Island sink SN-RS1840 Origin x (centred on the bay depth) | 20.573 | **20.5635** (tap and disposer follow) |
+| Hob cut-out | 50–550 behind the west front, 622 to the east edge | 50–550 (not moved), **603** to the east edge |
+| Island east face to the Gatta table (x 23.087) | 1415 | **1434** |
+| Island east face to the west chairs' backs (x 22.547) | 875 | **894** (a pulled-out east drawer, 546, leaves 348; was 329) |
+| Island to the sofa (x 25.52) | 3848 | **3867** |
+| Stone | island top 2540 × 1192 + 2 claddings 1192 × 930 | **2540 × 1173 + 2 × 1173 × 930**; the top still fits one 3270 × 1590 slab |
+
+- Not moved: the hob (its `FrontOffset` is from the west front), the hood shelf light C183-S, the electrical plan's island sockets SOCK-1.02-I1 (x 21.023) and I2 (x 20.896), both still inside the west row (x 20.500–21.058).
 

@@ -326,14 +326,14 @@ def test_sf_i600a_drawers():
 def test_island_worktop_and_cladding():
     run = _runs()["KR-ISL"]
     a0, a1, c0, c1, z0, z1 = run.worktop
-    # 1172 deep body (both rows 586 for the Gridfinity depth since 2026-11-19) + 20 overhang on the
-    # west; flush with the east fronts since 2026-11-20 f.
-    assert (a1 - a0, c1 - c0, z1 - z0, z1) == pytest.approx((2540.0, 1192.0, 20.0, 930.0))
-    assert (c0, c1) == pytest.approx((-20.0, 1172.0))
+    # 1153 deep body (west row 567 since 2026-11-22, t803u: "Ok, I want 1173.";
+    # east row 586) + 20 overhang on the west; flush with the east fronts since 2026-11-20 f.
+    assert (a1 - a0, c1 - c0, z1 - z0, z1) == pytest.approx((2540.0, 1173.0, 20.0, 930.0))
+    assert (c0, c1) == pytest.approx((-20.0, 1153.0))
     clad = run.part("KR-ISL-CLAD-N").boxes[0]
     # 2026-11-20 f: the end panels run up to the top and meet it at 45 degrees.
     assert clad[1] - clad[0] == pytest.approx(20.0) and clad[4] == 0.0 and clad[5] == pytest.approx(930.0)
-    assert clad[2:4] == pytest.approx((-20.0, 1172.0))
+    assert clad[2:4] == pytest.approx((-20.0, 1153.0))
 
 
 def test_island_mitre_joints():
@@ -360,10 +360,10 @@ def test_mitre_solids():
     top, clad = solids["KR-ISL-WORKTOP"], solids["KR-ISL-CLAD-N"]
     # The mitred end loses a 20 x 20 / 2 triangle over the depth; the panel the same.
     # (Boxes shrink by half the 1 mm mesh gap.)
-    box = 19.0 * 1191.0 * 929.0
-    assert clad.volume == pytest.approx(box - 200.0 * 1191.0, rel=0.003)
-    assert clad.volume < box - 150.0 * 1191.0
-    assert top.volume < 2539.0 * 1191.0 * 19.0 - 2 * 150.0 * 1191.0
+    box = 19.0 * 1172.0 * 929.0
+    assert clad.volume == pytest.approx(box - 200.0 * 1172.0, rel=0.003)
+    assert clad.volume < box - 150.0 * 1172.0
+    assert top.volume < 2539.0 * 1172.0 * 19.0 - 2 * 150.0 * 1172.0
 
 
 def test_height_change_follows():
@@ -455,10 +455,11 @@ def test_drawer_motions_in_model():
         "SF-I300-D1"]
     for m in drawers:
         assert m["element"] == m["id"]
-    # The slide is the full extension (box length: 463 + 19 back in the 586
-    # island's grid bays, no box front since 2026-11-22 e; SF-I300 keeps 501).
+    # The slide is the full extension (box length: 463 + 19 back, no box
+    # front since 2026-11-22 e; the 567 west row since 2026-11-22, t803u,
+    # gives SF-I300's pull-out the same 482).
     for m in island:
-        assert m["slide"] == pytest.approx([-0.501 if m["id"] == "SF-I300-D1" else -0.482, 0.0, 0.0])
+        assert m["slide"] == pytest.approx([-0.482, 0.0, 0.0])
     east = [m for m in drawers if m["id"].startswith("SF-E")]
     # MERIVOBOX NL 550 since 2026-11-20 c.
     assert len(east) == 12 and all(m["slide"] == pytest.approx([EAST_SLIDE, 0.0, 0.0]) for m in east)

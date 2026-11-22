@@ -354,7 +354,9 @@ systemFurniture:
     Origin: [20.5, 13.8]
     RefDirection: [0, -1]
     Width: 0.5
-    Depth: 0.586
+    # Petr, 2026-11-22 (t803u): "Ok, I want 1173." 586 -> 567: the west
+    # drawers on 11 Gridfinity rows with no unused depth; the west face stays.
+    Depth: 0.567
     Height: 0.93
     PropertySets:
       - Name: Pset_KitchenBay
@@ -379,7 +381,9 @@ systemFurniture:
     Origin: [20.5, 13.3]
     RefDirection: [0, -1]
     Width: 0.607
-    Depth: 0.586
+    # Petr, 2026-11-22 (t803u): "Ok, I want 1173." 586 -> 567: the west
+    # drawers on 11 Gridfinity rows with no unused depth; the west face stays.
+    Depth: 0.567
     Height: 0.93
     PropertySets:
       - Name: Pset_KitchenBay
@@ -406,7 +410,9 @@ systemFurniture:
     Origin: [20.5, 12.693]
     RefDirection: [0, -1]
     Width: 0.481
-    Depth: 0.586
+    # Petr, 2026-11-22 (t803u): "Ok, I want 1173." 586 -> 567: the west
+    # drawers on 11 Gridfinity rows with no unused depth; the west face stays.
+    Depth: 0.567
     Height: 0.93
     PropertySets:
       - Name: Pset_KitchenBay
@@ -434,7 +440,9 @@ systemFurniture:
     Origin: [20.5, 12.212]
     RefDirection: [0, -1]
     Width: 0.607
-    Depth: 0.586
+    # Petr, 2026-11-22 (t803u): "Ok, I want 1173." 586 -> 567: the west
+    # drawers on 11 Gridfinity rows with no unused depth; the west face stays.
+    Depth: 0.567
     Height: 0.93
     PropertySets:
       - Name: Pset_KitchenBay
@@ -485,7 +493,9 @@ systemFurniture:
     Origin: [20.5, 11.605]
     RefDirection: [0, -1]
     Width: 0.305
-    Depth: 0.586
+    # Petr, 2026-11-22 (t803u): "Ok, I want 1173." 586 -> 567: the west
+    # drawers on 11 Gridfinity rows with no unused depth; the west face stays.
+    Depth: 0.567
     Height: 0.93
     PropertySets:
       - Name: Pset_KitchenBay
@@ -665,7 +675,9 @@ systemFurniture:
       # the end bays are 13 cells exact, the middle two 13 with 9 over.
       - Name: Pset_Links
         Properties:
-          X: "0.0 + 21.672"
+          # East face: west face 20.500 + west row 0.567 + east row 0.586
+          # (2026-11-22, t803u; 21.672 until then).
+          X: "0.0 + 21.653"
           Y: "(SF-I300.Y - SF-I300.Width)"
           Width: "(SF-I500a.Y - (SF-I300.Y - SF-I300.Width)) / 4"
   - id: SF-A250
@@ -1135,13 +1147,14 @@ sanitaryTerminals:
           CutoutRadius: 0.013
   - id: SN-RS1840
     Name: "Teka BE LINEA RS15 18.40 X"
-    Description: "Island sink in SF-I500a, the card on Petr's KitchenPlan.jpg. Undermount. Overall 440×220, bowl 400×180×140, cut-out 396×176 R13 (Teka). Long side across the island (east-west), as the plan's rectangle is drawn, guess:. Centred on the 500 bay and on its 600 depth, guess:. Rim top 910 under the 20 mm stone."
+    Description: "Island sink in SF-I500a, the card on Petr's KitchenPlan.jpg. Undermount. Overall 440×220, bowl 400×180×140, cut-out 396×176 R13 (Teka). Long side across the island (east-west), as the plan's rectangle is drawn, guess:. Centred on the 500 bay and on its depth (567), guess:. Rim top 910 under the 20 mm stone."
     PredefinedType: SINK
     ContainedInStructure: SP-1.02
-    # Centre x = 20.500 + 0.293, y = 13.800 − 0.250 (SF-I500a centre).
-    # Was 20.568 + 0.293 until the island moved 68 west (2026-11-20).
+    # Centre x = 20.500 + 0.2835 (half the 567 bay), y = 13.800 − 0.250 (SF-I500a centre).
+    # Was 20.568 + 0.293 until the island moved 68 west (2026-11-20), and
+    # 20.500 + 0.293 until the west row went 586 -> 567 (2026-11-22, t803u).
     # Elevation 0.93 − 0.02 − 0.14 = 0.77.
-    Origin: [20.573, 13.44]
+    Origin: [20.5635, 13.44]
     Elevation: 0.77
     Width: 0.44
     Depth: 0.22
