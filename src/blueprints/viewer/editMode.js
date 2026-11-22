@@ -13,8 +13,10 @@
  * - The selected fixture gets three arrows (three.js TransformControls in
  *   world space, plane handles removed): red x (east), blue y (north),
  *   green z (up). Drags snap the move to 1 cm (or 1 mm, or off).
- * - Edits live in localStorage and export as a JSON patch for
+ * - Edits live for this visit only and export as a JSON patch for
  *   inputs/ground_floor/fixture_overrides.json (docs/electrical/EditMode.md).
+ *   A refresh discards them; leaving or refreshing with unsaved edits asks
+ *   to confirm. Leftover `blueprints.fixtureEdits.*` keys are removed on load.
  * - The Cables tab lists the cable routes (cables.js draws them). Select a
  *   route from the table or by tapping it, then drag a vertex or a whole
  *   segment with the same arrows (docs/electrical/CableRoutes.md).
@@ -26,13 +28,16 @@ import {
   STORAGE_PREFIX,
   addElementFrom,
   buildPatch,
+  discardLegacyEdits,
+  emptyStore,
   facingOf,
   fixtureRows,
   nextFixtureId,
-  parseStore,
+  onUnsavedLeave,
   pruneAbsorbed,
   rowSearchText,
   snap,
+  storeHasEdits,
 } from "./fixtureEdits.js";
 import { createCableLayer } from "./cables.js";
 import {
@@ -91,6 +96,8 @@ const PLANE_HANDLES = new Set(["XY", "YZ", "XZ", "XYZ"]);
 export function createEditMode(ctx) {
   const { canvas, controls, t } = ctx;
   const storageKey = STORAGE_PREFIX + (ctx.modelId || "model");
+  const storage = typeof localStorage !== "undefined" ? localStorage : null;
+  discardLegacyEdits(storage);
   const wideMq = window.matchMedia("(min-width: 768px)");
 
   let active = false;
@@ -110,7 +117,7 @@ export function createEditMode(ctx) {
   const deployedBase = new Map();
   /** Added fixture id → cloned meshes. */
   const addedMeshes = new Map();
-  let store = parseStore(readStorage(), ctx.modelId);
+  let store = emptyStore(ctx.modelId);
   /** @type {string | null} */
   let selectedId = null;
   let snapStep = 0.01;
@@ -641,26 +648,26 @@ export function createEditMode(ctx) {
     ctx.markDirty();
   }
 
-  // --- store ---
-  function readStorage() {
-    try {
-      return localStorage.getItem(storageKey);
-    } catch {
-      return null;
-    }
+  // --- store (session-only: a refresh cancels unsaved edits) ---
+  function hasUnsavedEdits() {
+    return storeHasEdits(store);
   }
 
   function save() {
+    // Do not write fixture edits to localStorage. Any leftover key from
+    // before this change was already removed on load; keep it gone.
     try {
-      if (Object.keys(store.fixtures).length || Object.keys(store.cables || {}).length) {
-        localStorage.setItem(storageKey, JSON.stringify(store));
-      }
-      else localStorage.removeItem(storageKey);
+      storage?.removeItem(storageKey);
     } catch {
-      /* private mode: edits stay for this session */
+      /* private mode */
     }
     renderExportCount();
   }
+
+  function onLeave(event) {
+    onUnsavedLeave(event, hasUnsavedEdits());
+  }
+  window.addEventListener("beforeunload", onLeave);
 
   function editOf(id) {
     if (!store.fixtures[id]) store.fixtures[id] = {};
@@ -1778,7 +1785,7 @@ export function createEditMode(ctx) {
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   });
   $("discard").addEventListener("click", () => {
-    if (!Object.keys(store.fixtures).length && !Object.keys(store.cables || {}).length) return;
+    if (!hasUnsavedEdits()) return;
     if (!window.confirm(t("edit.discardConfirm"))) return;
     discardAll();
     exportText.value = patchText();
@@ -1966,7 +1973,7 @@ export function createEditMode(ctx) {
       button.hidden = !show;
       if (show) {
         button.textContent = t("ui.edit");
-        // Saved edits show in the model outside edit mode too.
+        // In-session edits show in the model outside edit mode too.
         bind();
       }
     },
@@ -1982,6 +1989,9 @@ export function createEditMode(ctx) {
     },
     rows: () => rows.map((row) => ({ ...row, position: currentTarget(row.id), state: rowState(row.id) })),
     store: () => JSON.parse(JSON.stringify(store)),
+    hasUnsavedEdits,
+    discardAll,
+    setPosition: (id, target) => setTarget(id, target),
     patch: () => currentPatch(),
     cables: {
       routes: () => routes.map((r) => ({ ...r, points: routePoints(r.id), edited: routeEdited(r.id) })),
