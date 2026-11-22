@@ -221,6 +221,20 @@ class _Writer:
             Depth=z1 - z0,
         )
 
+    def grip_prism(self, grip):
+        """A J grip (``kc.Grip``): its profile extruded along a or z."""
+        pts = [self.m.create_entity("IfcCartesianPoint", Coordinates=(float(x) / 1000.0, float(y) / 1000.0))
+               for x, y in grip.profile]
+        profile = self.m.create_entity("IfcArbitraryClosedProfileDef", ProfileType="AREA",
+                                       OuterCurve=self.m.create_entity("IfcPolyline", Points=pts + pts[:1]))
+        if grip.axis == "a":  # profile x = c, y = z; extrude along a
+            place = self.m.create_entity("IfcAxis2Placement3D", Location=self.point(grip.s0 / 1000.0, 0.0, 0.0),
+                                         Axis=self.direction(1.0, 0.0, 0.0), RefDirection=self.direction(0.0, 1.0, 0.0))
+        else:  # profile x = a, y = c; extrude along z
+            place = self.m.create_entity("IfcAxis2Placement3D", Location=self.point(0.0, 0.0, grip.s0 / 1000.0))
+        return self.m.create_entity("IfcExtrudedAreaSolid", SweptArea=profile, Position=place,
+                                    ExtrudedDirection=self.direction(0.0, 0.0, 1.0), Depth=(grip.s1 - grip.s0) / 1000.0)
+
     def shape(self, part: kc.Part):
         if part.shape == "cylinder":
             items = [self.cylinder(part.boxes[0])]
@@ -240,7 +254,7 @@ class _Writer:
             front = items[0]
             for grip in part.grips:
                 front = self.m.create_entity("IfcBooleanResult", Operator="DIFFERENCE",
-                                             FirstOperand=front, SecondOperand=self.extrusion(grip))
+                                             FirstOperand=front, SecondOperand=self.grip_prism(grip))
             items[0] = front
             kind = "CSG"
         if part.cuts:

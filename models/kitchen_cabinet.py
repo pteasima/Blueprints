@@ -124,18 +124,18 @@ IKEA_DEFAULTS_MM = {
     "BackThickness": 8.0,  # single-row back panel (guess)
     "FrontGap": 3.0,  # 600×200 grid front is 597×197
     # Integrated J grip (``Pset_KitchenRun.FrontGrip: J``; Petr, 2026-11-22 c:
-    # "voxtorp J style on drawers and hinged doors"): a routed band along one
-    # edge of the front face, ``JGripHeight`` wide, ``JGripDepth`` deep into the
-    # front. guess: 22 x 10, read off IKEA's VOXTORP product photos (the band
-    # is about 20-25 of a 127/254 front); IKEA does not publish it. The J's
-    # hook: below the band's floor (toward the front's middle), a slot
-    # ``JGripUndercut`` long behind a ``JGripLip`` thick lip of the face, so
-    # the fingertips pull on the lip's back. Square-cut boxes; the curve is
-    # the router bit's. Which edge: ``_grip_edge``.
+    # "voxtorp J style on drawers and hinged doors"; t786u: rounded like
+    # VOXTORP, not sharp lines): a scoop routed into the front face along one
+    # edge, ``JGripHeight`` wide and ``JGripDepth`` deep, its inner corner a
+    # cove of ``JGripRadius`` and the lip (where the scoop's floor meets the
+    # face) rounded ``JGripLipRadius``. guess: 22 x 8, R6 cove, R2 lip, from
+    # IKEA's VOXTORP photos (the band is about 20-25 of a 127/254 front);
+    # IKEA does not publish it. The front stays ``FrontThickness`` (18).
+    # Which edge: ``_grip_edge``. Profile: ``grip_profile``.
     "JGripHeight": 22.0,
-    "JGripDepth": 10.0,
-    "JGripLip": 4.0,
-    "JGripUndercut": 8.0,
+    "JGripDepth": 8.0,
+    "JGripRadius": 6.0,
+    "JGripLipRadius": 2.0,
     # Wall (top) cabinets: the lowest front hangs this far below the carcass
     # bottom as the grip (Petr, 2026-11-22 c: "plain 1cm overhang on all top
     # cabinets"). The top edge does not move.
@@ -518,9 +518,53 @@ class Part:
     props: dict = field(default_factory=dict)  # Pset_KitchenFront / Pset_BuiltIn values for IFC
     builtin: dict | None = None  # a yaml appliance laid out here (its own IFC product)
     lift: LiftJoint | None = None  # a lift front or its arm: how it moves open (viewer)
-    # Routed grips (``FrontGrip``): run-frame boxes subtracted from the
-    # front (boxes[0] of a door, drawer.front of a drawer) in the 3D model and IFC.
+    # Routed grips (``FrontGrip``): ``Grip`` prisms subtracted from the front
+    # (boxes[0] of a door, drawer.front of a drawer) in the 3D model and IFC.
     grips: list = field(default_factory=list)
+
+
+@dataclass
+class Grip:
+    """A prism cut from a front, run frame mm: the closed polygon ``profile``
+    extruded along ``axis`` ("a": along the run, points (c, z); "z":
+    vertical, points (a, c)) from s0 to s1."""
+    axis: str
+    s0: float
+    s1: float
+    profile: list
+
+    def bounds(self) -> tuple:
+        """(a0, a1, c0, c1, z0, z1) of the prism."""
+        xs = [q[0] for q in self.profile]
+        ys = [q[1] for q in self.profile]
+        if self.axis == "a":
+            return (self.s0, self.s1, min(xs), max(xs), min(ys), max(ys))
+        return (min(xs), max(xs), min(ys), max(ys), self.s0, self.s1)
+
+
+def grip_profile(p: dict, steps: int = 6) -> list:
+    """The J scoop's cut-away region as (d, u) points: d into the front from
+    its face, u from the gripped edge toward the middle. Face and edge are
+    overcut by 1. The inner corner (d = depth, u = height) keeps a cove of
+    ``JGripRadius``; the lip (d = 0, u = height) is rounded ``JGripLipRadius``."""
+    gh, gd, r, rl, e = p["JGripHeight"], p["JGripDepth"], p["JGripRadius"], p["JGripLipRadius"], 1.0
+    if not (0.0 < gd < p["FrontThickness"]):
+        raise ValueError("J grip: 0 < JGripDepth < FrontThickness")
+    if not (0.0 <= r <= gd and 0.0 <= rl and r + rl <= gh):
+        raise ValueError("J grip: JGripRadius <= JGripDepth and JGripRadius + JGripLipRadius <= JGripHeight")
+    pts = [(-e, -e), (gd, -e)]
+    for k in range(steps + 1):  # the cove, concave: back wall into the floor
+        t = math.pi / 2.0 * k / steps
+        pts.append((gd - r + r * math.cos(t), gh - r + r * math.sin(t)))
+    for k in range(steps + 1):  # the lip, convex: floor round onto the face
+        t = 1.5 * math.pi - math.pi / 2.0 * k / steps
+        pts.append((rl + rl * math.cos(t), gh + rl + rl * math.sin(t)))
+    pts.append((-e, gh + rl))
+    out = []
+    for q in pts:  # drop repeats (r or rl 0)
+        if not out or abs(q[0] - out[-1][0]) > 1e-9 or abs(q[1] - out[-1][1]) > 1e-9:
+            out.append(q)
+    return out
 
 
 @dataclass
@@ -1526,27 +1570,19 @@ class _Builder:
         edge = _grip_edge(zone, role, box)
         if edge in (None, "none"):
             return [], None
-        gh, gd, lip, u, e = p["JGripHeight"], p["JGripDepth"], p["JGripLip"], p["JGripUndercut"], 1.0
-        if not (0.0 < lip < gd < p["FrontThickness"]):
-            raise ValueError(f"{bay.id}: J grip needs 0 < JGripLip < JGripDepth < FrontThickness")
         a0, a1, c0, c1, z0, z1 = box
-        cc = (c0 - e, c0 + gd) if bay.front_low else (c1 - gd, c1 + e)  # the band, from the face
-        hc = (c0 + lip, c0 + gd) if bay.front_low else (c1 - gd, c1 - lip)  # the hook, behind the lip
-        if edge == "top":
-            cuts = [(a0 - e, a1 + e, *cc, z1 - gh, z1 + e), (a0 - e, a1 + e, *hc, z1 - gh - u, z1 - gh + e)]
-        elif edge == "bottom":
-            cuts = [(a0 - e, a1 + e, *cc, z0 - e, z0 + gh), (a0 - e, a1 + e, *hc, z0 + gh - e, z0 + gh + u)]
-        elif edge == "side":
+        face, inward = (c0, 1.0) if bay.front_low else (c1, -1.0)
+        prof = grip_profile(p)
+        if edge in ("top", "bottom"):
+            zz = (lambda u: z1 - u) if edge == "top" else (lambda u: z0 + u)
+            return [Grip("a", a0 - 1.0, a1 + 1.0, [(face + inward * d, zz(u)) for d, u in prof])], edge
+        if edge == "side":
             if hinge_a is None:
                 raise ValueError(f"{bay.id}: grip=side needs a hinged door")
             latch_low = abs(hinge_a - a1) < abs(hinge_a - a0)  # the edge away from the hinge
-            if latch_low:
-                cuts = [(a0 - e, a0 + gh, *cc, z0 - e, z1 + e), (a0 + gh - e, a0 + gh + u, *hc, z0 - e, z1 + e)]
-            else:
-                cuts = [(a1 - gh, a1 + e, *cc, z0 - e, z1 + e), (a1 - gh - u, a1 - gh + e, *hc, z0 - e, z1 + e)]
-        else:
-            raise ValueError(f"{bay.id}: grip={edge!r}, one of top, bottom, side, none")
-        return cuts, edge
+            aa = (lambda u: a0 + u) if latch_low else (lambda u: a1 - u)
+            return [Grip("z", z0 - 1.0, z1 + 1.0, [(aa(u), face + inward * d) for d, u in prof])], edge
+        raise ValueError(f"{bay.id}: grip={edge!r}, one of top, bottom, side, none")
 
     def _lift(self, bay: Bay, p: dict, zone: Zone, front_box: tuple, in_z1: float, back_y: float,
               base: dict, drop: float = 0.0) -> list:

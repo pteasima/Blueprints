@@ -343,6 +343,17 @@ def _run_box(box, shrink: float):
     )
 
 
+def _grip_solid(grip):
+    """A ``kitchen_cabinet.Grip`` prism (run frame mm): its profile extruded
+    along a (points (c, z)) or z (points (a, c))."""
+    if grip.axis == "a":
+        plane = Plane(origin=(grip.s0, 0.0, 0.0), x_dir=(0.0, 1.0, 0.0), z_dir=(1.0, 0.0, 0.0))
+    else:
+        plane = Plane(origin=(0.0, 0.0, grip.s0), x_dir=(1.0, 0.0, 0.0), z_dir=(0.0, 0.0, 1.0))
+    wire = Wire.make_polygon([plane.from_local_coords((x, y)) for x, y in grip.profile], close=True)
+    return extrude(Face(wire), amount=grip.s1 - grip.s0, dir=plane.z_dir)
+
+
 def _kitchen_run_parts(run, motions=None, layers: dict | None = None) -> list:
     """Solids for one kitchen run (docs/design/kitchen-cabinets.md).
 
@@ -372,7 +383,7 @@ def _kitchen_run_parts(run, motions=None, layers: dict | None = None) -> list:
             for box in boxes[1:]:
                 solid = solid + _run_box(box, 0.0)
             for grip in part.grips:  # the routed J grip (FrontGrip)
-                solid = solid - _run_box(grip, 0.0)
+                solid = solid - _grip_solid(grip)
             inward = -dr.out * half
             solid = Pos(0.0, inward, 0.0) * solid
             if plate:
@@ -392,7 +403,7 @@ def _kitchen_run_parts(run, motions=None, layers: dict | None = None) -> list:
             for box in part.boxes[1:]:
                 solid = solid + _run_box(box, 0.0)
             for grip in part.grips:  # the routed J grip (FrontGrip)
-                solid = solid - _run_box(grip, 0.0)
+                solid = solid - _grip_solid(grip)
         elif part.shape == "cylinder":
             a0, a1, c0, c1, z0, z1 = part.boxes[0]
             solid = Pos((a0 + a1) / 2.0, (c0 + c1) / 2.0, z0 + half) * Cylinder(
