@@ -124,27 +124,28 @@ IKEA_DEFAULTS_MM = {
     "BackThickness": 8.0,  # single-row back panel (guess)
     "FrontGap": 3.0,  # 600×200 grid front is 597×197
     # Integrated J grip (``Pset_KitchenRun.FrontGrip: J``; Petr, 2026-11-22 c:
-    # "voxtorp J style on drawers and hinged doors"; t786u: rounded like
-    # VOXTORP; t788u: "make the voxtorp shape (rounded J), yours is missing
-    # the lip"). In section (``grip_profile``): the front is notched at the
-    # gripped edge, ``JGripHeight`` along the face and ``JGripDepth`` into the
-    # front; below the notch the face material stays as a lip ``JGripLip``
-    # thick, and behind it the cut hooks on ``JGripHookDepth`` (15, a fingertip) further from the
-    # edge (an undercut pocket JGripDepth - JGripLip wide, its end a full round
-    # of ``JGripRadius``). The fingertips go in at the notch and curl behind
-    # the lip. The lip's top is rounded ``JGripLipRadius`` on both corners; the
-    # back wall's corner at the edge ``JGripEdgeRadius``. No sharp inner
-    # corners. guess: all of it (IKEA does not publish VOXTORP's section; its
-    # band reads about 20-25 on IKEA's photos; VOXTORP fronts are 22 thick,
-    # ours ``FrontThickness`` 18, so the back wall behind the pocket is 5).
-    # Which edge: ``_grip_edge``.
-    "JGripHeight": 22.0,
-    "JGripDepth": 13.0,
-    "JGripLip": 4.0,
-    "JGripHookDepth": 15.0,
-    "JGripRadius": 4.5,
-    "JGripLipRadius": 2.0,
-    "JGripEdgeRadius": 2.0,
+    # "voxtorp J style on drawers and hinged doors"; t789u, a photo of a real
+    # VOXTORP edge: "Not as deep and a little different detail (looks like
+    # much larger radius on the inside of the outer handle part and only a
+    # very small radius on the visible face of the handle)"; t791u: an
+    # aluminium J handle (18 wide, 31.18 tall) with VOXTORP's line sketched in
+    # red). In section (``grip_profile``), an open J cup, no undercut: the
+    # face side is cut away from the edge down to the lip's crest
+    # ``JGripLipTop`` below the edge (a crest of ``JGripCrestRadius``, very
+    # small, on the visible face); from the crest the lip's inside sweeps
+    # down in one large arc ``JGripBowlRadius`` to the cup's bottom
+    # ``JGripCupDepth`` below the edge; the bottom turns up into the back
+    # wall (``JGripBackWall`` thick, up to the edge) with ``JGripCornerRadius``.
+    # The fingers go in over the crest and pull on the inside of the lip.
+    # guess: all of it, read off Petr's sketch (the aluminium profile is 18
+    # wide, like our fronts) and photo. Which edge: ``_grip_edge``.
+    "JGripLipTop": 21.0,
+    "JGripCupDepth": 28.0,
+    "JGripBackWall": 4.0,
+    "JGripBowlRadius": 7.0,
+    "JGripCrestRadius": 1.0,
+    "JGripCornerRadius": 4.0,
+    "JGripEdgeRadius": 0.0,
     # Wall (top) cabinets: the lowest front hangs this far below the carcass
     # bottom as the grip (Petr, 2026-11-22 c: "plain 1cm overhang on all top
     # cabinets"). The top edge does not move.
@@ -584,38 +585,36 @@ def _sample_segments(segs: list, step_deg: float = 10.0) -> list:
 
 
 def grip_profile(p: dict) -> list:
-    """The rounded J's cut-away region as segments in (d, u): d into the front
-    from its face, u from the gripped edge toward the middle of the front.
-    Overcut 1 past the face and the edge. See ``IKEA_DEFAULTS_MM``."""
-    gh, gd, tl, hd = p["JGripHeight"], p["JGripDepth"], p["JGripLip"], p["JGripHookDepth"]
-    rp, rl, re, e = p["JGripRadius"], p["JGripLipRadius"], p["JGripEdgeRadius"], 1.0
-    w, u_end = gd - tl, gh + hd
-    if not (0.0 < tl < gd < p["FrontThickness"]):
-        raise ValueError("J grip: 0 < JGripLip < JGripDepth < FrontThickness")
-    if not (0.0 < rp <= w / 2.0 and rp + rl <= hd and 0.0 < rl <= tl / 2.0 and 0.0 <= re <= p["FrontThickness"] - gd):
-        raise ValueError("J grip: radii do not fit (JGripRadius <= pocket/2, JGripLipRadius <= JGripLip/2, "
-                         "JGripRadius + JGripLipRadius <= JGripHookDepth, JGripEdgeRadius <= back wall)")
+    """The VOXTORP J cup's cut-away region as segments in (d, u): d into the
+    front from its visible face, u from the gripped edge toward the middle of
+    the front. Overcut 1 past the face and the edge. See ``IKEA_DEFAULTS_MM``."""
+    hc, hb, tb = p["JGripLipTop"], p["JGripCupDepth"], p["JGripBackWall"]
+    R, rc, rk, re, e = p["JGripBowlRadius"], p["JGripCrestRadius"], p["JGripCornerRadius"], p["JGripEdgeRadius"], 1.0
+    dw = p["FrontThickness"] - tb  # the back wall's inside
+    dy = (hb - R) - (hc + rc)  # bowl centre to crest centre, along u
+    if not (0.0 < tb < p["FrontThickness"] and 0.0 < hc < hb and R > 0.0 and rc > 0.0 and (R + rc) ** 2 > dy * dy):
+        raise ValueError("J grip: 0 < JGripLipTop < JGripCupDepth, 0 < JGripBackWall < FrontThickness, "
+                         "and the bowl must reach the crest")
+    xb = rc + math.sqrt((R + rc) ** 2 - dy * dy)  # the bowl's centre (and bottom point), d
+    if not (0.0 <= rk and xb <= dw - rk + 1e-9 and rk <= hb - re and 0.0 <= re <= tb):
+        raise ValueError("J grip: JGripCornerRadius does not fit between the bowl and the back wall")
+    tt = math.atan2(-dy, rc - xb)  # bowl centre -> crest centre, the tangent point's angle on the bowl
+
     def arc(cx, cy, r, t0, t1):
         tm = (t0 + t1) / 2.0
         return [(cx + r * math.cos(t), cy + r * math.sin(t)) for t in (t0, tm, t1)]
 
     pi = math.pi
-    segs = [[(-e, -e), (gd + re, -e)]]
+    segs = [[(-e, -e), (dw + re, -e)]]
     if re > 0:
-        segs += [[(gd + re, -e), (gd + re, 0.0)], arc(gd + re, re, re, 1.5 * pi, pi)]
-    segs.append([(gd, re), (gd, u_end - rp)])  # the back wall, down into the pocket
-    if rp >= w / 2.0 - 1e-9:  # the pocket's end, a full round
-        segs.append(arc(tl + rp, u_end - rp, rp, 0.0, pi))
-    else:
-        segs += [arc(gd - rp, u_end - rp, rp, 0.0, pi / 2.0), [(gd - rp, u_end), (tl + rp, u_end)],
-                 arc(tl + rp, u_end - rp, rp, pi / 2.0, pi)]
-    segs.append([(tl, u_end - rp), (tl, gh + rl)])  # the back of the lip
-    segs.append(arc(tl - rl, gh + rl, rl, 0.0, -pi / 2.0))  # the lip's top, back corner
-    if tl - 2.0 * rl > 1e-9:
-        segs.append([(tl - rl, gh), (rl, gh)])
-    segs.append(arc(rl, gh + rl, rl, -pi / 2.0, -pi))  # front corner, onto the face
-    segs += [[(0.0, gh + rl), (-e, gh + rl)], [(-e, gh + rl), (-e, -e)]]
-    # drop zero-length lines, make the segments chain
+        segs += [[(dw + re, -e), (dw + re, 0.0)], arc(dw + re, re, re, 1.5 * pi, pi)]
+    segs.append([(dw, re if re > 0 else -e), (dw, hb - rk)])  # the back wall's inside
+    if rk > 0:
+        segs.append(arc(dw - rk, hb - rk, rk, 0.0, pi / 2.0))  # into the bottom
+    segs.append([(dw - rk, hb), (xb, hb)])  # the bottom
+    segs.append(arc(xb, hb - R, R, pi / 2.0, tt))  # the lip's inside, one large arc up to the crest
+    segs.append(arc(rc, hc + rc, rc, tt - pi, -pi))  # the crest, over onto the visible face
+    segs += [[(0.0, hc + rc), (-e, hc + rc)], [(-e, hc + rc), (-e, -e)]]
     return [sg for sg in segs if len(sg) == 3 or math.hypot(sg[1][0] - sg[0][0], sg[1][1] - sg[0][1]) > 1e-9]
 
 
