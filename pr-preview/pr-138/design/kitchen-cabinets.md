@@ -1599,6 +1599,14 @@ Totals: 2 diffusers, 6 plate pieces (from one 1000 × 2000 aluminium sheet per r
 - **Plexiglas LED White WH14**: about 47 % transmission, the brighter one. **Plexiglas LED White WH72**: about 31 %, more diffusion, whiter when off, hides the dots better. Cast PMMA, 3050 × 2030 sheets, so **the 2408.5 and 2608 diffusers each come out of one sheet along its 3050 length**; no joint needed ([Plexiglas LED technical information 222-25](https://www.plexiglas.de/files/plexiglas-content/pdf/technische-informationen/222-25-EN-PLEXIGLAS-LED-back-lighting-white.pdf)). Petr will dim the panels anyway, so `guess:` **WH72** (no dots visible at 8 mm).
 - In the Czech Republic: [Zenit eshop](https://eshop.zenit.cz/desky/plexisklo-barevne/xt-plexiglas-3mm-opal-wn770/variant/2050-3050/?a21=118) (Plexiglas XT opal WN770, 45 %, cut to size at 12.10 CZK per metre of cut; ask them for WH14/WH72) (sheets 2050 × 3050 and 1520 × 2050: use the 3050 one) or [Dencop](https://eshop.dencop.cz/plexisklo-opalove-3-mm/) (3 mm opal, 29–35 % grades, 1020 × 3050, 2050 × 3050, also 2000 × 6000 in XT; cut to size in Zlín). Not a 2030/2050-long sheet: both diffusers are longer. If a run ever grows past about 3000, butt two pieces over a 20 aluminium T-strip glued on the ledge across the field (`guess:`).
 
+### One light, the right cable (2026-11-22 c)
+
+Petr: “theres a panel light very close by to the one you added in the kitchen. Can we remove the extra one and make sure the cable number is configured well? Am I right to assume that the dining one doesnt have a cable number yet? Document that well (Ill need to actually add that cable on site, it was forgotten. Then merge.”
+
+- **The extra one was `C180-S`**, “Světlo 180”, `Panel`, a 0.25 × 2.4 × 0.03 box at x 18.907, y 11.36, z 3.92 (under the sloped ceiling), straight above the west cabinets. But **the plan's “Panel 250x2400 (~200 W)”, mark 3(180), is drawn over the west wall cabinets (FixturePlan.pdf), and 250 × 2400 is their underside: it is this LED panel**, and the Soupis gives cable 180 the heavier CYKY 4x2.5 that a ~200 W 24 V panel needs. 2026-11-22 a had put the panel on cable 181 instead, so the model had two panels for one light.
+- Now: **one light, `C180-S`, cable 180**, `PanelRun: KR-WEST-H`. The ceiling box is removed; the id and GlobalId are C180's. `C181-S` is back to its #120 strip (cable 181 is a real Soupis row, CYKY 4x1.5, “into a box in the pre-wall”), with the question what it is now. Cable 180 is on C180-S only, cable 181 on C181-S only; both stay in the room's `Controls` lists.
+- Dining: **yes, it has no cable number. See “Missing cable” below.**
+
 ### Lights in IFC (and Matter)
 
 The house lights are yaml-ifc `lightFixtures` in `inputs/ground_floor/electrical-<room>.yaml`, one element per cable (`C<cable>-<code>`; a strip with several runs is still one element), `Pset_YamlIfc` with `CableNumber`, `Panel`, `DeviceCode`, `CableSpec`. Matter lives in the Home repo's `hardware.yaml`, keyed by each element's IFC GlobalId (one `ColorTemperatureLight` with warm and cool channels per light; Home covers room 1.11 only so far).
@@ -1607,16 +1615,17 @@ New: a light can be `PanelRun: <kitchen run>` instead of a box or a `Path`; it i
 
 | Light | Was | Now |
 |---|---|---|
-| `C181-S` (cable 181, panel 1, CYKY 4x1.5), GlobalId `0Em9207ILL0AQyFYvB2qXE` kept | `LedStrip`, Path 19.430, 11.310 → 13.780 at **z 1.530**: at the worktop's front edge, **280 in front of the cabinet fronts and 30 under the cabinets**, 2.47 long | `LedPanel`, `PanelRun: KR-WEST-H`: one diffuser 2408.5 × 268.5 at x 18.836–19.104, y 11.396–13.804, z 1.560–1.563 (2026-11-22 a: three, 770/729/770 × 271) |
-| `NC-1.02-S-2` (new), GlobalId `3kNrurCkTGufS7Cviy$JPc` | — | `LedPanel`, `PanelRun: KR-DH`: one diffuser 2608 × 194 at x 22.496–25.104, y 15.370–15.564, z 1.560–1.563 (2026-11-22 a: two, 1269 × 196). **Temporary cable `TEMP-1.02-DH`** (`Pset_YamlIfc.TempCable`, no `CableNumber`), panel 1 and CYKY 4x1.5 assumed. Added to the room's `Controls` lists next to NC-1.02-S. |
+| **`C180-S`** (cable 180, panel 1, **CYKY 4x2.5**, 4 m), GlobalId `1RcvK5MrXPgx45bpdubcog` (2026-11-22 c) | plan “Panel 250x2400 (~200 W)”, modelled as a ceiling panel at x 18.907, y 11.36, **z 3.92**, 0.25 × 2.4, right above the cabinets | `LedPanel`, `PanelRun: KR-WEST-H`: one diffuser 2408.5 × 268.5 at x 18.836–19.104, y 11.396–13.804, z 1.560–1.563 |
+| `C181-S` (cable 181, panel 1, CYKY 4x1.5), GlobalId `0Em9207ILL0AQyFYvB2qXE` | 2026-11-22 a/b: the west panel | back to its #120 `LedStrip`, Path 19.430, 11.310 → 13.780 at z 1.530 (the plan's strip line at the worktop front edge); `open:` what it is (Questions.md 14b) |
+| `NC-1.02-S-2` (new), GlobalId `3kNrurCkTGufS7Cviy$JPc` | — | `LedPanel`, `PanelRun: KR-DH`: one diffuser 2608 × 194 at x 22.496–25.104, y 15.370–15.564, z 1.560–1.563 (2026-11-22 a: two, 1269 × 196). **⚠️ No cable: temporary `TEMP-1.02-DH`** (`Pset_YamlIfc.TempCable`, no `CableNumber`), panel 1 and CYKY 4x2.5 assumed (2026-11-22 c; was 4x1.5). See “Missing cable” below. Added to the room's `Controls` lists next to NC-1.02-S. |
 
 `open:` **`NC-1.02-S`** (the plan's “Panel 200x2500 (~160 W)” with no cable, at 2.99 by the north wall, x 22.515–25.015, y 15.343–15.543) lies exactly over SF-DH in plan. It may be the same dining light drawn on the plan at the ceiling. Not touched; question in [Questions.md](../electrical/Questions.md) item 14.
 
 Matter, not done here (Home is a separate repo; `blueprints-1.02` would be a new entry in its `sources` and pins a Blueprints commit; it can only reference these GlobalIds after this is merged and the pin bumped). `guess:` records for Home's `hardware.yaml`, if Petr's sheets are CCT like every other indoor light (WiringOverview: 24 V, PWM, CCT on 4 cores):
 
 ```yaml
-  "0Em9207ILL0AQyFYvB2qXE":
-    blueprintsId: C181-S
+  "1RcvK5MrXPgx45bpdubcog":
+    blueprintsId: C180-S
     matter: { deviceType: ColorTemperatureLight, channels: [warm, cool] }
     control: { esp32: null, driver: null, pins: null }
     automations: {}
@@ -1634,8 +1643,22 @@ Matter, not done here (Home is a separate repo; `blueprints-1.02` would be a new
 - No driver in the cabinets if the sheets are 24 V: the house's 24 V constant-voltage supplies and the PWM dimming are in the panels (WiringOverview), and the 4-core cable goes straight to the LEDs (V+, V+, cool, warm). `open:` if Petr's sheets are 12 V, single-colour or need their own driver, a small one goes in the cabinet at the bottom back (it then needs air) and the cable type may change.
 - `open:` the power per module is not known, so the panel-1 supply cannot be sized yet (WiringOverview: size for every light at full output on both channels).
 - Each field has **one Ø10 hole through the web**, centred along the field, 15 in from the pocket's back edge (world: west x 18.856, y 12.600, inside SF-BH800; SF-DH y 15.544, x 23.800, inside the west section). Inside, a small junction box at the bottom back of that cabinet. The LED pieces are linked to each other inside the pocket, so no holes through the dividers are needed any more.
-- West (C181): the Soupis says “into a box in the pre-wall”; `guess:` that box behind SF-BH800 (the middle cabinet), the cable through its back panel.
-- Dining (TEMP-1.02-DH): `open:` where it comes from. One option: from panel 1 like C181, or a short run from the deep box behind C185-V (x 25.61, y 15.60, z 1.35, where 186–188 end “for later distribution in the furniture”), past pier W-053 into SF-DH's east section.
+- West (**C180**, CYKY 4x2.5, 4 m, panel 1): the Soupis row has no note; `guess:` up the pre-wall behind SF-BH800 (the middle cabinet) to the hole at y 12.600, through its back panel. (Until 2026-11-22 c this was C181 with C181's “into a box in the pre-wall” note; that note stays with cable 181.)
+- Dining (TEMP-1.02-DH): **the cable does not exist; see “Missing cable” below.**
+
+#### ⚠️ Missing cable: TEMP-1.02-DH, the SF-DH panel — add on site
+
+Petr (2026-11-22): “Am I right to assume that the dining one doesnt have a cable number yet? Document that well (Ill need to actually add that cable on site, it was forgotten.” **Yes: the dining panel `NC-1.02-S-2` has no row in the Soupis (CableSchedule.xlsx) and no `CableNumber`; TEMP-1.02-DH is only a placeholder.** The cable has to be pulled on site:
+
+| | |
+|---|---|
+| **When** | **Before the north wall's pre-wall, drywall and cladding (the CV-SLAT lining behind SF-DH) are closed.** |
+| **From** (`guess:`) | Panel 1, like C180 (the 24 V supplies and PWM dimmers are in the panel). Alternative: the deep box behind `C185-V` (x 25.61, y 15.60, z 1.35, where 186–188 end “for later distribution in the furniture”), if a supply is put there. |
+| **To** | The Ø10 hole in the SF-DH bottom web at **x 23.800, y 15.544, z 1.575–1.590** (15 in from the pocket's back edge, in SF-DH's west section); leave the end in the wall behind SF-DH at about z 1.60 near x 23.80, past pier W-053, into a small junction box at the bottom back of that section. |
+| **Cable** (`guess:`) | **CYKY 4x2.5**, like C180: 4 cores V+, V+, cool, warm at 24 V; a 2.6 m panel like the ~200 W west one draws ~8 A. 4x1.5 only if the panel's power turns out much lower. |
+| **Then** | Give it a Soupis number, set `CableNumber` on `NC-1.02-S-2` (or rename it `C<n>-S`), drop `TempCable`. |
+
+Tracked as [Questions.md](../electrical/Questions.md) item 14a.
 
 ### What changed (old → new)
 
@@ -1661,12 +1684,16 @@ Matter, not done here (Home is a separate repo; `blueprints-1.02` would be a new
 | LED modules | 12 | 11 |
 | C181-S / NC-1.02-S-2 geometry | 3 / 2 diffusers | 1 / 1 diffuser |
 | Cable holes in the web | 5 | 2 (y 12.600 west, x 23.800 SF-DH) |
+| **2026-11-22 c, one light, the right cable:** | | |
+| West panel light | `C181-S` (cable 181) on the cabinets **and** `C180-S` (cable 180) on the ceiling at z 3.92, right above it | **`C180-S` only**, on the cabinets (cable 180, CYKY 4x2.5); the ceiling panel is gone |
+| `C181-S` | the west panel | its #120 strip at the worktop front edge, `open:` |
+| TEMP-1.02-DH cable guess | CYKY 4x1.5 | **CYKY 4x2.5, MISSING, add on site** |
 
 ### Open (`open:`)
 
 - Petr's module size (245 × 495 “I think”), its thickness, voltage, CCT or not, power, and whether it can be cut to the pieces above.
 - The air gap (8) depends on the LED pitch; denser dots can go closer.
 - Fixing the 30 bottom (fixings in the web), and how the diffuser is held.
-- TEMP-1.02-DH: cable number, panel and route. C181's pre-wall box position (after the sliding-door work, Soupis).
+- **TEMP-1.02-DH: the missing cable; number, source and route (above).** C181: what it is now, and its pre-wall box position (after the sliding-door work, Soupis).
 - NC-1.02-S: the same light as the SF-DH panels, or something else?
 - Matter records in Home (above), after this is merged.
