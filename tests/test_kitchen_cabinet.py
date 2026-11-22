@@ -785,13 +785,16 @@ def test_j_grips_and_wall_front_overhang():
     assert d.props["Grip"] == "J top"
     a0, a1, c0, c1, z0, z1 = g.bounds()
     face = d.drawer.front[2]
-    assert z1 > d.drawer.front[5] and z0 == pytest.approx(d.drawer.front[5] - 22.0 - 2.0)  # 22 + the R2 lip
-    assert c1 == pytest.approx(face + 8.0)  # 8 deep into the 18 front
-    assert len(g.profile) > 10  # rounded: cove and lip are arcs
+    assert z1 > d.drawer.front[5] and z0 == pytest.approx(d.drawer.front[5] - 22.0 - 15.0)  # notch + hook
+    assert c1 == pytest.approx(face + 13.0 + 2.0)  # 13 deep (+ R2 on the back wall's edge) of the 18 front
+    assert any(len(sg) == 3 for sg in g.segments)  # rounded: arcs
+    # The lip: face material 4 thick below the 22 notch, the pocket behind it.
+    lip = [q for q in g.profile if abs(q[0] - (face + 4.0)) < 1e-6]
+    assert lip and min(q[1] for q in lip) < d.drawer.front[5] - 22.0 - 2.0
     _r, door = parts["SF-T2-DOOR1"]
     assert door.props["Grip"] == "J side"
     g = door.grips[0].bounds()
-    assert g[1] - g[0] == pytest.approx(25.0) and g[4] < door.boxes[0][4]  # 22 + R2 lip + 1 overcut
+    assert g[1] - g[0] == pytest.approx(38.0) and g[4] < door.boxes[0][4]  # 22 notch + 15 hook + 1 overcut
     assert not parts["SF-B800-D1"][1].grips and not parts["SF-LB-S1-FRONT"][1].grips
     for lift in ("SF-BH800-LIFT2", "SF-DH-S1-LIFT2"):
         assert parts[lift][1].boxes[0][4] == pytest.approx(1550.0)

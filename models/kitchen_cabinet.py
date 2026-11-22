@@ -125,17 +125,26 @@ IKEA_DEFAULTS_MM = {
     "FrontGap": 3.0,  # 600×200 grid front is 597×197
     # Integrated J grip (``Pset_KitchenRun.FrontGrip: J``; Petr, 2026-11-22 c:
     # "voxtorp J style on drawers and hinged doors"; t786u: rounded like
-    # VOXTORP, not sharp lines): a scoop routed into the front face along one
-    # edge, ``JGripHeight`` wide and ``JGripDepth`` deep, its inner corner a
-    # cove of ``JGripRadius`` and the lip (where the scoop's floor meets the
-    # face) rounded ``JGripLipRadius``. guess: 22 x 8, R6 cove, R2 lip, from
-    # IKEA's VOXTORP photos (the band is about 20-25 of a 127/254 front);
-    # IKEA does not publish it. The front stays ``FrontThickness`` (18).
-    # Which edge: ``_grip_edge``. Profile: ``grip_profile``.
+    # VOXTORP; t788u: "make the voxtorp shape (rounded J), yours is missing
+    # the lip"). In section (``grip_profile``): the front is notched at the
+    # gripped edge, ``JGripHeight`` along the face and ``JGripDepth`` into the
+    # front; below the notch the face material stays as a lip ``JGripLip``
+    # thick, and behind it the cut hooks on ``JGripHookDepth`` (15, a fingertip) further from the
+    # edge (an undercut pocket JGripDepth - JGripLip wide, its end a full round
+    # of ``JGripRadius``). The fingertips go in at the notch and curl behind
+    # the lip. The lip's top is rounded ``JGripLipRadius`` on both corners; the
+    # back wall's corner at the edge ``JGripEdgeRadius``. No sharp inner
+    # corners. guess: all of it (IKEA does not publish VOXTORP's section; its
+    # band reads about 20-25 on IKEA's photos; VOXTORP fronts are 22 thick,
+    # ours ``FrontThickness`` 18, so the back wall behind the pocket is 5).
+    # Which edge: ``_grip_edge``.
     "JGripHeight": 22.0,
-    "JGripDepth": 8.0,
-    "JGripRadius": 6.0,
+    "JGripDepth": 13.0,
+    "JGripLip": 4.0,
+    "JGripHookDepth": 15.0,
+    "JGripRadius": 4.5,
     "JGripLipRadius": 2.0,
+    "JGripEdgeRadius": 2.0,
     # Wall (top) cabinets: the lowest front hangs this far below the carcass
     # bottom as the grip (Petr, 2026-11-22 c: "plain 1cm overhang on all top
     # cabinets"). The top edge does not move.
@@ -525,46 +534,89 @@ class Part:
 
 @dataclass
 class Grip:
-    """A prism cut from a front, run frame mm: the closed polygon ``profile``
-    extruded along ``axis`` ("a": along the run, points (c, z); "z":
-    vertical, points (a, c)) from s0 to s1."""
+    """A prism cut from a front, run frame mm: the closed outline extruded
+    along ``axis`` ("a": along the run, points (c, z); "z": vertical, points
+    (a, c)) from s0 to s1. ``segments`` is the exact outline: 2 points per
+    straight line, 3 (start, middle, end) per circular arc; ``profile`` is
+    the same outline as a polygon (arcs every 10 degrees)."""
     axis: str
     s0: float
     s1: float
-    profile: list
+    segments: list
+
+    @property
+    def profile(self) -> list:
+        return _sample_segments(self.segments)
 
     def bounds(self) -> tuple:
         """(a0, a1, c0, c1, z0, z1) of the prism."""
-        xs = [q[0] for q in self.profile]
-        ys = [q[1] for q in self.profile]
+        pts = self.profile
+        xs = [q[0] for q in pts]
+        ys = [q[1] for q in pts]
         if self.axis == "a":
             return (self.s0, self.s1, min(xs), max(xs), min(ys), max(ys))
         return (min(xs), max(xs), min(ys), max(ys), self.s0, self.s1)
 
 
-def grip_profile(p: dict, steps: int = 6) -> list:
-    """The J scoop's cut-away region as (d, u) points: d into the front from
-    its face, u from the gripped edge toward the middle. Face and edge are
-    overcut by 1. The inner corner (d = depth, u = height) keeps a cove of
-    ``JGripRadius``; the lip (d = 0, u = height) is rounded ``JGripLipRadius``."""
-    gh, gd, r, rl, e = p["JGripHeight"], p["JGripDepth"], p["JGripRadius"], p["JGripLipRadius"], 1.0
-    if not (0.0 < gd < p["FrontThickness"]):
-        raise ValueError("J grip: 0 < JGripDepth < FrontThickness")
-    if not (0.0 <= r <= gd and 0.0 <= rl and r + rl <= gh):
-        raise ValueError("J grip: JGripRadius <= JGripDepth and JGripRadius + JGripLipRadius <= JGripHeight")
-    pts = [(-e, -e), (gd, -e)]
-    for k in range(steps + 1):  # the cove, concave: back wall into the floor
-        t = math.pi / 2.0 * k / steps
-        pts.append((gd - r + r * math.cos(t), gh - r + r * math.sin(t)))
-    for k in range(steps + 1):  # the lip, convex: floor round onto the face
-        t = 1.5 * math.pi - math.pi / 2.0 * k / steps
-        pts.append((rl + rl * math.cos(t), gh + rl + rl * math.sin(t)))
-    pts.append((-e, gh + rl))
+def _sample_segments(segs: list, step_deg: float = 10.0) -> list:
+    """Polygon through ``segs`` (each starts where the last ended)."""
     out = []
-    for q in pts:  # drop repeats (r or rl 0)
-        if not out or abs(q[0] - out[-1][0]) > 1e-9 or abs(q[1] - out[-1][1]) > 1e-9:
-            out.append(q)
+    for seg in segs:
+        if len(seg) == 2:
+            pts = [seg[0]]
+        else:
+            (x0, y0), (xm, ym), (x1, y1) = seg
+            # circle through the three points
+            d = 2.0 * (x0 * (ym - y1) + xm * (y1 - y0) + x1 * (y0 - ym))
+            ux = ((x0**2 + y0**2) * (ym - y1) + (xm**2 + ym**2) * (y1 - y0) + (x1**2 + y1**2) * (y0 - ym)) / d
+            uy = ((x0**2 + y0**2) * (x1 - xm) + (xm**2 + ym**2) * (x0 - x1) + (x1**2 + y1**2) * (xm - x0)) / d
+            r = math.hypot(x0 - ux, y0 - uy)
+            t0, tm, t1 = (math.atan2(y - uy, x - ux) for x, y in seg)
+            sweep = (t1 - t0) % (2 * math.pi)
+            if (tm - t0) % (2 * math.pi) > sweep:  # goes the other way round
+                sweep -= 2 * math.pi
+            n = max(2, math.ceil(abs(math.degrees(sweep)) / step_deg))
+            pts = [(ux + r * math.cos(t0 + sweep * k / n), uy + r * math.sin(t0 + sweep * k / n)) for k in range(n)]
+        for q in pts:
+            if not out or math.hypot(q[0] - out[-1][0], q[1] - out[-1][1]) > 1e-9:
+                out.append(q)
     return out
+
+
+def grip_profile(p: dict) -> list:
+    """The rounded J's cut-away region as segments in (d, u): d into the front
+    from its face, u from the gripped edge toward the middle of the front.
+    Overcut 1 past the face and the edge. See ``IKEA_DEFAULTS_MM``."""
+    gh, gd, tl, hd = p["JGripHeight"], p["JGripDepth"], p["JGripLip"], p["JGripHookDepth"]
+    rp, rl, re, e = p["JGripRadius"], p["JGripLipRadius"], p["JGripEdgeRadius"], 1.0
+    w, u_end = gd - tl, gh + hd
+    if not (0.0 < tl < gd < p["FrontThickness"]):
+        raise ValueError("J grip: 0 < JGripLip < JGripDepth < FrontThickness")
+    if not (0.0 < rp <= w / 2.0 and rp + rl <= hd and 0.0 < rl <= tl / 2.0 and 0.0 <= re <= p["FrontThickness"] - gd):
+        raise ValueError("J grip: radii do not fit (JGripRadius <= pocket/2, JGripLipRadius <= JGripLip/2, "
+                         "JGripRadius + JGripLipRadius <= JGripHookDepth, JGripEdgeRadius <= back wall)")
+    def arc(cx, cy, r, t0, t1):
+        tm = (t0 + t1) / 2.0
+        return [(cx + r * math.cos(t), cy + r * math.sin(t)) for t in (t0, tm, t1)]
+
+    pi = math.pi
+    segs = [[(-e, -e), (gd + re, -e)]]
+    if re > 0:
+        segs += [[(gd + re, -e), (gd + re, 0.0)], arc(gd + re, re, re, 1.5 * pi, pi)]
+    segs.append([(gd, re), (gd, u_end - rp)])  # the back wall, down into the pocket
+    if rp >= w / 2.0 - 1e-9:  # the pocket's end, a full round
+        segs.append(arc(tl + rp, u_end - rp, rp, 0.0, pi))
+    else:
+        segs += [arc(gd - rp, u_end - rp, rp, 0.0, pi / 2.0), [(gd - rp, u_end), (tl + rp, u_end)],
+                 arc(tl + rp, u_end - rp, rp, pi / 2.0, pi)]
+    segs.append([(tl, u_end - rp), (tl, gh + rl)])  # the back of the lip
+    segs.append(arc(tl - rl, gh + rl, rl, 0.0, -pi / 2.0))  # the lip's top, back corner
+    if tl - 2.0 * rl > 1e-9:
+        segs.append([(tl - rl, gh), (rl, gh)])
+    segs.append(arc(rl, gh + rl, rl, -pi / 2.0, -pi))  # front corner, onto the face
+    segs += [[(0.0, gh + rl), (-e, gh + rl)], [(-e, gh + rl), (-e, -e)]]
+    # drop zero-length lines, make the segments chain
+    return [sg for sg in segs if len(sg) == 3 or math.hypot(sg[1][0] - sg[0][0], sg[1][1] - sg[0][1]) > 1e-9]
 
 
 @dataclass
@@ -1575,13 +1627,13 @@ class _Builder:
         prof = grip_profile(p)
         if edge in ("top", "bottom"):
             zz = (lambda u: z1 - u) if edge == "top" else (lambda u: z0 + u)
-            return [Grip("a", a0 - 1.0, a1 + 1.0, [(face + inward * d, zz(u)) for d, u in prof])], edge
+            return [Grip("a", a0 - 1.0, a1 + 1.0, [[(face + inward * d, zz(u)) for d, u in sg] for sg in prof])], edge
         if edge == "side":
             if hinge_a is None:
                 raise ValueError(f"{bay.id}: grip=side needs a hinged door")
             latch_low = abs(hinge_a - a1) < abs(hinge_a - a0)  # the edge away from the hinge
             aa = (lambda u: a0 + u) if latch_low else (lambda u: a1 - u)
-            return [Grip("z", z0 - 1.0, z1 + 1.0, [(aa(u), face + inward * d) for d, u in prof])], edge
+            return [Grip("z", z0 - 1.0, z1 + 1.0, [[(aa(u), face + inward * d) for d, u in sg] for sg in prof])], edge
         raise ValueError(f"{bay.id}: grip={edge!r}, one of top, bottom, side, none")
 
     def _lift(self, bay: Bay, p: dict, zone: Zone, front_box: tuple, in_z1: float, back_y: float,

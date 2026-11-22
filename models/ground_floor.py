@@ -76,6 +76,7 @@ from build123d import (
     Color,
     Compound,
     Cylinder,
+    Edge,
     Face,
     Plane,
     Polygon,
@@ -344,13 +345,19 @@ def _run_box(box, shrink: float):
 
 
 def _grip_solid(grip):
-    """A ``kitchen_cabinet.Grip`` prism (run frame mm): its profile extruded
+    """A ``kitchen_cabinet.Grip`` prism (run frame mm): its outline extruded
     along a (points (c, z)) or z (points (a, c))."""
     if grip.axis == "a":
         plane = Plane(origin=(grip.s0, 0.0, 0.0), x_dir=(0.0, 1.0, 0.0), z_dir=(1.0, 0.0, 0.0))
     else:
         plane = Plane(origin=(0.0, 0.0, grip.s0), x_dir=(1.0, 0.0, 0.0), z_dir=(0.0, 0.0, 1.0))
-    wire = Wire.make_polygon([plane.from_local_coords((x, y)) for x, y in grip.profile], close=True)
+    # Exact lines and arcs, so the rounded J is a smooth (cylindrical) face:
+    # smooth normals and no tessellation edges under the viewer's crease angle.
+    edges = []
+    for seg in grip.segments:
+        pts = [plane.from_local_coords((x, y)) for x, y in seg]
+        edges.append(Edge.make_line(*pts) if len(pts) == 2 else Edge.make_three_point_arc(*pts))
+    wire = Wire(edges)
     return extrude(Face(wire), amount=grip.s1 - grip.s0, dir=plane.z_dir)
 
 
