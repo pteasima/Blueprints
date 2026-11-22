@@ -1913,9 +1913,15 @@ class _Builder:
         return self.add(part, bay)
 
     def _sink_fittings(self, bays, zt):
-        """Disposers hang under a sink's bowl, taps stand behind it (guess:
-        positions, sizes from Pset_BuiltIn). A bowl and a disposer are
-        obstacles for any drawer box under them."""
+        """Disposers hang under a sink's bowl, taps stand behind it
+        (positions and sizes from Pset_BuiltIn). A bowl and a disposer are
+        obstacles for any drawer box under them.
+
+        ``HoleOffset`` is the hole centre behind the inner bowl back, not
+        the rim. A disposer uses ``Pset_Sink DrainOffsetFromBack`` when
+        set (mm from the inner bowl back); otherwise it is centred on the
+        bowl (guess:).
+        """
         p = self.p
         for sink in self.sinks:
             bay = next((b for b in bays if sink["yaml_id"] in b.external), None)
@@ -1937,10 +1943,20 @@ class _Builder:
                         return default
                     return float(v) * 1000.0
 
-                bowl_c = (sc0 + sc1) / 2.0
+                # Inner bowl in the bay's c axis: the cut-out sits
+                # SINK_CUTOUT_INSET_MM inside the bowl (Teka, and the fallback).
+                inset = SINK_CUTOUT_INSET_MM
+                bowl_c0 = sink["cutout"].c0 - inset
+                bowl_c1 = sink["cutout"].c1 + inset
+                bowl_c = (bowl_c0 + bowl_c1) / 2.0
                 if kind == "Disposer":
                     d, h = mm("Width"), mm("Height")
-                    box = (ca - d / 2, ca + d / 2, bowl_c - d / 2, bowl_c + d / 2, sz0 - h, sz0)
+                    drain = sink.get("drain_from_back")
+                    if drain is None:
+                        dc = bowl_c
+                    else:
+                        dc = (bowl_c1 - drain) if bay.front_low else (bowl_c0 + drain)
+                    box = (ca - d / 2, ca + d / 2, dc - d / 2, dc + d / 2, sz0 - h, sz0)
                     part = self._builtin_part(ext, bay, [box], shape="cylinder",
                                               props={"Sink": sink["yaml_id"], "Top": round(sz0 / 1000.0, 6),
                                                      "Bottom": round((sz0 - h) / 1000.0, 6)})
@@ -1949,8 +1965,8 @@ class _Builder:
                     d, h = mm("BodyDiameter", 50.0), mm("Height")
                     reach, spout = mm("SpoutReach"), mm("SpoutHeight")
                     hole = mm("HoleOffset", 40.0)
-                    # Behind the bowl: away from the bay front.
-                    back_c = sc1 + hole if bay.front_low else sc0 - hole
+                    # Behind the inner bowl, away from the bay front.
+                    back_c = bowl_c1 + hole if bay.front_low else bowl_c0 - hole
                     toward = -1.0 if bay.front_low else 1.0  # the spout points at the bowl
                     arm = 30.0
                     body = (ca - d / 2, ca + d / 2, back_c - d / 2, back_c + d / 2, zt, zt + h)
@@ -2784,6 +2800,9 @@ def _sink(ext: dict, frame: Frame, centre, ref, top: float) -> dict:
         "cutout": Void(ca - ha, ca + ha, cc - hc, cc + hc, radius=m("CutoutRadius") or 0.0, name=ext["id"]),
         "top": top,
         "mounting": str(_prop(ext, PSET_SINK, "Mounting", "Undermount")),
+        # mm from the inner bowl back to the drain centre, or None to hang
+        # the disposer on the bowl centre (guess:).
+        "drain_from_back": m("DrainOffsetFromBack"),
     }
 
 
