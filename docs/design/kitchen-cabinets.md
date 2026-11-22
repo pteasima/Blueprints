@@ -412,7 +412,7 @@ Alternative, only the top drawer shallow (not built): SF-I600a and SF-I500b 100 
 
 ## Parametric rule
 
-Everything above is computed in `kitchen_cabinet.runs` from the bay boxes (`Origin`, `RefDirection`, `Width`, `Depth`, `Height`, `Elevation`), the run's `Pset_KitchenRun` (any `IKEA_DEFAULTS_MM` key, in metres, plus `WorktopMaterial`, `WorktopOverhang<N|E|S|W>` (one edge, 2026-11-20 f), `CladEnds`, `CladdingMaterial`, `MitreEnds` (45° top/end joints), `Carcass` (`Box` for whole-body bays), `BodyMaterial`, `PlinthKind` (`Legs` or `Board`), `Backsplash`, `BacksplashThickness`, `BacksplashTop`, `BacksplashMaterial`, `UnderlayThickness` + `UnderlayMaterial` (a layer under the stone, box runs, 2026-11-20 h), `SideKickboards`, `SideKickboardSetback` (2026-11-20 h)) and each bay's `Pset_Fronts` (`Layout`, `Contents`: see “Fronts and interiors”) or the older `Pset_Drawers` (`NominalHeights` in metres top to bottom, one `*` for the rest; `Contents` separated by `;`), plus the built-ins' `Pset_BuiltIn`. A bay may override the drawer and front values in its own `Pset_KitchenCabinet`. Change a bay's width and its dividers move, both neighbours' clear widths and drawer boxes follow (drawer insides are the clear width and side depth less the MAXIMERA deductions, Gridfinity baseplates follow the inside), and the worktop grows; change the counter height or the worktop thickness and the carcass, the `*` drawer and the cladding follow. Rows that stand back to back (same back plane, fronts facing away) share one central back; a run with `CladEnds` gets stone on both ends. A sink's cut-out comes from its `Pset_Sink` and follows the sink box. A hob follows its bay (`Pset_Hob`): move or widen the bay and the cut-out, rebate, glass and housing move with it. The model stops the export if the hob comes closer than `MinBackEdge` to the far edge. A backsplash runs the worktop's length, from the worktop top up to the lowest box hanging over it. A `lift` band takes its cabinet height, width and depth from the bay and is checked against Blum's ranges for its fitting; change the bay and the fronts, mechanisms, weight, power factor and open clearance follow.
+Everything above is computed in `kitchen_cabinet.runs` from the bay boxes (`Origin`, `RefDirection`, `Width`, `Depth`, `Height`, `Elevation`), the run's `Pset_KitchenRun` (any `IKEA_DEFAULTS_MM` key, in metres, plus `WorktopMaterial`, `WorktopOverhang<N|E|S|W>` (one edge, 2026-11-20 f), `CladEnds`, `CladdingMaterial`, `MitreEnds` (45° top/end joints), `Carcass` (`Box` for whole-body bays), `BodyMaterial`, `PlinthKind` (`Legs` or `Board`), `Backsplash`, `BacksplashThickness`, `BacksplashTop`, `BacksplashMaterial`, `UnderlayThickness` + `UnderlayMaterial` (a layer under the stone, box runs, 2026-11-20 h), `SideKickboards`, `SideKickboardSetback` (2026-11-20 h), `FrontGrip` (`J`: routed grips, `JGripHeight`, `JGripDepth`, per-band `grip=`), `FrontFinish`, `WallFrontOverhang` (2026-11-22 c)) and each bay's `Pset_Fronts` (`Layout`, `Contents`: see “Fronts and interiors”) or the older `Pset_Drawers` (`NominalHeights` in metres top to bottom, one `*` for the rest; `Contents` separated by `;`), plus the built-ins' `Pset_BuiltIn`. A bay may override the drawer and front values in its own `Pset_KitchenCabinet`. Change a bay's width and its dividers move, both neighbours' clear widths and drawer boxes follow (drawer insides are the clear width and side depth less the MAXIMERA deductions, Gridfinity baseplates follow the inside), and the worktop grows; change the counter height or the worktop thickness and the carcass, the `*` drawer and the cladding follow. Rows that stand back to back (same back plane, fronts facing away) share one central back; a run with `CladEnds` gets stone on both ends. A sink's cut-out comes from its `Pset_Sink` and follows the sink box. A hob follows its bay (`Pset_Hob`): move or widen the bay and the cut-out, rebate, glass and housing move with it. The model stops the export if the hob comes closer than `MinBackEdge` to the far edge. A backsplash runs the worktop's length, from the worktop top up to the lowest box hanging over it. A `lift` band takes its cabinet height, width and depth from the bay and is checked against Blum's ranges for its fitting; change the bay and the fronts, mechanisms, weight, power factor and open clearance follow.
 
 ## Tap to open
 
@@ -1698,3 +1698,58 @@ Tracked as [Questions.md](../electrical/Questions.md) item 14a.
 - **TEMP-1.02-DH: the missing cable; number, source and route (above).** C181: what it is now, and its pre-wall box position (after the sliding-door work, Soupis).
 - NC-1.02-S: the same light as the SF-DH panels, or something else?
 - Matter records in Home (above), after this is merged.
+
+## Lacquered fronts and handles (2026-11-22 c)
+
+Petr (t783u): “ok, assume laquered and add all the handles (voxtorp J style on drawers and hinged doors, plain 1cm overhang on all top cabinets)”. Then (t784u, with the bot's proposal): drawers and low hinged doors get a horizontal J grip on the top edge; tall hinged doors a vertical J grip on the handle (non-hinge) edge, like VOXTORP tall doors; on tall cabinets with drawers below, the drawers keep the top grip and the door above gets the side grip; the orientation is a per-front parameter; wall cabinets only the 10 mm overhang.
+
+### Finish
+
+Every cream front, end panel, cladding and plinth (`kitchen-front-cream`) is **matt lacquered MDF**, RAL 9001 (`guess:` the shade, as before). Recorded on the runs as `Pset_KitchenRun.FrontFinish: matt lacquered MDF (RAL 9001 cream)` (KR-ISL, KR-WEST, KR-WEST-H, KR-DN, KR-LB, KR-TC, KR-TALL-W, KR-TALL, KR-TALL-F) and in the material catalogue. Carcass interiors stay white melamine. Lacquer is why the routed grip is possible: the groove is lacquered with the face (foil and melamine fronts cannot be routed after finishing).
+
+### J grip (`FrontGrip: J`)
+
+- A run with `Pset_KitchenRun.FrontGrip: J` routes a J grip into the **face** of each drawer front and hinged door along one edge: a band `JGripHeight` × `JGripDepth`, `guess:` **22 × 10** (of the 18 front), and the J's hook: below the band's floor a slot `JGripUndercut` **8** long behind a `JGripLip` **4** lip of the face (6 wide, from 4 to 10 behind the face), so the fingertips go into the band and pull on the back of the lip. The back of the front stays 8 thick there. IKEA does not publish VOXTORP's groove; the band size is read off IKEA's VOXTORP product photos ([VOXTORP drawer front](https://www.ikea.com/us/en/p/voxtorp-drawer-front-dark-gray-50456177/): a darker band along the top edge, about 20–25 mm on the 127 and 254 high fronts; VOXTORP fronts are 22 thick, ours 18). Square cuts; the rounded scoop is the woodworker's router bit (`open:` the bit and whether 18 is enough, or 22 fronts as VOXTORP).
+- The grip is a real subtraction from the front solid in the GLB and in the IFC (an `IfcBooleanResult` DIFFERENCE, so the front is `CSG`), and rides with the drawer or door when it opens. Each front with a grip has `Grip: J top|bottom|side` in its properties.
+- **Which edge** (`kitchen_cabinet._grip_edge`), per front: the band's `grip=` option in `Pset_Fronts.Layout` (`top`, `bottom`, `side`, `none`) wins, so a tall door can be switched to a horizontal grip with `door:...,grip=top`. Otherwise:
+  - drawers and doors up to 1200 high: **top edge** (horizontal);
+  - doors over 1200 high: **the vertical edge away from the hinge** (side), full height, like IKEA's [VOXTORP “vertical handle” tall doors](https://www.ikea.com/de/en/p/voxtorp-door-oak-effect-vertical-handle-20648994/);
+  - doors starting above 1400 (the upper doors of the tall cabinets, SF-T3-DOOR1 and SF-TF-DOOR1/2): **bottom edge**, `guess:` (in reach from below; they are neither low nor tall).
+- Not given a grip (`open:`, untouched): the full-height **pull-outs** SF-I300-D1, SF-A250-D1, SF-B800-D1, SF-C850-D1 (role `PullOut`; add `grip=top` to their band if wanted); the fixed **blank fronts** SF-LB-S1…S7-FRONT and SF-TC-FRONT2 (dead space, they do not open); the **filler** SF-T1-FILLER1; the **appliance fronts** (the integrated dishwasher's door panel is not a modelled front); the **lift-ups** (overhang below).
+
+| Front | Grip | Band (run frame) |
+|---|---|---|
+| Island: SF-I500a-DOOR1, SF-I600a-D1…D3, SF-I500b-D1…D3, SF-I600b-D1…D3, SF-E600a/b/c-D1, SF-E700-D1 (14) | top | 22 × 10 band + hook along the top edge |
+| Dining base: SF-F052-DOOR1, SF-DN-S1…S4-D1, SF-F053-DOOR1 (6) | top | same |
+| Tall: SF-T2/T3/T4-D1, -D2 (6 drawers under the doors) | top | same |
+| Tall doors: SF-T1-DOOR1 (101–2449), SF-T2-DOOR1, SF-T4-DOOR1 (911–2449), SF-TC-DOOR1 (701–2449) | side | the same along the latch edge, full height, hook toward the hinge |
+| Upper doors: SF-T3-DOOR1 (1904–2449), SF-TF-DOOR1/2 (1927–2449) | bottom | the same along the bottom edge, hook upward (`guess:`) |
+
+33 fronts, about 23.5 m of grip.
+
+The grip works from the front: no finger room behind the front is needed (behind the top drawers is the carcass rail, and the worktop is 1.5 above them).
+
+### Wall cabinets: 10 mm overhang (`WallFrontOverhang`)
+
+All wall (top) cabinets, KR-WEST-H (cream) and KR-DH (oak, SF-DH): `Pset_KitchenRun.WallFrontOverhang: 0.010`. The **lowest** lift-up front (the lower HF leaf) now reaches **10 below the carcass bottom**, and closes the 1.5 half-gap it had above the bottom edge; nothing is routed. **The top edge does not move** (upper leaves unchanged, 2448.5 west, 2402.5 SF-DH), so the 2450 ceiling line and the HF space above are unchanged.
+
+| Front | Old z | New z | Height |
+|---|---|---|---|
+| SF-CH850/BH800/AH850-LIFT2 | 1561.5–2003.5 | **1550.0–2003.5** | 442 → **453.5** |
+| SF-CH850/BH800/AH850-LIFT1 | 2006.5–2448.5 | unchanged | 442 |
+| SF-DH-S1/S2-LIFT2 (oak) | 1561.5–1980.5 | **1550.0–1980.5** | 419 → **430.5** |
+| SF-DH-S1/S2-LIFT1 (oak) | 1983.5–2402.5 | unchanged | 419 |
+
+- Open at 88°, the lower leaf's bottom edge is at **1980** (was 1991). The fronts get taller, not shorter; the carcasses (bottom 1560, top 2450 west / 2404 SF-DH) do not change. Worktop (930) to the front's lower edge: 630 → **620**.
+- LED panels: the diffusers stay flush with the bottom at 1560; the lower leaf now hides their front edge and the 25 padding from a standing eye, and from the front you see the 10 lip before the light. The front is in front of the carcass (c 0–18), so it does not touch the diffuser or the rebate.
+- The HF front weight and power factor follow (the export checks Blum's range): BH800 8.88 → 8.99 kg, LF 7901 → 8004; CH850 and AH850 9.43 → 9.56 kg, LF 8396 → 8506; SF-DH 14.22 → 14.42 kg, LF 12004 → 12169. No new breach; SF-DH stays outside HF's 264 internal depth (250) under Petr's existing override (2026-11-20 f). `open:` set the lift mechanisms' power to the new weights.
+- **TIP-ON is not available on AVENTOS HF**: Blum's TIP-ON is for AVENTOS HKi, HK top, HK-S and HK-XS; HF top only has SERVO-DRIVE (electric) ([Blum catalogue 2027/2028, lift systems](https://publications.blum.com/2026/catalogue/en/)). So a plain overhang pulled from below is the consistent handle-less grip for the bi-fold wall cabinets.
+
+### What changed (old → new)
+
+| Element | Old | New |
+|---|---|---|
+| Cream fronts' finish | “smooth matt lacquer or matt laminate” | **matt lacquered MDF** |
+| 33 drawer fronts and hinged doors | flat | J grip 22 × 10 band + 8 hook behind a 4 lip, routed (top 23, side 4, bottom 3; table above) |
+| Lower HF leaves, west and SF-DH | bottom 1561.5 | **bottom 1550.0** (+11.5 taller) |
+| Pull-outs, blank fronts, filler, lift-ups' upper leaves | — | unchanged |

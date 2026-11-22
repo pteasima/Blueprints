@@ -123,6 +123,23 @@ IKEA_DEFAULTS_MM = {
     "FrontThickness": 18.0,  # METOD fronts
     "BackThickness": 8.0,  # single-row back panel (guess)
     "FrontGap": 3.0,  # 600×200 grid front is 597×197
+    # Integrated J grip (``Pset_KitchenRun.FrontGrip: J``; Petr, 2026-11-22 c:
+    # "voxtorp J style on drawers and hinged doors"): a routed band along one
+    # edge of the front face, ``JGripHeight`` wide, ``JGripDepth`` deep into the
+    # front. guess: 22 x 10, read off IKEA's VOXTORP product photos (the band
+    # is about 20-25 of a 127/254 front); IKEA does not publish it. The J's
+    # hook: below the band's floor (toward the front's middle), a slot
+    # ``JGripUndercut`` long behind a ``JGripLip`` thick lip of the face, so
+    # the fingertips pull on the lip's back. Square-cut boxes; the curve is
+    # the router bit's. Which edge: ``_grip_edge``.
+    "JGripHeight": 22.0,
+    "JGripDepth": 10.0,
+    "JGripLip": 4.0,
+    "JGripUndercut": 8.0,
+    # Wall (top) cabinets: the lowest front hangs this far below the carcass
+    # bottom as the grip (Petr, 2026-11-22 c: "plain 1cm overhang on all top
+    # cabinets"). The top edge does not move.
+    "WallFrontOverhang": 0.0,
     "RailDepth": 80.0,  # top front/back rails (guess)
     # Drawers modelled after IKEA MAXIMERA in a METOD 60×60 frame (IKEA's own
     # pages, kitchen-cabinets.md "Drawers: MAXIMERA"): inside 480 × 504 in a
@@ -501,6 +518,9 @@ class Part:
     props: dict = field(default_factory=dict)  # Pset_KitchenFront / Pset_BuiltIn values for IFC
     builtin: dict | None = None  # a yaml appliance laid out here (its own IFC product)
     lift: LiftJoint | None = None  # a lift front or its arm: how it moves open (viewer)
+    # Routed grips (``FrontGrip``): run-frame boxes subtracted from the
+    # front (boxes[0] of a door, drawer.front of a drawer) in the 3D model and IFC.
+    grips: list = field(default_factory=list)
 
 
 @dataclass
@@ -1305,8 +1325,11 @@ class _Builder:
                     # the front (rides with the front); the driver clips on the
                     # top inner drawer (rides with that drawer, below).
                     boxes += latch_boxes(p, dr, inner_boxes[0])[:1]
+                grips, edge = self._grips(bay, p, zone, "Drawer" if zone.kind == "drawer" else "PullOut", dr.front)
+                if edge:
+                    props.update(Grip=f"J {edge}")
                 outer = self.add(Part(f"{bay.id}-D{drawer_no}", name.strip(), "Drawer" if zone.kind == "drawer" else "PullOut",
-                                      boxes, drawer=dr, props=props), bay)
+                                      boxes, drawer=dr, props=props, grips=grips), bay)
                 # Inner drawers (2026-11-20 c): each its own part and motion,
                 # opening only with the front open (``Parent``); the coupled
                 # top one (ZI7.0M07) opens with the front, the front closing
@@ -1341,8 +1364,10 @@ class _Builder:
                     racks = int(zone.opts.get("racks", 0))
                     boxes += _racks(bay, p, (a0, a1), front_box, racks)
                     leaf = Leaf(zone.index, hinge, hinge_a, face_c, out)
+                    grips, edge = self._grips(bay, p, zone, "Door", boxes[0], hinge_a)
                     self.add(Part(f"{bay.id}-DOOR{leaf_no}", f"Dvířka {leaf_no} ({hinge})", "Door", boxes, door=leaf,
-                                  props=dict(base, Hinge=hinge, Racks=racks or None,
+                                  grips=grips,
+                                  props=dict(base, Hinge=hinge, Racks=racks or None, Grip=f"J {edge}" if edge else None,
                                              LeafWidth=round((a1 - a0) / 1000.0, 6),
                                              LeafHeight=round((front_box[5] - front_box[4]) / 1000.0, 6))), bay)
                 for a0, a1 in leaves["fillers"]:
@@ -1350,7 +1375,10 @@ class _Builder:
                                   [(a0, a1, fc0, fc1, front_box[4], front_box[5])], props={"Zone": zone.index}), bay)
                 self._shelves(bay, p, zone, in_z0, in_z1, back_y, racks=int(zone.opts.get("racks", 0)))
             elif zone.kind == "lift":
-                mechs = self._lift(bay, p, zone, front_box, in_z1, back_y, base)
+                # The lowest front of a wall cabinet hangs ``WallFrontOverhang``
+                # below the carcass bottom (and closes the half gap under it).
+                drop = (g + p["WallFrontOverhang"]) if (below is None and p["WallFrontOverhang"] > 0) else 0.0
+                mechs = self._lift(bay, p, zone, front_box, in_z1, back_y, base, drop=drop)
                 lift_p = dict(p, ShelfSetback=max(p["ShelfSetback"], LIFT_HF_SHELF_SETBACK))
                 self._shelves(bay, lift_p, zone, in_z0, in_z1, back_y, avoid=mechs)
             elif zone.kind == "niche":
@@ -1489,8 +1517,39 @@ class _Builder:
                     "DockClearHeight": round((top - floor) / 1000.0, 6),
                     "ClearanceAbove": round((top - floor - h) / 1000.0, 6)})
 
+    def _grips(self, bay: Bay, p: dict, zone: Zone, role: str, box: tuple, hinge_a: float | None = None):
+        """The routed J grip of one front (``Pset_KitchenRun.FrontGrip: J``):
+        (cut boxes, edge). Edge per front from the band's ``grip=`` option
+        (top | bottom | side | none), else ``_grip_edge``."""
+        if str(_prop(self.run.element, PSET_RUN, "FrontGrip") or "").upper() != "J":
+            return [], None
+        edge = _grip_edge(zone, role, box)
+        if edge in (None, "none"):
+            return [], None
+        gh, gd, lip, u, e = p["JGripHeight"], p["JGripDepth"], p["JGripLip"], p["JGripUndercut"], 1.0
+        if not (0.0 < lip < gd < p["FrontThickness"]):
+            raise ValueError(f"{bay.id}: J grip needs 0 < JGripLip < JGripDepth < FrontThickness")
+        a0, a1, c0, c1, z0, z1 = box
+        cc = (c0 - e, c0 + gd) if bay.front_low else (c1 - gd, c1 + e)  # the band, from the face
+        hc = (c0 + lip, c0 + gd) if bay.front_low else (c1 - gd, c1 - lip)  # the hook, behind the lip
+        if edge == "top":
+            cuts = [(a0 - e, a1 + e, *cc, z1 - gh, z1 + e), (a0 - e, a1 + e, *hc, z1 - gh - u, z1 - gh + e)]
+        elif edge == "bottom":
+            cuts = [(a0 - e, a1 + e, *cc, z0 - e, z0 + gh), (a0 - e, a1 + e, *hc, z0 + gh - e, z0 + gh + u)]
+        elif edge == "side":
+            if hinge_a is None:
+                raise ValueError(f"{bay.id}: grip=side needs a hinged door")
+            latch_low = abs(hinge_a - a1) < abs(hinge_a - a0)  # the edge away from the hinge
+            if latch_low:
+                cuts = [(a0 - e, a0 + gh, *cc, z0 - e, z1 + e), (a0 + gh - e, a0 + gh + u, *hc, z0 - e, z1 + e)]
+            else:
+                cuts = [(a1 - gh, a1 + e, *cc, z0 - e, z1 + e), (a1 - gh - u, a1 - gh + e, *hc, z0 - e, z1 + e)]
+        else:
+            raise ValueError(f"{bay.id}: grip={edge!r}, one of top, bottom, side, none")
+        return cuts, edge
+
     def _lift(self, bay: Bay, p: dict, zone: Zone, front_box: tuple, in_z1: float, back_y: float,
-              base: dict) -> list:
+              base: dict, drop: float = 0.0) -> list:
         """A Blum AVENTOS lift-up front (``lift`` band), its two lift
         mechanisms and the space it needs open (``run.clearances``).
 
@@ -1531,6 +1590,10 @@ class _Builder:
         else:
             fho = fh
             fronts = [("", "Výklopná dvířka", (z0, z1))]
+        if drop:
+            # ``WallFrontOverhang``: the lowest front reaches below the carcass.
+            tag_, label_, (zz0_, zz1_) = fronts[-1]
+            fronts[-1] = (tag_, label_, (zz0_ - drop, zz1_))
         fg = sum((zz1 - zz0) * fb * tf for _n, _l, (zz0, zz1) in fronts) * 1e-9 * density
         lf = kh * fg
         if spec["lf"] is not None and not (spec["lf"][0] <= lf <= spec["lf"][1]):
@@ -2343,6 +2406,30 @@ def _even(z_lo: float, z_hi: float, n: int, t: float) -> list[float]:
 
 def _plan_meet(a, b) -> bool:
     return a[0] < b[1] - TOL and b[0] < a[1] - TOL and a[2] < b[3] - TOL and b[2] < a[3] - TOL
+
+
+def _grip_edge(zone: "Zone", role: str, box: tuple) -> str | None:
+    """Which edge of a front gets the J grip. The band's ``grip=`` option
+    wins (top | bottom | side | none: per front, so a tall door can be
+    switched to a horizontal grip). Else (Petr, 2026-11-22 c, t784u): drawers
+    and low doors the top edge; tall doors (over 1200 high) the vertical edge
+    away from the hinge, like IKEA's VOXTORP "vertical handle" tall doors;
+    doors starting above 1400 (the upper doors of tall cabinets) the bottom
+    edge (guess:, within reach). Pull-outs, fixed fronts, fillers, lift-ups:
+    none unless asked."""
+    opt = zone.opts.get("grip")
+    if opt:
+        return str(opt).lower()
+    z0, z1 = box[4], box[5]
+    if role == "Drawer":
+        return "top"
+    if role == "Door":
+        if z1 - z0 > 1200.0:
+            return "side"
+        if z0 > 1400.0:
+            return "bottom"
+        return "top"
+    return None
 
 
 def _hinge_a(bay: Bay, hinge: str, a0: float, a1: float) -> float:

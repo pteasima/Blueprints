@@ -371,6 +371,8 @@ def _kitchen_run_parts(run, motions=None, layers: dict | None = None) -> list:
             solid = _run_box(boxes[0], 0.0)
             for box in boxes[1:]:
                 solid = solid + _run_box(box, 0.0)
+            for grip in part.grips:  # the routed J grip (FrontGrip)
+                solid = solid - _run_box(grip, 0.0)
             inward = -dr.out * half
             solid = Pos(0.0, inward, 0.0) * solid
             if plate:
@@ -389,6 +391,8 @@ def _kitchen_run_parts(run, motions=None, layers: dict | None = None) -> list:
             solid = _run_box(part.boxes[0], 0.0)
             for box in part.boxes[1:]:
                 solid = solid + _run_box(box, 0.0)
+            for grip in part.grips:  # the routed J grip (FrontGrip)
+                solid = solid - _run_box(grip, 0.0)
         elif part.shape == "cylinder":
             a0, a1, c0, c1, z0, z1 = part.boxes[0]
             solid = Pos((a0 + a1) / 2.0, (c0 + c1) / 2.0, z0 + half) * Cylinder(

@@ -235,6 +235,14 @@ class _Writer:
         items = [self.extrusion(b, v) for b, v in _layers(part.boxes[0], part.voids)]
         items += [self.extrusion(b) for b in part.boxes[1:]]
         kind = "SweptSolid"
+        if part.grips:
+            # The routed J grip (FrontGrip): the front less each grip box.
+            front = items[0]
+            for grip in part.grips:
+                front = self.m.create_entity("IfcBooleanResult", Operator="DIFFERENCE",
+                                             FirstOperand=front, SecondOperand=self.extrusion(grip))
+            items[0] = front
+            kind = "CSG"
         if part.cuts:
             # Mitre cuts (the island's 45 degree joints): each item less
             # every triangular prism.
