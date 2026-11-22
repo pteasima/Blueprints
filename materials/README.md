@@ -68,7 +68,8 @@ Swatches (0.3 m crops of each colour map, or the flat `base_color`): [`docs/prev
 | **Sectional garage doors, anthracite** `garage-door-anthracite` | `#383e42` | 0.5 / 0.0 | none | `door` D-OP49, D-OP50 | none |
 | **Exterior blinds and blind motors, anthracite** `blind-anthracite` | `#383e42` | 0.45 / 0.0 | none | `actuator`; pending | none |
 | **Light fittings, white housing with opal diffuser** `light-diffuser-opal` | `#f7f7f4` | 0.3 / 0.0 | none | `light` | [1](https://github.com/pteasima/Blueprints/blob/main/docs/electrical/PlanNotes.md) |
-| **Anodised aluminium, natural (LED profiles, curtain rails)** `aluminium-anodised` | `#b9bbbd` | 0.4 / 1.0 | none | `furniture` RAIL-S, RAIL-W | none |
+| **Anodised aluminium, natural (LED profiles, curtain rails)** `aluminium-anodised` | `#b9bbbd` | 0.4 / 1.0 | none | `furniture` RAIL-S, RAIL-W; `appliance` /-LED\d+-PLATE$/ | none |
+| **Cuttable LED panel sheet (SMD dots on a white PCB)** `led-sheet-smd` | `#ece8d8` | 0.5 / 0.0 | none | `appliance` /-LED\d+-SHEET$/ | none |
 | **Polished chrome (Paffoni Tango mixers)** `chrome-polished` | `#e6e7e8` | 0.05 / 1.0 | none | `fixture` MIX-SH, MIX-B-W, MIX-B-E | [1](https://www.sanitino.cz/paffoni-tango-vanova-podomitkova-baterie-s-prepinacem-chrom-ta001cr) |
 | **Television, black panel** `tv-panel-black` | `#0e0f11` | 0.15 / 0.0 | none | `appliance` EA-TV | none |
 | **Subwoofer, black** `subwoofer-black` | `#1c1c1e` | 0.8 / 0.0 | none | `appliance` EA-SUB | none |
