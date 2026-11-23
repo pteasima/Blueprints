@@ -515,8 +515,9 @@ lightFixtures:
           # aisle, the east one inside the east row. Now in the toe-kick recess
           # behind each long side's fronts (west fronts' back x 20.518, east
           # 21.635; kickboards at 20.550 / 21.585), 12 mm strip centred 7 behind
-          # the fronts, top at the carcass bottom (0.100).
-          Path: "20.525,11.310,0.088;20.525,13.780,0.088 | 21.628,11.310,0.088;21.628,13.780,0.088"
+          # the fronts, top at the carcass bottom (0.100). 2026-11-23: the east
+          # strip 7 east with the island's east face (21.653 -> 21.660, MERIVOBOX).
+          Path: "20.525,11.310,0.088;20.525,13.780,0.088 | 21.635,11.310,0.088;21.635,13.780,0.088"
           Question: "C182 island strips: plinth (0.10 m) or under the worktop overhang?"
   - id: C183-S
     Name: Světlo 183

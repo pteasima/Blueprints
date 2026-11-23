@@ -37,7 +37,9 @@
 # (~75) and the note's east edge within 80 mm. The fridge is its real
 # 908×716×1876, packed against T1. T2 and T3 are 600, T4 is 500.
 # Tall carcasses are 600 deep. The fridge is 716 deep and projects 116 mm
-# past the cabinet faces; the run is not deepened to match it.
+# past the cabinet faces; the run is not deepened to match it. Since
+# 2026-11-23 (Blum MERIVOBOX NL 600, Petr t835u) the tall bays are 629 deep,
+# fronts at y 14.971, and the fridge projects 87.
 # The soffit band is 450 mm, and so are the dining and living-area cabinets.
 # These 600 mm kitchen tall cabinets stick out beyond that line on purpose.
 # Petr, 2026-11-06. See docs/design/obyvak.md.
@@ -65,6 +67,9 @@
 #   20.568, the central back stays at 21.154) and 500/607/481/607/305 wide
 #   so the drawer insides are whole Gridfinity cells (MAXIMERA deductions,
 #   scripts/gridfinity_fit.py, kitchen-cabinets.md "Gridfinity drawers").
+#   Blum MERIVOBOX (Petr, 2026-11-23, t835u): west row 630 deep (NL 600),
+#   east row 530 (NL 500), island 1180 overall; widths unchanged
+#   (kitchen-cabinets.md "Deviations from Petr's original plan").
 #   West row, faces west. RefDirection [0, -1]: Origin is the north-west
 #   corner, Width runs south, Depth runs east. Modules north to south
 #   500, 600, 500, 600, 300. The green rectangular sink is in the north
@@ -221,9 +226,14 @@ systemFurniture:
     ObjectType: TallCabinet
     ContainedInStructure: SP-1.02
     # 2026-11-20: 750 -> 696, the fridge moved 54 west onto the alley axis.
-    Origin: [18.8, 15.0]
+    Origin: [18.8, 14.971]
     Width: 0.696
-    Depth: 0.6
+    # Petr, 2026-11-23 (t835u): "tall kitchen north run should use 600mm
+    # also". MERIVOBOX NL 600 needs 603 inside: 18 front + 603 + 8 back =
+    # 629 (600 until then); the back stays on the north wall y 15.600, so the
+    # fronts come 29 south (y 15.000 -> 14.971). SF-T1 and SF-TF follow so
+    # the run's fronts stay in one line.
+    Depth: 0.629
     Height: 2.45
     PropertySets:
       - Name: Pset_KitchenBay
@@ -248,9 +258,14 @@ systemFurniture:
     PredefinedType: USERDEFINED
     ObjectType: TallCabinet
     ContainedInStructure: SP-1.02
-    Origin: [20.404, 15.0]
+    Origin: [20.404, 14.971]
     Width: 0.6
-    Depth: 0.6
+    # Petr, 2026-11-23 (t835u): "tall kitchen north run should use 600mm
+    # also". MERIVOBOX NL 600 needs 603 inside: 18 front + 603 + 8 back =
+    # 629 (600 until then); the back stays on the north wall y 15.600, so the
+    # fronts come 29 south (y 15.000 -> 14.971). SF-T1 and SF-TF follow so
+    # the run's fronts stay in one line.
+    Depth: 0.629
     Height: 2.45
     PropertySets:
       - Name: Pset_KitchenBay
@@ -277,9 +292,14 @@ systemFurniture:
     PredefinedType: USERDEFINED
     ObjectType: TallCabinet
     ContainedInStructure: SP-1.02
-    Origin: [21.004, 15.0]
+    Origin: [21.004, 14.971]
     Width: 0.6
-    Depth: 0.6
+    # Petr, 2026-11-23 (t835u): "tall kitchen north run should use 600mm
+    # also". MERIVOBOX NL 600 needs 603 inside: 18 front + 603 + 8 back =
+    # 629 (600 until then); the back stays on the north wall y 15.600, so the
+    # fronts come 29 south (y 15.000 -> 14.971). SF-T1 and SF-TF follow so
+    # the run's fronts stay in one line.
+    Depth: 0.629
     Height: 2.45
     PropertySets:
       - Name: Pset_KitchenBay
@@ -306,9 +326,14 @@ systemFurniture:
     # 2026-11-20: the run moved 54 west with the fridge; T4 takes the
     # remainder up to pier W-052 (x 22.15): 500 -> 546, no more nick.
     # The note's "zbyva sirka cca 50 (pokud je lednice na stredu)": guess:.
-    Origin: [21.604, 15.0]
+    Origin: [21.604, 14.971]
     Width: 0.546
-    Depth: 0.6
+    # Petr, 2026-11-23 (t835u): "tall kitchen north run should use 600mm
+    # also". MERIVOBOX NL 600 needs 603 inside: 18 front + 603 + 8 back =
+    # 629 (600 until then); the back stays on the north wall y 15.600, so the
+    # fronts come 29 south (y 15.000 -> 14.971). SF-T1 and SF-TF follow so
+    # the run's fronts stay in one line.
+    Depth: 0.629
     Height: 2.45
     PropertySets:
       - Name: Pset_KitchenBay
@@ -330,10 +355,15 @@ systemFurniture:
     PredefinedType: USERDEFINED
     ObjectType: WallCabinet
     ContainedInStructure: SP-1.02
-    Origin: [19.496, 15.0]
+    Origin: [19.496, 14.971]
     Elevation: 1.926
     Width: 0.908
-    Depth: 0.6
+    # Petr, 2026-11-23 (t835u): "tall kitchen north run should use 600mm
+    # also". MERIVOBOX NL 600 needs 603 inside: 18 front + 603 + 8 back =
+    # 629 (600 until then); the back stays on the north wall y 15.600, so the
+    # fronts come 29 south (y 15.000 -> 14.971). SF-T1 and SF-TF follow so
+    # the run's fronts stay in one line.
+    Depth: 0.629
     Height: 0.524
     PropertySets:
       - Name: Pset_KitchenBay
@@ -353,10 +383,17 @@ systemFurniture:
     ContainedInStructure: SP-1.02
     Origin: [20.5, 13.8]
     RefDirection: [0, -1]
-    Width: 0.5
-    # Petr, 2026-11-22 (t803u): "Ok, I want 1173." 586 -> 567: the west
-    # drawers on 11 Gridfinity rows with no unused depth; the west face stays.
-    Depth: 0.567
+    Width: 0.47
+    # Petr, 2026-11-23 (t841u): widths for Gridfinity with 2 mm play
+    # (inside = n x 42 + 2 = clear - 51; clear = width - 18 between two
+    # dividers, width - 27 at the north end): SF-I600b 13 columns -> 617,
+    # SF-I600a 12 -> 575, SF-I500b 11 -> 533, SF-I300 stays 305, SF-I500a
+    # takes the rest of the 2500 -> 470. Ids keep their old nominal names.
+    # Petr, 2026-11-23 (t835u): "on island west side, use longest merivobox
+    # (600mm)". Blum MERIVOBOX NL 600 needs 603 inside (NL + 3): 18 front +
+    # 603 + 9 (half the central back) = 630 (567 since 2026-11-22 t803u, 586
+    # before). The west face stays at x 20.500.
+    Depth: 0.63
     Height: 0.93
     PropertySets:
       - Name: Pset_KitchenBay
@@ -378,12 +415,19 @@ systemFurniture:
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
-    Origin: [20.5, 13.3]
+    Origin: [20.5, 13.33]
     RefDirection: [0, -1]
-    Width: 0.607
-    # Petr, 2026-11-22 (t803u): "Ok, I want 1173." 586 -> 567: the west
-    # drawers on 11 Gridfinity rows with no unused depth; the west face stays.
-    Depth: 0.567
+    Width: 0.575
+    # Petr, 2026-11-23 (t841u): widths for Gridfinity with 2 mm play
+    # (inside = n x 42 + 2 = clear - 51; clear = width - 18 between two
+    # dividers, width - 27 at the north end): SF-I600b 13 columns -> 617,
+    # SF-I600a 12 -> 575, SF-I500b 11 -> 533, SF-I300 stays 305, SF-I500a
+    # takes the rest of the 2500 -> 470. Ids keep their old nominal names.
+    # Petr, 2026-11-23 (t835u): "on island west side, use longest merivobox
+    # (600mm)". Blum MERIVOBOX NL 600 needs 603 inside (NL + 3): 18 front +
+    # 603 + 9 (half the central back) = 630 (567 since 2026-11-22 t803u, 586
+    # before). The west face stays at x 20.500.
+    Depth: 0.63
     Height: 0.93
     PropertySets:
       - Name: Pset_KitchenBay
@@ -396,10 +440,9 @@ systemFurniture:
         Properties:
           NominalHeights: "0.1 0.1 *"
           Gridfinity: true
-          # Petr, 2026-11-22 (t795u): "for the island west side, there are no inner
-          # drawers, so the drawer depth can match gridfinity." The box is cut to
-          # a whole number of 42 cells deep (inside m x 42 + 1).
-          GridfinityFitDepth: true
+          # GridfinityFitDepth (a box cut to whole cells, t795u) is gone: a
+          # MERIVOBOX box is its NL long. The plate is the closest whole grid,
+          # snapped to the front (Petr, 2026-11-23, t835u).
           Contents: "nože; nářadí; dole nevím"
   - id: SF-I500b
     Name: "Ostrov západ 500"
@@ -407,12 +450,19 @@ systemFurniture:
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
-    Origin: [20.5, 12.693]
+    Origin: [20.5, 12.755]
     RefDirection: [0, -1]
-    Width: 0.481
-    # Petr, 2026-11-22 (t803u): "Ok, I want 1173." 586 -> 567: the west
-    # drawers on 11 Gridfinity rows with no unused depth; the west face stays.
-    Depth: 0.567
+    Width: 0.533
+    # Petr, 2026-11-23 (t841u): widths for Gridfinity with 2 mm play
+    # (inside = n x 42 + 2 = clear - 51; clear = width - 18 between two
+    # dividers, width - 27 at the north end): SF-I600b 13 columns -> 617,
+    # SF-I600a 12 -> 575, SF-I500b 11 -> 533, SF-I300 stays 305, SF-I500a
+    # takes the rest of the 2500 -> 470. Ids keep their old nominal names.
+    # Petr, 2026-11-23 (t835u): "on island west side, use longest merivobox
+    # (600mm)". Blum MERIVOBOX NL 600 needs 603 inside (NL + 3): 18 front +
+    # 603 + 9 (half the central back) = 630 (567 since 2026-11-22 t803u, 586
+    # before). The west face stays at x 20.500.
+    Depth: 0.63
     Height: 0.93
     PropertySets:
       - Name: Pset_KitchenBay
@@ -426,10 +476,9 @@ systemFurniture:
         Properties:
           NominalHeights: "0.1 0.1 *"
           Gridfinity: true
-          # Petr, 2026-11-22 (t795u): "for the island west side, there are no inner
-          # drawers, so the drawer depth can match gridfinity." The box is cut to
-          # a whole number of 42 cells deep (inside m x 42 + 1).
-          GridfinityFitDepth: true
+          # GridfinityFitDepth (a box cut to whole cells, t795u) is gone: a
+          # MERIVOBOX box is its NL long. The plate is the closest whole grid,
+          # snapped to the front (Petr, 2026-11-23, t835u).
           Contents: "koření; oleje, octy, mouky, cukry, dochucovadla; hrnce"
   - id: SF-I600b
     Name: "Ostrov západ 600 varná deska"
@@ -437,12 +486,19 @@ systemFurniture:
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
-    Origin: [20.5, 12.212]
+    Origin: [20.5, 12.222]
     RefDirection: [0, -1]
-    Width: 0.607
-    # Petr, 2026-11-22 (t803u): "Ok, I want 1173." 586 -> 567: the west
-    # drawers on 11 Gridfinity rows with no unused depth; the west face stays.
-    Depth: 0.567
+    Width: 0.617
+    # Petr, 2026-11-23 (t841u): widths for Gridfinity with 2 mm play
+    # (inside = n x 42 + 2 = clear - 51; clear = width - 18 between two
+    # dividers, width - 27 at the north end): SF-I600b 13 columns -> 617,
+    # SF-I600a 12 -> 575, SF-I500b 11 -> 533, SF-I300 stays 305, SF-I500a
+    # takes the rest of the 2500 -> 470. Ids keep their old nominal names.
+    # Petr, 2026-11-23 (t835u): "on island west side, use longest merivobox
+    # (600mm)". Blum MERIVOBOX NL 600 needs 603 inside (NL + 3): 18 front +
+    # 603 + 9 (half the central back) = 630 (567 since 2026-11-22 t803u, 586
+    # before). The west face stays at x 20.500.
+    Depth: 0.63
     Height: 0.93
     PropertySets:
       - Name: Pset_KitchenBay
@@ -455,10 +511,9 @@ systemFurniture:
         Properties:
           NominalHeights: "0.2 0.1 *"
           Gridfinity: true
-          # Petr, 2026-11-22 (t795u): "for the island west side, there are no inner
-          # drawers, so the drawer depth can match gridfinity." The box is cut to
-          # a whole number of 42 cells deep (inside m x 42 + 1).
-          GridfinityFitDepth: true
+          # GridfinityFitDepth (a box cut to whole cells, t795u) is gone: a
+          # MERIVOBOX box is its NL long. The plate is the closest whole grid,
+          # snapped to the front (Petr, 2026-11-23, t835u).
           Contents: "příbory; vařečky, stěrky, naběračky; pánve"
       # Miele KM 8665 FL (Petr, 2026-11-11). Sizes: Miele installation
       # manual pp. 23, 29, see kitchen-cabinets.md "Induction hob".
@@ -493,9 +548,11 @@ systemFurniture:
     Origin: [20.5, 11.605]
     RefDirection: [0, -1]
     Width: 0.305
-    # Petr, 2026-11-22 (t803u): "Ok, I want 1173." 586 -> 567: the west
-    # drawers on 11 Gridfinity rows with no unused depth; the west face stays.
-    Depth: 0.567
+    # Petr, 2026-11-23 (t835u): "on island west side, use longest merivobox
+    # (600mm)". Blum MERIVOBOX NL 600 needs 603 inside (NL + 3): 18 front +
+    # 603 + 9 (half the central back) = 630 (567 since 2026-11-22 t803u, 586
+    # before). The west face stays at x 20.500.
+    Depth: 0.63
     Height: 0.93
     PropertySets:
       - Name: Pset_KitchenBay
@@ -517,7 +574,11 @@ systemFurniture:
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
     RefDirection: [0, 1]
-    Depth: 0.586
+    # Petr, 2026-11-23 (t835u): "on island east use whatever gets us closely
+    # below 1200mm total island depth". 20 overhang + 630 west + 530 east =
+    # 1180: MERIVOBOX NL 500 (needs 503: 18 front + 503 + 9 = 530); NL 550
+    # would make it 1230. Was 586 (NL 550).
+    Depth: 0.53
     Height: 0.93
     PropertySets:
       - Name: Pset_KitchenBay
@@ -525,7 +586,7 @@ systemFurniture:
           Run: KR-ISL
       # Petr, 2026-11-20: "east side of kitchen island are 4 large full height
       # drawers". One drawer per bay, one front at full height (807), on the
-      # Gridfinity rule (inside n x 42 + 1, MAXIMERA deductions).
+      # Gridfinity rule (inside n x 42 + 1; Blum MERIVOBOX deductions since 2026-11-23).
       # Was a door over a shelf (2026-11-19). The row cannot be whole cells
       # in all four bays at 2500 (two end bays 42n+112, two middle 42k+103
       # leave 12 over), so this end bay keeps 586 and its drawer has 12 mm
@@ -536,7 +597,7 @@ systemFurniture:
           # island east, please double check that you've added them." Two
           # MERIVOBOX inner drawers behind the front (M coupled, K), as in
           # the dining run; the F box stays at the bottom.
-          Layout: "drawer * box=F inner=M,K"
+          Layout: "drawer * box=E inner=M,K"
       - Name: Pset_Drawers
         Properties:
           Gridfinity: true
@@ -544,15 +605,20 @@ systemFurniture:
           # the inner drawer, the bottom main one doesnt need gridfinity (remove the
           # gridfinity plate too)".
           GridfinityMain: false
-          # Petr, 2026-11-20 c: "Also, give them Merivobox drawers." Blum
-          # MERIVOBOX, box height F (256, the tallest; a MAXIMERA-like 700
-          # box until now). Inside LW − 51 by NL − 42 (kitchen-cabinets.md).
+          # Petr, 2026-11-20 c: "Also, give them Merivobox drawers." The
+          # bottom box is E (192, the tallest side in Blum's European
+          # catalogue; F 256 until 2026-11-23, which Blum sells only in NZ/AU).
+          # Inside LW − 51 by NL − 42 (kitchen-cabinets.md).
           System: MERIVOBOX
       - Name: Pset_Links
         Properties:
           X: "SF-E600b.X"
           Y: "SF-E600b.Y + SF-E600b.Width"
-          Width: "SF-E600b.Width"
+          # Petr, 2026-11-23 (t851u): the north three inner drawers exactly
+          # 13 Gridfinity columns + 2 (inside 548 = clear - 51; clear = width
+          # - 27 at an end, width - 18 between dividers): SF-E600a 626,
+          # SF-E600b / SF-E600c 617; SF-E700 takes the rest (640).
+          Width: "0.626"
   - id: SF-E600b
     Name: "Ostrov východ 600"
     Description: "Island, east row. Second module, 607 (was 600) for whole Gridfinity cells. One full-height drawer (2026-11-20). Faces east."
@@ -560,7 +626,11 @@ systemFurniture:
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
     RefDirection: [0, 1]
-    Depth: 0.586
+    # Petr, 2026-11-23 (t835u): "on island east use whatever gets us closely
+    # below 1200mm total island depth". 20 overhang + 630 west + 530 east =
+    # 1180: MERIVOBOX NL 500 (needs 503: 18 front + 503 + 9 = 530); NL 550
+    # would make it 1230. Was 586 (NL 550).
+    Depth: 0.53
     Height: 0.93
     PropertySets:
       - Name: Pset_KitchenBay
@@ -568,7 +638,7 @@ systemFurniture:
           Run: KR-ISL
       # Petr, 2026-11-20: "east side of kitchen island are 4 large full height
       # drawers". One drawer per bay, one front at full height (807), on the
-      # Gridfinity rule (inside n x 42 + 1, MAXIMERA deductions).
+      # Gridfinity rule (inside n x 42 + 1; Blum MERIVOBOX deductions since 2026-11-23).
       # Was three drawers 100 / 100 / rest (2026-11-19).
       - Name: Pset_Fronts
         Properties:
@@ -576,7 +646,7 @@ systemFurniture:
           # island east, please double check that you've added them." Two
           # MERIVOBOX inner drawers behind the front (M coupled, K), as in
           # the dining run; the F box stays at the bottom.
-          Layout: "drawer * box=F inner=M,K"
+          Layout: "drawer * box=E inner=M,K"
       - Name: Pset_Drawers
         Properties:
           Gridfinity: true
@@ -584,15 +654,20 @@ systemFurniture:
           # the inner drawer, the bottom main one doesnt need gridfinity (remove the
           # gridfinity plate too)".
           GridfinityMain: false
-          # Petr, 2026-11-20 c: "Also, give them Merivobox drawers." Blum
-          # MERIVOBOX, box height F (256, the tallest; a MAXIMERA-like 700
-          # box until now). Inside LW − 51 by NL − 42 (kitchen-cabinets.md).
+          # Petr, 2026-11-20 c: "Also, give them Merivobox drawers." The
+          # bottom box is E (192, the tallest side in Blum's European
+          # catalogue; F 256 until 2026-11-23, which Blum sells only in NZ/AU).
+          # Inside LW − 51 by NL − 42 (kitchen-cabinets.md).
           System: MERIVOBOX
       - Name: Pset_Links
         Properties:
           X: "SF-E600c.X"
           Y: "SF-E600c.Y + SF-E600c.Width"
-          Width: "SF-E600c.Width"
+          # Petr, 2026-11-23 (t851u): the north three inner drawers exactly
+          # 13 Gridfinity columns + 2 (inside 548 = clear - 51; clear = width
+          # - 27 at an end, width - 18 between dividers): SF-E600a 626,
+          # SF-E600b / SF-E600c 617; SF-E700 takes the rest (640).
+          Width: "0.617"
   - id: SF-E600c
     Name: "Ostrov východ 600"
     Description: "Island, east row. Third module, 607 (was 600) for whole Gridfinity cells. One full-height drawer (2026-11-20). Faces east."
@@ -600,7 +675,11 @@ systemFurniture:
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
     RefDirection: [0, 1]
-    Depth: 0.586
+    # Petr, 2026-11-23 (t835u): "on island east use whatever gets us closely
+    # below 1200mm total island depth". 20 overhang + 630 west + 530 east =
+    # 1180: MERIVOBOX NL 500 (needs 503: 18 front + 503 + 9 = 530); NL 550
+    # would make it 1230. Was 586 (NL 550).
+    Depth: 0.53
     Height: 0.93
     PropertySets:
       - Name: Pset_KitchenBay
@@ -608,7 +687,7 @@ systemFurniture:
           Run: KR-ISL
       # Petr, 2026-11-20: "east side of kitchen island are 4 large full height
       # drawers". One drawer per bay, one front at full height (807), on the
-      # Gridfinity rule (inside n x 42 + 1, MAXIMERA deductions).
+      # Gridfinity rule (inside n x 42 + 1; Blum MERIVOBOX deductions since 2026-11-23).
       # Was three drawers 100 / 100 / rest (2026-11-19).
       - Name: Pset_Fronts
         Properties:
@@ -616,7 +695,7 @@ systemFurniture:
           # island east, please double check that you've added them." Two
           # MERIVOBOX inner drawers behind the front (M coupled, K), as in
           # the dining run; the F box stays at the bottom.
-          Layout: "drawer * box=F inner=M,K"
+          Layout: "drawer * box=E inner=M,K"
       - Name: Pset_Drawers
         Properties:
           Gridfinity: true
@@ -624,15 +703,20 @@ systemFurniture:
           # the inner drawer, the bottom main one doesnt need gridfinity (remove the
           # gridfinity plate too)".
           GridfinityMain: false
-          # Petr, 2026-11-20 c: "Also, give them Merivobox drawers." Blum
-          # MERIVOBOX, box height F (256, the tallest; a MAXIMERA-like 700
-          # box until now). Inside LW − 51 by NL − 42 (kitchen-cabinets.md).
+          # Petr, 2026-11-20 c: "Also, give them Merivobox drawers." The
+          # bottom box is E (192, the tallest side in Blum's European
+          # catalogue; F 256 until 2026-11-23, which Blum sells only in NZ/AU).
+          # Inside LW − 51 by NL − 42 (kitchen-cabinets.md).
           System: MERIVOBOX
       - Name: Pset_Links
         Properties:
           X: "SF-E700.X"
           Y: "SF-E700.Y + SF-E700.Width"
-          Width: "SF-E700.Width"
+          # Petr, 2026-11-23 (t851u): the north three inner drawers exactly
+          # 13 Gridfinity columns + 2 (inside 548 = clear - 51; clear = width
+          # - 27 at an end, width - 18 between dividers): SF-E600a 626,
+          # SF-E600b / SF-E600c 617; SF-E700 takes the rest (640).
+          Width: "0.617"
   - id: SF-E700
     Name: "Ostrov východ 700"
     Description: "Island, east row, south end. The remaining 700. One full-height drawer (2026-11-20). Faces east."
@@ -640,7 +724,11 @@ systemFurniture:
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
     RefDirection: [0, 1]
-    Depth: 0.586
+    # Petr, 2026-11-23 (t835u): "on island east use whatever gets us closely
+    # below 1200mm total island depth". 20 overhang + 630 west + 530 east =
+    # 1180: MERIVOBOX NL 500 (needs 503: 18 front + 503 + 9 = 530); NL 550
+    # would make it 1230. Was 586 (NL 550).
+    Depth: 0.53
     Height: 0.93
     PropertySets:
       - Name: Pset_KitchenBay
@@ -648,7 +736,7 @@ systemFurniture:
           Run: KR-ISL
       # Petr, 2026-11-20: "east side of kitchen island are 4 large full height
       # drawers". One drawer per bay, one front at full height (807), on the
-      # Gridfinity rule (inside n x 42 + 1, MAXIMERA deductions).
+      # Gridfinity rule (inside n x 42 + 1; Blum MERIVOBOX deductions since 2026-11-23).
       # Was three drawers 100 / 100 / rest (2026-11-19).
       - Name: Pset_Fronts
         Properties:
@@ -656,7 +744,7 @@ systemFurniture:
           # island east, please double check that you've added them." Two
           # MERIVOBOX inner drawers behind the front (M coupled, K), as in
           # the dining run; the F box stays at the bottom.
-          Layout: "drawer * box=F inner=M,K"
+          Layout: "drawer * box=E inner=M,K"
       - Name: Pset_Drawers
         Properties:
           Gridfinity: true
@@ -664,9 +752,10 @@ systemFurniture:
           # the inner drawer, the bottom main one doesnt need gridfinity (remove the
           # gridfinity plate too)".
           GridfinityMain: false
-          # Petr, 2026-11-20 c: "Also, give them Merivobox drawers." Blum
-          # MERIVOBOX, box height F (256, the tallest; a MAXIMERA-like 700
-          # box until now). Inside LW − 51 by NL − 42 (kitchen-cabinets.md).
+          # Petr, 2026-11-20 c: "Also, give them Merivobox drawers." The
+          # bottom box is E (192, the tallest side in Blum's European
+          # catalogue; F 256 until 2026-11-23, which Blum sells only in NZ/AU).
+          # Inside LW − 51 by NL − 42 (kitchen-cabinets.md).
           System: MERIVOBOX
       # Petr, 2026-11-20 c: "East island cabinets are 694,604,604,583 wide,
       # they should be the same width. Three of these should fit gridfinity,
@@ -675,22 +764,32 @@ systemFurniture:
       # the end bays are 13 cells exact, the middle two 13 with 9 over.
       - Name: Pset_Links
         Properties:
-          # East face: west face 20.500 + west row 0.567 + east row 0.586
-          # (2026-11-22, t803u; 21.672 until then).
-          X: "0.0 + 21.653"
+          # East face: west face 20.500 + west row 0.630 + east row 0.530
+          # (2026-11-23, t835u, MERIVOBOX; 21.653 since 2026-11-22 t803u,
+          # 21.672 before).
+          X: "0.0 + 21.66"
           Y: "(SF-I300.Y - SF-I300.Width)"
-          Width: "(SF-I500a.Y - (SF-I300.Y - SF-I300.Width)) / 4"
+          # Petr, 2026-11-23 (t851u): the north three inner drawers exactly
+          # 13 Gridfinity columns + 2 (inside 548 = clear - 51; clear = width
+          # - 27 at an end, width - 18 between dividers): SF-E600a 626,
+          # SF-E600b / SF-E600c 617; SF-E700 takes the rest (640).
+          Width: "(SF-I500a.Y - (SF-I300.Y - SF-I300.Width)) - 0.626 - 2 * 0.617"
   - id: SF-A250
     Name: "Západ 250 úklid"
     Description: "Section A, south side. Cleaning pull-out, 232 (250 until 2026-11-22: the dishwasher slot's 18 end panel came out of it). Left when facing the west wall."
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
-    Origin: [19.4, 13.0]
+    Origin: [19.4, 13.02]
     RefDirection: [0, 1]
     # 2026-11-22 (FlushEnds): 250 -> 232, so the 600 dishwasher slot and its
     # 18 end panel fit before the OP25 jamb (y 13.85).
-    Width: 0.232
+    Width: 0.212
+    # Petr, 2026-11-23 (t848u): "if we go 835, then all of our top cabinets
+    # on the west run are the same 835? Lets do that." SF-B800 800 -> 835
+    # for the FILUR frame; the base sections follow the wall cabinets'
+    # grid: C 850 -> 835, B 800 -> 835, A 850 -> 830 (SF-A250 232 -> 212).
+    # Three 835s would be 2505, 5 over the fixed 2500 between the jambs.
     Depth: 0.6
     Height: 0.93
     PropertySets:
@@ -726,10 +825,15 @@ systemFurniture:
     PredefinedType: USERDEFINED
     ObjectType: WallCabinet
     ContainedInStructure: SP-1.02
-    Origin: [19.15, 13.0]
+    Origin: [19.15, 13.02]
     Elevation: 1.56
     RefDirection: [0, 1]
-    Width: 0.85
+    Width: 0.83
+    # Petr, 2026-11-23 (t848u): "if we go 835, then all of our top cabinets
+    # on the west run are the same 835? Lets do that." SF-B800 800 -> 835
+    # for the FILUR frame; the base sections follow the wall cabinets'
+    # grid: C 850 -> 835, B 800 -> 835, A 850 -> 830 (SF-A250 232 -> 212).
+    # Three 835s would be 2505, 5 over the fixed 2500 between the jambs.
     Depth: 0.35
     Height: 0.89
     PropertySets:
@@ -760,9 +864,14 @@ systemFurniture:
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
-    Origin: [19.4, 12.2]
+    Origin: [19.4, 12.185]
     RefDirection: [0, 1]
-    Width: 0.8
+    Width: 0.835
+    # Petr, 2026-11-23 (t848u): "if we go 835, then all of our top cabinets
+    # on the west run are the same 835? Lets do that." SF-B800 800 -> 835
+    # for the FILUR frame; the base sections follow the wall cabinets'
+    # grid: C 850 -> 835, B 800 -> 835, A 850 -> 830 (SF-A250 232 -> 212).
+    # Three 835s would be 2505, 5 over the fixed 2500 between the jambs.
     Depth: 0.6
     Height: 0.93
     PropertySets:
@@ -770,12 +879,20 @@ systemFurniture:
         Properties:
           Run: KR-WEST
       # Note B: "dole vlevo kos, vpravo kompost / kose se musi vyhnout
-      # drtici, to se proste bude resit az skrinky budou". One full-height
-      # pull-out with two bins (guess:); its box stops 10 under the
-      # disposer, which shows how little room is left (open:).
+      # drtici, to se proste bude resit az skrinky budou". Petr, 2026-11-23
+      # (t835u): "assume merivobox with upright Ikea Filur bins under main
+      # sink". A full-height front on a low MERIVOBOX M box (NL 550, 70 kg),
+      # whose 83 back passes under the disposer, with two IKEA FILUR 42 l
+      # bins (29 x 38 x 55 cm, IKEA) standing on its base, one against each
+      # side, either side of the disposer (kitchen-cabinets.md).
       - Name: Pset_Fronts
         Properties:
-          Layout: "pullout * items=bins n=2"
+          # Petr, 2026-11-23 (t842u): no MERIVOBOX here. A U-shaped MDF
+          # frame round the disposer with two holes, each hanging one IKEA
+          # FILUR 42 l by its rim (hole = 29 x 38 cm less 5 a side), on Blum
+          # MOVENTO concealed runners, BLUMOTION soft-close, manual opening
+          # (kitchen-cabinets.md "SF-B800: hanging FILUR frame").
+          Layout: "pullout * frame=u n=2 bin=0.29x0.38x0.55"
           Contents: "vlevo koš, vpravo kompost"
       - Name: Pset_BaseContents
         Properties:
@@ -787,10 +904,15 @@ systemFurniture:
     PredefinedType: USERDEFINED
     ObjectType: WallCabinet
     ContainedInStructure: SP-1.02
-    Origin: [19.15, 12.2]
+    Origin: [19.15, 12.185]
     Elevation: 1.56
     RefDirection: [0, 1]
-    Width: 0.8
+    Width: 0.835
+    # Petr, 2026-11-23 (t848u): "if we go 835, then all of our top cabinets
+    # on the west run are the same 835? Lets do that." SF-B800 800 -> 835
+    # for the FILUR frame; the base sections follow the wall cabinets'
+    # grid: C 850 -> 835, B 800 -> 835, A 850 -> 830 (SF-A250 232 -> 212).
+    # Three 835s would be 2505, 5 over the fixed 2500 between the jambs.
     Depth: 0.35
     Height: 0.89
     PropertySets:
@@ -813,18 +935,26 @@ systemFurniture:
     ContainedInStructure: SP-1.02
     Origin: [19.4, 11.35]
     RefDirection: [0, 1]
-    Width: 0.85
+    Width: 0.835
+    # Petr, 2026-11-23 (t848u): "if we go 835, then all of our top cabinets
+    # on the west run are the same 835? Lets do that." SF-B800 800 -> 835
+    # for the FILUR frame; the base sections follow the wall cabinets'
+    # grid: C 850 -> 835, B 800 -> 835, A 850 -> 830 (SF-A250 232 -> 212).
+    # Three 835s would be 2505, 5 over the fixed 2500 between the jambs.
     Depth: 0.6
     Height: 0.93
     PropertySets:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-WEST
-      # Note C: "dole tridene odpad". A full-height pull-out with bins;
-      # three bins is guess: (the note gives no count).
+      # Note C: "dole tridene odpad". Petr, 2026-11-23 (t835u): "assume
+      # deepest merivobox for southwest recycling cabinet, leave empty without
+      # bins for now". A full-height pull-out on the deepest MERIVOBOX that
+      # fits the 574 inside depth, NL 550, E sides, 70 kg; no bins (three
+      # equal bins until 2026-11-23, guess:).
       - Name: Pset_Fronts
         Properties:
-          Layout: "pullout * items=bins n=3"
+          Layout: "pullout *"
           Contents: "tříděný odpad"
   - id: SF-CH850
     Name: "Západ horní 850"
@@ -835,7 +965,12 @@ systemFurniture:
     Origin: [19.15, 11.35]
     Elevation: 1.56
     RefDirection: [0, 1]
-    Width: 0.85
+    Width: 0.835
+    # Petr, 2026-11-23 (t848u): "if we go 835, then all of our top cabinets
+    # on the west run are the same 835? Lets do that." SF-B800 800 -> 835
+    # for the FILUR frame; the base sections follow the wall cabinets'
+    # grid: C 850 -> 835, B 800 -> 835, A 850 -> 830 (SF-A250 232 -> 212).
+    # Three 835s would be 2505, 5 over the fixed 2500 between the jambs.
     Depth: 0.35
     Height: 0.89
     PropertySets:
@@ -1125,11 +1260,16 @@ systemFurniture:
 sanitaryTerminals:
   - id: SN-RS15
     Name: "Teka BE LINEA RS15 71.40"
-    Description: "Undermount sink in SF-B800. Overall 750×440, bowl 710×400×200. Centred in the 800, 60 mm toward the front since 2026-11-22 (rim 20 mm behind the carcass front; bowl front 60 mm from the worktop edge). Rim glued under the 20 mm stone: top 910, worktop cut-out 706×396 R13 (Teka)."
+    Description: "Undermount sink in SF-B800. Overall 750×440, bowl 710×400×200. Centred in the 800; rim 41 mm behind the carcass front since 2026-11-23 so the front clip clears the drawer front (t841u; bowl front 81 mm from the worktop edge). Rim glued under the 20 mm stone: top 910, worktop cut-out 706×396 R13 (Teka)."
     PredefinedType: SINK
     ContainedInStructure: SP-1.02
-    # Front of the 440 overall at c 20 (was 19.32 / c 80 until 2026-11-22).
-    Origin: [19.38, 12.225]
+    # Front of the 440 overall at c 41 since 2026-11-23 (Petr, t841u: set it
+    # back so the front Teka clip, hole 30 from the cut-out edge, clears the
+    # drawer front: cut-out edge c 63 = 45 behind the front's inner face c 18,
+    # guess:/open: ask the stone fabricator). Was c 20 (x 19.38) since
+    # 2026-11-22 and c 80 (x 19.32) before.
+    # Centred on SF-B800 (y 12.185-13.020 since t848u): 12.6025 - 0.375.
+    Origin: [19.359, 12.2275]
     # 0.93 counter − 0.02 worktop − 0.2 = 0.71 (rim under the stone).
     Elevation: 0.71
     RefDirection: [0, 1]
@@ -1154,15 +1294,21 @@ sanitaryTerminals:
           DrainOffsetFromBack: 0.115
   - id: SN-RS1840
     Name: "Teka BE LINEA RS15 18.40 X"
-    Description: "Island sink in SF-I500a, the card on Petr's KitchenPlan.jpg. Undermount. Overall 440×220, bowl 400×180×140, cut-out 396×176 R13 (Teka). Long side across the island (east-west), as the plan's rectangle is drawn, guess:. South rim on the 500/600 line (against the divider), 320 mm of landing from the north worktop edge to the inner bowl (Petr, 2026-11-23, t834u; the plan's green rectangle already sat here). Still centred on the 567 bay depth, guess:. Rim top 910 under the 20 mm stone."
+    Description: "Island sink in SF-I500a, the card on Petr's KitchenPlan.jpg. Undermount. Overall 440×220, bowl 400×180×140, cut-out 396×176 R13 (Teka). Long side across the island (east-west), as the plan's rectangle is drawn, guess:. South rim 32 mm north of the SF-I500a/SF-I600a divider so the Teka clips clear it (cut-out 45 from the divider face, guess:), 258 mm of landing from the north worktop edge to the inner bowl (Petr, 2026-11-23, t841u; t834u had it against the divider, 320). Still centred on the bay depth (630 since 2026-11-23), guess:. Rim top 910 under the 20 mm stone."
     PredefinedType: SINK
     ContainedInStructure: SP-1.02
-    # Centre x = 20.500 + 0.2835 (half the 567 bay). South rim on y 13.300
+    # Centre x = 20.500 + 0.315 (half the 630 bay, 2026-11-23 MERIVOBOX;
+    # 0.2835 = half the 567 bay until then). South rim on y 13.300
     # (the SF-I500a / SF-I600a line). Was y 13.44 (centred in the 500) until
     # 2026-11-23 (t834u). Was 20.568 + 0.293 until the island moved 68 west
     # (2026-11-20), and 20.500 + 0.293 until the west row went 586 -> 567
     # (2026-11-22, t803u). Elevation 0.93 − 0.02 − 0.14 = 0.77.
-    Origin: [20.5635, 13.3]
+    # Petr, 2026-11-23 (t841u): off the south divider so the Teka clip
+    # (hole 30 from the cut-out edge, Teka 61401450) and its plate clear it:
+    # cut-out edge >= 45 from the divider face (guess:, open: ask the stone
+    # fabricator). SF-I500a 470: divider face a 461, cut-out a 240-416, rim
+    # a 218-438 -> south rim y 13.8 - 0.438 = 13.362. Landing 258 (was 320).
+    Origin: [20.595, 13.362]
     Elevation: 0.77
     Width: 0.44
     Depth: 0.22
