@@ -979,6 +979,15 @@ def test_sink_frame_hangs_two_filur_bins_round_the_disposer():
     assert not [b for b in pieces if kc._plan_meet(b, disposer) and b[5] > disposer[4] and b[4] < disposer[5]]
     assert not [b for b in fr["bins"] if kc._plan_meet(b, disposer)]
     assert any("SF-B800 bin frame: MOVENTO NL 450" in n for n in run.notes)
+    # t866u: no side walls and no back panel; the runners screw under the
+    # plate (bottom 630, runner 21 below), the bins hang free. Only the two
+    # rear hook blocks (40) reach under the plate; two 90° angles tie the
+    # front to the plate.
+    assert fr["runner_z0"] == pytest.approx(648.0 - 18.0 - 21.0) and d.profile_z == pytest.approx(609.0)
+    under = [b for b in pieces if b[4] < 630.0 - 1e-6]
+    assert len(under) == 2 and all(b[5] - b[4] == pytest.approx(40.0) for b in under)
+    assert fr["brackets"] == 2 and "no side walls" in part.props["FrameKind"]
+    assert any("no side walls" in n for n in run.notes)
 
 
 def test_recycling_cabinet_is_the_deepest_empty_merivobox():

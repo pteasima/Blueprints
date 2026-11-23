@@ -30,6 +30,7 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection  # noqa: E402
 import ground_floor  # noqa: E402
 import kitchen_cabinet as kc  # noqa: E402
 
+MERIVOBOX_WHITE = "#f1f0ea"  # Blum SW-M silk white matt (shade a guess)
 COLORS = {
     "EndSide": "#c9822b",
     "Divider": "#e07a1f",
@@ -41,6 +42,7 @@ COLORS = {
     "Front": "#e9c46a",
     "Drawer": "#f2d27a",
     "PullOut": "#f4b860",
+    "DecorPanel": "#e9c46a",  # the same cream front finish as Front
     "Door": "#9ecae1",
     "Lift": "#9ecae1",
     "LiftMechanism": "#333333",
@@ -129,16 +131,20 @@ def iso(run, parts, open_ids, path: Path, title: str, elev=26, azim=-62, clearan
         if part.drawer is not None and part.id in open_ids:
             off = (0.0, part.drawer.out * part.drawer.extension, 0.0)
         faces = [f for box in part.boxes for f in _box_faces(box, off)]
+        # MERIVOBOX boxes (and the bin frame) are Blum silk white, the front cream (t866u).
+        white = part.drawer is not None and (part.role == "InnerDrawer" or len(part.boxes) > 1)
+        n_front = 0 if part.role == "InnerDrawer" else 6
         if part.door is not None and part.id in open_ids:
             faces = [_swing(f, part) for f in faces]
         if part.lift is not None and (part.id in open_ids or part.lift.group in open_ids):
             faces = [_lift_open(f, part, owner[part.id], run) for f in faces]
         base = np.array(matplotlib.colors.to_rgb(COLORS.get(part.role, "#999999")))
         cols = []
-        for f in faces:
+        for i, f in enumerate(faces):
             n = np.cross(f[1] - f[0], f[2] - f[0])
             s = 0.55 + 0.45 * abs(float(np.dot(n / (np.linalg.norm(n) or 1.0), light)))
-            cols.append(tuple(np.clip(base * s, 0, 1)) + (ALPHA.get(part.role, 1.0),))
+            c = np.array(matplotlib.colors.to_rgb(MERIVOBOX_WHITE)) if white and i >= n_front else base
+            cols.append(tuple(np.clip(c * s, 0, 1)) + (ALPHA.get(part.role, 1.0),))
         ax.add_collection3d(Poly3DCollection(faces, facecolors=cols, edgecolors=(0, 0, 0, 0.25), linewidths=0.2))
         pts = np.vstack(faces)
         lo, hi = np.minimum(lo, pts.min(0)), np.maximum(hi, pts.max(0))

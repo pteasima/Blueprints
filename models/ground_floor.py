@@ -453,19 +453,42 @@ def _kitchen_run_parts(run, motions=None, layers: dict | None = None) -> list:
     linkages: dict[str, list] = {}
     out = []
     for part in run.parts:
+        placed = None
         if part.drawer is not None:
             dr = part.drawer
             plate = list(dr.baseplate) if layers is not None else []
             boxes = list(part.boxes)
             for box in plate:
                 boxes.remove(box)
-            solid = _run_box(boxes[0], 0.0)
-            for box in boxes[1:]:
-                solid = solid + _run_box(box, 0.0)
-            for grip in part.grips:  # the routed J grip (FrontGrip)
-                solid = solid - _grip_solid(grip)
             inward = -dr.out * half
-            solid = Pos(0.0, inward, 0.0) * solid
+            if part.role in ("Drawer", "PullOut") and len(boxes) > 1:
+                # Petr, 2026-11-23 (t866u): the MERIVOBOX hardware is Blum
+                # silk white (SW-M), not the cream of the fronts. The decor
+                # front and the box (sides, back, bottom, inner pieces, or
+                # the bin frame) are two painted children of one drawer
+                # node, so the viewer still moves them as one; the box
+                # child's id ends in -BOX for the material catalogue.
+                front = _run_box(boxes[0], 0.0)
+                for grip in part.grips:  # the routed J grip (FrontGrip)
+                    front = front - _grip_solid(grip)
+                body = _run_box(boxes[1], 0.0)
+                for box in boxes[2:]:
+                    body = body + _run_box(box, 0.0)
+                front_part = _paint(plane * (Pos(0.0, inward, 0.0) * front), LABEL_CABINET)
+                front_part.element_id = part.id
+                box_part = _paint(plane * (Pos(0.0, inward, 0.0) * body), LABEL_CABINET)
+                box_part.element_id = f"{part.id}-BOX"
+                placed = Compound(children=[front_part, box_part])
+                placed.label = LABEL_CABINET
+                placed.color = _color(LABEL_CABINET)
+                solid = None
+            else:
+                solid = _run_box(boxes[0], 0.0)
+                for box in boxes[1:]:
+                    solid = solid + _run_box(box, 0.0)
+                for grip in part.grips:  # the routed J grip (FrontGrip)
+                    solid = solid - _grip_solid(grip)
+                solid = Pos(0.0, inward, 0.0) * solid
             if plate:
                 # The floor and ribs as one compound, not fused: the same
                 # picture (one material, the overlaps are inside) at about a
@@ -505,7 +528,7 @@ def _kitchen_run_parts(run, motions=None, layers: dict | None = None) -> list:
         label = {"worktop": LABEL_WORKTOP, "hob": LABEL_HOB, "appliance": LABEL_APPLIANCE,
                  "sink": LABEL_SINK, "oak": LABEL_OAK}.get(part.label, LABEL_CABINET)
         list_key = {"appliance": "electricAppliances", "sink": "sanitaryTerminals"}.get(part.label, "systemFurniture")
-        out.append(_tag(_paint(plane * solid, label), part.id, list_key))
+        out.append(_tag(placed if placed is not None else _paint(plane * solid, label), part.id, list_key))
         if motions is None:
             continue
         if part.lift is not None:
