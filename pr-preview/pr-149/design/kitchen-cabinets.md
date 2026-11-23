@@ -41,6 +41,10 @@ Petr's original document is the sticky-note plan [`KitchenPlan.jpg`](../../input
 | 14 | Island sink SN-RS1840 against the south divider (t834u; landing 320) | **Cut-out 45 from the divider face**: rim a 218–438, cut-out a 240–416 in the 470 bay; **landing 258** | Petr (t840u): “are you positive it can be mounted this close to the cabinet edge? Its undermount”; t841u: “Im ok with 258 landing”. Teka sheet 61401450: clip hole Ø10 × 16 deep, **30 mm from the cut-out edge**; the rim (220 × 440) runs 22 past the cut-out. The old rim lay 9 mm on the divider and the south clip hole fell over it. `guess:` the clip plate reaches about 12 past its screw + 3 play → 45. `open:` ask the stone fabricator (clip count and positions, or glue + battens) |
 | 15 | West sink SN-RS15 rim 20 behind the carcass front (2026-11-22, t819u) | **Set back 21**: rim c 41–481, cut-out c 63–459 (45 behind the drawer front's inner face c 18) | Petr (t841u): “we'll setback the large west sink to be sure”. The front clip hole (cut-out c 42 − 30 = c 12) fell over the drawer front. Same `guess:` / `open:` as row 14 |
 | 16 | SF-B800: MERIVOBOX M with two FILUR standing on its base (row 9) | **Hanging FILUR frame**: U-shaped 18 MDF plate (`guess:` thickness) round the disposer, two holes 280 × 370 (FILUR 290 × 380 less 5 a side), each FILUR hung by its rim; plate top z 660 on two 16 sides running on **Blum MOVENTO 760H4501S** (NL 450, 40 kg, concealed, BLUMOTION S, manual opening; no TIP-ON, no SERVO-DRIVE, no MERIVOBOX). See “SF-B800: hanging FILUR frame” | Petr, 2026-11-23 (t842u) |
+| 17 | West run sections C 850 / B 800 / A 850 (base and wall cabinets on one grid) | **835 / 835 / 830** (still 2500 between the OP24 / OP25 jambs): SF-C850 and SF-CH850 850 → 835, SF-B800 and SF-BH800 800 → 835, SF-AH850 850 → 830, SF-A250 232 → 212 (the dishwasher niche and its end panel do not move). Three 835s would be 2505, 5 over | Petr, 2026-11-23 (t848u): “if we go 835, then all of our top cabinets on the west run are the same 835? Lets do that.” |
+| 18 | SF-B800 FILUR frame: bins 22 over the carcass bottom | **10** over it: plate top 660 → 648, 62 under the bowl | Petr, 2026-11-23 (t849u) |
+| 19 | — | **Petr to measure a real FILUR (rim height, outer dimensions) and the installed disposer / trap on site before the MDF frame is cut.** | Petr, 2026-11-23 (t848u): “Note in docs that I should measure this on site.” |
+| 20 | Island east 625 × 4 (t835u: equal widths) | **626 / 617 / 617 / 640** (SF-E600a / b / c / SF-E700, north to south), still 2500. Inner drawer insides 548 / 548 / 548 / 562 = **13 columns + 2 mm in the north three, SF-E700 13 + 14 spare** (were 12 / 13 / 13 / 12). **The fronts are no longer equal (623 / 614 / 614 / 637).** | Petr, 2026-11-23 (t851u): north three exactly 13 Gridfinity columns + 2 mm, the southmost takes the rest |
 
 ## Monoblocks
 
@@ -2055,7 +2059,7 @@ Depth: NL 600 inside 558 = 13 rows + 10 (was + 11 with 1 mm play). The hob stays
 | West: disposer (c) | 252.5–397.5 | 273.5–418.5 |
 | West: tap hole c / stone cut-out → hole / bowl → hole centre / hole edge → backsplash face (c 580) | 510 / 54.5 / 70 / 52.5 | **531 / 54.5 / 70 / 31.5** (Cosentino ≥ 50, Teka min 65: unchanged; the tap follows the bowl) |
 
-- **East island inner drawers: with 2 mm play the end bays' 547 inside is 1 short of 13 columns, so SF-E600a and SF-E700 drop to 12 × 10 (41 spare).** `open:` 626 / 624 / 624 / 626 (still 2500) would give 548 / 554 / 554 / 548 = 13 columns in all four. Not changed: Petr has not asked to touch the east widths.
+- ~~East island inner drawers: with 2 mm play the end bays' 547 inside is 1 short of 13 columns.~~ Superseded by t851u: 626 / 617 / 617 / 640, see “Island east on 13 columns”.
 - Dining: still 14 × 8 (597 / 606 inside, 7 / 16 spare).
 - `guess:` / `open:` the Teka clip extent (45) is not on Teka's sheet; ask the stone fabricator before the cut-outs are templated.
 - SF-B800's FILUR clearances do not change (the sink moves along c, the bins sit beside the disposer across a): 3 mm each side, 11 mm under the bowl.
@@ -2079,6 +2083,49 @@ Petr (t842u): replace the MERIVOBOX M and the standing FILURs with a custom U-sh
 | Disposer (EVO3, a −472.5 … −327.5, z 342–710) | rims 12.5 beside it, bin bodies 22.5 (`guess:` taper), notch strips 5; back panel (z 139–259) passes 83 under it |
 | **MDF beside the notch** | **12.5 mm** at 800 (hole edge −490 to notch edge −477.5) |
 
-- **At 800 the U is not practical: each arm between a hole and the disposer notch is only 12.5 mm of MDF, and the FILUR rim lies 5 of that.** 2 × 280 holes + 155 notch + 2 × 16 sides take 747 of the 782 inside. `guess:` about 30 mm arms need a cabinet ≈ 835 wide (LW 817); at 900 (LW 882) the arms are 62.5. Not widened (Petr: SF-B800 stays 800).
+- (At 800, superseded by t848u below.) **At 800 the U is not practical: each arm between a hole and the disposer notch is only 12.5 mm of MDF, and the FILUR rim lies 5 of that.** 2 × 280 holes + 155 notch + 2 × 16 sides take 747 of the 782 inside. `guess:` about 30 mm arms need a cabinet ≈ 835 wide (LW 817); at 900 (LW 882) the arms are 62.5. Not widened (Petr: SF-B800 stays 800).
 - **Not modelled: the disposer outlet elbow, the trap, the dishwasher hose and the sink's rectangular overflow tube.** The notch is open to the back only as wide as the disposer + 5; an outlet or hose that leaves the disposer sideways at plate height (z 642–660) would hit the arms. Check on site before the frame is made.
 - The frame's back panel spans the full width under the disposer (top z 259); a trap lower than that would clash: `open:`.
+
+
+### West run on an 835 grid; FILUR frame lower (2026-11-23, t848u / t849u)
+
+| | Old | New |
+| --- | --- | --- |
+| SF-C850 / SF-CH850 (y from 11.350) | 850 / 850 | **835 / 835** |
+| SF-B800 / SF-BH800 | 800 / 800 (y 12.200–13.000) | **835 / 835** (y 12.185–13.020) |
+| SF-A250 / SF-AH850 | 232 / 850 (from y 13.000) | **212 / 830** (from y 13.020) |
+| SF-A600 dishwasher niche + end panel | y 13.232–13.850 | unchanged |
+| West sink SN-RS15 (centred on SF-B800) | y 12.225–12.975 | **12.2275–12.9775** (+2.5) |
+| SF-A250 pull-out inside (MERIVOBOX E) | 154 × 508 | **134** × 508 |
+| SF-C850 recycling pull-out inside | 772 × 508 | 757 × 508 |
+| FILUR frame: LW / inside between the sides (SKW) | 782 / 740 | **817 / 775** |
+| MDF between each hole and the disposer notch | 12.5 | **30** |
+| Disposer (now a −490 … −345) to the notch edges / rims / bin bodies | 5 / 12.5 / 22.5 | 5 / **30** / **40** |
+| Bins over the carcass bottom (t849u) | 22 | **10** |
+| Plate top / to the bowl underside / lids to the bowl | 660 / 50 / 20 | **648 / 62 / 32** |
+| MOVENTO NL, bins past the worktop edge | 450, 12 | 450, 12 (unchanged) |
+
+- The wall cabinets share the base sections' grid (C, B, A over C, B, A; the same Petr notes A/B/C on both), so they follow; they cannot all be 835 in 2500.
+- **SF-A250 at 212 (clear 185, inside 134) is even further below MERIVOBOX's usual widths; Blum's narrow-cabinet product is SPACE TWIN (KB 150–250).**
+- AVENTOS HF fronts are now 827 / 832 / 832 wide (9.3–9.4 kg, still in the HF range, model check).
+- `guess:` the hanging bins (bottom z 128) stand 10 inside the frame sides; the MOVENTO runners sit under the sides (z 118–139), so a bin passes about 10 mm beside a runner. The back panel (z 139–259, behind the bins) still passes 83 under the disposer.
+- **Petr to measure a real FILUR (rim height, outer dimensions) and the installed disposer / trap on site before the MDF frame is cut** (t848u).
+
+### Island east on 13 columns (2026-11-23, t851u)
+
+> Petr (t851u): the north three exactly 13 Gridfinity columns + 2 mm leeway; the southmost takes whatever remains of the fixed run length.
+
+Inner drawer inside = clear − 51 (MERIVOBOX LW − 51); clear = width − 27 at a run end (one 18 side + 9 half-divider), width − 18 between dividers. 13 × 42 + 2 = 548.
+
+| Bay (north → south) | Width old → new | y origin old → new | Clear | Inner inside | GF columns, spare |
+| --- | --- | --- | --- | --- | --- |
+| SF-E600a (end) | 625 → **626** | 13.175 → 13.174 | 598 → 599 | 547 → **548** | 12 (41) → **13 (0)** |
+| SF-E600b | 625 → **617** | 12.550 → 12.557 | 607 → 599 | 556 → **548** | 13 (8) → **13 (0)** |
+| SF-E600c | 625 → **617** | 11.925 → 11.940 | 607 → 599 | 556 → **548** | 13 (8) → **13 (0)** |
+| SF-E700 (end, rest) | 625 → **640** | 11.300 (same) | 598 → 613 | 547 → **562** | 12 (41) → **13 (14)** |
+
+- Yaml: the north three have fixed `Width` links (0.626 / 0.617 / 0.617); SF-E700 is `(SF-I500a.Y − (SF-I300.Y − SF-I300.Width)) − 0.626 − 2 × 0.617`, so it still absorbs any change of the 2500.
+- Depth 10 × 42 + 36 spare is unchanged (inside 458).
+- **The fronts are no longer equal (623 / 614 / 614 / 637, 3 gap), which goes against Petr's earlier “they should be the same width” (t835u); SF-E700 is 23 wider than the middles.** The east row has no module lines on the west side, so the island's two rows do not line up anyway.
+- **0 mm spare in the north three: 2 mm play is the whole tolerance. The MERIVOBOX LW − 51 deduction and the carcass sides have to be as specified (`open:` check on site).**
