@@ -193,7 +193,27 @@ IKEA_DEFAULTS_MM = {
     "RackInset": 40.0,  # each side, from the door edge
     "BinGap": 10.0,  # between bins in a pull-out
     "BinWall": 3.0,  # plastic bin wall
+    # Hanging-bin frame pull-out (``frame=u``, Petr 2026-11-23, t842u): an
+    # MDF plate with one hole per bin, U-shaped round the disposer, on two
+    # sides running on Blum MOVENTO 760H (BLUMOTION S, manual opening).
+    "FrameBoard": 18.0,  # MDF plate (guess:)
+    "FrameSide": 16.0,  # drawer sides (Blum: 12-15, 16 with limited side adjustment)
+    "FrameRunnerBelow": 21.0,  # cabinet floor to the side's lower edge (guess:, MOVENTO drawing)
+    "FrameBack": 16.0,  # back panel under the disposer, for the runners' rear hooks
+    "FrameBackHeight": 120.0,  # (guess:)
+    "FrameHoleInset": 5.0,  # hole = the bin's outer size less this a side (Petr, t842u)
+    "FrameFrontStrip": 25.0,  # plate in front of the holes (guess:)
+    "FrameNotchClearance": 5.0,  # notch edge to the disposer, each side (guess:)
+    "FrameLiftClearance": 10.0,  # bins in front of the worktop edge when pulled out (guess:)
+    "FrameTopClearance": 20.0,  # bin top (lid) under the sink bowl (guess:)
+    "FrameFloorGap": 10.0,  # minimum, hanging bin bottom over the carcass bottom (guess:)
+    "BinRim": 30.0,  # FILUR rim + lid above the plate (guess: Petr ~3 cm; IKEA lid package 3 cm)
+    "BinTaper": 10.0,  # FILUR body under the rim, narrower a side (guess:)
 }
+
+# Blum MOVENTO 760H / 766H nominal lengths (technical data sheet TD-132/1,
+# 06.22): SKL = NL - 10, SKW = LW - 42, inside cabinet depth >= NL + 3.
+MOVENTO_NL = (250, 270, 300, 320, 350, 380, 400, 420, 450, 480, 500, 550, 600)
 RUN_FLAGS = ("CladEnds", "Backsplash", "FlushEnds")
 
 # Blum AVENTOS lift systems (``lift`` bands), from the Blum catalogue and
@@ -434,6 +454,7 @@ class Drawer:
     load: int = 0  # Blum profile load class, kg (40 / 70)
     drop: float = 0.0  # mm the box sits below its band's own position (stacking, see _drawer)
     profile_z: float = 0.0  # bottom of the cabinet profile (Blum space requirement), mm
+    frame: dict | None = None  # hanging-bin frame pull-out (``frame=u``): its sizes, see _frame_pullout
 
 
 @dataclass
@@ -1401,7 +1422,30 @@ class _Builder:
                 stack_top = dr.profile_z
                 name = ("Výsuv" if zone.kind == "pullout" else "Šuplík") + f" {drawer_no} {dr.content}"
                 drawer_system(bay.element)
-                props = dict(base, System="Blum MERIVOBOX",
+                if dr.frame:
+                    fr = dr.frame
+                    props = dict(base, System="Blum MOVENTO 760H, BLUMOTION S (manual opening)",
+                                 RunnerArticle=f"760H{int(dr.nl)}1S", NominalLength=round(dr.nl / 1000.0, 6),
+                                 Extension=round(dr.extension / 1000.0, 6), LoadClass=40,
+                                 FrameKind="U-shaped MDF plate, bins hung by the rim",
+                                 FrameBoard=round(fr["plate"] / 1000.0, 6),
+                                 FramePlateTop=round(fr["plate_top"] / 1000.0, 6),
+                                 FrameInsideWidth=round(fr["skw"] / 1000.0, 6),
+                                 FrameLength=round(fr["skl"] / 1000.0, 6),
+                                 HoleWidth=round(fr["hole"][0] / 1000.0, 6), HoleDepth=round(fr["hole"][1] / 1000.0, 6),
+                                 NotchStrip=round(min(fr["strip"]) / 1000.0, 6),
+                                 PlateToBowl=round(fr["top_gap"] / 1000.0, 6),
+                                 BinTopToBowl=round(fr["lid_gap"] / 1000.0, 6),
+                                 BinBottomToFloor=round(fr["floor_gap"] / 1000.0, 6),
+                                 BinsPastWorktop=round(fr["lift"] / 1000.0, 6),
+                                 Items=n_bins if (n_bins := len(fr["bins"]) // 2) else None, ItemKind="bins (hung)")
+                    self.run.notes.append(
+                        f"open: {bay.id} bin frame: MOVENTO NL {dr.nl:g}, plate top {fr['plate_top']:g} "
+                        f"({fr['top_gap']:g} under the bowl), bins {fr['floor_gap']:g} over the floor, "
+                        f"{min(fr['strip']):g} mm of MDF beside the disposer notch (trap, outlet and hoses not modelled)")
+                else:
+                    props = None
+                props = props or dict(base, System="Blum MERIVOBOX",
                              NominalLength=round(dr.nl / 1000.0, 6),
                              DrawerSide=dr.side, LoadClass=dr.load,
                              BoxBelowFront=round(dr.drop / 1000.0, 6) if dr.drop > TOL else None,
@@ -2556,6 +2600,8 @@ def _drawer(bay: Bay, p: dict, zone: Zone, number: int, back_y: float, ceiling: 
     (``stack_top``), the box moves down instead (``Drawer.drop``): metal
     sides cannot be trimmed. See kitchen-cabinets.md "Drawers: Blum MERIVOBOX".
     """
+    if zone.opts.get("frame"):
+        return _frame_pullout(bay, p, zone, number, back_y, obstacles, carcass_z0, on_board)
     tf, wall = p["FrontThickness"], p["BoxWall"]
     inner_w, inner_d = drawer_inside(bay, p, back_y)
     if inner_w <= 0 or inner_d <= 0:
@@ -2625,6 +2671,115 @@ def _drawer(bay: Bay, p: dict, zone: Zone, number: int, back_y: float, ceiling: 
                   baseplate=baseplate, side=letter, nl=nl,
                   load=merivobox_load(p, zone.kind, letter, inner_w, nl), drop=drop,
                   profile_z=bz0 - below)
+
+
+def _frame_pullout(bay: Bay, p: dict, zone: Zone, number: int, back_y: float, obstacles: list,
+                   carcass_z0: float, on_board: bool) -> Drawer:
+    """A pull-out that hangs bins by their rims in an MDF plate (Petr,
+    2026-11-23, t842u): ``frame=u bin=WxDxH n=2`` (metres, the bin's outer
+    size with its rim). Two sides on Blum MOVENTO 760H runners (concealed,
+    BLUMOTION S, manual opening), a plate ``FrameBoard`` thick on top with
+    one hole per bin (outer size less ``FrameHoleInset`` a side), the outer
+    holes against the sides, and a notch open to the back round the
+    disposer so the frame slides past it. A back panel low under the
+    disposer takes the runners' rear hooks.
+
+    The runner is the shortest MOVENTO NL whose travel (= NL, guess:) takes
+    the bins ``FrameLiftClearance`` in front of the worktop edge, so they
+    lift straight up. The plate sits so the bin tops stay
+    ``FrameTopClearance`` under the lowest obstacle over them (the bowl)."""
+    tf, t = p["FrontThickness"], p["BoardThickness"]
+    fb, fs, inset = p["FrameBoard"], p["FrameSide"], p["FrameHoleInset"]
+    bw, bd, bh = (float(v) * 1000.0 for v in str(zone.opts.get("bin", "0.29x0.38x0.55")).lower().split("x"))
+    n = int(zone.opts.get("n", 2))
+    out_dir = -1.0 if bay.front_low else 1.0
+    g = p["FrontGap"] / 2.0
+    fc0, fc1 = _Builder.c_range(bay, 0.0, tf)
+    front = (bay.a0 + g, bay.a1 - g, fc0, fc1, zone.slot_z0 + g, zone.slot_z1 - g)
+    depth = back_y - tf
+    # Bins: offsets behind the carcass front (the decor front's back is tf).
+    hole0 = tf + p["FrameFrontStrip"]
+    rim_back = hole0 - inset + bd
+    need = rim_back + p["WorktopOverhang"] + p["FrameLiftClearance"]
+    fit = [nl for nl in MOVENTO_NL if nl + 3.0 <= depth + TOL and nl - 10.0 >= rim_back - tf + p["FrameBack"]]
+    nl = next((x for x in fit if x >= need - TOL), None)
+    if nl is None:
+        raise ValueError(f"{bay.id}: no MOVENTO length takes the bins past the worktop edge (needs {need:.0f})")
+    skl = nl - 10.0
+    lift = nl - rim_back - p["WorktopOverhang"]  # bins' back edge in front of the worktop edge, pulled out
+    # Across: SKW = LW - 42 between the sides, centred in the opening.
+    lw = bay.clear_hi - bay.clear_lo
+    skw = lw - 42.0
+    mid = (bay.clear_lo + bay.clear_hi) / 2.0
+    ia0, ia1 = mid - skw / 2.0, mid + skw / 2.0
+    hw, hd = bw - 2 * inset, bd - 2 * inset
+    if n != 2:
+        raise ValueError(f"{bay.id}: frame=u takes two bins, one each side of the disposer")
+    holes_a = [(ia0, ia0 + hw), (ia1 - hw, ia1)]
+    # The disposer (or whatever hangs lowest between the holes).
+    disp = [(ob, top, oid) for ob, top, oid in obstacles if ob[5] - ob[4] > 50.0 and ob[1] - ob[0] < 300.0]
+    if not disp:
+        raise ValueError(f"{bay.id}: frame=u needs a disposer to go round")
+    dbox = disp[0][0]
+    nc = p["FrameNotchClearance"]
+    notch_a = (dbox[0] - nc, dbox[1] + nc)
+    strip_l, strip_r = notch_a[0] - holes_a[0][1], holes_a[1][0] - notch_a[1]
+    if min(strip_l, strip_r) < -TOL:
+        raise ValueError(f"{bay.id}: the bin holes run into the disposer notch ({min(strip_l, strip_r):.1f} mm)")
+    dc = sorted(dbox[2:4])
+    d_front = min(abs(dc[0] - _Builder.c_range(bay, 0.0, 0.0)[0]), abs(dc[1] - _Builder.c_range(bay, 0.0, 0.0)[0]))
+    notch_front = d_front - nc
+    # Heights: the plate under the bowl, the bins hanging from it.
+    floor0 = zone.slot_z0 + (t if abs(zone.slot_z0 - carcass_z0) < TOL or on_board else 0.0)
+    bins_plan = [(a0 - inset, a1 + inset) for a0, a1 in holes_a]
+    bc = sorted(_Builder.c_range(bay, hole0 - inset, rim_back))
+    over = [ob[4] for ob, _top, _oid in obstacles
+            if any(_plan_meet((a0, a1, bc[0], bc[1], 0, 0), ob) for a0, a1 in bins_plan)]
+    roof = min(over) if over else zone.slot_z1 - g
+    plate_top = roof - p["FrameTopClearance"] - p["BinRim"]
+    bin_bottom = plate_top - (bh - p["BinRim"])
+    floor_gap = bin_bottom - floor0
+    if floor_gap < p["FrameFloorGap"] - TOL:
+        raise ValueError(f"{bay.id}: hanging bins reach the carcass bottom ({floor_gap:.0f} mm)")
+    side_z0 = floor0 + p["FrameRunnerBelow"]
+    pz0 = plate_top - fb
+
+    def cr(o0, o1):
+        return _Builder.c_range(bay, o0, o1)
+
+    f0, f1 = tf, tf + skl
+    h0, h1 = hole0, hole0 + hd
+    items = [
+        (ia0 - fs, ia0, *cr(f0, f1), side_z0, pz0),  # sides
+        (ia1, ia1 + fs, *cr(f0, f1), side_z0, pz0),
+        (ia0, ia1, *cr(f1 - p["FrameBack"], f1), side_z0, side_z0 + p["FrameBackHeight"]),  # back, under the disposer
+        # The U plate: front band, the bridge between the holes in front of
+        # the notch, the strips over the sides, beside the notch, behind the holes.
+        (ia0 - fs, ia1 + fs, *cr(f0, h0), pz0, plate_top),
+        (holes_a[0][1], holes_a[1][0], *cr(h0, notch_front), pz0, plate_top),
+        (ia0 - fs, ia0, *cr(h0, h1), pz0, plate_top),
+        (ia1, ia1 + fs, *cr(h0, h1), pz0, plate_top),
+        (holes_a[0][1], notch_a[0], *cr(notch_front, f1), pz0, plate_top),
+        (notch_a[1], holes_a[1][0], *cr(notch_front, f1), pz0, plate_top),
+        (ia0 - fs, notch_a[0], *cr(h1, f1), pz0, plate_top),
+        (notch_a[1], ia1 + fs, *cr(h1, f1), pz0, plate_top),
+    ]
+    items = [b for b in items if b[1] - b[0] > TOL and abs(b[3] - b[2]) > TOL and b[5] - b[4] > TOL]
+    taper = p["BinTaper"]
+    bins = []
+    for a0, a1 in bins_plan:
+        bins.append((a0, a1, *bc, plate_top, plate_top + p["BinRim"]))  # rim and lid on the plate
+        bins.append((a0 + taper, a1 - taper, *cr(hole0 - inset + taper, rim_back - taper), bin_bottom, plate_top))
+    box = (ia0 - fs, ia1 + fs, *cr(f0, f1), side_z0, plate_top)
+    frame = dict(nl=nl, skl=skl, skw=skw, lw=lw, plate_top=plate_top, plate=fb, bin_bottom=bin_bottom,
+                 floor_gap=floor_gap, roof=roof, top_gap=roof - plate_top, lid_gap=roof - plate_top - p["BinRim"],
+                 hole=(hw, hd), strip=(strip_l, strip_r), notch=notch_a, notch_front=notch_front,
+                 notch_clear=nc, lift=lift, front_strip=p["FrameFrontStrip"], back_strip=skl - (h1 - tf),
+                 bins=bins, holes=[(a0, a1, *cr(h0, h1)) for a0, a1 in holes_a])
+    return Drawer(number, zone.content, zone.nominal, zone.slot_z0, front, box, nl, out_dir, 0.0,
+                  kind=zone.kind, items=items + bins, zone=zone.index,
+                  inside=(skw, skl, plate_top - side_z0), floor_z=side_z0, side="", nl=nl, load=40,
+                  profile_z=floor0, frame=frame)
 
 
 def gridfinity_baseplate(p: dict, n: int, m: int, a_mid: float, c_mid: float, z0: float) -> list:
@@ -2809,6 +2964,8 @@ def drawer_boxes(dr: Drawer, p: dict) -> list:
     """Front plus the box (bottom, two sides, back; a box front board only
     when ``BoxFrontPanel`` > 0), run frame, then anything riding in it
     (baskets, bins, a Gridfinity baseplate). The decor front closes the box."""
+    if dr.frame:  # hanging-bin frame: its pieces are the items
+        return [dr.front, *dr.items]
     wall, fp = p["BoxWall"], p["BoxFrontPanel"]
     a0, a1, c0, c1, z0, z1 = dr.box
     back_lo = dr.out > 0  # pulls toward +c, so its back is the c0 end

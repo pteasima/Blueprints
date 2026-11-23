@@ -856,7 +856,12 @@ systemFurniture:
       # side, either side of the disposer (kitchen-cabinets.md).
       - Name: Pset_Fronts
         Properties:
-          Layout: "pullout * box=M items=bins n=2 bin=0.29x0.38x0.55"
+          # Petr, 2026-11-23 (t842u): no MERIVOBOX here. A U-shaped MDF
+          # frame round the disposer with two holes, each hanging one IKEA
+          # FILUR 42 l by its rim (hole = 29 x 38 cm less 5 a side), on Blum
+          # MOVENTO concealed runners, BLUMOTION soft-close, manual opening
+          # (kitchen-cabinets.md "SF-B800: hanging FILUR frame").
+          Layout: "pullout * frame=u n=2 bin=0.29x0.38x0.55"
           Contents: "vlevo koš, vpravo kompost"
       - Name: Pset_BaseContents
         Properties:

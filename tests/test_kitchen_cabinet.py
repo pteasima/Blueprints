@@ -175,8 +175,8 @@ def test_disposers_and_taps_hang_on_their_sinks():
     # The west bins stop 10 under the disposer.
     west = runs["KR-WEST"]
     pull = west.part("SF-B800-D1").drawer
-    assert pull.box[5] <= west.part("EA-EVO3-W").boxes[0][4] - 10.0 + 1e-6
-    assert len(pull.items) == 2
+    # Since 2026-11-23 (t842u) the bins hang in a U frame round the disposer.
+    assert pull.frame and len(pull.frame["bins"]) == 4  # two bins, rim + body each
 
 
 def test_west_sink_sits_forward_on_teka_drain_and_official_m71():
@@ -553,7 +553,9 @@ def test_drawer_motions_in_model():
     assert [m["center"][2] for m in island[:3]] == pytest.approx([-13.0425] * 3, abs=1e-6)
     west = [m for m in drawers if m["id"] in ("SF-A250-D1", "SF-B800-D1", "SF-C850-D1")]
     # Blum MERIVOBOX NL 550 in the 600 west run (2026-11-23).
-    assert len(west) == 3 and all(m["slide"] == pytest.approx([0.546, 0.0, 0.0]) for m in west)
+    assert len(west) == 3 and all(m["slide"] == pytest.approx([0.546, 0.0, 0.0]) for m in west if m["id"] != "SF-B800-D1")
+    # SF-B800's bin frame runs on MOVENTO NL 450 (2026-11-23, t842u).
+    assert next(m for m in west if m["id"] == "SF-B800-D1")["slide"] == pytest.approx([0.45, 0.0, 0.0])
     # Dining base drawers slide south (glTF +z). The living counter is dead
     # space since 2026-11-20 (no drawers).
     found = [m for m in drawers if m["id"].startswith("SF-DN-S")]
@@ -944,25 +946,35 @@ def test_j_grips_and_wall_front_overhang():
     assert parts["SF-BH800-LIFT1"][1].boxes[0][5] == pytest.approx(2448.5)
 
 
-def test_sink_drawer_holds_two_filur_bins_beside_the_disposer():
-    """Petr, 2026-11-23 (t835u): upright IKEA FILUR bins under the main sink;
-    SF-B800 stays 800 (t836u: check the fit at 800, flag it, do not widen).
-    FILUR 42 l is 29 x 38 x 55 cm (IKEA)."""
+def test_sink_frame_hangs_two_filur_bins_round_the_disposer():
+    """Petr, 2026-11-23 (t842u): replace the MERIVOBOX M + standing FILURs
+    with a U-shaped MDF frame round the disposer, two holes (the FILUR's
+    29 x 38 cm less 5 a side) each hanging one FILUR 42 l by its rim, on
+    Blum concealed runners, BLUMOTION, manual opening; the shortest runner
+    that takes both bins past the worktop edge. SF-B800 stays 800."""
     run = _runs()["KR-WEST"]
     part = run.part("SF-B800-D1")
     d = part.drawer
+    fr = d.frame
     assert run.bay("SF-B800").width == pytest.approx(800.0)
-    assert part.props["System"] == "Blum MERIVOBOX" and part.props["NominalLength"] == pytest.approx(0.55)
-    assert d.side == "M" and d.load == 70
-    bins = [b for b in d.items if b[5] - b[4] == pytest.approx(550.0)]
-    assert len(bins) == 2
-    for b in bins:
-        assert (b[1] - b[0], abs(b[3] - b[2])) == pytest.approx((290.0, 380.0))
+    assert part.props["System"].startswith("Blum MOVENTO 760H") and part.props["RunnerArticle"] == "760H4501S"
+    assert "MERIVOBOX" not in part.props["System"] and "TIP-ON" not in part.props["System"]
+    assert fr["nl"] == 450 and d.extension == pytest.approx(450.0)
+    assert fr["hole"] == pytest.approx((280.0, 370.0))
+    assert fr["skw"] == pytest.approx(782.0 - 42.0)
+    # Bins 12 mm in front of the worktop edge (overhang 20) when pulled out;
+    # NL 420 would leave them 18 mm under it.
+    assert fr["lift"] == pytest.approx(12.0)
+    # Plate top 660: 50 under the bowl (710), lids 20 under it, bins 22 over
+    # the carcass bottom (118).
+    assert (fr["plate_top"], fr["top_gap"], fr["lid_gap"], fr["floor_gap"]) == pytest.approx((660.0, 50.0, 20.0, 22.0))
+    # Only 12.5 mm of MDF between each hole and the disposer notch at 800.
+    assert fr["strip"] == pytest.approx((12.5, 12.5))
     disposer = run.part("EA-EVO3-W").boxes[0]
-    side, top = kc.bin_clearance(d, run.bay("SF-B800").obstacles)
-    assert side == pytest.approx(3.0) and top == pytest.approx(11.0)
-    assert d.box[5] < disposer[4]
-    assert any("SF-B800 bins clear the disposer by 3.0 mm" in n for n in run.notes)
+    pieces = [b for b in d.items if b not in fr["bins"]]
+    assert not [b for b in pieces if kc._plan_meet(b, disposer) and b[5] > disposer[4] and b[4] < disposer[5]]
+    assert not [b for b in fr["bins"] if kc._plan_meet(b, disposer)]
+    assert any("SF-B800 bin frame: MOVENTO NL 450" in n for n in run.notes)
 
 
 def test_recycling_cabinet_is_the_deepest_empty_merivobox():

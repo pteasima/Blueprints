@@ -33,13 +33,14 @@ Petr's original document is the sticky-note plan [`KitchenPlan.jpg`](../../input
 | 6 | Tall north run 600 deep (the plan: “Tall carcasses are 600 deep”) | **629** (NL 600 + 3 + 18 front + 8 back); back on the wall, fronts 29 further south (y 14.971). SF-T1 and SF-TF follow so the fronts stay in line | Petr: “tall kitchen north run should use 600mm also (lmk total cabinet depth, this will affect fridge choice)” |
 | 7 | Cabinet widths | **unchanged** | Petr: “cabinet widths stay unchanged” |
 | 8 | Gridfinity: west boxes cut to whole cells (`GridfinityFitDepth`), plates centred | **No cut** (a MERIVOBOX box is its NL long); the plate is the closest whole grid for the new inside and is **snapped to the drawer front**, the slack at the back | Petr: “gridfinity plates stay (closest match to drawer length) and are snapped to the front of the drawer”; t836u: re-check the width too (see “MERIVOBOX remodel”) |
-| 9 | Sink base SF-B800: a full-height pull-out with two equal bins trimmed under the disposer | A low **MERIVOBOX M** box (back 83 high, passes under the disposer) with **two IKEA FILUR 42 l** standing on its base, one each side of the disposer | Petr: “assume merivobox with upright Ikea Filur bins under main sink (the one you recommended)” |
+| 9 | Sink base SF-B800: a full-height pull-out with two equal bins trimmed under the disposer | (superseded by row 16) A low **MERIVOBOX M** box (back 83 high, passes under the disposer) with **two IKEA FILUR 42 l** standing on its base, one each side of the disposer | Petr: “assume merivobox with upright Ikea Filur bins under main sink (the one you recommended)” |
 | 10 | Recycling SF-C850: three equal bins (`guess:`) | **Empty**, deepest MERIVOBOX that fits: NL 550, E, 70 kg | Petr: “assume deepest merivobox for southwest recycling cabinet, leave empty without bins for now” |
 | 11 | Island west top drawers: MAXIMERA low (78 box in a 100 front) | **MERIVOBOX M** (91) behind the same 100 fronts; the boxes sit lower than their fronts (see “MERIVOBOX remodel”) | N (the Blum box made for ~100 fronts) is only made up to NL 550, and Petr asked for NL 600 on the west |
 | 12 | Gridfinity play 1 mm (inside n × 42 + 1) | **2 mm** (inside n × 42 + 2, `GridfinityPlay`) | Petr, 2026-11-23 (t841u), approving the 2 mm leeway |
 | 13 | Island west widths 500 / 607 / 481 / 607 / 305 (row 7: unchanged) | **470 / 575 / 533 / 617 / 305** (SF-I500a / SF-I600a / SF-I500b / SF-I600b / SF-I300), still 2500. Insides 506 / 464 / 548 = **12 / 11 / 13 columns exactly** (were 12 / 9 / 12 with 33 spare). Ids keep their old nominal names | Petr (t837u): “when you say island west drawers have spare room in width, then you should change them … The south 300 stays. The hob drawer gets wider to fit gridfinity”; t841u: “can we make the middle two drawers closer in size (12 and 11 gridfinities instead of 13 and 10)?” |
 | 14 | Island sink SN-RS1840 against the south divider (t834u; landing 320) | **Cut-out 45 from the divider face**: rim a 218–438, cut-out a 240–416 in the 470 bay; **landing 258** | Petr (t840u): “are you positive it can be mounted this close to the cabinet edge? Its undermount”; t841u: “Im ok with 258 landing”. Teka sheet 61401450: clip hole Ø10 × 16 deep, **30 mm from the cut-out edge**; the rim (220 × 440) runs 22 past the cut-out. The old rim lay 9 mm on the divider and the south clip hole fell over it. `guess:` the clip plate reaches about 12 past its screw + 3 play → 45. `open:` ask the stone fabricator (clip count and positions, or glue + battens) |
 | 15 | West sink SN-RS15 rim 20 behind the carcass front (2026-11-22, t819u) | **Set back 21**: rim c 41–481, cut-out c 63–459 (45 behind the drawer front's inner face c 18) | Petr (t841u): “we'll setback the large west sink to be sure”. The front clip hole (cut-out c 42 − 30 = c 12) fell over the drawer front. Same `guess:` / `open:` as row 14 |
+| 16 | SF-B800: MERIVOBOX M with two FILUR standing on its base (row 9) | **Hanging FILUR frame**: U-shaped 18 MDF plate (`guess:` thickness) round the disposer, two holes 280 × 370 (FILUR 290 × 380 less 5 a side), each FILUR hung by its rim; plate top z 660 on two 16 sides running on **Blum MOVENTO 760H4501S** (NL 450, 40 kg, concealed, BLUMOTION S, manual opening; no TIP-ON, no SERVO-DRIVE, no MERIVOBOX). See “SF-B800: hanging FILUR frame” | Petr, 2026-11-23 (t842u) |
 
 ## Monoblocks
 
@@ -2058,3 +2059,26 @@ Depth: NL 600 inside 558 = 13 rows + 10 (was + 11 with 1 mm play). The hob stays
 - Dining: still 14 × 8 (597 / 606 inside, 7 / 16 spare).
 - `guess:` / `open:` the Teka clip extent (45) is not on Teka's sheet; ask the stone fabricator before the cut-outs are templated.
 - SF-B800's FILUR clearances do not change (the sink moves along c, the bins sit beside the disposer across a): 3 mm each side, 11 mm under the bowl.
+
+
+### SF-B800: hanging FILUR frame (2026-11-23, t842u)
+
+Petr (t842u): replace the MERIVOBOX M and the standing FILURs with a custom U-shaped MDF frame round the drain and disposer, two holes, each hanging one IKEA FILUR 42 l by its rim; hole = the FILUR's official outer size inset 5 mm a side; Blum concealed runners, BLUMOTION soft-close, manual opening; the shortest standard runner that lets both FILURs clear the worktop front when lifted straight up. Modelled as `Layout: "pullout * frame=u n=2 bin=0.29x0.38x0.55"` (`kitchen_cabinet._frame_pullout`).
+
+**Facts.** IKEA FILUR bin with lid 42 l (201.938.99): W 29, D 38, H 55 cm; the lid ships as its own 29 × 39 × 3 cm package. Blum MOVENTO 760H (technical data sheet TD-132/1, 06.22): concealed full extension, BLUMOTION S, NL 250–600 (…, 420, 450, 480, …), 40 kg (766H 70 kg for NL 450+), drawer side length SKL = NL − 10, internal drawer width SKW = LW − 42, sides 12–15 (16 with limited side adjustment), inside cabinet depth ≥ NL + 3, rear hooks into Ø6 × 10 bores in the drawer back. Article 760H4501S (the S = BLUMOTION S; the T versions are TIP-ON and are not used).
+
+**Guesses.** `guess:` FILUR rim + lid stand 30 above the plate (Petr ~3 cm; the lid package is 3 cm). `guess:` the body under the rim is 10 narrower a side (it tapers, IKEA photos), so it drops through the 280 × 370 hole. `open:` IKEA gives D 38 but the lid package is 39: check a real FILUR's rim before cutting the holes. `guess:` 18 MDF, front strip 25 in front of the holes, 5 notch clearance, 21 from the carcass bottom to the side's lower edge, back panel 120 high. `guess:` travel = NL (full extension).
+
+| | Value |
+| --- | --- |
+| Runner | MOVENTO 760H4501S, NL 450 (NL 420 leaves the bins' back edge 18 under the worktop edge) |
+| Frame | outer 772 (LW 782 − 10) × 440 (SKL), sides 16, inside 740 (SKW) |
+| Plate | 18 MDF, top z 660; holes 280 × 370, 43–413 behind the carcass front (front strip 25, back strip 45); notch a −477.5 … −322.5 (disposer ± 5), open to the back from 268.5 |
+| Bins | rims 290 × 380 at 38–418; pulled out 450 their back edge is **12** in front of the worktop edge (overhang 20) |
+| Heights | carcass bottom 118, bins hang to 140 (**22 over the floor**), plate top 660, lids 690; sink bowl underside 710: **plate 50 under the bowl, lids 20** |
+| Disposer (EVO3, a −472.5 … −327.5, z 342–710) | rims 12.5 beside it, bin bodies 22.5 (`guess:` taper), notch strips 5; back panel (z 139–259) passes 83 under it |
+| **MDF beside the notch** | **12.5 mm** at 800 (hole edge −490 to notch edge −477.5) |
+
+- **At 800 the U is not practical: each arm between a hole and the disposer notch is only 12.5 mm of MDF, and the FILUR rim lies 5 of that.** 2 × 280 holes + 155 notch + 2 × 16 sides take 747 of the 782 inside. `guess:` about 30 mm arms need a cabinet ≈ 835 wide (LW 817); at 900 (LW 882) the arms are 62.5. Not widened (Petr: SF-B800 stays 800).
+- **Not modelled: the disposer outlet elbow, the trap, the dishwasher hose and the sink's rectangular overflow tube.** The notch is open to the back only as wide as the disposer + 5; an outlet or hose that leaves the disposer sideways at plate height (z 642–660) would hit the arms. Check on site before the frame is made.
+- The frame's back panel spans the full width under the disposer (top z 259); a trap lower than that would clash: `open:`.
