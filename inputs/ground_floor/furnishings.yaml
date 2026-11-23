@@ -2177,11 +2177,11 @@ furniture:
   # HF fronts are checked against it (models/ceiling_line.py).
   - id: SF-DH-LINING
     Name: "Jídelna horní, dubový podhled"
-    Description: "Oak top board under the soffit, one piece from W-052 (x 22.45) to SF-TC (linked, x 29.60; was x 22.45–25.15 between the piers, 2026-11-20 c): front flush with the soffit's room face (y 15.15) back to the wall (15.60), notched round the pier slats (from their front face back), 18 thick, 2432–2450 under the 2450 line. guess: thickness, the 20 gap to the soffit's GKB above."
+    Description: "Oak top board under the soffit, one piece from the east face of the kitchen north tall cabinets (SF-T4.East, x 22.15; was x 22.45, short of pier W-052, until 2026-11-23 t904u) to SF-TC (linked, x 29.60; was x 22.45–25.15 between the piers, 2026-11-20 c): front flush with the soffit's room face (y 15.15) back to the wall (15.60), notched round both pier slat panels (from their front face back), 18 thick, 2432–2450 under the 2450 line. guess: thickness, the 20 gap to the soffit's GKB above."
     PredefinedType: USERDEFINED
     ObjectType: CabinetLining
     ContainedInStructure: SP-1.02
-    Origin: [22.45, 15.15]
+    Origin: [0, 15.15]
     Elevation: 2.432
     Depth: 0.45
     Height: 0.018
@@ -2197,8 +2197,13 @@ furniture:
       # be flush with soffit and extend all the way to the living room in one
       # piece." East end on SF-TC's west face; notched round both pier slat
       # panels (their x range, from their front face back to the wall).
+      # Petr, 2026-11-23 (t904u): "in the dining area that top plank extends
+      # all the way to the kitchen north top cabinets (yours ends short of
+      # the column, which is wrong)". West end on SF-T4's east face, running
+      # past / around pier W-052 (Notch1).
       - Name: Pset_Links
         Properties:
+          X: "SF-T4.East"
           East: "SF-TC.X"
           Pset_CabinetLining.Notch1X0: "CV-SLAT-W052.X"
           Pset_CabinetLining.Notch1X1: "CV-SLAT-W052.East"
@@ -2256,9 +2261,34 @@ furniture:
       - Name: Pset_CabinetLining
         Properties:
           PartOf: SF-DH
+  # Petr, 2026-11-23 (t904u): "Theres also an oak side wall in that area,
+  # on the east side of the kitchen north tall cabinets, up to 450 from the
+  # north wall." The west end of the continuous 450-deep oak frame.
+  - id: SF-DH-SIDE-W
+    Name: "Dubový bok u vysokých skříní"
+    Description: "Oak side wall on the east face of the kitchen north tall cabinets (SF-T4.East, x 22.15), the west end of the continuous dining-to-living oak frame (Petr, 2026-11-23 t904u). 40 thick, linked to the bookshelf boards (guess: the same 40). Starts at the SF-F052 counter (930), not the floor: the filler cupboard already fills y 15.15–15.35 up to 930. Stops at the W-052 slat front (y 15.324), not the full 450 back to the wall: pier W-052 and its slats occupy y 15.324–15.60 at this x. Up to the lining (2432)."
+    PredefinedType: USERDEFINED
+    ObjectType: CabinetLining
+    ContainedInStructure: SP-1.02
+    PropertySets:
+      - Name: Pset_Finish
+        Properties:
+          Material: "natural oak"
+          Form: "solid or veneer"
+      - Name: Pset_CabinetLining
+        Properties:
+          PartOf: SF-DH
+      - Name: Pset_Links
+        Properties:
+          X: "SF-T4.East"
+          Width: "FN-BK.Pset_Bookshelf.BoardThickness"
+          Y: "SF-DH-LINING.Y"
+          Depth: "CV-SLAT-W052.Y - Y"
+          Elevation: "SF-F052.Top"
+          Top: "SF-DH-LINING.Elevation"
   - id: FN-BK
     Name: "Knihovna"
-    Description: "Open bookshelf above the sofa, from W-053's east face to SF-TC (linked, x 25.45–29.60; was 25.52–29.70). Depth 276, front flush with the pier's slat face (linked; 250 until 2026-11-20 f), standing on the oak counter (930, linked; was 980, 50 above it), up to the oak top board SF-DH-LINING (2432, linked; was 2450). Lamella back on a 6 mm oak-veneer backing (2026-11-20 c). Three shelves. Oak lamella back, slats 40 / gap 20 / thick 12. Sides, top and shelves 40 (Petr, 2026-11-20 f; 20 until then)."
+    Description: "Open bookshelf above the sofa, from W-053's east face to SF-TC (linked, x 25.45–29.60; was 25.52–29.70). The case (west side, shelves, lamella) stays 276, front flush with the pier's slat face (linked; 250 until 2026-11-20 f). The east side is the full 450 of the oak counter, lining SF-TC's west face (Petr, 2026-11-23 t904u; the box front is on the counter front, y 15.15). Standing on the oak counter (930, linked; was 980, 50 above it), up to the oak top board SF-DH-LINING (2432, linked; was 2450). No top board of its own since t904u (the lining is the top); three shelves respaced evenly in the new clear height. Lamella back on a 6 mm oak-veneer backing (2026-11-20 c). Oak lamella back, slats 40 / gap 20 / thick 12. Sides and shelves 40 (Petr, 2026-11-20 f; 20 until then)."
     PredefinedType: SHELF
     ObjectType: Bookshelf
     ContainedInStructure: SP-1.02
@@ -2277,9 +2307,15 @@ furniture:
           BackingThickness: 0.006
           BackingMaterial: "oak veneer"
           # Petr, 2026-11-20 f: "the living room counter is the same
-          # thickness as the bookshelves, which is 40". Sides, top and
+          # thickness as the bookshelves, which is 40". Sides and
           # shelves (20, guess:, until then); the living counter links here.
+          # The case has no top board of its own since 2026-11-23 (t904u):
+          # "you have a 4th shelf at the very top, basically the bookshelf
+          # has its own top plank. But there already is a 450 deep top plank
+          # spanning all the way from the dining area. The shelf doesnt need
+          # its own."
           BoardThickness: 0.04
+          HasTopBoard: false
       # Petr, 2026-11-20 c: "that whole bookshelf area and base cabinets
       # below it need to be tightened, the connection to the column is weird,
       # these and extra thin sliver of panels and some gaps." Side to the
@@ -2289,14 +2325,19 @@ furniture:
         Properties:
           # Petr, 2026-11-20 f: "dining area top cabinets as well as living room
           # shelves are exactly the delth of columns + accoustic cladding".
-          # Front flush with W-053's slat face, back on the north wall
-          # (15.60): 276 deep (250, front on the pier face 15.35, until then).
+          # The case (west side, shelves, lamella) stays that 276 (250, front
+          # on the pier face 15.35, until then). Petr, 2026-11-23 (t904u):
+          # "the bookshelf east wall needs to extend the whole 450mm to line
+          # the side of the tall corner cabinet". Box front on the counter
+          # front (SF-LB.Y), back on the north wall (15.60); CaseDepth keeps
+          # the 276 case.
           X: "SF-LB.X"
-          Y: "CV-SLAT-W053.Y"
-          Depth: "15.60 - CV-SLAT-W053.Y"
+          Y: "SF-LB.Y"
+          Depth: "15.60 - SF-LB.Y"
           East: "SF-TC.X"
           Elevation: "SF-LB.Top"
           Top: "SF-DH-LINING.Elevation"
+          Pset_Bookshelf.CaseDepth: "15.60 - CV-SLAT-W053.Y"
   # The table stays the Gatta. open: the plan's card says "STUL LIBRA"
   # (kaplan1934.cz) and its note "Spravne je: 120x240, s prodlouzenim na
   # 340", against this 1100 × 2400 Gatta. Not changed here; see
