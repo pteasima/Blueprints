@@ -36,6 +36,10 @@ Petr's original document is the sticky-note plan [`KitchenPlan.jpg`](../../input
 | 9 | Sink base SF-B800: a full-height pull-out with two equal bins trimmed under the disposer | A low **MERIVOBOX M** box (back 83 high, passes under the disposer) with **two IKEA FILUR 42 l** standing on its base, one each side of the disposer | Petr: “assume merivobox with upright Ikea Filur bins under main sink (the one you recommended)” |
 | 10 | Recycling SF-C850: three equal bins (`guess:`) | **Empty**, deepest MERIVOBOX that fits: NL 550, E, 70 kg | Petr: “assume deepest merivobox for southwest recycling cabinet, leave empty without bins for now” |
 | 11 | Island west top drawers: MAXIMERA low (78 box in a 100 front) | **MERIVOBOX M** (91) behind the same 100 fronts; the boxes sit lower than their fronts (see “MERIVOBOX remodel”) | N (the Blum box made for ~100 fronts) is only made up to NL 550, and Petr asked for NL 600 on the west |
+| 12 | Gridfinity play 1 mm (inside n × 42 + 1) | **2 mm** (inside n × 42 + 2, `GridfinityPlay`) | Petr, 2026-11-23 (t841u), approving the 2 mm leeway |
+| 13 | Island west widths 500 / 607 / 481 / 607 / 305 (row 7: unchanged) | **470 / 575 / 533 / 617 / 305** (SF-I500a / SF-I600a / SF-I500b / SF-I600b / SF-I300), still 2500. Insides 506 / 464 / 548 = **12 / 11 / 13 columns exactly** (were 12 / 9 / 12 with 33 spare). Ids keep their old nominal names | Petr (t837u): “when you say island west drawers have spare room in width, then you should change them … The south 300 stays. The hob drawer gets wider to fit gridfinity”; t841u: “can we make the middle two drawers closer in size (12 and 11 gridfinities instead of 13 and 10)?” |
+| 14 | Island sink SN-RS1840 against the south divider (t834u; landing 320) | **Cut-out 45 from the divider face**: rim a 218–438, cut-out a 240–416 in the 470 bay; **landing 258** | Petr (t840u): “are you positive it can be mounted this close to the cabinet edge? Its undermount”; t841u: “Im ok with 258 landing”. Teka sheet 61401450: clip hole Ø10 × 16 deep, **30 mm from the cut-out edge**; the rim (220 × 440) runs 22 past the cut-out. The old rim lay 9 mm on the divider and the south clip hole fell over it. `guess:` the clip plate reaches about 12 past its screw + 3 play → 45. `open:` ask the stone fabricator (clip count and positions, or glue + battens) |
+| 15 | West sink SN-RS15 rim 20 behind the carcass front (2026-11-22, t819u) | **Set back 21**: rim c 41–481, cut-out c 63–459 (45 behind the drawer front's inner face c 18) | Petr (t841u): “we'll setback the large west sink to be sure”. The front clip hole (cut-out c 42 − 30 = c 12) fell over the drawer front. Same `guess:` / `open:` as row 14 |
 
 ## Monoblocks
 
@@ -274,7 +278,7 @@ Both sinks are Teka BE LINEA RS15 and both are **undermount** only (Teka: “Spo
 | Sink | Where | Overall | Bowl | Worktop cut-out | Rim top | Source |
 | --- | --- | --- | --- | --- | --- | --- |
 | `SN-RS15`, Teka BE LINEA RS15 71.40 X | west run, SF-B800, centred in the 800, 60 mm toward the front since 2026-11-22 (rim c 20–460, bowl c 40–440) | 750 × 440 | 710 × 400 × 200 | **706 × 396, R13** | 910 (`Elevation` 0.73 → **0.71**) | [Teka 115000004](https://www.teka.com/cs-cz/produkt/be-linea-rs15-71-40_115000004/) |
-| `SN-RS1840`, Teka BE LINEA RS15 18.40 X | island, SF-I500a, south rim on the 500/600 line | 440 × 220 | 400 × 180 × 140 | **396 × 176, R13** | 910 (`Elevation` 0.77) | [Teka 115000010](https://www.teka.com/cs-cz/produkt/be-linea-rs15-18-40-ss_115000010/); the card on [`KitchenPlan.jpg`](../../inputs/ground_floor/KitchenPlan.jpg) next to the island's green rectangle |
+| `SN-RS1840`, Teka BE LINEA RS15 18.40 X | island, SF-I500a, cut-out 45 from the south divider face since 2026-11-23 (t841u; was against it, t834u) | 440 × 220 | 400 × 180 × 140 | **396 × 176, R13** | 910 (`Elevation` 0.77) | [Teka 115000010](https://www.teka.com/cs-cz/produkt/be-linea-rs15-18-40-ss_115000010/); the card on [`KitchenPlan.jpg`](../../inputs/ground_floor/KitchenPlan.jpg) next to the island's green rectangle |
 
 - `SN-RS15` sat with its rim at c 80–520 (bowl c 100–500, 120 mm of stone in front of the inner bowl). Since 2026-11-22 (Petr, t819u) it sits 60 mm toward the front: rim c 20–460, bowl c 40–440, cut-out c 42–438. That leaves 60 mm from the worktop front edge (c −20) to the inner bowl and 62 mm to the cut-out, still above Cosentino's ≥ 50 mm from a worktop edge to a cut-out ([Silestone Design & Installation, Jan 2024](https://www.cosentino.com), “Cut-outs: Sink and tap”). The 20 mm rim stops 2 mm behind the inner face of the 18 mm front (`guess:` glue and clip play; the rim must not sit on the front). SF-B800 has no front rail. The Teka install sheet 61401450 wants a **min 65 mm** back band for a Ø35 hole; with the bowl back at c 440 there are 140 mm to the backsplash face (c 580). Drain centre is 115 mm from the inner bowl back, measured from the official to-scale plan (±3 mm for line thickness), stored as `Pset_Sink DrainOffsetFromBack: 0.115` (c 325).
 - `SN-RS1840`'s long side runs across the island (east–west), because the plan's green rectangle is a little longer that way. `guess:` Both ways fit: the clear width is 473 and 440 is the longest side.
@@ -405,7 +409,7 @@ What it means here:
 
 - **Thicknesses: METOD**, 18 mm carcass board, dividers and central back (`BoardThickness`). `open:` the woodworker may want thicker boards for a monoblock; rerun `scripts/gridfinity_fit.py` and adjust the bay boxes.
 - **Inside: MAXIMERA deductions**, clear width − 84 and side depth − 96 (IKEA MAXIMERA; that section was replaced by “Drawers: Blum MERIVOBOX” on 2026-11-23).
-- **Target:** inside width n × 42 + 1 and depth m × 42 + 1 (`GridfinityPitch`, `GridfinityPlay`). Width: the nearest n; the shared divider moves, so a bay's clear width changes 1:1 with its width. The west row stays 2500: SF-I300 takes the difference, so the sink bay SF-I500a does not move. Depth: always round down, the bay gets shallower.
+- **Target:** inside width n × 42 + 1 and depth m × 42 + 1 (`GridfinityPitch`, `GridfinityPlay`; **+ 2 since 2026-11-23, t841u**). Width: the nearest n; the shared divider moves, so a bay's clear width changes 1:1 with its width. The west row stays 2500: SF-I300 takes the difference, so the sink bay SF-I500a does not move. Depth: always round down, the bay gets shallower.
 - Bays with `Pset_Drawers.Gridfinity: true`: SF-I600a, SF-I500b, SF-I600b. The model checks the fit and writes an `open:` note when a drawer is off the grid. `scripts/gridfinity_fit.py` prints the bay width and depth that would make it exact.
 
 | Bay | Width (old → new) | Clear | Drawer inside | Grid | Fronts (old → new) |
@@ -2021,3 +2025,36 @@ Inside is width × depth × side height above the base. “Below front” is how
 - Every carcass with NL 600 / 500 is at Blum's minimum (NL + 3): a thicker front (`open:` for the woodworker) or a thicker back takes a whole NL step.
 - The island is 1180, not 1199: the east carcass is the Blum minimum. If Petr wants about 20 unused behind the east boxes, the east row goes 530 → 550 and the island to 1200.
 - Inner drawers: same NL and inside depth as the main box in the model (their aluminium front piece is drawn 19 thick).
+
+
+### Widths for Gridfinity, sink clips (2026-11-23, t837u / t840u / t841u)
+
+Inside = clear − 51 (Blum MERIVOBOX); clear = width − 18 between two dividers, width − 27 at the north end (18 end side + 9 half divider); Gridfinity inside = n × 42 + 2.
+
+| Cabinet (north → south) | Width old → new | Clear | Inside | Gridfinity old → new |
+| --- | --- | ---: | ---: | --- |
+| SF-I500a (sink, door) | 500 → **470** | 473 → 443 | — | — |
+| SF-I600a | 607 → **575** | 589 → 557 | 538 → **506** | 12 × 13 → **12 × 13** (33 → 0 spare) |
+| SF-I500b | 481 → **533** | 463 → 515 | 412 → **464** | 9 × 13 → **11 × 13** |
+| SF-I600b (hob) | 607 → **617** | 589 → 599 | 538 → **548** | 12 × 13 → **13 × 13** |
+| SF-I300 | 305 | 278 | 227 | — |
+
+Depth: NL 600 inside 558 = 13 rows + 10 (was + 11 with 1 mm play). The hob stays centred on SF-I600b: cut-out a 1591.5–2191.5 → **1586.5–2186.5**.
+
+| Sink | Old | New |
+| --- | --- | --- |
+| Island SN-RS1840 rim / cut-out (a, along the run) | 280–500 / 302–478 | **218–438 / 240–416** (yaml y 13.300 → 13.362) |
+| Island: cut-out → divider face | 13 (rim 9 on the divider) | **45** (rim 23 clear) |
+| Island: north corner landing (worktop edge → bowl) | 320 | **258** |
+| Island: disposer (a) / to the divider face | 317.5–462.5 / 28.5 | 255.5–400.5 / **60.5** |
+| Island: tap hole c / stone to the cut-out | 581 / 50.5 | unchanged |
+| Island: sink cut-out → hob cut-out (clear stone) | 1113.5 (rim 1091.5) | **1170.5** (rim **1148.5**); to the hob glass 1160.5 |
+| West SN-RS15 rim / cut-out (c, behind the carcass front) | 20–460 / 42–438 | **41–481 / 63–459** (yaml x 19.380 → 19.359) |
+| West: worktop front edge → cut-out | 62 | 83 |
+| West: disposer (c) | 252.5–397.5 | 273.5–418.5 |
+| West: tap hole c / stone cut-out → hole / bowl → hole centre / hole edge → backsplash face (c 580) | 510 / 54.5 / 70 / 52.5 | **531 / 54.5 / 70 / 31.5** (Cosentino ≥ 50, Teka min 65: unchanged; the tap follows the bowl) |
+
+- **East island inner drawers: with 2 mm play the end bays' 547 inside is 1 short of 13 columns, so SF-E600a and SF-E700 drop to 12 × 10 (41 spare).** `open:` 626 / 624 / 624 / 626 (still 2500) would give 548 / 554 / 554 / 548 = 13 columns in all four. Not changed: Petr has not asked to touch the east widths.
+- Dining: still 14 × 8 (597 / 606 inside, 7 / 16 spare).
+- `guess:` / `open:` the Teka clip extent (45) is not on Teka's sheet; ask the stone fabricator before the cut-outs are templated.
+- SF-B800's FILUR clearances do not change (the sink moves along c, the bins sit beside the disposer across a): 3 mm each side, 11 mm under the bowl.
