@@ -288,7 +288,10 @@ systemFurniture:
           # loses its lowest shelf: the Maxxo Chamber Line 40 vacuum sealer
           # (EA-MAXXO-CL40) stands on its floor. The three shelves left keep
           # the even spacing of four (first 642 over the floor).
-          Layout: "door * hinge=R shelves=3 first=0.642 racks=4 | drawer 0.682 box=E inner=M"
+          # t874u: the drawer band 100-797 (was 782), board 797-815, so the
+          # drawer front ends at 795.5 like SF-T3's and SF-T4's and the
+          # door starts at 798.5, level with the oven door's bottom.
+          Layout: "door * hinge=R shelves=3 first=0.642 racks=4 | drawer 0.697 box=E inner=M"
           Contents: "rýže, těstoviny, tortilly, asie, pečení; "
       - Name: Pset_CabinetDoor
         Properties:
@@ -336,7 +339,11 @@ systemFurniture:
           # the carcass, not in the drawer: top at 661, the level of the
           # inner drawers' bottoms in SF-T2 / SF-T4 (661-752), 20 behind the
           # front's back, 300 over the E box; the drawer slides under it.
-          Layout: "door * hinge=L shelves=1 | niche 0.356 clear=0.564 | niche 0.593 clear=0.564 | drawer 0.682 box=E shelf=0.661"
+          # t874u: the drawer front reaches 795.5 (front_top), over the oven
+          # board's edge (782-800), one front gap under the oven door
+          # (798.5); band and board stay. The tray shelf follows the SF-T2 /
+          # SF-T4 inner drawers up 15: top 661 -> 676.
+          Layout: "door * hinge=L shelves=1 | niche 0.356 clear=0.564 | niche 0.593 clear=0.564 | drawer 0.682 box=E shelf=0.676 front_top=0.7955"
   - id: SF-T4
     Name: "Vysoká 500"
     Description: "Tall run, east end. Note: zbyva sirka cca 50. Modelled 500 until 2026-11-20, now 546: the remainder up to pier W-052 after the fridge was centred on the alley (guess:). The same note allows 600 if a drinks fridge goes underneath."
@@ -369,7 +376,8 @@ systemFurniture:
         Properties:
           # t870u: one outer drawer with one MERIVOBOX inner drawer, level
           # with SF-T2 / SF-T3 (was 400 + 410 to 910); the door grows to 800.
-          Layout: "door * hinge=R shelves=4 | drawer 0.682 box=E inner=M"
+          # t874u: band 100-797, board 797-815, front 101.5-795.5, door from 798.5.
+          Layout: "door * hinge=R shelves=4 | drawer 0.697 box=E inner=M"
           Contents: "sladkosti, brambůrky, oříšky; sladkosti, brambůrky, oříšky"
   - id: SF-TF
     Name: "Nad lednicí 908"
@@ -1530,7 +1538,7 @@ electricAppliances:
   # Chamber Line 40 vacuum sealer".
   - id: EA-MAXXO-CL40
     Name: "Maxxo VM Chamber Line 40"
-    Description: "Chamber vacuum sealer standing on the floor of the SF-T2 pantry (door band), behind the door racks. 345 × 285 × 225 (W × D × H), 8.5 kg, chamber 310 × 220 × 70 deep (Czech/Slovak retailers' spec tables: elektrocentrum24.cz, nay.sk, mujpramen.cz, 4home.sk; nay.sk answer for the chamber). Lid open height not published: guess: 500 (lid hinged at the back, about the depth of the top). Needs a socket in the pantry: open:."
+    Description: "Chamber vacuum sealer standing on the floor of the SF-T2 pantry (door band), behind the door racks. 345 × 285 × 225 (W × D × H), 8.5 kg, chamber 310 × 220 × 70 deep (Czech/Slovak retailers' spec tables: elektrocentrum24.cz, nay.sk, mujpramen.cz, 4home.sk; nay.sk answer for the chamber). Lid open height not published: about 510 (Petr's estimate, t874u: the whole lid lifts up, 225 + 285; was a 500 guess). Needs a socket in the pantry: open:."
     PredefinedType: USERDEFINED
     ObjectType: VacuumSealer
     ContainedInStructure: SP-1.02
@@ -1547,8 +1555,10 @@ electricAppliances:
           Width: 0.345
           Depth: 0.285
           Height: 0.225
-          # guess: not published; Petr offered to measure.
-          LidOpenHeight: 0.5
+          # Not published. Petr, 2026-11-23 (t874u, estimate): "the whole
+          # lid lifts up", so about height + depth = 225 + 285 = 510 (was a
+          # 500 guess).
+          LidOpenHeight: 0.51
   - id: EA-EVO3-W
     Name: "EcoMaster STANDARD EVO3"
     Description: "Food waste disposer under the west sink SN-RS15 (card on KitchenPlan.jpg). 368 high, 145 diameter (EcoMaster). Hangs from the bowl's drain, 115 mm from the inner bowl back (Teka RS15 plan, Pset_Sink DrainOffsetFromBack)."

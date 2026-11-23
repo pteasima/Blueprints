@@ -56,6 +56,7 @@ Petr's original document is the sticky-note plan [`KitchenPlan.jpg`](../../input
 | 29 | Under the oven line two drawers in SF-T2 / SF-T3 / SF-T4 (400 + 410 to 910 in T2/T4, 350 + 350 to 800 in T3) | **One outer drawer each, band 100–782, fronts 101.5–780.5 level in all three; oven niche from 800** (board 782–800). SF-T3: E box with only one shelf for oven trays; SF-T2 / SF-T4: E box with one MERIVOBOX M inner drawer. T2/T4 doors grow down to 783.5 | Petr, 2026-11-23 (t870u) |
 | 30 | SF-T2 pantry: four shelves | **Three (the lowest gone); the Maxxo VM Chamber Line 40 vacuum sealer on the pantry floor (z 800)**; door racks kept | Petr (t870u); sealer size from retailers' spec tables, lid-open height `guess:` |
 | 31 | SF-T3 tray shelf in the drawer (on the E box, z 325–344) | **Fixed shelf in the carcass, z 643–661** (top at the SF-T2 / SF-T4 inner drawers' bottom, 661), 20 behind the drawer front, no front, no runners; the drawer and its E box (top 325) slide under it | Petr, 2026-11-23 (t871u) |
+| 32 | An 18 board edge (SF-T3 oven board 782–800) visible between SF-T3's drawer front (top 780.5) and the oven door (798.5); T2/T4 doors from 783.5 | **All three drawer fronts 101.5–795.5 (694, was 679)**, one 3 front gap under the oven door; SF-T3's front reaches over its board (band and board unchanged), SF-T2 / SF-T4 bands 100–797 with boards 797–815 (were 782–800), their doors from **798.5** (was 783.5), level with the oven door | Petr, 2026-11-23 (t874u, call) |
 
 ## Monoblocks
 
@@ -2249,14 +2250,14 @@ Read as: the steam oven niche (and the pantry floor, and T4's door band) starts 
 | SF-T2 door racks (bottoms) | 1183.9 / 1491.3 / 1798.7 / 2106.1 | 1081.5 / 1414.5 / 1747.5 / 2080.5 (still 4, spread over the taller door) |
 | SF-T4 shelves | 4: 1214.4 / 1518.8 / 1823.2 / 2127.6 | 4: 1112 / 1442 / 1772 / 2102 |
 
-**Maxxo VM Chamber Line 40** (`EA-MAXXO-CL40`, `Pset_BuiltIn.Kind: Standing`, new `_standing_appliances`): 345 × 285 × 225 (W × D × H), 8.5 kg, chamber 310 × 220 × 70 deep, 300 W (retailers' spec tables, all the same: [elektrocentrum24.cz](https://www.elektrocentrum24.cz/maxxo-chamber-line-40), [nay.sk](https://www.nay.sk/vakuovacka-maxxo-chamber-line-40) (also the chamber size, a shop answer), [mujpramen.cz](https://www.mujpramen.cz/cz/maxxo-chamber-line-40), [4home.sk](https://www.4home.sk/maxxo-vakuova-balicka-vm-chamber-line-40/); read 2026-11-23). No maker drawing found; **the lid-open height is not published: `guess:` 500** (lid hinged at the back, about as long as the 285 top). Petr offered to measure.
+**Maxxo VM Chamber Line 40** (`EA-MAXXO-CL40`, `Pset_BuiltIn.Kind: Standing`, new `_standing_appliances`): 345 × 285 × 225 (W × D × H), 8.5 kg, chamber 310 × 220 × 70 deep, 300 W (retailers' spec tables, all the same: [elektrocentrum24.cz](https://www.elektrocentrum24.cz/maxxo-chamber-line-40), [nay.sk](https://www.nay.sk/vakuovacka-maxxo-chamber-line-40) (also the chamber size, a shop answer), [mujpramen.cz](https://www.mujpramen.cz/cz/maxxo-chamber-line-40), [4home.sk](https://www.4home.sk/maxxo-vakuova-balicka-vm-chamber-line-40/); read 2026-11-23). No maker drawing found; **the lid-open height is not published: about 510** (Petr's estimate, t874u: the whole lid lifts up, 225 + 285; 500 `guess:` until then).
 
 | Check (SF-T2, door band floor z 800) | Value |
 | --- | --- |
 | Clear width | 573 → 114 a side |
 | Clear depth behind the door racks | 483 (door back 18, racks 80 + 2 × 20 setback, back 621) → sealer at c 138–423, **198 left behind it** |
 | Under the lowest shelf (1442) | 642 → 417 over the closed sealer |
-| Lid open (`guess:` 500) | **142 left under the shelf** (fits if the real lid opens no higher than 642) |
+| Lid open (510, Petr's estimate since t874u; 500 `guess:` before) | **132 left under the shelf** (fits if the real lid opens no higher than 642) |
 | Door racks | at the door, c 17.5–98, lowest 1081.5–1151.5: in front of the sealer, no clash with the door shut |
 
 - `open:` a socket in the pantry for the sealer (none modelled), and heat: a 300 W pump in a closed cupboard is used with the door open.
@@ -2280,4 +2281,28 @@ Read as: the steam oven niche (and the pantry floor, and T4's door band) starts 
 
 **Tall cabinet shelf heights are placeholders.** Every shelf position in the tall run (SF-T1, SF-T2, SF-T3, SF-T4, SF-TF): the evenly spread door-band shelves, SF-T2's three shelves after the sealer (1442 / 1772 / 2102), SF-T3's top-door shelf, and this tray shelf's 661, is a placeholder for the drawings. **The exact positions are to be decided later** (Petr, t871u). Only the vacuum sealer's fit check depends on one: it needs the lowest SF-T2 shelf at 800 + the real lid-open height or higher.
 
-- `open:` **Consider aligning the oven bottom (and thus the T2/T3/T4 drawer tops, currently 800) with the fridge/freezer split line, once the fridge model is chosen** (Petr, t873u). The current Whirlpool WQ9I is modelled with its fridge/freezer door split at **800 above its base (z 800)**, which matches the oven line now, but that 800 is a `guess:` from photos (`Pset_ApplianceDoors.Split: 0.8`, base 50), not a Whirlpool drawing, and the fridge model is not final.
+- `open:` **Consider aligning the oven bottom (and thus the T2/T3/T4 drawer tops) with the fridge/freezer split line, once the fridge model is chosen** (Petr, t873u). Since t874u the line is: oven niche floor **800**, oven door and T2/T4 door bottoms **798.5**, the three drawer fronts' tops **795.5**. The current Whirlpool WQ9I is modelled with its fridge/freezer door split at **800 above its base (z 800)**, a `guess:` from photos (`Pset_ApplianceDoors.Split: 0.8`, base 50), not a Whirlpool drawing; the fridge model is not final.
+
+
+### Drawer fronts cover the oven board; T2/T4 boards up 15 (2026-11-23, t874u)
+
+> Petr (t874u, on a call, relayed): hide the 18 mm board edge between SF-T3's drawer front and the oven door by making all three drawer fronts (SF-T2, SF-T3, SF-T4) taller so their tops sit one front gap below the oven door; keep the oven at 800; raise the SF-T2 / SF-T4 boards so their doors start a gap above the new drawer tops. Vacuum sealer: “the whole lid lifts up”, so open height ≈ 225 + 285 = 510.
+
+| z (mm) | Old (t871u) | New |
+| --- | --- | --- |
+| SF-T2 / SF-T3 / SF-T4 drawer fronts | 101.5–780.5 (679) | **101.5–795.5 (694)**, 3 under the oven door (798.5) |
+| SF-T3 drawer band, oven board | 100–782, board 782–800 | unchanged; the front reaches over the board's edge (`front_top=0.7955`) |
+| Oven niche, oven door, microwave, SF-T3 top door | 800–1393, 798.5–1394.5, 1411–1767, 1776.5–2448.5 | unchanged |
+| SF-T2 / SF-T4 drawer bands | 100–782 | **100–797** (`drawer 0.697`) |
+| SF-T2 / SF-T4 boards | 782–800 | **797–815** |
+| SF-T2 / SF-T4 doors | 783.5–2448.5 (1665) | **798.5–2448.5 (1650)**, bottoms level with the oven door |
+| SF-T2 / SF-T4 inner M drawers | 661–752 | **676–767** (they follow the band) |
+| SF-T3 fixed tray shelf | 643–661 | **658–676** (top at the inner drawers' bottom again); 106 free over it to the oven board (782), 333 over the E box (top 325) |
+| SF-T2 shelves (placeholders) | 1442 / 1772 / 2102 | 1457 / 1782 / 2107 (same `first=0.642` over the raised floor) |
+| SF-T4 shelves (placeholders) | 1112 / 1442 / 1772 / 2102 | 1124 / 1451 / 1778 / 2105 |
+| Vacuum sealer EA-MAXXO-CL40 | on z 800, lid open 500 (`guess:`) | on **z 815**, lid open **510** (Petr's estimate) |
+
+- **The strip is hidden:** in the front view the three drawer fronts end at 795.5, the oven door and both neighbouring doors start at 798.5, so one 3 mm front gap runs across all three columns, like every other gap. The board edges (SF-T3 782–800, SF-T2 / SF-T4 797–815) are behind fronts or the 3 mm gap.
+- SF-T3's drawer front now laps 13.5 over its band (the board edge) on the fronts' plane, in front of the carcass; it pulls straight out, nothing behind it at that height but the board's edge.
+- `guess:` the oven door's bottom 1.5 below the niche floor: the model centres the 596 door on the 593 niche. Miele's side view (data sheet FS_12100360, “Seitenansicht DGC XXL”) shows the 596 front with 111.5 + 473.5 and a detail with “min. 2” and “4” at the bottom edge, but no plain door-to-niche-floor figure, so the 1.5 stays a guess. Check against the Miele drawing before the fronts are ordered.
+- Shelf positions in the tall run are still placeholders (t871u); the sealer fit was not re-checked for the raised floor beyond the model's own check.
