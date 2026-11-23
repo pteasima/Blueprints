@@ -107,6 +107,16 @@ Arms are the lower pieces: 300 thick, 660 high, 860 long. Each sits on the end s
 
 East-west is 300 + 1160 + 1160 + 1460 + 300 = 4380. North-south is 300 + 860 + 1160 + 1160 + 300 = 3780. The east face is x = 29.90, on the TV wall. The west face is x = 25.52. The low base (`SF-LB`) and the bookshelf (`FN-BK`) start at that same x. The 70 mm piece between pier W-053 (x = 25.45) and this face is real. Source: the living-room header of `furnishings.yaml` on `cursor/living-room-sp102-8b74` at `bc4fe87`.
 
+#### Under-sofa LED strip, marked for removal (2026-11-23, t920u)
+
+> Petr (t920u): "document that led strip for removal (Im not sure we have a cable for it on site)"
+
+Still in the electrical model; not removed yet. The fixture is `C186-S` (`ObjectType: LedStrip`) in [`inputs/ground_floor/electrical-1.02.yaml`](../../inputs/ground_floor/electrical-1.02.yaml): Soupis cable **186**, panel 1, `CYKY 4x2.5`, 15 m, plan mark 3(186). The viewer draws it from `Pset_YamlIfc.Path` at **z 0.050**, an L around the sofa: (25.428, 15.044) → (25.428, 11.378) → (26.489, 11.378) → (26.489, 14.171) → (29.145, 14.171). The Soupis note on that fixture plans to terminate cables 186, 187 and 188 in the deep box behind switch `C185-V`, then distribute them (probably with thinner cables) in the furniture. The model's own Question still says the outline is the sofa and that floor level is assumed.
+
+Reasons (t918u–t919u, and t920u): the Livom Harvey sits very low (~4 cm nominal, **<2 cm at the metal connectors**), so the strip would have to sit at the very perimeter, where it looks harsh and spotlights dust and rug edges. `open:` it is unverified whether cable 186 was actually pulled on site (it is in the Soupis and the model; Petr is not sure it is there).
+
+Petr is considering a recessed door-bottom brush strip under the sofa perimeter instead, to block items from getting lost underneath. Not modelled.
+
 ### Television
 
 The centre is the false ridge, y = 12.700. The branch states it as “centre of y 10.25–15.15, the room below the 450 cabinet”, 225 mm south of the full-room centre y = 12.925. It does not use the name “false ridge”. The identity of those two descriptions is [obyvak.md](obyvak.md). An earlier commit on the same PR (`82a6ea8`) had centred the set on the room, which is the wall-to-wall middle. Commit `bf214ac` moved it.
