@@ -2385,3 +2385,23 @@ The same change is tabulated in [furnishings.md](furnishings.md#continuous-oak-f
 
 - **The west oak side wall is not the full 450 mm to the wall**, and it starts at the counter, not the floor (SF-F052 is already there). `open:` oak cladding on the pier's west face.
 - Standard board lengths and joints are still ignored: the lining is one seamless piece, as asked.
+
+
+### Open cream niche under the living-room oak top (2026-11-23, t910u)
+
+> Petr (t910u): "Ok the architect doesnt want this but I still gotta see it: Below the 930 oak countertop (below its 890 bottom side), add another cream color 450 deep niche (430 deep if assuming 20 thick cream back panel). This niche's bottom sits at 650 (the sofa armrest height). The niche spans the full width of the bookself, i.e. starts at column and ends at corner tall cabinet. So the oak counter kinda acts like another shelf. Model and deploy, nothing else, I gotta see this in 3d to form an opinion."
+
+Parametric on `KR-LB`: `OpenNicheFloor: 0.65`, `OpenNicheBack: 0.02`, `OpenNicheEnds: "W"`. The oak top stays at 890–930 (thickness still linked to FN-BK). The seven blank cream fronts stay fixed (`Layout: "front *"`), shortened under the new floor board. Nothing else changes.
+
+| | Old | New |
+| --- | --- | --- |
+| Cream body / carcass top | 890 (rails under the oak top) | **650**, top face of a cream floor board (`SF-LB-NICHE-FLOOR`, 632–650, 18 mm `BoardThickness`) |
+| Open niche | none (cream ran up to 890) | **650–890**, full SF-LB width (x 25.45–29.60), 450 deep with a 20 mm cream back at the wall (clear **430**) |
+| Blank fronts (7 sections) | 1.5–888.5 | **1.5–630.5**, still seven fixed blanks |
+| Oak worktop | 890–930, 4150 × 450 over SF-LB plus the SF-F053 slab | unchanged |
+| West niche side board | none | **20 mm** cream, x 25.45–25.47, 450 deep, 650–890 (`guess:`, see below) |
+| East niche side board | — | **none**; SF-TC already closes the east end (cream, 450 deep, floor to 2450) |
+
+- **The sofa armrest (`FN-ARME`) is 660, but Petr set the niche floor at 650.** The floor is not linked to `FN-ARME.Height`, so it stays 650 as written.
+- `guess:` west side board only, 20 mm, the same thickness as the back panel. The pier W-053 east face is exposed in y 15.35–15.60, z 650–890 (SF-F053 only covers y 15.15–15.35). The lower carcass end side is still 18 mm (`BoardThickness`), so there is a 2 mm inward step at 650.
+- `guess:` the niche floor uses the existing 18 mm carcass `BoardThickness` (top face 650).

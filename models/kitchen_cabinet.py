@@ -935,6 +935,30 @@ class _Builder:
                 if _near(a1, bay.a0) or _near(a0, bay.a1):
                     bay.members.append(part.id)
 
+
+    def _open_niche_floor(self, bay: Bay | None = None) -> float | None:
+        """Top face of an open niche under the worktop, mm, or None.
+
+        ``Pset_KitchenRun.OpenNicheFloor`` (metres), overridable on the bay
+        (``Pset_KitchenBay.OpenNicheFloor``). The cream body stops there;
+        the worktop stays at the bay height.
+        """
+        raw = _prop(self.run.element, PSET_RUN, "OpenNicheFloor")
+        if bay is not None:
+            own = _prop(bay.element, PSET_BAY, "OpenNicheFloor")
+            if own is not None:
+                raw = own
+        return None if raw is None else float(raw) * 1000.0
+
+    def _open_niche_back(self) -> float:
+        """Cream back-panel thickness in the open niche, mm.
+
+        ``Pset_KitchenRun.OpenNicheBack`` (metres); default 20 (Petr, 2026-11-23,
+        t910u: "430 deep if assuming 20 thick cream back panel").
+        """
+        raw = _prop(self.run.element, PSET_RUN, "OpenNicheBack")
+        return 20.0 if raw is None else float(raw) * 1000.0
+
     def _box_run(self, bays, z_base, height, wt):
         """Bays as whole bodies under a stone worktop (``Carcass: Box``).
 
@@ -968,6 +992,17 @@ class _Builder:
 
         for bay in bays:
             z1 = z_base + height - bay_stack(bay)
+            floor = self._open_niche_floor(bay)
+            if floor is not None:
+                # Carcass (and the niche-floor board's underside) stops at
+                # floor - BoardThickness; the board's top face is ``floor``.
+                t = self.p["BoardThickness"]
+                if floor - t <= z0 + 2 * t or floor >= z1 - TOL:
+                    raise ValueError(
+                        f"{bay.id}: OpenNicheFloor {floor:.0f} must sit under the "
+                        f"worktop underside {z1:.0f}, with room for the floor board"
+                    )
+                z1 = floor - t
             if has_fronts(bay.element):
                 # A bay with fronts is a carcass of its own (end sides,
                 # bottom, back, rails) with its fronts, on the run's plinth.
@@ -976,6 +1011,7 @@ class _Builder:
                 continue
             self.add(Part(f"{bay.id}-BODY", bay.element.get("Name") or bay.id, "Body",
                           [(bay.a0, bay.a1, bay.c0, bay.c1, z_base, z1)], material=material), bay)
+        self._open_niche_linings(bays, z_base, height, wt)
         self._dock_appliances(bays)
         self._standing_appliances()
         self._join_flush_kickboards(bays)
@@ -1025,6 +1061,46 @@ class _Builder:
                               label=_worktop_label(under), material=under, props={"Material": under}))
         if clad:
             self._cladding(_rows(run.bays), z_base, z_base + height - wt - ul)
+
+
+    def _open_niche_linings(self, bays, z_base, height, wt):
+        """Cream back (and end sides, if needed) of an open niche under the worktop.
+
+        The niche is OpenNicheFloor to the worktop underside, 450 deep overall,
+        with a cream back panel ``OpenNicheBack`` thick at the wall (clear
+        depth 450 minus that). ``OpenNicheEnds`` lists compass ends that need
+        a cream side board to close the niche (``W``, ``E``, …).
+        """
+        run = self.run
+        back_t = self._open_niche_back()
+        # guess: side boards are the same 20 mm as the back panel.
+        side_t = back_t
+        ends = str(_prop(run.element, PSET_RUN, "OpenNicheEnds", "") or "").split()
+        underside = z_base + height - wt
+        for bay in bays:
+            floor = self._open_niche_floor(bay)
+            if floor is None:
+                continue
+            a0, a1 = bay.a0, bay.a1
+            sides = {}
+            for name in ends:
+                if name == self._end_name(-1):
+                    sides[name] = (a0, a0 + side_t)
+                    a0 = a0 + side_t
+                elif name == self._end_name(1):
+                    sides[name] = (a1 - side_t, a1)
+                    a1 = a1 - side_t
+                else:
+                    raise ValueError(f"{run.id}: OpenNicheEnds {name!r} is not a run end")
+            c0, c1 = self.c_range(bay, 0.0, bay.depth)
+            for name, a_range in sides.items():
+                self.add(Part(f"{bay.id}-NICHE-END-{name}", f"Bok niky {name}", "EndSide",
+                              [(*a_range, c0, c1, floor, underside)],
+                              props={"OpenNiche": True, "End": name}), bay)
+            bc0, bc1 = self.c_range(bay, bay.depth - back_t, bay.depth)
+            self.add(Part(f"{bay.id}-NICHE-BACK", "Záda niky", "Back",
+                          [(a0, a1, bc0, bc1, floor, underside)],
+                          props={"OpenNiche": True, "Thickness": round(back_t / 1000.0, 6)}), bay)
 
     def _pairs(self, rows):
         """Back-to-back rows: a row facing c0 whose back plane is another row's back plane."""
@@ -1244,7 +1320,17 @@ class _Builder:
             c0, c1 = self.c_range(bay, back_y, bay.depth)
             self.add(Part(f"{bay.id}-BACK", "Záda", "Back", [(lo, hi, c0, c1, z0 + tb, z1)]), bay)
         hob = self.run.hobs.get(bay.id)
-        if p["WorktopThickness"] > 0:
+        floor = self._open_niche_floor(bay)
+        if floor is not None:
+            # A full-plan cream board, top face at OpenNicheFloor: the niche
+            # floor, and the top of the cream body (Petr, 2026-11-23, t910u).
+            # z1 is the underside. The board is the bay's full width and depth,
+            # flush with the fronts, sitting on the end sides and dividers.
+            c0, c1 = self.c_range(bay, 0.0, bay.depth)
+            self.add(Part(f"{bay.id}-NICHE-FLOOR", "Dno niky", "Top",
+                          [(bay.a0, bay.a1, c0, c1, z1, floor)],
+                          props={"OpenNicheFloor": round(floor / 1000.0, 6)}), bay)
+        elif p["WorktopThickness"] > 0:
             if not self._has_sink(bay):
                 rails = [("F", "Přední lišta", self.c_range(bay, tf, tf + p["RailDepth"]))]
                 if not shared_back:
@@ -1395,8 +1481,9 @@ class _Builder:
         for k, (number, a0, a1) in enumerate(zip(order, edges, edges[1:])):
             first, last = k == 0, k == len(widths) - 1
             if not last:
+                div_top = z1 if self._open_niche_floor(bay) is not None else z1 - t
                 self.add(Part(f"{bay.id}-SDIV{k + 1}", f"Přepážka sekcí {k + 1}", "Divider",
-                              [(a1 - t / 2, a1 + t / 2, dc0, dc1, z0 + tb, z1 - t)]), bay)
+                              [(a1 - t / 2, a1 + t / 2, dc0, dc1, z0 + tb, div_top)]), bay)
             sub = replace(bay, id=f"{bay.id}-S{number}", element=section_element(bay.element, number),
                           a0=a0, a1=a1, clear_lo=bay.clear_lo if first else a0 + t / 2,
                           clear_hi=bay.clear_hi if last else a1 - t / 2, zones=[])
