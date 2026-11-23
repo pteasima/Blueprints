@@ -45,6 +45,7 @@ Petr's original document is the sticky-note plan [`KitchenPlan.jpg`](../../input
 | 18 | SF-B800 FILUR frame: bins 22 over the carcass bottom | **10** over it: plate top 660 → 648, 62 under the bowl | Petr, 2026-11-23 (t849u) |
 | 19 | — | **Petr to measure a real FILUR (rim height, outer dimensions) and the installed disposer / trap on site before the MDF frame is cut.** | Petr, 2026-11-23 (t848u): “Note in docs that I should measure this on site.” |
 | 20 | Island east 625 × 4 (t835u: equal widths) | **626 / 617 / 617 / 640** (SF-E600a / b / c / SF-E700, north to south), still 2500. Inner drawer insides 548 / 548 / 548 / 562 = **13 columns + 2 mm in the north three, SF-E700 13 + 14 spare** (were 12 / 13 / 13 / 12). **The fronts are no longer equal (623 / 614 / 614 / 637).** | Petr, 2026-11-23 (t851u): north three exactly 13 Gridfinity columns + 2 mm, the southmost takes the rest |
+| 21 | SF-A250 MERIVOBOX E pull-out | **Accepted for now at 212 wide (134 inside).** `open:` it may need a custom pull-out later instead of MERIVOBOX; Blum's narrow-cabinet alternative is SPACE TWIN | Petr, 2026-11-23 (t855u) |
 
 ## Monoblocks
 
