@@ -53,6 +53,8 @@ Petr's original document is the sticky-note plan [`KitchenPlan.jpg`](../../input
 | 26 | SF-B800 FILUR frame with two 16 MDF side walls on the runners and a 120 back panel under the disposer (rows 16, 17) | **No side walls, no back panel**: the MOVENTO runners screw straight under the plate's 16 edge strips (runner bottom z 609, was 118 on the carcass bottom), a 16 × 16 × 40 block under each arm's back end for the rear hook, the bins hang free below the plate; **two 90° steel angles 40 × 40 × 3, 30 wide**, inside on the bridge between the bins, tie the plate to the decor front | Petr, 2026-11-23 (t866u): “NO side walls … bins hang freely below with no wooden box around them”; angles and blocks `guess:`; MOVENTO without drawer sides is `open:` |
 | 27 | MERIVOBOX boxes drawn in the front cream | **Blum SW-M silk white matt** (sides, backs, bases, inner drawers, SPACE TWIN upper box); fronts stay cream | Petr (t866u): “make merivobox hardware white”; colour name **Blum** (MERIVOBOX colours SW-M silk white matt, IG-M indium grey matt, OG-M orion grey matt) |
 | 28 | SF-T3 oven stack at the counter line: steam oven niche bottom 910, bottom band 810 (drawers 400 + 410) | **Lowered 110 for Zuzana (174 cm): niche bottom 800, bottom band 700 (drawers 350 + 350), microwave niche straight above, top door band 537 → 647**. SF-T3's drawers no longer line up with SF-T2 / SF-T4 (400 + 410) | Petr, 2026-11-23 (t869u) |
+| 29 | Under the oven line two drawers in SF-T2 / SF-T3 / SF-T4 (400 + 410 to 910 in T2/T4, 350 + 350 to 800 in T3) | **One outer drawer each, band 100–782, fronts 101.5–780.5 level in all three; oven niche from 800** (board 782–800). SF-T3: E box with only one shelf for oven trays; SF-T2 / SF-T4: E box with one MERIVOBOX M inner drawer. T2/T4 doors grow down to 783.5 | Petr, 2026-11-23 (t870u) |
+| 30 | SF-T2 pantry: four shelves | **Three (the lowest gone); the Maxxo VM Chamber Line 40 vacuum sealer on the pantry floor (z 800)**; door racks kept | Petr (t870u); sealer size from retailers' spec tables, lid-open height `guess:` |
 
 ## Monoblocks
 
@@ -1789,7 +1791,7 @@ Every cream front, end panel, cladding and plinth (`kitchen-front-cream`) is **m
 | Dining base: SF-F052-DOOR1, SF-DN-S1…S4-D1, SF-F053-DOOR1 (6) | top | same |
 | Tall: SF-T2/T3/T4-D1, -D2 (6 drawers under the doors) | top | same |
 | Tall doors: SF-T1-DOOR1 (101–2449), SF-T2-DOOR1, SF-T4-DOOR1 (911–2449), SF-TC-DOOR1 (701–2449) | side | the same along the latch edge, full height |
-| Upper doors: SF-T3-DOOR1 (1794–2449 since t869u, was 1904–2449), SF-TF-DOOR1/2 (1927–2449) | bottom | the same along the bottom edge (`guess:`) |
+| Upper doors: SF-T3-DOOR1 (1776–2449 since t870u; 1794 t869u, 1904 before), SF-TF-DOOR1/2 (1927–2449) | bottom | the same along the bottom edge (`guess:`) |
 
 33 fronts, about 23.5 m of grip.
 
@@ -2222,3 +2224,41 @@ Blum, catalogue 2024/25 [p. 282](https://publications.blum.com/2024/catalogue/en
 - Drawers: both stay MERIVOBOX E, NL 600, 70 kg, inside 531 × 558 × 176 (the E box fits a 350 slot as it fitted 400/410); top J grips unchanged. The upper door keeps its bottom-edge J grip (it still starts above 1400).
 - `open:` SF-T3's drawer joints (450, 800) no longer line up with SF-T2's and SF-T4's (510, 910). Not changed (not asked); say if they should follow.
 - `guess:` the ergonomics: steam oven door top 1412, microwave centre about 1607.
+
+
+### One drawer under the oven line, vacuum sealer in the pantry (2026-11-23, t870u)
+
+> Petr (t870u): “Lets even a little lower with the oven, 800 start is good. Below oven line, only keep a single outer drawer. So all 3 (below oven and either side) will start at the same height (800, below oven). The middle (below oven) one will only have a shallow shelf on the inside for oven trays, no inside drawers. The ones on either side will have a single inside merivobox drawer too. … That upper tall cupboard/pantry between fridge and ovens will keep its small hinged door shelves, but will [have] its first main shelf removed and will instead fit at its base a Maxxo Chamber Line 40 vacuum sealer”.
+
+Read as: the steam oven niche (and the pantry floor, and T4's door band) starts at **z 800**, the top of an 18 board 782–800 in all three columns; the drawer bands below are 100–782, so the three drawer fronts end level at 780.5.
+
+| z (mm) | Old (t869u) | New |
+| --- | --- | --- |
+| SF-T3 below the oven | drawers 350 + 350, fronts 101.5–448.5 / 451.5–798.5 | **one drawer, front 101.5–780.5 (679)**, E box, one shelf 325–344 on the box's top edge, no inner drawers |
+| SF-T3 board under the oven | 800–818 | **782–800** |
+| Steam oven niche (clear 593), body, fascia | 818–1411, 819–1410, 816.5–1412.5 | **800–1393, 801–1392, 798.5–1394.5** |
+| Board between the niches | 1411–1429 | **1393–1411** |
+| Microwave niche (clear 356), body | 1429–1785, 1430–1784 | **1411–1767, 1412–1766** |
+| Board over the microwave | 1785–1803 | **1767–1785** |
+| SF-T3 top door | 1794.5–2448.5 (654), shelf 2108.5 | **1776.5–2448.5 (672)**, shelf 2099.5 |
+| SF-T2 / SF-T4 below the doors | drawers 400 + 410, fronts 101.5–508.5 / 511.5–908.5 | **one drawer, front 101.5–780.5 (679)**, E box, one M inner drawer (661–752, latch ZI7.0M07) |
+| SF-T2 / SF-T4 board under the door band | 910–928 | **782–800** |
+| SF-T2 / SF-T4 doors | 911.5–2448.5 (1537) | **783.5–2448.5 (1665)** |
+| SF-T2 shelves | 4: 1214.4 / 1518.8 / 1823.2 / 2127.6 | **3: 1442 / 1772 / 2102** (the four-shelf spacing with the lowest removed, `first=0.642`) |
+| SF-T2 door racks (bottoms) | 1183.9 / 1491.3 / 1798.7 / 2106.1 | 1081.5 / 1414.5 / 1747.5 / 2080.5 (still 4, spread over the taller door) |
+| SF-T4 shelves | 4: 1214.4 / 1518.8 / 1823.2 / 2127.6 | 4: 1112 / 1442 / 1772 / 2102 |
+
+**Maxxo VM Chamber Line 40** (`EA-MAXXO-CL40`, `Pset_BuiltIn.Kind: Standing`, new `_standing_appliances`): 345 × 285 × 225 (W × D × H), 8.5 kg, chamber 310 × 220 × 70 deep, 300 W (retailers' spec tables, all the same: [elektrocentrum24.cz](https://www.elektrocentrum24.cz/maxxo-chamber-line-40), [nay.sk](https://www.nay.sk/vakuovacka-maxxo-chamber-line-40) (also the chamber size, a shop answer), [mujpramen.cz](https://www.mujpramen.cz/cz/maxxo-chamber-line-40), [4home.sk](https://www.4home.sk/maxxo-vakuova-balicka-vm-chamber-line-40/); read 2026-11-23). No maker drawing found; **the lid-open height is not published: `guess:` 500** (lid hinged at the back, about as long as the 285 top). Petr offered to measure.
+
+| Check (SF-T2, door band floor z 800) | Value |
+| --- | --- |
+| Clear width | 573 → 114 a side |
+| Clear depth behind the door racks | 483 (door back 18, racks 80 + 2 × 20 setback, back 621) → sealer at c 138–423, **198 left behind it** |
+| Under the lowest shelf (1442) | 642 → 417 over the closed sealer |
+| Lid open (`guess:` 500) | **142 left under the shelf** (fits if the real lid opens no higher than 642) |
+| Door racks | at the door, c 17.5–98, lowest 1081.5–1151.5: in front of the sealer, no clash with the door shut |
+
+- `open:` a socket in the pantry for the sealer (none modelled), and heat: a 300 W pump in a closed cupboard is used with the door open.
+- `open:` SF-T3's shelf: it lies on the E box's top edge (z 325, `at=0.176`), oven trays on it; how it is held (on the BOXCAP / gallery, or a board in its own runners) is the joiner's. 176 mm of box below it.
+- **The line at 800 is not one line in the front view:** the drawer fronts end at 780.5 in all three columns, the T2 / T4 doors start at 783.5 (covering their board), but the oven fascia starts at 798.5 and the 18 board edge 782–800 shows between it and SF-T3's drawer (as before, one board higher). Say if the T2/T4 doors should start at 798.5 too (they would leave the same 18 strip of board visible) or the drawer front should be taller.
+- Fronts of 679 on an E box (192 high): the tall front pull-out with the top front fixing bracket, as on the island (**Blum**: E pull-outs add the top front fixing bracket).
