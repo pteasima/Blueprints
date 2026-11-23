@@ -58,6 +58,10 @@ Petr's original document is the sticky-note plan [`KitchenPlan.jpg`](../../input
 | 31 | SF-T3 tray shelf in the drawer (on the E box, z 325–344) | **Fixed shelf in the carcass, z 643–661** (top at the SF-T2 / SF-T4 inner drawers' bottom, 661), 20 behind the drawer front, no front, no runners; the drawer and its E box (top 325) slide under it | Petr, 2026-11-23 (t871u) |
 | 32 | An 18 board edge (SF-T3 oven board 782–800) visible between SF-T3's drawer front (top 780.5) and the oven door (798.5); T2/T4 doors from 783.5 | **All three drawer fronts 101.5–795.5 (694, was 679)**, one 3 front gap under the oven door; SF-T3's front reaches over its board (band and board unchanged), SF-T2 / SF-T4 bands 100–797 with boards 797–815 (were 782–800), their doors from **798.5** (was 783.5), level with the oven door | Petr, 2026-11-23 (t874u, call) |
 | 33 | SF-T4 door without racks | **Four door racks like SF-T2's** (80 deep, 70 high, 40 in from each door edge, spread evenly over the door); its four shelves stand back behind them (front edge c 38 → 138) | Petr, 2026-11-23 (t874u) |
+| 34 | Vacuum sealer on the SF-T2 pantry floor, three shelves | **Sealer in the island's northmost east drawer SF-E600a**, on its inner drawer, turned 90° with its front facing north; SF-T2 back to four even shelves (1124 / 1451 / 1778 / 2105, placeholders) | Petr, 2026-11-23 (t883u) |
+| 35 | SF-E600a: E box + inner M (coupled, 771–862) + K (483.5–612.5) | **E box + one inner K (621–750)**, its floor 637 exactly 255 (sealer 225 + 30) under the band top 892; no Gridfinity in SF-E600a | Petr (t883u) |
+| 36 | Island east widths N→S 626 / 617 / 617 / 640 (SF-E700 off the Gridfinity grid) | **640 / 617 / 617 / 626**: SF-E600a (north) off the grid (inside 562), SF-E700 548 inside = 13 columns + 2 | Petr (t883u) |
+| 37 | Tall north-wall doors (SF-T1, SF-T2, SF-T4, SF-TC): J grip on the side | **Upside-down J on the bottom edge** (SF-T3's top door already had it); **SF-T1 split into two doors**, both hinged L, 597 × 1172 each (101.5–1273.5 and 1276.5–2448.5; was one 597 × 2347), two shelves each (placeholders) | Petr (t883u) |
 
 ## Monoblocks
 
@@ -2308,3 +2312,14 @@ Read as: the steam oven niche (and the pantry floor, and T4's door band) starts 
 - `guess:` the oven door's bottom 1.5 below the niche floor: the model centres the 596 door on the 593 niche. Miele's side view (data sheet FS_12100360, “Seitenansicht DGC XXL”) shows the 596 front with 111.5 + 473.5 and a detail with “min. 2” and “4” at the bottom edge, but no plain door-to-niche-floor figure, so the 1.5 stays a guess. Check against the Miele drawing before the fronts are ordered.
 - SF-T4 gets SF-T2's door racks (four, same size and even spacing over its 1650 door; Petr, t874u), so its shelves stand 100 further back (c 138–621, 483 deep, was 583).
 - Shelf positions in the tall run are still placeholders (t871u); the sealer fit was not re-checked for the raised floor beyond the model's own check.
+
+
+### Sealer in the island, island east widths, bottom grips on the tall doors (2026-11-23, t883u)
+
+> Petr (t883u): remove the vacuum sealer from the tall cabinet, return a regular shelf there; the sealer goes into the northmost drawer on the island's east side, facing north (operated from the side with the drawer pulled out); its top inner drawer is removed, the middle one carries the sealer and is just tall enough for it closed with about 30 above; the island east widths change so this northmost one is off the Gridfinity grid instead of the southmost; all tall cabinets on the north wall get upside-down J grips at their bottom edge; the westmost one is split into two, both hinged.
+
+- **Sealer** (`EA-MAXXO-CL40`, `Pset_BuiltIn.InnerDrawer: SF-E600a-D1-I1`, `Rotation: 90`, `Faces: N`): 285 along the run × 345 across the drawer's depth × 225, on the K inner drawer's floor (z 637), against its north side. Inside 562 × 458: **277 spare along the run, 113 across the depth, 30 over the closed sealer** to the band top (892, under the front rail). It slides with the inner drawer (coupled to the front). `open:` the inner drawer's K side (129 high) covers the lower part of the sealer's north face; the controls are on its top/front edge (`guess:`, check the real unit). The lid-open height (510) needs the drawer pulled out.
+- **SF-E600a**: `inner=K inner_clear=0.255` (new option: the top inner drawer's floor that far under the band top). The E box (133–325) stays; 296 free between it and the inner drawer.
+- **Island east, N→S**: SF-E600a 626 → **640** (clear 613, inside 562, off the grid), SF-E600b / SF-E600c 617 (unchanged), SF-E700 640 → **626** (inside 548 = 13 × 42 + 2).
+- **Grips**: `grip=bottom` on SF-T1 (both doors), SF-T2, SF-T4, SF-TC; the J profile is mirrored at the bottom edge (upside down). SF-T3's top door and the cabinet over the fridge (SF-TF) already had it.
+- **SF-T1**: `door * … | door 1.175 …`: two equal bands of 1175 from the plinth top, doors 597 × 1172 each (gap 3 between them), hinged L with the filler on the wall side as before.

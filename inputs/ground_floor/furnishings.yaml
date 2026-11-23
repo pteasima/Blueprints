@@ -246,7 +246,11 @@ systemFurniture:
       # for beer crates, then evenly (guess:).
       - Name: Pset_Fronts
         Properties:
-          Layout: "door * hinge=L width=0.6 shelves=4 first=0.4"
+          # Petr, 2026-11-23 (t883u): "Westmost one is split into two (both
+          # halves stay hinged)", upside-down J grips on the bottom edges.
+          # Two equal bands of 1175 (plinth top 100 to 2450), two shelves
+          # each (placeholders; the lowest still 400 over the bottom).
+          Layout: "door * hinge=L width=0.6 shelves=2 grip=bottom | door 1.175 hinge=L width=0.6 shelves=2 first=0.4 grip=bottom"
           Contents: "dole nápoje, basy od piva / nahoře plechovky, vývary, trvanlivé potraviny"
       - Name: Pset_CabinetDoor
         Properties:
@@ -291,7 +295,9 @@ systemFurniture:
           # t874u: the drawer band 100-797 (was 782), board 797-815, so the
           # drawer front ends at 795.5 like SF-T3's and SF-T4's and the
           # door starts at 798.5, level with the oven door's bottom.
-          Layout: "door * hinge=R shelves=3 first=0.642 racks=4 | drawer 0.697 box=E inner=M"
+          # t883u: the vacuum sealer moved to the island (SF-E600a); four
+          # shelves again, evenly spaced (placeholders). Bottom J grip.
+          Layout: "door * hinge=R shelves=4 racks=4 grip=bottom | drawer 0.697 box=E inner=M"
           Contents: "rýže, těstoviny, tortilly, asie, pečení; "
       - Name: Pset_CabinetDoor
         Properties:
@@ -379,7 +385,8 @@ systemFurniture:
           # t874u: band 100-797, board 797-815, front 101.5-795.5, door from 798.5.
           # t874u: door racks like SF-T2's (Petr: "the same small hinged-door
           # shelves"), 4 over the door; the shelves stand back behind them.
-          Layout: "door * hinge=R shelves=4 racks=4 | drawer 0.697 box=E inner=M"
+          # t883u: upside-down J grip on the door's bottom edge (was side).
+          Layout: "door * hinge=R shelves=4 racks=4 grip=bottom | drawer 0.697 box=E inner=M"
           Contents: "sladkosti, brambůrky, oříšky; sladkosti, brambůrky, oříšky"
   - id: SF-TF
     Name: "Nad lednicí 908"
@@ -629,10 +636,15 @@ systemFurniture:
           # island east, please double check that you've added them." Two
           # MERIVOBOX inner drawers behind the front (M coupled, K), as in
           # the dining run; the F box stays at the bottom.
-          Layout: "drawer * box=E inner=M,K"
+          # Petr, 2026-11-23 (t883u): the vacuum sealer goes in here, facing
+          # north; the top inner drawer (M) is gone, the middle one (K)
+          # carries the sealer with just its closed height + 30 over its
+          # floor (225 + 30 = 255 to the band top).
+          Layout: "drawer * box=E inner=K inner_clear=0.255"
       - Name: Pset_Drawers
         Properties:
-          Gridfinity: true
+          # t883u: no Gridfinity plate under the sealer (its inner drawer).
+          Gridfinity: false
           # Petr, 2026-11-22 (t795u): "for the island east side, we want gridfinity on
           # the inner drawer, the bottom main one doesnt need gridfinity (remove the
           # gridfinity plate too)".
@@ -646,11 +658,11 @@ systemFurniture:
         Properties:
           X: "SF-E600b.X"
           Y: "SF-E600b.Y + SF-E600b.Width"
-          # Petr, 2026-11-23 (t851u): the north three inner drawers exactly
-          # 13 Gridfinity columns + 2 (inside 548 = clear - 51; clear = width
-          # - 27 at an end, width - 18 between dividers): SF-E600a 626,
-          # SF-E600b / SF-E600c 617; SF-E700 takes the rest (640).
-          Width: "0.626"
+          # Petr, 2026-11-23 (t883u): this northmost bay is now the one off
+          # the Gridfinity grid; it takes the rest (640, was 626). The south
+          # three are 13 columns + 2 (inside 548): SF-E700 626, SF-E600b /
+          # SF-E600c 617 (t851u had SF-E600a 626 and SF-E700 the rest).
+          Width: "(SF-I500a.Y - (SF-I300.Y - SF-I300.Width)) - 0.626 - 2 * 0.617"
   - id: SF-E600b
     Name: "Ostrov východ 600"
     Description: "Island, east row. Second module, 607 (was 600) for whole Gridfinity cells. One full-height drawer (2026-11-20). Faces east."
@@ -801,11 +813,10 @@ systemFurniture:
           # 21.672 before).
           X: "0.0 + 21.66"
           Y: "(SF-I300.Y - SF-I300.Width)"
-          # Petr, 2026-11-23 (t851u): the north three inner drawers exactly
-          # 13 Gridfinity columns + 2 (inside 548 = clear - 51; clear = width
-          # - 27 at an end, width - 18 between dividers): SF-E600a 626,
-          # SF-E600b / SF-E600c 617; SF-E700 takes the rest (640).
-          Width: "(SF-I500a.Y - (SF-I300.Y - SF-I300.Width)) - 0.626 - 2 * 0.617"
+          # Petr, 2026-11-23 (t883u): the south three exactly 13 Gridfinity
+          # columns + 2 (inside 548): SF-E700 626 (was 640, the rest), SF-E600b /
+          # SF-E600c 617; SF-E600a (north) takes the rest.
+          Width: "0.626"
   - id: SF-A250
     Name: "Západ 250 úklid"
     Description: "Section A, south side. Cleaning pull-out, 232 (250 until 2026-11-22: the dishwasher slot's 18 end panel came out of it). Left when facing the west wall."
@@ -1289,7 +1300,8 @@ systemFurniture:
       # bottom, so the lowest 700 is a fixed slab. All guess:.
       - Name: Pset_Fronts
         Properties:
-          Layout: "door * hinge=R shelves=4 | front 0.7"
+          # t883u: bottom J grip on the tall door (was side).
+          Layout: "door * hinge=R shelves=4 grip=bottom | front 0.7"
       # Petr, 2026-11-20 c: "That tall corner cabinet in living room should
       # be the exact width of the couch armrest." Width and east face from
       # the arm (FN-ARME), front on the arm's back end (the sofa back line).
@@ -1540,7 +1552,7 @@ electricAppliances:
   # Chamber Line 40 vacuum sealer".
   - id: EA-MAXXO-CL40
     Name: "Maxxo VM Chamber Line 40"
-    Description: "Chamber vacuum sealer standing on the floor of the SF-T2 pantry (door band), behind the door racks. 345 × 285 × 225 (W × D × H), 8.5 kg, chamber 310 × 220 × 70 deep (Czech/Slovak retailers' spec tables: elektrocentrum24.cz, nay.sk, mujpramen.cz, 4home.sk; nay.sk answer for the chamber). Lid open height not published: about 510 (Petr's estimate, t874u: the whole lid lifts up, 225 + 285; was a 500 guess). Needs a socket in the pantry: open:."
+    Description: "Chamber vacuum sealer in the island's northmost east drawer SF-E600a, on its inner drawer's floor, front facing north (in the SF-T2 pantry until 2026-11-23, t883u). 345 × 285 × 225 (W × D × H), 8.5 kg, chamber 310 × 220 × 70 deep (Czech/Slovak retailers' spec tables: elektrocentrum24.cz, nay.sk, mujpramen.cz, 4home.sk; nay.sk answer for the chamber). Lid open height not published: about 510 (Petr's estimate, t874u: the whole lid lifts up, 225 + 285; was a 500 guess). Needs a socket in the pantry: open:."
     PredefinedType: USERDEFINED
     ObjectType: VacuumSealer
     ContainedInStructure: SP-1.02
@@ -1551,9 +1563,16 @@ electricAppliances:
           ModelLabel: "VM Chamber Line 40"
       - Name: Pset_BuiltIn
         Properties:
+          # Petr, 2026-11-23 (t883u): "vaccum sealer goes into northmost
+          # drawer on island east side. Sealer faces north (you operate it
+          # from the side when drawer is pulled out)". On the floor of that
+          # drawer's inner drawer, turned 90° (345 along the drawer's depth,
+          # 285 along the run), front against the north side.
           Kind: Standing
-          Bay: SF-T2
-          Zone: 1
+          Bay: SF-E600a
+          InnerDrawer: SF-E600a-D1-I1
+          Rotation: 90
+          Faces: N
           Width: 0.345
           Depth: 0.285
           Height: 0.225

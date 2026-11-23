@@ -109,7 +109,7 @@ def test_island_east_row_drawers_are_on_the_gridfinity_grid():
         assert part.props["DrawerSide"] == "E" and i1.props["DrawerSide"] == "M" and i2.props["DrawerSide"] == "K"
         grids[bay_id] = i1.drawer.grid
     assert grids == {b: (13, 10) for b in ("SF-E600a", "SF-E600b", "SF-E600c", "SF-E700")}
-    assert [run.bay(b).width for b in ("SF-E700", "SF-E600c", "SF-E600b", "SF-E600a")] == pytest.approx([640.0, 617.0, 617.0, 626.0])
+    assert [run.bay(b).width for b in ("SF-E700", "SF-E600c", "SF-E600b", "SF-E600a")] == pytest.approx([626.0, 617.0, 617.0, 640.0])  # t883u: the north one off grid
     assert sum(b.width for b in run.bays if not b.front_low) == pytest.approx(2500.0)
 
 
@@ -127,9 +127,10 @@ def test_tall_doors_hinge_as_the_notes_say():
     assert len(t2.boxes) == 1 + 4
     assert t2.door.hinge_a == pytest.approx(t2.boxes[0][1])
     shelves = [p for p in runs["KR-TALL"].parts if p.id.startswith("SF-T2-SH1-")]
-    # t870u: the lowest of four shelves went for the vacuum sealer.
-    assert len(shelves) == 3
-    t1_shelves = sorted(p.boxes[0][4] for p in runs["KR-TALL-W"].parts if p.id.startswith("SF-T1-SH1-"))
+    # t883u: four shelves again (the sealer moved to the island).
+    assert len(shelves) == 4
+    # t883u: T1 split into two doors; the lower band's shelves are SH2.
+    t1_shelves = sorted(p.boxes[0][4] for p in runs["KR-TALL-W"].parts if p.id.startswith("SF-T1-SH2-"))
     assert t1_shelves[0] == pytest.approx(118.0 + 400.0)
 
 
@@ -938,9 +939,8 @@ def test_j_grips_and_wall_front_overhang():
     at_face = [q for q in g.profile if abs(q[0] - face) < 1e-6]
     assert min(q[1] for q in at_face) == pytest.approx(d.drawer.front[5] - 22.0)  # crest 21 + R1
     _r, door = parts["SF-T2-DOOR1"]
-    assert door.props["Grip"] == "J side"
-    g = door.grips[0].bounds()
-    assert g[1] - g[0] == pytest.approx(29.0) and g[4] < door.boxes[0][4]  # 28 cup + 1 overcut
+    # t883u: tall north-wall doors get the upside-down J on the bottom edge.
+    assert door.props["Grip"] == "J bottom"
     # Petr, 2026-11-23 (t865u): "same J grip everywhere": pull-outs and the
     # dishwasher's decor panel get the top grip; fixed blank fronts do not.
     assert parts["SF-B800-D1"][1].grips and parts["SF-B800-D1"][1].props["Grip"] == "J top"
@@ -1022,6 +1022,7 @@ def test_one_drawer_under_the_oven_line_and_the_sealer_in_the_pantry():
     assert shelf.drawer is None and shelf.boxes[0][5] == pytest.approx(676.0)
     assert shelf.boxes[0][4] > run.part("SF-T3-D1").drawer.box[5]
     assert run.part("SF-T2-D1").props["InnerDrawers"] == "M" and run.part("SF-T4-D1").props["InnerDrawers"] == "M"
-    sealer = run.part("EA-MAXXO-CL40")
-    assert sealer.boxes[0][4] == pytest.approx(815.0)  # t874u: SF-T2 board 797-815
-    assert sealer.props["LidOpenClearance"] > 0
+    # t883u: the sealer left the pantry for the island's north east drawer.
+    sealer = _runs()["KR-ISL"].part("EA-MAXXO-CL40")
+    assert sealer.props["InnerDrawer"] == "SF-E600a-D1-I1" and sealer.props["ClearanceAbove"] == pytest.approx(0.03)
+    assert sealer.props["SpareAlongRun"] > 0 and sealer.props["SpareAcrossDepth"] > 0
