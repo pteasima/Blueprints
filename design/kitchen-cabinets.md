@@ -4,7 +4,7 @@ Every kitchen cabinet run is one **monoblock**: a single carcass body whose neig
 
 Code: `models/kitchen_cabinet.py` (layout), `models/kitchen_ifc.py` (IFC structure). Parameters live in `inputs/ground_floor/furnishings.yaml`: each run is an element with `Pset_KitchenRun`, each bay keeps its box and names its run in `Pset_KitchenBay`, and a drawer bay has `Pset_Drawers`. The live Pages preview is how a change is reviewed. `scripts/render_kitchen_run.py <run> [--bay <id>] [--open <drawer ids>]` can draw plan, front and iso PNGs later if they would help explain something; do not wait for them before sending the preview link.
 
-Labels: **Petr** is a fact Petr gave, with the date or document. **IKEA** is an IKEA METOD / MAXIMERA default, used because Petr said “when unsure of details and margins, default to IKEA METOD measurements” (2026-11-11). These cabinets are custom made, so every IKEA number can change. `guess:` is a number with no source at all. **Cosentino** is from the maker's colour page.
+Labels: **Petr** is a fact Petr gave, with the date or document. **Blum** is from Blum's MERIVOBOX catalogue 2024/25 (every drawer and pull-out since 2026-11-23, see “Drawers: Blum MERIVOBOX”). **IKEA** is an IKEA METOD carcass default (the MAXIMERA drawer assumption is gone since 2026-11-23), used because Petr said “when unsure of details and margins, default to IKEA METOD measurements” (2026-11-11). These cabinets are custom made, so every IKEA number can change. `guess:` is a number with no source at all. **Cosentino** is from the maker's colour page.
 
 > **`open:` for the woodworker: SF-DH (the dining wall cabinet) is too shallow for its Blum AVENTOS HF lift-up fittings. Unresolved.**
 >
@@ -16,8 +16,36 @@ Labels: **Petr** is a fact Petr gave, with the date or document. **IKEA** is an 
 
 > **`open:` for the woodworker: front thickness is his call.** The model draws **18** mm fronts (`FrontThickness`, METOD); **19–22** is possible and may be wanted for the rounded J grip (VOXTORP fronts are 22; ours leave a 4 back wall behind the cup; see “J grip”).
 >
-> - Thicker fronts are not a front-only change: they move the carcass depth / front offsets (the bay boxes keep their outside depth, so the carcass gets shallower or the fronts stand further out), the drawer box depths (MAXIMERA lengths), the **Gridfinity drawer inserts** (the grid fit in the SF-I600a, SF-I500b and SF-I600b drawers, the east row's inner drawers and the dining drawers; rerun `scripts/gridfinity_fit.py`; the west boxes are cut to 11 cells deep and still fit 11 with a 22 front), and the **Blum** front weights and power factors (MAXIMERA, AVENTOS HF).
+> - Thicker fronts are not a front-only change: they move the carcass depth / front offsets (the bay boxes keep their outside depth, so the carcass gets shallower or the fronts stand further out), the drawer box depths (Blum MERIVOBOX needs NL + 3 inside the carcass, so a thicker front can cost a whole 50 mm NL step where the carcass is at its minimum: island west and east, the tall run), the **Gridfinity drawer inserts** (the grid fit in the SF-I600a, SF-I500b and SF-I600b drawers, the east row's inner drawers and the dining drawers; rerun `scripts/gridfinity_fit.py`), and the **Blum** front weights and power factors (MERIVOBOX load class, AVENTOS HF).
 > - Petr, 2026-11-22 (t787u): “if he chooses thicker fronts, it will affect cabinets and gridfinity in drawers etc.”
+
+## Deviations from Petr's original plan (2026-11-23)
+
+Petr's original document is the sticky-note plan [`KitchenPlan.jpg`](../../inputs/ground_floor/KitchenPlan.jpg) with his notes (quoted in `inputs/ground_floor/furnishings.yaml`), plus his rule of 2026-11-11 “when unsure of details and margins, default to IKEA METOD measurements”, which made the drawers IKEA MAXIMERA (2026-11-13). On **2026-11-23** (t835u) Petr switched every drawer to **Blum MERIVOBOX**: “Ok, time to pull the trigger. Remodel or drawers to use merivobox.” His standing rules: **soft-close (BLUMOTION) only, opening by hand; never TIP-ON (push to open) or SERVO-DRIVE (electric)** (Petr, 2026-11-23, t830u: “I never want anything push to open (nor electric). I do want soft close, but opening must be manual.”), and “existing docs probably say ‘assume ikea maximera’, that will have to go”. Each deviation, with its reason:
+
+| # | Original (plan / earlier model) | Now (2026-11-23) | Why |
+| --- | --- | --- | --- |
+| 1 | Drawers modelled as IKEA MAXIMERA (inside = clear − 84 by side depth − 96; boxes 78 / 144 / 212 / front − 110) | **Blum MERIVOBOX everywhere**: inside LW − 51 by NL − 42, sides N 68.5 / M 91 / K 129 / E 192, full extension, BLUMOTION | Petr, t835u. One system for main and inner drawers (the ZI7.0M07 latch needs MERIVOBOX or LEGRABOX) |
+| 2 | Island west row 586, then 567 deep (2026-11-22, “Ok, I want 1173.”) | **630** (NL 600 + 3 + 18 front + 9 half back) | Petr: “on island west side, use longest merivobox (600mm)” |
+| 3 | Island east row 586 deep (NL 550); total island **1173** | **530** (NL 500); total island **1180** (20 overhang + 630 + 530) | Petr: “on island east use whatever gets us closely below 1200mm total island depth. The inner drawers matter, the bottom one can be the same length”. NL 550 would make 1230; the carcass is the Blum minimum, so there is no unused depth behind the boxes (Petr expected about 20; giving the east row 550 instead of 530 would restore 20 unused at 1200 overall) |
+| 4 | Island east bottom box F (256) | **E (192)** | F is not in Blum's European catalogue (Blum NZ/AU sell it, NL 270–550 only); E is the tallest European side |
+| 5 | West run and dining run carcasses | **unchanged** (600 / 450), boxes the longest NL that fits: west **NL 550** (574 inside, 21 behind), dining **NL 400** (414 inside, 11 behind) | Petr: “kitchen west run and dining area run dimensions are given, so choose closest merivobox length” |
+| 6 | Tall north run 600 deep (the plan: “Tall carcasses are 600 deep”) | **629** (NL 600 + 3 + 18 front + 8 back); back on the wall, fronts 29 further south (y 14.971). SF-T1 and SF-TF follow so the fronts stay in line | Petr: “tall kitchen north run should use 600mm also (lmk total cabinet depth, this will affect fridge choice)” |
+| 7 | Cabinet widths | **unchanged** | Petr: “cabinet widths stay unchanged” |
+| 8 | Gridfinity: west boxes cut to whole cells (`GridfinityFitDepth`), plates centred | **No cut** (a MERIVOBOX box is its NL long); the plate is the closest whole grid for the new inside and is **snapped to the drawer front**, the slack at the back | Petr: “gridfinity plates stay (closest match to drawer length) and are snapped to the front of the drawer”; t836u: re-check the width too (see “MERIVOBOX remodel”) |
+| 9 | Sink base SF-B800: a full-height pull-out with two equal bins trimmed under the disposer | (superseded by row 16) A low **MERIVOBOX M** box (back 83 high, passes under the disposer) with **two IKEA FILUR 42 l** standing on its base, one each side of the disposer | Petr: “assume merivobox with upright Ikea Filur bins under main sink (the one you recommended)” |
+| 10 | Recycling SF-C850: three equal bins (`guess:`) | **Empty**, deepest MERIVOBOX that fits: NL 550, E, 70 kg | Petr: “assume deepest merivobox for southwest recycling cabinet, leave empty without bins for now” |
+| 11 | Island west top drawers: MAXIMERA low (78 box in a 100 front) | **MERIVOBOX M** (91) behind the same 100 fronts; the boxes sit lower than their fronts (see “MERIVOBOX remodel”) | N (the Blum box made for ~100 fronts) is only made up to NL 550, and Petr asked for NL 600 on the west |
+| 12 | Gridfinity play 1 mm (inside n × 42 + 1) | **2 mm** (inside n × 42 + 2, `GridfinityPlay`) | Petr, 2026-11-23 (t841u), approving the 2 mm leeway |
+| 13 | Island west widths 500 / 607 / 481 / 607 / 305 (row 7: unchanged) | **470 / 575 / 533 / 617 / 305** (SF-I500a / SF-I600a / SF-I500b / SF-I600b / SF-I300), still 2500. Insides 506 / 464 / 548 = **12 / 11 / 13 columns exactly** (were 12 / 9 / 12 with 33 spare). Ids keep their old nominal names | Petr (t837u): “when you say island west drawers have spare room in width, then you should change them … The south 300 stays. The hob drawer gets wider to fit gridfinity”; t841u: “can we make the middle two drawers closer in size (12 and 11 gridfinities instead of 13 and 10)?” |
+| 14 | Island sink SN-RS1840 against the south divider (t834u; landing 320) | **Cut-out 45 from the divider face**: rim a 218–438, cut-out a 240–416 in the 470 bay; **landing 258** | Petr (t840u): “are you positive it can be mounted this close to the cabinet edge? Its undermount”; t841u: “Im ok with 258 landing”. Teka sheet 61401450: clip hole Ø10 × 16 deep, **30 mm from the cut-out edge**; the rim (220 × 440) runs 22 past the cut-out. The old rim lay 9 mm on the divider and the south clip hole fell over it. `guess:` the clip plate reaches about 12 past its screw + 3 play → 45. `open:` ask the stone fabricator (clip count and positions, or glue + battens) |
+| 15 | West sink SN-RS15 rim 20 behind the carcass front (2026-11-22, t819u) | **Set back 21**: rim c 41–481, cut-out c 63–459 (45 behind the drawer front's inner face c 18) | Petr (t841u): “we'll setback the large west sink to be sure”. The front clip hole (cut-out c 42 − 30 = c 12) fell over the drawer front. Same `guess:` / `open:` as row 14 |
+| 16 | SF-B800: MERIVOBOX M with two FILUR standing on its base (row 9) | **Hanging FILUR frame**: U-shaped 18 MDF plate (`guess:` thickness) round the disposer, two holes 280 × 370 (FILUR 290 × 380 less 5 a side), each FILUR hung by its rim; plate top z 660 on two 16 sides running on **Blum MOVENTO 760H4501S** (NL 450, 40 kg, concealed, BLUMOTION S, manual opening; no TIP-ON, no SERVO-DRIVE, no MERIVOBOX). See “SF-B800: hanging FILUR frame” | Petr, 2026-11-23 (t842u) |
+| 17 | West run sections C 850 / B 800 / A 850 (base and wall cabinets on one grid) | **835 / 835 / 830** (still 2500 between the OP24 / OP25 jambs): SF-C850 and SF-CH850 850 → 835, SF-B800 and SF-BH800 800 → 835, SF-AH850 850 → 830, SF-A250 232 → 212 (the dishwasher niche and its end panel do not move). Three 835s would be 2505, 5 over | Petr, 2026-11-23 (t848u): “if we go 835, then all of our top cabinets on the west run are the same 835? Lets do that.” |
+| 18 | SF-B800 FILUR frame: bins 22 over the carcass bottom | **10** over it: plate top 660 → 648, 62 under the bowl | Petr, 2026-11-23 (t849u) |
+| 19 | — | **Petr to measure a real FILUR (rim height, outer dimensions) and the installed disposer / trap on site before the MDF frame is cut.** | Petr, 2026-11-23 (t848u): “Note in docs that I should measure this on site.” |
+| 20 | Island east 625 × 4 (t835u: equal widths) | **626 / 617 / 617 / 640** (SF-E600a / b / c / SF-E700, north to south), still 2500. Inner drawer insides 548 / 548 / 548 / 562 = **13 columns + 2 mm in the north three, SF-E700 13 + 14 spare** (were 12 / 13 / 13 / 12). **The fronts are no longer equal (623 / 614 / 614 / 637).** | Petr, 2026-11-23 (t851u): north three exactly 13 Gridfinity columns + 2 mm, the southmost takes the rest |
+| 21 | SF-A250 MERIVOBOX E pull-out | **Accepted for now at 212 wide (134 inside).** `open:` it may need a custom pull-out later instead of MERIVOBOX; Blum's narrow-cabinet alternative is SPACE TWIN | Petr, 2026-11-23 (t855u) |
 
 ## Monoblocks
 
@@ -147,7 +175,7 @@ Contents are now written on every front (`Pset_KitchenFront.Contents`), from the
 | Worktop thickness | 20 | Silestone comes in 12, 20 and 30 (**Cosentino**). Petr gave no thickness: `guess:` 20 |
 | Plinth (sokl) height | **100**, open legs, no kick board | **Petr**, 2026-11-12: “Ok, 100mm it is.” (was 110; 92 before that) |
 | Carcass height | **810** | derived: 930 − 20 − 100. METOD's carcass is 800; the extra 10 goes into the `*` drawer |
-| Drawer band, D1 (top) | **100** (was 200); SF-I600b (hob) **200** | **Petr**, 2026-11-13: the top drawers are MAXIMERA's lowest variant (system height 10 cm, **IKEA**). Under the hob see “Gridfinity drawers” |
+| Drawer band, D1 (top) | **100** (was 200); SF-I600b (hob) **200** | **Petr**, 2026-11-13: the top drawers are the shallowest variant (then IKEA MAXIMERA low, system height 10 cm). Since 2026-11-23 a Blum MERIVOBOX M box (see “MERIVOBOX remodel”). Under the hob see “Gridfinity drawers” |
 | Drawer band, D2 | **100** (was 200) | **Petr**, 2026-11-13, as D1 |
 | Drawer band, D3 (bottom) | **610** (rest; was 410); SF-I600b **510** | **Petr**, 2026-11-13: “The bottom drawer can grow by that leftover amount.” Written `*`, the rest of the carcass, so a carcass change lands here |
 | Tall run carcass | **2350** | 2450 (**Petr**, tall height, unchanged) − the same 100 plinth, so the tall plinth lines up with the bases. The tall runs keep a kick board (`PlinthKind` is `Board` by default) |
@@ -167,44 +195,50 @@ Petr, 2026-11-12: “Ok, 100mm it is.” He wants the lowest plinth his robot va
 - Legs: Ø40, adjustable, IKEA-like. Each row has a front and a back leg on every wall line, under each end side and each shared divider. The front leg centre is 50 behind the carcass front (68 behind the front face) and the back one is 50 before the back. `guess:` IKEA puts 4 legs under each cabinet; a monoblock shares them at the dividers. Island: 22 legs. West run: 8 legs.
 - The stone end cladding (island and west run) still runs from the floor to the worktop underside, so the robot gets in from the long sides only.
 - The dishwasher slot (SF-A600) has no carcass: floor to worktop underside is **910**, unchanged by the plinth. The Bosch SBD6ECX12E is the XXL model (865 high) and takes a 865–925 niche ([Bosch spec sheet](https://media3.bosch-home.com/Documents/specsheet/de-DE/SBD6ECX12E.pdf)), so 910 fits. The usual 815–875 niche is the 815-high SMD model, not this one. The robot does not get under the dishwasher.
-- The hob is unchanged: carcass top 910, hob underside 879. SF-I600b has three drawers under it (see “Gridfinity drawers”); the top box (a MAXIMERA medium, 713–857) stays 22 under the hob, more than Miele's 8.
+- The hob is unchanged: carcass top 910, hob underside 879. SF-I600b has three drawers under it (see “Gridfinity drawers”); the top box (a MERIVOBOX K since 2026-11-23, 725–854) stays 25 under the hob, more than Miele's 8.
 - (Resolved 2026-11-20 b: a 100 flush kickboard.) The north dining run (`KR-DN`) has no plinth parameter: its oak bodies stand on the floor (`Carcass: Box`). `open:` should they get legs too?
 - `open:` the drawer and door fronts stop 1.5 above the carcass bottom (101.5), with no kick board behind. Check the look and toe space with Petr.
 
-## Fronts, boxes, slides (island drawers)
+## Fronts, boxes, slides (every drawer)
 
-The drawer boxes are modelled after IKEA **MAXIMERA** (Petr, 2026-11-13, see “Gridfinity drawers”). Until then the box was 13 mm a side off the carcass (labelled “IKEA/Blum-style”; Blum's own MOVENTO rule is 5 mm a side for 16 mm sides, IKEA gives no such number), 16 mm walls, no box front and as long as a 50 mm slide step. That gave a 600 bay a 524 × 534 inside, roomier than the real MAXIMERA (480 × 504). All of it is replaced by the two MAXIMERA deductions.
+Since 2026-11-23 every drawer and pull-out is a **Blum MERIVOBOX** (Petr, t835u; see “Deviations from Petr's original plan”). Until then the boxes were modelled after IKEA MAXIMERA (2026-11-13 to 2026-11-22; history in “Gridfinity drawers”), and before that 13 mm a side off the carcass.
 
 | Item | Value (mm) | Source |
 | --- | ---: | --- |
 | Front thickness | 18 | **IKEA** METOD fronts |
 | Gap between fronts (and to the sides, 1.5 each) | 3 | **IKEA**: a 600×200 grid front is 597×197 |
-| Drawer inside width | clear width − **84** (`DrawerInnerWidthDeduction`) | **IKEA** MAXIMERA, see below |
-| Drawer inside depth | box length − 19 back (no box front since 2026-11-22 e); box length = side depth − 96 (`DrawerInnerDepthDeduction`) + 2 × 19; the side depth is the divider's, carcass front edge to the back (the island's central back face). Bays with `GridfinityFitDepth` cut the box to the grid | **IKEA** MAXIMERA, see below and “Drawer boxes without a box front” |
-| Drawn box walls (sides, back) | 19 (`BoxWall`); box front `BoxFrontPanel` **0** (was 19) | (542 − 504) / 2: MAXIMERA box 542 deep, inside 504 (**IKEA**). The decor front closes the box (2026-11-22 e) |
-| Drawn box bottom | 16 (`BoxBottomThickness`) | `guess:` |
-| Box side height | low **78** in a 100 band, medium **144** in 200, high **212** in 300; bands of 400 and more (and pull-outs): front − 110 | **IKEA** MAXIMERA product pages; the 400+ rule is `guess:` (a high box with side extensions) |
-| Box bottom | 3 above its band (the lowest box 3 above the 18 carcass bottom) | `guess:`; the top box must clear the 18 top rail (box top 891, rail from 892) |
-| Box length, extension | side depth − 96 + 2 × 19 (= inside + 19 back), full extension (travel = box length) | **IKEA** MAXIMERA full extension |
-| Carcass depth, island west row | **567** bay (since 2026-11-22 f, Petr: “Ok, I want 1173.”), so the side depth is 567 − 18 front − 9 (half the central back) = **540**; the MAXIMERA rule gives a 482 box, inside 463 = 11 Gridfinity rows with nothing left over | Gridfinity depth, see below. Was 600 / 573, then 586 / 559 (2026-11-13 to 2026-11-22) |
+| Motion | full extension, integrated **BLUMOTION** soft close, opened by hand. **No TIP-ON BLUMOTION, no SERVO-DRIVE** | **Blum** (both are optional add-ons; Petr, 2026-11-23, t830u, never wants them) |
+| Nominal length NL | the longest Blum NL that fits the carcass (`merivobox_nl`), or `Pset_Drawers.NominalLength` | **Blum**: inside cabinet depth LT ≥ **NL + 3** |
+| Drawer inside width | LW − **51** (`MerivoboxWidthDeduction`), LW the clear width between the carcass sides | **Blum**: chipboard base and back are cut to LW − 51; that it is also the inside between the sides is `guess:` |
+| Drawer inside depth | NL − 26 − 16 = **NL − 42** (`MerivoboxBaseDeduction`, `MerivoboxBackThickness`) | **Blum**: base NL − 26 with a 16 chipboard back (NL − 22 with a steel back); minus the back is `guess:` |
+| Drawer side | the band's `box=` letter; else a pull-out E, else the tallest of E, K, M, N whose space requirement fits the band and is made in the NL; else the lowest made | **Blum** heights and NL ranges, below; the rule is the model's |
+| Vertical position | the cabinet profile stands on the band's floor (carcass bottom or a board for the lowest band, the band's bottom line above that) and takes **15** under the side and **2** over it; a box that would reach the top rail, the hob limit or the profile of the drawer above moves down (`BoxBelowFront` in the export) | **Blum** space requirement (N 85.5 = 68.5 + 17, M 108 = 91 + 17, K 146 = 129 + 17, E 209 = 192 + 17, “incl. 2 mm tilt adjustment”); the split 15 / 2 is derived |
+| Load class | **70 kg** for pull-outs, E sides and insides over 600 wide, if the NL is 450–600; else 40 | **Blum**: 70 kg profiles exist for NL 450–600; the rule is `guess:` (brief: “use 70 kg for wide/heavy and the bin pull-outs”) |
+| Inner drawers | Blum M / K inner drawers behind one tall front, each with a Blum **aluminium front piece** cut to **LW − 126** (for cabinets up to 1200; no wooden inner front); same NL as the main box | **Blum** pp. 258–263 |
+| Coupled top inner drawer | **Blum ZI7.0M07** latch: driver on the inner front piece, housing drilled into the back of the outer front (Ø 25) | **Blum** p. 259 (“inner drawer with latch set possible from height 57 mm”); MERIVOBOX / LEGRABOX only |
+| Drawn box walls (sides, back, inner front piece) | 19 (`BoxWall`); no box front behind the decor front (`BoxFrontPanel` **0**) | drawing size, `guess:`; the decor front closes the box (2026-11-22 e) |
+| Drawn box base | 16 (`BoxBottomThickness`) | **Blum** cutting list: 16 chipboard |
+| Box length, extension | inside + 2 × 19 (NL − 4), full extension (travel = box length) | drawing, see above |
+| Front fixing | Blum front fixing brackets (INSERTA, screw-on or EXPANDO T), clip-on, 3-way adjustable; E pull-outs add the top front fixing bracket | **Blum** |
 
-### Drawers: MAXIMERA
+### Drawers: Blum MERIVOBOX
 
-IKEA's own pages:
+Blum, *Catalogue and technical manual 2024/2025* (English), MERIVOBOX pages 250–289 ([p. 252 overview](https://publications.blum.com/2024/catalogue/en/252/), [p. 256 drawer M](https://publications.blum.com/2024/catalogue/en/256/), [p. 257 planning M](https://publications.blum.com/2024/catalogue/en/257/), [p. 258 inner drawer M](https://publications.blum.com/2024/catalogue/en/258/), [p. 264 high fronted pull-out E](https://publications.blum.com/2024/catalogue/en/264/), [p. 274 waste-bin over-extension profile](https://publications.blum.com/2024/catalogue/en/274/), [p. 278 sink pull-out with centre piece](https://publications.blum.com/2024/catalogue/en/278/), [p. 282 SPACE TWIN](https://publications.blum.com/2024/catalogue/en/282/)); the [Blum MERIVOBOX ordering and planning guide (AU)](https://asset.duluxgroup.com.au/asset/b912dcd6-cc03-4181-abb0-9d5c9fc9a8e0/Blum-MERIVOBOX-Ordering-Planning-Information.pdf) says the same with fewer lengths; F is on [Blum NZ's range page](https://www.blum.com/nz/en/products/boxsystems/merivobox/programme/). Read 2026-11-23.
 
-- [IKEA Sverige, “Vad är innermåtten på MAXIMERA lådor?”](https://www.ikea.com/se/sv/customer-service/knowledge/articles/2f2d5df3-50gg-4939-gfef-150779b2c4e2.html): drawer 40 × 60 inside 28.0 × 50.4 cm, 60 × 60 inside 48.0 × 50.4, 80 × 60 inside 68.0 × 50.4 (37 deep: 30.9 inside).
-- [MAXIMERA drawer, low, 60×60](https://www.ikea.com/se/en/p/maximera-drawer-low-white-20204628/): width 56.4, depth 54.2, height **7.8** cm, frame 60 × 60. The 80 × 60 low drawer is 76.4 wide. [Medium 60×60](https://www.ikea.com/gb/en/p/maximera-drawer-medium-white-60285038/): height **14.4**. [High 60×60](https://www.ikea.com/gb/en/p/maximera-drawer-high-white-30285025/): height **21.2**.
-- [MAXIMERA low drawer with front 60×60×10](https://www.ikea.com/se/en/p/maximera-low-drawer-with-front-s49282673/): “System, height: 10 cm”, with a 60 × 10 front. IKEA's [inner-drawer article](https://www.ikea.com/se/en/customer-service/knowledge/articles/925bf3bb-b393-4967-g3d6-b8d7gc065g90.html): “a low drawer is 10 cm high, a medium drawer is 20 cm high, and a high drawer is 30 cm high.”
+| Side | Height | Space requirement (height) | NL made (mm) | 70 kg | Chipboard back height |
+| --- | ---: | ---: | --- | --- | ---: |
+| N | 68.5 | 85.5 | 400, 450, 500, 550 | — (40 kg only) | 60.5 |
+| M | 91 | 108 (inner drawer 106) | 270, 300, 350, 400, 450, 500, 550, 600 | 450–600 | 83 |
+| K | 129 | 146 (inner drawer 144) | 300–600 | 450–600 | 121 |
+| E (M side + gallery rail, BOXCOVER or BOXCAP) | 192 | 209 | 270–600 | 450–600 | 184 |
+| F (Blum NZ/AU only, not in the European catalogue) | 256 | — | 270–550 | 500–550 | 248 |
 
-Derived. The drawer's outer width equals the frame's clear width (56.4 = 60 − 2 × 1.8; 76.4 = 80 − 2 × 1.8), which also confirms the **18 mm METOD side**:
-
-| Frame | Clear (frame − 36) | Inside width | Width deduction | Inside depth | Depth deduction (600 frame) |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| 40 × 60 | 364 | 280 | 84 | 504 | 96 |
-| 60 × 60 | 564 | 480 | 84 | 504 | 96 |
-| 80 × 60 | 764 | 680 | 84 | 504 | 96 |
-
-The same at every width, so the model subtracts 84 from our clear width and 96 from our side depth (“subtract the same from whatever our side is”). The 480 is measured at the bottom: MAXIMERA's steel sides slope out, so it is wider higher up. The pull-outs on the west run follow the same rule; their box sizes changed with it (see “Gridfinity drawers”).
+- Every height: inside cabinet depth **LT ≥ NL + 3**; base and back **LW − 51** wide; base **NL − 26** (chipboard back) or NL − 22 (steel back); integrated BLUMOTION; TIP-ON BLUMOTION and SERVO-DRIVE are optional add-ons (not used here).
+- Inner drawers: M and K, any NL of that side; front piece ZV4.1042M (1042 long, for KB 1200), cut to **LW − 126**.
+- Waste bins: a **cabinet profile with over-extension for waste-bin applications** (453.4501BZ / .5001BZ / .5501BZ, 70 kg, cabinet NL 450–550 with drawer sides NL − 50) for E pull-outs. Not used in the model yet (SF-C850 is empty, SF-B800 uses a plain M box); `open:` for the bins.
+- Sink cabinets: Blum's own answer is the **drawer M or pull-out E with a centre piece** (a U-shaped box round the siphon, exterior NL 450–600, interior NL 300–450). Petr chose a plain low M box with upright FILUR bins instead (2026-11-23).
+- Narrow cabinets: **SPACE TWIN** for cabinet widths KB 150–250 (M, K or E sides). **SF-A250 (232 wide) is in that range**; the model draws it as an ordinary E pull-out.
+- Cabinet widths: Blum NZ gives MERIVOBOX drawers and pull-outs 275–1400 wide and inner drawers 275–1200 (`guess:` that the European range is the same).
 
 ## Worktop and cladding
 
@@ -250,7 +284,7 @@ Both sinks are Teka BE LINEA RS15 and both are **undermount** only (Teka: “Spo
 | Sink | Where | Overall | Bowl | Worktop cut-out | Rim top | Source |
 | --- | --- | --- | --- | --- | --- | --- |
 | `SN-RS15`, Teka BE LINEA RS15 71.40 X | west run, SF-B800, centred in the 800, 60 mm toward the front since 2026-11-22 (rim c 20–460, bowl c 40–440) | 750 × 440 | 710 × 400 × 200 | **706 × 396, R13** | 910 (`Elevation` 0.73 → **0.71**) | [Teka 115000004](https://www.teka.com/cs-cz/produkt/be-linea-rs15-71-40_115000004/) |
-| `SN-RS1840`, Teka BE LINEA RS15 18.40 X | island, SF-I500a, south rim on the 500/600 line | 440 × 220 | 400 × 180 × 140 | **396 × 176, R13** | 910 (`Elevation` 0.77) | [Teka 115000010](https://www.teka.com/cs-cz/produkt/be-linea-rs15-18-40-ss_115000010/); the card on [`KitchenPlan.jpg`](../../inputs/ground_floor/KitchenPlan.jpg) next to the island's green rectangle |
+| `SN-RS1840`, Teka BE LINEA RS15 18.40 X | island, SF-I500a, cut-out 45 from the south divider face since 2026-11-23 (t841u; was against it, t834u) | 440 × 220 | 400 × 180 × 140 | **396 × 176, R13** | 910 (`Elevation` 0.77) | [Teka 115000010](https://www.teka.com/cs-cz/produkt/be-linea-rs15-18-40-ss_115000010/); the card on [`KitchenPlan.jpg`](../../inputs/ground_floor/KitchenPlan.jpg) next to the island's green rectangle |
 
 - `SN-RS15` sat with its rim at c 80–520 (bowl c 100–500, 120 mm of stone in front of the inner bowl). Since 2026-11-22 (Petr, t819u) it sits 60 mm toward the front: rim c 20–460, bowl c 40–440, cut-out c 42–438. That leaves 60 mm from the worktop front edge (c −20) to the inner bowl and 62 mm to the cut-out, still above Cosentino's ≥ 50 mm from a worktop edge to a cut-out ([Silestone Design & Installation, Jan 2024](https://www.cosentino.com), “Cut-outs: Sink and tap”). The 20 mm rim stops 2 mm behind the inner face of the 18 mm front (`guess:` glue and clip play; the rim must not sit on the front). SF-B800 has no front rail. The Teka install sheet 61401450 wants a **min 65 mm** back band for a Ø35 hole; with the bowl back at c 440 there are 140 mm to the backsplash face (c 580). Drain centre is 115 mm from the inner bowl back, measured from the official to-scale plan (±3 mm for line thickness), stored as `Pset_Sink DrainOffsetFromBack: 0.115` (c 325).
 - `SN-RS1840`'s long side runs across the island (east–west), because the plan's green rectangle is a little longer that way. `guess:` Both ways fit: the clear width is 473 and 440 is the longest side.
@@ -297,9 +331,9 @@ The hob is on **SF-I600b**, the island's west row, second 600 from the north (y 
 | Housing | 533 × 427, from 879 to 926 | Miele (51 installation height) |
 | Hob underside | **879**, 31 below the carcass top (910) | derived |
 | Front rail in SF-I600b | **left out**: the housing (86.5–513.5 behind the front face) drops into the rail (18–98) | `guess:` |
-| Drawers | three: fronts 197 / 97 / 507, boxes MAXIMERA medium 144 (713–857), low 78, tall 400. Housing 533 in a 589 clear, 28 a side | yaml, see “Gridfinity drawers” |
+| Drawers | three: fronts 197 / 97 / 507, Blum MERIVOBOX boxes K (725–854), M (617–708), E (133–325), NL 600 (since 2026-11-23). Housing 533 in a 589 clear, 28 a side | yaml, see “MERIVOBOX remodel” |
 
-If a bay under a hob has drawers, the top drawer box is cut down to 8 mm below the hob underside (`MinDrawerGap`), and the export stops if that leaves less than `BoxMinHeight`. The top box ends at 857, 22 below the hob, so nothing is cut. A 100 band under the hob would stop the export (61 mm to the limit, the low box is 78).
+If a bay under a hob has drawers, the top drawer box stays 8 mm below the hob underside (`MinDrawerGap`): since 2026-11-23 a MERIVOBOX box is not cut but moves down (its metal sides cannot be trimmed), and the export stops if it no longer fits above the carcass bottom. The top K box ends at 854, 25 below the hob.
 
 In IFC the worktop's rebate is a second extrusion layer. The slab is one 14.5 mm layer with the through holes and one 5.5 mm top layer with the rebate. In the 3D model the rebate is a pocket.
 
@@ -365,6 +399,8 @@ Petr, 2026-11-12: “As well as the back wall above countertop, below top cabine
 
 ## Gridfinity drawers (2026-11-13)
 
+> History. The MAXIMERA deductions and box heights below were superseded on 2026-11-23 by Blum MERIVOBOX (see “Fronts, boxes, slides” and “MERIVOBOX remodel”). The grid rule (inside n × 42 + 1) still holds.
+
 Petr, 2026-11-13, after a plan for sizing the island drawers' insides to the Gridfinity grid (42 mm pitch, inside n × 42 + 1 mm):
 
 > On Gridfinity: cleanup the issues you've found. Model this after maximera (so if 600 ikea metod has a certain maximera inner size, subtract the same from whatever our side is). Also assume Metod material thicknesses for now (although its a monoblock, so the woodworker might ask for thicker material). When considering depth, always round down (i.e. make the whole island a bit shallower to fit gridfinity grid, don't make it any deeper). Add gridfinity baseplates to each drawer so that I can see them in the 3D model.
@@ -378,8 +414,8 @@ and:
 What it means here:
 
 - **Thicknesses: METOD**, 18 mm carcass board, dividers and central back (`BoardThickness`). `open:` the woodworker may want thicker boards for a monoblock; rerun `scripts/gridfinity_fit.py` and adjust the bay boxes.
-- **Inside: MAXIMERA deductions**, clear width − 84 and side depth − 96 (see “Drawers: MAXIMERA”).
-- **Target:** inside width n × 42 + 1 and depth m × 42 + 1 (`GridfinityPitch`, `GridfinityPlay`). Width: the nearest n; the shared divider moves, so a bay's clear width changes 1:1 with its width. The west row stays 2500: SF-I300 takes the difference, so the sink bay SF-I500a does not move. Depth: always round down, the bay gets shallower.
+- **Inside: MAXIMERA deductions**, clear width − 84 and side depth − 96 (IKEA MAXIMERA; that section was replaced by “Drawers: Blum MERIVOBOX” on 2026-11-23).
+- **Target:** inside width n × 42 + 1 and depth m × 42 + 1 (`GridfinityPitch`, `GridfinityPlay`; **+ 2 since 2026-11-23, t841u**). Width: the nearest n; the shared divider moves, so a bay's clear width changes 1:1 with its width. The west row stays 2500: SF-I300 takes the difference, so the sink bay SF-I500a does not move. Depth: always round down, the bay gets shallower.
 - Bays with `Pset_Drawers.Gridfinity: true`: SF-I600a, SF-I500b, SF-I600b. The model checks the fit and writes an `open:` note when a drawer is off the grid. `scripts/gridfinity_fit.py` prints the bay width and depth that would make it exact.
 
 | Bay | Width (old → new) | Clear | Drawer inside | Grid | Fronts (old → new) |
@@ -417,11 +453,11 @@ Each Gridfinity drawer carries an n × m baseplate on its inside floor, centred.
 
 Alternative, only the top drawer shallow (not built): SF-I600a and SF-I500b 100 / 200 / 510 (boxes 78 / 144 / 400: side 8 / 17 / 54 u, clear 8 / 25 / 67 u); SF-I600b 200 / 200 / 410 (boxes 144 / 144 / 300: side 17 / 17 / 39 u, clear 19 / 25 / 53 u).
 
-`open:` the woodworker's board thickness (the fit changes with it); the hob bay's front lines; the east row (no drawers, kept at 600 deep); MAXIMERA's real box height position in its band (`BoxBottomOffset` 3 is `guess:`, and the top box clears the rail by 1).
+`open:` the woodworker's board thickness (the fit changes with it); the hob bay's front lines. (The MAXIMERA box position is moot since 2026-11-23: MERIVOBOX uses Blum's space requirement.)
 
 ## Parametric rule
 
-Everything above is computed in `kitchen_cabinet.runs` from the bay boxes (`Origin`, `RefDirection`, `Width`, `Depth`, `Height`, `Elevation`), the run's `Pset_KitchenRun` (any `IKEA_DEFAULTS_MM` key, in metres, plus `WorktopMaterial`, `WorktopOverhang<N|E|S|W>` (one edge, 2026-11-20 f), `CladEnds`, `CladdingMaterial`, `FlushEnds` (end sides as the end panels, top flush, an 18 panel past an end niche; 2026-11-22), `MitreEnds` (45° top/end joints), `Carcass` (`Box` for whole-body bays), `BodyMaterial`, `PlinthKind` (`Legs` or `Board`), `Backsplash`, `BacksplashThickness`, `BacksplashTop`, `BacksplashMaterial`, `UnderlayThickness` + `UnderlayMaterial` (a layer under the stone, box runs, 2026-11-20 h), `SideKickboards`, `SideKickboardSetback` (2026-11-20 h), `FrontGrip` (`J`: routed rounded J grips, `JGripLipTop`, `JGripCupDepth`, `JGripBackWall`, `JGripBowlRadius`, `JGripCrestRadius`, `JGripCornerRadius`, `JGripEdgeRadius`, per-band `grip=`), `FrontFinish`, `WallFrontOverhang` (2026-11-22 c)) and each bay's `Pset_Fronts` (`Layout`, `Contents`: see “Fronts and interiors”) or the older `Pset_Drawers` (`NominalHeights` in metres top to bottom, one `*` for the rest; `Contents` separated by `;`), plus the built-ins' `Pset_BuiltIn`. A bay may override the drawer and front values in its own `Pset_KitchenCabinet`. Change a bay's width and its dividers move, both neighbours' clear widths and drawer boxes follow (drawer insides are the clear width and side depth less the MAXIMERA deductions, Gridfinity baseplates follow the inside), and the worktop grows; change the counter height or the worktop thickness and the carcass, the `*` drawer and the cladding follow. Rows that stand back to back (same back plane, fronts facing away) share one central back; a run with `CladEnds` gets stone on both ends. A sink's cut-out comes from its `Pset_Sink` and follows the sink box. A hob follows its bay (`Pset_Hob`): move or widen the bay and the cut-out, rebate, glass and housing move with it. The model stops the export if the hob comes closer than `MinBackEdge` to the far edge. A backsplash runs the worktop's length, from the worktop top up to the lowest box hanging over it. A `lift` band takes its cabinet height, width and depth from the bay and is checked against Blum's ranges for its fitting; change the bay and the fronts, mechanisms, weight, power factor and open clearance follow.
+Everything above is computed in `kitchen_cabinet.runs` from the bay boxes (`Origin`, `RefDirection`, `Width`, `Depth`, `Height`, `Elevation`), the run's `Pset_KitchenRun` (any `IKEA_DEFAULTS_MM` key, in metres, plus `WorktopMaterial`, `WorktopOverhang<N|E|S|W>` (one edge, 2026-11-20 f), `CladEnds`, `CladdingMaterial`, `FlushEnds` (end sides as the end panels, top flush, an 18 panel past an end niche; 2026-11-22), `MitreEnds` (45° top/end joints), `Carcass` (`Box` for whole-body bays), `BodyMaterial`, `PlinthKind` (`Legs` or `Board`), `Backsplash`, `BacksplashThickness`, `BacksplashTop`, `BacksplashMaterial`, `UnderlayThickness` + `UnderlayMaterial` (a layer under the stone, box runs, 2026-11-20 h), `SideKickboards`, `SideKickboardSetback` (2026-11-20 h), `FrontGrip` (`J`: routed rounded J grips, `JGripLipTop`, `JGripCupDepth`, `JGripBackWall`, `JGripBowlRadius`, `JGripCrestRadius`, `JGripCornerRadius`, `JGripEdgeRadius`, per-band `grip=`), `FrontFinish`, `WallFrontOverhang` (2026-11-22 c)) and each bay's `Pset_Fronts` (`Layout`, `Contents`: see “Fronts and interiors”) or the older `Pset_Drawers` (`NominalHeights` in metres top to bottom, one `*` for the rest; `Contents` separated by `;`), plus the built-ins' `Pset_BuiltIn`. A bay may override the drawer and front values in its own `Pset_KitchenCabinet`. Change a bay's width and its dividers move, both neighbours' clear widths and drawer boxes follow (drawer insides are Blum MERIVOBOX: the clear width less 51 by the longest NL that fits less 42; Gridfinity baseplates follow the inside), and the worktop grows; change the counter height or the worktop thickness and the carcass, the `*` drawer and the cladding follow. Rows that stand back to back (same back plane, fronts facing away) share one central back; a run with `CladEnds` gets stone on both ends. A sink's cut-out comes from its `Pset_Sink` and follows the sink box. A hob follows its bay (`Pset_Hob`): move or widen the bay and the cut-out, rebate, glass and housing move with it. The model stops the export if the hob comes closer than `MinBackEdge` to the far edge. A backsplash runs the worktop's length, from the worktop top up to the lowest box hanging over it. A `lift` band takes its cabinet height, width and depth from the bay and is checked against Blum's ranges for its fitting; change the bay and the fronts, mechanisms, weight, power factor and open clearance follow.
 
 ## Tap to open
 
@@ -441,8 +477,8 @@ A bay's `Pset_Fronts.Layout` lists its bands top to bottom, split by `|`. Each b
 
 | Kind | What it builds | Keys |
 | --- | --- | --- |
-| `drawer` | A drawer: a front on the 3 mm grid, plus a MAXIMERA-like box (inside = clear width − 84 by side depth − 96, full extension; see “Fronts, boxes, slides”). `Pset_Drawers.Gridfinity: true` adds a Gridfinity baseplate. | — |
-| `pullout` | A full-height front with one box behind it, plus the baskets or bins riding in it. | `items=shelves\|bins`, `n=` |
+| `drawer` | A drawer: a front on the 3 mm grid, plus a Blum MERIVOBOX box (inside LW − 51 by NL − 42, full extension; see “Fronts, boxes, slides”). `Pset_Drawers.Gridfinity: true` adds a Gridfinity baseplate, snapped to the front. | `box=N\|M\|K\|E` (the side; default: the tallest that fits), `inner=M,K` (inner drawers, top first), `latch=top\|none` |
+| `pullout` | A full-height front with one MERIVOBOX box behind it (E unless `box=`), plus the baskets or bins riding in it. | `box=`, `items=shelves\|bins`, `n=`, `bin=WxDxH` (metres: real bins standing on the base, the outer two against the box sides) |
 | `door` | One hinged leaf. The rest of the bay is a fixed filler. Adjustable shelves sit behind it. | `hinge=L\|R` (as you face it), `width=` (leaf grid), `filler=L\|R` (default: the hinge side), `shelves=`, `first=` (the first shelf's height over the band floor), `racks=` (door shelves) |
 | `doors` | A pair of leaves: the left one hinged left, the right one hinged right. | `shelves=`, `first=` |
 | `lift` | A Blum AVENTOS lift-up front (HF: a bi-fold pair, the others one front), a lift mechanism on each side panel, a lever arm on each, and the space the front needs open. The export stops outside Blum's ranges unless the bay's `Pset_Fronts.BlumRangeOverride` gives the reason (a quote); the breach is then kept on the front (`OutsideBlumRange`). | `fitting=HF\|HS\|HL\|HK\|HK-S\|HK-XS`, `upper=` (HF upper front, metres), `shelves=`, `first=`, `density=` (kg/m³) |
@@ -466,7 +502,7 @@ The quoted notes are the yellow sticky notes next to each bay on KitchenPlan.jpg
 | SF-I500a (island sink) | „vlevo prkynka / vpravo cednik do drezu (a drtic) / madlo na uterku / SBox by mel trcet doprava, coz nejde, ma nakou vuli a de pootocit, ale musi se vyhnout drtici, snad to vyjde“ | left: cutting boards / right: sink strainer (and the disposer) / towel-bar handle / the sBox should stick out to the right, which is not possible; it has some play and can be turned, but it must avoid the disposer, hopefully it works out | The slab front is unchanged. Since 2026-11-23 the sink sits against the south divider (320 mm landing at the north; boards get the 282 mm clear north of the bowl). Disposer `EA-EVO3-I` hangs on the official drain. Tap `SN-TAP-I` stands behind the bowl. `open:` door or pull-out, and the split between boards and strainer. `open:` the towel-bar handle. `open:` the sBox (not modelled; clearance below). |
 | SF-I600a | „noze / naradi (lis na cesnek, hmozdir, vaha, ..) / dole nevim 🤷“ | knives / tools (garlic press, mortar, scales …) / bottom: don't know | Three drawers, **100 / 100 / rest (610)** since 2026-11-13 (Gridfinity drawers). Fronts 604 × 97 / 97 / 607. |
 | SF-I500b | „koreni / oleje, octy, mouky, cukry, dochucovadla / hrnce“ | spices / oils, vinegars, flours, sugars, seasonings / pots | Three drawers, **100 / 100 / rest (610)** since 2026-11-13. Fronts 478 × 97 / 97 / 607. Boxes 78 / 78 / 500 high. **`open:` oil and vinegar bottles now go in a 100 drawer (a 78 box); they did not stand in the old 90 box either.** |
-| SF-I600b (hob) | „pribory / varecky, sterky, naberacky / panve“ | cutlery / wooden spoons, spatulas, ladles / pans | Three drawers, **200 / 100 / rest (510)** since 2026-11-13. Fronts 604 × 197 / 97 / 507. The top box (MAXIMERA medium, 713–857) stays under the hob limit (879 − 8 = 871). |
+| SF-I600b (hob) | „pribory / varecky, sterky, naberacky / panve“ | cutlery / wooden spoons, spatulas, ladles / pans | Three drawers, **200 / 100 / rest (510)** since 2026-11-13. Fronts 604 × 197 / 97 / 507. The top box (MERIVOBOX K, 725–854 since 2026-11-23) stays under the hob limit (879 − 8 = 871). |
 | SF-I300 | „alobal, folie, spejle, pytliky“ | foil, cling film, skewers, bags | Since 2026-11-19 a full-height pull-out with three baskets (`guess:`; see “Fronts everywhere”). |
 | SF-E600a … SF-E700 (island east row) | Black card: „Jak vyresit detail spodniho soklu vs. dock pro robota? …“ (in full under “Island east row”) | Questions only | Since 2026-11-20 four full-height Gridfinity drawers, one per bay (see “Batch 2026-11-20”; a door and three drawer bays on 2026-11-19). The dock and the plinth questions stay `open:`. |
 | SF-A250 | Note A: „dole vlevo suplik uklid (mycka, jar, odmastovac, houbicky)“ | bottom left: cleaning drawer (dishwasher tabs, washing-up liquid, degreaser, sponges) | A full-height pull-out (front 229 × 807, 247 until 2026-11-22) with 3 baskets. The basket count is `guess:`. |
@@ -573,7 +609,7 @@ No carcass size or position changed. These are the fronts:
 ### guess: and open: (fronts and appliances)
 
 `guess:`
-- Drawer heights on SF-I500b and SF-I600b (Petr set the island's top drawers to MAXIMERA low on 2026-11-13).
+- Drawer heights on SF-I500b and SF-I600b (Petr set the island's top drawers to the shallowest variant on 2026-11-13; MERIVOBOX M since 2026-11-23).
 - Pull-out basket and bin counts (3 / 2 / 3).
 - Two shelves per wall cabinet. The lift mechanism box sizes and the 700 kg/m³ front density (see “Wall cabinets: lift-up fronts”).
 - The living-room counter's 20 mm oak-veneer top and its 20 mm overhang (the stone runs' 20 since #116).
@@ -1922,3 +1958,175 @@ West-row frame mm: front at c 0 (x 20.500), central back at c 567; along the run
 sBox (still `open:`, not modelled): Hansgrohe, 30 × 160 × 520, ideally under the tap, can tilt ±20°. Against the south divider it **cannot** sit to the right of the disposer (only 28.5 mm from the Ø145 body to the divider's inner face). It **does** fit in the official place, under the tap against the central back: 160 mm wide, centred with the bowl, 21 mm north of the divider, and about 96 mm of depth between the disposer (c 441) and a 30 mm sBox on the back (c 537–567). Height 520 hangs from the 910 underside to 390, clear of the plinth. That is the “turn it so it misses the disposer” the plan's note already hoped for.
 
 Not moved: SF-I500a stays 500; the hob; the sink's front-to-back centring on the 567 (`guess:`).
+
+## MERIVOBOX remodel (2026-11-23)
+
+Petr, 2026-11-23 (t835u), the decisions listed in “Deviations from Petr's original plan”, and t836u: “cabinet widths stay, but Merivobox inner width deductions … differ from the old Maximera assumption, so re-evaluate Gridfinity in WIDTH too”. Blum facts: “Drawers: Blum MERIVOBOX”. Everything below is measured from the model (`scripts/gridfinity_fit.py`, `kitchen_cabinet.runs`).
+
+### Depths
+
+| Run | Carcass (bay) depth old → new | Inside depth (front edge to back) | NL | Left behind the box (inside − NL − 3) |
+| --- | --- | ---: | ---: | ---: |
+| Island west row (SF-I500a … SF-I300) | 567 → **630** | 603 | **600** | 0 |
+| Island east row (SF-E600a … SF-E700) | 586 → **530** | 503 | **500** | 0 |
+| West run (SF-A250, SF-B800, SF-C850) | 600 (unchanged) | 574 | **550** | 21 |
+| Dining base (SF-DN) | 450 (unchanged) | 414 | **400** | 11 |
+| Tall north run (SF-T1, SF-TF, SF-T2, SF-T3, SF-T4) | 600 → **629** | 603 | **600** (drawers in T2–T4) | 0 |
+
+- **Island: 1173 → 1180 overall** (worktop x 20.480–21.660, 2540 × 1180; west overhang 20, east 0). The west face stays at x 20.500 (west aisle 1100 front to front, unchanged); the central back moves x 21.058–21.076 → **21.121–21.139**; the east face 21.653 → **21.660** (east bays' `Pset_Links.X`). NL 550 on the east would make it 1230.
+- **Tall north run: total depth 629 from the north wall** (8 back + 603 + 18 front; no handles stand proud, J grips), fronts y 15.000 → **14.971**. The fridge EA-WQ9I (716 deep, front y 14.884) now stands **87** proud of the tall fronts (was 116). Any fridge up to 629 deep would be flush.
+- Tall fronts to the island's north end (cladding y 13.820): 1180 → **1151**. T1's front is still 21 north of the OP25 jamb (y 14.950).
+- Island east face to the Gatta table 1434 → **1427**; to the west chairs' backs 894 → **887** (a pulled-out east drawer, 496, leaves 391; was 348).
+- Island sink SN-RS1840 stays centred on the bay depth (`guess:`): Origin x 20.5635 → **20.595**; disposer and tap follow the sink (tap hole still 66 behind the bowl). Hob not moved (cut-out 50–550 behind the west front; 610 to the east edge, was 603).
+- Wiring: C182's east LED strip x 21.628 → **21.635** (follows the east kickboard, x 21.592–21.610).
+
+### Every drawer, old → new
+
+Inside is width × depth × side height above the base. “Below front” is how far the box sits under its front's own position because the stack is too tight (see “Fronts, boxes, slides”).
+
+| Drawer | Old (MAXIMERA-like unless noted): box h, inside, extension | New: Blum side, NL, kg | New inside | New box h, extension | Below front |
+| --- | --- | --- | --- | --- | ---: |
+| SF-I600a-D1, -D2 (100 fronts) | 78, 505 × 463 × 62, 482 | **M**, 600, 40 | 538 × 558 × 75 | 91, 596 | **26 / 34** |
+| SF-I600a-D3 | 500, 505 × 463 × 484, 482 | **E**, 600, 70 | 538 × 558 × 176 | 192, 596 | 0 |
+| SF-I500b-D1, -D2 | 78, 379 × 463 × 62, 482 | **M**, 600, 40 | 412 × 558 × 75 | 91, 596 | **26 / 34** |
+| SF-I500b-D3 | 500, 379 × 463 × 484, 482 | **E**, 600, 70 | 412 × 558 × 176 | 192, 596 | 0 |
+| SF-I600b-D1 (hob, 200 front) | 144, 505 × 463 × 128, 482 | **K**, 600, 40 | 538 × 558 × 113 | 129, 596 | 0 |
+| SF-I600b-D2 | 78, 505 × 463 × 62, 482 | **M**, 600, 40 | 538 × 558 × 75 | 91, 596 | 8 |
+| SF-I600b-D3 | 400, 505 × 463 × 384, 482 | **E**, 600, 70 | 538 × 558 × 176 | 192, 596 | 0 |
+| SF-I300-D1 (pull-out, 3 shelves) | 700, 194 × 463 × 684, 482 | **E**, 600, 70 | 227 × 558 × 176 | 192, 596 | 0 |
+| SF-E600a, SF-E700 D1 (main) | MERIVOBOX F 256, 547 × 508 × 240, 546 | **E**, 500, 70 | 547 × 458 × 176 | 192, 496 | 0 |
+| SF-E600b, SF-E600c D1 (main) | MERIVOBOX F 256, 556 × 508 × 240, 546 | **E**, 500, 70 | 556 × 458 × 176 | 192, 496 | 0 |
+| SF-E…-D1-I1 (inner M, ZI7.0M07 latch) | 90, 547 / 556 × 508 × 74 | **M**, 500, 40 | 547 / 556 × 458 × 75 | 91, 496 | — |
+| SF-E…-D1-I2 (inner K) | 128, 547 / 556 × 508 × 112 | **K**, 500, 40 | 547 / 556 × 458 × 113 | 129, 496 | — |
+| SF-A250-D1 (pull-out, 3 shelves) | 700, 121 × 497 × 684, 516 | **E**, 550, 70 | 154 × 508 × 176 | 192, 546 | 0 |
+| SF-B800-D1 (sink, FILUR) | 211 (trimmed under the disposer), 698 × 497 × 195, 516 | **M**, 550, 70 | 731 × 508 × 75 | 91, 546 | 0 |
+| SF-C850-D1 (recycling, empty) | 700, 739 × 497 × 684, 516, 3 bins | **E**, 550, 70, no bins | 772 × 508 × 176 | 192, 546 | 0 |
+| SF-DN-S1…S4 D1 (main) and -I1, -I2 | MERIVOBOX K / M / K 128 / 90 / 128, 597 / 606 × 358 | **K / M / K**, 400, 40 | 597 / 606 × 358 × 113 / 75 / 113 | 129 / 91 / 129, 396 | 0 |
+| SF-T2/T3/T4-D1, -D2 (400 / 410 fronts) | 290 / 300, 489 / 498 / 435 × 497 × 274 / 284, 516 | **E**, 600, 70 | 522 / 531 / 468 × 558 × 176 | 192, 596 | 0 |
+
+### Gridfinity (width and depth)
+
+| Drawer | Grid old → new | Slack w / d new | Changed |
+| --- | --- | --- | --- |
+| SF-I600a, SF-I600b D1–D3 | 12 × 11 → **12 × 13** | 33 / 11 | depth +2 rows |
+| SF-I500b D1–D3 | 9 × 11 → **9 × 13** | 33 / 11 | depth +2 rows |
+| SF-E…-D1-I1, -I2 (inner) | 13 × 12 → **13 × 10** | 0 or 9 / 37 | depth −2 rows |
+| SF-DN all | 14 × 8 → 14 × 8 | 8 or 17 / 21 | — |
+
+- **Width counts did not change anywhere**, but the west row's width slack grew from 0 to **33**: MERIVOBOX takes 51 off the clear width where MAXIMERA took 84, so one more column (13 in the 600s, 10 in SF-I500b) is **9 short**. Widening SF-I600a, SF-I500b and SF-I600b by 9 each (27 from SF-I300, or the run) would give 13 / 10 / 13 columns; not done (Petr: widths unchanged).
+- Plates are snapped to the front (main drawers to the back of the decor front, inner drawers to the inside of their aluminium front piece); the depth slack is at the back.
+
+### SF-B800: two IKEA FILUR 42 l at 800 (the sink base)
+
+- IKEA FILUR bin with lid 42 l: **29 × 38 × 55 cm** (W × D × H, [IKEA](https://www.ikea.com/gb/en/p/filur-bin-with-lid-white-20193899/)), lid clamped over the bag, so it opens only with the drawer pulled out.
+- MERIVOBOX M, NL 550, 70 kg: box top 224 and its 83 back pass **118 under the disposer** (EA-EVO3-W bottom z 342). Base (floor) at z 149.
+- The bins stand on the base against the box sides, 290 + 151 + 290 in the 731 inside; the disposer (Ø 145, centred in the bay at a −472.5 … −327.5) is in the 151 gap: **3 mm each side**. Bin tops 699, bowl underside 710: **11 mm**. So they fit on paper, drawer closed and while sliding (the bins stay beside the disposer).
+- **That is not a practical fit**: 3 mm beside a vibrating disposer, and the disposer's outlet elbow, the trap and the dishwasher hose (not modelled) sit in the same space. At a 900 cabinet the gap would be about 53 each side (`guess:`, not modelled; Petr said widths stay). Check the real FILUR (lid rim) and the disposer outlet before the woodworker fixes the layout. Blum's own sink answer, a box with a centre piece round the siphon, is listed in “Drawers: Blum MERIVOBOX”.
+
+### Suspicious or open
+
+- **Island west top drawers (100 fronts) get M boxes that hang 26 (D1) and 34 (D2) below their fronts' own band**: the Blum space requirement of M is 108 and the top band loses 18 to the top rail. The box base shows below the front's lower edge when the drawer is open. Alternatives: N boxes (68.5, made for about 100 fronts) at **NL 550** (N is not made in 600), or taller top fronts. Under the hob only the 100 drawer drops (8).
+- Tall run drawers (400 / 410 fronts) and every E box: E is the tallest European MERIVOBOX side (192), so the tall run's drawer insides drop from 274 / 284 to **176** high; inner pull-outs (E) behind the same fronts would win the height back. Same for SF-I300 and SF-A250's “shelves”, which stand for inner pull-outs or a rack behind the front (`guess:`).
+- **SF-A250 is 232 wide: below the usual MERIVOBOX range (275+); Blum's narrow-cabinet product is SPACE TWIN (KB 150–250).** The model draws an ordinary E pull-out.
+- Every carcass with NL 600 / 500 is at Blum's minimum (NL + 3): a thicker front (`open:` for the woodworker) or a thicker back takes a whole NL step.
+- The island is 1180, not 1199: the east carcass is the Blum minimum. If Petr wants about 20 unused behind the east boxes, the east row goes 530 → 550 and the island to 1200.
+- Inner drawers: same NL and inside depth as the main box in the model (their aluminium front piece is drawn 19 thick).
+
+
+### Widths for Gridfinity, sink clips (2026-11-23, t837u / t840u / t841u)
+
+Inside = clear − 51 (Blum MERIVOBOX); clear = width − 18 between two dividers, width − 27 at the north end (18 end side + 9 half divider); Gridfinity inside = n × 42 + 2.
+
+| Cabinet (north → south) | Width old → new | Clear | Inside | Gridfinity old → new |
+| --- | --- | ---: | ---: | --- |
+| SF-I500a (sink, door) | 500 → **470** | 473 → 443 | — | — |
+| SF-I600a | 607 → **575** | 589 → 557 | 538 → **506** | 12 × 13 → **12 × 13** (33 → 0 spare) |
+| SF-I500b | 481 → **533** | 463 → 515 | 412 → **464** | 9 × 13 → **11 × 13** |
+| SF-I600b (hob) | 607 → **617** | 589 → 599 | 538 → **548** | 12 × 13 → **13 × 13** |
+| SF-I300 | 305 | 278 | 227 | — |
+
+Depth: NL 600 inside 558 = 13 rows + 10 (was + 11 with 1 mm play). The hob stays centred on SF-I600b: cut-out a 1591.5–2191.5 → **1586.5–2186.5**.
+
+| Sink | Old | New |
+| --- | --- | --- |
+| Island SN-RS1840 rim / cut-out (a, along the run) | 280–500 / 302–478 | **218–438 / 240–416** (yaml y 13.300 → 13.362) |
+| Island: cut-out → divider face | 13 (rim 9 on the divider) | **45** (rim 23 clear) |
+| Island: north corner landing (worktop edge → bowl) | 320 | **258** |
+| Island: disposer (a) / to the divider face | 317.5–462.5 / 28.5 | 255.5–400.5 / **60.5** |
+| Island: tap hole c / stone to the cut-out | 581 / 50.5 | unchanged |
+| Island: sink cut-out → hob cut-out (clear stone) | 1113.5 (rim 1091.5) | **1170.5** (rim **1148.5**); to the hob glass 1160.5 |
+| West SN-RS15 rim / cut-out (c, behind the carcass front) | 20–460 / 42–438 | **41–481 / 63–459** (yaml x 19.380 → 19.359) |
+| West: worktop front edge → cut-out | 62 | 83 |
+| West: disposer (c) | 252.5–397.5 | 273.5–418.5 |
+| West: tap hole c / stone cut-out → hole / bowl → hole centre / hole edge → backsplash face (c 580) | 510 / 54.5 / 70 / 52.5 | **531 / 54.5 / 70 / 31.5** (Cosentino ≥ 50, Teka min 65: unchanged; the tap follows the bowl) |
+
+- ~~East island inner drawers: with 2 mm play the end bays' 547 inside is 1 short of 13 columns.~~ Superseded by t851u: 626 / 617 / 617 / 640, see “Island east on 13 columns”.
+- Dining: still 14 × 8 (597 / 606 inside, 7 / 16 spare).
+- `guess:` / `open:` the Teka clip extent (45) is not on Teka's sheet; ask the stone fabricator before the cut-outs are templated.
+- SF-B800's FILUR clearances do not change (the sink moves along c, the bins sit beside the disposer across a): 3 mm each side, 11 mm under the bowl.
+
+
+### SF-B800: hanging FILUR frame (2026-11-23, t842u)
+
+Petr (t842u): replace the MERIVOBOX M and the standing FILURs with a custom U-shaped MDF frame round the drain and disposer, two holes, each hanging one IKEA FILUR 42 l by its rim; hole = the FILUR's official outer size inset 5 mm a side; Blum concealed runners, BLUMOTION soft-close, manual opening; the shortest standard runner that lets both FILURs clear the worktop front when lifted straight up. Modelled as `Layout: "pullout * frame=u n=2 bin=0.29x0.38x0.55"` (`kitchen_cabinet._frame_pullout`).
+
+**Facts.** IKEA FILUR bin with lid 42 l (201.938.99): W 29, D 38, H 55 cm; the lid ships as its own 29 × 39 × 3 cm package. Blum MOVENTO 760H (technical data sheet TD-132/1, 06.22): concealed full extension, BLUMOTION S, NL 250–600 (…, 420, 450, 480, …), 40 kg (766H 70 kg for NL 450+), drawer side length SKL = NL − 10, internal drawer width SKW = LW − 42, sides 12–15 (16 with limited side adjustment), inside cabinet depth ≥ NL + 3, rear hooks into Ø6 × 10 bores in the drawer back. Article 760H4501S (the S = BLUMOTION S; the T versions are TIP-ON and are not used).
+
+**Guesses.** `guess:` FILUR rim + lid stand 30 above the plate (Petr ~3 cm; the lid package is 3 cm). `guess:` the body under the rim is 10 narrower a side (it tapers, IKEA photos), so it drops through the 280 × 370 hole. `open:` IKEA gives D 38 but the lid package is 39: check a real FILUR's rim before cutting the holes. `guess:` 18 MDF, front strip 25 in front of the holes, 5 notch clearance, 21 from the carcass bottom to the side's lower edge, back panel 120 high. `guess:` travel = NL (full extension).
+
+| | Value |
+| --- | --- |
+| Runner | MOVENTO 760H4501S, NL 450 (NL 420 leaves the bins' back edge 18 under the worktop edge) |
+| Frame | outer 772 (LW 782 − 10) × 440 (SKL), sides 16, inside 740 (SKW) |
+| Plate | 18 MDF, top z 660; holes 280 × 370, 43–413 behind the carcass front (front strip 25, back strip 45); notch a −477.5 … −322.5 (disposer ± 5), open to the back from 268.5 |
+| Bins | rims 290 × 380 at 38–418; pulled out 450 their back edge is **12** in front of the worktop edge (overhang 20) |
+| Heights | carcass bottom 118, bins hang to 140 (**22 over the floor**), plate top 660, lids 690; sink bowl underside 710: **plate 50 under the bowl, lids 20** |
+| Disposer (EVO3, a −472.5 … −327.5, z 342–710) | rims 12.5 beside it, bin bodies 22.5 (`guess:` taper), notch strips 5; back panel (z 139–259) passes 83 under it |
+| **MDF beside the notch** | **12.5 mm** at 800 (hole edge −490 to notch edge −477.5) |
+
+- (At 800, superseded by t848u below.) **At 800 the U is not practical: each arm between a hole and the disposer notch is only 12.5 mm of MDF, and the FILUR rim lies 5 of that.** 2 × 280 holes + 155 notch + 2 × 16 sides take 747 of the 782 inside. `guess:` about 30 mm arms need a cabinet ≈ 835 wide (LW 817); at 900 (LW 882) the arms are 62.5. Not widened (Petr: SF-B800 stays 800).
+- **Not modelled: the disposer outlet elbow, the trap, the dishwasher hose and the sink's rectangular overflow tube.** The notch is open to the back only as wide as the disposer + 5; an outlet or hose that leaves the disposer sideways at plate height (z 642–660) would hit the arms. Check on site before the frame is made.
+- The frame's back panel spans the full width under the disposer (top z 259); a trap lower than that would clash: `open:`.
+
+
+### West run on an 835 grid; FILUR frame lower (2026-11-23, t848u / t849u)
+
+| | Old | New |
+| --- | --- | --- |
+| SF-C850 / SF-CH850 (y from 11.350) | 850 / 850 | **835 / 835** |
+| SF-B800 / SF-BH800 | 800 / 800 (y 12.200–13.000) | **835 / 835** (y 12.185–13.020) |
+| SF-A250 / SF-AH850 | 232 / 850 (from y 13.000) | **212 / 830** (from y 13.020) |
+| SF-A600 dishwasher niche + end panel | y 13.232–13.850 | unchanged |
+| West sink SN-RS15 (centred on SF-B800) | y 12.225–12.975 | **12.2275–12.9775** (+2.5) |
+| SF-A250 pull-out inside (MERIVOBOX E) | 154 × 508 | **134** × 508 |
+| SF-C850 recycling pull-out inside | 772 × 508 | 757 × 508 |
+| FILUR frame: LW / inside between the sides (SKW) | 782 / 740 | **817 / 775** |
+| MDF between each hole and the disposer notch | 12.5 | **30** |
+| Disposer (now a −490 … −345) to the notch edges / rims / bin bodies | 5 / 12.5 / 22.5 | 5 / **30** / **40** |
+| Bins over the carcass bottom (t849u) | 22 | **10** |
+| Plate top / to the bowl underside / lids to the bowl | 660 / 50 / 20 | **648 / 62 / 32** |
+| MOVENTO NL, bins past the worktop edge | 450, 12 | 450, 12 (unchanged) |
+
+- The wall cabinets share the base sections' grid (C, B, A over C, B, A; the same Petr notes A/B/C on both), so they follow; they cannot all be 835 in 2500.
+- **SF-A250 at 212 (clear 185, inside 134) is even further below MERIVOBOX's usual widths; Blum's narrow-cabinet product is SPACE TWIN (KB 150–250).**
+- AVENTOS HF fronts are now 827 / 832 / 832 wide (9.3–9.4 kg, still in the HF range, model check).
+- `guess:` the hanging bins (bottom z 128) stand 10 inside the frame sides; the MOVENTO runners sit under the sides (z 118–139), so a bin passes about 10 mm beside a runner. The back panel (z 139–259, behind the bins) still passes 83 under the disposer.
+- **Petr to measure a real FILUR (rim height, outer dimensions) and the installed disposer / trap on site before the MDF frame is cut** (t848u).
+
+### Island east on 13 columns (2026-11-23, t851u)
+
+> Petr (t851u): the north three exactly 13 Gridfinity columns + 2 mm leeway; the southmost takes whatever remains of the fixed run length.
+
+Inner drawer inside = clear − 51 (MERIVOBOX LW − 51); clear = width − 27 at a run end (one 18 side + 9 half-divider), width − 18 between dividers. 13 × 42 + 2 = 548.
+
+| Bay (north → south) | Width old → new | y origin old → new | Clear | Inner inside | GF columns, spare |
+| --- | --- | --- | --- | --- | --- |
+| SF-E600a (end) | 625 → **626** | 13.175 → 13.174 | 598 → 599 | 547 → **548** | 12 (41) → **13 (0)** |
+| SF-E600b | 625 → **617** | 12.550 → 12.557 | 607 → 599 | 556 → **548** | 13 (8) → **13 (0)** |
+| SF-E600c | 625 → **617** | 11.925 → 11.940 | 607 → 599 | 556 → **548** | 13 (8) → **13 (0)** |
+| SF-E700 (end, rest) | 625 → **640** | 11.300 (same) | 598 → 613 | 547 → **562** | 12 (41) → **13 (14)** |
+
+- Yaml: the north three have fixed `Width` links (0.626 / 0.617 / 0.617); SF-E700 is `(SF-I500a.Y − (SF-I300.Y − SF-I300.Width)) − 0.626 − 2 × 0.617`, so it still absorbs any change of the 2500.
+- Depth 10 × 42 + 36 spare is unchanged (inside 458).
+- **The fronts are no longer equal (623 / 614 / 614 / 637, 3 gap), which goes against Petr's earlier “they should be the same width” (t835u); SF-E700 is 23 wider than the middles.** The east row has no module lines on the west side, so the island's two rows do not line up anyway.
+- **0 mm spare in the north three: 2 mm play is the whole tolerance. The MERIVOBOX LW − 51 deduction and the carcass sides have to be as specified (`open:` check on site).**
