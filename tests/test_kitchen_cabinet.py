@@ -197,17 +197,40 @@ def test_west_sink_sits_forward_on_teka_drain_and_official_m71():
     # Reach from the hole centre to the spout tip (front of the arm).
     assert arm[2] == pytest.approx(hole - 235.0)
     assert nozzle[4] == pytest.approx(930.0 + 333.0)
-    # Island: disposer stays centred; HoleOffset 60 keeps the same hole
-    # now that the offset is measured from the bowl, not the rim.
+
+
+def test_island_sink_sits_against_the_south_divider_on_teka_drain():
+    """Petr, 2026-11-23 (t834u): keep SF-I500a at 500, move the Teka
+    RS15 18.40 against the south divider (KitchenPlan.jpg), hang the
+    disposer on the official drain, and leave ≥50 mm of stone between
+    the cut-out and the Aquno M81 Ø35 hole."""
+    runs = _runs()
     isl = runs["KR-ISL"]
-    ibay = isl.bay("SF-I500a")
-    isink = next(box for box, oid in ibay.obstacles if oid == "SN-RS1840")
-    idisp = isl.part("EA-EVO3-I").boxes[0]
-    assert (idisp[2] + idisp[3]) / 2 == pytest.approx((isink[2] + isink[3]) / 2)
-    itap = isl.part("SN-TAP-I")
-    ihole = (itap.boxes[0][2] + itap.boxes[0][3]) / 2
-    assert ihole == pytest.approx(543.5)
-    assert itap.props["HoleBehindBowl"] == pytest.approx(0.06)
+    bay = isl.bay("SF-I500a")
+    assert bay.width == pytest.approx(500.0)
+    sink = next(box for box, oid in bay.obstacles if oid == "SN-RS1840")
+    # Along the run: a 0 at the north body end, a 500 at the 500/600 line.
+    # Rim a 280–500, inner bowl a 300–480 (20 mm rim, 2 mm cut-out inset).
+    assert sink[0:2] == pytest.approx((280.0, 500.0))
+    cut = next(v for v in isl.part("KR-ISL-WORKTOP").voids if v.name == "SN-RS1840")
+    assert (cut.a0, cut.a1) == pytest.approx((302.0, 478.0))
+    # 320 mm from the worktop's north edge (a -20) to the inner bowl (a 300).
+    assert cut.a0 - 2.0 - (-20.0) == pytest.approx(320.0)
+    # Depth unchanged: still centred on the 567 bay, cut-out c 85.5–481.5.
+    assert (cut.c0, cut.c1) == pytest.approx((85.5, 481.5))
+    disp = isl.part("EA-EVO3-I").boxes[0]
+    # Drain 115 mm from the inner bowl back (c 483.5): centre c 368.5.
+    assert (disp[2] + disp[3]) / 2 == pytest.approx(368.5)
+    assert disp[2:4] == pytest.approx((296.0, 441.0))
+    # Along the run the disposer stays centred on the bowl (a 390).
+    assert (disp[0] + disp[1]) / 2 == pytest.approx((sink[0] + sink[1]) / 2)
+    tap = isl.part("SN-TAP-I")
+    body = tap.boxes[0]
+    hole = (body[2] + body[3]) / 2
+    assert hole == pytest.approx(549.5)
+    assert tap.props["HoleBehindBowl"] == pytest.approx(0.066)
+    # Cosentino: stone between the cut-out and the Ø35 hole ≥ 50 mm.
+    assert hole - 17.5 - cut.c1 == pytest.approx(50.5)
 
 
 def test_wall_cabinets_have_hf_bifold_fronts_that_open_partly_folded():

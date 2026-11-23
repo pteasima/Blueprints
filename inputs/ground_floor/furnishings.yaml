@@ -1154,21 +1154,24 @@ sanitaryTerminals:
           DrainOffsetFromBack: 0.115
   - id: SN-RS1840
     Name: "Teka BE LINEA RS15 18.40 X"
-    Description: "Island sink in SF-I500a, the card on Petr's KitchenPlan.jpg. Undermount. Overall 440×220, bowl 400×180×140, cut-out 396×176 R13 (Teka). Long side across the island (east-west), as the plan's rectangle is drawn, guess:. Centred on the 500 bay and on its depth (567), guess:. Rim top 910 under the 20 mm stone."
+    Description: "Island sink in SF-I500a, the card on Petr's KitchenPlan.jpg. Undermount. Overall 440×220, bowl 400×180×140, cut-out 396×176 R13 (Teka). Long side across the island (east-west), as the plan's rectangle is drawn, guess:. South rim on the 500/600 line (against the divider), 320 mm of landing from the north worktop edge to the inner bowl (Petr, 2026-11-23, t834u; the plan's green rectangle already sat here). Still centred on the 567 bay depth, guess:. Rim top 910 under the 20 mm stone."
     PredefinedType: SINK
     ContainedInStructure: SP-1.02
-    # Centre x = 20.500 + 0.2835 (half the 567 bay), y = 13.800 − 0.250 (SF-I500a centre).
-    # Was 20.568 + 0.293 until the island moved 68 west (2026-11-20), and
-    # 20.500 + 0.293 until the west row went 586 -> 567 (2026-11-22, t803u).
-    # Elevation 0.93 − 0.02 − 0.14 = 0.77.
-    Origin: [20.5635, 13.44]
+    # Centre x = 20.500 + 0.2835 (half the 567 bay). South rim on y 13.300
+    # (the SF-I500a / SF-I600a line). Was y 13.44 (centred in the 500) until
+    # 2026-11-23 (t834u). Was 20.568 + 0.293 until the island moved 68 west
+    # (2026-11-20), and 20.500 + 0.293 until the west row went 586 -> 567
+    # (2026-11-22, t803u). Elevation 0.93 − 0.02 − 0.14 = 0.77.
+    Origin: [20.5635, 13.3]
     Elevation: 0.77
     Width: 0.44
     Depth: 0.22
     Height: 0.14
     PropertySets:
       # Teka (teka.com, product 115000010): "Vana 180x400/140 mm, Rozměr
-      # 220x440 mm, Spodní montáž (výřez 176x396 mm/R13)".
+      # 220x440 mm, Spodní montáž (výřez 176x396 mm/R13)". Drain 115 mm
+      # from the inner bowl back: official RS15 plan, the same 400 mm
+      # bowl depth as the 71.40 (sheet 61401450), ±3 mm for line thickness.
       - Name: Pset_Sink
         Properties:
           Mounting: Undermount
@@ -1177,6 +1180,7 @@ sanitaryTerminals:
           CutoutWidth: 0.396
           CutoutDepth: 0.176
           CutoutRadius: 0.013
+          DrainOffsetFromBack: 0.115
   # Taps from the plan's cards, laid out behind their sink's inner bowl
   # by models/kitchen_cabinet.py (Pset_BuiltIn HoleOffset). Body 50 round,
   # arm 30 (shape guess:). Official sizes in docs/design/kitchen-cabinets.md.
@@ -1206,7 +1210,7 @@ sanitaryTerminals:
           HoleOffset: 0.07
   - id: SN-TAP-I
     Name: "Hansgrohe Aquno Select M81"
-    Description: "Kitchen mixer 170 with pull-out spray and sBox, on the island sink SN-RS1840 (card on KitchenPlan.jpg). 390 high, spout 165 high, 220 reach (Hansgrohe 73831000)."
+    Description: "Kitchen mixer 170 with pull-out spray and sBox, on the island sink SN-RS1840 (card on KitchenPlan.jpg). 390 high, spout 165 high, 220 reach (Hansgrohe 73831000). Hole 66 mm behind the bowl (Cosentino ≥50 mm of stone between the cut-out and the Ø35 hole)."
     PredefinedType: USERDEFINED
     ObjectType: KitchenTap
     ContainedInStructure: SP-1.02
@@ -1223,10 +1227,13 @@ sanitaryTerminals:
           Height: 0.39
           SpoutHeight: 0.165
           SpoutReach: 0.22
-          # Behind the inner bowl back. Was 0.04 when HoleOffset was
-          # wrongly applied from the rim (20 mm past the bowl); 0.06 keeps
-          # the same hole (60 mm behind the bowl / 40 mm behind the rim).
-          HoleOffset: 0.06
+          # Behind the inner bowl back. 66 mm leaves 50.5 mm of Silestone
+          # between the cut-out and the Ø35 hole (Cosentino 2024 ≥ 50).
+          # Was 0.04 when HoleOffset was wrongly applied from the rim, then
+          # 0.06 to keep that hole (60 mm behind the bowl, only 44.5 mm of
+          # stone). Hansgrohe's own note is "max. 50 mm from the back of
+          # the bowl" (recommendation); 66 exceeds it — see kitchen-cabinets.md.
+          HoleOffset: 0.066
 electricAppliances:
   - id: EA-WQ9I
     Name: "Whirlpool WQ9I MO2L EF"
@@ -1341,7 +1348,7 @@ electricAppliances:
           Height: 0.368
   - id: EA-EVO3-I
     Name: "EcoMaster STANDARD EVO3"
-    Description: "Food waste disposer under the island sink SN-RS1840 (card on KitchenPlan.jpg). 368 high, 145 diameter (EcoMaster). Centred on the bowl: guess:."
+    Description: "Food waste disposer under the island sink SN-RS1840 (card on KitchenPlan.jpg). 368 high, 145 diameter (EcoMaster). Hangs from the bowl's drain, 115 mm from the inner bowl back (Teka RS15 plan, Pset_Sink DrainOffsetFromBack)."
     PredefinedType: USERDEFINED
     ObjectType: FoodWasteDisposer
     ContainedInStructure: SP-1.02
