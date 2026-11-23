@@ -794,7 +794,7 @@
     "element": "SF-E600b-D1-I1",
     "center": [
       21.3935,
-      0.8165,
+      0.5655,
       -12.8515
     ],
     "slide": [
@@ -804,23 +804,6 @@
     ],
     "parent": "SF-E600b-D1",
     "coupled": true
-  },
-  {
-    "id": "SF-E600b-D1-I2",
-    "kind": "drawer",
-    "element": "SF-E600b-D1-I2",
-    "center": [
-      21.3935,
-      0.548,
-      -12.8515
-    ],
-    "slide": [
-      0.496,
-      0.0,
-      0.0
-    ],
-    "parent": "SF-E600b-D1",
-    "coupled": false
   },
   {
     "id": "SF-E600c-D1",
@@ -934,8 +917,55 @@
       0.0,
       0.0
     ],
-    "parent": "SF-E600a-D1",
-    "coupled": true
+    "rides": "SF-E600a-D1-I1"
+  },
+  {
+    "id": "EA-KENWOOD-CHEF-XL",
+    "kind": "drawer",
+    "element": "EA-KENWOOD-CHEF-XL",
+    "center": [
+      21.3935,
+      0.6895,
+      -12.9855
+    ],
+    "slide": [
+      0.496,
+      0.0,
+      0.0
+    ],
+    "rides": "SF-E600b-D1-I1"
+  },
+  {
+    "id": "EA-KENWOOD-CHEF-XL-BOWL",
+    "kind": "drawer",
+    "element": "EA-KENWOOD-CHEF-XL-BOWL",
+    "center": [
+      21.446,
+      0.6628,
+      -12.9855
+    ],
+    "slide": [
+      0.496,
+      0.0,
+      0.0
+    ],
+    "rides": "SF-E600b-D1-I1"
+  },
+  {
+    "id": "EA-KENWOOD-CHEF-XL-DISPLAY",
+    "kind": "drawer",
+    "element": "EA-KENWOOD-CHEF-XL-DISPLAY",
+    "center": [
+      21.27305,
+      0.7991,
+      -13.0873
+    ],
+    "slide": [
+      0.496,
+      0.0,
+      0.0
+    ],
+    "rides": "SF-E600b-D1-I1"
   },
   {
     "id": "SF-A250-D1",

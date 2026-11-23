@@ -1027,3 +1027,23 @@ def test_one_drawer_under_the_oven_line_and_the_sealer_in_the_pantry():
     sealer = _runs()["KR-ISL"].part("EA-MAXXO-CL40")
     assert sealer.props["InnerDrawer"] == "SF-E600a-D1-I1" and sealer.props["ClearanceAbove"] == pytest.approx(0.03)
     assert sealer.props["SpareAlongRun"] > 0 and sealer.props["SpareAcrossDepth"] > 0
+
+
+def test_kenwood_rides_its_inner_drawer():
+    """Petr, 2026-11-23 (t889u): the Kenwood Chef XL in SF-E600b (next to
+    the sealer's SF-E600a), on its only inner drawer with 30 over it, the
+    control side north; it and the sealer slide with their inner drawers."""
+    run = _runs()["KR-ISL"]
+    assert run.part("SF-E600b-D1").props["InnerDrawers"] == "K"
+    mixer = run.part("EA-KENWOOD-CHEF-XL")
+    assert mixer.props["InnerDrawer"] == "SF-E600b-D1-I1"
+    assert mixer.props["ClearanceAbove"] == pytest.approx(0.03)
+    assert mixer.props["SpareAlongRun"] > 0 and mixer.props["SpareAcrossDepth"] > 0
+    host = run.part("SF-E600b-D1-I1").drawer
+    display = run.part("EA-KENWOOD-CHEF-XL-DISPLAY")
+    # North is low a on the island: the display is on the mixer's low-a side.
+    assert display.boxes[0][1] <= min(b[0] for b in mixer.boxes) + 30.0
+    for pid in ("EA-KENWOOD-CHEF-XL", "EA-KENWOOD-CHEF-XL-BOWL", "EA-KENWOOD-CHEF-XL-DISPLAY", "EA-MAXXO-CL40"):
+        part = run.part(pid)
+        assert part.drawer is not None and part.drawer.extension == pytest.approx(host.extension)
+        assert part.props["InnerDrawer"].endswith("-D1-I1")

@@ -695,10 +695,16 @@ systemFurniture:
           # island east, please double check that you've added them." Two
           # MERIVOBOX inner drawers behind the front (M coupled, K), as in
           # the dining run; the F box stays at the bottom.
-          Layout: "drawer * box=E inner=M,K"
+          # Petr, 2026-11-23 (t889u): "lets hide a Kenwood Chef XL in the
+          # drawer next to it [the sealer's]. It should barely fit the
+          # drawer height with no attachments." Like the sealer: the top
+          # inner drawer (M) is gone, the K one carries the machine with
+          # its height + 30 over its floor (345 + 30 = 375 to the band top).
+          Layout: "drawer * box=E inner=K inner_clear=0.375"
       - Name: Pset_Drawers
         Properties:
-          Gridfinity: true
+          # t889u: no Gridfinity plate under the Kenwood (its inner drawer).
+          Gridfinity: false
           # Petr, 2026-11-22 (t795u): "for the island east side, we want gridfinity on
           # the inner drawer, the bottom main one doesnt need gridfinity (remove the
           # gridfinity plate too)".
@@ -1585,6 +1591,34 @@ electricAppliances:
           # lid lifts up", so about height + depth = 225 + 285 = 510 (was a
           # 500 guess).
           LidOpenHeight: 0.51
+  - id: EA-KENWOOD-CHEF-XL
+    Name: "Kenwood Chef XL KVL4100S"
+    Description: "Stand mixer (kitchen machine) in the island's east drawer SF-E600b, next to the sealer's SF-E600a, on its inner drawer's floor, control side facing north (Petr, 2026-11-23, t889u). Kenwood: 385 × 280 × 345 (W × D × H as Kenwood lists them, 38.5 × 28 × 34.5 cm), 6.7 l bowl, 7.84 kg (kenwoodworld.com KVL4100S; Harvey Norman, proshop.dk, crosscraft.com.mt data sheet agree, the data sheet says 7.658 kg). guess: 385 is column to bowl, 280 across; the stated height is the head down with the bowl on and no tool; the machine is stored bowl on, no tool, no splash guard. open: which Chef XL Petr has (KVL4100 assumed; the Chef XL Sense KVL6100 is 350 × 430 × 300 and the Titanium Chef Baker XL KVL85 370 × 400 × 225, Kenwood's listings), and where its speed dial / display really is (drawn on the head's side next to the column, guess:)."
+    PredefinedType: USERDEFINED
+    ObjectType: StandMixer
+    ContainedInStructure: SP-1.02
+    PropertySets:
+      - Name: Pset_ManufacturerTypeInformation
+        Properties:
+          Manufacturer: "Kenwood"
+          ModelLabel: "Chef XL KVL4100S"
+      - Name: Pset_BuiltIn
+        Properties:
+          # Petr, 2026-11-23 (t889u): "The display is facing north. Ok to use
+          # a basic kitchen robot 3d model but proportions and display
+          # position should be apparent." On the floor of SF-E600b's inner
+          # drawer, column to bowl along the drawer's depth (bowl at the
+          # front, east: guess:), the control side against the north side.
+          Kind: Standing
+          Shape: StandMixer
+          Bay: SF-E600b
+          InnerDrawer: SF-E600b-D1-I1
+          Faces: N
+          BowlEnd: E
+          # Width across (the control side's normal), Depth column to bowl.
+          Width: 0.28
+          Depth: 0.385
+          Height: 0.345
   - id: EA-EVO3-W
     Name: "EcoMaster STANDARD EVO3"
     Description: "Food waste disposer under the west sink SN-RS15 (card on KitchenPlan.jpg). 368 high, 145 diameter (EcoMaster). Hangs from the bowl's drain, 115 mm from the inner bowl back (Teka RS15 plan, Pset_Sink DrainOffsetFromBack)."

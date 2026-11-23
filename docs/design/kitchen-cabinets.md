@@ -63,6 +63,7 @@ Petr's original document is the sticky-note plan [`KitchenPlan.jpg`](../../input
 | 36 | Island east widths N→S 626 / 617 / 617 / 640 (SF-E700 off the Gridfinity grid) | **640 / 617 / 617 / 626**: SF-E600a (north) off the grid (inside 562), SF-E700 548 inside = 13 columns + 2 | Petr (t883u) |
 | 37 | Tall north-wall doors (SF-T1, SF-T2, SF-T4, SF-TC): J grip on the side | **Upside-down J on the bottom edge** (SF-T3's top door already had it); **SF-T1 split into two doors**, both hinged L, 597 × 1172 each (101.5–1273.5 and 1276.5–2448.5; was one 597 × 2347), two shelves each (placeholders) | Petr (t883u) |
 | 38 | SF-T1 split in two equal doors 597 × 1172 (101.5–1273.5, 1276.5–2448.5), both bottom J | **Split on the oven columns' line: lower door 597 × 694 (101.5–795.5, normal top J, like the T2/T3/T4 drawer fronts), board 797–815, upper door 597 × 1650 (798.5–2448.5, upside-down bottom J, like the T2/T4 doors)**; both hinged L; shelves 1 below / 3 above (placeholders); contents: lower “nápoje, basy od piva”, upper “plechovky, vývary, trvanlivé potraviny” | Petr, 2026-11-23 (t887u) |
+| 39 | SF-E600b: inner drawers M 771–862 + K 483.5–612.5, Gridfinity on them | **One K inner drawer 501–630 (floor 517), 375 to the band top (892); the Kenwood Chef XL KVL4100S (345 high) on it with 30 over it, control side north; no Gridfinity plate**. The sealer and the Kenwood ride their inner drawers in the viewer (no motion of their own) | Petr, 2026-11-23 (t889u) |
 
 ## Monoblocks
 
@@ -2325,3 +2326,16 @@ Read as: the steam oven niche (and the pantry floor, and T4's door band) starts 
 - **Grips**: `grip=bottom` on SF-T1 (both doors), SF-T2, SF-T4, SF-TC; the J profile is mirrored at the bottom edge (upside down). SF-T3's top door and the cabinet over the fridge (SF-TF) already had it.
 - **SF-T1**: `door * … | door 1.175 …`: two equal bands of 1175 from the plinth top, doors 597 × 1172 each (gap 3 between them), hinged L with the filler on the wall side as before.
 - **SF-T1, t887u**: `door * hinge=L width=0.6 shelves=3 grip=bottom | door 0.697 hinge=L width=0.6 shelves=1 grip=top`: the lower band is 100–797 like the T2 / T4 drawer bands, so the lower door (101.5–795.5) lines up with the drawer fronts and the upper door (798.5–2448.5) with the T2 / T4 doors; a hinged door at the bottom instead of a drawer.
+
+## Kenwood in the island, appliances ride their inner drawers (2026-11-23, t889u)
+
+Petr: "just like we hid the vacuum sealer in a drawer, lets hide a Kenwood Chef XL in the drawer next to it. It should barely fit the drawer height with no attachments. The display is facing north. … fix the fact the sealer and the new kenwood robot should slide with their respective inner drawer, not move independently on tap."
+
+- **Which drawer**: north to south the east row is SF-E600a (640, sealer), SF-E600b (617), SF-E600c (617), SF-E700 (626). The drawer next to the sealer's is SF-E600b.
+- **Kenwood Chef XL KVL4100S** (manufacturer): 38.5 × 28 × 34.5 cm, 6.7 l bowl, 7.84 kg ([kenwoodworld.com](https://www.kenwoodworld.com/en/p/chef-chef-xl-kvl4100s/KVL4100S.html?pid=0W20011150); the same 34.5 H × 38.5 W × 28 D at [Harvey Norman](https://www.harveynorman.com.sg/home-appliances/small-kitchen-appliances-en/mixers-and-food-processors/kenwood-kvl4100s-chef-xl-kitchen-machine-silver.html), [proshop.dk](https://www.proshop.dk/Koekkenmaskiner-Foodprocessor/Kenwood-Koekkenmaskine-KVL4100S-Chef-XL/2675120) and Kenwood's [data sheet](https://www.crosscraft.com.mt/wp-content/uploads/2021/02/Kenwood-Chef-XL-Kitchen-Machine-KVL4100S-Data-Sheet.pdf), 7.658 kg there).
+- guess: 385 is column to bowl and 280 across; the 345 is the head down, the bowl on, no tool. Stored like that (no tool, no splash guard).
+- guess: the model is a basic machine (base, column, head, bowl); the control / display is a black patch on the head's north side next to the column; the bowl is at the drawer's front (east).
+- open: which Chef XL Petr has. Others for comparison (Kenwood listings): Chef XL Sense KVL6100 350 H × 430 × 300 (25 over it, fits); Titanium Chef Baker XL KVL85 370 H × 400 × 225 (5 over it).
+- **Layout**: `drawer * box=E inner=K inner_clear=0.375`: the top inner drawer (M) is gone, the K one's floor is 375 under the band top (345 + 30, as the sealer's 225 + 30). Inside 548 × 458: 268 spare along the run, 73 along the depth.
+- **Viewer**: a standing appliance's record names its inner drawer in `rides` (models/ground_floor.py); doors.js `attachRiders` hangs its mesh under that drawer's pivot, so it slides with it and a tap on it drives the drawer. Before, the sealer had its own motion (parent the outer drawer) and moved on its own.
+

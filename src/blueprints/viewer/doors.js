@@ -24,6 +24,9 @@
  * front shuts them all and re-couples them. Tapping an open coupled one
  * releases and shuts it alone, like pressing the driver's housing
  * (`toggleDrawerTree`).
+ * A drawer record with `rides` (an inner drawer's id) is something standing
+ * in that drawer: it slides with it and a tap on it drives it
+ * (`attachRiders`).
  *
  * Sliding and pocket doors are records with kind "sliding": the leaf's jamb
  * ends `start` and `end` (glTF metres) and `panels`, each a fraction `span`
@@ -400,6 +403,7 @@ export function bindDrawer(host, record) {
     goal: 0,
     anim: null,
     parentId: record.parent ? String(record.parent) : null,
+    ridesId: record.rides ? String(record.rides) : null,
     coupledDefault: Boolean(record.coupled),
     coupled: Boolean(record.coupled),
     parent: null,
@@ -909,6 +913,37 @@ export function linkDrawerTree(bindings) {
 }
 
 /**
+ * Things standing in a drawer (a record with `rides`: the drawer's id, e.g.
+ * the vacuum sealer on its MERIVOBOX inner drawer, Petr t889u) have no
+ * motion of their own: their mesh is hung under that drawer's pivot, so it
+ * slides with it, and a tap on it drives that drawer. Returns the bindings
+ * left (riders whose drawer is bound are removed; others stay as before).
+ * Call while everything is shut (bind time).
+ * @param {object[]} bindings
+ * @returns {object[]}
+ */
+export function attachRiders(bindings) {
+  const byId = new Map(bindings.map((b) => [b.id, b]));
+  const kept = [];
+  for (const b of bindings) {
+    const host = b.ridesId ? byId.get(b.ridesId) : null;
+    if (!host || host === b || !host.pivot || !b.pivot) {
+      kept.push(b);
+      continue;
+    }
+    host.pivot.updateWorldMatrix(true, false);
+    host.pivot.attach(b.pivot);
+    const tag = (obj) => {
+      obj.userData.bpDoor = host;
+    };
+    b.pivot.traverse(tag);
+    host.riders = host.riders || [];
+    host.riders.push(b.id);
+  }
+  return kept;
+}
+
+/**
  * Drive one drawer of a front + inner drawers group; returns the bindings
  * that changed as [binding, from, to].
  * @param {object} binding
@@ -1281,6 +1316,11 @@ export function createDoorController(opts) {
       bindings.push(binding);
     }
     linkDrawerTree(bindings);
+    {
+      const kept = attachRiders(bindings);
+      bindings.length = 0;
+      bindings.push(...kept);
+    }
     const used = new Set();
     for (const record of records) {
       if (!isLinkageRecord(record)) continue;

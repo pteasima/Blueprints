@@ -1840,6 +1840,8 @@ class _Builder:
                 "Parent": host.props.get("Parent"), "Latched": host.props.get("Latched")})
             # It slides with its inner drawer (viewer: the same motion).
             part.drawer = replace(idr, front=body, box=body, items=[], baseplate=[])
+            if str(_prop(ext, PSET_BUILTIN, "Shape", "") or "") == "StandMixer":
+                self._stand_mixer(ext, bay, part, body, faces, north_hi, idr, host_id)
             self.run.notes.append(
                 f"open: {ext['id']} in {host_id}: {along:g} along the run x {across:g} deep x {h:g}, "
                 f"inside {ia1 - ia0:g} x {ic1 - ic0:g}, faces {faces or '-'}"
@@ -2151,6 +2153,60 @@ class _Builder:
         return out
 
     # --- built-in appliances and sink fittings (Pset_BuiltIn) ----------------
+
+    def _stand_mixer(self, ext: dict, bay: Bay, part: Part, body: tuple, faces: str, north_hi: bool,
+                     idr: "Drawer", host_id: str):
+        """A basic kitchen machine in ``body`` (Petr, 2026-11-23, t889u: the
+        Kenwood Chef XL; "proportions and display position should be
+        apparent"): a base, a column at the back, a head arm over a bowl,
+        and the control / display patch on the side that ``Faces`` names
+        (N / S), drawn black (``hob`` label) so it stands out. ``Depth``
+        runs column to bowl along the drawer's depth; ``BowlEnd`` (E / W)
+        says which end the bowl is. Every piece rides the inner drawer.
+
+        Proportions (guess:, from Kenwood's product photos, not a drawing):
+        base 70 high and 85 % of the width; column 33 % of the depth, 72 %
+        of the width, full height; head from the column to 25 mm short of
+        the bowl end, the top 32 % of the height, 72 % of the width; bowl
+        the full width across, centred half a width from the bowl end, from
+        the base up to 3 mm under the head; display 90 x 55 on the head's
+        side next to the column, 2 proud."""
+        a0, a1, c0, c1, z0, z1 = body
+        w, d, h = a1 - a0, c1 - c0, z1 - z0
+        am = (a0 + a1) / 2.0
+        fr = self.run.frame
+        east_hi = fr.world(0.0, 1.0, 0.0)[0] > fr.world(0.0, 0.0, 0.0)[0]
+        bowl_end = str(_prop(ext, PSET_BUILTIN, "BowlEnd", "E") or "E").upper()
+        bowl_hi = (bowl_end == "E") == east_hi
+
+        def span(frm: float, to: float) -> tuple:
+            # c range measured from the column (back) end.
+            return (c1 - to, c1 - frm) if not bowl_hi else (c0 + frm, c0 + to)
+
+        def across(frac: float) -> tuple:
+            return (am - w * frac / 2.0, am + w * frac / 2.0)
+
+        base_h, head_h = 70.0, 0.32 * h
+        col = span(0.0, 0.33 * d)
+        head = span(0.0, d - 25.0)
+        bowl = span(d - w, d)
+        boxes = [(*across(0.85), c0, c1, z0, z0 + base_h),
+                 (*across(0.72), *col, z0, z1),
+                 (*across(0.72), *head, z1 - head_h, z1)]
+        part.boxes = boxes
+        bowl_box = (a0, a1, *bowl, z0 + base_h - 10.0, z1 - head_h - 3.0)
+        side_hi = (faces == "N") == north_hi
+        ha0, ha1 = across(0.72)
+        da0, da1 = (ha1, ha1 + 2.0) if side_hi else (ha0 - 2.0, ha0)
+        disp = (da0, da1, *span(0.33 * d - 100.0, 0.33 * d - 10.0), z1 - head_h + 20.0, z1 - head_h + 75.0)
+        for suffix, name, box, label, shape in (
+                ("BOWL", "Mísa", bowl_box, "appliance", "cylinder"),
+                ("DISPLAY", "Ovládání / displej", disp, "hob", "box")):
+            piece = Part(f"{ext['id']}-{suffix}", f"{ext.get('Name') or ext['id']}: {name}", "Appliance", [box],
+                         label=label, shape=shape,
+                         props={"Bay": bay.id, "InnerDrawer": host_id, "Of": ext["id"]})
+            piece.drawer = replace(idr, front=box, box=box, items=[], baseplate=[])
+            self.add(piece, bay)
 
     def _builtin_part(self, ext: dict, bay: Bay, boxes: list, shape: str = "box", props: dict | None = None) -> Part:
         label = "sink" if ext["id"] in self.sanitary else "appliance"

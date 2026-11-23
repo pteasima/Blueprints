@@ -482,6 +482,12 @@ def _kitchen_run_parts(run, motions=None, layers: dict | None = None) -> list:
                 placed.label = LABEL_CABINET
                 placed.color = _color(LABEL_CABINET)
                 solid = None
+            elif part.shape == "cylinder":
+                # The kitchen machine's bowl riding its inner drawer (t889u).
+                a0, a1, c0, c1, z0, z1 = boxes[0]
+                solid = Pos((a0 + a1) / 2.0, (c0 + c1) / 2.0 + inward, z0) * Cylinder(
+                    min(a1 - a0, c1 - c0) / 2.0, z1 - z0, align=(Align.CENTER, Align.CENTER, Align.MIN)
+                )
             else:
                 solid = _run_box(boxes[0], 0.0)
                 for box in boxes[1:]:
@@ -554,7 +560,12 @@ def _kitchen_run_parts(run, motions=None, layers: dict | None = None) -> list:
             "center": [round(v, 6) for v in cg],
             "slide": [round(q - p, 6) + 0.0 for p, q in zip(cg, mg)],
         }
-        if part.props.get("Parent"):
+        if part.props.get("InnerDrawer"):
+            # Standing in an inner drawer (the sealer, the Kenwood; Petr,
+            # t889u): no motion of its own, it rides that drawer (doors.js
+            # ``attachRiders``): it slides with it and a tap drives it.
+            record["rides"] = part.props["InnerDrawer"]
+        elif part.props.get("Parent"):
             # An inner drawer (2026-11-20 c): opens only with its front open;
             # ``coupled`` (Blum ZI7.0M07) opens with the front. doors.js.
             record["parent"] = part.props["Parent"]
