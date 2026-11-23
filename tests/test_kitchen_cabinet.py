@@ -820,7 +820,7 @@ def test_wide_bays_split_into_sections():
     # Petr, 2026-11-20: "remove living room drawers behind couch. Those
     # cabinets are dead space": seven blank fixed fronts, nothing moves.
     lb = runs["KR-LB"]
-    assert [p.role for p in lb.parts if p.id.startswith("SF-LB-S") and p.role in ("Front", "Drawer", "Door")] == ["Front"] * 7
+    assert [p.role for p in lb.parts if p.id.startswith("SF-LB-S") and p.role in ("Front", "Drawer", "Door")] == ["Front"] * 2
     assert all(p.drawer is None and p.door is None for p in lb.parts)
     # Petr, 2026-11-20: "dining area top cabinets split in half, same flip
     # out opening as kitchen top cabinets, same 88deg setting."

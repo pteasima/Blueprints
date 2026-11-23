@@ -1183,7 +1183,7 @@ systemFurniture:
   # bodies stop at 910), 30 front overhang like KR-DN.
   - id: SF-LB
     Name: "Obývák nízká"
-    Description: "Low base behind the sofa, from W-053's east face (x 25.45, the face of SF-F053) to SF-TC's west face (x 29.60), both linked (2026-11-20 c; was x 25.52–29.70 with the 70 strip SF-DN70 at the pier). 450 deep, front y=15.15. Counter 930, the dining-run height (was 800), oak veneer top. 170 mm above the 760 sofa back. Cream like the kitchen since 2026-11-20 (was natural oak); dead space behind blank fronts since 2026-11-20."
+    Description: "Low base behind the sofa, from W-053's east face (x 25.45, the face of SF-F053) to SF-TC's west face (x 29.60), both linked (2026-11-20 c; was x 25.52–29.70 with the 70 strip SF-DN70 at the pier). 450 deep, front y=15.15. Counter 930, the dining-run height (was 800), oak veneer top. 170 mm above the 760 sofa back. Cream like the kitchen since 2026-11-20 (was natural oak); dead space behind blank fronts since 2026-11-20. Petr, 2026-11-23 (t915u, t916u): two equal blank front panels (was seven)."
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
@@ -1207,9 +1207,13 @@ systemFurniture:
       # cabinets are dead space (at least for now)." Same seven sections,
       # each one fixed blank front at full height (no doors, no drawers,
       # no shelves).
+      # Petr, 2026-11-23 (t915u, t916u): "the front panel (the one thats
+      # mostly hidden behind sofa) shouldnt be split into so many sections.
+      # I assume it cant be a single panel, so lets split it in the middle
+      # into two." Two equal sections (2075 mm), still fixed blank fronts.
       - Name: Pset_Fronts
         Properties:
-          Sections: "7"
+          Sections: "2"
           Layout: "front *"
       # Petr, 2026-11-20 c: "that whole bookshelf area and base cabinets
       # below it need to be tightened, the connection to the column is weird,
