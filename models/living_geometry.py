@@ -181,6 +181,47 @@ def _lining(element: dict, width: float, depth: float, height: float, gap: float
     return [solid]
 
 
+
+def bookshelf_metrics(element: dict, width: float, depth: float, height: float, gap: float) -> dict:
+    """Shelf boards and the lamella, local millimetres from the box min corner.
+
+    ``width``, ``depth`` and ``height`` are the converter's box, in mm.
+    Stays in lockstep with ``_bookshelf`` (same openings, same 0.5 mm
+    insets). Used by the living-room worktop lids (2026-11-23, t913u) so
+    the lid depth is derived from Shelf 1 and the lamella, not typed in.
+    """
+    raw = _prop(element, "Pset_Bookshelf", "ShelfCount", _SHELVES)
+    backing = float(_prop(element, "Pset_Bookshelf", "BackingThickness", 0.0)) * 1000.0
+    board_t = float(_prop(element, "Pset_Bookshelf", "BoardThickness", _CASE_T / 1000.0)) * 1000.0
+    has_top = _prop(element, "Pset_Bookshelf", "HasTopBoard", True)
+    if isinstance(has_top, str):
+        has_top = has_top.strip().lower() not in ("false", "0", "no")
+    lo = gap / 2.0
+    y1, z1 = depth - lo, height - lo
+    top_t = board_t if has_top else 0.0
+    count = int(raw) if raw and int(raw) > 0 else _SHELVES
+    inner_h = (z1 - top_t) - lo - count * board_t
+    opening = inner_h / (count + 1)
+    z = lo
+    shelves = []
+    for _ in range(count):
+        z += opening
+        shelves.append((z, z + board_t))
+        z += board_t
+    back = y1 - backing
+    return {
+        "shelves": shelves,  # (z0, z1) of each shelf board, first is Shelf 1
+        "lamella_y0": back - _LAMELLA_T,  # front face of the slats
+        "lamella_y1": back,
+        "lamella_z0": lo,  # slats start this far above the box bottom
+        "lamella_z1": z1 - top_t,
+        "board_t": board_t,
+        "backing": backing,
+        "has_top": bool(has_top),
+        "opening": opening,
+    }
+
+
 def _bookshelf(width: float, depth: float, height: float, gap: float, shelves: int, backing: float = 0.0,
                board_t: float = _CASE_T, has_top: bool = True, case_depth: float | None = None):
     lo = gap / 2.0

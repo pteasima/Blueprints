@@ -36,6 +36,8 @@ wall from the worktop up to the boxes hanging over it.
 from __future__ import annotations
 
 import math
+
+import living_geometry
 from dataclasses import dataclass, field, replace
 
 PSET_CABINET = "Pset_KitchenCabinet"
@@ -832,13 +834,14 @@ def _segments(row: list) -> list[list]:
 
 class _Builder:
     def __init__(self, run: Run, sinks: list[dict], above: list | None = None, builtins: list | None = None,
-                 sanitary: set | None = None):
+                 sanitary: set | None = None, doc: dict | None = None):
         self.run = run
         self.p = run.params
         self.sinks = sinks
         self.builtins = builtins or []  # yaml elements with Pset_BuiltIn and no box
         self.sanitary = sanitary or set()  # of those, the sanitaryTerminals (taps)
         self.above = above or []  # (a0, a1, c0, c1, z0, id): boxes hanging over the run
+        self.doc = doc or {}
         self.ids: set[str] = set()
 
     def add(self, part: Part, *bays: Bay) -> Part:
@@ -1014,6 +1017,7 @@ class _Builder:
         if slabs:
             self.add(Part(f"{run.id}-WORKTOP", "Pracovní deska", "Worktop", slabs, label=_worktop_label(material),
                           material=material))
+            self._apply_worktop_lids(bays, z_base, height, wt)
             if ul > 0:
                 # The same footprint, under the stone (Petr, 2026-11-20 f:
                 # "the dining part has 20 silestone and 20 oak below it").
@@ -1025,6 +1029,246 @@ class _Builder:
                               label=_worktop_label(under), material=under, props={"Material": under}))
         if clad:
             self._cladding(_rows(run.bays), z_base, z_base + height - wt - ul)
+
+
+    def _furnishing(self, element_id: str) -> dict | None:
+        doc = self.doc or {}
+        for key, items in doc.items():
+            if not isinstance(items, list):
+                continue
+            for el in items:
+                if isinstance(el, dict) and el.get("id") == element_id:
+                    return el
+        return None
+
+    def _worktop_lid_sections(self, bay: Bay) -> set[int]:
+        """1-indexed worktop-band numbers with an upward-hinged lid.
+
+        ``Pset_KitchenBay.WorktopLids``, else ``Pset_KitchenRun.WorktopLids``
+        (a comma or space separated list, e.g. ``"3,6"``). These index
+        ``WorktopLidDivisions`` equal bands along the top, not
+        ``Pset_Fronts.Sections`` (the cream fronts can be a coarser split).
+        """
+        raw = _prop(bay.element, PSET_BAY, "WorktopLids")
+        if raw is None:
+            raw = _prop(self.run.element, PSET_RUN, "WorktopLids")
+        if raw is None or str(raw).strip() == "":
+            return set()
+        out = set()
+        for chunk in str(raw).replace(",", " ").split():
+            out.add(int(chunk))
+        return out
+
+    def _worktop_lid_divisions(self, bay: Bay) -> int:
+        """How many equal bands the worktop is split into for lids."""
+        raw = _prop(bay.element, PSET_BAY, "WorktopLidDivisions")
+        if raw is None:
+            raw = _prop(self.run.element, PSET_RUN, "WorktopLidDivisions")
+        if raw is not None:
+            return int(raw)
+        return 8 if self._worktop_lid_sections(bay) else 0
+
+    def _worktop_lid_bands(self, bay: Bay) -> list[tuple]:
+        """``(number, a0, a1)`` of equal worktop bands, run-frame mm.
+
+        Independent of ``Pset_Fronts.Sections`` (Petr, 2026-11-23, t915u/t916u:
+        two cream front panels; t913u: lids on the 3rd and 6th of eight
+        equal bands of the oak top).
+        """
+        n = self._worktop_lid_divisions(bay)
+        if n <= 0:
+            return []
+        w = bay.width / n
+        return [(i, bay.a0 + (i - 1) * w, bay.a0 + i * w) for i in range(1, n + 1)]
+
+    def _section_spans(self, bay: Bay) -> list[tuple]:
+        """``(number, a0, a1, clear_lo, clear_hi)`` of each section, in
+        run-frame millimetres. Same edges as ``_sections``.
+        """
+        widths = section_widths(bay.element, bay.width)
+        if widths is None:
+            return [(1, bay.a0, bay.a1, bay.clear_lo, bay.clear_hi)]
+        t = self.p["BoardThickness"]
+        if not bay.front_low:
+            widths = widths[::-1]
+        order = list(range(1, len(widths) + 1))
+        if not bay.front_low:
+            order = order[::-1]
+        edges = [bay.a0]
+        for w in widths:
+            edges.append(edges[-1] + w)
+        out = []
+        for k, (number, a0, a1) in enumerate(zip(order, edges, edges[1:])):
+            first, last = k == 0, k == len(widths) - 1
+            clo = bay.clear_lo if first else a0 + t / 2
+            chi = bay.clear_hi if last else a1 - t / 2
+            out.append((number, a0, a1, clo, chi))
+        out.sort(key=lambda s: s[0])
+        return out
+
+    def _worktop_lid_geometry(self, bay: Bay, z_top: float, thickness: float) -> dict:
+        """Lid depth, hinge, lean angle: just deep enough to clear Shelf 1.
+
+        Petr, 2026-11-23 (t913u): do not use the full 450 minus the acoustic
+        panel; size the lid so it opens fully below the first bookshelf
+        shelf and leans past 90° against the lamella.
+        """
+        run = self.run
+        book_id = str(_prop(run.element, PSET_RUN, "WorktopLidBookshelf") or "").strip()
+        if not book_id:
+            raise ValueError(f"{run.id}: WorktopLids needs WorktopLidBookshelf")
+        book = self._furnishing(book_id)
+        if book is None:
+            raise ValueError(f"{run.id}: WorktopLidBookshelf {book_id} is not in the furnishings")
+        # Same millimetre box and mesh gap the bookshelf itself is built with.
+        gap = 1.0  # MESH_GAP_MM in ground_floor.py (circular to import)
+        width = float(book["Width"]) * 1000.0
+        depth = float(book["Depth"]) * 1000.0
+        height = float(book["Height"]) * 1000.0
+        metrics = living_geometry.bookshelf_metrics(book, width, depth, height, gap)
+        origin = book.get("Origin") or (book.get("X"), book.get("Y"))
+        if origin is None or origin[0] is None or origin[1] is None:
+            raise ValueError(f"{book_id}: needs an Origin")
+        x0, y0 = float(origin[0]) * 1000.0, float(origin[1]) * 1000.0
+        elev = float(book.get("Elevation") or 0.0) * 1000.0
+        shelf1_z0 = elev + metrics["shelves"][0][0]
+        lamella_y = y0 + metrics["lamella_y0"]
+        # Run-frame c of the lamella front. SF-LB: front at c=0, wall at +c;
+        # the bookshelf sits on the same front plane as the bay.
+        _a, lamella_c = run.frame.local(x0 + width / 2.0, lamella_y)
+        front_c = bay.c0 if bay.front_low else bay.c1
+        raw_clear = _prop(run.element, PSET_RUN, "WorktopLidClearance")
+        # guess: 8 mm under Shelf 1 at the peak of the swing (in the 5–10 mm band).
+        clearance = 8.0 if raw_clear is None else float(raw_clear) * 1000.0
+        t = thickness
+        headroom = shelf1_z0 - z_top
+        r_max = headroom - clearance
+        if r_max <= t + 1.0:
+            raise ValueError(
+                f"{run.id}: only {headroom:.1f} mm under {book_id} Shelf 1, not enough for a {t:.0f} mm lid"
+            )
+        depth_lid = math.sqrt(r_max * r_max - t * t)
+        # Front-flush lid: the hinge is D in from the front, the rear oak
+        # strip is whatever is left to the back (including under the bookshelf).
+        if bay.front_low:
+            hinge_c = front_c + depth_lid
+        else:
+            hinge_c = front_c - depth_lid
+        # Top-front edge at opening 90° + theta: c = hinge_c + D * sin(theta)
+        # toward the wall (the lamella). Solve for the lean that rests on it.
+        toward_wall = (lamella_c - hinge_c) if bay.front_low else (hinge_c - lamella_c)
+        sin_theta = toward_wall / depth_lid
+        if sin_theta <= 0:
+            raise ValueError(
+                f"{run.id}: the hinge at c {hinge_c:.1f} is at or behind the lamella "
+                f"(c {lamella_c:.1f}); the lid cannot lean on it"
+            )
+        if sin_theta >= 1.0 - 1e-12:
+            raise ValueError(
+                f"{run.id}: lid depth {depth_lid:.1f} cannot reach the lamella at c {lamella_c:.1f} "
+                f"from the hinge at {hinge_c:.1f} even at 90° past vertical"
+            )
+        theta = math.asin(sin_theta)
+        peak_z = z_top + math.hypot(depth_lid, t)
+        # out: down × out is the axis; out toward the front so a positive
+        # angle raises the lid's front edge up and toward the wall (t913u).
+        out = -1.0 if bay.front_low else 1.0
+        return {
+            "depth": depth_lid,
+            "hinge_c": hinge_c,
+            "front_c": front_c,
+            "lamella_c": lamella_c,
+            "lamella_y": lamella_y,
+            "shelf1_z0": shelf1_z0,
+            "theta": theta,
+            "peak_z": peak_z,
+            "clearance": shelf1_z0 - peak_z,
+            "clearance_asked": clearance,
+            "thickness": t,
+            "out": out,
+            "book_id": book_id,
+            "lamella_z0": elev + metrics["lamella_z0"],
+        }
+
+    def _apply_worktop_lids(self, bays, z_base, height, wt):
+        """Cut lid openings in the oak worktop and add hinged lid parts.
+
+        Sections listed in ``WorktopLids`` get a 40 mm oak lid, piano-hinged
+        at its top-rear edge, that opens past 90° and leans on the bookshelf
+        lamella under Shelf 1 (Petr, 2026-11-23, t913u). The rest of the
+        top, including a fixed rear strip behind each hinge, stays put.
+        """
+        run = self.run
+        top = next((p for p in run.parts if p.id == f"{run.id}-WORKTOP"), None)
+        if top is None or wt <= 0:
+            return
+        z0, z1 = z_base + height - wt, z_base + height
+        new_boxes = []
+        changed = False
+        for slab in list(top.boxes):
+            a0, a1, c0, c1, sz0, sz1 = slab
+            bay = next((b for b in bays if _near(b.a0, a0) and _near(b.a1, a1)
+                        and _near(min(b.c0, b.c1), min(c0, c1)) and _near(max(b.c0, b.c1), max(c1, c0))), None)
+            lids = self._worktop_lid_sections(bay) if bay is not None else set()
+            if not lids:
+                new_boxes.append(slab)
+                continue
+            geom = self._worktop_lid_geometry(bay, z1, wt)
+            D, hinge_c = geom["depth"], geom["hinge_c"]
+            # Fixed full-depth runs between / beside the lid openings, and a
+            # rear strip behind each lid. Lids take the full width of their
+            # worktop band (1/8 of the 4150 top); the cream fronts and the
+            # single mid carcass divider are a separate, coarser split.
+            cutouts = [(n, a0, a1) for n, a0, a1 in self._worktop_lid_bands(bay) if n in lids]
+            cutouts.sort(key=lambda x: x[1])
+            # Fixed full-depth pieces: from slab a0 to first cutout, between
+            # cutouts, and after the last, at full c0–c1.
+            cursor = a0
+            fixed_full = []
+            for n, clo, chi in cutouts:
+                if clo > cursor + 0.1:
+                    fixed_full.append((cursor, clo, c0, c1, sz0, sz1))
+                cursor = chi
+            if a1 > cursor + 0.1:
+                fixed_full.append((cursor, a1, c0, c1, sz0, sz1))
+            new_boxes.extend(fixed_full)
+            if bay.front_low:
+                rear = (hinge_c, c1, 0.0, D)
+                lid_c0, lid_c1 = c0, hinge_c
+            else:
+                rear = (c0, hinge_c, 0.0, D)
+                lid_c0, lid_c1 = hinge_c, c1
+            for n, clo, chi in cutouts:
+                new_boxes.append((clo, chi, rear[0], rear[1], sz0, sz1))
+                steps = [k / LIFT_STEPS for k in range(LIFT_STEPS + 1)]
+                angles = tuple((math.pi / 2.0 + geom["theta"]) * s for s in steps)
+                self.add(Part(
+                    f"{bay.id}-S{n}-LID", f"Víko pracovní desky S{n}", "Worktop",
+                    [(clo, chi, lid_c0, lid_c1, sz0, sz1)],
+                    label=_worktop_label(top.material or top.label),
+                    material=top.material,
+                    lift=LiftJoint(f"{bay.id}-S{n}-LID", 0, None, hinge_c, z1, geom["out"], angles),
+                    props={
+                        "OpeningAngle": round(math.degrees(math.pi / 2.0 + geom["theta"]), 2),
+                        "LeanAngle": round(math.degrees(geom["theta"]), 2),
+                        "LidDepth": round(D / 1000.0, 6),
+                        "HingeC": round(hinge_c / 1000.0, 6),
+                        "PeakZ": round(geom["peak_z"] / 1000.0, 6),
+                        "Shelf1Bottom": round(geom["shelf1_z0"] / 1000.0, 6),
+                        "Clearance": round(geom["clearance"] / 1000.0, 6),
+                    },
+                ), bay)
+            opening = math.degrees(math.pi / 2.0 + geom["theta"])
+            self.run.notes.append(
+                f"{bay.id}: worktop lids {sorted(lids)}: depth {D:.2f} mm, hinge at c {hinge_c:.2f}, "
+                f"opens to {opening:.1f}° (leans {math.degrees(geom['theta']):.1f}° past 90° on "
+                f"{geom['book_id']} lamella at c {geom['lamella_c']:.1f}), peak z {geom['peak_z']:.2f} "
+                f"clears Shelf 1 at {geom['shelf1_z0']:.2f} by {geom['clearance']:.2f} mm "
+                f"(asked {geom['clearance_asked']:.0f})"
+            )
+            changed = True
+        if changed:
+            top.boxes = new_boxes
 
     def _pairs(self, rows):
         """Back-to-back rows: a row facing c0 whose back plane is another row's back plane."""
@@ -1246,16 +1490,50 @@ class _Builder:
         hob = self.run.hobs.get(bay.id)
         if p["WorktopThickness"] > 0:
             if not self._has_sink(bay):
-                rails = [("F", "Přední lišta", self.c_range(bay, tf, tf + p["RailDepth"]))]
+                lids = self._worktop_lid_sections(bay)
+                rail_z = (z1 - t, z1)
+                if lids:
+                    # Petr, 2026-11-23 (t913u): the front rail would run across
+                    # the lid cutouts and block reaching in from above. Omit
+                    # it in the lid bands of the oak top. The back rail stays
+                    # under the fixed rear strip. The cream fronts (and the
+                    # one mid divider) follow Pset_Fronts.Sections, which
+                    # can be coarser than the lid grid.
+                    fc0, fc1 = self.c_range(bay, tf, tf + p["RailDepth"])
+                    cuts = [(a0, a1) for number, a0, a1 in self._worktop_lid_bands(bay) if number in lids]
+                    cuts.sort()
+                    front_boxes = []
+                    cursor = lo
+                    for a0, a1 in cuts:
+                        if a0 > cursor + 0.1:
+                            box = (cursor, a0, fc0, fc1, *rail_z)
+                            if hob is not None and _boxes_meet(box, hob.housing):
+                                self.run.notes.append(f"{bay.id}: rail F left out, the hob housing sits there")
+                            else:
+                                front_boxes.append(box)
+                        cursor = max(cursor, a1)
+                    if hi > cursor + 0.1:
+                        box = (cursor, hi, fc0, fc1, *rail_z)
+                        if hob is not None and _boxes_meet(box, hob.housing):
+                            self.run.notes.append(f"{bay.id}: rail F left out, the hob housing sits there")
+                        else:
+                            front_boxes.append(box)
+                    if front_boxes:
+                        self.add(Part(f"{bay.id}-RAIL-F", "Přední lišta", "Rail", front_boxes), bay)
+                else:
+                    rails = [("F", "Přední lišta", self.c_range(bay, tf, tf + p["RailDepth"]))]
+                    for tag, name, (c0, c1) in rails:
+                        box = (lo, hi, c0, c1, *rail_z)
+                        if hob is not None and _boxes_meet(box, hob.housing):
+                            self.run.notes.append(f"{bay.id}: rail {tag} left out, the hob housing sits there")
+                            continue
+                        self.add(Part(f"{bay.id}-RAIL-{tag}", name, "Rail", [box]), bay)
                 if not shared_back:
-                    rails.append(("B", "Zadní lišta", self.c_range(bay, back_y - p["RailDepth"], back_y)))
-                for tag, name, (c0, c1) in rails:
-                    box = (lo, hi, c0, c1, z1 - t, z1)
+                    box = (lo, hi, *self.c_range(bay, back_y - p["RailDepth"], back_y), *rail_z)
                     if hob is not None and _boxes_meet(box, hob.housing):
-                        # The hob housing drops into the rail: no rail (guess:).
-                        self.run.notes.append(f"{bay.id}: rail {tag} left out, the hob housing sits there")
-                        continue
-                    self.add(Part(f"{bay.id}-RAIL-{tag}", name, "Rail", [box]), bay)
+                        self.run.notes.append(f"{bay.id}: rail B left out, the hob housing sits there")
+                    else:
+                        self.add(Part(f"{bay.id}-RAIL-B", "Zadní lišta", "Rail", [box]), bay)
         else:
             self.add(Part(f"{bay.id}-TOP", "Strop", "Top", [(lo, hi, c_in0, c_in1, z1 - t, z1)]), bay)
         ceiling = None if hob is None else hob.underside - hob.min_drawer_gap
@@ -1395,8 +1673,13 @@ class _Builder:
         for k, (number, a0, a1) in enumerate(zip(order, edges, edges[1:])):
             first, last = k == 0, k == len(widths) - 1
             if not last:
+                lids = self._worktop_lid_sections(bay)
+                # Dividers that frame a lid cutout run up to the worktop
+                # underside so the opening has sides you can reach past.
+                left_n, right_n = order[k], order[k + 1]
+                div_top = z1 if (left_n in lids or right_n in lids) else z1 - t
                 self.add(Part(f"{bay.id}-SDIV{k + 1}", f"Přepážka sekcí {k + 1}", "Divider",
-                              [(a1 - t / 2, a1 + t / 2, dc0, dc1, z0 + tb, z1 - t)]), bay)
+                              [(a1 - t / 2, a1 + t / 2, dc0, dc1, z0 + tb, div_top)]), bay)
             sub = replace(bay, id=f"{bay.id}-S{number}", element=section_element(bay.element, number),
                           a0=a0, a1=a1, clear_lo=bay.clear_lo if first else a0 + t / 2,
                           clear_hi=bay.clear_hi if last else a1 - t / 2, zones=[])
@@ -3484,7 +3767,7 @@ def runs(doc: dict) -> list[Run]:
         builtins = [x for key in EXTERNAL_LISTS for x in (doc.get(key) or [])
                     if _prop(x, PSET_BUILTIN, "Kind") is not None]
         sanitary = {x["id"] for x in (doc.get("sanitaryTerminals") or [])}
-        _Builder(run, sinks, above, builtins, sanitary).build()
+        _Builder(run, sinks, above, builtins, sanitary, doc).build()
         out.append(run)
     _join_worktops(out)
     return out
