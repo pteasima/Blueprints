@@ -698,6 +698,7 @@ class Run:
     bays: list
     parts: list = field(default_factory=list)
     docks: list = field(default_factory=list)  # (section bay, zone) with a dock band
+    door_bands: list = field(default_factory=list)  # (bay, zone, floor z, top z, back_y, racks): door bands
     lent_worktop: list = field(default_factory=list)  # (run id, bay id, run-frame slab) topped by another run
     carcass_z0: float = 0.0
     carcass_z1: float = 0.0
@@ -909,6 +910,7 @@ class _Builder:
             self._bay_parts(bay, z0, z1, shared_back=any(bay in r for k, rs in blocks if k == "pair" for r in rs))
         self._niche_appliances(cabinets)
         self._dock_appliances(cabinets)
+        self._standing_appliances()
         self._decor_panels()
         if wt > 0:
             self._worktop(rows, z_base + height - wt, z_base + height)
@@ -974,6 +976,7 @@ class _Builder:
             self.add(Part(f"{bay.id}-BODY", bay.element.get("Name") or bay.id, "Body",
                           [(bay.a0, bay.a1, bay.c0, bay.c1, z_base, z1)], material=material), bay)
         self._dock_appliances(bays)
+        self._standing_appliances()
         self._join_flush_kickboards(bays)
         if wt <= 0:
             return
@@ -1608,6 +1611,7 @@ class _Builder:
                     self.add(Part(f"{bay.id}-FILLER{zone.index}", "Lišta", "Filler",
                                   [(a0, a1, fc0, fc1, front_box[4], front_box[5])], props={"Zone": zone.index}), bay)
                 self._shelves(bay, p, zone, in_z0, in_z1, back_y, racks=int(zone.opts.get("racks", 0)))
+                self.run.door_bands.append((bay, zone, in_z0, in_z1, back_y, int(zone.opts.get("racks", 0))))
             elif zone.kind == "lift":
                 # The lowest front of a wall cabinet hangs ``WallFrontOverhang``
                 # below the carcass bottom (and closes the half gap under it).
@@ -1750,6 +1754,53 @@ class _Builder:
                     "Bay": bay.id, "Zone": zone.index, "DockClearWidth": round((o1 - o0) / 1000.0, 6),
                     "DockClearHeight": round((top - floor) / 1000.0, 6),
                     "ClearanceAbove": round((top - floor - h) / 1000.0, 6)})
+
+    def _standing_appliances(self):
+        """Loose appliances on the floor of a door band (``Pset_BuiltIn.Kind:
+        Standing``, ``Bay``, ``Zone``; Petr, 2026-11-23, t870u: the vacuum
+        sealer at the pantry's base). Centred across the clear width, its
+        front ``ShelfSetback`` behind the door racks (or the door). It must
+        fit under the band's lowest shelf; ``LidOpenHeight`` (the height
+        with the lid open, base to the lid's top) is checked against that
+        shelf and reported, not drawn."""
+        p = self.p
+        for bay, zone, floor, top, back_y, racks in self.run.door_bands:
+            for ext in self.builtins:
+                if str(_prop(ext, PSET_BUILTIN, "Kind", "")) != "Standing" or str(_prop(ext, PSET_BUILTIN, "Bay", "")) != bay.id:
+                    continue
+                if int(_prop(ext, PSET_BUILTIN, "Zone", zone.index)) != zone.index:
+                    continue
+                w, d, h = (float(_prop(ext, PSET_BUILTIN, k)) * 1000.0 for k in ("Width", "Depth", "Height"))
+                lid = float(_prop(ext, PSET_BUILTIN, "LidOpenHeight", 0.0) or 0.0) * 1000.0
+                tf = p["FrontThickness"]
+                front = tf + p["ShelfSetback"] + (p["RackDepth"] + p["ShelfSetback"] if racks else 0.0)
+                depth_clear = back_y - front
+                cw = bay.clear_hi - bay.clear_lo
+                shelves = [q for q in self.run.parts if q.role == "Shelf" and q.id.startswith(f"{bay.id}-SH{zone.index}-")]
+                roof = min((q.boxes[0][4] for q in shelves), default=top)
+                if w > cw + TOL:
+                    raise ValueError(f"{ext['id']}: {w:.0f} wide, {bay.id} is {cw:.0f} clear")
+                if d > depth_clear + TOL:
+                    raise ValueError(f"{ext['id']}: {d:.0f} deep, {bay.id} has {depth_clear:.0f} behind the door racks")
+                if h > roof - floor + TOL:
+                    raise ValueError(f"{ext['id']}: {h:.0f} high, {roof - floor:.0f} under the lowest shelf of {bay.id}")
+                am = (bay.clear_lo + bay.clear_hi) / 2.0
+                b0, b1 = self.c_range(bay, front, front + d)
+                body = (am - w / 2.0, am + w / 2.0, b0, b1, floor, floor + h)
+                lid_clear = roof - floor - lid if lid else None
+                self._builtin_part(ext, bay, [body], props={
+                    "Bay": bay.id, "Zone": zone.index, "ClearWidth": round(cw / 1000.0, 6),
+                    "ClearDepthBehindRacks": round(depth_clear / 1000.0, 6),
+                    "ClearHeight": round((roof - floor) / 1000.0, 6),
+                    "SideClearance": round((cw - w) / 2000.0, 6),
+                    "DepthLeftBehind": round((depth_clear - d) / 1000.0, 6),
+                    "ClearanceAbove": round((roof - floor - h) / 1000.0, 6),
+                    "LidOpenClearance": round(lid_clear / 1000.0, 6) if lid_clear is not None else None})
+                self.run.notes.append(
+                    f"{'open' if lid_clear is None or lid_clear >= 0 else 'CLASH'}: {ext['id']} in {bay.id}: "
+                    f"{w:g} × {d:g} × {h:g} on z {floor:g}, {(cw - w) / 2:g} a side, {depth_clear - d:g} behind it, "
+                    f"{roof - floor - h:g} over it to the lowest shelf"
+                    + (f"; lid open {lid:g} (guess:) leaves {lid_clear:g}" if lid else ""))
 
     def _grips(self, bay: Bay, p: dict, zone: Zone, role: str, box: tuple, hinge_a: float | None = None):
         """The routed J grip of one front (``Pset_KitchenRun.FrontGrip: J``):
@@ -2979,6 +3030,11 @@ def _items(p: dict, zone: Zone, box: tuple, out_dir: float, item_top: float | No
     out = []
     if kind == "shelves":
         board = wall
+        if zone.opts.get("at") is not None and n == 1:
+            # ``at=`` metres over the box floor (t870u: SF-T3's oven-tray
+            # shelf on the E box's top edge).
+            z = iz0 + float(zone.opts["at"]) * 1000.0
+            return [(ia0, ia1, ic0, ic1, z, z + board)]
         step = (top - iz0 - n * board) / (n + 1)
         for k in range(n):
             z = iz0 + step * (k + 1) + board * k
