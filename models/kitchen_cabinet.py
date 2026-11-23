@@ -115,10 +115,11 @@ IKEA_DEFAULTS_MM = {
     "MerivoboxBaseDeduction": 26.0,
     "MerivoboxBackThickness": 16.0,
     "MerivoboxInnerFrontDeduction": 126.0,
-    # 70 kg profiles (453.xxxx) exist for NL 450-600 only (Blum). The model
-    # takes 70 kg for pull-outs, E boxes and boxes wider than this inside
-    # (guess:, the brief: "use 70 kg for wide/heavy and the bin pull-outs").
-    "Merivobox70kgWidth": 600.0,
+    # 70 kg profiles (453.xxx1B) exist for NL 450-600 only (Blum). Petr,
+    # 2026-11-23 (t895u): "go all out, all heavy duty where they fit": every
+    # MERIVOBOX drawer, pull-out and inner drawer at NL 450-600 is 70 kg,
+    # NL 270-400 stays 40 kg (``merivobox_load``). Was 70 kg only for
+    # pull-outs, E boxes and boxes wider than 600 inside (guess: rule).
     "InnerTopGap": 30.0,
     # Blum ZI7.0M07 driver set ("unašeč", LEGRABOX/MERIVOBOX inner drawers,
     # for 90 / 128 sides): the driver clips on the middle of the inner
@@ -1495,6 +1496,7 @@ class _Builder:
                              BoxColour=MERIVOBOX_COLOUR,
                              NominalLength=round(dr.nl / 1000.0, 6),
                              DrawerSide=dr.side, LoadClass=dr.load,
+                             ProfileArticle=None if dr.twin else merivobox_profile_article(dr.load, dr.nl),
                              BoxBelowFront=round(dr.drop / 1000.0, 6) if dr.drop > TOL else None,
                              Extension=round(dr.extension / 1000.0, 6),
                              BoxWidth=round((dr.box[1] - dr.box[0]) / 1000.0, 6),
@@ -1617,6 +1619,7 @@ class _Builder:
                                          "SideHeight": round((ib[5] - ib[4]) / 1000.0, 6), "Latched": coupled,
                                          "ClearAbove": round((in_z1 - ifloor) / 1000.0, 6),
                                          "Latch": "Blum ZI7.0M07" if coupled else None, "Parent": outer.id, "LoadClass": idr.load,
+                                         "ProfileArticle": merivobox_profile_article(idr.load, dr.nl),
                                          "InsideWidth": round(iw / 1000.0, 6), "InsideDepth": round(idp / 1000.0, 6),
                                          "Gridfinity": f"{igrid[0]}x{igrid[1]}" if igrid else None,
                                          "GridfinitySlackWidth": round(gridfinity_cells(p, iw)[1] / 1000.0, 6) if igrid else None,
@@ -2847,9 +2850,16 @@ def merivobox_side(p: dict, kind: str, room: float, nl: float, want: str | None 
 
 
 def merivobox_load(p: dict, kind: str, letter: str, inner_w: float, nl: float) -> int:
-    """40 or 70 kg profile (guess: rule; 70 kg exists for NL 450-600 only)."""
-    heavy = kind == "pullout" or letter in ("E", "F") or inner_w > p["Merivobox70kgWidth"]
-    return 70 if heavy and nl in MERIVOBOX_70KG_NL else 40
+    """40 or 70 kg profile. Petr, 2026-11-23 (t895u): 70 kg wherever Blum
+    makes it (NL 450-600, any box height, outer or inner), else 40 kg."""
+    return 70 if any(abs(nl - x) <= TOL for x in MERIVOBOX_70KG_NL) else 40
+
+
+def merivobox_profile_article(load: int, nl: float) -> str:
+    """Blum MERIVOBOX BLUMOTION cabinet profile pair (left/right): 450.xxx1B
+    for 40 kg, 453.xxx1B for 70 kg (NL 450-600 only), e.g. 453.5001B for NL
+    500 (MERIVOBOX ordering information, "Cabinet profile left/right")."""
+    return f"{450 if load == 40 else 453}.{int(round(nl))}1B"
 
 
 def drawer_inside(bay: Bay, p: dict, back_y: float) -> tuple[float, float]:
