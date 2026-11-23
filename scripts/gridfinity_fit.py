@@ -4,14 +4,15 @@
 
 Reads inputs/ground_floor/furnishings.yaml, lays the runs out with
 models/kitchen_cabinet.py and, for every bay whose Pset_Drawers has
-``Gridfinity: true``, prints the drawer inside (MAXIMERA deductions), the
-Gridfinity cells, and the bay width / depth that would make the inside
-exactly n × 42 + 1 by m × 42 + 1:
+``Gridfinity: true``, prints the drawer inside (Blum MERIVOBOX: LW − 51 by
+NL − 42), the Gridfinity cells, and the bay width that would make the inside
+exactly n × 42 + 1 wide:
 
 - width: the nearest n (a shared divider moves, so the clear width and the
   inside change 1:1 with the bay width);
-- depth: always round down (floor m): the bay gets shallower, never deeper.
-  A bay with ``Pset_Drawers.GridfinityFitDepth`` cuts its box instead.
+- depth: a MERIVOBOX box is its nominal length NL long, so the depth cannot
+  be tuned to the grid; the plate is snapped to the front and the slack is
+  at the back (Petr, 2026-11-23, t835u). Only the slack is printed.
 
 Then, as modelled: every drawer with a baseplate (main drawers, or the
 inner drawers where ``GridfinityMain`` is false), its box length, inside,
@@ -50,8 +51,8 @@ def main() -> None:
             continue
         p = run.params
         pitch, play = p["GridfinityPitch"], p["GridfinityPlay"]
-        print(f"{run.id}: width deduction {p['DrawerInnerWidthDeduction']:g}, depth deduction "
-              f"{p['DrawerInnerDepthDeduction']:g}, board {p['BoardThickness']:g}")
+        print(f"{run.id}: Blum MERIVOBOX, width LW − {p['MerivoboxWidthDeduction']:g}, depth NL − "
+              f"{p['MerivoboxBaseDeduction'] + p['MerivoboxBackThickness']:g}, board {p['BoardThickness']:g}")
         total = 0.0
         depth_cuts = []
         for bay in grid_bays:
@@ -65,17 +66,11 @@ def main() -> None:
             dd = m * pitch + play - idp
             total += dw
             depth_cuts.append(dd)
-            cut_box = kc.gridfinity_fit_depth(bay.element)
-            ok = "ok" if abs(dw) < 0.5 and (abs(dd) < 0.5 or cut_box) else "CHANGE"
-            if cut_box and abs(dd) >= 0.5:
-                ok += f" (box cut {dd:+g}, GridfinityFitDepth)"
-                dd = 0.0
+            ok = "ok" if abs(dw) < 0.5 else "CHANGE"
             print(f"  {bay.id:9} width {bay.width:6.1f} inside {iw:6.1f} x {idp:6.1f} -> {n:2d} x {m:2d} "
-                  f"needs {n * pitch + play:g} x {m * pitch + play:g}: bay width {dw:+g}, depth {dd:+g}  {ok}")
+                  f"needs {n * pitch + play:g} wide: bay width {dw:+g}  {ok}; depth slack {-dd:g} at the back (NL fixed)")
         if abs(total) >= 0.5:
             print(f"  run length {total:+g}: {a.absorb} takes {-total:+g}")
-        if depth_cuts and len({round(d, 3) for d in depth_cuts}) > 1:
-            print("  depth cuts differ between bays; use the deepest cut for the row")
         # As modelled (2026-11-22 e): which drawers carry a baseplate, box
         # length, inside, cells and the slack left over.
         print("  as modelled (baseplate drawers):")

@@ -1,7 +1,8 @@
 """Kitchen cabinet runs as monoblocks: shared walls, drawers, worktop, cladding.
 
 Facts and their sources: docs/design/kitchen-cabinets.md. Numbers Petr did
-not give are IKEA METOD / MAXIMERA defaults or ``guess:`` values, marked there.
+not give are IKEA METOD carcass defaults, Blum MERIVOBOX catalogue values
+(every drawer, 2026-11-23) or ``guess:`` values, marked there.
 
 A *run* is one continuous cabinet body (Petr, 2026-11-12: "lets assume
 cabinets are a monoblock. Neighboring walls are shared, including the back
@@ -84,28 +85,39 @@ IKEA_DEFAULTS_MM = {
     "LedPlateMaxLength": 1000.0,  # aluminium plates butted at module joints, each at most this long
     "PlinthHeight": 92.0,  # METOD legs 80–100
     "PlinthSetback": 50.0,  # plinth board behind the front face (guess)
-    # Inner drawers (Pset_Fronts drawer ``inner=``), Blum MERIVOBOX / LEGRABOX
-    # inner drawers behind one full-height front (2026-11-20 b). Side heights
-    # by Blum letter: M 90, K 128 (Blum: M 90.5, K 128.5; Petr's brief says
-    # M=90, K=128). The top inner drawer sits InnerTopGap under the band's
-    # ceiling (guess:); the others spread evenly below it.
-    "InnerSideM": 90.0,
-    "InnerSideK": 128.0,
-    # Blum MERIVOBOX system heights E and F (Blum MERIVOBOX instructions: N
-    # 68.5, M 91, K 129, E 192, F 256; M and K as Petr gave them, above).
+    # Every drawer and pull-out is Blum MERIVOBOX (Petr, 2026-11-23, t835u:
+    # "Remodel or drawers to use merivobox"). Blum catalogue 2024/25, pp.
+    # 250-289 (https://publications.blum.com/2024/catalogue/en/254/ ...), see
+    # kitchen-cabinets.md "Drawers: Blum MERIVOBOX". Blum: drawer side heights
+    # N 68.5, M 91, K 129; E is the M side plus a gallery rail, BOXCOVER or
+    # BOXCAP, 192 overall (Blum planning sheet); F 256 is not in the European
+    # catalogue (Blum NZ/AU only, NL <= 550). Space requirement in height
+    # (profile + side + 2 tilt): N 85.5, M 108, K 146, E 209; inner drawers M
+    # 106, K 144. So the cabinet profile takes 15 under the side and 2 over it.
+    # M and K were 90 / 128 from Petr's brief of 2026-11-20 b; Blum's 91 / 129
+    # since every drawer became MERIVOBOX (2026-11-23).
+    "InnerSideM": 91.0,
+    "InnerSideK": 129.0,
     "InnerSideE": 192.0,
-    "InnerSideF": 256.0,
-    # Blum MERIVOBOX (Pset_Drawers.System: MERIVOBOX, 2026-11-20 c): the
-    # 16 mm chipboard base and back are LW − 51 wide, LW the cabinet's inside
-    # width (Blum MERIVOBOX planning, TD-069 / installation sheet); the
-    # inside width is taken as that base width (guess: the side profiles'
-    # inner faces). Nominal lengths NL in 50 steps from 270; the cabinet
-    # needs NL + 3 inside depth (Blum); the base is NL − 26 long with a
-    # chipboard back, the inside depth that less the 16 back (guess:).
+    "InnerSideF": 256.0,  # not in the European catalogue; kept so an old layout still reads
+    "InnerSideN": 68.5,
+    "MerivoboxProfileBelow": 15.0,  # space requirement − side − tilt (Blum: 108 − 91 − 2)
+    "MerivoboxTilt": 2.0,  # "incl. 2 mm tilt adjustment" (Blum)
+    # Base and chipboard back LW − 51 wide, LW the cabinet's inside width
+    # (Blum); the inside width is taken as that base width (guess: the side
+    # profiles' inner faces). The cabinet needs NL + 3 inside depth ("internal
+    # cabinet depth LT min. = NL + 3 mm", Blum); the base is NL − 26 long with
+    # a 16 chipboard back, the inside depth that less the 16 back (guess:).
+    # Blum inner drawers: an aluminium front piece cut to LW − 126 (Blum).
     "MerivoboxWidthDeduction": 51.0,
     "MerivoboxDepthClearance": 3.0,
     "MerivoboxBaseDeduction": 26.0,
     "MerivoboxBackThickness": 16.0,
+    "MerivoboxInnerFrontDeduction": 126.0,
+    # 70 kg profiles (453.xxxx) exist for NL 450-600 only (Blum). The model
+    # takes 70 kg for pull-outs, E boxes and boxes wider than this inside
+    # (guess:, the brief: "use 70 kg for wide/heavy and the bin pull-outs").
+    "Merivobox70kgWidth": 600.0,
     "InnerTopGap": 30.0,
     # Blum ZI7.0M07 driver set ("unašeč", LEGRABOX/MERIVOBOX inner drawers,
     # for 90 / 128 sides): the driver clips on the middle of the inner
@@ -151,35 +163,17 @@ IKEA_DEFAULTS_MM = {
     # cabinets"). The top edge does not move.
     "WallFrontOverhang": 0.0,
     "RailDepth": 80.0,  # top front/back rails (guess)
-    # Drawers modelled after IKEA MAXIMERA in a METOD 60×60 frame (IKEA's own
-    # pages, kitchen-cabinets.md "Drawers: MAXIMERA"): inside 480 × 504 in a
-    # 564 clear (600 − 2 × 18) by 600 deep frame, the same deduction at 40, 60
-    # and 80 wide. Our carcass loses the same from its own sides.
-    "DrawerInnerWidthDeduction": 84.0,  # clear width between the sides − drawer inside width (IKEA)
-    "DrawerInnerDepthDeduction": 96.0,  # side depth (front edge to the back) − drawer inside depth (IKEA)
-    "BoxWall": 19.0,  # drawn box side / back: (542 − 504) / 2, MAXIMERA box 542 deep (IKEA)
+    "BoxWall": 19.0,  # drawn box side / back / inner front piece (a drawing size, guess:)
     # Petr, 2026-11-22 (t795u): "we remove the useless frame frontsides". A
     # main drawer is sides + back + bottom; the decor front closes the box
     # (clips onto the sides), so there is no box front board behind it
-    # (``BoxFrontPanel`` 0; 19 = the old drawn box front). The box keeps its
-    # length (side depth − 96 + 2 × 19, IKEA), so the inside gains the 19.
-    # Inner drawers keep their own low front piece (``inner_drawer_boxes``).
+    # (``BoxFrontPanel`` 0; 19 = the old drawn box front). Inner drawers keep
+    # their own low front piece (``inner_drawer_boxes``).
     "BoxFrontPanel": 0.0,
-    "BoxBottomThickness": 16.0,  # drawn box bottom (guess; MAXIMERA's is particleboard)
-    "BoxBottomOffset": 3.0,  # band bottom (above the carcass bottom board for the lowest) to box bottom (guess)
-    # MAXIMERA side heights by "system height" (the front band it is sold for):
-    # low 78 in 100, medium 144 in 200, high 212 in 300 (IKEA). A taller band
-    # than MaximeraTallBand gets front − BoxHeightReserve (a high box with side
-    # extensions, guess:), as do pull-outs.
-    "MaximeraLowBand": 100.0,
-    "MaximeraLowHeight": 78.0,
-    "MaximeraMediumBand": 200.0,
-    "MaximeraMediumHeight": 144.0,
-    "MaximeraHighBand": 300.0,
-    "MaximeraHighHeight": 212.0,
-    "MaximeraTallBand": 400.0,
-    "BoxHeightReserve": 110.0,  # front height minus drawer box side height, tall bands (guess)
-    "BoxMinHeight": 60.0,
+    "BoxBottomThickness": 16.0,  # 16 chipboard base (Blum cutting list)
+    # A pull-out's shelves or bins stand up to the front top less this
+    # (guess:, the old tall-box rule; MERIVOBOX boxes stop at E 192).
+    "BoxHeightReserve": 110.0,
     # Gridfinity (bays with Pset_Drawers.Gridfinity): 42 mm pitch, the drawer
     # inside is n × 42 + GridfinityPlay; the baseplate is drawn in the drawer.
     "GridfinityPitch": 42.0,
@@ -434,6 +428,11 @@ class Drawer:
     floor_z: float = 0.0  # z of the box's inside floor
     grid: tuple | None = None  # Gridfinity (n, m) cells when the bay asks for a baseplate
     baseplate: list = field(default_factory=list)  # the baseplate's boxes (also in items); the viewer loads them on demand
+    side: str = ""  # Blum MERIVOBOX drawer side letter (N, M, K, E)
+    nl: float = 0.0  # Blum nominal length, mm
+    load: int = 0  # Blum profile load class, kg (40 / 70)
+    drop: float = 0.0  # mm the box sits below its band's own position (stacking, see _drawer)
+    profile_z: float = 0.0  # bottom of the cabinet profile (Blum space requirement), mm
 
 
 @dataclass
@@ -1372,7 +1371,10 @@ class _Builder:
         leaf_no = 0
         front_no = 0
         lo, hi = bay.clear_lo, bay.clear_hi
+        stack_top = None  # the cabinet profile of the drawer just above (MERIVOBOX stacking)
         for i, zone in enumerate(bay.zones):
+            if zone.kind not in DRAWER_KINDS:
+                stack_top = None
             below = bay.zones[i + 1] if i + 1 < len(bay.zones) else None
             top_zone = i == 0
             # A fixed board between two bands, except between drawers.
@@ -1394,11 +1396,14 @@ class _Builder:
                 drawer_no += 1
                 dr = _drawer(bay, p, zone, drawer_no, back_y, ceiling, self._obstacle_ceiling(bay, p),
                              carcass_z0=z0, top_limit=(z1 - t) if top_zone else None,
-                             on_board=board_below)
+                             on_board=board_below, stack_top=stack_top)
+                stack_top = dr.profile_z
                 name = ("Výsuv" if zone.kind == "pullout" else "Šuplík") + f" {drawer_no} {dr.content}"
-                system = drawer_system(bay.element)
-                props = dict(base, System=("Blum MERIVOBOX" if system == "MERIVOBOX" else "MAXIMERA-like"),
-                             NominalLength=(round(merivobox_nl(p, back_y - tf) / 1000.0, 6) if system == "MERIVOBOX" else None),
+                drawer_system(bay.element)
+                props = dict(base, System="Blum MERIVOBOX",
+                             NominalLength=round(dr.nl / 1000.0, 6),
+                             DrawerSide=dr.side, LoadClass=dr.load,
+                             BoxBelowFront=round(dr.drop / 1000.0, 6) if dr.drop > TOL else None,
                              Extension=round(dr.extension / 1000.0, 6),
                              BoxWidth=round((dr.box[1] - dr.box[0]) / 1000.0, 6),
                              BoxDepth=round(abs(dr.box[3] - dr.box[2]) / 1000.0, 6),
@@ -1419,6 +1424,14 @@ class _Builder:
                         self.run.notes.append(f"open: {bay.id}-D{drawer_no} inside {dr.inside[0]:g} x {dr.inside[1]:g} is "
                                               f"{sw:+g} / {sd:+g} off the Gridfinity {dr.grid[0]}x{dr.grid[1]} size "
                                               f"(scripts/gridfinity_fit.py)")
+                if zone.opts.get("items") == "bins" and bay.obstacles:
+                    side_gap, top_gap = bin_clearance(dr, bay.obstacles)
+                    props.update(BinClearanceSide=round(side_gap / 1000.0, 6), BinClearanceTop=round(top_gap / 1000.0, 6))
+                    if side_gap < -TOL or top_gap < -TOL:
+                        raise ValueError(f"{bay.id}: the bins run into the sink or disposer "
+                                         f"(side {side_gap:.1f}, top {top_gap:.1f} mm)")
+                    self.run.notes.append(f"open: {bay.id} bins clear the disposer by {side_gap:.1f} mm each side "
+                                          f"and the bowl by {top_gap:.1f} mm on top (drawn sizes, no trap or outlet)")
                 inner = [x for x in str(zone.opts.get("inner", "")).split(",") if x.strip()]
                 boxes = drawer_boxes(dr, p)
                 inner_boxes = inner_drawers(p, dr, in_z1, inner) if inner else []
@@ -1449,8 +1462,15 @@ class _Builder:
                     # Its own front piece and back: inside = box − 2 walls deep.
                     iw, idp = dr.inside[0], abs(ib[3] - ib[2]) - 2 * p["BoxWall"]
                     if zone.kind == "drawer" and wants_gridfinity(bay.element):
-                        ic0, ic1 = ib[2] + p["BoxWall"], ib[3] - p["BoxWall"]
                         igrid = (gridfinity_cells(p, iw)[0], gridfinity_cells(p, idp)[0])
+                        # Snapped to the inner drawer's front piece (Petr, t835u).
+                        gd = igrid[1] * p["GridfinityPitch"]
+                        if dr.out < 0:
+                            ic0 = ib[2] + p["BoxWall"]
+                            ic1 = ic0 + gd
+                        else:
+                            ic1 = ib[3] - p["BoxWall"]
+                            ic0 = ic1 - gd
                         iplate = gridfinity_baseplate(p, igrid[0], igrid[1], (ib[0] + ib[1]) / 2.0, (ic0 + ic1) / 2.0, ifloor)
                     if igrid:
                         isw, isd = gridfinity_cells(p, iw)[1], gridfinity_cells(p, idp)[1]
@@ -1460,14 +1480,18 @@ class _Builder:
                                                   f"(scripts/gridfinity_fit.py)")
                     if coupled:
                         iboxes += latch_boxes(p, dr, ib)[1:]
-                    idr = replace(dr, front=iboxes[0], box=ib, items=list(iplate), baseplate=list(iplate),
+                    idr = replace(dr, front=iboxes[0], box=ib, items=list(iplate), baseplate=list(iplate), side=inner[k - 1].strip().upper(),
+                                  load=merivobox_load(p, "drawer", inner[k - 1].strip().upper(), iw, dr.nl),
                                   grid=igrid, floor_z=ifloor,
                                   inside=(iw, idp, ib[5] - ifloor))
                     self.add(Part(f"{bay.id}-D{drawer_no}-I{k}", f"Vnitřní šuplík {k}", "InnerDrawer",
                                   iboxes + iplate, drawer=idr,
                                   props={"Zone": zone.index, "Kind": "inner", "System": "Blum MERIVOBOX",
+                                         "NominalLength": round(dr.nl / 1000.0, 6),
+                                         "DrawerSide": inner[k - 1].strip().upper(),
+                                         "FrontPieceLength": round((bay.clear_width - p["MerivoboxInnerFrontDeduction"]) / 1000.0, 6),
                                          "SideHeight": round((ib[5] - ib[4]) / 1000.0, 6), "Latched": coupled,
-                                         "Latch": "Blum ZI7.0M07" if coupled else None, "Parent": outer.id,
+                                         "Latch": "Blum ZI7.0M07" if coupled else None, "Parent": outer.id, "LoadClass": idr.load,
                                          "InsideWidth": round(iw / 1000.0, 6), "InsideDepth": round(idp / 1000.0, 6),
                                          "Gridfinity": f"{igrid[0]}x{igrid[1]}" if igrid else None,
                                          "GridfinitySlackWidth": round(gridfinity_cells(p, iw)[1] / 1000.0, 6) if igrid else None,
@@ -2375,10 +2399,10 @@ def zones(element: dict, carcass_height: float, board: float, z0: float) -> list
 
 
 def inner_side_height(p: dict, letter: str) -> float:
-    """Blum MERIVOBOX / LEGRABOX side height for a letter (M, K), mm."""
+    """Blum MERIVOBOX side height for a letter (N, M, K, E, F), mm."""
     key = "InnerSide" + str(letter).strip().upper()
     if key not in p:
-        raise ValueError(f"unknown Blum side height {letter!r} (M or K)")
+        raise ValueError(f"unknown Blum side height {letter!r} (N, M, K, E)")
     return p[key]
 
 
@@ -2393,6 +2417,10 @@ def inner_drawers(p: dict, dr: "Drawer", zone_top: float, letters: list) -> list
     if free < 0:
         raise ValueError(f"inner drawers {letters} do not fit over the outer box ({free:.0f} mm short)")
     gap = free / len(heights)  # the same clear height over each drawer below
+    need = p["MerivoboxProfileBelow"] + p["MerivoboxTilt"]
+    if gap < need - TOL:
+        raise ValueError(f"inner drawers {letters}: {gap:.0f} mm between boxes, Blum needs {need:g} "
+                         "(profile under the side and tilt over it)")
     out = []
     z = top
     for h in heights:
@@ -2401,77 +2429,99 @@ def inner_drawers(p: dict, dr: "Drawer", zone_top: float, letters: list) -> list
     return out
 
 
-def box_side_height(p: dict, kind: str, nominal: float) -> float:
-    """Drawer box side height for a front band (mm). Drawers in bands up to
-    a MAXIMERA "system height" get that MAXIMERA box: low 78 (band 100),
-    medium 144 (200), high 212 (300), IKEA. Taller bands and pull-outs get
-    the front height less ``BoxHeightReserve`` (guess:)."""
-    reserve = max(p["BoxMinHeight"], nominal - p["BoxHeightReserve"])
-    if kind != "drawer" or nominal >= p["MaximeraTallBand"] - TOL:
-        return reserve
-    tiers = [(p["MaximeraHighBand"], p["MaximeraHighHeight"]), (p["MaximeraMediumBand"], p["MaximeraMediumHeight"]),
-             (p["MaximeraLowBand"], p["MaximeraLowHeight"])]
-    for band, height in tiers:
-        if nominal >= band - TOL:
-            return height
-    return max(p["BoxMinHeight"], min(p["MaximeraLowHeight"], nominal - (p["MaximeraLowBand"] - p["MaximeraLowHeight"])))
-
-
+# Blum MERIVOBOX, catalogue 2024/25 pp. 252-279 (kitchen-cabinets.md "Drawers:
+# Blum MERIVOBOX"). Nominal lengths NL per drawer side height: N 400-550,
+# M 270-600, K 300-600, E (M sides + gallery / BOXCOVER / BOXCAP) 270-600;
+# 70 kg profiles NL 450-600. F (256) is Blum NZ/AU only: NL 270-550.
 MERIVOBOX_NL = (270.0, 300.0, 350.0, 400.0, 450.0, 500.0, 550.0, 600.0)  # Blum nominal lengths
+MERIVOBOX_NL_BY_SIDE = {
+    "N": (400.0, 450.0, 500.0, 550.0),
+    "M": MERIVOBOX_NL,
+    "K": MERIVOBOX_NL[1:],
+    "E": MERIVOBOX_NL,
+    "F": MERIVOBOX_NL[:-1],
+}
+MERIVOBOX_70KG_NL = (450.0, 500.0, 550.0, 600.0)
+# Drawer sides tallest first, for picking the tallest box a band can take.
+# F is left out: it is not in Blum's European catalogue.
+MERIVOBOX_AUTO_SIDES = ("E", "K", "M", "N")
 
 
 def drawer_system(element: dict) -> str:
-    """``MAXIMERA`` (default, IKEA-like) or ``MERIVOBOX`` (Blum), from Pset_Drawers.System."""
-    v = str(_prop(element, PSET_DRAWERS, "System", "MAXIMERA")).upper()
-    if v not in ("MAXIMERA", "MERIVOBOX"):
-        raise ValueError(f"{element['id']}: Pset_Drawers.System is MAXIMERA or MERIVOBOX, got {v}")
+    """Every drawer is Blum ``MERIVOBOX`` (Petr, 2026-11-23, t835u). The
+    IKEA MAXIMERA assumption is gone; ``Pset_Drawers.System`` may only say
+    MERIVOBOX."""
+    v = str(_prop(element, PSET_DRAWERS, "System", "MERIVOBOX")).upper()
+    if v != "MERIVOBOX":
+        raise ValueError(f"{element['id']}: Pset_Drawers.System is MERIVOBOX (the only drawer system), got {v}")
     return v
 
 
-def merivobox_nl(p: dict, side_depth: float) -> float:
-    """The longest Blum MERIVOBOX nominal length that fits (NL + 3 <= inside depth)."""
+def merivobox_nl(p: dict, side_depth: float, element: dict | None = None) -> float:
+    """The bay's Blum MERIVOBOX nominal length: ``Pset_Drawers.NominalLength``
+    (metres) if set, else the longest NL that fits (Blum: inside cabinet
+    depth >= NL + 3). Raises when the set one does not fit."""
+    want = _prop(element, PSET_DRAWERS, "NominalLength") if element is not None else None
+    if want is not None:
+        nl = float(want) * 1000.0
+        if all(abs(nl - x) > TOL for x in MERIVOBOX_NL):
+            raise ValueError(f"{element['id']}: MERIVOBOX NominalLength {nl:g} is not a Blum length {MERIVOBOX_NL}")
+        if nl + p["MerivoboxDepthClearance"] > side_depth + TOL:
+            raise ValueError(f"{element['id']}: MERIVOBOX NL {nl:g} needs {nl + p['MerivoboxDepthClearance']:g} "
+                             f"inside depth, the cabinet has {side_depth:g}")
+        return nl
     fits = [nl for nl in MERIVOBOX_NL if nl + p["MerivoboxDepthClearance"] <= side_depth + TOL]
     if not fits:
         raise ValueError(f"no MERIVOBOX nominal length fits {side_depth:.0f} mm")
     return fits[-1]
 
 
+def merivobox_side(p: dict, kind: str, room: float, nl: float, want: str | None = None) -> str:
+    """The drawer side letter for one band: ``want`` (the band's ``box=``) if
+    given, else for a pull-out E, else the tallest of E, K, M, N whose Blum
+    space requirement (profile 15 + side + tilt 2) fits ``room`` and that is
+    made in ``nl``; if none fits, the lowest side made in ``nl`` (the box
+    then sits lower than its front, see ``_drawer``)."""
+    if want:
+        letter = str(want).strip().upper()
+        if nl not in MERIVOBOX_NL_BY_SIDE.get(letter, ()):
+            raise ValueError(f"MERIVOBOX side {letter} is not made in NL {nl:g} (Blum)")
+        return letter
+    if kind == "pullout":
+        return "E"
+    made = [x for x in MERIVOBOX_AUTO_SIDES if nl in MERIVOBOX_NL_BY_SIDE[x]]
+    for letter in made:
+        need = p["MerivoboxProfileBelow"] + inner_side_height(p, letter) + p["MerivoboxTilt"]
+        if need <= room + TOL:
+            return letter
+    return made[-1]
+
+
+def merivobox_load(p: dict, kind: str, letter: str, inner_w: float, nl: float) -> int:
+    """40 or 70 kg profile (guess: rule; 70 kg exists for NL 450-600 only)."""
+    heavy = kind == "pullout" or letter in ("E", "F") or inner_w > p["Merivobox70kgWidth"]
+    return 70 if heavy and nl in MERIVOBOX_70KG_NL else 40
+
+
 def drawer_inside(bay: Bay, p: dict, back_y: float) -> tuple[float, float]:
-    """Drawer inside width and depth (mm): the bay's clear width and side
-    depth less the MAXIMERA deductions (kitchen-cabinets.md), or for a
-    MERIVOBOX bay LW − 51 by NL − 26 − 16 (Blum, see ``IKEA_DEFAULTS_MM``)."""
-    side_depth = back_y - p["FrontThickness"]
-    if drawer_system(bay.element) == "MERIVOBOX":
-        nl = merivobox_nl(p, side_depth)
-        return (bay.clear_width - p["MerivoboxWidthDeduction"],
-                nl - p["MerivoboxBaseDeduction"] - p["MerivoboxBackThickness"])
-    return (bay.clear_width - p["DrawerInnerWidthDeduction"],
-            drawer_box_length(bay, p, back_y) - p["BoxWall"] - p["BoxFrontPanel"])
+    """Drawer inside width and depth (mm), Blum MERIVOBOX: LW − 51 by
+    NL − 26 − 16 (see ``IKEA_DEFAULTS_MM``)."""
+    nl = merivobox_nl(p, back_y - p["FrontThickness"], bay.element)
+    return (bay.clear_width - p["MerivoboxWidthDeduction"],
+            nl - p["MerivoboxBaseDeduction"] - p["MerivoboxBackThickness"])
 
 
 def drawer_box_length(bay: Bay, p: dict, back_y: float) -> float:
     """The drawn drawer box's length (mm), back of the decor front to the
-    box back: MAXIMERA side depth − 96 + 2 × BoxWall (the IKEA 542 box in a
-    600 frame), MERIVOBOX the Blum inside + 2 × BoxWall (as drawn before)."""
-    side_depth = back_y - p["FrontThickness"]
-    if drawer_system(bay.element) == "MERIVOBOX":
-        nl = merivobox_nl(p, side_depth)
-        return nl - p["MerivoboxBaseDeduction"] - p["MerivoboxBackThickness"] + 2 * p["BoxWall"]
-    return side_depth - p["DrawerInnerDepthDeduction"] + 2 * p["BoxWall"]
+    box back: the Blum inside + 2 × BoxWall (as drawn since 2026-11-20 c)."""
+    _w, inner_d = drawer_inside(bay, p, back_y)
+    return inner_d + 2 * p["BoxWall"]
 
 
 def gridfinity_main(element: dict) -> bool:
     """``Pset_Drawers.GridfinityMain`` (default true): false keeps the
     baseplate out of a main drawer that carries inner drawers (they get it)."""
     v = _prop(element, PSET_DRAWERS, "GridfinityMain", True)
-    return v is True or str(v).lower() == "true"
-
-
-def gridfinity_fit_depth(element: dict) -> bool:
-    """``Pset_Drawers.GridfinityFitDepth``: shorten the box so its inside is
-    exactly m × pitch + play deep (Petr, t795u: "for the island west side,
-    there are no inner drawers, so the drawer depth can match gridfinity")."""
-    v = _prop(element, PSET_DRAWERS, "GridfinityFitDepth", False)
     return v is True or str(v).lower() == "true"
 
 
@@ -2490,18 +2540,26 @@ def wants_gridfinity(element: dict) -> bool:
 
 def _drawer(bay: Bay, p: dict, zone: Zone, number: int, back_y: float, ceiling: float | None,
             obstacles: list, carcass_z0: float = 0.0, top_limit: float | None = None,
-            on_board: bool = False) -> Drawer:
-    """One drawer or pull-out in its band, from the clear opening (mm).
+            on_board: bool = False, stack_top: float | None = None) -> Drawer:
+    """One Blum MERIVOBOX drawer or pull-out in its band, from the clear
+    opening (mm).
 
-    The box is a MAXIMERA-like box: sides, back and bottom ``BoxWall`` /
-    ``BoxBottomThickness``, closed at the front by the decor front itself
-    (``BoxFrontPanel`` 0), ``drawer_box_length`` long, centred in the
-    opening, full extension (travel = box length). See kitchen-cabinets.md.
+    The box (sides, back and base ``BoxWall`` / ``BoxBottomThickness``,
+    closed at the front by the decor front itself) is ``drawer_box_length``
+    long, centred in the opening, full extension (travel = box length). Its
+    side letter comes from ``merivobox_side``. Vertically, the cabinet
+    profile sits on the band's floor (the carcass bottom or a board for the
+    lowest band) and takes ``MerivoboxProfileBelow`` under the side and
+    ``MerivoboxTilt`` over it (Blum's space requirement). When that would
+    reach the top rail, the hob limit or the profile of the drawer above
+    (``stack_top``), the box moves down instead (``Drawer.drop``): metal
+    sides cannot be trimmed. See kitchen-cabinets.md "Drawers: Blum MERIVOBOX".
     """
     tf, wall = p["FrontThickness"], p["BoxWall"]
     inner_w, inner_d = drawer_inside(bay, p, back_y)
     if inner_w <= 0 or inner_d <= 0:
         raise ValueError(f"{bay.id}: no room for a drawer ({inner_w} × {inner_d})")
+    nl = merivobox_nl(p, back_y - tf, bay.element)
     length = drawer_box_length(bay, p, back_y)
     has_inner = bool(str(zone.opts.get("inner", "")).strip())
     # Gridfinity: in the main drawer unless it carries inner drawers (then in
@@ -2509,58 +2567,63 @@ def _drawer(bay: Bay, p: dict, zone: Zone, number: int, back_y: float, ceiling: 
     # the inner drawer, the bottom main one doesnt need gridfinity").
     grid_here = (zone.kind == "drawer" and wants_gridfinity(bay.element)
                  and not (has_inner and not gridfinity_main(bay.element)))
-    if grid_here and gridfinity_fit_depth(bay.element):
-        m, _sd = gridfinity_cells(p, inner_d)
-        cut = inner_d - (m * p["GridfinityPitch"] + p["GridfinityPlay"])
-        inner_d -= cut
-        length -= cut
     g = p["FrontGap"] / 2.0
     out_dir = -1.0 if bay.front_low else 1.0
     fc0, fc1 = _Builder.c_range(bay, 0.0, tf)
     front = (bay.a0 + g, bay.a1 - g, fc0, fc1, zone.slot_z0 + g, zone.slot_z1 - g)
-    box_h = box_side_height(p, zone.kind, zone.nominal)
-    if zone.opts.get("box"):
-        # An outer drawer under inner drawers: a low box by Blum letter (M, K).
-        box_h = inner_side_height(p, zone.opts["box"])
     lowest = abs(zone.slot_z0 - carcass_z0) < TOL
-    # On the carcass bottom or on a fixed board under the band (a dock).
-    bz0 = zone.slot_z0 + p["BoxBottomOffset"] + (p["BoardThickness"] if lowest or on_board else 0.0)
+    # The profile stands on the carcass bottom or a fixed board under the
+    # band (a dock); a band higher up starts on its own bottom line.
+    floor0 = zone.slot_z0 + (p["BoardThickness"] if lowest or on_board else 0.0)
+    roof = zone.slot_z1
+    for lim in (top_limit, ceiling):
+        if lim is not None:
+            roof = min(roof, lim)
+    letter = merivobox_side(p, zone.kind, roof - floor0, nl, zone.opts.get("box"))
+    box_h = inner_side_height(p, letter)
+    below, tilt = p["MerivoboxProfileBelow"], p["MerivoboxTilt"]
+    bz0 = floor0 + below
+    limit, why = None, ""
+    for lim, name in ((top_limit, "rail"), (ceiling, "hob"), (stack_top, "drawer above")):
+        if lim is not None and (limit is None or lim < limit):
+            limit, why = lim, name
+    drop = 0.0
+    if limit is not None and bz0 + box_h + tilt > limit + TOL:
+        drop = bz0 + box_h + tilt - limit
+        bz0 -= drop
+    if bz0 - below < carcass_z0 + p["BoardThickness"] - TOL:
+        raise ValueError(f"{bay.id}: MERIVOBOX {letter} drawer {number} under the {why} does not fit "
+                         f"over the carcass bottom ({carcass_z0 + p['BoardThickness'] - bz0 + below:.0f} mm short)")
     mid = (bay.clear_lo + bay.clear_hi) / 2.0
     half = inner_w / 2.0 + wall
     bc0, bc1 = _Builder.c_range(bay, tf, tf + length)
     box = (mid - half, mid + half, bc0, bc1, bz0, bz0 + box_h)
-    limit, why = None, ""
-    if top_limit is not None and box[5] > top_limit:
-        limit, why = top_limit, "rail"
-    if ceiling is not None and box[5] > ceiling and (limit is None or ceiling < limit):
-        # Miele: >= 8 mm from the hob underside to a drawer's top edge.
-        limit, why = ceiling, "hob"
     for obox, top, oid in obstacles:
-        if _plan_meet(box, obox) and box[5] > top and (limit is None or top < limit):
-            limit, why = top, oid
-    trimmed = 0.0
-    if limit is not None:
-        trimmed = box[5] - limit
-        if limit - bz0 < p["BoxMinHeight"]:
-            raise ValueError(f"{bay.id}: drawer {number} under the {why} would be under {p['BoxMinHeight']} mm")
-        box = (*box[:5], limit)
+        if _plan_meet(box, obox) and box[5] > top + TOL:
+            raise ValueError(f"{bay.id}: MERIVOBOX {letter} drawer {number} (top {box[5]:.0f}) runs into {oid} "
+                             f"(bottom {top:.0f}); pick a lower side with box=")
     floor_z = bz0 + p["BoxBottomThickness"]
-    items = _items(p, zone, box, out_dir)
+    item_top = zone.slot_z1 - g - p["BoxHeightReserve"]
+    items = _items(p, zone, box, out_dir, item_top, floor_z)
     grid = None
     if grid_here:
         n, _sw = gridfinity_cells(p, inner_w)
         m, _sd = gridfinity_cells(p, inner_d)
         grid = (n, m)
-        f0 = tf + p["BoxFrontPanel"]  # the inside starts at the back of the front (or the box front)
-        ic0, ic1 = _Builder.c_range(bay, f0, f0 + inner_d)
+        # Snapped to the drawer front (Petr, 2026-11-23, t835u: "snapped to
+        # the front of the drawer"); the slack in depth is at the back.
+        f0 = tf + p["BoxFrontPanel"]  # the inside starts at the back of the front
+        ic0, ic1 = _Builder.c_range(bay, f0, f0 + m * p["GridfinityPitch"])
         baseplate = gridfinity_baseplate(p, n, m, mid, (ic0 + ic1) / 2.0, floor_z)
         items = items + baseplate
     else:
         baseplate = []
-    return Drawer(number, zone.content, zone.nominal, zone.slot_z0, front, box, length, out_dir, trimmed,
+    return Drawer(number, zone.content, zone.nominal, zone.slot_z0, front, box, length, out_dir, 0.0,
                   kind=zone.kind, items=items, zone=zone.index,
                   inside=(inner_w, inner_d, box[5] - floor_z), floor_z=floor_z, grid=grid,
-                  baseplate=baseplate)
+                  baseplate=baseplate, side=letter, nl=nl,
+                  load=merivobox_load(p, zone.kind, letter, inner_w, nl), drop=drop,
+                  profile_z=bz0 - below)
 
 
 def gridfinity_baseplate(p: dict, n: int, m: int, a_mid: float, c_mid: float, z0: float) -> list:
@@ -2580,31 +2643,79 @@ def gridfinity_baseplate(p: dict, n: int, m: int, a_mid: float, c_mid: float, z0
     return out
 
 
-def _items(p: dict, zone: Zone, box: tuple, out_dir: float) -> list:
-    """Baskets (shelves) or bins riding in a pull-out box, evenly (guess:)."""
+def _items(p: dict, zone: Zone, box: tuple, out_dir: float, item_top: float | None = None,
+           floor_z: float | None = None) -> list:
+    """Baskets (shelves) or bins riding in a pull-out box (run frame mm).
+
+    ``items=shelves n=N``: N boards spread evenly from the box floor up to
+    ``item_top`` (the front less ``BoxHeightReserve``; guess:, they stand for
+    inner pull-outs or a rack behind the tall front, since a MERIVOBOX box
+    stops at its E side). ``items=bins n=N``: N equal bins over the inside
+    width up to ``item_top`` (guess:), or with ``bin=WxDxH`` (metres) N bins
+    of that real size standing on the floor, front against the decor front,
+    the outer two against the box sides and the rest spread evenly between.
+    """
     kind = zone.opts.get("items")
     n = int(zone.opts.get("n", 0))
     if not kind or n <= 0:
         return []
     wall = p["BoxWall"]
     a0, a1, c0, c1, z0, z1 = box
-    ia0, ia1, ic0, ic1, iz0 = a0 + wall, a1 - wall, c0 + wall, c1 - wall, z0 + wall
+    ia0, ia1 = a0 + wall, a1 - wall
+    iz0 = floor_z if floor_z is not None else z0 + p["BoxBottomThickness"]
+    top = item_top if item_top is not None else z1
+    # The decor front closes the box: the inside runs from the box's front
+    # end to its back wall.
+    if out_dir < 0:  # pulls toward -c: the front end is c0
+        ic_front, ic_back = c0, c1 - wall
+    else:
+        ic_front, ic_back = c1, c0 + wall
+    ic0, ic1 = sorted((ic_front, ic_back))
     out = []
     if kind == "shelves":
         board = wall
-        step = (z1 - iz0 - n * board) / (n + 1)
+        step = (top - iz0 - n * board) / (n + 1)
         for k in range(n):
             z = iz0 + step * (k + 1) + board * k
             out.append((ia0, ia1, ic0, ic1, z, z + board))
         return out
     if kind == "bins":
+        size = zone.opts.get("bin")
+        if size:
+            bw, bd, bh = (float(v) * 1000.0 for v in str(size).lower().split("x"))
+            if n * bw > ia1 - ia0 + TOL or bd > ic1 - ic0 + TOL:
+                raise ValueError(f"{n} bins {bw:g} x {bd:g} do not fit the {ia1 - ia0:g} x {ic1 - ic0:g} inside")
+            step = (ia1 - ia0 - bw) / (n - 1) if n > 1 else 0.0
+            for k in range(n):
+                x0 = ia0 + k * step if n > 1 else (ia0 + ia1 - bw) / 2.0
+                d0, d1 = sorted((ic_front, ic_front - out_dir * bd))
+                out.append((x0, x0 + bw, d0, d1, iz0, iz0 + bh))
+            return out
         gap = p["BinGap"]
         w = (ia1 - ia0 - (n + 1) * gap) / n
         for k in range(n):
             x0 = ia0 + gap + k * (w + gap)
-            out.append((x0, x0 + w, ic0 + gap, ic1 - gap, iz0, z1 - gap))
+            out.append((x0, x0 + w, ic0 + gap, ic1 - gap, iz0, top))
         return out
     raise ValueError(f"pull-out items={kind!r}: shelves or bins")
+
+
+def bin_clearance(dr: "Drawer", obstacles: list) -> tuple[float, float]:
+    """Smallest gaps (mm) between a pull-out's bins and the things hanging
+    into the bay (a sink bowl, a disposer), drawer closed: beside them in
+    plan where the heights overlap (``side``), and from a bin top up to an
+    obstacle's bottom where they overlap in plan (``top``). The drawer
+    slides along c, so a bin beside a disposer stays beside it."""
+    side, top = math.inf, math.inf
+    for it in dr.items:
+        for box, _oid in obstacles:
+            plan = _plan_meet(it, box)
+            if plan:
+                top = min(top, box[4] - it[5])
+            elif it[4] < box[5] and box[4] < it[5]:
+                # beside it: the gap across the sliding direction
+                side = min(side, max(box[0] - it[1], it[0] - box[1]))
+    return (side if side < math.inf else 0.0, top if top < math.inf else 0.0)
 
 
 def _even(z_lo: float, z_hi: float, n: int, t: float) -> list[float]:
