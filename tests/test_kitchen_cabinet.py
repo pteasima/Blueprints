@@ -733,8 +733,47 @@ def test_dining_run_box_bodies_under_stone():
     # "the living room counter is the same thickness as the bookshelves, which is 40"
     assert all((b[4], b[5]) == (pytest.approx(890.0), pytest.approx(930.0)) for b in lb.boxes)
     assert lb.label == "oak" and lb.props["Covers"] == "SF-F053"
-    assert sorted((round(b[0]), round(b[1]), round(b[3])) for b in lb.boxes) == [(-300, 0, 200), (0, 4150, 450)]
+    # 2026-11-23 (t913u): the 4150 × 450 oak top is split — lids in
+    # sections 3 and 6, fixed full-depth runs and a rear strip behind each lid,
+    # plus the SF-F053 slab.
+    assert (-300, 0, 200) in [(round(b[0]), round(b[1]), round(b[3])) for b in lb.boxes]
     assert not [p for p in run.parts if p.role == "Cladding"]
+
+
+def test_living_counter_worktop_lids():
+    # Petr, 2026-11-23 (t913u / t915u / t916u): two cream front panels;
+    # the oak top is eight equal bands with upward-hinged lids on 3 and 6.
+    run = _runs()["KR-LB"]
+    assert len([p for p in run.parts if p.id.startswith("SF-LB-S") and p.role == "Front"]) == 2
+    assert len([p for p in run.parts if p.id.startswith("SF-LB-SDIV")]) == 1
+    s3, s6 = run.part("SF-LB-S3-LID"), run.part("SF-LB-S6-LID")
+    assert s3.label == "oak" and s6.label == "oak"
+    assert s3.lift is not None and s6.lift is not None
+    assert s3.props["Clearance"] == pytest.approx(0.008)
+    assert s3.props["Shelf1Bottom"] == pytest.approx(1.27575)
+    assert s3.props["PeakZ"] == pytest.approx(1.26775)
+    assert s3.props["LidDepth"] == pytest.approx(0.335373, abs=1e-6)
+    assert s3.props["OpeningAngle"] == pytest.approx(106.66, abs=0.05)
+    assert s3.props["LeanAngle"] == pytest.approx(16.66, abs=0.05)
+    # Piano hinge at the lid's top-rear edge; front-flush; rear strip behind.
+    a0, a1, c0, c1, z0, z1 = s3.boxes[0]
+    assert (c0, z0, z1) == (pytest.approx(0.0), pytest.approx(890.0), pytest.approx(930.0))
+    assert c1 == pytest.approx(s3.lift.pivot_c)
+    assert s3.lift.pivot_z == pytest.approx(930.0)
+    assert s3.lift.out == pytest.approx(-1.0)
+    assert s3.lift.angles[0] == pytest.approx(0.0)
+    assert math.degrees(s3.lift.angles[-1]) == pytest.approx(s3.props["OpeningAngle"])
+    # Lid width is a full 1/8 of the 4150 top (518.75). The cream fronts
+    # are a coarser 2-panel split (t915u/t916u), so there are no 18 mm
+    # dividers at the eighths to inset for.
+    assert a1 - a0 == pytest.approx(518.75)
+    assert (a0, a1) == (pytest.approx(1037.5), pytest.approx(1556.25))
+    assert s6.boxes[0][1] - s6.boxes[0][0] == pytest.approx(518.75)
+    # Front rail omitted in the lid cutouts so you can reach in from above.
+    rail = run.part("SF-LB-RAIL-F")
+    for box in rail.boxes:
+        assert box[1] <= a0 + 1e-6 or box[0] >= a1 - 1e-6
+        assert box[1] <= s6.boxes[0][0] + 1e-6 or box[0] >= s6.boxes[0][1] - 1e-6
 
 
 def test_dining_flush_kickboard():

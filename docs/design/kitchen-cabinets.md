@@ -2397,3 +2397,46 @@ The same change is tabulated in [furnishings.md](furnishings.md#continuous-oak-f
 | Front sections | 7 equal, 4150/7 ≈ **592.86 mm** | **2 equal, 2075 mm** (one 18 mm divider on the centre line; each front **2072 mm**, with the usual 1.5 mm gaps at the ends and at the mid joint) |
 
 2075 mm is within a standard 2800 mm MDF sheet, which is why two panels rather than one (Petr: "I assume it cant be a single panel").
+### Open oak lids on the living-room counter (2026-11-23, t913u)
+
+> Petr (t913u): "Ok here's another idea, separate PR:
+> - split living room counter into 8 equal sections.
+> - 3rd and 6th section is an upwards hinged (piano) door like we discussed.
+> - dont use full 450 (minus accoustic panel depth), instead use whatever lets the lid fully open below the shelf.
+> -btw, on a technical note, the lid will open more than 90deg so we dont need a special hinge that holds it open, it will lean against the back panel on its own."
+
+Rebased onto main after t915u/t916u (Petr: two cream front panels, not seven or eight). The fronts stay `Pset_Fronts.Sections: "2"`. The oak top uses a separate 8-band grid (`WorktopLidDivisions: 8`, `WorktopLids: "3,6"`), so the lids sit on the 3rd and 6th eighths of the 4150 mm top. Lid depth, hinge and lean angle are derived from FN-BK Shelf 1 and the lamella (`WorktopLidBookshelf: FN-BK`, `WorktopLidClearance: 0.008`, `guess:` in the 5–10 mm band; see `living_geometry.bookshelf_metrics`).
+
+The lid is flush with the counter front. A piano hinge runs along its top-rear edge (c = D, z = 930). A fixed oak rear strip stays behind the hinge, including under the bookshelf. The lid opens past 90° and its top-front edge rests on the lamella front. The furthest corner during the swing is the bottom-front, at radius R = √(D² + t²); its peak z is 930 + R.
+
+| | Old (main, after t915u/t916u) | New |
+| --- | --- | --- |
+| Cream fronts | 2 equal, 2075 mm (fronts 2072 mm) | **unchanged** (still `Sections: "2"`) |
+| Carcass divider | one 18 mm, centred at 2075 | **unchanged**; no dividers at the 8-band lid edges |
+| Oak worktop | one 4150 × 450 slab 890–930 (plus the SF-F053 piece) | the same 890–930 oak, split into eight 518.75 mm bands: full-depth fixed over bands 1–2, 4–5, 7–8; a rear strip behind each lid; two lids `SF-LB-S3-LID` / `SF-LB-S6-LID` |
+| Lid width | — | **518.75 mm** (a full 1/8 of 4150). Was 500.75 in the pre-rebase PR, when 18 mm dividers sat on every eighth and the lids sat between them. Those dividers are gone. The usual 1 mm mesh gap is the visual kerf (`guess:`, no extra saw cut). |
+| Lid depth × thickness | — | **335.37 × 40 mm**, flush with the front (D from Shelf 1 + 8 mm clearance) |
+| Rear strip | — | **114.63 mm** (c 335.37–450), of which 96.13 mm is in front of the lamella |
+| Hinge | — | top-rear of the lid, c **335.37**, y **15.485**, z 930 |
+| Open angle | — | **106.7°** (leans **16.7°** past 90° on the lamella) |
+| Peak swing z | — | **1267.75**, Shelf 1 bottom **1275.75**, clearance **8.00 mm** |
+| Reach-in / front rail | one front rail under the whole top | front rail **omitted under the two lid bands** (c 18–98, z 872–890); back rail stays under the rear strip (c 362–442, full width). Clear opening **518.75 × 335.37 mm** from above |
+
+- FN-BK Shelf 1 is at 1275.75–1315.75 (three 40 mm shelves in four equal openings under the lining; no top board of the case since t904u). The 8 mm clearance is `guess:`.
+- The lamella front face is at **y 15.5815** (local 431.5 mm from the box front): 15.60 − 0.0005 (mesh gap at the wall) − 0.006 (backing) − 0.012 (slats). The often-quoted 15.582 ignores that 0.5 mm gap. The slats run from z 930.5 to 2431.5, i.e. they do come down to the counter (0.5 mm mesh gap above 930).
+- **The lean past 90° is 16.7°, not the 5–10° example.** A front-flush lid sized to clear Shelf 1 is 335.37 deep; that is what reaches the lamella at 16.7° past vertical. A 5–10° lean would need a deeper lid (about 368–379 mm) whose peak would hit Shelf 1. The lid stays front-flush so you can reach in from the front of the counter.
+- `guess:` 8 mm peak clearance under Shelf 1. The piano hinge is a line at the top-rear edge (no separate hinge solid). The 1 mm visual gap at the cuts is the usual mesh gap, not an extra kerf.
+- `open:` the exact piano-hinge article and how the 16.7° rest is finished against the lamella (a felt bump stop?).
+
+The two lids are their own oak solids with a `LiftJoint` (viewer `kind: "linkage"`), so they can be tapped open in the 3D viewer, past 90°, until they lean on the lamella below Shelf 1.
+
+#### Planned interior (TBD, 2026-11-23, t917u)
+
+> Petr (t917u): "btw I agree that there should be an inner shelf and either a plywood sled or just a bunch of conected boxes sliding on top of it. The two front panels will be removable (with tools and after couch is moved) in case something goes wrong. Ill just need to find the best boxes and decide on the exact mechanism. TBD, document this idea on the PR."
+
+Not modelled yet. The idea, for when the box and mechanism are chosen:
+
+- A **continuous inner shelf** across the 4150 mm run. The sliding zone above that shelf must have **no full-height centre divider**, so both containers can cross the 4|5 midline. Today's `SF-LB-SDIV1` (centred at 2075, currently up to z 872) would **stop below the shelf**.
+- Two separate **3-section-wide (~1556 mm)** sliding containers riding on top of that shelf: either custom plywood sleds (optionally holding lift-out bins) or a bunch of connected off-the-shelf boxes. Six of the eight 518.75 mm bands are occupied and two stay empty, so all six bays can be reached through the S3 and S6 lids: container A parks across 1–3 / 2–4 / 3–5, container B across 4–6 / 5–7 / 6–8.
+- Both cream front panels (`SF-LB-S1-FRONT`, `SF-LB-S2-FRONT`) are **tool-removable** after the sofa is moved, for service or recovery if something jams or drops behind.
+- `open:` exact container/box selection, inner shelf height, and the sliding mechanism (e.g. UHMW-PE glide strips + a guide vs rollers).

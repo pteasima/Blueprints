@@ -1183,7 +1183,7 @@ systemFurniture:
   # bodies stop at 910), 30 front overhang like KR-DN.
   - id: SF-LB
     Name: "Obývák nízká"
-    Description: "Low base behind the sofa, from W-053's east face (x 25.45, the face of SF-F053) to SF-TC's west face (x 29.60), both linked (2026-11-20 c; was x 25.52–29.70 with the 70 strip SF-DN70 at the pier). 450 deep, front y=15.15. Counter 930, the dining-run height (was 800), oak veneer top. 170 mm above the 760 sofa back. Cream like the kitchen since 2026-11-20 (was natural oak); dead space behind blank fronts since 2026-11-20. Petr, 2026-11-23 (t915u, t916u): two equal blank front panels (was seven)."
+    Description: "Low base behind the sofa, from W-053's east face (x 25.45, the face of SF-F053) to SF-TC's west face (x 29.60), both linked (2026-11-20 c; was x 25.52–29.70 with the 70 strip SF-DN70 at the pier). 450 deep, front y=15.15. Counter 930, the dining-run height (was 800), oak veneer top. 170 mm above the 760 sofa back. Cream like the kitchen since 2026-11-20 (was natural oak); dead space behind blank fronts since 2026-11-20. Petr, 2026-11-23 (t915u, t916u): two equal blank front panels (was seven). Petr, 2026-11-23 (t913u): the oak top has flip-up lids in the 3rd and 6th of eight equal bands."
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
@@ -1862,7 +1862,7 @@ furniture:
           PlinthKind: Flush
   - id: KR-LB
     Name: "Obývák linka"
-    Description: "Living-room counter behind the sofa: SF-LB. Cream body (oak until 2026-11-20) under a 40 mm oak-veneer top (the bookshelf boards' thickness, linked; 20 until 2026-11-20 f), flush with the fronts like the dining top (overhang linked to KR-DN's, 0; 20 until 2026-11-20 f), top 930 like the dining run. The joint with KR-DN's Silestone at x 25.52 is open (Petr, 2026-11-13)."
+    Description: "Living-room counter behind the sofa: SF-LB. Cream body (oak until 2026-11-20) under a 40 mm oak-veneer top (the bookshelf boards' thickness, linked; 20 until 2026-11-20 f), flush with the fronts like the dining top (overhang linked to KR-DN's, 0; 20 until 2026-11-20 f), top 930 like the dining run. Petr, 2026-11-23 (t915u, t916u): two equal blank front panels. Petr, 2026-11-23 (t913u): the oak top is split into eight equal bands, with upward-hinged oak lids on bands 3 and 6 (piano hinge at the lid's top-rear edge) that open past 90° and lean on the FN-BK lamella under Shelf 1. The joint with KR-DN's Silestone at x 25.52 is open (Petr, 2026-11-13)."
     PredefinedType: USERDEFINED
     ObjectType: KitchenRun
     ContainedInStructure: SP-1.02
@@ -1881,6 +1881,18 @@ furniture:
           WorktopMaterial: "oak veneer"
           # The under-storage (2026-11-19) stands on the floor like the body did (open:).
           PlinthHeight: 0.0
+          # Petr, 2026-11-23 (t913u): "split living room counter into 8 equal
+          # sections. 3rd and 6th section is an upwards hinged (piano) door
+          # [...] dont use full 450 (minus accoustic panel depth), instead
+          # use whatever lets the lid fully open below the shelf. [...] the
+          # lid will open more than 90deg so we dont need a special hinge
+          # that holds it open, it will lean against the back panel on its
+          # own." Lid depth is derived from FN-BK Shelf 1 and the lamella;
+          # the 8 mm swing clearance under Shelf 1 is a guess: (5-10 mm).
+          WorktopLids: "3,6"
+          WorktopLidDivisions: 8
+          WorktopLidBookshelf: FN-BK
+          WorktopLidClearance: 0.008
       # Petr, 2026-11-20 f: "living room overhang also goes away". The oak
       # top is flush with the fronts like the dining top: its overhang is
       # linked to KR-DN's (0, was 20).
