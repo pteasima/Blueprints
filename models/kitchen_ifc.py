@@ -69,7 +69,7 @@ NOT_AGGREGATED = frozenset({"Hob"})
 PSET_FRONT = "Pset_KitchenFront"
 PSET_BUILTIN_LAYOUT = "Pset_KitchenBuiltIn"
 FRONT_ROLES = frozenset({"Front", "Door", "Lift", "LiftMechanism", "LiftArm", "Drawer", "PullOut", "InnerDrawer", "Filler", "Shelf", "Board",
-                         "Packer"})
+                         "Packer", "DecorPanel"})
 FURNITURE_GROUP_ID = "GRP-FURNITURE"
 ELECTRICAL_GROUP_ID = "GRP-ELECTRICAL"
 # yaml-ifc types these as IfcFurniture, but they are construction or the

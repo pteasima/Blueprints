@@ -127,7 +127,8 @@ def test_tall_doors_hinge_as_the_notes_say():
     assert len(t2.boxes) == 1 + 4
     assert t2.door.hinge_a == pytest.approx(t2.boxes[0][1])
     shelves = [p for p in runs["KR-TALL"].parts if p.id.startswith("SF-T2-SH1-")]
-    assert len(shelves) == 4
+    # t870u: the lowest of four shelves went for the vacuum sealer.
+    assert len(shelves) == 3
     t1_shelves = sorted(p.boxes[0][4] for p in runs["KR-TALL-W"].parts if p.id.startswith("SF-T1-SH1-"))
     assert t1_shelves[0] == pytest.approx(118.0 + 400.0)
 
@@ -142,7 +143,8 @@ def test_oven_column_niches_fit_miele():
         assert part.props["NicheClearWidth"] == pytest.approx(0.564)
         assert part.role == "Appliance" and part.id in run.bay("SF-T3").members
     # The oven stands on the counter-line board; the microwave over it.
-    assert oven.props["Elevation"] == pytest.approx(0.928)
+    # t869u: lowered for Zuzana; t870u: the niche starts at 800 (818, 928 before).
+    assert oven.props["Elevation"] == pytest.approx(0.800)
     assert micro.props["Elevation"] > oven.props["Elevation"] + 0.59
     # Fascias do not touch the slab fronts above and below.
     front1 = run.part("SF-T3-DOOR1").boxes[0]
@@ -939,7 +941,11 @@ def test_j_grips_and_wall_front_overhang():
     assert door.props["Grip"] == "J side"
     g = door.grips[0].bounds()
     assert g[1] - g[0] == pytest.approx(29.0) and g[4] < door.boxes[0][4]  # 28 cup + 1 overcut
-    assert not parts["SF-B800-D1"][1].grips and not parts["SF-LB-S1-FRONT"][1].grips
+    # Petr, 2026-11-23 (t865u): "same J grip everywhere": pull-outs and the
+    # dishwasher's decor panel get the top grip; fixed blank fronts do not.
+    assert parts["SF-B800-D1"][1].grips and parts["SF-B800-D1"][1].props["Grip"] == "J top"
+    assert parts["SF-A600-PANEL"][1].props["Grip"] == "J top"
+    assert not parts["SF-LB-S1-FRONT"][1].grips
     for lift in ("SF-BH800-LIFT2", "SF-DH-S1-LIFT2"):
         assert parts[lift][1].boxes[0][4] == pytest.approx(1550.0)
     assert parts["SF-BH800-LIFT1"][1].boxes[0][5] == pytest.approx(2448.5)
@@ -975,9 +981,42 @@ def test_sink_frame_hangs_two_filur_bins_round_the_disposer():
     assert not [b for b in pieces if kc._plan_meet(b, disposer) and b[5] > disposer[4] and b[4] < disposer[5]]
     assert not [b for b in fr["bins"] if kc._plan_meet(b, disposer)]
     assert any("SF-B800 bin frame: MOVENTO NL 450" in n for n in run.notes)
+    # t866u: no side walls and no back panel; the runners screw under the
+    # plate (bottom 630, runner 21 below), the bins hang free. Only the two
+    # rear hook blocks (40) reach under the plate; two 90° angles tie the
+    # front to the plate.
+    assert fr["runner_z0"] == pytest.approx(648.0 - 18.0 - 21.0) and d.profile_z == pytest.approx(609.0)
+    under = [b for b in pieces if b[4] < 630.0 - 1e-6]
+    assert len(under) == 2 and all(b[5] - b[4] == pytest.approx(40.0) for b in under)
+    assert fr["brackets"] == 2 and "no side walls" in part.props["FrameKind"]
+    assert any("no side walls" in n for n in run.notes)
 
 
 def test_recycling_cabinet_is_the_deepest_empty_merivobox():
     part = _runs()["KR-WEST"].part("SF-C850-D1")
     assert part.props["NominalLength"] == pytest.approx(0.55) and part.drawer.side == "E"
     assert part.drawer.items == []  # Petr, t835u: it stays empty
+
+
+def test_one_drawer_under_the_oven_line_and_the_sealer_in_the_pantry():
+    """Petr, 2026-11-23 (t870u): SF-T2, SF-T3 and SF-T4 each one outer
+    drawer up to the oven line (fronts level), SF-T3's with only a shelf
+    for oven trays, SF-T2's and SF-T4's with one MERIVOBOX inner drawer;
+    the Maxxo Chamber Line 40 on the SF-T2 pantry floor."""
+    run = _runs()["KR-TALL"]
+    tops = []
+    for bay in ("SF-T2", "SF-T3", "SF-T4"):
+        drawers = [p for p in run.parts if p.id.startswith(f"{bay}-D") and p.role == "Drawer"]
+        assert [p.id for p in drawers] == [f"{bay}-D1"]
+        tops.append(drawers[0].drawer.front[5])
+        assert drawers[0].props["Grip"] == "J top"
+    assert tops == pytest.approx([780.5] * 3)
+    # t871u: the tray shelf is fixed in the carcass, not in the drawer.
+    assert not run.part("SF-T3-D1").drawer.items and not run.part("SF-T3-D1").props.get("InnerDrawers")
+    shelf = run.part("SF-T3-SH4-1")
+    assert shelf.drawer is None and shelf.boxes[0][5] == pytest.approx(661.0)
+    assert shelf.boxes[0][4] > run.part("SF-T3-D1").drawer.box[5]
+    assert run.part("SF-T2-D1").props["InnerDrawers"] == "M" and run.part("SF-T4-D1").props["InnerDrawers"] == "M"
+    sealer = run.part("EA-MAXXO-CL40")
+    assert sealer.boxes[0][4] == pytest.approx(800.0)
+    assert sealer.props["LidOpenClearance"] > 0

@@ -296,6 +296,10 @@ def _solid_from_product(product, label: str, list_key: str, element: dict | None
     gap = min(MESH_GAP_MM, width * 0.25, depth * 0.25, height * 0.25)
     plane = Plane(origin=origin, x_dir=x_dir, z_dir=z_dir)
     yaml_id = _yaml_id(product)
+    doors = _appliance_doors(element, width, depth, height) if element else None
+    if doors:
+        return _appliance_with_doors(doors, plane, origin, x_dir, z_dir, width, depth, height, gap,
+                                     label, yaml_id, list_key, motions)
     detail = living_detail(element, width, depth, height, gap) if element else None
     if detail is None:
         detail = Pos(gap / 2.0, gap / 2.0, gap / 2.0) * Box(
@@ -305,6 +309,75 @@ def _solid_from_product(product, label: str, list_key: str, element: dict | None
             align=(Align.MIN, Align.MIN, Align.MIN),
         )
     return [_tag(_paint(plane * detail, label), yaml_id, list_key)]
+
+
+def _appliance_doors(element: dict, width: float, depth: float, height: float) -> list | None:
+    """Door leaves of a free-standing appliance (``Pset_ApplianceDoors``),
+    product-local mm: (suffix, x0, x1, z0, z1, hinge) with hinge "L" / "R"
+    as you face it (L = local x 0). Petr, 2026-11-23 (t865u): "let me open
+    ... fridge (side hinge). Dont overthink the modeling of the insides".
+
+    ``Layout: quad`` (the 4-door fridge): two leaves over two, each hinged
+    on its outer edge, split at ``Split`` (m above the base), ``Gap``
+    between leaves. Doors ``Thickness`` deep from the front face (local
+    y 0). All guess: from the maker's photos, not a drawing."""
+    props = None
+    for pset in element.get("PropertySets") or []:
+        if pset.get("Name") == "Pset_ApplianceDoors":
+            props = pset.get("Properties") or {}
+    if not props:
+        return None
+    layout = str(props.get("Layout", ""))
+    gap = float(props.get("Gap", 0.004)) * 1000.0
+    split = float(props.get("Split", 0.0)) * 1000.0
+    base = float(props.get("Base", 0.0)) * 1000.0
+    t = float(props.get("Thickness", 0.05)) * 1000.0
+    if layout != "quad":
+        raise ValueError(f"{element.get('id')}: Pset_ApplianceDoors Layout {layout!r}, only quad")
+    if not (base < split < height):
+        raise ValueError(f"{element.get('id')}: door Split {split} outside {base}..{height}")
+    mid = width / 2.0
+    g = gap / 2.0
+    leaves = [("DOOR1", 0.0, mid - g, split + g, height, "L"), ("DOOR2", mid + g, width, split + g, height, "R"),
+              ("DOOR3", 0.0, mid - g, base, split - g, "L"), ("DOOR4", mid + g, width, base, split - g, "R")]
+    return [(sfx, x0, x1, z0, z1, h, t) for sfx, x0, x1, z0, z1, h in leaves]
+
+
+def _appliance_with_doors(doors, plane, origin, x_dir, z_dir, width, depth, height, gap,
+                          label, yaml_id, list_key, motions):
+    """The appliance body behind its doors plus one hinged leaf solid each,
+    with a ``hinged`` record per leaf (the viewer's doors.js)."""
+    t = doors[0][6]
+    y_dir = (z_dir[1] * x_dir[2] - z_dir[2] * x_dir[1], z_dir[2] * x_dir[0] - z_dir[0] * x_dir[2],
+             z_dir[0] * x_dir[1] - z_dir[1] * x_dir[0])
+
+    def world(x, y, z):
+        return tuple(origin[i] + x * x_dir[i] + y * y_dir[i] + z * z_dir[i] for i in range(3))
+
+    body = Pos(gap / 2.0, t, gap / 2.0) * Box(width - gap, depth - t - gap / 2.0, height - gap,
+                                               align=(Align.MIN, Align.MIN, Align.MIN))
+    out = [_tag(_paint(plane * body, label), yaml_id, list_key)]
+    for sfx, x0, x1, z0, z1, hinge, _t in doors:
+        leaf = Pos(x0, 0.0, z0) * Box(x1 - x0, t, z1 - z0, align=(Align.MIN, Align.MIN, Align.MIN))
+        did = f"{yaml_id}-{sfx}"
+        part = _tag(_paint(plane * leaf, label), did, list_key)
+        part.furnishing_id = yaml_id  # one furnishing; each leaf its own mesh
+        out.append(part)
+        if motions is None:
+            continue
+        zm = (z0 + z1) / 2.0
+        hx, fx = (x0, x1) if hinge == "L" else (x1, x0)
+        centre = cad_mm_to_gltf_m(world((x0 + x1) / 2.0, t / 2.0, zm))
+        hp = cad_mm_to_gltf_m(world(hx, 0.0, zm))
+        fp = cad_mm_to_gltf_m(world(fx, 0.0, zm))
+        op = cad_mm_to_gltf_m(world(hx, -100.0, zm))  # out of the front, local -y
+        vx, vz = fp[0] - hp[0], fp[2] - hp[2]
+        nx, nz = op[0] - hp[0], op[2] - hp[2]
+        sign = 1 if (vz * nx + -vx * nz) > 0 else -1
+        motions.append({"id": did, "kind": "hinged", "element": did,
+                        "center": [round(v, 6) + 0.0 for v in centre],
+                        "hinge": [round(v, 6) + 0.0 for v in hp], "axis": [0, 1, 0], "sign": sign})
+    return out
 
 
 def _tag(painted, yaml_id: str, list_key: str):
@@ -380,19 +453,42 @@ def _kitchen_run_parts(run, motions=None, layers: dict | None = None) -> list:
     linkages: dict[str, list] = {}
     out = []
     for part in run.parts:
+        placed = None
         if part.drawer is not None:
             dr = part.drawer
             plate = list(dr.baseplate) if layers is not None else []
             boxes = list(part.boxes)
             for box in plate:
                 boxes.remove(box)
-            solid = _run_box(boxes[0], 0.0)
-            for box in boxes[1:]:
-                solid = solid + _run_box(box, 0.0)
-            for grip in part.grips:  # the routed J grip (FrontGrip)
-                solid = solid - _grip_solid(grip)
             inward = -dr.out * half
-            solid = Pos(0.0, inward, 0.0) * solid
+            if part.role in ("Drawer", "PullOut") and len(boxes) > 1:
+                # Petr, 2026-11-23 (t866u): the MERIVOBOX hardware is Blum
+                # silk white (SW-M), not the cream of the fronts. The decor
+                # front and the box (sides, back, bottom, inner pieces, or
+                # the bin frame) are two painted children of one drawer
+                # node, so the viewer still moves them as one; the box
+                # child's id ends in -BOX for the material catalogue.
+                front = _run_box(boxes[0], 0.0)
+                for grip in part.grips:  # the routed J grip (FrontGrip)
+                    front = front - _grip_solid(grip)
+                body = _run_box(boxes[1], 0.0)
+                for box in boxes[2:]:
+                    body = body + _run_box(box, 0.0)
+                front_part = _paint(plane * (Pos(0.0, inward, 0.0) * front), LABEL_CABINET)
+                front_part.element_id = part.id
+                box_part = _paint(plane * (Pos(0.0, inward, 0.0) * body), LABEL_CABINET)
+                box_part.element_id = f"{part.id}-BOX"
+                placed = Compound(children=[front_part, box_part])
+                placed.label = LABEL_CABINET
+                placed.color = _color(LABEL_CABINET)
+                solid = None
+            else:
+                solid = _run_box(boxes[0], 0.0)
+                for box in boxes[1:]:
+                    solid = solid + _run_box(box, 0.0)
+                for grip in part.grips:  # the routed J grip (FrontGrip)
+                    solid = solid - _grip_solid(grip)
+                solid = Pos(0.0, inward, 0.0) * solid
             if plate:
                 # The floor and ribs as one compound, not fused: the same
                 # picture (one material, the overlaps are inside) at about a
@@ -425,10 +521,14 @@ def _kitchen_run_parts(run, motions=None, layers: dict | None = None) -> list:
                 solid = solid - _void_solid(void, bottom, z1 + 1.0)
             for cut in part.cuts:
                 solid = solid - _cut_solid(cut, part.boxes[0][2], part.boxes[0][3])
+            if part.grips:  # a decor panel's J grip (t865u), one unshrunk slab
+                solid = _run_box(part.boxes[0], 0.0)
+                for grip in part.grips:
+                    solid = solid - _grip_solid(grip)
         label = {"worktop": LABEL_WORKTOP, "hob": LABEL_HOB, "appliance": LABEL_APPLIANCE,
                  "sink": LABEL_SINK, "oak": LABEL_OAK}.get(part.label, LABEL_CABINET)
         list_key = {"appliance": "electricAppliances", "sink": "sanitaryTerminals"}.get(part.label, "systemFurniture")
-        out.append(_tag(_paint(plane * solid, label), part.id, list_key))
+        out.append(_tag(placed if placed is not None else _paint(plane * solid, label), part.id, list_key))
         if motions is None:
             continue
         if part.lift is not None:

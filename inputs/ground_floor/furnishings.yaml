@@ -280,7 +280,15 @@ systemFurniture:
       # SF-T3's and SF-T4's.
       - Name: Pset_Fronts
         Properties:
-          Layout: "door * hinge=R shelves=4 racks=4 | drawer 0.4 | drawer 0.41"
+          # Petr, 2026-11-23 (t870u): below the oven line one outer drawer
+          # with one MERIVOBOX inner drawer, its top level with SF-T3's and
+          # SF-T4's (band 100-782, the board 782-800 behind the door, so
+          # the door band starts at 800 like the steam oven niche; was
+          # drawers 400 + 410 to 910). The pantry keeps its door racks but
+          # loses its lowest shelf: the Maxxo Chamber Line 40 vacuum sealer
+          # (EA-MAXXO-CL40) stands on its floor. The three shelves left keep
+          # the even spacing of four (first 642 over the floor).
+          Layout: "door * hinge=R shelves=3 first=0.642 racks=4 | drawer 0.682 box=E inner=M"
           Contents: "rýže, těstoviny, tortilly, asie, pečení; "
       - Name: Pset_CabinetDoor
         Properties:
@@ -316,7 +324,19 @@ systemFurniture:
           # 2026-11-19 (best effort, see SF-T2): the top band is a door
           # hinged L (towards SF-T2) with one shelf, the bottom band two
           # drawers 400 + 410. All guess:.
-          Layout: "door * hinge=L shelves=1 | niche 0.356 clear=0.564 | niche 0.593 clear=0.564 | drawer 0.4 | drawer 0.41"
+          # Petr, 2026-11-23 (t869u): lower the oven stack for Zuzana
+          # (174 cm): steam oven niche bottom 910 -> 800, microwave directly
+          # above, the top band grows, the bottom band 810 -> 700 as two
+          # drawers 350 + 350 (were 400 + 410). No longer level with SF-T2 /
+          # SF-T4's drawers (still 400 + 410).
+          # t870u: "even a little lower with the oven, 800 start is good":
+          # the niche starts at 800 (818 since t869u), its board 782-800;
+          # below it one drawer, inside only one shelf for oven trays (no
+          # inner drawers; was 350 + 350). t871u: the tray shelf is FIXED in
+          # the carcass, not in the drawer: top at 661, the level of the
+          # inner drawers' bottoms in SF-T2 / SF-T4 (661-752), 20 behind the
+          # front's back, 300 over the E box; the drawer slides under it.
+          Layout: "door * hinge=L shelves=1 | niche 0.356 clear=0.564 | niche 0.593 clear=0.564 | drawer 0.682 box=E shelf=0.661"
   - id: SF-T4
     Name: "Vysoká 500"
     Description: "Tall run, east end. Note: zbyva sirka cca 50. Modelled 500 until 2026-11-20, now 546: the remainder up to pier W-052 after the fridge was centred on the alley (guess:). The same note allows 600 if a drinks fridge goes underneath."
@@ -347,8 +367,10 @@ systemFurniture:
       # line with SF-T2 / SF-T3. All guess:; no keg fridge, so 500 stays.
       - Name: Pset_Fronts
         Properties:
-          Layout: "door * hinge=R shelves=4 | drawer 0.4 | drawer 0.41"
-          Contents: "sladkosti, brambůrky, oříšky; sladkosti, brambůrky, oříšky; sladkosti, brambůrky, oříšky"
+          # t870u: one outer drawer with one MERIVOBOX inner drawer, level
+          # with SF-T2 / SF-T3 (was 400 + 410 to 910); the door grows to 800.
+          Layout: "door * hinge=R shelves=4 | drawer 0.682 box=E inner=M"
+          Contents: "sladkosti, brambůrky, oříšky; sladkosti, brambůrky, oříšky"
   - id: SF-TF
     Name: "Nad lednicí 908"
     Description: "Cabinet over the Whirlpool fridge, between SF-T1 and SF-T2 (x 19.496–20.404, 54 west of 19.55–20.458 since 2026-11-20). Fronts flush with the tall run, top 2450. Bottom 1926: the fridge top 1876 + 50 clearance (guess:). Note: nahore prislusenstvi od robota, ryzovar."
@@ -821,6 +843,13 @@ systemFurniture:
         Properties:
           Run: KR-WEST
           Kind: "Niche"
+      # Petr, 2026-11-23 (t865u): "fix the dishwasher, it has to sit flush
+      # with the other fronts"; "same J grip everywhere"; "let me open
+      # dishwasher". The integrated dishwasher's decor panel: a front on the
+      # fronts' plane, J grip on top, dropping down (guess:).
+      - Name: Pset_Fronts
+        Properties:
+          DecorPanel: EA-SBD6ECX
   - id: SF-AH850
     Name: "Západ horní 850 sklenice"
     Description: "Section A wall cabinet, glasses, 850. Depth 350, bottom 1560, height 890, top 2450 (the ceiling line). Blum AVENTOS HF top bi-fold lift fronts, upper and lower."
@@ -1392,13 +1421,27 @@ electricAppliances:
     Width: 0.908
     Depth: 0.716
     Height: 1.876
+    # Petr, 2026-11-23 (t865u): "let me open ... fridge (side hinge). Dont
+    # overthink the modeling of the insides". Four doors, two over two,
+    # each hinged on its outer edge; split height, base and door depth are
+    # guess: (Whirlpool photos, no drawing).
+    PropertySets:
+      - Name: Pset_ApplianceDoors
+        Properties:
+          Layout: quad
+          Split: 0.8
+          Base: 0.05
+          Thickness: 0.06
   - id: EA-SBD6ECX
     Name: "Bosch SBD6ECX12E"
     Description: "Fully integrated dishwasher, 598×550×865, in the north 600 of section A. Right when facing the west wall. Back on the wall, 1 mm clear of each side of the niche."
     PredefinedType: DISHWASHER
     ContainedInStructure: SP-1.02
     # 2026-11-22: 18 south with the slot (13.251 before).
-    Origin: [19.35, 13.233]
+    # Petr, 2026-11-23 (t865u): flush with the other fronts. The door face
+    # sits on the carcass front line (x 19.382), so the decor panel on it is
+    # on the fronts' plane (19.382-19.400). Was 19.35 (32 back).
+    Origin: [19.382, 13.233]
     RefDirection: [0, 1]
     Width: 0.598
     Depth: 0.55
@@ -1409,7 +1452,7 @@ electricAppliances:
   # and URLs: docs/design/kitchen-cabinets.md "Appliances".
   - id: EA-DGC7465
     Name: "Miele DGC 7465 HCX Pro"
-    Description: "Combi steam oven with fresh and waste water connection, 60 cm. In the SF-T3 niche at the counter line. 595 × 596 × 567, niche 560–568 × 590–595 × 550 (Miele)."
+    Description: "Combi steam oven with fresh and waste water connection, 60 cm. In the SF-T3 niche, bottom 800 (t870u; 818 t869u, 928 before). 595 × 596 × 567, niche 560–568 × 590–595 × 550 (Miele)."
     PredefinedType: ELECTRICCOOKER
     ContainedInStructure: SP-1.02
     PropertySets:
@@ -1420,6 +1463,8 @@ electricAppliances:
           ArticleNumber: "12100360"
       - Name: Pset_BuiltIn
         Properties:
+          # Miele data sheet: "Türanschlag unten" (drop-down door). t865u.
+          DoorHinge: Bottom
           Kind: Niche
           Bay: SF-T3
           Zone: 3
@@ -1444,6 +1489,8 @@ electricAppliances:
           ArticleNumber: "11103410"
       - Name: Pset_BuiltIn
         Properties:
+          # Miele data sheet: "Türanschlag links" (hinged on the left). t865u.
+          DoorHinge: L
           Kind: Niche
           Bay: SF-T3
           Zone: 2
@@ -1477,6 +1524,31 @@ electricAppliances:
           Width: 0.416
           Depth: 0.443
           Height: 0.249
+  # Petr, 2026-11-23 (t870u): "That upper tall cupboard/pantry between
+  # fridge and ovens will keep its small hinged door shelves, but will its
+  # it first main shelf removed and will instead fit at its base a Maxxo
+  # Chamber Line 40 vacuum sealer".
+  - id: EA-MAXXO-CL40
+    Name: "Maxxo VM Chamber Line 40"
+    Description: "Chamber vacuum sealer standing on the floor of the SF-T2 pantry (door band), behind the door racks. 345 × 285 × 225 (W × D × H), 8.5 kg, chamber 310 × 220 × 70 deep (Czech/Slovak retailers' spec tables: elektrocentrum24.cz, nay.sk, mujpramen.cz, 4home.sk; nay.sk answer for the chamber). Lid open height not published: guess: 500 (lid hinged at the back, about the depth of the top). Needs a socket in the pantry: open:."
+    PredefinedType: USERDEFINED
+    ObjectType: VacuumSealer
+    ContainedInStructure: SP-1.02
+    PropertySets:
+      - Name: Pset_ManufacturerTypeInformation
+        Properties:
+          Manufacturer: "Maxxo"
+          ModelLabel: "VM Chamber Line 40"
+      - Name: Pset_BuiltIn
+        Properties:
+          Kind: Standing
+          Bay: SF-T2
+          Zone: 1
+          Width: 0.345
+          Depth: 0.285
+          Height: 0.225
+          # guess: not published; Petr offered to measure.
+          LidOpenHeight: 0.5
   - id: EA-EVO3-W
     Name: "EcoMaster STANDARD EVO3"
     Description: "Food waste disposer under the west sink SN-RS15 (card on KitchenPlan.jpg). 368 high, 145 diameter (EcoMaster). Hangs from the bowl's drain, 115 mm from the inner bowl back (Teka RS15 plan, Pset_Sink DrainOffsetFromBack)."
@@ -1659,6 +1731,12 @@ furniture:
           # end panels, flush with the wall segment y 11.35-13.85; the top
           # stops flush. The dishwasher end gets an 18 panel (FlushEnds).
           FlushEnds: true
+          # Petr, 2026-11-23 (t865u): "fix south side panel on west run
+          # (should go all the way to floor, like north one does)". The
+          # carcass end side runs down to the floor; the bottom is fixed to
+          # it (guess: connectors / angle brackets), legs and kickboard stop
+          # inside it.
+          EndsToFloor: "S"
   - id: KR-DN
     Name: "Jídelní linka"
     Description: "North dining base run: SF-F052, SF-DN, SF-F053 (SF-DN70 removed 2026-11-20 c). Cream boxes (oak until 2026-11-20) under a 20 mm Silestone Blanco Maple worktop, no front overhang (20 until 2026-11-20 f): top and boxes both 450 deep, 430 of the top visible in front of the 20 mm backsplash, top 930. No exposed ends: west abuts SF-T4, east abuts SF-LB (KR-LB, oak-veneer top, also 930)."

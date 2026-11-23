@@ -198,10 +198,15 @@ IKEA_DEFAULTS_MM = {
     # MDF plate with one hole per bin, U-shaped round the disposer, on two
     # sides running on Blum MOVENTO 760H (BLUMOTION S, manual opening).
     "FrameBoard": 18.0,  # MDF plate (guess:)
-    "FrameSide": 16.0,  # drawer sides (Blum: 12-15, 16 with limited side adjustment)
-    "FrameRunnerBelow": 21.0,  # cabinet floor to the side's lower edge (guess:, MOVENTO drawing)
-    "FrameBack": 16.0,  # back panel under the disposer, for the runners' rear hooks
-    "FrameBackHeight": 120.0,  # (guess:)
+    # No side walls since 2026-11-23 (t866u): the runners screw straight
+    # under the plate's edge strips, the bins hang free below it.
+    "FrameSide": 16.0,  # plate edge strip over each runner, the "drawer side" width (Blum: 12-16)
+    "FrameRunnerBelow": 21.0,  # runner bottom to the plate underside (guess:, MOVENTO drawing)
+    "FrameBack": 16.0,  # rear hook block under each arm's back end (guess:)
+    "FrameBackHeight": 40.0,  # rear hook block height (guess:; was a 120 back panel)
+    "FrameBracket": 40.0,  # 90° steel angle, front to plate, leg length (guess:)
+    "FrameBracketWidth": 30.0,  # (guess:)
+    "FrameBracketThick": 3.0,  # (guess:)
     "FrameHoleInset": 5.0,  # hole = the bin's outer size less this a side (Petr, t842u)
     "FrameFrontStrip": 25.0,  # plate in front of the holes (guess:)
     "FrameNotchClearance": 5.0,  # notch edge to the disposer, each side (guess:)
@@ -214,6 +219,9 @@ IKEA_DEFAULTS_MM = {
 
 # Blum MOVENTO 760H / 766H nominal lengths (technical data sheet TD-132/1,
 # 06.22): SKL = NL - 10, SKW = LW - 42, inside cabinet depth >= NL + 3.
+# Petr, 2026-11-23 (t866u): "make merivobox hardware white". Blum makes
+# MERIVOBOX in SW-M silk white matt, IG-M indium grey matt, OG-M orion grey matt.
+MERIVOBOX_COLOUR = "Blum SW-M silk white matt"
 MOVENTO_NL = (250, 270, 300, 320, 350, 380, 400, 420, 450, 480, 500, 550, 600)
 RUN_FLAGS = ("CladEnds", "Backsplash", "FlushEnds")
 
@@ -690,6 +698,7 @@ class Run:
     bays: list
     parts: list = field(default_factory=list)
     docks: list = field(default_factory=list)  # (section bay, zone) with a dock band
+    door_bands: list = field(default_factory=list)  # (bay, zone, floor z, top z, back_y, racks): door bands
     lent_worktop: list = field(default_factory=list)  # (run id, bay id, run-frame slab) topped by another run
     carcass_z0: float = 0.0
     carcass_z1: float = 0.0
@@ -901,6 +910,8 @@ class _Builder:
             self._bay_parts(bay, z0, z1, shared_back=any(bay in r for k, rs in blocks if k == "pair" for r in rs))
         self._niche_appliances(cabinets)
         self._dock_appliances(cabinets)
+        self._standing_appliances()
+        self._decor_panels()
         if wt > 0:
             self._worktop(rows, z_base + height - wt, z_base + height)
         if _prop(run.element, PSET_RUN, "CladEnds"):
@@ -965,6 +976,7 @@ class _Builder:
             self.add(Part(f"{bay.id}-BODY", bay.element.get("Name") or bay.id, "Body",
                           [(bay.a0, bay.a1, bay.c0, bay.c1, z_base, z1)], material=material), bay)
         self._dock_appliances(bays)
+        self._standing_appliances()
         self._join_flush_kickboards(bays)
         if wt <= 0:
             return
@@ -1065,11 +1077,18 @@ class _Builder:
                 self._plinth(row, a_lo, a_hi, back_y=row[0].depth - t / 2, tag=tag)
             return
         (row,) = rows_in
+        floor_ends = self._floor_ends()
         for end, a_range, bay in (("lo", (a_lo, a_lo + t), row[0]), ("hi", (a_hi - t, a_hi), row[-1])):
             name = self._end_name(-1 if end == "lo" else 1)
             c0, c1 = self.c_range(bay, tf, bay.depth)
+            # ``EndsToFloor`` (Petr, 2026-11-23, t865u): this end side runs
+            # down past the plinth to the floor; the bottom is fixed to it
+            # (guess: dowels / connectors or angle brackets) and the legs and
+            # kickboard stop at its inside face.
+            zs = bay.z_base if name in floor_ends else z0
             self.add(Part(f"{run.id}-END-{name}{tag}", f"Bok {name}", "EndSide",
-                          [(*a_range, c0, c1, z0, z1)]), bay)
+                          [(*a_range, c0, c1, zs, z1)],
+                          props={"ToFloor": True} if name in floor_ends else {}), bay)
         self._dividers(row, z0, z1, back_y=row[0].depth, tag=tag)
         self._plinth(row, a_lo, a_hi, back_y=row[0].depth - p["BackThickness"], tag=tag)
 
@@ -1111,6 +1130,10 @@ class _Builder:
         else:
             c0, c1 = self.c_range(bay, p["PlinthSetback"], p["PlinthSetback"] + p["BoardThickness"])
         face = self.run.frame.compass(0.0, -1.0 if bay.front_low else 1.0)
+        floor = self._floor_ends()
+        t = p["BoardThickness"]
+        a_lo += t if self._end_name(-1) in floor else 0.0
+        a_hi -= t if self._end_name(1) in floor else 0.0
         self.add(Part(f"{self.run.id}-PLINTH-{face}{tag}", f"Soklová lišta {face}", "Plinth",
                       [(a_lo, a_hi, c0, c1, bay.z_base, bay.z_base + p["PlinthHeight"])],
                       props={"Kind": "Kickboard", "Setback": round((0.0 if kind == "Flush" else p["PlinthSetback"]) / 1000.0, 6)}),
@@ -1186,9 +1209,14 @@ class _Builder:
         # An end leg sits under the end side but never past its outer face
         # (2026-11-22: a free end next to a door opening, ``FlushEnds``).
         end = max(t, d) / 2 if self._flush_ends() else t / 2
-        lines = [(row[0].a0 + end, (row[0],), f"{row[0].id}-{run.frame.compass(-1.0, 0.0)}")]
+        floor = self._floor_ends()
+        # An end side down to the floor (``EndsToFloor``): its leg stands
+        # just inside it.
+        lo_end = t + d / 2 if self._end_name(-1) in floor else end
+        hi_end = t + d / 2 if self._end_name(1) in floor else end
+        lines = [(row[0].a0 + lo_end, (row[0],), f"{row[0].id}-{run.frame.compass(-1.0, 0.0)}")]
         lines += [(l.a1, (l, r), f"{l.id}-{r.id}") for l, r in zip(row, row[1:])]
-        lines.append((row[-1].a1 - end, (row[-1],), f"{row[-1].id}-{run.frame.compass(1.0, 0.0)}"))
+        lines.append((row[-1].a1 - hi_end, (row[-1],), f"{row[-1].id}-{run.frame.compass(1.0, 0.0)}"))
         for a, bays, tag in lines:
             for end, y in (("F", tf + inset), ("B", back_y - inset)):
                 c = sum(self.c_range(row[0], y, y)) / 2.0
@@ -1429,7 +1457,9 @@ class _Builder:
                     props = dict(base, System="Blum MOVENTO 760H, BLUMOTION S (manual opening)",
                                  RunnerArticle=f"760H{int(dr.nl)}1S", NominalLength=round(dr.nl / 1000.0, 6),
                                  Extension=round(dr.extension / 1000.0, 6), LoadClass=40,
-                                 FrameKind="U-shaped MDF plate, bins hung by the rim",
+                                 FrameKind="U-shaped MDF plate, no side walls, runners screwed under the plate, bins hung free by the rim",
+                                 RunnerHeight=round(fr["runner_z0"] / 1000.0, 6),
+                                 FrontBrackets=f"{fr['brackets']} × 90° steel angle {fr['bracket'][0]:g}×{fr['bracket'][0]:g}×{fr['bracket'][2]:g}, {fr['bracket'][1]:g} wide (guess:)",
                                  FrameBoard=round(fr["plate"] / 1000.0, 6),
                                  FramePlateTop=round(fr["plate_top"] / 1000.0, 6),
                                  FrameInsideWidth=round(fr["skw"] / 1000.0, 6),
@@ -1445,9 +1475,15 @@ class _Builder:
                         f"open: {bay.id} bin frame: MOVENTO NL {dr.nl:g}, plate top {fr['plate_top']:g} "
                         f"({fr['top_gap']:g} under the bowl), bins {fr['floor_gap']:g} over the floor, "
                         f"{min(fr['strip']):g} mm of MDF beside the disposer notch (trap, outlet and hoses not modelled)")
+                    self.run.notes.append(
+                        f"open: {bay.id} bin frame has no side walls: MOVENTO is made for wooden drawer sides "
+                        f"12-16 mm; here its locking devices screw under the plate's {p['FrameSide']:g} mm edge strips "
+                        f"and the rear hooks go into blocks under the arms (runner bottom z {fr['runner_z0']:g}); "
+                        f"check with Blum or the joiner")
                 else:
                     props = None
                 props = props or dict(base, System="Blum MERIVOBOX",
+                             BoxColour=MERIVOBOX_COLOUR,
                              NominalLength=round(dr.nl / 1000.0, 6),
                              DrawerSide=dr.side, LoadClass=dr.load,
                              BoxBelowFront=round(dr.drop / 1000.0, 6) if dr.drop > TOL else None,
@@ -1508,6 +1544,24 @@ class _Builder:
                     props.update(Grip=f"J {edge}")
                 outer = self.add(Part(f"{bay.id}-D{drawer_no}", name.strip(), "Drawer" if zone.kind == "drawer" else "PullOut",
                                       boxes, drawer=dr, props=props, grips=grips), bay)
+                if zone.opts.get("shelf") is not None:
+                    # Petr, 2026-11-23 (t871u): a FIXED shelf in the carcass
+                    # behind the drawer front, over the drawer's box, for
+                    # laying oven trays on; not part of the pull-out.
+                    # ``shelf=`` is its top z in metres (absolute).
+                    st = float(zone.opts["shelf"]) * 1000.0
+                    sz0 = st - t
+                    if sz0 < dr.box[5] + p["ShelfSetback"] - TOL or st > zone.slot_z1 - TOL:
+                        raise ValueError(f"{bay.id}: fixed shelf {sz0:g}-{st:g} must sit over the drawer box "
+                                         f"(top {dr.box[5]:g}) and under the band top {zone.slot_z1:g}")
+                    sc0, sc1 = self.c_range(bay, tf + p["ShelfSetback"], back_y)
+                    self.add(Part(f"{bay.id}-SH{zone.index}-1", "Police na plechy", "Shelf",
+                                  [(bay.clear_lo, bay.clear_hi, sc0, sc1, sz0, st)],
+                                  props={"Zone": zone.index, "Kind": "fixed shelf over the drawer box",
+                                         "ShelfTop": round(st / 1000.0, 6),
+                                         "OverDrawerBox": round((sz0 - dr.box[5]) / 1000.0, 6),
+                                         "UnderBoard": round((zone.slot_z1 - st) / 1000.0, 6),
+                                         "BehindFront": round(p["ShelfSetback"] / 1000.0, 6)}), bay)
                 # Inner drawers (2026-11-20 c): each its own part and motion,
                 # opening only with the front open (``Parent``); the coupled
                 # top one (ZI7.0M07) opens with the front, the front closing
@@ -1545,6 +1599,7 @@ class _Builder:
                     self.add(Part(f"{bay.id}-D{drawer_no}-I{k}", f"Vnitřní šuplík {k}", "InnerDrawer",
                                   iboxes + iplate, drawer=idr,
                                   props={"Zone": zone.index, "Kind": "inner", "System": "Blum MERIVOBOX",
+                                         "BoxColour": MERIVOBOX_COLOUR,
                                          "NominalLength": round(dr.nl / 1000.0, 6),
                                          "DrawerSide": inner[k - 1].strip().upper(),
                                          "FrontPieceLength": round((bay.clear_width - p["MerivoboxInnerFrontDeduction"]) / 1000.0, 6),
@@ -1574,6 +1629,7 @@ class _Builder:
                     self.add(Part(f"{bay.id}-FILLER{zone.index}", "Lišta", "Filler",
                                   [(a0, a1, fc0, fc1, front_box[4], front_box[5])], props={"Zone": zone.index}), bay)
                 self._shelves(bay, p, zone, in_z0, in_z1, back_y, racks=int(zone.opts.get("racks", 0)))
+                self.run.door_bands.append((bay, zone, in_z0, in_z1, back_y, int(zone.opts.get("racks", 0))))
             elif zone.kind == "lift":
                 # The lowest front of a wall cabinet hangs ``WallFrontOverhang``
                 # below the carcass bottom (and closes the half gap under it).
@@ -1716,6 +1772,53 @@ class _Builder:
                     "Bay": bay.id, "Zone": zone.index, "DockClearWidth": round((o1 - o0) / 1000.0, 6),
                     "DockClearHeight": round((top - floor) / 1000.0, 6),
                     "ClearanceAbove": round((top - floor - h) / 1000.0, 6)})
+
+    def _standing_appliances(self):
+        """Loose appliances on the floor of a door band (``Pset_BuiltIn.Kind:
+        Standing``, ``Bay``, ``Zone``; Petr, 2026-11-23, t870u: the vacuum
+        sealer at the pantry's base). Centred across the clear width, its
+        front ``ShelfSetback`` behind the door racks (or the door). It must
+        fit under the band's lowest shelf; ``LidOpenHeight`` (the height
+        with the lid open, base to the lid's top) is checked against that
+        shelf and reported, not drawn."""
+        p = self.p
+        for bay, zone, floor, top, back_y, racks in self.run.door_bands:
+            for ext in self.builtins:
+                if str(_prop(ext, PSET_BUILTIN, "Kind", "")) != "Standing" or str(_prop(ext, PSET_BUILTIN, "Bay", "")) != bay.id:
+                    continue
+                if int(_prop(ext, PSET_BUILTIN, "Zone", zone.index)) != zone.index:
+                    continue
+                w, d, h = (float(_prop(ext, PSET_BUILTIN, k)) * 1000.0 for k in ("Width", "Depth", "Height"))
+                lid = float(_prop(ext, PSET_BUILTIN, "LidOpenHeight", 0.0) or 0.0) * 1000.0
+                tf = p["FrontThickness"]
+                front = tf + p["ShelfSetback"] + (p["RackDepth"] + p["ShelfSetback"] if racks else 0.0)
+                depth_clear = back_y - front
+                cw = bay.clear_hi - bay.clear_lo
+                shelves = [q for q in self.run.parts if q.role == "Shelf" and q.id.startswith(f"{bay.id}-SH{zone.index}-")]
+                roof = min((q.boxes[0][4] for q in shelves), default=top)
+                if w > cw + TOL:
+                    raise ValueError(f"{ext['id']}: {w:.0f} wide, {bay.id} is {cw:.0f} clear")
+                if d > depth_clear + TOL:
+                    raise ValueError(f"{ext['id']}: {d:.0f} deep, {bay.id} has {depth_clear:.0f} behind the door racks")
+                if h > roof - floor + TOL:
+                    raise ValueError(f"{ext['id']}: {h:.0f} high, {roof - floor:.0f} under the lowest shelf of {bay.id}")
+                am = (bay.clear_lo + bay.clear_hi) / 2.0
+                b0, b1 = self.c_range(bay, front, front + d)
+                body = (am - w / 2.0, am + w / 2.0, b0, b1, floor, floor + h)
+                lid_clear = roof - floor - lid if lid else None
+                self._builtin_part(ext, bay, [body], props={
+                    "Bay": bay.id, "Zone": zone.index, "ClearWidth": round(cw / 1000.0, 6),
+                    "ClearDepthBehindRacks": round(depth_clear / 1000.0, 6),
+                    "ClearHeight": round((roof - floor) / 1000.0, 6),
+                    "SideClearance": round((cw - w) / 2000.0, 6),
+                    "DepthLeftBehind": round((depth_clear - d) / 1000.0, 6),
+                    "ClearanceAbove": round((roof - floor - h) / 1000.0, 6),
+                    "LidOpenClearance": round(lid_clear / 1000.0, 6) if lid_clear is not None else None})
+                self.run.notes.append(
+                    f"{'open' if lid_clear is None or lid_clear >= 0 else 'CLASH'}: {ext['id']} in {bay.id}: "
+                    f"{w:g} × {d:g} × {h:g} on z {floor:g}, {(cw - w) / 2:g} a side, {depth_clear - d:g} behind it, "
+                    f"{roof - floor - h:g} over it to the lowest shelf"
+                    + (f"; lid open {lid:g} (guess:) leaves {lid_clear:g}" if lid else ""))
 
     def _grips(self, bay: Bay, p: dict, zone: Zone, role: str, box: tuple, hinge_a: float | None = None):
         """The routed J grip of one front (``Pset_KitchenRun.FrontGrip: J``):
@@ -2062,6 +2165,44 @@ class _Builder:
                     raise ValueError(f"{ext['id']}: a sink fitting is Kind Disposer or Tap, got {kind!r}")
         return p
 
+    def _decor_panels(self):
+        """An integrated appliance's decor front in a niche bay
+        (``Pset_Fronts.DecorPanel``: the appliance id): one front on the
+        fronts' plane, the bay less the front gaps, as high as the run's
+        other fronts, with the run's grip. It drops down about its bottom
+        edge (a dishwasher door, guess: the real hinge sits near the
+        appliance's foot, not at the panel's edge). Petr, 2026-11-23, t865u:
+        "fix the dishwasher, it has to sit flush with the other fronts"; "let
+        me open dishwasher"."""
+        p = self.p
+        run = self.run
+        tf, g = p["FrontThickness"], p["FrontGap"] / 2.0
+        for bay in run.bays:
+            appliance = _prop(bay.element, PSET_FRONTS, "DecorPanel")
+            if not bay.niche or not appliance:
+                continue
+            fronts = [q.boxes[0] if q.drawer is None else q.drawer.front for q in run.parts
+                      if q.role in ("Drawer", "PullOut", "Door")]
+            if not fronts:
+                raise ValueError(f"{bay.id}: DecorPanel needs another front in the run to match")
+            z0, z1 = min(b[4] for b in fronts), max(b[5] for b in fronts)
+            fc0, fc1 = self.c_range(bay, 0.0, tf)
+            box = (bay.a0 + g, bay.a1 - g, fc0, fc1, z0, z1)
+            out = -1.0 if bay.front_low else 1.0
+            face = fc0 if bay.front_low else fc1
+            zone = Zone(0, "front", z1 - z0, z0, z1, {})
+            grips, edge = self._grips(bay, p, zone, "DecorPanel", box)
+            steps = 8
+            lift = LiftJoint(f"{bay.id}-PANEL", 0, None, face, z0, out,
+                             tuple(-math.pi / 2 * k / steps for k in range(steps + 1)))
+            self.add(Part(f"{bay.id}-PANEL", f"Dekor {appliance}", "DecorPanel", [box], lift=lift, grips=grips,
+                          props={"Appliance": str(appliance), "Opens": "down (guess: like the appliance door)",
+                                 "Grip": f"J {edge}" if edge else None,
+                                 "PanelWidth": round((box[1] - box[0]) / 1000.0, 6),
+                                 "PanelHeight": round((z1 - z0) / 1000.0, 6),
+                                 # Petr, t866u: the same colour as the other fronts.
+                                 "Finish": "same as the other fronts (kitchen cream, matt lacquered MDF)"}), bay)
+
     def _niche_appliances(self, bays):
         """Appliances in a ``niche`` band: centred along the run, standing on
         the band's board, front face on the fronts' plane. The niche must be
@@ -2113,10 +2254,29 @@ class _Builder:
                     other.boxes[0] = (x0, x1, y0, y1, fz1 + g, z1)
                 elif z1 > fz0 - g and z0 < fz0:
                     other.boxes[0] = (x0, x1, y0, y1, z0, fz0 - g)
-            self._builtin_part(ext, bay, [fascia, body], props={
+            self._builtin_part(ext, bay, [body], props={
                 "Bay": bay.id, "Zone": zi, "NicheClearWidth": round(clear_w / 1000.0, 6),
                 "NicheClearHeight": round(clear_h / 1000.0, 6), "NicheClearDepth": round(niche_depth / 1000.0, 6),
                 "Elevation": round(nz0 / 1000.0, 6)})
+            # The fascia is the appliance door (Petr, 2026-11-23, t865u: "let
+            # me open ... oven, microwave"; insides not modelled).
+            # ``Pset_BuiltIn.DoorHinge``: Bottom (drops down), L or R (as
+            # you face it), from the maker's data sheet.
+            hinge = str(_prop(ext, PSET_BUILTIN, "DoorHinge", "Bottom"))
+            out = -1.0 if bay.front_low else 1.0
+            face = f0 if bay.front_low else f1
+            door, lift = None, None
+            if hinge == "Bottom":
+                steps = 8
+                lift = LiftJoint(f"{ext['id']}-DOOR", 0, None, face, fascia[4], out,
+                                 tuple(-math.pi / 2 * k / steps for k in range(steps + 1)))
+            elif hinge in ("L", "R"):
+                door = Leaf(zi, hinge, _hinge_a(bay, hinge, fascia[0], fascia[1]), face, out)
+            else:
+                raise ValueError(f"{ext['id']}: DoorHinge {hinge!r}, one of Bottom, L, R")
+            self.add(Part(f"{ext['id']}-DOOR", f"Dvířka {ext.get('Name') or ext['id']}", "ApplianceDoor",
+                          [fascia], label="appliance", door=door, lift=lift,
+                          props={"Appliance": ext["id"], "Hinge": hinge}), bay)
 
     def _worktop(self, rows, zb, zt):
         run, p = self.run, self.p
@@ -2153,6 +2313,12 @@ class _Builder:
             cuts = [_mitre_cut(a0, a0 + (zt - zb), zb, zt, "top"), _mitre_cut(a1, a1 - (zt - zb), zb, zt, "top")]
         self.add(Part(f"{run.id}-WORKTOP", "Pracovní deska", "Worktop", [run.worktop],
                       label="worktop", voids=voids, material=material, cuts=cuts))
+
+    def _floor_ends(self) -> set:
+        """``Pset_KitchenRun.EndsToFloor``: compass names of the run ends
+        (single rows) whose carcass end side runs down to the floor."""
+        v = _prop(self.run.element, PSET_RUN, "EndsToFloor")
+        return set(str(v or "").split())
 
     def _flush_ends(self) -> bool:
         """``Pset_KitchenRun.FlushEnds`` (Petr, 2026-11-22, the west run
@@ -2715,12 +2881,15 @@ def _frame_pullout(bay: Bay, p: dict, zone: Zone, number: int, back_y: float, ob
                    carcass_z0: float, on_board: bool) -> Drawer:
     """A pull-out that hangs bins by their rims in an MDF plate (Petr,
     2026-11-23, t842u): ``frame=u bin=WxDxH n=2`` (metres, the bin's outer
-    size with its rim). Two sides on Blum MOVENTO 760H runners (concealed,
-    BLUMOTION S, manual opening), a plate ``FrameBoard`` thick on top with
-    one hole per bin (outer size less ``FrameHoleInset`` a side), the outer
-    holes against the sides, and a notch open to the back round the
-    disposer so the frame slides past it. A back panel low under the
-    disposer takes the runners' rear hooks.
+    size with its rim). No side walls and no back panel (Petr, t866u): the
+    plate ``FrameBoard`` thick runs on Blum MOVENTO 760H runners (concealed,
+    BLUMOTION S, manual opening) screwed under its edge strips, with one
+    hole per bin (outer size less ``FrameHoleInset`` a side), the outer
+    holes against the edge strips, and a notch open to the back round the
+    disposer so the frame slides past it. The bins hang free below the
+    plate. A small block under each arm's back end takes the runner's rear
+    hook (guess:), and two 90° steel angles inside tie the plate to the
+    decor front (guess:).
 
     The runner is the shortest MOVENTO NL whose travel (= NL, guess:) takes
     the bins ``FrameLiftClearance`` in front of the worktop edge, so they
@@ -2782,8 +2951,8 @@ def _frame_pullout(bay: Bay, p: dict, zone: Zone, number: int, back_y: float, ob
     floor_gap = bin_bottom - floor0
     if plate_top + p["BinRim"] > roof - p["FrameTopClearance"] + TOL:
         raise ValueError(f"{bay.id}: hanging bins' lids reach the bowl ({roof - plate_top - p['BinRim']:.0f} mm)")
-    side_z0 = floor0 + p["FrameRunnerBelow"]
     pz0 = plate_top - fb
+    runner_z0 = pz0 - p["FrameRunnerBelow"]
 
     def cr(o0, o1):
         return _Builder.c_range(bay, o0, o1)
@@ -2791,9 +2960,9 @@ def _frame_pullout(bay: Bay, p: dict, zone: Zone, number: int, back_y: float, ob
     f0, f1 = tf, tf + skl
     h0, h1 = hole0, hole0 + hd
     items = [
-        (ia0 - fs, ia0, *cr(f0, f1), side_z0, pz0),  # sides
-        (ia1, ia1 + fs, *cr(f0, f1), side_z0, pz0),
-        (ia0, ia1, *cr(f1 - p["FrameBack"], f1), side_z0, side_z0 + p["FrameBackHeight"]),  # back, under the disposer
+        # Rear hook blocks under the arms' back ends (no side walls, no back panel).
+        (ia0 - fs, ia0, *cr(f1 - p["FrameBack"], f1), pz0 - p["FrameBackHeight"], pz0),
+        (ia1, ia1 + fs, *cr(f1 - p["FrameBack"], f1), pz0 - p["FrameBackHeight"], pz0),
         # The U plate: front band, the bridge between the holes in front of
         # the notch, the strips over the sides, beside the notch, behind the holes.
         (ia0 - fs, ia1 + fs, *cr(f0, h0), pz0, plate_top),
@@ -2805,22 +2974,30 @@ def _frame_pullout(bay: Bay, p: dict, zone: Zone, number: int, back_y: float, ob
         (ia0 - fs, notch_a[0], *cr(h1, f1), pz0, plate_top),
         (notch_a[1], ia1 + fs, *cr(h1, f1), pz0, plate_top),
     ]
+    # Two 90° angles on the bridge between the bins, front to plate (Petr,
+    # t866u: "for front panel rigidity").
+    bl, bwid, bt = p["FrameBracket"], p["FrameBracketWidth"], p["FrameBracketThick"]
+    bmid = (holes_a[0][1] + holes_a[1][0]) / 2.0
+    for a0 in (bmid - 40.0 - bwid, bmid + 40.0):
+        items.append((a0, a0 + bwid, *cr(f0, f0 + bl), plate_top, plate_top + bt))  # leg on the plate
+        items.append((a0, a0 + bwid, *cr(f0, f0 + bt), plate_top, plate_top + bl))  # leg on the front
     items = [b for b in items if b[1] - b[0] > TOL and abs(b[3] - b[2]) > TOL and b[5] - b[4] > TOL]
     taper = p["BinTaper"]
     bins = []
     for a0, a1 in bins_plan:
         bins.append((a0, a1, *bc, plate_top, plate_top + p["BinRim"]))  # rim and lid on the plate
         bins.append((a0 + taper, a1 - taper, *cr(hole0 - inset + taper, rim_back - taper), bin_bottom, plate_top))
-    box = (ia0 - fs, ia1 + fs, *cr(f0, f1), side_z0, plate_top)
+    box = (ia0 - fs, ia1 + fs, *cr(f0, f1), bin_bottom, plate_top + p["BinRim"])
     frame = dict(nl=nl, skl=skl, skw=skw, lw=lw, plate_top=plate_top, plate=fb, bin_bottom=bin_bottom,
                  floor_gap=floor_gap, roof=roof, top_gap=roof - plate_top, lid_gap=roof - plate_top - p["BinRim"],
                  hole=(hw, hd), strip=(strip_l, strip_r), notch=notch_a, notch_front=notch_front,
                  notch_clear=nc, lift=lift, front_strip=p["FrameFrontStrip"], back_strip=skl - (h1 - tf),
-                 bins=bins, holes=[(a0, a1, *cr(h0, h1)) for a0, a1 in holes_a])
+                 bins=bins, holes=[(a0, a1, *cr(h0, h1)) for a0, a1 in holes_a],
+                 runner_z0=runner_z0, brackets=2, bracket=(bl, bwid, bt))
     return Drawer(number, zone.content, zone.nominal, zone.slot_z0, front, box, nl, out_dir, 0.0,
                   kind=zone.kind, items=items + bins, zone=zone.index,
-                  inside=(skw, skl, plate_top - side_z0), floor_z=side_z0, side="", nl=nl, load=40,
-                  profile_z=floor0, frame=frame)
+                  inside=(skw, skl, plate_top - bin_bottom), floor_z=pz0, side="", nl=nl, load=40,
+                  profile_z=runner_z0, frame=frame)
 
 
 def gridfinity_baseplate(p: dict, n: int, m: int, a_mid: float, c_mid: float, z0: float) -> list:
@@ -2871,6 +3048,11 @@ def _items(p: dict, zone: Zone, box: tuple, out_dir: float, item_top: float | No
     out = []
     if kind == "shelves":
         board = wall
+        if zone.opts.get("at") is not None and n == 1:
+            # ``at=`` metres over the box floor (t870u: SF-T3's oven-tray
+            # shelf on the E box's top edge).
+            z = iz0 + float(zone.opts["at"]) * 1000.0
+            return [(ia0, ia1, ic0, ic1, z, z + board)]
         step = (top - iz0 - n * board) / (n + 1)
         for k in range(n):
             z = iz0 + step * (k + 1) + board * k
@@ -2934,13 +3116,14 @@ def _grip_edge(zone: "Zone", role: str, box: tuple) -> str | None:
     and low doors the top edge; tall doors (over 1200 high) the vertical edge
     away from the hinge, like IKEA's VOXTORP "vertical handle" tall doors;
     doors starting above 1400 (the upper doors of tall cabinets) the bottom
-    edge (guess:, within reach). Pull-outs, fixed fronts, fillers, lift-ups:
-    none unless asked."""
+    edge (guess:, within reach). Pull-outs and an integrated dishwasher's
+    decor panel: the top edge too (Petr, 2026-11-23, t865u: "same J grip
+    everywhere"). Fixed fronts, fillers, lift-ups: none unless asked."""
     opt = zone.opts.get("grip")
     if opt:
         return str(opt).lower()
     z0, z1 = box[4], box[5]
-    if role == "Drawer":
+    if role in ("Drawer", "PullOut", "DecorPanel"):
         return "top"
     if role == "Door":
         if z1 - z0 > 1200.0:
