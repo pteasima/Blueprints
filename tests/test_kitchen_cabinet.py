@@ -142,7 +142,8 @@ def test_oven_column_niches_fit_miele():
         assert part.props["NicheClearWidth"] == pytest.approx(0.564)
         assert part.role == "Appliance" and part.id in run.bay("SF-T3").members
     # The oven stands on the counter-line board; the microwave over it.
-    assert oven.props["Elevation"] == pytest.approx(0.928)
+    # t869u: lowered for Zuzana, niche bottom board 800 (was 910).
+    assert oven.props["Elevation"] == pytest.approx(0.818)
     assert micro.props["Elevation"] > oven.props["Elevation"] + 0.59
     # Fascias do not touch the slab fronts above and below.
     front1 = run.part("SF-T3-DOOR1").boxes[0]

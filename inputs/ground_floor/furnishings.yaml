@@ -316,7 +316,12 @@ systemFurniture:
           # 2026-11-19 (best effort, see SF-T2): the top band is a door
           # hinged L (towards SF-T2) with one shelf, the bottom band two
           # drawers 400 + 410. All guess:.
-          Layout: "door * hinge=L shelves=1 | niche 0.356 clear=0.564 | niche 0.593 clear=0.564 | drawer 0.4 | drawer 0.41"
+          # Petr, 2026-11-23 (t869u): lower the oven stack for Zuzana
+          # (174 cm): steam oven niche bottom 910 -> 800, microwave directly
+          # above, the top band grows, the bottom band 810 -> 700 as two
+          # drawers 350 + 350 (were 400 + 410). No longer level with SF-T2 /
+          # SF-T4's drawers (still 400 + 410).
+          Layout: "door * hinge=L shelves=1 | niche 0.356 clear=0.564 | niche 0.593 clear=0.564 | drawer 0.35 | drawer 0.35"
   - id: SF-T4
     Name: "Vysoká 500"
     Description: "Tall run, east end. Note: zbyva sirka cca 50. Modelled 500 until 2026-11-20, now 546: the remainder up to pier W-052 after the fridge was centred on the alley (guess:). The same note allows 600 if a drinks fridge goes underneath."
@@ -1430,7 +1435,7 @@ electricAppliances:
   # and URLs: docs/design/kitchen-cabinets.md "Appliances".
   - id: EA-DGC7465
     Name: "Miele DGC 7465 HCX Pro"
-    Description: "Combi steam oven with fresh and waste water connection, 60 cm. In the SF-T3 niche at the counter line. 595 × 596 × 567, niche 560–568 × 590–595 × 550 (Miele)."
+    Description: "Combi steam oven with fresh and waste water connection, 60 cm. In the SF-T3 niche, bottom 800 (110 under the counter line since 2026-11-23, t869u). 595 × 596 × 567, niche 560–568 × 590–595 × 550 (Miele)."
     PredefinedType: ELECTRICCOOKER
     ContainedInStructure: SP-1.02
     PropertySets:
