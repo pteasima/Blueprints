@@ -58,7 +58,7 @@ COLORS = {
     "Cladding": "#d9d5cc",
 }
 ALPHA = {"Worktop": 0.35, "Cladding": 0.45, "Front": 0.55, "Door": 0.6, "Lift": 0.6, "Clearance": 0.12}
-FRONT_ROLES = ("Front", "Drawer", "PullOut", "Door", "Lift", "Filler", "Appliance")
+FRONT_ROLES = ("Front", "Drawer", "PullOut", "Door", "Lift", "Filler", "Appliance", "DecorPanel", "ApplianceDoor")
 
 
 def _box_faces(box, offset):
@@ -217,6 +217,10 @@ def front(run, path: Path):
             bits.append(f"{len(part.drawer.items)} {part.props.get('ItemKind') or ''}".strip())
         if part.drawer is not None and part.drawer.trimmed:
             bits.append(f"box −{part.drawer.trimmed:.0f}")
+        if part.props.get("Grip"):
+            bits.append(str(part.props["Grip"]))
+        if part.role in ("DecorPanel", "ApplianceDoor") and part.door is None:
+            bits.append("drops down")
         content = part.props.get("Contents")
         if content:
             bits.append(str(content)[:38])
