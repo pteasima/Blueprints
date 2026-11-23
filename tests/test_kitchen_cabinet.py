@@ -737,6 +737,27 @@ def test_dining_run_box_bodies_under_stone():
     assert not [p for p in run.parts if p.role == "Cladding"]
 
 
+def test_living_counter_open_niche():
+    # Petr, 2026-11-23 (t910u): cream niche under the oak top, floor at 650,
+    # 20 mm back, 430 clear, seven blank fronts shortened under the floor.
+    run = _runs()["KR-LB"]
+    floor = run.part("SF-LB-NICHE-FLOOR")
+    assert floor.boxes == [(0.0, 4150.0, 0.0, 450.0, 632.0, 650.0)]
+    back = run.part("SF-LB-NICHE-BACK")
+    # West side board (20) insets the back; east runs to SF-TC.
+    assert back.boxes == [(20.0, 4150.0, 430.0, 450.0, 650.0, 890.0)]
+    west = run.part("SF-LB-NICHE-END-W")
+    assert west.boxes == [(0.0, 20.0, 0.0, 450.0, 650.0, 890.0)]
+    assert not [p for p in run.parts if p.id == "SF-LB-NICHE-END-E"]
+    fronts = [p for p in run.parts if p.id.startswith("SF-LB-S") and p.role == "Front"]
+    assert len(fronts) == 7
+    assert all((p.boxes[0][4], p.boxes[0][5]) == (pytest.approx(1.5), pytest.approx(630.5)) for p in fronts)
+    top = run.part("KR-LB-WORKTOP")
+    assert all((b[4], b[5]) == (pytest.approx(890.0), pytest.approx(930.0)) for b in top.boxes)
+    # No rails under the oak top any more; the cream body stops at 650.
+    assert not [p for p in run.parts if p.role == "Rail"]
+
+
 def test_dining_flush_kickboard():
     # Petr, 2026-11-20 b: "a bottom fixed kickboard with the same 100mm
     # height (flush with the cabinet fronts)".
