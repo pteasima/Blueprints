@@ -983,6 +983,53 @@
     ]
   },
   {
+    "id": "SF-A600-PANEL",
+    "kind": "linkage",
+    "element": "SF-A600-PANEL",
+    "center": [
+      19.391,
+      0.505,
+      -13.532
+    ],
+    "duration_ms": 900,
+    "joints": [
+      {
+        "elements": [
+          {
+            "element": "SF-A600-PANEL",
+            "center": [
+              19.391,
+              0.505,
+              -13.532
+            ]
+          }
+        ],
+        "parent": null,
+        "pivot": [
+          19.4,
+          0.1015,
+          -13.532
+        ],
+        "axis": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "angles": [
+          0.0,
+          -0.19635,
+          -0.392699,
+          -0.589049,
+          -0.785398,
+          -0.981748,
+          -1.178097,
+          -1.374447,
+          -1.570796
+        ]
+      }
+    ]
+  },
+  {
     "id": "SF-F052-DOOR1",
     "kind": "hinged",
     "element": "SF-F052-DOOR1",
@@ -2271,6 +2318,74 @@
     ]
   },
   {
+    "id": "EA-M2230-DOOR",
+    "kind": "hinged",
+    "element": "EA-M2230-DOOR",
+    "center": [
+      21.304,
+      1.717,
+      -14.98
+    ],
+    "hinge": [
+      21.0065,
+      1.717,
+      -14.971
+    ],
+    "axis": [
+      0,
+      1,
+      0
+    ],
+    "sign": -1
+  },
+  {
+    "id": "EA-DGC7465-DOOR",
+    "kind": "linkage",
+    "element": "EA-DGC7465-DOOR",
+    "center": [
+      21.304,
+      1.2245,
+      -14.98
+    ],
+    "duration_ms": 900,
+    "joints": [
+      {
+        "elements": [
+          {
+            "element": "EA-DGC7465-DOOR",
+            "center": [
+              21.304,
+              1.2245,
+              -14.98
+            ]
+          }
+        ],
+        "parent": null,
+        "pivot": [
+          21.304,
+          0.9265,
+          -14.971
+        ],
+        "axis": [
+          -1.0,
+          0.0,
+          0.0
+        ],
+        "angles": [
+          0.0,
+          -0.19635,
+          -0.392699,
+          -0.589049,
+          -0.785398,
+          -0.981748,
+          -1.178097,
+          -1.374447,
+          -1.570796
+        ]
+      }
+    ]
+  },
+  {
     "id": "SF-TF-DOOR1",
     "kind": "hinged",
     "element": "SF-TF-DOOR1",
@@ -2304,6 +2419,90 @@
       20.4025,
       2.188,
       -14.971
+    ],
+    "axis": [
+      0,
+      1,
+      0
+    ],
+    "sign": 1
+  },
+  {
+    "id": "EA-WQ9I-DOOR1",
+    "kind": "hinged",
+    "element": "EA-WQ9I-DOOR1",
+    "center": [
+      19.722,
+      1.339,
+      -14.914
+    ],
+    "hinge": [
+      19.496,
+      1.339,
+      -14.884
+    ],
+    "axis": [
+      0,
+      1,
+      0
+    ],
+    "sign": -1
+  },
+  {
+    "id": "EA-WQ9I-DOOR2",
+    "kind": "hinged",
+    "element": "EA-WQ9I-DOOR2",
+    "center": [
+      20.178,
+      1.339,
+      -14.914
+    ],
+    "hinge": [
+      20.404,
+      1.339,
+      -14.884
+    ],
+    "axis": [
+      0,
+      1,
+      0
+    ],
+    "sign": 1
+  },
+  {
+    "id": "EA-WQ9I-DOOR3",
+    "kind": "hinged",
+    "element": "EA-WQ9I-DOOR3",
+    "center": [
+      19.722,
+      0.424,
+      -14.914
+    ],
+    "hinge": [
+      19.496,
+      0.424,
+      -14.884
+    ],
+    "axis": [
+      0,
+      1,
+      0
+    ],
+    "sign": -1
+  },
+  {
+    "id": "EA-WQ9I-DOOR4",
+    "kind": "hinged",
+    "element": "EA-WQ9I-DOOR4",
+    "center": [
+      20.178,
+      0.424,
+      -14.914
+    ],
+    "hinge": [
+      20.404,
+      0.424,
+      -14.884
     ],
     "axis": [
       0,

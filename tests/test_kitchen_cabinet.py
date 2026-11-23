@@ -939,7 +939,11 @@ def test_j_grips_and_wall_front_overhang():
     assert door.props["Grip"] == "J side"
     g = door.grips[0].bounds()
     assert g[1] - g[0] == pytest.approx(29.0) and g[4] < door.boxes[0][4]  # 28 cup + 1 overcut
-    assert not parts["SF-B800-D1"][1].grips and not parts["SF-LB-S1-FRONT"][1].grips
+    # Petr, 2026-11-23 (t865u): "same J grip everywhere": pull-outs and the
+    # dishwasher's decor panel get the top grip; fixed blank fronts do not.
+    assert parts["SF-B800-D1"][1].grips and parts["SF-B800-D1"][1].props["Grip"] == "J top"
+    assert parts["SF-A600-PANEL"][1].props["Grip"] == "J top"
+    assert not parts["SF-LB-S1-FRONT"][1].grips
     for lift in ("SF-BH800-LIFT2", "SF-DH-S1-LIFT2"):
         assert parts[lift][1].boxes[0][4] == pytest.approx(1550.0)
     assert parts["SF-BH800-LIFT1"][1].boxes[0][5] == pytest.approx(2448.5)

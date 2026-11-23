@@ -46,6 +46,10 @@ Petr's original document is the sticky-note plan [`KitchenPlan.jpg`](../../input
 | 19 | — | **Petr to measure a real FILUR (rim height, outer dimensions) and the installed disposer / trap on site before the MDF frame is cut.** | Petr, 2026-11-23 (t848u): “Note in docs that I should measure this on site.” |
 | 20 | Island east 625 × 4 (t835u: equal widths) | **626 / 617 / 617 / 640** (SF-E600a / b / c / SF-E700, north to south), still 2500. Inner drawer insides 548 / 548 / 548 / 562 = **13 columns + 2 mm in the north three, SF-E700 13 + 14 spare** (were 12 / 13 / 13 / 12). **The fronts are no longer equal (623 / 614 / 614 / 637).** | Petr, 2026-11-23 (t851u): north three exactly 13 Gridfinity columns + 2 mm, the southmost takes the rest |
 | 21 | SF-A250 one E pull-out with three shelves | **Blum SPACE TWIN, a MERIVOBOX application for narrow cabinets (KB 150–250): one front carrying a low M box and a tall E box on diagonally offset cabinet profiles; bottom LW − 51 = 134** at 212 wide. Standard MERIVOBOX parts, 20 kg per cabinet | Petr, 2026-11-23 (t855u: 212 accepted; t863u: “remodel SF-A250 as Blum SPACE TWIN”) |
+| 22 | Pull-outs and the dishwasher without a grip | **Top J grip on SF-I300-D1, SF-A250-D1, SF-B800-D1, SF-C850-D1 and the new dishwasher decor panel SF-A600-PANEL** | Petr, 2026-11-23 (t865u): “same J grip everywhere” |
+| 23 | Dishwasher front 32 behind the carcass front line, no decor panel | **Appliance door face at x 19.382 (was 19.35), 18 decor panel SF-A600-PANEL on the fronts' plane (19.382–19.400), 597 × 807, z 101.5–908.5 like the other fronts** | Petr (t865u): “it has to sit flush with the other fronts” |
+| 24 | Appliance doors fixed | **Openable: dishwasher panel and Miele DGC 7465 oven drop down (bottom hinge); Miele M 2230 SC microwave hinged left; Whirlpool fridge four doors, each hinged on its outer edge** | Petr (t865u): “let me open dishwasher, fridge, oven, microwave” |
+| 25 | KR-WEST south end side on the plinth (z 100–910) | **Down to the floor (z 0–910)**, like the north niche panel; bottom fixed to it, legs and kickboard stop inside it | Petr (t865u): “should go all the way to floor, like north one does” |
 
 ## Monoblocks
 
@@ -1772,7 +1776,8 @@ Every cream front, end panel, cladding and plinth (`kitchen-front-cream`) is **m
   - doors starting above 1400 (the upper doors of the tall cabinets, SF-T3-DOOR1 and SF-TF-DOOR1/2): **bottom edge**, `guess:` (in reach from below; they are neither low nor tall).
 - `open:` **inner drawer inside depth (woodworker).** The MERIVOBOX inner drawers (island east SF-E…-D1-I1/-I2, dining SF-DN-S1…S4-D1-I1/-I2) compute the same inside depth as their main drawers (508 east, 358 dining) despite their own inner front: the main drawer uses Blum's NL − 26 − 16, the inner drawer its box − 2 × 19. The woodworker to verify both against the Blum catalogue (MERIVOBOX inner drawer with front piece vs. drawer with the front fixed to the sides); the Gridfinity counts (13 × 12 east inner, 14 × 8 dining) follow from it. See “Drawer boxes without a box front (2026-11-22 e)”.
 - `open:` **grips around the fridge.** Petr, 2026-11-22 (t792u): “Im not sure about handle placement around the fridge (based on how much final chosen fridge model sticks out).” Undecided: where and which way the grips go on the fronts next to and over the fridge: SF-TF-DOOR1/2 over it (now bottom edge), SF-T1-DOOR1 west of it and SF-T2-DOOR1 east of it (now side, latch edge), the SF-T2 drawers under SF-T2-DOOR1 (top), and the filler SF-T1-FILLER1 (none). It depends on how far the final fridge model stands proud of the cabinet fronts (the model's Whirlpool WQ9I MO2L EF box is a placeholder): a proud fridge can cover a grip on the edge next to it or get in the fingers' way.
-- Not given a grip (`open:`, untouched): the full-height **pull-outs** SF-I300-D1, SF-A250-D1, SF-B800-D1, SF-C850-D1 (role `PullOut`; add `grip=top` to their band if wanted); the fixed **blank fronts** SF-LB-S1…S7-FRONT and SF-TC-FRONT2 (dead space, they do not open); the **filler** SF-T1-FILLER1; the **appliance fronts** (the integrated dishwasher's door panel is not a modelled front); the **lift-ups** (overhang below).
+- Grips since 2026-11-23 (t865u, Petr: “same J grip everywhere”): the full-height **pull-outs** SF-I300-D1, SF-A250-D1, SF-B800-D1, SF-C850-D1 and the dishwasher's **decor panel** SF-A600-PANEL get the top J grip like the drawers.
+- Not given a grip: the fixed **blank fronts** SF-LB-S1…S7-FRONT and SF-TC-FRONT2 (dead space, they do not open); the **filler** SF-T1-FILLER1; the **appliance doors** (oven, microwave, fridge: the maker's own fronts); the **lift-ups** (overhang below).
 
 | Front | Grip | Band (run frame) |
 |---|---|---|
@@ -2150,3 +2155,24 @@ Blum, catalogue 2024/25 [p. 282](https://publications.blum.com/2024/catalogue/en
 
 - `guess:` the upper box sits as high as the band allows (2 under the top limit); Blum gives installation heights, not where the upper box goes. From the M floor (z 149) to the bottom of the E box: 549 for bottles.
 - `guess:` the lower box takes the left profile and the upper the right, as drawn on p. 283; the model draws boxes, not profiles.
+
+### Grips, dishwasher, appliance doors, south end panel (2026-11-23, t865u)
+
+> Petr (t865u): “same J grip everywhere”; “fix the dishwasher, it has to sit flush with the other fronts”; “let me open dishwasher, fridge, oven, microwave (side hinge). Dont overthink the modeling of the insides, opening the doors is what matters.”; “fix south side panel on west run (should go all the way to floor, like north one does) … the cabinet floor mounts to it on some 90deg angled brackets or something”.
+
+| | Old | New |
+| --- | --- | --- |
+| Pull-out grips (SF-I300/A250/B800/C850-D1) | none | top J grip |
+| Dishwasher EA-SBD6ECX front (x) | 19.350 | **19.382** (carcass front line) |
+| Dishwasher decor panel | not modelled | SF-A600-PANEL 597 × 807 × 18, 19.382–19.400, top J grip |
+| Oven EA-DGC7465 fascia | part of the appliance | door EA-DGC7465-DOOR, drops down |
+| Microwave EA-M2230 fascia | part of the appliance | door EA-M2230-DOOR, hinged left |
+| Fridge EA-WQ9I | one box | body + four doors (EA-WQ9I-DOOR1…4), 60 deep, split at 800 |
+| KR-WEST-END-S | z 100–910 | **z 0–910** |
+| KR-WEST kickboard | a −1670…212 | a −1652…212 |
+| South legs (front / back) | a −1670…−1630 | a −1652…−1612 |
+
+- Hinges: Miele DGC 7465 HCX Pro data sheet “Türanschlag: unten” (drop-down); Miele M 2230 SC data sheet “Türanschlag: links”. The dishwasher drops down like every dishwasher; `guess:` the model turns the panel about its own bottom edge (the real hinge is lower, near the appliance foot). Fridge: `guess:` four side-hinged doors, two over two, each hinged on its outer edge (west door hinged west, east door east), split height 800, base 50 and door depth 60 from photos, not a drawing.
+- Insides are not modelled: an opened door shows the appliance body.
+- `open:` **the end side to the floor** is a normal construction (a side “bis zum Boden” with the bottom fixed between the sides on connectors or angle brackets, `guess:`), but the side cannot be levelled by the legs: it needs scribing to the floor or its own levelling glides, and the floor must be flat along 582 mm. SF-C850's MERIVOBOX profile (z 118) on that side is unchanged. No conflict with SF-A250 (it is at the north end) or the dishwasher niche.
+- `open:` **pocket doors behind the run.** D-OP24 slides north into W-050 behind SF-C850 / SF-B800 (y 11.35–12.45) and D-OP25 south behind the dishwasher (y 12.75–13.85): no screws into the wall there (base fixing, the wall cabinets SF-CH850 / SF-AH850, the backsplash) without checking the pocket cassette.

@@ -901,6 +901,7 @@ class _Builder:
             self._bay_parts(bay, z0, z1, shared_back=any(bay in r for k, rs in blocks if k == "pair" for r in rs))
         self._niche_appliances(cabinets)
         self._dock_appliances(cabinets)
+        self._decor_panels()
         if wt > 0:
             self._worktop(rows, z_base + height - wt, z_base + height)
         if _prop(run.element, PSET_RUN, "CladEnds"):
@@ -1065,11 +1066,18 @@ class _Builder:
                 self._plinth(row, a_lo, a_hi, back_y=row[0].depth - t / 2, tag=tag)
             return
         (row,) = rows_in
+        floor_ends = self._floor_ends()
         for end, a_range, bay in (("lo", (a_lo, a_lo + t), row[0]), ("hi", (a_hi - t, a_hi), row[-1])):
             name = self._end_name(-1 if end == "lo" else 1)
             c0, c1 = self.c_range(bay, tf, bay.depth)
+            # ``EndsToFloor`` (Petr, 2026-11-23, t865u): this end side runs
+            # down past the plinth to the floor; the bottom is fixed to it
+            # (guess: dowels / connectors or angle brackets) and the legs and
+            # kickboard stop at its inside face.
+            zs = bay.z_base if name in floor_ends else z0
             self.add(Part(f"{run.id}-END-{name}{tag}", f"Bok {name}", "EndSide",
-                          [(*a_range, c0, c1, z0, z1)]), bay)
+                          [(*a_range, c0, c1, zs, z1)],
+                          props={"ToFloor": True} if name in floor_ends else {}), bay)
         self._dividers(row, z0, z1, back_y=row[0].depth, tag=tag)
         self._plinth(row, a_lo, a_hi, back_y=row[0].depth - p["BackThickness"], tag=tag)
 
@@ -1111,6 +1119,10 @@ class _Builder:
         else:
             c0, c1 = self.c_range(bay, p["PlinthSetback"], p["PlinthSetback"] + p["BoardThickness"])
         face = self.run.frame.compass(0.0, -1.0 if bay.front_low else 1.0)
+        floor = self._floor_ends()
+        t = p["BoardThickness"]
+        a_lo += t if self._end_name(-1) in floor else 0.0
+        a_hi -= t if self._end_name(1) in floor else 0.0
         self.add(Part(f"{self.run.id}-PLINTH-{face}{tag}", f"Soklová lišta {face}", "Plinth",
                       [(a_lo, a_hi, c0, c1, bay.z_base, bay.z_base + p["PlinthHeight"])],
                       props={"Kind": "Kickboard", "Setback": round((0.0 if kind == "Flush" else p["PlinthSetback"]) / 1000.0, 6)}),
@@ -1186,9 +1198,14 @@ class _Builder:
         # An end leg sits under the end side but never past its outer face
         # (2026-11-22: a free end next to a door opening, ``FlushEnds``).
         end = max(t, d) / 2 if self._flush_ends() else t / 2
-        lines = [(row[0].a0 + end, (row[0],), f"{row[0].id}-{run.frame.compass(-1.0, 0.0)}")]
+        floor = self._floor_ends()
+        # An end side down to the floor (``EndsToFloor``): its leg stands
+        # just inside it.
+        lo_end = t + d / 2 if self._end_name(-1) in floor else end
+        hi_end = t + d / 2 if self._end_name(1) in floor else end
+        lines = [(row[0].a0 + lo_end, (row[0],), f"{row[0].id}-{run.frame.compass(-1.0, 0.0)}")]
         lines += [(l.a1, (l, r), f"{l.id}-{r.id}") for l, r in zip(row, row[1:])]
-        lines.append((row[-1].a1 - end, (row[-1],), f"{row[-1].id}-{run.frame.compass(1.0, 0.0)}"))
+        lines.append((row[-1].a1 - hi_end, (row[-1],), f"{row[-1].id}-{run.frame.compass(1.0, 0.0)}"))
         for a, bays, tag in lines:
             for end, y in (("F", tf + inset), ("B", back_y - inset)):
                 c = sum(self.c_range(row[0], y, y)) / 2.0
@@ -2062,6 +2079,42 @@ class _Builder:
                     raise ValueError(f"{ext['id']}: a sink fitting is Kind Disposer or Tap, got {kind!r}")
         return p
 
+    def _decor_panels(self):
+        """An integrated appliance's decor front in a niche bay
+        (``Pset_Fronts.DecorPanel``: the appliance id): one front on the
+        fronts' plane, the bay less the front gaps, as high as the run's
+        other fronts, with the run's grip. It drops down about its bottom
+        edge (a dishwasher door, guess: the real hinge sits near the
+        appliance's foot, not at the panel's edge). Petr, 2026-11-23, t865u:
+        "fix the dishwasher, it has to sit flush with the other fronts"; "let
+        me open dishwasher"."""
+        p = self.p
+        run = self.run
+        tf, g = p["FrontThickness"], p["FrontGap"] / 2.0
+        for bay in run.bays:
+            appliance = _prop(bay.element, PSET_FRONTS, "DecorPanel")
+            if not bay.niche or not appliance:
+                continue
+            fronts = [q.boxes[0] if q.drawer is None else q.drawer.front for q in run.parts
+                      if q.role in ("Drawer", "PullOut", "Door")]
+            if not fronts:
+                raise ValueError(f"{bay.id}: DecorPanel needs another front in the run to match")
+            z0, z1 = min(b[4] for b in fronts), max(b[5] for b in fronts)
+            fc0, fc1 = self.c_range(bay, 0.0, tf)
+            box = (bay.a0 + g, bay.a1 - g, fc0, fc1, z0, z1)
+            out = -1.0 if bay.front_low else 1.0
+            face = fc0 if bay.front_low else fc1
+            zone = Zone(0, "front", z1 - z0, z0, z1, {})
+            grips, edge = self._grips(bay, p, zone, "DecorPanel", box)
+            steps = 8
+            lift = LiftJoint(f"{bay.id}-PANEL", 0, None, face, z0, out,
+                             tuple(-math.pi / 2 * k / steps for k in range(steps + 1)))
+            self.add(Part(f"{bay.id}-PANEL", f"Dekor {appliance}", "DecorPanel", [box], lift=lift, grips=grips,
+                          props={"Appliance": str(appliance), "Opens": "down (guess: like the appliance door)",
+                                 "Grip": f"J {edge}" if edge else None,
+                                 "PanelWidth": round((box[1] - box[0]) / 1000.0, 6),
+                                 "PanelHeight": round((z1 - z0) / 1000.0, 6)}), bay)
+
     def _niche_appliances(self, bays):
         """Appliances in a ``niche`` band: centred along the run, standing on
         the band's board, front face on the fronts' plane. The niche must be
@@ -2113,10 +2166,29 @@ class _Builder:
                     other.boxes[0] = (x0, x1, y0, y1, fz1 + g, z1)
                 elif z1 > fz0 - g and z0 < fz0:
                     other.boxes[0] = (x0, x1, y0, y1, z0, fz0 - g)
-            self._builtin_part(ext, bay, [fascia, body], props={
+            self._builtin_part(ext, bay, [body], props={
                 "Bay": bay.id, "Zone": zi, "NicheClearWidth": round(clear_w / 1000.0, 6),
                 "NicheClearHeight": round(clear_h / 1000.0, 6), "NicheClearDepth": round(niche_depth / 1000.0, 6),
                 "Elevation": round(nz0 / 1000.0, 6)})
+            # The fascia is the appliance door (Petr, 2026-11-23, t865u: "let
+            # me open ... oven, microwave"; insides not modelled).
+            # ``Pset_BuiltIn.DoorHinge``: Bottom (drops down), L or R (as
+            # you face it), from the maker's data sheet.
+            hinge = str(_prop(ext, PSET_BUILTIN, "DoorHinge", "Bottom"))
+            out = -1.0 if bay.front_low else 1.0
+            face = f0 if bay.front_low else f1
+            door, lift = None, None
+            if hinge == "Bottom":
+                steps = 8
+                lift = LiftJoint(f"{ext['id']}-DOOR", 0, None, face, fascia[4], out,
+                                 tuple(-math.pi / 2 * k / steps for k in range(steps + 1)))
+            elif hinge in ("L", "R"):
+                door = Leaf(zi, hinge, _hinge_a(bay, hinge, fascia[0], fascia[1]), face, out)
+            else:
+                raise ValueError(f"{ext['id']}: DoorHinge {hinge!r}, one of Bottom, L, R")
+            self.add(Part(f"{ext['id']}-DOOR", f"Dvířka {ext.get('Name') or ext['id']}", "ApplianceDoor",
+                          [fascia], label="appliance", door=door, lift=lift,
+                          props={"Appliance": ext["id"], "Hinge": hinge}), bay)
 
     def _worktop(self, rows, zb, zt):
         run, p = self.run, self.p
@@ -2153,6 +2225,12 @@ class _Builder:
             cuts = [_mitre_cut(a0, a0 + (zt - zb), zb, zt, "top"), _mitre_cut(a1, a1 - (zt - zb), zb, zt, "top")]
         self.add(Part(f"{run.id}-WORKTOP", "Pracovní deska", "Worktop", [run.worktop],
                       label="worktop", voids=voids, material=material, cuts=cuts))
+
+    def _floor_ends(self) -> set:
+        """``Pset_KitchenRun.EndsToFloor``: compass names of the run ends
+        (single rows) whose carcass end side runs down to the floor."""
+        v = _prop(self.run.element, PSET_RUN, "EndsToFloor")
+        return set(str(v or "").split())
 
     def _flush_ends(self) -> bool:
         """``Pset_KitchenRun.FlushEnds`` (Petr, 2026-11-22, the west run
@@ -2934,13 +3012,14 @@ def _grip_edge(zone: "Zone", role: str, box: tuple) -> str | None:
     and low doors the top edge; tall doors (over 1200 high) the vertical edge
     away from the hinge, like IKEA's VOXTORP "vertical handle" tall doors;
     doors starting above 1400 (the upper doors of tall cabinets) the bottom
-    edge (guess:, within reach). Pull-outs, fixed fronts, fillers, lift-ups:
-    none unless asked."""
+    edge (guess:, within reach). Pull-outs and an integrated dishwasher's
+    decor panel: the top edge too (Petr, 2026-11-23, t865u: "same J grip
+    everywhere"). Fixed fronts, fillers, lift-ups: none unless asked."""
     opt = zone.opts.get("grip")
     if opt:
         return str(opt).lower()
     z0, z1 = box[4], box[5]
-    if role == "Drawer":
+    if role in ("Drawer", "PullOut", "DecorPanel"):
         return "top"
     if role == "Door":
         if z1 - z0 > 1200.0:

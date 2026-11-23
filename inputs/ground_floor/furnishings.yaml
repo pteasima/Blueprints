@@ -821,6 +821,13 @@ systemFurniture:
         Properties:
           Run: KR-WEST
           Kind: "Niche"
+      # Petr, 2026-11-23 (t865u): "fix the dishwasher, it has to sit flush
+      # with the other fronts"; "same J grip everywhere"; "let me open
+      # dishwasher". The integrated dishwasher's decor panel: a front on the
+      # fronts' plane, J grip on top, dropping down (guess:).
+      - Name: Pset_Fronts
+        Properties:
+          DecorPanel: EA-SBD6ECX
   - id: SF-AH850
     Name: "Západ horní 850 sklenice"
     Description: "Section A wall cabinet, glasses, 850. Depth 350, bottom 1560, height 890, top 2450 (the ceiling line). Blum AVENTOS HF top bi-fold lift fronts, upper and lower."
@@ -1392,13 +1399,27 @@ electricAppliances:
     Width: 0.908
     Depth: 0.716
     Height: 1.876
+    # Petr, 2026-11-23 (t865u): "let me open ... fridge (side hinge). Dont
+    # overthink the modeling of the insides". Four doors, two over two,
+    # each hinged on its outer edge; split height, base and door depth are
+    # guess: (Whirlpool photos, no drawing).
+    PropertySets:
+      - Name: Pset_ApplianceDoors
+        Properties:
+          Layout: quad
+          Split: 0.8
+          Base: 0.05
+          Thickness: 0.06
   - id: EA-SBD6ECX
     Name: "Bosch SBD6ECX12E"
     Description: "Fully integrated dishwasher, 598×550×865, in the north 600 of section A. Right when facing the west wall. Back on the wall, 1 mm clear of each side of the niche."
     PredefinedType: DISHWASHER
     ContainedInStructure: SP-1.02
     # 2026-11-22: 18 south with the slot (13.251 before).
-    Origin: [19.35, 13.233]
+    # Petr, 2026-11-23 (t865u): flush with the other fronts. The door face
+    # sits on the carcass front line (x 19.382), so the decor panel on it is
+    # on the fronts' plane (19.382-19.400). Was 19.35 (32 back).
+    Origin: [19.382, 13.233]
     RefDirection: [0, 1]
     Width: 0.598
     Depth: 0.55
@@ -1420,6 +1441,8 @@ electricAppliances:
           ArticleNumber: "12100360"
       - Name: Pset_BuiltIn
         Properties:
+          # Miele data sheet: "Türanschlag unten" (drop-down door). t865u.
+          DoorHinge: Bottom
           Kind: Niche
           Bay: SF-T3
           Zone: 3
@@ -1444,6 +1467,8 @@ electricAppliances:
           ArticleNumber: "11103410"
       - Name: Pset_BuiltIn
         Properties:
+          # Miele data sheet: "Türanschlag links" (hinged on the left). t865u.
+          DoorHinge: L
           Kind: Niche
           Bay: SF-T3
           Zone: 2
@@ -1659,6 +1684,12 @@ furniture:
           # end panels, flush with the wall segment y 11.35-13.85; the top
           # stops flush. The dishwasher end gets an 18 panel (FlushEnds).
           FlushEnds: true
+          # Petr, 2026-11-23 (t865u): "fix south side panel on west run
+          # (should go all the way to floor, like north one does)". The
+          # carcass end side runs down to the floor; the bottom is fixed to
+          # it (guess: connectors / angle brackets), legs and kickboard stop
+          # inside it.
+          EndsToFloor: "S"
   - id: KR-DN
     Name: "Jídelní linka"
     Description: "North dining base run: SF-F052, SF-DN, SF-F053 (SF-DN70 removed 2026-11-20 c). Cream boxes (oak until 2026-11-20) under a 20 mm Silestone Blanco Maple worktop, no front overhang (20 until 2026-11-20 f): top and boxes both 450 deep, 430 of the top visible in front of the 20 mm backsplash, top 930. No exposed ends: west abuts SF-T4, east abuts SF-LB (KR-LB, oak-veneer top, also 930)."
