@@ -1011,7 +1011,11 @@ def test_one_drawer_under_the_oven_line_and_the_sealer_in_the_pantry():
         tops.append(drawers[0].drawer.front[5])
         assert drawers[0].props["Grip"] == "J top"
     assert tops == pytest.approx([780.5] * 3)
-    assert run.part("SF-T3-D1").props["ItemKind"] == "shelves" and not run.part("SF-T3-D1").props.get("InnerDrawers")
+    # t871u: the tray shelf is fixed in the carcass, not in the drawer.
+    assert not run.part("SF-T3-D1").drawer.items and not run.part("SF-T3-D1").props.get("InnerDrawers")
+    shelf = run.part("SF-T3-SH4-1")
+    assert shelf.drawer is None and shelf.boxes[0][5] == pytest.approx(661.0)
+    assert shelf.boxes[0][4] > run.part("SF-T3-D1").drawer.box[5]
     assert run.part("SF-T2-D1").props["InnerDrawers"] == "M" and run.part("SF-T4-D1").props["InnerDrawers"] == "M"
     sealer = run.part("EA-MAXXO-CL40")
     assert sealer.boxes[0][4] == pytest.approx(800.0)

@@ -1544,6 +1544,24 @@ class _Builder:
                     props.update(Grip=f"J {edge}")
                 outer = self.add(Part(f"{bay.id}-D{drawer_no}", name.strip(), "Drawer" if zone.kind == "drawer" else "PullOut",
                                       boxes, drawer=dr, props=props, grips=grips), bay)
+                if zone.opts.get("shelf") is not None:
+                    # Petr, 2026-11-23 (t871u): a FIXED shelf in the carcass
+                    # behind the drawer front, over the drawer's box, for
+                    # laying oven trays on; not part of the pull-out.
+                    # ``shelf=`` is its top z in metres (absolute).
+                    st = float(zone.opts["shelf"]) * 1000.0
+                    sz0 = st - t
+                    if sz0 < dr.box[5] + p["ShelfSetback"] - TOL or st > zone.slot_z1 - TOL:
+                        raise ValueError(f"{bay.id}: fixed shelf {sz0:g}-{st:g} must sit over the drawer box "
+                                         f"(top {dr.box[5]:g}) and under the band top {zone.slot_z1:g}")
+                    sc0, sc1 = self.c_range(bay, tf + p["ShelfSetback"], back_y)
+                    self.add(Part(f"{bay.id}-SH{zone.index}-1", "Police na plechy", "Shelf",
+                                  [(bay.clear_lo, bay.clear_hi, sc0, sc1, sz0, st)],
+                                  props={"Zone": zone.index, "Kind": "fixed shelf over the drawer box",
+                                         "ShelfTop": round(st / 1000.0, 6),
+                                         "OverDrawerBox": round((sz0 - dr.box[5]) / 1000.0, 6),
+                                         "UnderBoard": round((zone.slot_z1 - st) / 1000.0, 6),
+                                         "BehindFront": round(p["ShelfSetback"] / 1000.0, 6)}), bay)
                 # Inner drawers (2026-11-20 c): each its own part and motion,
                 # opening only with the front open (``Parent``); the coupled
                 # top one (ZI7.0M07) opens with the front, the front closing

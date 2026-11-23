@@ -332,9 +332,11 @@ systemFurniture:
           # t870u: "even a little lower with the oven, 800 start is good":
           # the niche starts at 800 (818 since t869u), its board 782-800;
           # below it one drawer, inside only one shelf for oven trays (no
-          # inner drawers; was 350 + 350). The shelf lies on the E box's
-          # top edge (176 over the box floor, guess:), oven trays on it.
-          Layout: "door * hinge=L shelves=1 | niche 0.356 clear=0.564 | niche 0.593 clear=0.564 | drawer 0.682 box=E items=shelves n=1 at=0.176"
+          # inner drawers; was 350 + 350). t871u: the tray shelf is FIXED in
+          # the carcass, not in the drawer: top at 661, the level of the
+          # inner drawers' bottoms in SF-T2 / SF-T4 (661-752), 20 behind the
+          # front's back, 300 over the E box; the drawer slides under it.
+          Layout: "door * hinge=L shelves=1 | niche 0.356 clear=0.564 | niche 0.593 clear=0.564 | drawer 0.682 box=E shelf=0.661"
   - id: SF-T4
     Name: "Vysoká 500"
     Description: "Tall run, east end. Note: zbyva sirka cca 50. Modelled 500 until 2026-11-20, now 546: the remainder up to pier W-052 after the fridge was centred on the alley (guess:). The same note allows 600 if a drinks fridge goes underneath."
