@@ -6,7 +6,7 @@ Reads inputs/ground_floor/furnishings.yaml, lays the runs out with
 models/kitchen_cabinet.py and, for every bay whose Pset_Drawers has
 ``Gridfinity: true``, prints the drawer inside (Blum MERIVOBOX: LW − 51 by
 NL − 42), the Gridfinity cells, and the bay width that would make the inside
-exactly n × 42 + 1 wide:
+exactly n × 42 + GridfinityPlay (2 since 2026-11-23, t841u) wide:
 
 - width: the nearest n (a shared divider moves, so the clear width and the
   inside change 1:1 with the bay width);

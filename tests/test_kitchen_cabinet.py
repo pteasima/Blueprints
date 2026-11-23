@@ -84,7 +84,10 @@ def test_island_east_row_drawers_are_on_the_gridfinity_grid():
         assert (i1.drawer.box[4], i1.drawer.box[5]) == (pytest.approx(771.0), pytest.approx(862.0))
         assert (i2.drawer.box[4], i2.drawer.box[5]) == (pytest.approx(483.5), pytest.approx(612.5))
         assert i1.props["Latched"] and not i2.props.get("Latched")
-        assert i1.drawer.grid == i2.drawer.grid == (13, 10)
+        # 2 mm play since 2026-11-23 (t841u): the end bays' 547 is 1 short of
+        # 13 columns (open: 626 / 624 / 624 / 626 would give 13 in all four).
+        cols = 13 if bay_id in ("SF-E600b", "SF-E600c") else 12
+        assert i1.drawer.grid == i2.drawer.grid == (cols, 10)
         d = run.part(f"{bay_id}-D1").drawer
         assert round(d.front[5] - d.front[4]) == 807
         # Petr, 2026-11-22 (t795u): "the bottom main one doesnt need
@@ -100,13 +103,13 @@ def test_island_east_row_drawers_are_on_the_gridfinity_grid():
         # NL 550 - 26 - 16. The end bays (clear 598) are whole cells, the
         # middle ones (clear 607) 9 over. Petr, 2026-11-23 (t835u): east row
         # 530 deep, NL 500: inside depth 458 = 10 cells + 37.
-        slack = 9.0 if bay_id in ("SF-E600b", "SF-E600c") else 0.0
-        assert d.inside[0] == pytest.approx(n * 42.0 + 1.0 + slack) and d.inside[1] == pytest.approx(m * 42.0 + 1.0 + 37.0)
+        slack = 8.0 if bay_id in ("SF-E600b", "SF-E600c") else 41.0
+        assert d.inside[0] == pytest.approx(n * 42.0 + 2.0 + slack) and d.inside[1] == pytest.approx(m * 42.0 + 2.0 + 36.0)
         part = run.part(f"{bay_id}-D1")
         assert part.props["System"] == "Blum MERIVOBOX" and part.props["NominalLength"] == pytest.approx(0.5)
         assert part.props["DrawerSide"] == "E" and i1.props["DrawerSide"] == "M" and i2.props["DrawerSide"] == "K"
         grids[bay_id] = i1.drawer.grid
-    assert grids == {b: (13, 10) for b in ("SF-E600a", "SF-E600b", "SF-E600c", "SF-E700")}
+    assert grids == {"SF-E600a": (12, 10), "SF-E600b": (13, 10), "SF-E600c": (13, 10), "SF-E700": (12, 10)}
     assert [run.bay(b).width for b in ("SF-E700", "SF-E600c", "SF-E600b", "SF-E600a")] == pytest.approx([625.0] * 4)
     assert sum(b.width for b in run.bays if not b.front_low) == pytest.approx(2500.0)
 
@@ -185,16 +188,23 @@ def test_west_sink_sits_forward_on_teka_drain_and_official_m71():
     west = runs["KR-WEST"]
     bay = west.bay("SF-B800")
     sink_box = next(box for box, oid in bay.obstacles if oid == "SN-RS15")
-    assert sink_box[2:4] == pytest.approx((20.0, 460.0))
+    # Set back 21 on 2026-11-23 (Petr, t841u): the front Teka clip (hole 30
+    # from the cut-out edge) and its plate clear the drawer front (inner
+    # face c 18): cut-out edge c 63, 45 behind it (guess:).
+    assert sink_box[2:4] == pytest.approx((41.0, 481.0))
     cut = next(v for v in west.part("KR-WEST-WORKTOP").voids if v.name == "SN-RS15")
-    assert (cut.c0, cut.c1) == pytest.approx((42.0, 438.0))
+    assert (cut.c0, cut.c1) == pytest.approx((63.0, 459.0))
+    assert cut.c0 - 18.0 >= 45.0
     disp = west.part("EA-EVO3-W").boxes[0]
-    assert (disp[2] + disp[3]) / 2 == pytest.approx(325.0)
-    assert disp[2:4] == pytest.approx((252.5, 397.5))
+    assert (disp[2] + disp[3]) / 2 == pytest.approx(346.0)
+    assert disp[2:4] == pytest.approx((273.5, 418.5))
     tap = west.part("SN-TAP-W")
     body, arm, nozzle = tap.boxes
     hole = (body[2] + body[3]) / 2
-    assert hole == pytest.approx(510.0)
+    assert hole == pytest.approx(531.0)
+    # Cosentino ≥ 50 of stone between the cut-out and the Ø35 hole; Teka min 65
+    # from the bowl to the hole.
+    assert hole - 17.5 - cut.c1 == pytest.approx(54.5) and hole - (cut.c1 + 2.0) >= 65.0
     assert tap.props["HoleBehindBowl"] == pytest.approx(0.07)
     assert body[5] - body[4] == pytest.approx(445.0)
     # Reach from the hole centre to the spout tip (front of the arm).
@@ -203,22 +213,26 @@ def test_west_sink_sits_forward_on_teka_drain_and_official_m71():
 
 
 def test_island_sink_sits_against_the_south_divider_on_teka_drain():
-    """Petr, 2026-11-23 (t834u): keep SF-I500a at 500, move the Teka
-    RS15 18.40 against the south divider (KitchenPlan.jpg), hang the
-    disposer on the official drain, and leave ≥50 mm of stone between
-    the cut-out and the Aquno M81 Ø35 hole."""
+    """Petr, 2026-11-23 (t834u): move the Teka RS15 18.40 to the south
+    divider (KitchenPlan.jpg), hang the disposer on the official drain, and
+    leave ≥50 mm of stone between the cut-out and the Aquno M81 Ø35 hole.
+    t841u: SF-I500a takes the rest of the row (470), and the sink keeps its
+    cut-out 45 from the divider face so the Teka clips clear it (guess:)."""
     runs = _runs()
     isl = runs["KR-ISL"]
     bay = isl.bay("SF-I500a")
-    assert bay.width == pytest.approx(500.0)
+    assert bay.width == pytest.approx(470.0)
     sink = next(box for box, oid in bay.obstacles if oid == "SN-RS1840")
-    # Along the run: a 0 at the north body end, a 500 at the 500/600 line.
-    # Rim a 280–500, inner bowl a 300–480 (20 mm rim, 2 mm cut-out inset).
-    assert sink[0:2] == pytest.approx((280.0, 500.0))
+    div = isl.part("KR-ISL-DIV-SF-I500a-SF-I600a").boxes[0]
+    # Along the run: a 0 at the north body end, the divider at a 461–479.
+    # Rim a 218–438, inner bowl a 238–418 (20 mm rim, 2 mm cut-out inset).
+    assert div[0:2] == pytest.approx((461.0, 479.0))
+    assert sink[0:2] == pytest.approx((218.0, 438.0))
     cut = next(v for v in isl.part("KR-ISL-WORKTOP").voids if v.name == "SN-RS1840")
-    assert (cut.a0, cut.a1) == pytest.approx((302.0, 478.0))
-    # 320 mm from the worktop's north edge (a -20) to the inner bowl (a 300).
-    assert cut.a0 - 2.0 - (-20.0) == pytest.approx(320.0)
+    assert (cut.a0, cut.a1) == pytest.approx((240.0, 416.0))
+    assert div[0] - cut.a1 == pytest.approx(45.0) and sink[1] < div[0]
+    # 258 mm from the worktop's north edge (a -20) to the inner bowl (a 238).
+    assert cut.a0 - 2.0 - (-20.0) == pytest.approx(258.0)
     # Still centred on the bay depth, now 630 (Blum MERIVOBOX NL 600,
     # 2026-11-23, t835u): cut-out c 117–513.
     assert (cut.c0, cut.c1) == pytest.approx((117.0, 513.0))
@@ -356,7 +370,8 @@ def test_island_clear_widths():
     run = _runs()["KR-ISL"]
     clear = {b["id"]: b["clear"] for b in kc.bay_summary(run)}
     assert clear == {
-        "SF-I500a": 473.0, "SF-I600a": 589.0, "SF-I500b": 463.0, "SF-I600b": 589.0, "SF-I300": 278.0,
+            # Petr, 2026-11-23 (t841u): 13, 12 and 11 Gridfinity columns with 2 mm play.
+        "SF-I500a": 443.0, "SF-I600a": 557.0, "SF-I500b": 515.0, "SF-I600b": 599.0, "SF-I300": 278.0,
         "SF-E600a": 598.0, "SF-E600b": 607.0, "SF-E600c": 607.0, "SF-E700": 598.0,
     }
 
@@ -376,13 +391,13 @@ def test_sf_i600a_drawers():
     assert [d.nominal for d in drawers] == [100.0, 100.0, 610.0]
     assert [d.content for d in drawers] == ["nože", "nářadí", "dole nevím"]
     assert [(round(d.front[1] - d.front[0]), round(d.front[5] - d.front[4])) for d in drawers] == [
-        (604, 97), (604, 97), (604, 607)]
-    # Blum MERIVOBOX NL 600 (Petr, 2026-11-23, t835u): inside = clear 589 − 51
-    # by NL 600 − 26 − 16; sides M, M, E.
-    assert all((round(d.inside[0]), round(d.inside[1])) == (538, 558) for d in drawers)
+        (572, 97), (572, 97), (572, 607)]
+    # Blum MERIVOBOX NL 600 (Petr, 2026-11-23, t835u): inside = clear 557 − 51
+    # by NL 600 − 26 − 16; sides M, M, E. 557 since t841u (12 columns).
+    assert all((round(d.inside[0]), round(d.inside[1])) == (506, 558) for d in drawers)
     assert [round(d.box[5] - d.box[4]) for d in drawers] == [91, 91, 192]
     assert [d.side for d in drawers] == ["M", "M", "E"] and all(d.nl == pytest.approx(600.0) for d in drawers)
-    assert all(d.grid == (12, 13) for d in drawers)
+    assert all(d.grid == (12, 13) for d in drawers)  # 12 x 42 + 2 = 506
     # No box front (2026-11-22 e, t795u): the box is the inside + the 19
     # back, as long as the NL allows.
     assert all(d.extension == pytest.approx(558.0 + 19.0 + 19.0) for d in drawers)
@@ -534,8 +549,8 @@ def test_drawer_motions_in_model():
     # 2026-11-20 d: each east front has two MERIVOBOX inner drawers.
     assert sorted(m["id"] for m in east if m.get("parent")) == sorted(
         f"{b}-D1-I{k}" for b in ("SF-E600a", "SF-E600b", "SF-E600c", "SF-E700") for k in (1, 2))
-    # SF-I600a spans y 12.693–13.300 (607 since the Gridfinity widths).
-    assert [m["center"][2] for m in island[:3]] == pytest.approx([-12.9965] * 3, abs=1e-6)
+    # SF-I600a spans y 12.755–13.330 (575 since 2026-11-23, t841u).
+    assert [m["center"][2] for m in island[:3]] == pytest.approx([-13.0425] * 3, abs=1e-6)
     west = [m for m in drawers if m["id"] in ("SF-A250-D1", "SF-B800-D1", "SF-C850-D1")]
     # Blum MERIVOBOX NL 550 in the 600 west run (2026-11-23).
     assert len(west) == 3 and all(m["slide"] == pytest.approx([0.546, 0.0, 0.0]) for m in west)
@@ -605,9 +620,9 @@ def test_gridfinity_drawers_fit_the_grid():
         for i in (1, 2, 3):
             d = run.part(f"{bay}-D{i}").drawer
             n, m = d.grid
-            # Blum MERIVOBOX (2026-11-23): clear − 51 leaves 33 across (one more
-            # column needs 9 more width; Petr: widths stay) and NL 600 leaves 11.
-            assert d.inside[0] == pytest.approx(n * 42 + 1 + 33) and d.inside[1] == pytest.approx(m * 42 + 1 + 11)
+            # Blum MERIVOBOX (2026-11-23): clear − 51 is exactly n x 42 + 2
+            # since t841u (2 mm play); NL 600 leaves 10 in depth.
+            assert d.inside[0] == pytest.approx(n * 42 + 2) and d.inside[1] == pytest.approx(m * 42 + 2 + 10)
             # The baseplate rides in the drawer: n × m cells, on the inside
             # floor, snapped to the front (Petr, t835u).
             plate = d.items[0]
@@ -616,11 +631,13 @@ def test_gridfinity_drawers_fit_the_grid():
             assert plate[2] == pytest.approx(d.box[2]) == pytest.approx(d.front[3])
     # East: inner drawers only (2026-11-22 e, t795u); the middle bays 9 over
     # across; NL 500 since 2026-11-23 leaves 37 in depth.
-    west = [f"open: {b}-D{i} inside {w} x 558 is +33 / +11 off the Gridfinity {n}x13 size (scripts/gridfinity_fit.py)"
-            for b, w, n in (("SF-I600a", 538, 12), ("SF-I500b", 412, 9), ("SF-I600b", 538, 12)) for i in (1, 2, 3)]
+    west = [f"open: {b}-D{i} inside {w} x 558 is +0 / +10 off the Gridfinity {n}x13 size (scripts/gridfinity_fit.py)"
+            for b, w, n in (("SF-I600a", 506, 12), ("SF-I500b", 464, 11), ("SF-I600b", 548, 13)) for i in (1, 2, 3)]
+    # With 2 mm play the end bays' 547 is 1 short of 13 columns (t841u).
+    east = {"SF-E600a": (547, 12, 41), "SF-E600b": (556, 13, 8), "SF-E600c": (556, 13, 8), "SF-E700": (547, 12, 41)}
     assert [n for n in run.notes if "Gridfinity" in n] == west + [
-        f"open: {b}-D1-I{k} inside {w} x 458 is +{w - 547} / +37 off the Gridfinity 13x10 size (scripts/gridfinity_fit.py)"
-        for b, w in (("SF-E600a", 547), ("SF-E600b", 556), ("SF-E600c", 556), ("SF-E700", 547)) for k in (1, 2)]
+        f"open: {b}-D1-I{k} inside {w} x 458 is +{sl} / +36 off the Gridfinity {n}x10 size (scripts/gridfinity_fit.py)"
+        for b, (w, n, sl) in east.items() for k in (1, 2)]
 
 
 def test_drawer_boxes_have_no_box_front_and_east_grid_is_inner_only():
@@ -636,7 +653,7 @@ def test_drawer_boxes_have_no_box_front_and_east_grid_is_inner_only():
     main = run.part("SF-E600a-D1")
     assert main.drawer.grid is None and not main.drawer.baseplate and main.props.get("Gridfinity") is None
     inner = run.part("SF-E600a-D1-I1")
-    assert inner.drawer.grid == (13, 10) and inner.drawer.baseplate
+    assert inner.drawer.grid == (12, 10) and inner.drawer.baseplate  # 547 < 13 x 42 + 2
     ib = inner.drawer.box
     assert inner.drawer.inside[1] == pytest.approx(abs(ib[3] - ib[2]) - 2 * p["BoxWall"])  # own front + back
 

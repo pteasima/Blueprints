@@ -177,7 +177,8 @@ IKEA_DEFAULTS_MM = {
     # Gridfinity (bays with Pset_Drawers.Gridfinity): 42 mm pitch, the drawer
     # inside is n × 42 + GridfinityPlay; the baseplate is drawn in the drawer.
     "GridfinityPitch": 42.0,
-    "GridfinityPlay": 1.0,
+    # 2 mm of play since 2026-11-23 (Petr, t841u; was 1).
+    "GridfinityPlay": 2.0,
     "GridfinityHeight": 5.0,  # baseplate height (guess: standard plates are about 5)
     "GridfinityFloor": 1.0,  # drawn floor under the cells (guess)
     "GridfinityRib": 2.5,  # drawn rib between cells (guess)

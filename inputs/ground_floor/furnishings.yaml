@@ -383,7 +383,12 @@ systemFurniture:
     ContainedInStructure: SP-1.02
     Origin: [20.5, 13.8]
     RefDirection: [0, -1]
-    Width: 0.5
+    Width: 0.47
+    # Petr, 2026-11-23 (t841u): widths for Gridfinity with 2 mm play
+    # (inside = n x 42 + 2 = clear - 51; clear = width - 18 between two
+    # dividers, width - 27 at the north end): SF-I600b 13 columns -> 617,
+    # SF-I600a 12 -> 575, SF-I500b 11 -> 533, SF-I300 stays 305, SF-I500a
+    # takes the rest of the 2500 -> 470. Ids keep their old nominal names.
     # Petr, 2026-11-23 (t835u): "on island west side, use longest merivobox
     # (600mm)". Blum MERIVOBOX NL 600 needs 603 inside (NL + 3): 18 front +
     # 603 + 9 (half the central back) = 630 (567 since 2026-11-22 t803u, 586
@@ -410,9 +415,14 @@ systemFurniture:
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
-    Origin: [20.5, 13.3]
+    Origin: [20.5, 13.33]
     RefDirection: [0, -1]
-    Width: 0.607
+    Width: 0.575
+    # Petr, 2026-11-23 (t841u): widths for Gridfinity with 2 mm play
+    # (inside = n x 42 + 2 = clear - 51; clear = width - 18 between two
+    # dividers, width - 27 at the north end): SF-I600b 13 columns -> 617,
+    # SF-I600a 12 -> 575, SF-I500b 11 -> 533, SF-I300 stays 305, SF-I500a
+    # takes the rest of the 2500 -> 470. Ids keep their old nominal names.
     # Petr, 2026-11-23 (t835u): "on island west side, use longest merivobox
     # (600mm)". Blum MERIVOBOX NL 600 needs 603 inside (NL + 3): 18 front +
     # 603 + 9 (half the central back) = 630 (567 since 2026-11-22 t803u, 586
@@ -440,9 +450,14 @@ systemFurniture:
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
-    Origin: [20.5, 12.693]
+    Origin: [20.5, 12.755]
     RefDirection: [0, -1]
-    Width: 0.481
+    Width: 0.533
+    # Petr, 2026-11-23 (t841u): widths for Gridfinity with 2 mm play
+    # (inside = n x 42 + 2 = clear - 51; clear = width - 18 between two
+    # dividers, width - 27 at the north end): SF-I600b 13 columns -> 617,
+    # SF-I600a 12 -> 575, SF-I500b 11 -> 533, SF-I300 stays 305, SF-I500a
+    # takes the rest of the 2500 -> 470. Ids keep their old nominal names.
     # Petr, 2026-11-23 (t835u): "on island west side, use longest merivobox
     # (600mm)". Blum MERIVOBOX NL 600 needs 603 inside (NL + 3): 18 front +
     # 603 + 9 (half the central back) = 630 (567 since 2026-11-22 t803u, 586
@@ -471,9 +486,14 @@ systemFurniture:
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
-    Origin: [20.5, 12.212]
+    Origin: [20.5, 12.222]
     RefDirection: [0, -1]
-    Width: 0.607
+    Width: 0.617
+    # Petr, 2026-11-23 (t841u): widths for Gridfinity with 2 mm play
+    # (inside = n x 42 + 2 = clear - 51; clear = width - 18 between two
+    # dividers, width - 27 at the north end): SF-I600b 13 columns -> 617,
+    # SF-I600a 12 -> 575, SF-I500b 11 -> 533, SF-I300 stays 305, SF-I500a
+    # takes the rest of the 2500 -> 470. Ids keep their old nominal names.
     # Petr, 2026-11-23 (t835u): "on island west side, use longest merivobox
     # (600mm)". Blum MERIVOBOX NL 600 needs 603 inside (NL + 3): 18 front +
     # 603 + 9 (half the central back) = 630 (567 since 2026-11-22 t803u, 586
@@ -1189,11 +1209,15 @@ systemFurniture:
 sanitaryTerminals:
   - id: SN-RS15
     Name: "Teka BE LINEA RS15 71.40"
-    Description: "Undermount sink in SF-B800. Overall 750×440, bowl 710×400×200. Centred in the 800, 60 mm toward the front since 2026-11-22 (rim 20 mm behind the carcass front; bowl front 60 mm from the worktop edge). Rim glued under the 20 mm stone: top 910, worktop cut-out 706×396 R13 (Teka)."
+    Description: "Undermount sink in SF-B800. Overall 750×440, bowl 710×400×200. Centred in the 800; rim 41 mm behind the carcass front since 2026-11-23 so the front clip clears the drawer front (t841u; bowl front 81 mm from the worktop edge). Rim glued under the 20 mm stone: top 910, worktop cut-out 706×396 R13 (Teka)."
     PredefinedType: SINK
     ContainedInStructure: SP-1.02
-    # Front of the 440 overall at c 20 (was 19.32 / c 80 until 2026-11-22).
-    Origin: [19.38, 12.225]
+    # Front of the 440 overall at c 41 since 2026-11-23 (Petr, t841u: set it
+    # back so the front Teka clip, hole 30 from the cut-out edge, clears the
+    # drawer front: cut-out edge c 63 = 45 behind the front's inner face c 18,
+    # guess:/open: ask the stone fabricator). Was c 20 (x 19.38) since
+    # 2026-11-22 and c 80 (x 19.32) before.
+    Origin: [19.359, 12.225]
     # 0.93 counter − 0.02 worktop − 0.2 = 0.71 (rim under the stone).
     Elevation: 0.71
     RefDirection: [0, 1]
@@ -1218,7 +1242,7 @@ sanitaryTerminals:
           DrainOffsetFromBack: 0.115
   - id: SN-RS1840
     Name: "Teka BE LINEA RS15 18.40 X"
-    Description: "Island sink in SF-I500a, the card on Petr's KitchenPlan.jpg. Undermount. Overall 440×220, bowl 400×180×140, cut-out 396×176 R13 (Teka). Long side across the island (east-west), as the plan's rectangle is drawn, guess:. South rim on the 500/600 line (against the divider), 320 mm of landing from the north worktop edge to the inner bowl (Petr, 2026-11-23, t834u; the plan's green rectangle already sat here). Still centred on the bay depth (630 since 2026-11-23), guess:. Rim top 910 under the 20 mm stone."
+    Description: "Island sink in SF-I500a, the card on Petr's KitchenPlan.jpg. Undermount. Overall 440×220, bowl 400×180×140, cut-out 396×176 R13 (Teka). Long side across the island (east-west), as the plan's rectangle is drawn, guess:. South rim 32 mm north of the SF-I500a/SF-I600a divider so the Teka clips clear it (cut-out 45 from the divider face, guess:), 258 mm of landing from the north worktop edge to the inner bowl (Petr, 2026-11-23, t841u; t834u had it against the divider, 320). Still centred on the bay depth (630 since 2026-11-23), guess:. Rim top 910 under the 20 mm stone."
     PredefinedType: SINK
     ContainedInStructure: SP-1.02
     # Centre x = 20.500 + 0.315 (half the 630 bay, 2026-11-23 MERIVOBOX;
@@ -1227,7 +1251,12 @@ sanitaryTerminals:
     # 2026-11-23 (t834u). Was 20.568 + 0.293 until the island moved 68 west
     # (2026-11-20), and 20.500 + 0.293 until the west row went 586 -> 567
     # (2026-11-22, t803u). Elevation 0.93 − 0.02 − 0.14 = 0.77.
-    Origin: [20.595, 13.3]
+    # Petr, 2026-11-23 (t841u): off the south divider so the Teka clip
+    # (hole 30 from the cut-out edge, Teka 61401450) and its plate clear it:
+    # cut-out edge >= 45 from the divider face (guess:, open: ask the stone
+    # fabricator). SF-I500a 470: divider face a 461, cut-out a 240-416, rim
+    # a 218-438 -> south rim y 13.8 - 0.438 = 13.362. Landing 258 (was 320).
+    Origin: [20.595, 13.362]
     Elevation: 0.77
     Width: 0.44
     Depth: 0.22
