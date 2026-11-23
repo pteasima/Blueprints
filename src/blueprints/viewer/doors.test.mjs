@@ -33,6 +33,7 @@ import {
   sectionalTrack,
   sectionalTravel,
   linkDrawerTree,
+  attachRiders,
   toggleDrawerTree,
 } from "./doors.js";
 import { readFileSync } from "node:fs";
@@ -939,4 +940,34 @@ console.log("doors.test.mjs ok");
   const list = Array.isArray(recs) ? recs : recs.motions || Object.values(recs).flat();
   const inner = list.filter((r) => r && r.parent === "SF-DN-S2-D1");
   assert.deepEqual(inner.map((r) => [r.id, r.coupled]).sort(), [["SF-DN-S2-D1-I1", true], ["SF-DN-S2-D1-I2", false]]);
+}
+
+// Something standing in an inner drawer (Petr, t889u: the sealer, the
+// Kenwood) rides it: no motion of its own, a tap drives the drawer.
+{
+  const drawer = { id: "I1", kind: "drawer", pivot: new THREE.Group(), goal: 0, anim: null };
+  const sealer = { id: "EA-X", kind: "drawer", pivot: new THREE.Group(), ridesId: "I1", goal: 0, anim: null };
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+  sealer.pivot.add(mesh);
+  const root = new THREE.Group();
+  root.add(drawer.pivot, sealer.pivot);
+  const kept = attachRiders([drawer, sealer]);
+  assert.deepEqual(kept.map((b) => b.id), ["I1"]);
+  assert.equal(sealer.pivot.parent, drawer.pivot);
+  assert.equal(mesh.userData.bpDoor, drawer);
+  drawer.pivot.position.set(0, 0, 0.5);
+  mesh.updateWorldMatrix(true, false);
+  assert.ok(Math.abs(new THREE.Vector3().setFromMatrixPosition(mesh.matrixWorld).z - 0.5) < 1e-9);
+  const recs = JSON.parse(
+    readFileSync(new URL("../../../docs/models/ground_floor.doors.json", import.meta.url), "utf8"),
+  );
+  const list = Array.isArray(recs) ? recs : recs.motions || Object.values(recs).flat();
+  const riders = list.filter((r) => r && r.rides).map((r) => [r.id, r.rides]).sort();
+  assert.deepEqual(riders, [
+    ["EA-KENWOOD-CHEF-XL", "SF-E600b-D1-I1"],
+    ["EA-KENWOOD-CHEF-XL-BOWL", "SF-E600b-D1-I1"],
+    ["EA-KENWOOD-CHEF-XL-DISPLAY", "SF-E600b-D1-I1"],
+    ["EA-MAXXO-CL40", "SF-E600a-D1-I1"],
+  ]);
+  assert.ok(list.filter((r) => r && r.rides).every((r) => !r.parent), "a rider has no parent of its own");
 }
