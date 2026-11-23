@@ -42,7 +42,7 @@ COLORS = {
     "Front": "#e9c46a",
     "Drawer": "#f2d27a",
     "PullOut": "#f4b860",
-    "DecorPanel": "#e9c46a",  # the same cream front finish as Front
+    "DecorPanel": "#f4b860",  # the same cream front finish as the pull-out fronts (t866u)
     "Door": "#9ecae1",
     "Lift": "#9ecae1",
     "LiftMechanism": "#333333",
@@ -220,7 +220,7 @@ def front(run, path: Path):
             hx = x0 if (part.door.hinge == "L") else x1
             ax.plot([hx, hx], [z0 + 40, z1 - 40], color="#c00", lw=2.0)
         if part.drawer is not None and part.drawer.items:
-            bits.append(f"{len(part.drawer.items)} {part.props.get('ItemKind') or ''}".strip())
+            bits.append(f"{part.props.get('Items') or len(part.drawer.items)} {part.props.get('ItemKind') or ''}".strip())
         if part.drawer is not None and part.drawer.trimmed:
             bits.append(f"box −{part.drawer.trimmed:.0f}")
         if part.props.get("Grip"):
