@@ -377,7 +377,9 @@ systemFurniture:
           # t870u: one outer drawer with one MERIVOBOX inner drawer, level
           # with SF-T2 / SF-T3 (was 400 + 410 to 910); the door grows to 800.
           # t874u: band 100-797, board 797-815, front 101.5-795.5, door from 798.5.
-          Layout: "door * hinge=R shelves=4 | drawer 0.697 box=E inner=M"
+          # t874u: door racks like SF-T2's (Petr: "the same small hinged-door
+          # shelves"), 4 over the door; the shelves stand back behind them.
+          Layout: "door * hinge=R shelves=4 racks=4 | drawer 0.697 box=E inner=M"
           Contents: "sladkosti, brambůrky, oříšky; sladkosti, brambůrky, oříšky"
   - id: SF-TF
     Name: "Nad lednicí 908"

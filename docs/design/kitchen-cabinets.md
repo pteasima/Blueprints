@@ -57,6 +57,7 @@ Petr's original document is the sticky-note plan [`KitchenPlan.jpg`](../../input
 | 30 | SF-T2 pantry: four shelves | **Three (the lowest gone); the Maxxo VM Chamber Line 40 vacuum sealer on the pantry floor (z 800)**; door racks kept | Petr (t870u); sealer size from retailers' spec tables, lid-open height `guess:` |
 | 31 | SF-T3 tray shelf in the drawer (on the E box, z 325–344) | **Fixed shelf in the carcass, z 643–661** (top at the SF-T2 / SF-T4 inner drawers' bottom, 661), 20 behind the drawer front, no front, no runners; the drawer and its E box (top 325) slide under it | Petr, 2026-11-23 (t871u) |
 | 32 | An 18 board edge (SF-T3 oven board 782–800) visible between SF-T3's drawer front (top 780.5) and the oven door (798.5); T2/T4 doors from 783.5 | **All three drawer fronts 101.5–795.5 (694, was 679)**, one 3 front gap under the oven door; SF-T3's front reaches over its board (band and board unchanged), SF-T2 / SF-T4 bands 100–797 with boards 797–815 (were 782–800), their doors from **798.5** (was 783.5), level with the oven door | Petr, 2026-11-23 (t874u, call) |
+| 33 | SF-T4 door without racks | **Four door racks like SF-T2's** (80 deep, 70 high, 40 in from each door edge, spread evenly over the door); its four shelves stand back behind them (front edge c 38 → 138) | Petr, 2026-11-23 (t874u) |
 
 ## Monoblocks
 
@@ -2305,4 +2306,5 @@ Read as: the steam oven niche (and the pantry floor, and T4's door band) starts 
 - **The strip is hidden:** in the front view the three drawer fronts end at 795.5, the oven door and both neighbouring doors start at 798.5, so one 3 mm front gap runs across all three columns, like every other gap. The board edges (SF-T3 782–800, SF-T2 / SF-T4 797–815) are behind fronts or the 3 mm gap.
 - SF-T3's drawer front now laps 13.5 over its band (the board edge) on the fronts' plane, in front of the carcass; it pulls straight out, nothing behind it at that height but the board's edge.
 - `guess:` the oven door's bottom 1.5 below the niche floor: the model centres the 596 door on the 593 niche. Miele's side view (data sheet FS_12100360, “Seitenansicht DGC XXL”) shows the 596 front with 111.5 + 473.5 and a detail with “min. 2” and “4” at the bottom edge, but no plain door-to-niche-floor figure, so the 1.5 stays a guess. Check against the Miele drawing before the fronts are ordered.
+- SF-T4 gets SF-T2's door racks (four, same size and even spacing over its 1650 door; Petr, t874u), so its shelves stand 100 further back (c 138–621, 483 deep, was 583).
 - Shelf positions in the tall run are still placeholders (t871u); the sealer fit was not re-checked for the raised floor beyond the model's own check.
