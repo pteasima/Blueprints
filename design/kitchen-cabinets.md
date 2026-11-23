@@ -2385,3 +2385,15 @@ The same change is tabulated in [furnishings.md](furnishings.md#continuous-oak-f
 
 - **The west oak side wall is not the full 450 mm to the wall**, and it starts at the counter, not the floor (SF-F052 is already there). `open:` oak cladding on the pier's west face.
 - Standard board lengths and joints are still ignored: the lining is one seamless piece, as asked.
+
+### Living-room counter fronts: two panels (2026-11-23, t915u, t916u)
+
+> Petr (t915u, t916u): "small change on main, then rebase the PR against it: the front panel (the one thats mostly hidden behind sofa) shouldnt be split into so many sections. I assume it cant be a single panel, so lets split it in the middle into two."
+
+`SF-LB` `Pset_Fronts.Sections`: 7 → **2**. Still `Layout: "front *"` (fixed blank cream fronts). The oak top and the rest of the run are unchanged.
+
+| | Old | New |
+| --- | --- | --- |
+| Front sections | 7 equal, 4150/7 ≈ **592.86 mm** | **2 equal, 2075 mm** (one 18 mm divider on the centre line; each front **2072 mm**, with the usual 1.5 mm gaps at the ends and at the mid joint) |
+
+2075 mm is within a standard 2800 mm MDF sheet, which is why two panels rather than one (Petr: "I assume it cant be a single panel").
