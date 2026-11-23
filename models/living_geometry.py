@@ -12,7 +12,13 @@ Assumed part sizes (millimetres), not on the plan:
   back top is the box.
 * Bookshelf sides, top and shelf boards ``Pset_Bookshelf.BoardThickness``
   (default 20; FN-BK 40, Petr 2026-11-20 f), three shelves in four
-  equal openings. Lamella slats 40 wide, 20 gap, 12 thick, on the back.
+  equal openings. ``Pset_Bookshelf.HasTopBoard`` (default true) set false
+  drops the case's own top: the fourth opening then runs up to the box
+  top (FN-BK, Petr 2026-11-23 t904u: the continuous oak lining is the
+  top). ``Pset_Bookshelf.CaseDepth`` (metres, optional) keeps the west
+  side, shelves, lamella and backing at that depth when the box itself
+  is deeper; the east side uses the full box depth (FN-BK: 450, lining
+  SF-TC). Lamella slats 40 wide, 20 gap, 12 thick, on the back.
 * Slat cladding (``ObjectType: SlatCladding``, the oak slats on the dining
   piers, 2026-11-20): vertical battens the box's full depth and height,
   ``Pset_Slats.SlatWidth`` wide and ``SlatGap`` apart (metres; default the
@@ -176,25 +182,30 @@ def _lining(element: dict, width: float, depth: float, height: float, gap: float
 
 
 def _bookshelf(width: float, depth: float, height: float, gap: float, shelves: int, backing: float = 0.0,
-               board_t: float = _CASE_T):
+               board_t: float = _CASE_T, has_top: bool = True, case_depth: float | None = None):
     lo = gap / 2.0
     x1, y1, z1 = width - lo, depth - lo, height - lo
     side = board_t
-    top_t = board_t
+    top_t = board_t if has_top else 0.0
     board = board_t
     count = shelves if shelves and shelves > 0 else _SHELVES
+    case_d = min(case_depth, depth) if case_depth and case_depth > 0 else depth
+    # Front of the case (west side, shelves, lamella). The east side uses the
+    # full box, so it can line a deeper neighbour (FN-BK / SF-TC, 450).
+    case_y0 = (depth - case_d) + lo
     parts = [
-        _box(lo, lo, lo, lo + side, y1, z1),
+        _box(lo, case_y0, lo, lo + side, y1, z1),
         _box(x1 - side, lo, lo, x1, y1, z1),
-        _box(lo, lo, z1 - top_t, x1, y1, z1),
     ]
+    if has_top:
+        parts.append(_box(lo, case_y0, z1 - top_t, x1, y1, z1))
     inner_h = (z1 - top_t) - lo - count * board
     opening = inner_h / (count + 1)
     z = lo
     for _index in range(count):
         z += opening
         parts.append(
-            _box(lo + side + 0.5, lo, z, x1 - side - 0.5, y1 - backing - _LAMELLA_T - 0.5, z + board)
+            _box(lo + side + 0.5, case_y0, z, x1 - side - 0.5, y1 - backing - _LAMELLA_T - 0.5, z + board)
         )
         z += board
     slat_pitch = _LAMELLA_W + _LAMELLA_GAP
@@ -250,7 +261,13 @@ def living_detail(element: dict, width: float, depth: float, height: float, gap:
         raw = _prop(element, "Pset_Bookshelf", "ShelfCount", _SHELVES)
         backing = float(_prop(element, "Pset_Bookshelf", "BackingThickness", 0.0)) * 1000.0
         board_t = float(_prop(element, "Pset_Bookshelf", "BoardThickness", _CASE_T / 1000.0)) * 1000.0
-        parts = _bookshelf(width, depth, height, gap, int(raw), backing, board_t)
+        has_top = _prop(element, "Pset_Bookshelf", "HasTopBoard", True)
+        if isinstance(has_top, str):
+            has_top = has_top.strip().lower() not in ("false", "0", "no")
+        case_raw = _prop(element, "Pset_Bookshelf", "CaseDepth", None)
+        case_depth = float(case_raw) * 1000.0 if case_raw is not None else None
+        parts = _bookshelf(width, depth, height, gap, int(raw), backing, board_t,
+                           bool(has_top), case_depth)
     elif kind == "CabinetLining":
         parts = _lining(element, width, depth, height, gap)
         if parts is None:

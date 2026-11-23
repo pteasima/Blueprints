@@ -26,6 +26,17 @@ def test_specific_selectors_win():
         assert resolve(cat, "cabinet", mesh) == ["kitchen-front-cream"], mesh
     assert resolve(cat, "oak", "KR-LB-WORKTOP") == ["oak-natural-kaplan"]
     assert resolve(cat, "oak", "CV-SLAT-W052") == ["oak-natural-kaplan"]
+    assert resolve(cat, "oak", "SF-DH-LINING") == ["oak-natural-kaplan"]
+    assert resolve(cat, "oak", "SF-DH-SIDE-W") == ["oak-natural-kaplan"]
+    # Petr, 2026-11-23 (t905u): the three living-room pocket doors are oak.
+    for door in ("D-OP24", "D-OP25", "D-OP33"):
+        assert resolve(cat, "door", door) == ["oak-natural-kaplan"], door
+    # Petr, 2026-11-23 (t906u): pantry exterior door, full anthracite like
+    # the main entrance. Other interior leaves stay white.
+    assert resolve(cat, "door", "D-OP20") == ["aluminium-anthracite"]
+    assert resolve(cat, "door", "D-OP39a") == ["aluminium-anthracite"]
+    assert resolve(cat, "door", "D-OP10") == ["door-leaf-white"]
+    assert resolve(cat, "door", "D-OP03") == ["door-leaf-white"]
     assert resolve(cat, "cabinet", "SF-I600a-BOTTOM") == ["kitchen-carcass-white"]
     assert resolve(cat, "appliance", "EA-TV") == ["tv-panel-black"]
     assert resolve(cat, "worktop", None) == ["silestone-blanco-maple"]
