@@ -1010,13 +1010,18 @@ def test_one_drawer_under_the_oven_line_and_the_sealer_in_the_pantry():
         assert [p.id for p in drawers] == [f"{bay}-D1"]
         tops.append(drawers[0].drawer.front[5])
         assert drawers[0].props["Grip"] == "J top"
-    assert tops == pytest.approx([780.5] * 3)
+    # t874u: fronts 795.5, one front gap under the oven door (798.5).
+    assert tops == pytest.approx([795.5] * 3)
+    oven_door = run.part("EA-DGC7465-DOOR").boxes[0]
+    assert oven_door[4] - tops[1] == pytest.approx(3.0)
+    assert run.part("SF-T3-BOARD3").boxes[0][4:] == pytest.approx((782.0, 800.0))
+    assert run.part("SF-T2-DOOR1").boxes[0][4] == pytest.approx(798.5) and run.part("SF-T4-DOOR1").boxes[0][4] == pytest.approx(798.5)
     # t871u: the tray shelf is fixed in the carcass, not in the drawer.
     assert not run.part("SF-T3-D1").drawer.items and not run.part("SF-T3-D1").props.get("InnerDrawers")
     shelf = run.part("SF-T3-SH4-1")
-    assert shelf.drawer is None and shelf.boxes[0][5] == pytest.approx(661.0)
+    assert shelf.drawer is None and shelf.boxes[0][5] == pytest.approx(676.0)
     assert shelf.boxes[0][4] > run.part("SF-T3-D1").drawer.box[5]
     assert run.part("SF-T2-D1").props["InnerDrawers"] == "M" and run.part("SF-T4-D1").props["InnerDrawers"] == "M"
     sealer = run.part("EA-MAXXO-CL40")
-    assert sealer.boxes[0][4] == pytest.approx(800.0)
+    assert sealer.boxes[0][4] == pytest.approx(815.0)  # t874u: SF-T2 board 797-815
     assert sealer.props["LidOpenClearance"] > 0

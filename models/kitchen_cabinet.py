@@ -1450,6 +1450,15 @@ class _Builder:
                              carcass_z0=z0, top_limit=(z1 - t) if top_zone else None,
                              on_board=board_below, stack_top=stack_top)
                 stack_top = dr.profile_z
+                if zone.opts.get("front_top") is not None:
+                    # ``front_top=`` (absolute z, metres): the decor front
+                    # reaches past its band over the board above (Petr,
+                    # 2026-11-23, t874u: SF-T3's drawer front covers the
+                    # oven board's edge). Only upward, never into the box.
+                    ft = float(zone.opts["front_top"]) * 1000.0
+                    if ft < dr.front[5] - TOL:
+                        raise ValueError(f"{bay.id}: front_top {ft:g} is below the band's front top {dr.front[5]:g}")
+                    dr.front = (*dr.front[:5], ft)
                 name = ("Výsuv" if zone.kind == "pullout" else "Šuplík") + f" {drawer_no} {dr.content}"
                 drawer_system(bay.element)
                 if dr.frame:
