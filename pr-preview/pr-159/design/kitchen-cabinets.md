@@ -2429,3 +2429,14 @@ The lid is flush with the counter front. A piano hinge runs along its top-rear e
 - `open:` the exact piano-hinge article and how the 16.7° rest is finished against the lamella (a felt bump stop?).
 
 The two lids are their own oak solids with a `LiftJoint` (viewer `kind: "linkage"`), so they can be tapped open in the 3D viewer, past 90°, until they lean on the lamella below Shelf 1.
+
+#### Planned interior (TBD, 2026-11-23, t917u)
+
+> Petr (t917u): "btw I agree that there should be an inner shelf and either a plywood sled or just a bunch of conected boxes sliding on top of it. The two front panels will be removable (with tools and after couch is moved) in case something goes wrong. Ill just need to find the best boxes and decide on the exact mechanism. TBD, document this idea on the PR."
+
+Not modelled yet. The idea, for when the box and mechanism are chosen:
+
+- A **continuous inner shelf** across the 4150 mm run. The sliding zone above that shelf must have **no full-height centre divider**, so both containers can cross the 4|5 midline. Today's `SF-LB-SDIV1` (centred at 2075, currently up to z 872) would **stop below the shelf**.
+- Two separate **3-section-wide (~1556 mm)** sliding containers riding on top of that shelf: either custom plywood sleds (optionally holding lift-out bins) or a bunch of connected off-the-shelf boxes. Six of the eight 518.75 mm bands are occupied and two stay empty, so all six bays can be reached through the S3 and S6 lids: container A parks across 1–3 / 2–4 / 3–5, container B across 4–6 / 5–7 / 6–8.
+- Both cream front panels (`SF-LB-S1-FRONT`, `SF-LB-S2-FRONT`) are **tool-removable** after the sofa is moved, for service or recovery if something jams or drops behind.
+- `open:` exact container/box selection, inner shelf height, and the sliding mechanism (e.g. UHMW-PE glide strips + a guide vs rollers).
