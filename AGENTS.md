@@ -1,8 +1,8 @@
 # Agent notes
 
 Parametric 2D/3D models in Python ([build123d](https://github.com/gumyr/build123d)).
-Humans review geometry on the live Pages preview, from a link sent as soon as
-it is up. Images in chat are optional follow-up, not the review path.
+Humans review geometry on the live Pages preview, from a link sent right after
+the push (it may still be deploying). Images in chat are optional follow-up, not the review path.
 
 All process for this repo lives in this file. Humans are agents too. Do not add a `CONTRIBUTING.md`; a second process file would drift from this one.
 
@@ -67,7 +67,7 @@ Install also enables **Git LFS** (`docs/models/*.usdz`). Pull with LFS available
 
 ## Export and the preview link
 
-After creating or changing a model, export, push, and send the preview link as soon as it is live. Do not wait for 2D plans, renders, viewer drawings or other images before that message.
+After creating or changing a model, export, push, and send the preview link right away, even while `pages-content` is still deploying (optionally say it is still deploying). Do not wait for 2D plans, renders, viewer drawings or other images before that message.
 
 ```bash
 source .venv/bin/activate
@@ -78,7 +78,7 @@ Example: `python -m blueprints.export hello_world`
 
 Solids land in `exports/<model>/` as STEP/STL plus USDZ/GLB/HTML for the viewer. 2D modules (`obyvak_section`, `obyvak_elevation`) still write layered SVG/DXF/PNG. The HTML viewer is a self-contained offline WebGL page (embedded GLB + custom Three.js shell) with part toggles, camera presets, and scene drawings; USDZ remains for Quick Look/AR. Contractor plates — labels, dimensions, a named orthographic scene — come from the viewer **Drawing** button (PNG and PDF of that view).
 
-The first reply after the preview is live is a plain explanation of what was done, plus the preview URL. If that explanation would benefit from extra images (2D plans, renders, a viewer drawing), say you are continuing to work on those. Unless he asks to cancel that work, send the images later. Images must never block the preview link. If you do later send a drawing, capture the viewer drawing, not a hidden-line dump of the solid.
+The first reply after the push is a plain explanation of what was done, plus the preview URL. If that explanation would benefit from extra images (2D plans, renders, a viewer drawing), say you are continuing to work on those. Unless he asks to cancel that work, send the images later. Images must never block the preview link. If you do later send a drawing, capture the viewer drawing, not a hidden-line dump of the solid.
 
 The viewer **Measure** tool (top bar, next to AR) is **experimental** and will be developed further — do not treat its current UX/snap behavior as a stable contract when changing the viewer. See `src/blueprints/viewer/README.md`.
 
@@ -122,7 +122,7 @@ https://pteasima.github.io/Blueprints/pr-preview/pr-<N>/
 
 Publishing is automatic. Pushing the PR branch, or opening or closing the PR, runs `pages-content`. That workflow writes `pr-preview/pr-<N>/` and deploys GitHub Pages. A push to `main` updates the production site. Closing or merging the PR deletes that preview. Export’s printed `preview_url` is still the production root (no PR context locally).
 
-The agent waits until `pages-content` has finished and the preview URL is actually serving the change, then tells the user that preview is ready, with the explanation of what was done. Do not hold that message for images.
+Do not wait for `pages-content` to finish: right after the push, send the explanation of what was done with the PR preview URL, even if it is not serving the change yet (optionally say it is still deploying). Do not hold that message for images.
 
 ```text
 https://pteasima.github.io/Blueprints/pr-preview/pr-<N>/
