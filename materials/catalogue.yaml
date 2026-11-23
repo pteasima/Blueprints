@@ -79,8 +79,12 @@
       counter on the low base behind the sofa (KR-LB, Petr, 2026-11-13), the
       oak-front wall cabinet over the dining run (the tall corner cabinet
       SF-TC is cream since 2026-11-20 f),
-      with their fronts, doors, lift fronts and carcasses, and the vertical oak
-      slats on the dining piers (2026-11-20). The dining and living bases
+      with their fronts, doors, lift fronts and carcasses, the continuous oak
+      frame from the kitchen north tall cabinets through the dining area to
+      the living room (SF-DH-LINING and SF-DH-SIDE-W, 2026-11-23 t904u), the
+      vertical oak slats on the dining piers (2026-11-20), and the three
+      living-room pocket door leaves D-OP24, D-OP25 and D-OP33 (Petr,
+      2026-11-23 t905u; were door-leaf-white). The dining and living bases
       (KR-DN, KR-LB) are cream since 2026-11-20. Everything
       `Pset_Finish.Material: natural oak` in furnishings.yaml.
     selectors:
@@ -91,6 +95,8 @@
       # shelves and carcass): KR-DH. KR-DN and KR-LB are cream since
       # 2026-11-20, KR-TC (SF-TC) since 2026-11-20 f (kitchen-front-cream).
       - {label: cabinet, id_pattern: "^(SF-DH|KR-DH)-"}
+      # Petr, 2026-11-23 (t905u): "the three pocket doors are oak".
+      - {label: door, ids: [D-OP24, D-OP25, D-OP33]}
   base_color: "#aa7e60"
   roughness: 0.45
   metalness: 0.0
@@ -458,9 +464,13 @@
   applies_to:
     description: >-
       Every window frame and sash, inside and outside, the terrace door
-      OP32's 70 mm frame, and the main entrance door OP39a.
+      OP32's 70 mm frame, the main entrance door OP39a, and the pantry
+      exterior door D-OP20 (1.03 Spíž to the back garden, Petr 2026-11-23
+      t906u: "the outside door from pantry to back garden is full anthracite
+      (e.g. like main entry door)"; both faces — the model is one leaf mesh,
+      no separate frame solid).
     selectors:
-      - {label: door, ids: [D-OP32, D-OP39a]}
+      - {label: door, ids: [D-OP32, D-OP39a, D-OP20]}
     pending: >-
       All window frames and sash profiles, both faces; the model draws only
       the glass leaf today. Frame meshes should resolve here.
@@ -477,14 +487,18 @@
     inside face too (no white interior). The RAL number is the one
     assumption: anthracite aluminium is almost always RAL 7016 in a
     fine-texture powder coat. Entrance door OP39a: assumed to be from the
-    same aluminium system as the window beside it.
+    same aluminium system as the window beside it. Pantry door D-OP20:
+    Petr, 2026-11-23 (t906u), the same anthracite finish, both faces.
 
 - id: door-leaf-white
   name: Interior door leaves, white
   applies_to:
     description: >-
-      Interior hinged and pocket door leaves (40 mm). Fallback for the door
-      label.
+      Interior hinged door leaves (40 mm), and the bedroom double-pocket
+      D-OP03. Fallback for the door label. Not the three living-room pocket
+      leaves D-OP24, D-OP25, D-OP33 (oak-natural-kaplan since 2026-11-23
+      t905u) or the pantry exterior door D-OP20 (aluminium-anthracite since
+      2026-11-23 t906u, like D-OP39a).
     selectors:
       - {label: door}
   base_color: "#f1f0ec"

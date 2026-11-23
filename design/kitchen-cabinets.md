@@ -2362,3 +2362,26 @@ Petr: "go all out, all heavy duty where they fit" (after the price comparison in
 - **Unchanged**: SF-A250 (Blum SPACE TWIN, its own profiles, 20 kg), SF-B800 (MOVENTO 760H, 40 kg).
 - **Price** (cabinet profile pairs only, CZK incl. 21 % VAT, 2026-11-23): Démos trade list prices 450.5001B 886.56 / 453.5001B 1,248.89; 450.5501B 1,042.18 / 453.5501B 1,340.50; 450.6001B 1,240.08 / 453.6001B 1,580.33; 450.4001B 933.17 (e.g. https://www.demos-trade.cz/blum-453-5001b-merivobox-vysuv-500mm-70kg-blumotion-tob/). All 70 kg costs **9,025 Kč more than all 40 kg** (7,459 excl. VAT): 39,707 → 48,732 for the 38 pairs; 4,896 Kč more than the previous mix. Dřevoobchod K&C (25 % "Novinka" sale prices, https://www.drevoobchod-eshop.cz/merivobox?list=table): +4,953 Kč for all 70 kg.
 - open: (**CRITICAL**, see the callout at the top of this file) whether the Blum ZI7.0M07 inner-drawer driver set is load-class specific (not found in the ordering information); the 70 kg screw positions are not drawn in the model (profiles are not modelled, only the load class and article).
+
+### Continuous oak frame, dining to living (2026-11-23, t904u)
+
+> Petr (t904u): "lets quickly fix some of the bookshelf detail first, so the geometry is clear.
+> - the bookshelf east wall needs to extend the whole 450mm to line the side of the tall corner cabinet
+> - you have a "4th shelf" at the very top, basically the bookshelf has its own top plank. But there already is a 450 deep top plank spanning all the way from the dining area. The shelf doesnt need its own. That moves each shelf up just slightly so that theyre still evenly spaced.
+> - in the dining area that top plank extends all the way to the kitchen north top cabinets (yours ends short of the column, which is wrong).
+> - Theres also an oak side wall in that area, on the east side of the kitchen north tall cabinets, up to 450 from the north wall.
+> So in summary, the entire 450 deep area from dining to living room shares the same continuous oak frame (dont worry about standard lengths and joints yet, make it seamless)"
+
+The same change is tabulated in [furnishings.md](furnishings.md#continuous-oak-frame-dining-to-living-2026-11-23-t904u). Also t905u (pocket doors oak) and t906u (pantry exterior door anthracite).
+
+| | Old | New |
+| --- | --- | --- |
+| SF-DH-LINING x | 22.45–29.60 | **22.15–29.60**, west end on SF-T4.East, one piece, notched around both piers |
+| FN-BK east side | 276 deep | **450**, lining SF-TC, counter to the lining; the case (west side, shelves, lamella) stays 276 |
+| FN-BK top board | 40 mm, 2391.50–2431.50 | **removed**; three shelves evenly respaced: 1265.75–1305.75 → **1275.75–1315.75**, 1641–1681 → **1661–1701**, 2016.25–2056.25 → **2046.25–2086.25** |
+| SF-DH-SIDE-W | none | oak side wall on SF-T4.East, 40 thick (`guess:`), z 930–2432, **174 deep** (stops at the W-052 slat front; the pier blocks the rest of the 450) |
+| D-OP24, D-OP25, D-OP33 | white (`door-leaf-white`) | **natural oak** (`oak-natural-kaplan`) |
+| D-OP20 | white | **anthracite** (`aluminium-anthracite`), like D-OP39a |
+
+- **The west oak side wall is not the full 450 mm to the wall**, and it starts at the counter, not the floor (SF-F052 is already there). `open:` oak cladding on the pier's west face.
+- Standard board lengths and joints are still ignored: the lining is one seamless piece, as asked.

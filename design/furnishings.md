@@ -160,3 +160,34 @@ Rug 2800 × 3780 × 10, x 26.65–29.45, y 11.37–15.15. Furniture is not lifte
 ## What not to copy from the other layout
 
 **open:** PR #83 keeps the island, the fridge and a dining table. The wave study deletes all three and uses a 4.0 × 4.0 m sofa. Which room is current is not settled. Sources: `furnishings.yaml` on main, the PR #83 header, and the furniture comment in `src/blueprints/acoustics/roomwave/geometry.py`.
+
+## Continuous oak frame, dining to living (2026-11-23, t904u)
+
+> Petr (t904u): "lets quickly fix some of the bookshelf detail first, so the geometry is clear.
+> - the bookshelf east wall needs to extend the whole 450mm to line the side of the tall corner cabinet
+> - you have a "4th shelf" at the very top, basically the bookshelf has its own top plank. But there already is a 450 deep top plank spanning all the way from the dining area. The shelf doesnt need its own. That moves each shelf up just slightly so that theyre still evenly spaced.
+> - in the dining area that top plank extends all the way to the kitchen north top cabinets (yours ends short of the column, which is wrong).
+> - Theres also an oak side wall in that area, on the east side of the kitchen north tall cabinets, up to 450 from the north wall.
+> So in summary, the entire 450 deep area from dining to living room shares the same continuous oak frame (dont worry about standard lengths and joints yet, make it seamless)"
+
+Also in this pass: Petr (t905u) "the three pocket doors are oak"; Petr (t906u) "the outside door from pantry to back garden is full anthracite (e.g. like main entry door)".
+
+The earlier paragraphs on this page keep the historical coordinates from when the living room was first placed. Current geometry is the table below and `inputs/ground_floor/furnishings.yaml`. Shelf heights are the modelled bottom and top faces, including the 1 mm mesh gap.
+
+| | Old | New |
+| --- | --- | --- |
+| SF-DH-LINING x | 22.45–29.60 (7150), started east of pier W-052 | **22.15–29.60** (7450), west end on SF-T4.East, one piece, notched around both pier slat panels |
+| FN-BK box | y 15.324–15.60, **276** deep, with a 40 top board 2391.50–2431.50 | y 15.15–15.60, **450** deep; **no top board** (`HasTopBoard: false`); SF-DH-LINING is the top |
+| FN-BK east side | 276, y 15.324–15.60 | **450**, y 15.15–15.60, lining SF-TC's west face, counter (930) to the lining (2432) |
+| FN-BK west side, shelves, lamella | 276, front on the W-053 slat face | unchanged 276 (`CaseDepth`, linked) |
+| FN-BK shelf 1 (bottom–top face) | 1265.75–1305.75 | **1275.75–1315.75** (+10) |
+| FN-BK shelf 2 | 1641.00–1681.00 | **1661.00–1701.00** (+20) |
+| FN-BK shelf 3 | 2016.25–2056.25 | **2046.25–2086.25** (+30) |
+| SF-DH-SIDE-W | none | new oak side wall on SF-T4.East, x 22.15–22.19, **40** thick (`guess:` linked to FN-BK `BoardThickness`), z 930–2432 |
+| D-OP24, D-OP25, D-OP33 | `door-leaf-white` | `oak-natural-kaplan` (Petr, t905u) |
+| D-OP20 (pantry 1.03 Spíž ↔ garden, D2) | `door-leaf-white` | `aluminium-anthracite`, same as the main entrance D-OP39a (Petr, t906u) |
+
+- The three shelves stay evenly spaced in four openings; the fourth opening now runs to the underside of the lining instead of a top board of the case.
+- **SF-DH-SIDE-W is 174 mm deep (y 15.15–15.324), not the full 450 to the wall.** Pier W-052 and its slats occupy y 15.324–15.60 at this x, and there is no gap in which to put a 40 mm board. It starts at the SF-F052 counter (930), not the floor: the filler cupboard already fills y 15.15–15.35 up to 930. `open:` whether the pier's west face should also be oak-clad.
+- `guess:` the side wall's 40 mm thickness, the same as the bookshelf boards (linked).
+- D-OP03, the bedroom double pocket, stays white. The model has no separate door-frame solid, so "both faces and frame" on D-OP20 is both faces of the leaf mesh.
