@@ -40,7 +40,7 @@ Petr's original document is the sticky-note plan [`KitchenPlan.jpg`](../../input
 | 13 | Island west widths 500 / 607 / 481 / 607 / 305 (row 7: unchanged) | **470 / 575 / 533 / 617 / 305** (SF-I500a / SF-I600a / SF-I500b / SF-I600b / SF-I300), still 2500. Insides 506 / 464 / 548 = **12 / 11 / 13 columns exactly** (were 12 / 9 / 12 with 33 spare). Ids keep their old nominal names | Petr (t837u): “when you say island west drawers have spare room in width, then you should change them … The south 300 stays. The hob drawer gets wider to fit gridfinity”; t841u: “can we make the middle two drawers closer in size (12 and 11 gridfinities instead of 13 and 10)?” |
 | 14 | Island sink SN-RS1840 against the south divider (t834u; landing 320) | **Cut-out 45 from the divider face**: rim a 218–438, cut-out a 240–416 in the 470 bay; **landing 258** | Petr (t840u): “are you positive it can be mounted this close to the cabinet edge? Its undermount”; t841u: “Im ok with 258 landing”. Teka sheet 61401450: clip hole Ø10 × 16 deep, **30 mm from the cut-out edge**; the rim (220 × 440) runs 22 past the cut-out. The old rim lay 9 mm on the divider and the south clip hole fell over it. `guess:` the clip plate reaches about 12 past its screw + 3 play → 45. `open:` ask the stone fabricator (clip count and positions, or glue + battens) |
 | 15 | West sink SN-RS15 rim 20 behind the carcass front (2026-11-22, t819u) | **Set back 21**: rim c 41–481, cut-out c 63–459 (45 behind the drawer front's inner face c 18) | Petr (t841u): “we'll setback the large west sink to be sure”. The front clip hole (cut-out c 42 − 30 = c 12) fell over the drawer front. Same `guess:` / `open:` as row 14 |
-| 16 | SF-B800: MERIVOBOX M with two FILUR standing on its base (row 9) | **Hanging FILUR frame**: U-shaped 18 MDF plate (`guess:` thickness) round the disposer, two holes 280 × 370 (FILUR 290 × 380 less 5 a side), each FILUR hung by its rim; plate top z 660 on two 16 sides running on **Blum MOVENTO 760H4501S** (NL 450, 40 kg, concealed, BLUMOTION S, manual opening; no TIP-ON, no SERVO-DRIVE, no MERIVOBOX). See “SF-B800: hanging FILUR frame” | Petr, 2026-11-23 (t842u) |
+| 16 | SF-B800: MERIVOBOX M with two FILUR standing on its base (row 9) | **Hanging FILUR frame**: U-shaped 18 MDF plate (`guess:` thickness) round the disposer, two holes 280 × 370 (FILUR 290 × 380 less 5 a side), each FILUR hung by its rim; plate top z 660 on two 16 sides (gone since t866u, row 26) running on **Blum MOVENTO 760H4501S** (NL 450, 40 kg, concealed, BLUMOTION S, manual opening; no TIP-ON, no SERVO-DRIVE, no MERIVOBOX). See “SF-B800: hanging FILUR frame” | Petr, 2026-11-23 (t842u) |
 | 17 | West run sections C 850 / B 800 / A 850 (base and wall cabinets on one grid) | **835 / 835 / 830** (still 2500 between the OP24 / OP25 jambs): SF-C850 and SF-CH850 850 → 835, SF-B800 and SF-BH800 800 → 835, SF-AH850 850 → 830, SF-A250 232 → 212 (the dishwasher niche and its end panel do not move). Three 835s would be 2505, 5 over | Petr, 2026-11-23 (t848u): “if we go 835, then all of our top cabinets on the west run are the same 835? Lets do that.” |
 | 18 | SF-B800 FILUR frame: bins 22 over the carcass bottom | **10** over it: plate top 660 → 648, 62 under the bowl | Petr, 2026-11-23 (t849u) |
 | 19 | — | **Petr to measure a real FILUR (rim height, outer dimensions) and the installed disposer / trap on site before the MDF frame is cut.** | Petr, 2026-11-23 (t848u): “Note in docs that I should measure this on site.” |
@@ -50,6 +50,8 @@ Petr's original document is the sticky-note plan [`KitchenPlan.jpg`](../../input
 | 23 | Dishwasher front 32 behind the carcass front line, no decor panel | **Appliance door face at x 19.382 (was 19.35), 18 decor panel SF-A600-PANEL on the fronts' plane (19.382–19.400), 597 × 807, z 101.5–908.5 like the other fronts** | Petr (t865u): “it has to sit flush with the other fronts” |
 | 24 | Appliance doors fixed | **Openable: dishwasher panel and Miele DGC 7465 oven drop down (bottom hinge); Miele M 2230 SC microwave hinged left; Whirlpool fridge four doors, each hinged on its outer edge** | Petr (t865u): “let me open dishwasher, fridge, oven, microwave” |
 | 25 | KR-WEST south end side on the plinth (z 100–910) | **Down to the floor (z 0–910)**, like the north niche panel; bottom fixed to it, legs and kickboard stop inside it | Petr (t865u): “should go all the way to floor, like north one does” |
+| 26 | SF-B800 FILUR frame with two 16 MDF side walls on the runners and a 120 back panel under the disposer (rows 16, 17) | **No side walls, no back panel**: the MOVENTO runners screw straight under the plate's 16 edge strips (runner bottom z 609, was 118 on the carcass bottom), a 16 × 16 × 40 block under each arm's back end for the rear hook, the bins hang free below the plate; **two 90° steel angles 40 × 40 × 3, 30 wide**, inside on the bridge between the bins, tie the plate to the decor front | Petr, 2026-11-23 (t866u): “NO side walls … bins hang freely below with no wooden box around them”; angles and blocks `guess:`; MOVENTO without drawer sides is `open:` |
+| 27 | MERIVOBOX boxes drawn in the front cream | **Blum SW-M silk white matt** (sides, backs, bases, inner drawers, SPACE TWIN upper box); fronts stay cream | Petr (t866u): “make merivobox hardware white”; colour name **Blum** (MERIVOBOX colours SW-M silk white matt, IG-M indium grey matt, OG-M orion grey matt) |
 
 ## Monoblocks
 
@@ -237,6 +239,7 @@ Blum, *Catalogue and technical manual 2024/2025* (English), MERIVOBOX pages 250�
 | E (M side + gallery rail, BOXCOVER or BOXCAP) | 192 | 209 | 270–600 | 450–600 | 184 |
 | F (Blum NZ/AU only, not in the European catalogue) | 256 | — | 270–550 | 500–550 | 248 |
 
+- Colour: Blum makes MERIVOBOX in **SW-M silk white matt**, IG-M indium grey matt and OG-M orion grey matt (catalogue 2024/25, MERIVOBOX pages). Every box here is **SW-M silk white matt** since 2026-11-23 (Petr, t866u; drawn cream until then). Fronts are the kitchen cream (RAL 1015 `guess:` shade). Material `blum-merivobox-silk-white` (sRGB #f1f0ea `guess:`).
 - Every height: inside cabinet depth **LT ≥ NL + 3**; base and back **LW − 51** wide; base **NL − 26** (chipboard back) or NL − 22 (steel back); integrated BLUMOTION; TIP-ON BLUMOTION and SERVO-DRIVE are optional add-ons (not used here).
 - Inner drawers: M and K, any NL of that side; front piece ZV4.1042M (1042 long, for KB 1200), cut to **LW − 126**.
 - Waste bins: a **cabinet profile with over-extension for waste-bin applications** (453.4501BZ / .5001BZ / .5501BZ, 70 kg, cabinet NL 450–550 with drawer sides NL − 50) for E pull-outs. Not used in the model yet (SF-C850 is empty, SF-B800 uses a plain M box); `open:` for the bins.
@@ -2091,7 +2094,7 @@ Petr (t842u): replace the MERIVOBOX M and the standing FILURs with a custom U-sh
 
 - (At 800, superseded by t848u below.) **At 800 the U is not practical: each arm between a hole and the disposer notch is only 12.5 mm of MDF, and the FILUR rim lies 5 of that.** 2 × 280 holes + 155 notch + 2 × 16 sides take 747 of the 782 inside. `guess:` about 30 mm arms need a cabinet ≈ 835 wide (LW 817); at 900 (LW 882) the arms are 62.5. Not widened (Petr: SF-B800 stays 800).
 - **Not modelled: the disposer outlet elbow, the trap, the dishwasher hose and the sink's rectangular overflow tube.** The notch is open to the back only as wide as the disposer + 5; an outlet or hose that leaves the disposer sideways at plate height (z 642–660) would hit the arms. Check on site before the frame is made.
-- The frame's back panel spans the full width under the disposer (top z 259); a trap lower than that would clash: `open:`.
+- The frame's back panel spans the full width under the disposer (top z 259); a trap lower than that would clash: `open:`. (No back panel since t866u.)
 
 
 ### West run on an 835 grid; FILUR frame lower (2026-11-23, t848u / t849u)
@@ -2176,3 +2179,22 @@ Blum, catalogue 2024/25 [p. 282](https://publications.blum.com/2024/catalogue/en
 - Insides are not modelled: an opened door shows the appliance body.
 - `open:` **the end side to the floor** is a normal construction (a side “bis zum Boden” with the bottom fixed between the sides on connectors or angle brackets, `guess:`), but the side cannot be levelled by the legs: it needs scribing to the floor or its own levelling glides, and the floor must be flat along 582 mm. SF-C850's MERIVOBOX profile (z 118) on that side is unchanged. No conflict with SF-A250 (it is at the north end) or the dishwasher niche.
 - `open:` **pocket doors behind the run.** D-OP24 slides north into W-050 behind SF-C850 / SF-B800 (y 11.35–12.45) and D-OP25 south behind the dishwasher (y 12.75–13.85): no screws into the wall there (base fixing, the wall cabinets SF-CH850 / SF-AH850, the backsplash) without checking the pocket cassette.
+
+
+### FILUR frame without walls, white MERIVOBOX, decor panel colour (2026-11-23, t866u)
+
+> Petr (t866u): the dishwasher decor panel the same colour as the other fronts; the FILUR frame “must have NO side walls. MOVENTO runners screw to the MDF frame; the bins hang freely below with no wooden box around them”, 90° angle brackets inside from the MDF to the front for rigidity; MERIVOBOX hardware white (“Blum offers silk white / white; cream isn't an option”).
+
+| | Old | New |
+| --- | --- | --- |
+| SF-B800 frame side walls | 2 × 16 MDF, z 139–630 | **none** |
+| SF-B800 frame back panel | 16 × 120, z 139–259, full width under the disposer | **none**; a 16 × 16 × 40 rear hook block under each arm's back end (z 590–630) |
+| MOVENTO runner bottom (`profile_z`) | z 118 (carcass bottom) | **z 609** (plate underside 630 − 21), on the carcass sides |
+| Front to plate | front fixing only | + **2 × 90° steel angle 40 × 40 × 3, 30 wide**, inside, a −487.5…−457.5 and −377.5…−347.5 (on the bridge between the bins, in front of the disposer notch) |
+| Plate, holes, bins, NL 450 | unchanged | unchanged (plate top 648, bins 10 over the floor, lids 32 under the bowl) |
+| MERIVOBOX box colour | front cream | **Blum SW-M silk white matt** |
+| Dishwasher decor panel SF-A600-PANEL | white carcass in Realistic mode, grey in the renders | **kitchen cream, like every front** (`kitchen-front-cream`, id `-PANEL`); `Pset_KitchenFront` in the IFC |
+
+- **Blum** MOVENTO 760H is a runner for wooden drawers: the locking devices screw under a 12–16 drawer side and the rear hook goes into a Ø6 × 10 bore in the drawer back. Here the plate's 16 edge strip over each runner stands in for the side and the hook goes into a block under the arm. `open:` that Blum's locking devices and side adjustment work under an 18 MDF plate edge with no side; check with Blum or the joiner, or use a runner with a screw-on drawer profile.
+- `guess:` the angles (any 40 × 40 steel angle bracket, two 4 × 15 screws a leg), the blocks and the runner height. The bins and the disposer keep their clearances; nothing under the plate but the two blocks, so a trap under the disposer has the whole space below z 590 at the sides and below 630 in the middle.
+- The viewer draws a drawer as one node with two painted children: the cream front and the white box (`<drawer id>-BOX`). The FILUR frame's plate, blocks, angles and bins sit in the white child too (their own finish is `open:`). Inner drawers are white whole (their Blum aluminium front piece too, `guess:` colour).
