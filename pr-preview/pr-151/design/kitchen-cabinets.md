@@ -52,6 +52,7 @@ Petr's original document is the sticky-note plan [`KitchenPlan.jpg`](../../input
 | 25 | KR-WEST south end side on the plinth (z 100–910) | **Down to the floor (z 0–910)**, like the north niche panel; bottom fixed to it, legs and kickboard stop inside it | Petr (t865u): “should go all the way to floor, like north one does” |
 | 26 | SF-B800 FILUR frame with two 16 MDF side walls on the runners and a 120 back panel under the disposer (rows 16, 17) | **No side walls, no back panel**: the MOVENTO runners screw straight under the plate's 16 edge strips (runner bottom z 609, was 118 on the carcass bottom), a 16 × 16 × 40 block under each arm's back end for the rear hook, the bins hang free below the plate; **two 90° steel angles 40 × 40 × 3, 30 wide**, inside on the bridge between the bins, tie the plate to the decor front | Petr, 2026-11-23 (t866u): “NO side walls … bins hang freely below with no wooden box around them”; angles and blocks `guess:`; MOVENTO without drawer sides is `open:` |
 | 27 | MERIVOBOX boxes drawn in the front cream | **Blum SW-M silk white matt** (sides, backs, bases, inner drawers, SPACE TWIN upper box); fronts stay cream | Petr (t866u): “make merivobox hardware white”; colour name **Blum** (MERIVOBOX colours SW-M silk white matt, IG-M indium grey matt, OG-M orion grey matt) |
+| 28 | SF-T3 oven stack at the counter line: steam oven niche bottom 910, bottom band 810 (drawers 400 + 410) | **Lowered 110 for Zuzana (174 cm): niche bottom 800, bottom band 700 (drawers 350 + 350), microwave niche straight above, top door band 537 → 647**. SF-T3's drawers no longer line up with SF-T2 / SF-T4 (400 + 410) | Petr, 2026-11-23 (t869u) |
 
 ## Monoblocks
 
@@ -1788,7 +1789,7 @@ Every cream front, end panel, cladding and plinth (`kitchen-front-cream`) is **m
 | Dining base: SF-F052-DOOR1, SF-DN-S1…S4-D1, SF-F053-DOOR1 (6) | top | same |
 | Tall: SF-T2/T3/T4-D1, -D2 (6 drawers under the doors) | top | same |
 | Tall doors: SF-T1-DOOR1 (101–2449), SF-T2-DOOR1, SF-T4-DOOR1 (911–2449), SF-TC-DOOR1 (701–2449) | side | the same along the latch edge, full height |
-| Upper doors: SF-T3-DOOR1 (1904–2449), SF-TF-DOOR1/2 (1927–2449) | bottom | the same along the bottom edge (`guess:`) |
+| Upper doors: SF-T3-DOOR1 (1794–2449 since t869u, was 1904–2449), SF-TF-DOOR1/2 (1927–2449) | bottom | the same along the bottom edge (`guess:`) |
 
 33 fronts, about 23.5 m of grip.
 
@@ -2198,3 +2199,26 @@ Blum, catalogue 2024/25 [p. 282](https://publications.blum.com/2024/catalogue/en
 - **Blum** MOVENTO 760H is a runner for wooden drawers: the locking devices screw under a 12–16 drawer side and the rear hook goes into a Ø6 × 10 bore in the drawer back. Here the plate's 16 edge strip over each runner stands in for the side and the hook goes into a block under the arm. `open:` that Blum's locking devices and side adjustment work under an 18 MDF plate edge with no side; check with Blum or the joiner, or use a runner with a screw-on drawer profile.
 - `guess:` the angles (any 40 × 40 steel angle bracket, two 4 × 15 screws a leg), the blocks and the runner height. The bins and the disposer keep their clearances; nothing under the plate but the two blocks, so a trap under the disposer has the whole space below z 590 at the sides and below 630 in the middle.
 - The viewer draws a drawer as one node with two painted children: the cream front and the white box (`<drawer id>-BOX`). The FILUR frame's plate, blocks, angles and bins sit in the white child too (their own finish is `open:`). Inner drawers are white whole (their Blum aluminium front piece too, `guess:` colour).
+
+
+### SF-T3 oven stack lowered for Zuzana (2026-11-23, t869u)
+
+> Petr (t869u): lower the SF-T3 oven stack for Zuzana (174 cm): steam oven niche bottom 910 → about 800, microwave niche directly above it, the top band grows, the bottom band shrinks about 810 → 700 with its two drawers re-split.
+
+`Layout: "door * hinge=L shelves=1 | niche 0.356 clear=0.564 | niche 0.593 clear=0.564 | drawer 0.35 | drawer 0.35"` (was `drawer 0.4 | drawer 0.41`). The bottom band is exactly 700 (plinth top 100 → 800), so both drawers are whole-mm 350 slots; niche clear heights (593 / 356, inside Miele's 590–595 / 350–362) and the 9 mm packers are unchanged.
+
+| z (mm) | Old | New |
+| --- | --- | --- |
+| Bottom band (two drawers) | 100–910 (810) | **100–800 (700)** |
+| Lower drawer SF-T3-D2 (slot / front) | 100–510 / 101.5–508.5 (407) | **100–450 / 101.5–448.5 (347)** |
+| Upper drawer SF-T3-D1 (slot / front) | 510–910 / 511.5–908.5 (397) | **450–800 / 451.5–798.5 (347)** |
+| Board under the steam oven (BOARD3) | 910–928 | **800–818** |
+| Steam oven niche (clear 593), EA-DGC7465 body | 928–1521, body 929–1520 | **818–1411, body 819–1410** |
+| Board between the niches (BOARD2) | 1521–1539 | **1411–1429** |
+| Microwave niche (clear 356), EA-M2230 body | 1539–1895, body 1540–1894 | **1429–1785, body 1430–1784** |
+| Board over the microwave (BOARD1) | 1895–1913 | **1785–1803** |
+| Top door band (door hinged L, one shelf) | 1913–2450 (537), door 1904.5–2448.5 (544) | **1803–2450 (647), door 1794.5–2448.5 (654)**; shelf 2163.5 → 2108.5 |
+
+- Drawers: both stay MERIVOBOX E, NL 600, 70 kg, inside 531 × 558 × 176 (the E box fits a 350 slot as it fitted 400/410); top J grips unchanged. The upper door keeps its bottom-edge J grip (it still starts above 1400).
+- `open:` SF-T3's drawer joints (450, 800) no longer line up with SF-T2's and SF-T4's (510, 910). Not changed (not asked); say if they should follow.
+- `guess:` the ergonomics: steam oven door top 1412, microwave centre about 1607.
