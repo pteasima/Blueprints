@@ -614,7 +614,11 @@ systemFurniture:
         Properties:
           X: "SF-E600b.X"
           Y: "SF-E600b.Y + SF-E600b.Width"
-          Width: "SF-E600b.Width"
+          # Petr, 2026-11-23 (t851u): the north three inner drawers exactly
+          # 13 Gridfinity columns + 2 (inside 548 = clear - 51; clear = width
+          # - 27 at an end, width - 18 between dividers): SF-E600a 626,
+          # SF-E600b / SF-E600c 617; SF-E700 takes the rest (640).
+          Width: "0.626"
   - id: SF-E600b
     Name: "Ostrov východ 600"
     Description: "Island, east row. Second module, 607 (was 600) for whole Gridfinity cells. One full-height drawer (2026-11-20). Faces east."
@@ -659,7 +663,11 @@ systemFurniture:
         Properties:
           X: "SF-E600c.X"
           Y: "SF-E600c.Y + SF-E600c.Width"
-          Width: "SF-E600c.Width"
+          # Petr, 2026-11-23 (t851u): the north three inner drawers exactly
+          # 13 Gridfinity columns + 2 (inside 548 = clear - 51; clear = width
+          # - 27 at an end, width - 18 between dividers): SF-E600a 626,
+          # SF-E600b / SF-E600c 617; SF-E700 takes the rest (640).
+          Width: "0.617"
   - id: SF-E600c
     Name: "Ostrov východ 600"
     Description: "Island, east row. Third module, 607 (was 600) for whole Gridfinity cells. One full-height drawer (2026-11-20). Faces east."
@@ -704,7 +712,11 @@ systemFurniture:
         Properties:
           X: "SF-E700.X"
           Y: "SF-E700.Y + SF-E700.Width"
-          Width: "SF-E700.Width"
+          # Petr, 2026-11-23 (t851u): the north three inner drawers exactly
+          # 13 Gridfinity columns + 2 (inside 548 = clear - 51; clear = width
+          # - 27 at an end, width - 18 between dividers): SF-E600a 626,
+          # SF-E600b / SF-E600c 617; SF-E700 takes the rest (640).
+          Width: "0.617"
   - id: SF-E700
     Name: "Ostrov východ 700"
     Description: "Island, east row, south end. The remaining 700. One full-height drawer (2026-11-20). Faces east."
@@ -757,18 +769,27 @@ systemFurniture:
           # 21.672 before).
           X: "0.0 + 21.66"
           Y: "(SF-I300.Y - SF-I300.Width)"
-          Width: "(SF-I500a.Y - (SF-I300.Y - SF-I300.Width)) / 4"
+          # Petr, 2026-11-23 (t851u): the north three inner drawers exactly
+          # 13 Gridfinity columns + 2 (inside 548 = clear - 51; clear = width
+          # - 27 at an end, width - 18 between dividers): SF-E600a 626,
+          # SF-E600b / SF-E600c 617; SF-E700 takes the rest (640).
+          Width: "(SF-I500a.Y - (SF-I300.Y - SF-I300.Width)) - 0.626 - 2 * 0.617"
   - id: SF-A250
     Name: "Západ 250 úklid"
     Description: "Section A, south side. Cleaning pull-out, 232 (250 until 2026-11-22: the dishwasher slot's 18 end panel came out of it). Left when facing the west wall."
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
-    Origin: [19.4, 13.0]
+    Origin: [19.4, 13.02]
     RefDirection: [0, 1]
     # 2026-11-22 (FlushEnds): 250 -> 232, so the 600 dishwasher slot and its
     # 18 end panel fit before the OP25 jamb (y 13.85).
-    Width: 0.232
+    Width: 0.212
+    # Petr, 2026-11-23 (t848u): "if we go 835, then all of our top cabinets
+    # on the west run are the same 835? Lets do that." SF-B800 800 -> 835
+    # for the FILUR frame; the base sections follow the wall cabinets'
+    # grid: C 850 -> 835, B 800 -> 835, A 850 -> 830 (SF-A250 232 -> 212).
+    # Three 835s would be 2505, 5 over the fixed 2500 between the jambs.
     Depth: 0.6
     Height: 0.93
     PropertySets:
@@ -804,10 +825,15 @@ systemFurniture:
     PredefinedType: USERDEFINED
     ObjectType: WallCabinet
     ContainedInStructure: SP-1.02
-    Origin: [19.15, 13.0]
+    Origin: [19.15, 13.02]
     Elevation: 1.56
     RefDirection: [0, 1]
-    Width: 0.85
+    Width: 0.83
+    # Petr, 2026-11-23 (t848u): "if we go 835, then all of our top cabinets
+    # on the west run are the same 835? Lets do that." SF-B800 800 -> 835
+    # for the FILUR frame; the base sections follow the wall cabinets'
+    # grid: C 850 -> 835, B 800 -> 835, A 850 -> 830 (SF-A250 232 -> 212).
+    # Three 835s would be 2505, 5 over the fixed 2500 between the jambs.
     Depth: 0.35
     Height: 0.89
     PropertySets:
@@ -838,9 +864,14 @@ systemFurniture:
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
-    Origin: [19.4, 12.2]
+    Origin: [19.4, 12.185]
     RefDirection: [0, 1]
-    Width: 0.8
+    Width: 0.835
+    # Petr, 2026-11-23 (t848u): "if we go 835, then all of our top cabinets
+    # on the west run are the same 835? Lets do that." SF-B800 800 -> 835
+    # for the FILUR frame; the base sections follow the wall cabinets'
+    # grid: C 850 -> 835, B 800 -> 835, A 850 -> 830 (SF-A250 232 -> 212).
+    # Three 835s would be 2505, 5 over the fixed 2500 between the jambs.
     Depth: 0.6
     Height: 0.93
     PropertySets:
@@ -873,10 +904,15 @@ systemFurniture:
     PredefinedType: USERDEFINED
     ObjectType: WallCabinet
     ContainedInStructure: SP-1.02
-    Origin: [19.15, 12.2]
+    Origin: [19.15, 12.185]
     Elevation: 1.56
     RefDirection: [0, 1]
-    Width: 0.8
+    Width: 0.835
+    # Petr, 2026-11-23 (t848u): "if we go 835, then all of our top cabinets
+    # on the west run are the same 835? Lets do that." SF-B800 800 -> 835
+    # for the FILUR frame; the base sections follow the wall cabinets'
+    # grid: C 850 -> 835, B 800 -> 835, A 850 -> 830 (SF-A250 232 -> 212).
+    # Three 835s would be 2505, 5 over the fixed 2500 between the jambs.
     Depth: 0.35
     Height: 0.89
     PropertySets:
@@ -899,7 +935,12 @@ systemFurniture:
     ContainedInStructure: SP-1.02
     Origin: [19.4, 11.35]
     RefDirection: [0, 1]
-    Width: 0.85
+    Width: 0.835
+    # Petr, 2026-11-23 (t848u): "if we go 835, then all of our top cabinets
+    # on the west run are the same 835? Lets do that." SF-B800 800 -> 835
+    # for the FILUR frame; the base sections follow the wall cabinets'
+    # grid: C 850 -> 835, B 800 -> 835, A 850 -> 830 (SF-A250 232 -> 212).
+    # Three 835s would be 2505, 5 over the fixed 2500 between the jambs.
     Depth: 0.6
     Height: 0.93
     PropertySets:
@@ -924,7 +965,12 @@ systemFurniture:
     Origin: [19.15, 11.35]
     Elevation: 1.56
     RefDirection: [0, 1]
-    Width: 0.85
+    Width: 0.835
+    # Petr, 2026-11-23 (t848u): "if we go 835, then all of our top cabinets
+    # on the west run are the same 835? Lets do that." SF-B800 800 -> 835
+    # for the FILUR frame; the base sections follow the wall cabinets'
+    # grid: C 850 -> 835, B 800 -> 835, A 850 -> 830 (SF-A250 232 -> 212).
+    # Three 835s would be 2505, 5 over the fixed 2500 between the jambs.
     Depth: 0.35
     Height: 0.89
     PropertySets:
@@ -1222,7 +1268,8 @@ sanitaryTerminals:
     # drawer front: cut-out edge c 63 = 45 behind the front's inner face c 18,
     # guess:/open: ask the stone fabricator). Was c 20 (x 19.38) since
     # 2026-11-22 and c 80 (x 19.32) before.
-    Origin: [19.359, 12.225]
+    # Centred on SF-B800 (y 12.185-13.020 since t848u): 12.6025 - 0.375.
+    Origin: [19.359, 12.2275]
     # 0.93 counter − 0.02 worktop − 0.2 = 0.71 (rim under the stone).
     Elevation: 0.71
     RefDirection: [0, 1]

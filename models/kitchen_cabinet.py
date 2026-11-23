@@ -206,7 +206,7 @@ IKEA_DEFAULTS_MM = {
     "FrameNotchClearance": 5.0,  # notch edge to the disposer, each side (guess:)
     "FrameLiftClearance": 10.0,  # bins in front of the worktop edge when pulled out (guess:)
     "FrameTopClearance": 20.0,  # bin top (lid) under the sink bowl (guess:)
-    "FrameFloorGap": 10.0,  # minimum, hanging bin bottom over the carcass bottom (guess:)
+    "FrameFloorGap": 10.0,  # hanging bin bottom over the carcass bottom (Petr, 2026-11-23, t849u; was 22)
     "BinRim": 30.0,  # FILUR rim + lid above the plate (guess: Petr ~3 cm; IKEA lid package 3 cm)
     "BinTaper": 10.0,  # FILUR body under the rim, narrower a side (guess:)
 }
@@ -2736,11 +2736,14 @@ def _frame_pullout(bay: Bay, p: dict, zone: Zone, number: int, back_y: float, ob
     over = [ob[4] for ob, _top, _oid in obstacles
             if any(_plan_meet((a0, a1, bc[0], bc[1], 0, 0), ob) for a0, a1 in bins_plan)]
     roof = min(over) if over else zone.slot_z1 - g
-    plate_top = roof - p["FrameTopClearance"] - p["BinRim"]
-    bin_bottom = plate_top - (bh - p["BinRim"])
+    # Petr, 2026-11-23 (t849u): the bins hang FrameFloorGap over the carcass
+    # bottom; the plate follows. Their lids must stay FrameTopClearance
+    # under the lowest obstacle over them (the bowl).
+    bin_bottom = floor0 + p["FrameFloorGap"]
+    plate_top = bin_bottom + (bh - p["BinRim"])
     floor_gap = bin_bottom - floor0
-    if floor_gap < p["FrameFloorGap"] - TOL:
-        raise ValueError(f"{bay.id}: hanging bins reach the carcass bottom ({floor_gap:.0f} mm)")
+    if plate_top + p["BinRim"] > roof - p["FrameTopClearance"] + TOL:
+        raise ValueError(f"{bay.id}: hanging bins' lids reach the bowl ({roof - plate_top - p['BinRim']:.0f} mm)")
     side_z0 = floor0 + p["FrameRunnerBelow"]
     pz0 = plate_top - fb
 

@@ -84,10 +84,9 @@ def test_island_east_row_drawers_are_on_the_gridfinity_grid():
         assert (i1.drawer.box[4], i1.drawer.box[5]) == (pytest.approx(771.0), pytest.approx(862.0))
         assert (i2.drawer.box[4], i2.drawer.box[5]) == (pytest.approx(483.5), pytest.approx(612.5))
         assert i1.props["Latched"] and not i2.props.get("Latched")
-        # 2 mm play since 2026-11-23 (t841u): the end bays' 547 is 1 short of
-        # 13 columns (open: 626 / 624 / 624 / 626 would give 13 in all four).
-        cols = 13 if bay_id in ("SF-E600b", "SF-E600c") else 12
-        assert i1.drawer.grid == i2.drawer.grid == (cols, 10)
+        # Petr, 2026-11-23 (t851u): the north three exactly 13 columns with 2
+        # mm play (626 / 617 / 617), SF-E700 the rest (640, 14 over).
+        assert i1.drawer.grid == i2.drawer.grid == (13, 10)
         d = run.part(f"{bay_id}-D1").drawer
         assert round(d.front[5] - d.front[4]) == 807
         # Petr, 2026-11-22 (t795u): "the bottom main one doesnt need
@@ -103,14 +102,14 @@ def test_island_east_row_drawers_are_on_the_gridfinity_grid():
         # NL 550 - 26 - 16. The end bays (clear 598) are whole cells, the
         # middle ones (clear 607) 9 over. Petr, 2026-11-23 (t835u): east row
         # 530 deep, NL 500: inside depth 458 = 10 cells + 37.
-        slack = 8.0 if bay_id in ("SF-E600b", "SF-E600c") else 41.0
+        slack = 14.0 if bay_id == "SF-E700" else 0.0
         assert d.inside[0] == pytest.approx(n * 42.0 + 2.0 + slack) and d.inside[1] == pytest.approx(m * 42.0 + 2.0 + 36.0)
         part = run.part(f"{bay_id}-D1")
         assert part.props["System"] == "Blum MERIVOBOX" and part.props["NominalLength"] == pytest.approx(0.5)
         assert part.props["DrawerSide"] == "E" and i1.props["DrawerSide"] == "M" and i2.props["DrawerSide"] == "K"
         grids[bay_id] = i1.drawer.grid
-    assert grids == {"SF-E600a": (12, 10), "SF-E600b": (13, 10), "SF-E600c": (13, 10), "SF-E700": (12, 10)}
-    assert [run.bay(b).width for b in ("SF-E700", "SF-E600c", "SF-E600b", "SF-E600a")] == pytest.approx([625.0] * 4)
+    assert grids == {b: (13, 10) for b in ("SF-E600a", "SF-E600b", "SF-E600c", "SF-E700")}
+    assert [run.bay(b).width for b in ("SF-E700", "SF-E600c", "SF-E600b", "SF-E600a")] == pytest.approx([640.0, 617.0, 617.0, 626.0])
     assert sum(b.width for b in run.bays if not b.front_low) == pytest.approx(2500.0)
 
 
@@ -372,7 +371,7 @@ def test_island_clear_widths():
     assert clear == {
             # Petr, 2026-11-23 (t841u): 13, 12 and 11 Gridfinity columns with 2 mm play.
         "SF-I500a": 443.0, "SF-I600a": 557.0, "SF-I500b": 515.0, "SF-I600b": 599.0, "SF-I300": 278.0,
-        "SF-E600a": 598.0, "SF-E600b": 607.0, "SF-E600c": 607.0, "SF-E700": 598.0,
+        "SF-E600a": 599.0, "SF-E600b": 599.0, "SF-E600c": 599.0, "SF-E700": 613.0,
     }
 
 
@@ -469,10 +468,10 @@ def test_width_change_moves_dividers_and_worktop():
         if e["id"] == "SF-B800":
             e["Width"] = 0.9
         if e["id"] in ("SF-A250", "SF-A600"):
-            e["Origin"] = [e["Origin"][0], round(e["Origin"][1] + 0.1, 6)]
+            e["Origin"] = [e["Origin"][0], round(e["Origin"][1] + 0.065, 6)]  # 835 since t848u
     run = _runs(doc)["KR-WEST"]
     assert run.bay("SF-B800").clear_width == pytest.approx(882.0)
-    assert run.worktop[1] - run.worktop[0] == pytest.approx(2600.0)
+    assert run.worktop[1] - run.worktop[0] == pytest.approx(2565.0)
 
 
 def test_ifc_groups_and_assembly():
@@ -635,8 +634,8 @@ def test_gridfinity_drawers_fit_the_grid():
     # across; NL 500 since 2026-11-23 leaves 37 in depth.
     west = [f"open: {b}-D{i} inside {w} x 558 is +0 / +10 off the Gridfinity {n}x13 size (scripts/gridfinity_fit.py)"
             for b, w, n in (("SF-I600a", 506, 12), ("SF-I500b", 464, 11), ("SF-I600b", 548, 13)) for i in (1, 2, 3)]
-    # With 2 mm play the end bays' 547 is 1 short of 13 columns (t841u).
-    east = {"SF-E600a": (547, 12, 41), "SF-E600b": (556, 13, 8), "SF-E600c": (556, 13, 8), "SF-E700": (547, 12, 41)}
+    # Petr, 2026-11-23 (t851u): 13 columns exactly in the north three.
+    east = {"SF-E600a": (548, 13, 0), "SF-E600b": (548, 13, 0), "SF-E600c": (548, 13, 0), "SF-E700": (562, 13, 14)}
     assert [n for n in run.notes if "Gridfinity" in n] == west + [
         f"open: {b}-D1-I{k} inside {w} x 458 is +{sl} / +36 off the Gridfinity {n}x10 size (scripts/gridfinity_fit.py)"
         for b, (w, n, sl) in east.items() for k in (1, 2)]
@@ -655,7 +654,7 @@ def test_drawer_boxes_have_no_box_front_and_east_grid_is_inner_only():
     main = run.part("SF-E600a-D1")
     assert main.drawer.grid is None and not main.drawer.baseplate and main.props.get("Gridfinity") is None
     inner = run.part("SF-E600a-D1-I1")
-    assert inner.drawer.grid == (12, 10) and inner.drawer.baseplate  # 547 < 13 x 42 + 2
+    assert inner.drawer.grid == (13, 10) and inner.drawer.baseplate  # 548 = 13 x 42 + 2 (t851u)
     ib = inner.drawer.box
     assert inner.drawer.inside[1] == pytest.approx(abs(ib[3] - ib[2]) - 2 * p["BoxWall"])  # own front + back
 
@@ -951,25 +950,26 @@ def test_sink_frame_hangs_two_filur_bins_round_the_disposer():
     with a U-shaped MDF frame round the disposer, two holes (the FILUR's
     29 x 38 cm less 5 a side) each hanging one FILUR 42 l by its rim, on
     Blum concealed runners, BLUMOTION, manual opening; the shortest runner
-    that takes both bins past the worktop edge. SF-B800 stays 800."""
+    that takes both bins past the worktop edge. t848u: SF-B800 835 wide;
+    t849u: the bins hang 10 over the carcass bottom."""
     run = _runs()["KR-WEST"]
     part = run.part("SF-B800-D1")
     d = part.drawer
     fr = d.frame
-    assert run.bay("SF-B800").width == pytest.approx(800.0)
+    assert run.bay("SF-B800").width == pytest.approx(835.0)
     assert part.props["System"].startswith("Blum MOVENTO 760H") and part.props["RunnerArticle"] == "760H4501S"
     assert "MERIVOBOX" not in part.props["System"] and "TIP-ON" not in part.props["System"]
     assert fr["nl"] == 450 and d.extension == pytest.approx(450.0)
     assert fr["hole"] == pytest.approx((280.0, 370.0))
-    assert fr["skw"] == pytest.approx(782.0 - 42.0)
+    assert fr["skw"] == pytest.approx(817.0 - 42.0)
     # Bins 12 mm in front of the worktop edge (overhang 20) when pulled out;
     # NL 420 would leave them 18 mm under it.
     assert fr["lift"] == pytest.approx(12.0)
-    # Plate top 660: 50 under the bowl (710), lids 20 under it, bins 22 over
-    # the carcass bottom (118).
-    assert (fr["plate_top"], fr["top_gap"], fr["lid_gap"], fr["floor_gap"]) == pytest.approx((660.0, 50.0, 20.0, 22.0))
-    # Only 12.5 mm of MDF between each hole and the disposer notch at 800.
-    assert fr["strip"] == pytest.approx((12.5, 12.5))
+    # Bins 10 over the carcass bottom (118): plate top 648, 62 under the bowl
+    # (710), lids 32 under it.
+    assert (fr["plate_top"], fr["top_gap"], fr["lid_gap"], fr["floor_gap"]) == pytest.approx((648.0, 62.0, 32.0, 10.0))
+    # 30 mm of MDF between each hole and the disposer notch at 835.
+    assert fr["strip"] == pytest.approx((30.0, 30.0))
     disposer = run.part("EA-EVO3-W").boxes[0]
     pieces = [b for b in d.items if b not in fr["bins"]]
     assert not [b for b in pieces if kc._plan_meet(b, disposer) and b[5] > disposer[4] and b[4] < disposer[5]]
