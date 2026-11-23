@@ -1537,7 +1537,9 @@ class _Builder:
                                           f"and the bowl by {top_gap:.1f} mm on top (drawn sizes, no trap or outlet)")
                 inner = [x for x in str(zone.opts.get("inner", "")).split(",") if x.strip()]
                 boxes = drawer_boxes(dr, p)
-                inner_boxes = inner_drawers(p, dr, in_z1, inner) if inner else []
+                iclear = zone.opts.get("inner_clear")
+                inner_boxes = (inner_drawers(p, dr, in_z1, inner, float(iclear) * 1000.0 if iclear is not None else None)
+                               if inner else [])
                 latch = str(zone.opts.get("latch", "top")) if inner else None
                 if inner:
                     props.update(InnerDrawers=",".join(x.strip().upper() for x in inner), InnerSystem="Blum MERIVOBOX",
@@ -1613,6 +1615,7 @@ class _Builder:
                                          "DrawerSide": inner[k - 1].strip().upper(),
                                          "FrontPieceLength": round((bay.clear_width - p["MerivoboxInnerFrontDeduction"]) / 1000.0, 6),
                                          "SideHeight": round((ib[5] - ib[4]) / 1000.0, 6), "Latched": coupled,
+                                         "ClearAbove": round((in_z1 - ifloor) / 1000.0, 6),
                                          "Latch": "Blum ZI7.0M07" if coupled else None, "Parent": outer.id, "LoadClass": idr.load,
                                          "InsideWidth": round(iw / 1000.0, 6), "InsideDepth": round(idp / 1000.0, 6),
                                          "Gridfinity": f"{igrid[0]}x{igrid[1]}" if igrid else None,
@@ -1791,6 +1794,56 @@ class _Builder:
         with the lid open, base to the lid's top) is checked against that
         shelf and reported, not drawn."""
         p = self.p
+        # In an inner drawer (``Pset_BuiltIn.InnerDrawer``, t883u): on its
+        # floor, moving with it; ``Rotation: 90`` turns the footprint (its
+        # width along the drawer's depth); ``Faces`` N/S/E/W puts its front
+        # against that side of the drawer.
+        for ext in self.builtins:
+            if str(_prop(ext, PSET_BUILTIN, "Kind", "")) != "Standing":
+                continue
+            host_id = _prop(ext, PSET_BUILTIN, "InnerDrawer")
+            if not host_id:
+                continue
+            host = next((q for q in self.run.parts if q.id == host_id), None)
+            if host is None:
+                continue
+            bay = next(b for b in self.run.bays if b.id == _prop(ext, PSET_BUILTIN, "Bay"))
+            w, d, h = (float(_prop(ext, PSET_BUILTIN, k)) * 1000.0 for k in ("Width", "Depth", "Height"))
+            rot = int(_prop(ext, PSET_BUILTIN, "Rotation", 0) or 0) % 180
+            along, across = (d, w) if rot == 90 else (w, d)  # along the run (a), along the drawer depth (c)
+            idr = host.drawer
+            wall = p["BoxWall"]
+            a0, a1, c0, c1, _z0, _z1 = idr.box
+            ia0, ia1 = a0 + wall, a1 - wall
+            ic0, ic1 = c0 + wall, c1 - wall
+            if along > ia1 - ia0 + TOL or across > ic1 - ic0 + TOL:
+                raise ValueError(f"{ext['id']}: {along:g} x {across:g} does not fit {host_id}'s inside "
+                                 f"{ia1 - ia0:g} x {ic1 - ic0:g}")
+            faces = str(_prop(ext, PSET_BUILTIN, "Faces", "") or "").upper()
+            fr = self.run.frame
+            north_hi = fr.world(ia1, 0.0, 0.0)[1] > fr.world(ia0, 0.0, 0.0)[1]
+            at_hi = (faces == "N") == north_hi if faces in ("N", "S") else None
+            if at_hi is None:
+                x0 = (ia0 + ia1 - along) / 2.0
+            else:
+                x0 = ia1 - along if at_hi else ia0
+            cm = (ic0 + ic1) / 2.0
+            floor = idr.floor_z
+            body = (x0, x0 + along, cm - across / 2.0, cm + across / 2.0, floor, floor + h)
+            zone_top = floor + host.props["ClearAbove"] * 1000.0 if host.props.get("ClearAbove") is not None else None
+            part = self._builtin_part(ext, bay, [body], props={
+                "Bay": bay.id, "InnerDrawer": host_id, "Rotation": rot or None, "Faces": faces or None,
+                "InsideWidth": round((ia1 - ia0) / 1000.0, 6), "InsideDepth": round((ic1 - ic0) / 1000.0, 6),
+                "SpareAlongRun": round((ia1 - ia0 - along) / 1000.0, 6),
+                "SpareAcrossDepth": round((ic1 - ic0 - across) / 1000.0, 6),
+                "ClearanceAbove": round((zone_top - floor - h) / 1000.0, 6) if zone_top is not None else None,
+                "Parent": host.props.get("Parent"), "Latched": host.props.get("Latched")})
+            # It slides with its inner drawer (viewer: the same motion).
+            part.drawer = replace(idr, front=body, box=body, items=[], baseplate=[])
+            self.run.notes.append(
+                f"open: {ext['id']} in {host_id}: {along:g} along the run x {across:g} deep x {h:g}, "
+                f"inside {ia1 - ia0:g} x {ic1 - ic0:g}, faces {faces or '-'}"
+                + (f", {zone_top - floor - h:g} over it to the band top" if zone_top is not None else ""))
         for bay, zone, floor, top, back_y, racks in self.run.door_bands:
             for ext in self.builtins:
                 if str(_prop(ext, PSET_BUILTIN, "Kind", "")) != "Standing" or str(_prop(ext, PSET_BUILTIN, "Bay", "")) != bay.id:
@@ -2639,13 +2692,20 @@ def inner_side_height(p: dict, letter: str) -> float:
     return p[key]
 
 
-def inner_drawers(p: dict, dr: "Drawer", zone_top: float, letters: list) -> list[tuple]:
+def inner_drawers(p: dict, dr: "Drawer", zone_top: float, letters: list, clear: float | None = None) -> list[tuple]:
     """Inner drawer boxes behind one outer front (run frame mm), top first:
     the top one ``InnerTopGap`` under ``zone_top``, the rest spaced evenly
-    between it and the outer drawer's box, each the outer box's plan."""
+    between it and the outer drawer's box, each the outer box's plan.
+
+    ``clear`` (mm, the band's ``inner_clear=``): the top inner drawer's
+    floor sits that far under ``zone_top`` instead, so exactly that much
+    room is over it (Petr, 2026-11-23, t883u: the vacuum sealer's drawer
+    "just tall enough" for the closed sealer + 30)."""
     a0, a1, c0, c1, _bz0, bz1 = dr.box
     heights = [inner_side_height(p, x) for x in letters]
     top = zone_top - p["InnerTopGap"]
+    if clear is not None:
+        top = min(top, zone_top - clear - p["BoxBottomThickness"] + heights[0])
     free = top - bz1 - sum(heights)
     if free < 0:
         raise ValueError(f"inner drawers {letters} do not fit over the outer box ({free:.0f} mm short)")
