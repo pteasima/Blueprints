@@ -45,7 +45,7 @@ Petr's original document is the sticky-note plan [`KitchenPlan.jpg`](../../input
 | 18 | SF-B800 FILUR frame: bins 22 over the carcass bottom | **10** over it: plate top 660 → 648, 62 under the bowl | Petr, 2026-11-23 (t849u) |
 | 19 | — | **Petr to measure a real FILUR (rim height, outer dimensions) and the installed disposer / trap on site before the MDF frame is cut.** | Petr, 2026-11-23 (t848u): “Note in docs that I should measure this on site.” |
 | 20 | Island east 625 × 4 (t835u: equal widths) | **626 / 617 / 617 / 640** (SF-E600a / b / c / SF-E700, north to south), still 2500. Inner drawer insides 548 / 548 / 548 / 562 = **13 columns + 2 mm in the north three, SF-E700 13 + 14 spare** (were 12 / 13 / 13 / 12). **The fronts are no longer equal (623 / 614 / 614 / 637).** | Petr, 2026-11-23 (t851u): north three exactly 13 Gridfinity columns + 2 mm, the southmost takes the rest |
-| 21 | SF-A250 MERIVOBOX E pull-out | **Accepted for now at 212 wide (134 inside).** `open:` it may need a custom pull-out later instead of MERIVOBOX; Blum's narrow-cabinet alternative is SPACE TWIN | Petr, 2026-11-23 (t855u) |
+| 21 | SF-A250 one E pull-out with three shelves | **Blum SPACE TWIN, a MERIVOBOX application for narrow cabinets (KB 150–250): one front carrying a low M box and a tall E box on diagonally offset cabinet profiles; bottom LW − 51 = 134** at 212 wide. Standard MERIVOBOX parts, 20 kg per cabinet | Petr, 2026-11-23 (t855u: 212 accepted; t863u: “remodel SF-A250 as Blum SPACE TWIN”) |
 
 ## Monoblocks
 
@@ -237,7 +237,7 @@ Blum, *Catalogue and technical manual 2024/2025* (English), MERIVOBOX pages 250�
 - Inner drawers: M and K, any NL of that side; front piece ZV4.1042M (1042 long, for KB 1200), cut to **LW − 126**.
 - Waste bins: a **cabinet profile with over-extension for waste-bin applications** (453.4501BZ / .5001BZ / .5501BZ, 70 kg, cabinet NL 450–550 with drawer sides NL − 50) for E pull-outs. Not used in the model yet (SF-C850 is empty, SF-B800 uses a plain M box); `open:` for the bins.
 - Sink cabinets: Blum's own answer is the **drawer M or pull-out E with a centre piece** (a U-shaped box round the siphon, exterior NL 450–600, interior NL 300–450). Petr chose a plain low M box with upright FILUR bins instead (2026-11-23).
-- Narrow cabinets: **SPACE TWIN** for cabinet widths KB 150–250 (M, K or E sides). **SF-A250 (232 wide) is in that range**; the model draws it as an ordinary E pull-out.
+- Narrow cabinets: **SPACE TWIN** for cabinet widths KB 150–250 (M, K or E sides), part of MERIVOBOX with its standard parts (bottom and back LW − 51). SF-A250 (212 wide) uses it since t863u.
 - Cabinet widths: Blum NZ gives MERIVOBOX drawers and pull-outs 275–1400 wide and inner drawers 275–1200 (`guess:` that the European range is the same).
 
 ## Worktop and cladding
@@ -2027,7 +2027,7 @@ Inside is width × depth × side height above the base. “Below front” is how
 
 - **Island west top drawers (100 fronts) get M boxes that hang 26 (D1) and 34 (D2) below their fronts' own band**: the Blum space requirement of M is 108 and the top band loses 18 to the top rail. The box base shows below the front's lower edge when the drawer is open. Alternatives: N boxes (68.5, made for about 100 fronts) at **NL 550** (N is not made in 600), or taller top fronts. Under the hob only the 100 drawer drops (8).
 - Tall run drawers (400 / 410 fronts) and every E box: E is the tallest European MERIVOBOX side (192), so the tall run's drawer insides drop from 274 / 284 to **176** high; inner pull-outs (E) behind the same fronts would win the height back. Same for SF-I300 and SF-A250's “shelves”, which stand for inner pull-outs or a rack behind the front (`guess:`).
-- **SF-A250 is 232 wide: below the usual MERIVOBOX range (275+); Blum's narrow-cabinet product is SPACE TWIN (KB 150–250).** The model draws an ordinary E pull-out.
+- ~~SF-A250 is 232 wide: below the usual MERIVOBOX range (275+).~~ Wrong: 275–1200 is SPACE TOWER's range, and SPACE TWIN (KB 150–250) is itself a MERIVOBOX application. See “SF-A250: SPACE TWIN”.
 - Every carcass with NL 600 / 500 is at Blum's minimum (NL + 3): a thicker front (`open:` for the woodworker) or a thicker back takes a whole NL step.
 - The island is 1180, not 1199: the east carcass is the Blum minimum. If Petr wants about 20 unused behind the east boxes, the east row goes 530 → 550 and the island to 1200.
 - Inner drawers: same NL and inside depth as the main box in the model (their aluminium front piece is drawn 19 thick).
@@ -2108,7 +2108,7 @@ Petr (t842u): replace the MERIVOBOX M and the standing FILURs with a custom U-sh
 | MOVENTO NL, bins past the worktop edge | 450, 12 | 450, 12 (unchanged) |
 
 - The wall cabinets share the base sections' grid (C, B, A over C, B, A; the same Petr notes A/B/C on both), so they follow; they cannot all be 835 in 2500.
-- **SF-A250 at 212 (clear 185, inside 134) is even further below MERIVOBOX's usual widths; Blum's narrow-cabinet product is SPACE TWIN (KB 150–250).**
+- SF-A250 at 212 (clear 185, inside 134) is inside the MERIVOBOX SPACE TWIN range (KB 150–250); modelled as SPACE TWIN since t863u.
 - AVENTOS HF fronts are now 827 / 832 / 832 wide (9.3–9.4 kg, still in the HF range, model check).
 - `guess:` the hanging bins (bottom z 128) stand 10 inside the frame sides; the MOVENTO runners sit under the sides (z 118–139), so a bin passes about 10 mm beside a runner. The back panel (z 139–259, behind the bins) still passes 83 under the disposer.
 - **Petr to measure a real FILUR (rim height, outer dimensions) and the installed disposer / trap on site before the MDF frame is cut** (t848u).
@@ -2130,3 +2130,23 @@ Inner drawer inside = clear − 51 (MERIVOBOX LW − 51); clear = width − 27 a
 - Depth 10 × 42 + 36 spare is unchanged (inside 458).
 - **The fronts are no longer equal (623 / 614 / 614 / 637, 3 gap), which goes against Petr's earlier “they should be the same width” (t835u); SF-E700 is 23 wider than the middles.** The east row has no module lines on the west side, so the island's two rows do not line up anyway.
 - **0 mm spare in the north three: 2 mm play is the whole tolerance. The MERIVOBOX LW − 51 deduction and the carcass sides have to be as specified (`open:` check on site).**
+
+### SF-A250: SPACE TWIN (2026-11-23, t863u)
+
+> Petr (t858u): “Does merivobox really not solve that? Why, I though you can cut the back and bottom to whatever.” t863u: remodel SF-A250 as Blum SPACE TWIN.
+
+Blum, catalogue 2024/25 [p. 282](https://publications.blum.com/2024/catalogue/en/282/) and p. 283; [SPACE TWIN brochure](https://d2.blum.com/services/BEC003/me59462084_ep_dok_bau_$sen-ca_$aof_$v1.pdf):
+
+- SPACE TWIN is listed under MERIVOBOX › Narrow cabinets, cabinet width KB 150–250 (a newer brochure says 130–250, `open:`), 20 kg dynamic per base cabinet, BLUMOTION integrated.
+- One front carries two standard MERIVOBOX boxes; the cabinet profiles are diagonally offset (one box on the left profile, the other on the right), which keeps a narrow pull-out stable.
+- Cutting as standard MERIVOBOX: bottom and back LW − 51, base NL − 26; back height M 83 / E 184. Installation height X: M 54, K 92, E 155.
+
+| | Old | New |
+| --- | --- | --- |
+| Layout | `pullout * items=shelves n=3` | `pullout * box=M twin=E` |
+| Boxes | one E (z 133–325) with three shelves | **M low** (z 133–224, left profile at 118) + **E high** (z 698–890, right profile at 683) |
+| Inside width | 134 | 134 (LW 185 − 51) |
+| Load | 70 kg class | 20 kg (SPACE TWIN, per cabinet) |
+
+- `guess:` the upper box sits as high as the band allows (2 under the top limit); Blum gives installation heights, not where the upper box goes. From the M floor (z 149) to the bottom of the E box: 549 for bottles.
+- `guess:` the lower box takes the left profile and the upper the right, as drawn on p. 283; the model draws boxes, not profiles.
