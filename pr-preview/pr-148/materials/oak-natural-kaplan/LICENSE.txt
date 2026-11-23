@@ -1,3 +1,0 @@
-Source: Poly Haven "Oak Veneer 01" by Jenelle van Heerden, https://polyhaven.com/a/oak_veneer_01 (CC0 1.0).
-Modified: re-tinted to #aa7e60 (Kaplan 1934 oak 'Přírodní D 02' swatch, measured), normal flattened to 60 %,
-roughness re-centred on 0.45 for matt lacquer. Physical size of one repeat: 1.83 m.
