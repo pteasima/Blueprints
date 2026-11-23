@@ -62,6 +62,7 @@ Petr's original document is the sticky-note plan [`KitchenPlan.jpg`](../../input
 | 35 | SF-E600a: E box + inner M (coupled, 771–862) + K (483.5–612.5) | **E box + one inner K (621–750)**, its floor 637 exactly 255 (sealer 225 + 30) under the band top 892; no Gridfinity in SF-E600a | Petr (t883u) |
 | 36 | Island east widths N→S 626 / 617 / 617 / 640 (SF-E700 off the Gridfinity grid) | **640 / 617 / 617 / 626**: SF-E600a (north) off the grid (inside 562), SF-E700 548 inside = 13 columns + 2 | Petr (t883u) |
 | 37 | Tall north-wall doors (SF-T1, SF-T2, SF-T4, SF-TC): J grip on the side | **Upside-down J on the bottom edge** (SF-T3's top door already had it); **SF-T1 split into two doors**, both hinged L, 597 × 1172 each (101.5–1273.5 and 1276.5–2448.5; was one 597 × 2347), two shelves each (placeholders) | Petr (t883u) |
+| 38 | SF-T1 split in two equal doors 597 × 1172 (101.5–1273.5, 1276.5–2448.5), both bottom J | **Split on the oven columns' line: lower door 597 × 694 (101.5–795.5, normal top J, like the T2/T3/T4 drawer fronts), board 797–815, upper door 597 × 1650 (798.5–2448.5, upside-down bottom J, like the T2/T4 doors)**; both hinged L; shelves 1 below / 3 above (placeholders); contents: lower “nápoje, basy od piva”, upper “plechovky, vývary, trvanlivé potraviny” | Petr, 2026-11-23 (t887u) |
 
 ## Monoblocks
 
@@ -2323,3 +2324,4 @@ Read as: the steam oven niche (and the pantry floor, and T4's door band) starts 
 - **Island east, N→S**: SF-E600a 626 → **640** (clear 613, inside 562, off the grid), SF-E600b / SF-E600c 617 (unchanged), SF-E700 640 → **626** (inside 548 = 13 × 42 + 2).
 - **Grips**: `grip=bottom` on SF-T1 (both doors), SF-T2, SF-T4, SF-TC; the J profile is mirrored at the bottom edge (upside down). SF-T3's top door and the cabinet over the fridge (SF-TF) already had it.
 - **SF-T1**: `door * … | door 1.175 …`: two equal bands of 1175 from the plinth top, doors 597 × 1172 each (gap 3 between them), hinged L with the filler on the wall side as before.
+- **SF-T1, t887u**: `door * hinge=L width=0.6 shelves=3 grip=bottom | door 0.697 hinge=L width=0.6 shelves=1 grip=top`: the lower band is 100–797 like the T2 / T4 drawer bands, so the lower door (101.5–795.5) lines up with the drawer fronts and the upper door (798.5–2448.5) with the T2 / T4 doors; a hinged door at the bottom instead of a drawer.

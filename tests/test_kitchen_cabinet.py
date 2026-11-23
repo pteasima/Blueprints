@@ -131,7 +131,8 @@ def test_tall_doors_hinge_as_the_notes_say():
     assert len(shelves) == 4
     # t883u: T1 split into two doors; the lower band's shelves are SH2.
     t1_shelves = sorted(p.boxes[0][4] for p in runs["KR-TALL-W"].parts if p.id.startswith("SF-T1-SH2-"))
-    assert t1_shelves[0] == pytest.approx(118.0 + 400.0)
+    # t887u: one placeholder shelf in the lower door's band (118-797).
+    assert len(t1_shelves) == 1 and 118.0 < t1_shelves[0] < 797.0
 
 
 def test_oven_column_niches_fit_miele():

@@ -250,8 +250,13 @@ systemFurniture:
           # halves stay hinged)", upside-down J grips on the bottom edges.
           # Two equal bands of 1175 (plinth top 100 to 2450), two shelves
           # each (placeholders; the lowest still 400 over the bottom).
-          Layout: "door * hinge=L width=0.6 shelves=2 grip=bottom | door 1.175 hinge=L width=0.6 shelves=2 first=0.4 grip=bottom"
-          Contents: "dole nápoje, basy od piva / nahoře plechovky, vývary, trvanlivé potraviny"
+          # t887u: the split matches the oven columns: the lower door's band
+          # 100-797 like the T2/T4 drawers (front 101.5-795.5, normal top J
+          # grip), board 797-815, upper door 798.5-2448.5 like the T2/T4
+          # doors (upside-down bottom J). Shelves are placeholders. The
+          # note's "dole" / "nahoře" go to the lower / upper door.
+          Layout: "door * hinge=L width=0.6 shelves=3 grip=bottom | door 0.697 hinge=L width=0.6 shelves=1 grip=top"
+          Contents: "plechovky, vývary, trvanlivé potraviny; nápoje, basy od piva"
       - Name: Pset_CabinetDoor
         Properties:
           HingeSide: "L"
