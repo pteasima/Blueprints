@@ -55,6 +55,7 @@ Petr's original document is the sticky-note plan [`KitchenPlan.jpg`](../../input
 | 28 | SF-T3 oven stack at the counter line: steam oven niche bottom 910, bottom band 810 (drawers 400 + 410) | **Lowered 110 for Zuzana (174 cm): niche bottom 800, bottom band 700 (drawers 350 + 350), microwave niche straight above, top door band 537 → 647**. SF-T3's drawers no longer line up with SF-T2 / SF-T4 (400 + 410) | Petr, 2026-11-23 (t869u) |
 | 29 | Under the oven line two drawers in SF-T2 / SF-T3 / SF-T4 (400 + 410 to 910 in T2/T4, 350 + 350 to 800 in T3) | **One outer drawer each, band 100–782, fronts 101.5–780.5 level in all three; oven niche from 800** (board 782–800). SF-T3: E box with only one shelf for oven trays; SF-T2 / SF-T4: E box with one MERIVOBOX M inner drawer. T2/T4 doors grow down to 783.5 | Petr, 2026-11-23 (t870u) |
 | 30 | SF-T2 pantry: four shelves | **Three (the lowest gone); the Maxxo VM Chamber Line 40 vacuum sealer on the pantry floor (z 800)**; door racks kept | Petr (t870u); sealer size from retailers' spec tables, lid-open height `guess:` |
+| 31 | SF-T3 tray shelf in the drawer (on the E box, z 325–344) | **Fixed shelf in the carcass, z 643–661** (top at the SF-T2 / SF-T4 inner drawers' bottom, 661), 20 behind the drawer front, no front, no runners; the drawer and its E box (top 325) slide under it | Petr, 2026-11-23 (t871u) |
 
 ## Monoblocks
 
@@ -2234,7 +2235,7 @@ Read as: the steam oven niche (and the pantry floor, and T4's door band) starts 
 
 | z (mm) | Old (t869u) | New |
 | --- | --- | --- |
-| SF-T3 below the oven | drawers 350 + 350, fronts 101.5–448.5 / 451.5–798.5 | **one drawer, front 101.5–780.5 (679)**, E box, one shelf 325–344 on the box's top edge, no inner drawers |
+| SF-T3 below the oven | drawers 350 + 350, fronts 101.5–448.5 / 451.5–798.5 | **one drawer, front 101.5–780.5 (679)**, E box, no inner drawers; tray shelf: see t871u below (fixed in the carcass, 643–661) |
 | SF-T3 board under the oven | 800–818 | **782–800** |
 | Steam oven niche (clear 593), body, fascia | 818–1411, 819–1410, 816.5–1412.5 | **800–1393, 801–1392, 798.5–1394.5** |
 | Board between the niches | 1411–1429 | **1393–1411** |
@@ -2259,6 +2260,22 @@ Read as: the steam oven niche (and the pantry floor, and T4's door band) starts 
 | Door racks | at the door, c 17.5–98, lowest 1081.5–1151.5: in front of the sealer, no clash with the door shut |
 
 - `open:` a socket in the pantry for the sealer (none modelled), and heat: a 300 W pump in a closed cupboard is used with the door open.
-- `open:` SF-T3's shelf: it lies on the E box's top edge (z 325, `at=0.176`), oven trays on it; how it is held (on the BOXCAP / gallery, or a board in its own runners) is the joiner's. 176 mm of box below it.
+- (Superseded by t871u: the tray shelf was first drawn on the E box's top edge, z 325–344, as part of the drawer.)
 - **The line at 800 is not one line in the front view:** the drawer fronts end at 780.5 in all three columns, the T2 / T4 doors start at 783.5 (covering their board), but the oven fascia starts at 798.5 and the 18 board edge 782–800 shows between it and SF-T3's drawer (as before, one board higher). Say if the T2/T4 doors should start at 798.5 too (they would leave the same 18 strip of board visible) or the drawer front should be taller.
 - Fronts of 679 on an E box (192 high): the tall front pull-out with the top front fixing bracket, as on the island (**Blum**: E pull-outs add the top front fixing bracket).
+
+
+### SF-T3 tray shelf fixed in the carcass; tall shelf heights are placeholders (2026-11-23, t871u)
+
+> Petr (t871u): the SF-T3 oven-tray shelf must not be part of the bottom drawer: a fixed shelf in the carcass at the height of the MERIVOBOX inner drawers in SF-T2 / SF-T4, no front, no runners, just a shelf for laying trays on. The outer drawer front with its E box stays the only pull-out.
+
+| | Old (t870u) | New |
+| --- | --- | --- |
+| Tray shelf | in the drawer, on the E box's top edge, z 325–344 | **SF-T3-SH4-1, fixed, z 643–661** (18 board), a 609–1191 (the clear width), c 38–621 |
+| Its level | — | top 661 = the bottom of the SF-T2 / SF-T4 inner drawer boxes (661–752); 121 free over it to the board under the oven (782) |
+| Drawer SF-T3-D1 | front 101.5–780.5, E box 133–325 with the shelf | front 101.5–780.5, E box 133–325, **nothing else**; the shelf is 318 over the box top and 20 behind the front's back face, so the drawer pulls out under it |
+
+- Modelled as `drawer 0.682 box=E shelf=0.661` (`shelf=` the fixed shelf's top z in metres; the export stops if it is not over the drawer box or reaches the band top).
+- `guess:` the shelf's depth (front 20 behind the drawer front, like every shelf) and its fixing (shelf pins in the carcass sides). With the drawer shut the trays are reached only with the drawer pulled out.
+
+**Tall cabinet shelf heights are placeholders.** Every shelf position in the tall run (SF-T1, SF-T2, SF-T3, SF-T4, SF-TF): the evenly spread door-band shelves, SF-T2's three shelves after the sealer (1442 / 1772 / 2102), SF-T3's top-door shelf, and this tray shelf's 661, is a placeholder for the drawings. **The exact positions are to be decided later** (Petr, t871u). Only the vacuum sealer's fit check depends on one: it needs the lowest SF-T2 shelf at 800 + the real lid-open height or higher.
