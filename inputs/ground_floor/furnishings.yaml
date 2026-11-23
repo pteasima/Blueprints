@@ -797,11 +797,13 @@ systemFurniture:
         Properties:
           Run: KR-WEST
       # Note A: "dole vlevo suplik uklid (mycka, jar, odmastovac, houbicky)".
-      # A full-height pull-out (the yaml's "cleaning pull-out") with three
-      # baskets (count guess:).
+      # A full-height pull-out (the yaml's "cleaning pull-out").
+      # Petr, 2026-11-23 (t863u): Blum SPACE TWIN (MERIVOBOX, KB 150-250):
+      # one front carrying a low M box and a tall E box on diagonally offset
+      # profiles; bottom LW - 51 = 134. Was one E box with three shelves.
       - Name: Pset_Fronts
         Properties:
-          Layout: "pullout * items=shelves n=3"
+          Layout: "pullout * box=M twin=E"
           Contents: "úklid (do myčky, jar, odmašťovač, houbičky)"
   - id: SF-A600
     Name: "Západ 600 myčka"

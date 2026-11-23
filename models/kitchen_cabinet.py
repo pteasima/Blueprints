@@ -103,6 +103,7 @@ IKEA_DEFAULTS_MM = {
     "InnerSideN": 68.5,
     "MerivoboxProfileBelow": 15.0,  # space requirement − side − tilt (Blum: 108 − 91 − 2)
     "MerivoboxTilt": 2.0,  # "incl. 2 mm tilt adjustment" (Blum)
+    "SpaceTwinLoad": 20,  # Blum SPACE TWIN: 20 kg dynamic per base cabinet (catalogue 2024/25 p. 282)
     # Base and chipboard back LW − 51 wide, LW the cabinet's inside width
     # (Blum); the inside width is taken as that base width (guess: the side
     # profiles' inner faces). The cabinet needs NL + 3 inside depth ("internal
@@ -455,6 +456,7 @@ class Drawer:
     drop: float = 0.0  # mm the box sits below its band's own position (stacking, see _drawer)
     profile_z: float = 0.0  # bottom of the cabinet profile (Blum space requirement), mm
     frame: dict | None = None  # hanging-bin frame pull-out (``frame=u``): its sizes, see _frame_pullout
+    twin: dict | None = None  # Blum SPACE TWIN (``twin=E``): the upper box and its profile, see _drawer
 
 
 @dataclass
@@ -1462,6 +1464,17 @@ class _Builder:
                              Gridfinity=f"{dr.grid[0]}x{dr.grid[1]}" if dr.grid else None,
                              GridfinitySlackWidth=round(gridfinity_cells(p, dr.inside[0])[1] / 1000.0, 6) if dr.grid else None,
                              GridfinitySlackDepth=round(gridfinity_cells(p, dr.inside[1])[1] / 1000.0, 6) if dr.grid else None)
+                if dr.twin:
+                    tw = dr.twin
+                    props.update(System="Blum MERIVOBOX SPACE TWIN (BLUMOTION, manual opening)",
+                                 Items=None, ItemKind=None,
+                                 TwinBoxes=f"{dr.side} (low) + {tw['side']} (high)",
+                                 TwinUpperBoxBottom=round(tw["box"][4] / 1000.0, 6),
+                                 TwinProfiles="lower box: left cabinet profile; upper box: right (diagonally offset)",
+                                 TwinProfileHeights=f"{dr.profile_z:g} / {tw['profile_z']:g}")
+                    self.run.notes.append(
+                        f"open: {bay.id} SPACE TWIN {dr.side} + {tw['side']}: inside {dr.inside[0]:g} wide, profiles at "
+                        f"z {dr.profile_z:g} (left) and {tw['profile_z']:g} (right); upper box height is a guess")
                 if dr.grid:
                     sw = gridfinity_cells(p, dr.inside[0])[1]
                     sd = gridfinity_cells(p, dr.inside[1])[1]
@@ -2652,6 +2665,31 @@ def _drawer(bay: Bay, p: dict, zone: Zone, number: int, back_y: float, ceiling: 
     floor_z = bz0 + p["BoxBottomThickness"]
     item_top = zone.slot_z1 - g - p["BoxHeightReserve"]
     items = _items(p, zone, box, out_dir, item_top, floor_z)
+    twin = None
+    if zone.opts.get("twin"):
+        # Blum SPACE TWIN (MERIVOBOX, narrow cabinets KB 150-250, catalogue
+        # 2024/25 pp. 282-283): one front carries two standard MERIVOBOX boxes,
+        # each on one cabinet profile, diagonally offset (lower box on the
+        # left profile, upper box on the right, as drawn on p. 283). The low
+        # box is this drawer's own (box=); the upper one (twin=) sits as high
+        # as the band allows (guess:, Blum gives installation heights X, not
+        # the upper box position).
+        up = str(zone.opts["twin"]).strip().upper()
+        uh = inner_side_height(p, up)
+        utop = (limit if limit is not None else roof) - tilt
+        uz0 = utop - uh
+        if uz0 - below < box[5] + tilt - TOL:
+            raise ValueError(f"{bay.id}: SPACE TWIN {letter} + {up} do not fit one above the other "
+                             f"({box[5] + tilt - uz0 + below:.0f} mm short)")
+        ubox = (box[0], box[1], box[2], box[3], uz0, utop)
+        back_lo = out_dir > 0
+        uback = (ubox[0], ubox[1], ubox[2], ubox[2] + wall, uz0, utop) if back_lo else \
+            (ubox[0], ubox[1], ubox[3] - wall, ubox[3], uz0, utop)
+        items = items + [(ubox[0], ubox[1], ubox[2], ubox[3], uz0, uz0 + p["BoxBottomThickness"]),
+                         (ubox[0], ubox[0] + wall, ubox[2], ubox[3], uz0, utop),
+                         (ubox[1] - wall, ubox[1], ubox[2], ubox[3], uz0, utop), uback]
+        twin = {"side": up, "box": ubox, "profile_z": uz0 - below, "lower_profile": "left",
+                "upper_profile": "right", "floor_z": uz0 + p["BoxBottomThickness"]}
     grid = None
     if grid_here:
         n, _sw = gridfinity_cells(p, inner_w)
@@ -2669,8 +2707,8 @@ def _drawer(bay: Bay, p: dict, zone: Zone, number: int, back_y: float, ceiling: 
                   kind=zone.kind, items=items, zone=zone.index,
                   inside=(inner_w, inner_d, box[5] - floor_z), floor_z=floor_z, grid=grid,
                   baseplate=baseplate, side=letter, nl=nl,
-                  load=merivobox_load(p, zone.kind, letter, inner_w, nl), drop=drop,
-                  profile_z=bz0 - below)
+                  load=p["SpaceTwinLoad"] if twin else merivobox_load(p, zone.kind, letter, inner_w, nl), drop=drop,
+                  profile_z=bz0 - below, twin=twin)
 
 
 def _frame_pullout(bay: Bay, p: dict, zone: Zone, number: int, back_y: float, obstacles: list,
