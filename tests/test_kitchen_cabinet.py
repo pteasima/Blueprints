@@ -52,19 +52,20 @@ def test_island_drawer_bays_follow_the_notes():
     run = _runs()["KR-ISL"]
     for bay_id, contents in (
         ("SF-I600a", ["nože", "nářadí", "", "dole nevím"]),
-        ("SF-I500b", ["koření", "", "", "hrnce"]),
-        ("SF-I600b", ["příbory", "oleje, octy, dochucovadla", "vařečky, stěrky, naběračky, pánve"]),
+        ("SF-I500b", ["koření", "oleje, octy, dochucovadla", "hrnce"]),
+        ("SF-I600b", ["příbory", "", "", "vařečky, stěrky, naběračky, pánve"]),
     ):
         drawers = [run.part(f"{bay_id}-D{i}").drawer for i in range(1, len(contents) + 1)]
         assert [d.content for d in drawers] == contents
-    # Petr, 2026-11-24 (t976u): west stacks fully modelled, 3 mm gaps, D1 140.
+    # Petr, 2026-11-24 (t977u): tall E is in the middle cabinet SF-I500b;
+    # I600a and the hob I600b share the four-drawer stack.
     fronts = {}
-    for b, ids in (("SF-I600a", (1, 2, 3, 4)), ("SF-I500b", (1, 2, 3, 4)), ("SF-I600b", (1, 2, 3))):
+    for b, ids in (("SF-I600a", (1, 2, 3, 4)), ("SF-I500b", (1, 2, 3)), ("SF-I600b", (1, 2, 3, 4))):
         fronts[b] = [run.part(f"{b}-D{i}").drawer.front[5] - run.part(f"{b}-D{i}").drawer.front[4]
                      for i in ids]
     assert fronts["SF-I600a"] == pytest.approx([140.0, 108.0, 207.0, 344.5])
-    assert fronts["SF-I500b"] == pytest.approx([140.0, 108.0, 207.0, 344.5])
-    assert fronts["SF-I600b"] == pytest.approx([140.0, 318.0, 344.5])
+    assert fronts["SF-I500b"] == pytest.approx([140.0, 318.0, 344.5])
+    assert fronts["SF-I600b"] == pytest.approx([140.0, 108.0, 207.0, 344.5])
     # Best effort, 2026-11-19: the sink bay a door, the 300 a pull-out.
     # Petr, 2026-11-20: "east side of kitchen island are 4 large full height drawers".
     assert run.part("SF-I500a-DOOR1").door.hinge == "L"
@@ -583,8 +584,9 @@ def test_drawer_motions_in_model():
     drawers = [m for m in meta["door_motions"] if m["kind"] == "drawer"]
     island = [m for m in drawers if m["id"].startswith("SF-I")]
     assert [m["id"] for m in island] == (
-        [f"{b}-D{i}" for b in ("SF-I600a", "SF-I500b") for i in (1, 2, 3, 4)]
-        + [f"SF-I600b-D{i}" for i in (1, 2, 3)]
+        [f"SF-I600a-D{i}" for i in (1, 2, 3, 4)]
+        + [f"SF-I500b-D{i}" for i in (1, 2, 3)]
+        + [f"SF-I600b-D{i}" for i in (1, 2, 3, 4)]
         + ["SF-I300-D1"]
     )
     for m in drawers:
@@ -668,7 +670,7 @@ def test_hob_flush_fit_in_sf_i600b():
 def test_gridfinity_drawers_fit_the_grid():
     run = _runs()["KR-ISL"]
     p = run.params
-    drawers_of = {"SF-I600a": (1, 2, 3, 4), "SF-I500b": (1, 2, 3, 4), "SF-I600b": (1, 2, 3)}
+    drawers_of = {"SF-I600a": (1, 2, 3, 4), "SF-I500b": (1, 2, 3), "SF-I600b": (1, 2, 3, 4)}
     for bay, ids in drawers_of.items():
         for i in ids:
             d = run.part(f"{bay}-D{i}").drawer
@@ -691,8 +693,8 @@ def test_gridfinity_drawers_fit_the_grid():
         f"open: {b}-D{i} inside {w} x {d} is +0 / +{sl} off the Gridfinity {n}x{rows} size (scripts/gridfinity_fit.py)"
         for b, w, n, d, sl, rows, ids in (
             ("SF-I600a", 506, 12, 558, 10, 13, (1, 2, 3, 4)),
-            ("SF-I500b", 464, 11, 558, 10, 13, (1, 2, 3, 4)),
-            ("SF-I600b", 548, 13, 458, 36, 10, (1, 2, 3)),  # NL 500, t939u; 11 rows need 464
+            ("SF-I500b", 464, 11, 558, 10, 13, (1, 2, 3)),
+            ("SF-I600b", 548, 13, 458, 36, 10, (1, 2, 3, 4)),  # NL 500, t939u; 11 rows need 464
         ) for i in ids
     ]
     # Petr, 2026-11-23 (t851u): 13 columns exactly in the north three.
@@ -747,15 +749,16 @@ def test_hob_ventilation_in_sf_i600b():
     d1 = run.part("SF-I600b-D1").drawer
     assert d1.props.get("NominalLength") in (0.5, 500, "0.5") or d1.inside[1] == pytest.approx(458.0)
     assert d1.grid == (13, 10)
-    for i, side in ((1, "N"), (2, "E"), (3, "E")):
+    for i, side in ((1, "N"), (2, "M"), (3, "K"), (4, "E")):
         part = run.part(f"SF-I600b-D{i}")
         assert part.props["DrawerSide"] == side
         assert part.drawer.inside[1] == pytest.approx(458.0)
-    fronts = [run.part(f"SF-I600b-D{i}").drawer.front[5] - run.part(f"SF-I600b-D{i}").drawer.front[4] for i in (1, 2, 3)]
-    assert fronts == pytest.approx([140.0, 318.0, 344.5])
-    # t976u: D2 E 447.5–765.5, box 461–653; D3 E aligned with the side bottoms.
-    assert run.part("SF-I600b-D2").drawer.box[4:6] == pytest.approx((461.0, 653.0))
-    assert run.part("SF-I600b-D3").drawer.front[4:6] == pytest.approx((100.0, 444.5))
+    fronts = [run.part(f"SF-I600b-D{i}").drawer.front[5] - run.part(f"SF-I600b-D{i}").drawer.front[4] for i in (1, 2, 3, 4)]
+    assert fronts == pytest.approx([140.0, 108.0, 207.0, 344.5])
+    # t977u: hob has the four-drawer stack; D2 M 671–762 stays clear of the N box (782–850.5) and the 12 mm panel (867).
+    assert run.part("SF-I600b-D2").drawer.box[4:6] == pytest.approx((671.0, 762.0))
+    assert run.part("SF-I600b-D2").drawer.box[5] <= 782.0 - 1e-6
+    assert run.part("SF-I600b-D4").drawer.front[4:6] == pytest.approx((100.0, 444.5))
     back = run.part("SF-I600b-BACK")
     # Channel = inner face of central back (621) − outer face of new back.
     b = back.boxes[0]
