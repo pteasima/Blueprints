@@ -1072,7 +1072,7 @@ def test_dining_column_flipout_trashcan():
     assert run.part("SF-F053-RAIL-B") is not None
     assert front.boxes[0] == (pytest.approx(3001.5), pytest.approx(3298.5), pytest.approx(0.0),
                               pytest.approx(18.0), pytest.approx(101.5), pytest.approx(888.5))
-    assert math.degrees(front.lift.angles[-1]) == pytest.approx(-40.0)
+    assert math.degrees(front.lift.angles[-1]) == pytest.approx(-13.2)
     # Rear rim keeps 8 mm off the back rail through the swing; peak clears
     # the 890 worktop underside by more than that (about 15.5 mm).
     assert front.props["WorktopClearance"] == pytest.approx(0.015515, abs=1e-5)
@@ -1088,7 +1088,7 @@ def test_dining_column_flipout_is_a_linkage():
     assert rec["id"] == "SF-F053-FLIP"
     joint = rec["joints"][0]
     assert {e["element"] for e in joint["elements"]} == {"SF-F053-FLIP", "SF-F053-CRADLE", "SF-F053-BIN"}
-    assert math.degrees(joint["angles"][-1]) == pytest.approx(-40.0)
+    assert math.degrees(joint["angles"][-1]) == pytest.approx(-13.2)
     # Hinge at the door's bottom outer edge; a negative angle tilts the top out into the room (south, glTF +z).
     assert rec["joints"][0]["pivot"][1] == pytest.approx(0.1015)
 

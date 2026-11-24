@@ -1931,7 +1931,7 @@ class _Builder:
         out = -1.0 if bay.front_low else 1.0
         raw_bin = str(zone.opts.get("bin", "0.225x0.150x0.340")).lower().replace("×", "x")
         bw, bd, bh = (float(v) * 1000.0 for v in raw_bin.split("x"))
-        angle = float(zone.opts.get("angle", 40.0))
+        angle = float(zone.opts.get("angle", 13.2))
         # guess: 8 mm under the worktop at the peak of the rear rim's swing.
         clearance = 8.0 if zone.opts.get("clearance") is None else float(zone.opts["clearance"]) * 1000.0
         # guess: 12 mm plywood cradle (floor, two cheeks, a low back stop).
@@ -2857,7 +2857,8 @@ def zone_spec(element: dict) -> list[tuple[str, str, dict]]:
     - ``flipout``: a bottom-hinged tilt-out front (a trash bin on a cradle
       fixed to the inside of the front). ``bin=W×D×H`` metres (default the
       Elletipi Cover Box Small 8 L, 0.225×0.150×0.340), ``angle=`` the
-      opening stop in degrees (default 40), ``clearance=`` metres under
+      opening stop in degrees (default 13.2, the minimum that puts the
+      rear rim 8 mm in front of the worktop edge), ``clearance=`` metres under
       the worktop at the peak of the swing (default 0.008). The front
       rail is omitted so the bin can swing through the opening;
     - ``niche``: an appliance niche; the height is the *clear* niche height,
