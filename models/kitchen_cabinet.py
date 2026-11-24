@@ -550,12 +550,12 @@ class Hob:
 
 @dataclass
 class HobVent:
-    """Sealed hob exhaust channel in one bay (Miele KM 8665 FL, Petr
-    t935u–t941u). Lengths in mm from the bay's front face (y). The
-    moved-forward back sits at ``inner_y``–``outer_y``; the clear channel
-    is ``channel`` mm to the inner face of the rear (or shared central)
-    back. Intake panel, fillets, plinth duct, baffle and outlet grille
-    are not modelled (open: to settle with the woodworker).
+    """Hob ventilation in one bay (Miele KM 8665 FL, Petr t935u–t942u).
+    Lengths in mm from the bay's front face (y). The moved-forward back
+    sits at ``inner_y``–``outer_y``; the clear channel is ``channel`` mm
+    to the inner face of the rear (or shared central) back. The air-intake
+    panel is under the hob (no gap). Fillets, plinth duct, baffle and
+    outlet grille are not modelled (open: to settle with the woodworker).
     """
 
     nl: float
@@ -566,6 +566,8 @@ class HobVent:
     back_y: float
     cutout_h: float
     cutout_w: float
+    panel_t: float
+    hole_d: float
 
 
 @dataclass
@@ -1289,7 +1291,13 @@ class _Builder:
                     self.add(Part(f"{bay.id}-RAIL-{tag}", name, "Rail", [box]), bay)
         else:
             self.add(Part(f"{bay.id}-TOP", "Strop", "Top", [(lo, hi, c_in0, c_in1, z1 - t, z1)]), bay)
-        ceiling = None if hob is None else hob.underside - hob.min_drawer_gap
+        # Safety distances under an air-intake panel are from the panel
+        # underside (Miele pp. 19–20), not from the hob housing.
+        if hob is None:
+            ceiling = None
+        else:
+            panel_t = 0.0 if vent is None else vent.panel_t
+            ceiling = hob.underside - panel_t - hob.min_drawer_gap
         subs = self._sections(bay, p, z0, z1, back_y)
         for sub in subs or [bay]:
             self._fronts(sub, p, z0, z1, back_y, ceiling)
@@ -2856,34 +2864,76 @@ class _Builder:
                 f"{HOB_VENT_CHANNEL_MIN:.0f} (NL {nl:g}, back {back_t:g}; "
                 f"a shorter NL or a thinner back is needed)"
             )
+        panel_t = float(_prop(bay.element, PSET_HOB, "IntakePanelThickness", 0.012)) * 1000.0
+        if panel_t <= 0:
+            raise ValueError(f"{bay.id}: IntakePanelThickness must be > 0 when the bay is vented")
+        hole_d = float(_prop(bay.element, PSET_HOB, "IntakeHoleDiameter", 0.08)) * 1000.0
+        if not (MIELE_INTAKE_HOLE_D[0] - TOL <= hole_d <= MIELE_INTAKE_HOLE_D[1] + TOL):
+            raise ValueError(
+                f"{bay.id}: IntakeHoleDiameter {hole_d:g} mm is not in Miele's "
+                f"{MIELE_INTAKE_HOLE_D[0]:g}–{MIELE_INTAKE_HOLE_D[1]:g} mm"
+            )
         vent = HobVent(
             nl=nl, back_t=back_t, channel=channel, inner_y=inner_y, outer_y=outer_y,
             back_y=back_y, cutout_h=MIELE_REAR_CUTOUT_H, cutout_w=MIELE_REAR_CUTOUT_W,
+            panel_t=panel_t, hole_d=hole_d,
         )
         self.run.notes.append(
             f"{bay.id}: MERIVOBOX NL {longest:g} → {nl:g}, sealed exhaust channel "
             f"{channel:.0f} mm (moved-forward back {back_t:.0f} mm) to the central back"
         )
         self.run.notes.append(
-            f"open: {bay.id} intake base panel (thickness, holes), how exhaust "
-            f"leaves the island underside (outlet / grille / duct / baffle), "
-            f"fillets at the channel turns, and back-panel thickness are to be "
-            f"settled with the woodworker"
+            f"guess: {bay.id} intake panel {panel_t:.0f} mm carpenter board "
+            f"(MDF / plywood), no gap to the hob underside, holes Ø{hole_d:.0f} "
+            f"at Miele X {MIELE_INTAKE_X[0]:g}/{MIELE_INTAKE_X[1]:g}, Y {MIELE_INTAKE_Y:g}"
+        )
+        self.run.notes.append(
+            f"open: {bay.id} how exhaust leaves the island underside "
+            f"(outlet / grille / duct / baffle), fillets at the channel turns, "
+            f"and back-panel thickness are to be settled with the woodworker"
         )
         return vent
 
     def _hob_vent_carcass(self, bay: Bay, z0, z1, p, vent: HobVent):
-        """Moved-forward back with the Miele rear cut-out, sealing the
-        drawer space from the exhaust channel. The carcass bottom already
-        stops at ``vent.outer_y``, so the channel opens down into the
-        island underside / plinth void."""
+        """Air-intake panel under the hob, and the moved-forward back with
+        the Miele rear cut-out, sealing the drawer space from the exhaust
+        channel. The carcass bottom already stops at ``vent.outer_y``, so
+        the channel opens down into the island underside / plinth void."""
         lo, hi = bay.clear_lo, bay.clear_hi
         tb = p["BottomThickness"] or p["BoardThickness"]
         hob = self.run.hobs[bay.id]
-        am = (hob.cutout.a0 + hob.cutout.a1) / 2.0
+        cut = hob.cutout
+        y_front = _prop(bay.element, PSET_HOB, "FrontOffset")
+        y_front = (float(y_front) * 1000.0) if y_front is not None else (
+            abs((cut.c0 if bay.front_low else cut.c1) - (bay.c0 if bay.front_low else bay.c1))
+        )
+        mid_a = (cut.a0 + cut.a1) / 2.0
+        mid_y = y_front + abs(cut.c1 - cut.c0) / 2.0
+        # Panel: no gap to the hob, sealed to the new back, so intake air
+        # comes only from the drawer below. Facing the front, X1.1 is to
+        # the left (−a) and X2.1 to the right (+a). Y is toward the rear.
+        c_p0, c_p1 = self.c_range(bay, y_front, vent.inner_y)
+        r = vent.hole_d / 2.0
+        hy = mid_y + MIELE_INTAKE_Y
+        holes = []
+        for sign, x in ((-1, MIELE_INTAKE_X[0]), (1, MIELE_INTAKE_X[1])):
+            ha = mid_a + sign * x
+            hc0, hc1 = self.c_range(bay, hy - r, hy + r)
+            holes.append(Void(ha - r, ha + r, min(hc0, hc1), max(hc0, hc1),
+                              radius=r, name=f"intake {x:g}"))
+        gap = (MIELE_INTAKE_X[0] + MIELE_INTAKE_X[1]) - vent.hole_d
+        if gap < MIELE_INTAKE_HOLE_GAP - TOL:
+            raise ValueError(
+                f"{bay.id}: intake holes {gap:.0f} mm apart, Miele needs ≥ {MIELE_INTAKE_HOLE_GAP:.0f}"
+            )
+        self.add(Part(f"{bay.id}-INTAKE", "Air-intake base panel", "Board",
+                      [(lo, hi, c_p0, c_p1, hob.underside - vent.panel_t, hob.underside)],
+                      voids=holes,
+                      props={"Kind": "IntakePanel", "Thickness": round(vent.panel_t / 1000.0, 6),
+                             "Guess": True}), bay)
         c_b0, c_b1 = self.c_range(bay, vent.inner_y, vent.outer_y)
         void_c0, void_c1 = min(c_b0, c_b1) - 1.0, max(c_b0, c_b1) + 1.0
-        cutout = Void(am - vent.cutout_w / 2.0, am + vent.cutout_w / 2.0,
+        cutout = Void(mid_a - vent.cutout_w / 2.0, mid_a + vent.cutout_w / 2.0,
                       void_c0, void_c1, depth=vent.cutout_h, name="exhaust")
         self.add(Part(f"{bay.id}-BACK", "Záda (exhaust)", "Back",
                       [(lo, hi, c_b0, c_b1, z0 + tb, z1)],
@@ -3135,10 +3185,16 @@ MERIVOBOX_NL_BY_SIDE = {
 }
 MERIVOBOX_70KG_NL = (450.0, 500.0, 550.0, 600.0)
 
-# Miele KM 8665 FL rear cabinet cut-out (installation manual, en-GB
-# M.-Nr. 12 985 350, pp. 19–20): ≥ 45 mm high × ≥ 550 mm wide at the top
-# of the back, opening into the exhaust channel. The intake panel, outlet
-# path and fillets are not modelled (open: woodworker).
+# Miele KM 8665 FL air-intake-optimised base panel and rear cut-out
+# (installation manual, en-GB M.-Nr. 12 985 350, pp. 19–20). X and Y are
+# from the cut-out centre; Y is toward the rear. Safety distances under
+# the panel (variant 3, no intermediate shelf) are ≥ 5 mm to a drawer
+# upper edge and ≥ 75 mm to a drawer base. The modelled MinDrawerGap may
+# be tighter. The outlet path and fillets are not modelled (open: woodworker).
+MIELE_INTAKE_HOLE_D = (60.0, 80.0)
+MIELE_INTAKE_X = (78.0, 210.0)  # X1.1, X2.1; left, right facing the front
+MIELE_INTAKE_Y = 138.0
+MIELE_INTAKE_HOLE_GAP = 15.0
 MIELE_REAR_CUTOUT_H = 45.0
 MIELE_REAR_CUTOUT_W = 550.0
 HOB_VENT_CHANNEL_MIN = 50.0

@@ -676,12 +676,18 @@ def test_drawers_under_the_hob_clear_it():
     run = _runs()["KR-ISL"]
     hob = run.hobs["SF-I600b"]
     top = run.part("SF-I600b-D1").drawer
-    assert top.box[5] <= hob.underside - 8.0 + 1e-6
+    panel = run.part("SF-I600b-INTAKE")
+    pz0, pz1 = panel.boxes[0][4], panel.boxes[0][5]
+    assert pz1 == pytest.approx(hob.underside)  # no gap to the hob
+    assert pz1 - pz0 == pytest.approx(12.0)
+    # Conservative 8 mm and official 5 / 75 mm, from the panel underside.
+    assert top.box[5] <= pz0 - 8.0 + 1e-6
+    assert top.box[4] <= pz0 - 75.0 + 1e-6
 
 
 def test_hob_ventilation_in_sf_i600b():
-    """Petr, 2026-11-24 (t935u–t941u): NL 500, 82 mm sealed channel, Miele
-    rear cut-out; no intake panel, fillets, plinth duct, baffle or
+    """Petr, 2026-11-24 (t935u–t942u): intake panel, NL 500, 82 mm sealed
+    channel, Miele rear cut-out; no fillets, plinth duct, baffle or
     south-end grille."""
     run = _runs()["KR-ISL"]
     bay = run.bay("SF-I600b")
@@ -733,8 +739,11 @@ def test_hob_ventilation_in_sf_i600b():
     # Bottom must not cover the channel (it stops at the new back).
     bot_c0, bot_c1 = bottom[2], bottom[3]
     assert interval_gap(bot_c0, bot_c1, cb[2], cb[3]) >= 82.0 - 1e-6
+    panel = run.part("SF-I600b-INTAKE")
+    assert len(panel.voids) == 2
+    assert all(abs((v.a1 - v.a0) - 80.0) < 1e-6 and v.radius == pytest.approx(40.0) for v in panel.voids)
     ids = {q.id for q in run.parts}
-    for gone in ("SF-I600b-INTAKE", "SF-I600b-VENT-FILLET-T", "SF-I600b-VENT-FILLET-B",
+    for gone in ("SF-I600b-VENT-FILLET-T", "SF-I600b-VENT-FILLET-B",
                  "SF-I600b-VENT-DUCT", "SF-I600b-VENT-SIDE", "SF-I600b-VENT-SPINE",
                  "SF-I600b-VENT-BAFFLE", "SF-I600b-VENT-BAFFLE-N", "SF-I600b-VENT-BAFFLE-S",
                  "SF-I600b-VENT-GRILLE"):
