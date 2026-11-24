@@ -549,6 +549,26 @@ class Hob:
 
 
 @dataclass
+class HobVent:
+    """Sealed hob exhaust channel in one bay (Miele KM 8665 FL, Petr
+    t935u–t941u). Lengths in mm from the bay's front face (y). The
+    moved-forward back sits at ``inner_y``–``outer_y``; the clear channel
+    is ``channel`` mm to the inner face of the rear (or shared central)
+    back. Intake panel, fillets, plinth duct, baffle and outlet grille
+    are not modelled (open: to settle with the woodworker).
+    """
+
+    nl: float
+    back_t: float
+    channel: float
+    inner_y: float
+    outer_y: float
+    back_y: float
+    cutout_h: float
+    cutout_w: float
+
+
+@dataclass
 class Part:
     id: str
     name: str
@@ -1233,7 +1253,11 @@ class _Builder:
         t, tf, bt = p["BoardThickness"], p["FrontThickness"], p["BackThickness"]
         lo, hi = bay.clear_lo, bay.clear_hi
         back_y = bay.depth - (t / 2 if shared_back else bt)
-        c_in0, c_in1 = self.c_range(bay, tf, back_y)
+        vent = self._hob_vent_plan(bay, z0, z1, back_y, p)
+        # A vented hob bay stops the bottom at the moved-forward back so
+        # the exhaust channel is open down into the plinth.
+        bottom_y = vent.outer_y if vent is not None else back_y
+        c_in0, c_in1 = self.c_range(bay, tf, bottom_y)
         tb = p["BottomThickness"] or t
         if _prop(run.element, PSET_RUN, "LedPanels"):
             self._led_bottom(bay, p, lo, hi, c_in0, c_in1, z0, tb)
@@ -1269,6 +1293,8 @@ class _Builder:
         subs = self._sections(bay, p, z0, z1, back_y)
         for sub in subs or [bay]:
             self._fronts(sub, p, z0, z1, back_y, ceiling)
+        if vent is not None:
+            self._hob_vent_carcass(bay, z0, z1, p, vent)
 
     def _led_continuous(self) -> bool:
         return bool(_prop(self.run.element, PSET_RUN, "LedPanels")) and bool(
@@ -2807,6 +2833,63 @@ class _Builder:
         return Hob(hid, name, mounting, cutout, rebate, glass, housing, underside, back_edge,
                    mm("MinDrawerGap", 8.0))
 
+
+    def _hob_vent_plan(self, bay: Bay, z0, z1, back_y, p) -> HobVent | None:
+        """A sealed exhaust channel when this bay has a hob and a
+        ``Pset_Drawers.NominalLength`` shorter than the longest NL that
+        would fill the carcass (Petr, 2026-11-24, t935u–t941u)."""
+        hob = self.run.hobs.get(bay.id)
+        if hob is None or _prop(bay.element, PSET_DRAWERS, "NominalLength") is None:
+            return None
+        tf, t = p["FrontThickness"], p["BoardThickness"]
+        nl = merivobox_nl(p, back_y - tf, bay.element)
+        longest = merivobox_nl(p, back_y - tf, None)
+        if nl >= longest - TOL:
+            return None
+        inner_y = tf + nl + p["MerivoboxDepthClearance"]
+        back_t = t
+        outer_y = inner_y + back_t
+        channel = back_y - outer_y
+        if channel < HOB_VENT_CHANNEL_MIN - TOL:
+            raise ValueError(
+                f"{bay.id}: hob exhaust channel {channel:.1f} mm is under "
+                f"{HOB_VENT_CHANNEL_MIN:.0f} (NL {nl:g}, back {back_t:g}; "
+                f"a shorter NL or a thinner back is needed)"
+            )
+        vent = HobVent(
+            nl=nl, back_t=back_t, channel=channel, inner_y=inner_y, outer_y=outer_y,
+            back_y=back_y, cutout_h=MIELE_REAR_CUTOUT_H, cutout_w=MIELE_REAR_CUTOUT_W,
+        )
+        self.run.notes.append(
+            f"{bay.id}: MERIVOBOX NL {longest:g} → {nl:g}, sealed exhaust channel "
+            f"{channel:.0f} mm (moved-forward back {back_t:.0f} mm) to the central back"
+        )
+        self.run.notes.append(
+            f"open: {bay.id} intake base panel (thickness, holes), how exhaust "
+            f"leaves the island underside (outlet / grille / duct / baffle), "
+            f"fillets at the channel turns, and back-panel thickness are to be "
+            f"settled with the woodworker"
+        )
+        return vent
+
+    def _hob_vent_carcass(self, bay: Bay, z0, z1, p, vent: HobVent):
+        """Moved-forward back with the Miele rear cut-out, sealing the
+        drawer space from the exhaust channel. The carcass bottom already
+        stops at ``vent.outer_y``, so the channel opens down into the
+        island underside / plinth void."""
+        lo, hi = bay.clear_lo, bay.clear_hi
+        tb = p["BottomThickness"] or p["BoardThickness"]
+        hob = self.run.hobs[bay.id]
+        am = (hob.cutout.a0 + hob.cutout.a1) / 2.0
+        c_b0, c_b1 = self.c_range(bay, vent.inner_y, vent.outer_y)
+        void_c0, void_c1 = min(c_b0, c_b1) - 1.0, max(c_b0, c_b1) + 1.0
+        cutout = Void(am - vent.cutout_w / 2.0, am + vent.cutout_w / 2.0,
+                      void_c0, void_c1, depth=vent.cutout_h, name="exhaust")
+        self.add(Part(f"{bay.id}-BACK", "Záda (exhaust)", "Back",
+                      [(lo, hi, c_b0, c_b1, z0 + tb, z1)],
+                      voids=[cutout],
+                      props={"Kind": "ExhaustBack", "Channel": round(vent.channel / 1000.0, 6)}), bay)
+
     def _overhang(self, front_low: bool) -> float:
         """Front overhang of the edge a row facing c0 (``front_low``) or c1
         has: ``WorktopOverhang<compass>`` (metres, e.g. ``WorktopOverhangE``)
@@ -3051,6 +3134,14 @@ MERIVOBOX_NL_BY_SIDE = {
     "F": MERIVOBOX_NL[:-1],
 }
 MERIVOBOX_70KG_NL = (450.0, 500.0, 550.0, 600.0)
+
+# Miele KM 8665 FL rear cabinet cut-out (installation manual, en-GB
+# M.-Nr. 12 985 350, pp. 19–20): ≥ 45 mm high × ≥ 550 mm wide at the top
+# of the back, opening into the exhaust channel. The intake panel, outlet
+# path and fillets are not modelled (open: woodworker).
+MIELE_REAR_CUTOUT_H = 45.0
+MIELE_REAR_CUTOUT_W = 550.0
+HOB_VENT_CHANNEL_MIN = 50.0
 # Drawer sides tallest first, for picking the tallest box a band can take.
 # F is left out: it is not in Blum's European catalogue.
 MERIVOBOX_AUTO_SIDES = ("E", "K", "M", "N")
