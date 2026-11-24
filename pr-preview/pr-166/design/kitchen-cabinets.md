@@ -29,6 +29,11 @@ Labels: **Petr** is a fact Petr gave, with the date or document. **Blum** is fro
 > - Thicker fronts are not a front-only change: they move the carcass depth / front offsets (the bay boxes keep their outside depth, so the carcass gets shallower or the fronts stand further out), the drawer box depths (Blum MERIVOBOX needs NL + 3 inside the carcass, so a thicker front can cost a whole 50 mm NL step where the carcass is at its minimum: island west and east, the tall run), the **Gridfinity drawer inserts** (the grid fit in the SF-I600a, SF-I500b and SF-I600b drawers, the east row's inner drawers and the dining drawers; rerun `scripts/gridfinity_fit.py`), and the **Blum** front weights and power factors (MERIVOBOX load class, AVENTOS HF).
 > - Petr, 2026-11-22 (t787u): “if he chooses thicker fronts, it will affect cabinets and gridfinity in drawers etc.”
 
+> **`open:` for the woodworker: can he route this IKEA VOXTORP J-grip profile into the fronts?**
+>
+> - Petr (t951u) sent a 3D Warehouse side view as the target shape: [VoxtorpJGripSideView.png](sources/VoxtorpJGripSideView.png). He finds the current model reasonably close (“I think we got reasonably close in the model”); the model is unchanged.
+> - Details and the existing router-bit / front-thickness `open:` are in “J grip”.
+
 ## Deviations from Petr's original plan (2026-11-23)
 
 Petr's original document is the sticky-note plan [`KitchenPlan.jpg`](../../inputs/ground_floor/KitchenPlan.jpg) with his notes (quoted in `inputs/ground_floor/furnishings.yaml`), plus his rule of 2026-11-11 “when unsure of details and margins, default to IKEA METOD measurements”, which made the drawers IKEA MAXIMERA (2026-11-13). On **2026-11-23** (t835u) Petr switched every drawer to **Blum MERIVOBOX**: “Ok, time to pull the trigger. Remodel or drawers to use merivobox.” His standing rules: **soft-close (BLUMOTION) only, opening by hand; never TIP-ON (push to open) or SERVO-DRIVE (electric)** (Petr, 2026-11-23, t830u: “I never want anything push to open (nor electric). I do want soft close, but opening must be manual.”), and “existing docs probably say ‘assume ikea maximera’, that will have to go”. Each deviation, with its reason:
@@ -1819,6 +1824,13 @@ Every cream front, end panel, cladding and plinth (`kitchen-front-cream`) is **m
     - every number is a run parameter (`Pset_KitchenRun`, metres, like every `IKEA_DEFAULTS_MM` key), with `FrontThickness` (18). The model checks that the bowl reaches the crest and the corner fits.
   - Old → new: the J with an undercut pocket (notch 22 × 13, 4 lip, 9 × 15 pocket, 5 back wall, 37 from the edge) → this open cup, **28** from the edge (“not as deep”), 7 below the crest (was a 15 pocket).
   - `open:` **the woodworker**: the router bit, a J / cove profile cutter run along the edge (or two passes: a large-radius cove for the bowl and a 1 mm round-over for the crest), and **whether 18 is enough** for a 4 back wall 24 tall (VOXTORP's 22 would leave about 8). The front-thickness `open:` box at the top lists what a thicker front changes.
+- Petr (t951u) sent a side view of the IKEA VOXTORP J-grip front from 3D Warehouse as the **target shape**:
+
+  ![IKEA VOXTORP J-grip side view](sources/VoxtorpJGripSideView.png)
+
+  The front has a tall thin lip at the top, a rounded scoop / finger recess behind it, and the thicker body below. Petr finds the current model reasonably close (“I think we got reasonably close in the model”); the model is not changed.
+
+- `open:` **the woodworker**: ask whether he can route this VOXTORP profile into the fronts. The router-bit / 18 mm thickness `open:` just above stays.
 - The 3D model cuts the exact lines and arcs (four arcs, cylinders, so they shade smooth). The viewer outlines every CAD face, so the tangent seams between the arcs and the straight parts still show as thin lines. The IFC cuts the same outline as a polygon, arcs every 10°.
 - The grip is a real subtraction from the front solid in the GLB and in the IFC (an `IfcBooleanResult` DIFFERENCE of the profile extruded along the edge, `IfcExtrudedAreaSolid` of an `IfcArbitraryClosedProfileDef`, so the front is `CSG`), and rides with the drawer or door when it opens. Each front with a grip has `Grip: J top|bottom|side` in its properties.
 - **Which edge** (`kitchen_cabinet._grip_edge`), per front: the band's `grip=` option in `Pset_Fronts.Layout` (`top`, `bottom`, `side`, `none`) wins, so a tall door can be switched to a horizontal grip with `door:...,grip=top`. Otherwise:
@@ -2616,3 +2628,32 @@ N (min. front 85.5, the side made for ~100 mm fronts) is **not sold in NL 600** 
 **SF-I600b-D2** is a pinned `box=M` in a 97 mm front (layout `drawer 0.2 box=K | drawer 0.1 box=M | drawer * box=E`). The box is already behind the front. Blum options, not applied: grow that front to **108** (band 100→111, D3 500/508.5 → 489/497.5; D1 K and the Miele intake-panel gap stay), or change the pin to `box=N` (N is made in this bay's NL 500; 97 ≥ 85.5).
 
 No other Merivobox decor-front drawer has a front shorter than Blum's minimum, and none of them has the box sticking out below the front. Inner-drawer aluminium front pieces are Blum parts the same height as the side (bottoms aligned); they are not this rule. SF-B800's hanging FILUR frame pull-out is unchanged (lid-to-bowl still 22 mm, tight). Raising no boxes leaves the SF-I600b Miele clearances unchanged.
+
+
+### J grip and Blum front fixings (2026-11-24, t953u)
+
+Petr (t953u): the 123 / 108 / 571.5 layout drawing left out the J grips; check that MERIVOBOX does not want a fastener into the front from the top of the side wall, which would land in the thin part of the J ([VoxtorpJGripSideView.png](sources/VoxtorpJGripSideView.png); the model's VOXTORP-like cup, see “J grip”).
+
+**For N, M and K, it does not.** The only front fixings are the lower left and right **front fixing brackets** (screw-on ZF4.1002, INSERTA ZF4.10I2, EXPANDO T ZF4.10T2). There is no “front fixing bracket, top” and no screw at the top of the side wall. **E (and F) high-fronted pull-outs add** a top bracket left and right (screw-on ZF4.5002 / ZF4.5012, INSERTA ZF4.50I2, EXPANDO T ZF4.50T2), about 13.5 mm below the top of the 192 mm E side.
+
+Sources (read 2026-11-24): Blum *Catalogue and technical manual 2024/2025*, MERIVOBOX “Front installation dimensions for screw-on assembly” and “Front drilling distances for INSERTA/EXPANDO T” ([p. 257 planning M](https://publications.blum.com/2024/catalogue/en/257/)); the same drawings in the [AU ordering and planning guide](https://asset.duluxgroup.com.au/asset/b912dcd6-cc03-4181-abb0-9d5c9fc9a8e0/Blum-MERIVOBOX-Ordering-Planning-Information.pdf) (N p. 6, M p. 8, K p. 12, E high-fronted pull-out p. 16); accessories ZF4.10T2 / ZF4.50T2 and EXPANDO T for fronts **8 mm or more** ([catalogue p. 596](https://publications.blum.com/2024/catalogue/en/596/)); ZF4.50T2 is sold for **drawer side height E / F only**, installation position top ([Blum NZ](https://shop.blum.nz/en/merivobox-front-fixing-bracket-for-drawer-side-height-176965593)). Screw-on front screws are not in the lower-bracket pack; Blum accessory 609.1700 is Ø 3.5 × 17, and the top screw-on bracket can come with a pre-fitted chipboard screw Ø 3.8 × 11.4. INSERTA / EXPANDO T: Ø 10 holes, depth 12 mm (min. 6 mm for EXPANDO T).
+
+The catalogue dimensions are measured from the same bottom datum as the 33.5* (the front's lower edge when the front is the minimum height and aligned with the opening, i.e. the cabinet-profile bottom; * +1 mm if the profile is installed before the cabinet is assembled). The brackets ride with the box, so in this model the holes are at **profile_z + 33.5** and **profile_z + 65.5** (33.5 + 32). For E a third hole is at **profile_z + 193.5** (33.5 + 32 + 128), which is 13.5 mm below the E side top.
+
+The J cup (top edge of every one of these drawer fronts) occupies the top **28 mm** of the front (`JGripCupDepth`); the crest is 21 mm below the edge; behind the cup the back wall is only **4 mm** (`JGripBackWall`) in an 18 mm front. A screw or a 12 mm INSERTA dowel in that zone would have only 4 mm of material from the back (EXPANDO T's 8 mm minimum front thickness would not be met either). Below the cup the front is solid 18 mm.
+
+| Front | Side | Holes, from front top / bottom (mm) | In the J cup (top 28)? | Remaining thickness at the screw |
+| --- | --- | --- | --- | --- |
+| Current 97 mm D1 (SF-I600a/I500b) | M | lower 91 / 6; pair 59 / 38 | no | 18 (but the lower hole is only 6 mm from the front's lower edge, below Blum's min. 33.5) |
+| Current 97 mm D2 (SF-I600a/I500b) | M | lower off the front (−2 from the bottom); pair 67 / 30 | no | lower: none (the hole misses the front); pair: 18, but 30 mm from the bottom, also below min. 33.5 |
+| Current 97 mm SF-I600b-D2 | M | lower 73 / 24; pair 41 / 56 | no (pair is 13 mm below the cup) | 18; lower hole 24 mm from the bottom, below min. 33.5 (8 mm drop) |
+| **Proposed D1 123** (785.5–908.5, box 799–890) | M | lower 91 / 32; pair 59 / 64 | **no** (pair is 31 mm below the cup) | **18** (INSERTA 12 leaves 6 to the face; Ø 3.5 × 17 leaves 1) |
+| **Proposed D2 108** (674.5–782.5, box 688–779) | M | lower 76 / 32; pair 44 / 64 | **no** (pair is 16 mm below the cup) | **18** |
+| Typical K, SF-I600b-D1 197 | K | lower 165 / 32; pair 133 / 64 | no | 18; no top bracket on K |
+| Typical E, proposed D3 571.5 (or current 608.5 / 508.5 / 808.5 / 694) | E | lower pair far below the cup; **top** 13.5 mm below the E side top, 287–587 mm below the front top | **no** | **18** at the E top screw too (the box top is 273–573 mm below the J) |
+
+Inner-drawer fronts are Blum aluminium front pieces (M min. 54* + min. 52, latch housing Ø 25 for a coupled top inner), not wooden J fronts; they are not this question.
+
+**Recommendation.** The listed 123 / 108 / 571.5 layout can keep the top J grip. Blum does not put a fastener at the top of an M side, so no screw lands in the thin lip or the 4 mm back wall. Do not fit an E top bracket (ZF4.50xx) on these M drawers — it is not a Blum application for N/M/K, and on a 108 or 123 mm front it would sit in the J. There is no Blum alternative top hole for M; none is needed. Lowering the box is not required for this. The current 97 mm hanging D1/D2 have a different fixing problem (the lower hole too close to, or off, the front's lower edge), which the listed front growth also fixes.
+
+`open:` confirm the woodworker's front-fixing method (screw-on, INSERTA or EXPANDO T) and that 18 mm is enough for the 4 mm J back wall (already an `open:` under “J grip”); no change to the fronts or boxes on this question.
