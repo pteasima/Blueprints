@@ -50,7 +50,7 @@ Petr's original document is the sticky-note plan [`KitchenPlan.jpg`](../../input
 | 8 | Gridfinity: west boxes cut to whole cells (`GridfinityFitDepth`), plates centred | **No cut** (a MERIVOBOX box is its NL long); the plate is the closest whole grid for the new inside and is **snapped to the drawer front**, the slack at the back | Petr: “gridfinity plates stay (closest match to drawer length) and are snapped to the front of the drawer”; t836u: re-check the width too (see “MERIVOBOX remodel”) |
 | 9 | Sink base SF-B800: a full-height pull-out with two equal bins trimmed under the disposer | (superseded by row 16) A low **MERIVOBOX M** box (back 83 high, passes under the disposer) with **two IKEA FILUR 42 l** standing on its base, one each side of the disposer | Petr: “assume merivobox with upright Ikea Filur bins under main sink (the one you recommended)” |
 | 10 | Recycling SF-C850: three equal bins (`guess:`) | **Empty**, deepest MERIVOBOX that fits: NL 550, E, 70 kg | Petr: “assume deepest merivobox for southwest recycling cabinet, leave empty without bins for now” |
-| 11 | Island west top drawers: MAXIMERA low (78 box in a 100 front) | **MERIVOBOX M** (91) behind the same 100 fronts; the boxes sit lower than their fronts (see “MERIVOBOX remodel”) | N (the Blum box made for ~100 fronts) is only made up to NL 550, and Petr asked for NL 600 on the west |
+| 11 | Island west top drawers: MAXIMERA low, then hanging 97 mm M fronts, then (t972u) D1 only at 140 mm | **t977u:** full west stacks, 3 mm gaps, D1 **140 mm**. Order north→south: I600a (four-drawer M/M/K/E) · **I500b middle** (D1 M 140 / D2 E 318 oils / D3 E 344.5) · I600b hob (D1 N 140 / D2 M 108 / D3 K 207 / D4 E 344.5) plus 12 mm compact-HPL intake (867–879, `guess:`). See “Island west drawer stacks” | Petr, 2026-11-24 (t977u) |
 | 12 | Gridfinity play 1 mm (inside n × 42 + 1) | **2 mm** (inside n × 42 + 2, `GridfinityPlay`) | Petr, 2026-11-23 (t841u), approving the 2 mm leeway |
 | 13 | Island west widths 500 / 607 / 481 / 607 / 305 (row 7: unchanged) | **470 / 575 / 533 / 617 / 305** (SF-I500a / SF-I600a / SF-I500b / SF-I600b / SF-I300), still 2500. Insides 506 / 464 / 548 = **12 / 11 / 13 columns exactly** (were 12 / 9 / 12 with 33 spare). Ids keep their old nominal names | Petr (t837u): “when you say island west drawers have spare room in width, then you should change them … The south 300 stays. The hob drawer gets wider to fit gridfinity”; t841u: “can we make the middle two drawers closer in size (12 and 11 gridfinities instead of 13 and 10)?” |
 | 14 | Island sink SN-RS1840 against the south divider (t834u; landing 320) | **Cut-out 45 from the divider face**: rim a 218–438, cut-out a 240–416 in the 470 bay; **landing 258** | Petr (t840u): “are you positive it can be mounted this close to the cabinet edge? Its undermount”; t841u: “Im ok with 258 landing”. Teka sheet 61401450: clip hole Ø10 × 16 deep, **30 mm from the cut-out edge**; the rim (220 × 440) runs 22 past the cut-out. The old rim lay 9 mm on the divider and the south clip hole fell over it. `guess:` the clip plate reaches about 12 past its screw + 3 play → 45. `open:` ask the stone fabricator (clip count and positions, or glue + battens) |
@@ -246,13 +246,13 @@ Since 2026-11-23 every drawer and pull-out is a **Blum MERIVOBOX** (Petr, t835u;
 | Drawer inside width | LW − **51** (`MerivoboxWidthDeduction`), LW the clear width between the carcass sides | **Blum**: chipboard base and back are cut to LW − 51; that it is also the inside between the sides is `guess:` |
 | Drawer inside depth | NL − 26 − 16 = **NL − 42** (`MerivoboxBaseDeduction`, `MerivoboxBackThickness`) | **Blum**: base NL − 26 with a 16 chipboard back (NL − 22 with a steel back); minus the back is `guess:` |
 | Drawer side | the band's `box=` letter; else a pull-out E, else the tallest of E, K, M, N whose space requirement fits the band and is made in the NL; else the lowest made | **Blum** heights and NL ranges, below; the rule is the model's |
-| Vertical position | the cabinet profile stands on the band's floor (carcass bottom or a board for the lowest band, the band's bottom line above that) and takes **15** under the side and **2** over it; a box that would reach the top rail, the hob limit or the profile of the drawer above moves down (`BoxBelowFront` in the export) | **Blum** space requirement (N 85.5 = 68.5 + 17, M 108 = 91 + 17, K 146 = 129 + 17, E 209 = 192 + 17, “incl. 2 mm tilt adjustment”); the split 15 / 2 is derived |
+| Vertical position | Blum: the cabinet profile stands on the band's floor and takes **15** under the side and **2** over it; the box base is then **15 mm** above a minimum-height front's lower edge (**13.5** with the usual 1.5 mm half-gap; **25** on a 10 mm bottom-lip front). A box that would reach the top rail, the hob limit or the profile of the drawer above moves down (`BoxBelowFront`) only when the front/band is shorter than Blum's minimum front (N **85.5**, M **108**, K **146**, E **209**) — that hang-below is not a Blum recommendation; the required front-layout change is listed under “MERIVOBOX front coverage” and was not applied (agreed fronts stay) | **Blum** Catalogue 2024/2025 planning drawings (AU guide N p. 6, M p. 8, K p. 12, E p. 16; “Space requirements in the cabinet”: min. 54* + min. 31.5**/54**/92**/155** = the space requirement, which is also the minimum decor-front height) and space requirement “incl. 2 mm tilt adjustment”; the split 15 / 2 is derived (space − side − 2) |
 | Load class | **70 kg wherever Blum makes it: NL 450–600**, any side height, drawers, pull-outs and inner drawers alike; NL 270–400 stays 40 kg (Petr, 2026-11-23, t895u: "go all out, all heavy duty where they fit"; until then 70 kg only for pull-outs, E sides and insides over 600 wide, `guess:`). Cabinet profile pair `ProfileArticle`: 450.xxx1B (40 kg) / 453.xxx1B (70 kg) | **Blum**: 70 kg profiles exist for NL 450–600 only (MERIVOBOX ordering information, "Cabinet profile left/right"); the drawer side sets are the same for both classes |
 | Inner drawers | Blum M / K inner drawers behind one tall front, each with a Blum **aluminium front piece** cut to **LW − 126** (for cabinets up to 1200; no wooden inner front); same NL as the main box | **Blum** pp. 258–263 |
 | Coupled top inner drawer | **Blum ZI7.0M07** latch: driver on the inner front piece, housing drilled into the back of the outer front (Ø 25) | **Blum** p. 259 (“inner drawer with latch set possible from height 57 mm”); MERIVOBOX / LEGRABOX only |
 | Drawn box walls (sides, back, inner front piece) | 19 (`BoxWall`); no box front behind the decor front (`BoxFrontPanel` **0**) | drawing size, `guess:`; the decor front closes the box (2026-11-22 e) |
 | Drawn box base | 16 (`BoxBottomThickness`) | **Blum** cutting list: 16 chipboard |
-| Box length, extension | inside + 2 × 19 (NL − 4), full extension (travel = box length) | drawing, see above |
+| Box length, extension | inside + back wall 19 (NL − 23), full extension (travel = box length). A second 19 mm (a front panel that is not drawn) was dropped at t978u | drawing; Blum inside is NL − 42 |
 | Front fixing | Blum front fixing brackets (INSERTA, screw-on or EXPANDO T), clip-on, 3-way adjustable; E pull-outs add the top front fixing bracket | **Blum** |
 
 ### Drawers: Blum MERIVOBOX
@@ -366,9 +366,9 @@ The hob is on **SF-I600b**, the island's west row, second 600 from the north (y 
 | Housing | 533 × 427, from 879 to 926 | Miele (51 installation height) |
 | Hob underside | **879**, 31 below the carcass top (910) | derived |
 | Front rail in SF-I600b | **left out**: the housing (86.5–513.5 behind the front face) drops into the rail (18–98) | `guess:` |
-| Drawers | three: fronts 197 / 97 / 507, Blum MERIVOBOX boxes K (725–854), M (617–708), E (133–325), **NL 500** (was 600 until 2026-11-24, t939u, so a sealed exhaust channel fits). Housing 533 in a 599 clear | yaml, see “MERIVOBOX remodel” and “Hob ventilation” |
+| Drawers | four: fronts **140** / **108** / **207** / **344.5**, boxes **N** (782–850.5), **M** (671–762), **K** (461–590), **E** (143–335), **NL 500**. Housing 533 in a 599 clear. The tall oils E is in the middle cabinet SF-I500b, not here (t977u) | yaml, t977u; see “Island west drawer stacks” and “Hob ventilation” |
 
-If a bay under a hob has drawers, the top drawer box stays 8 mm below the **intake-panel underside** (`MinDrawerGap`; official KM 8xxx is ≥ 5 mm from the panel, plus ≥ 75 mm to the drawer base). Since 2026-11-23 a MERIVOBOX box is not cut but moves down (its metal sides cannot be trimmed), and the export stops if it no longer fits above the carcass bottom. The top K box ends at 854; with the 12 mm panel (underside 867) that is a 13 mm gap.
+If a bay under a hob has drawers, the top drawer box stays 8 mm below the **intake-panel underside** (`MinDrawerGap`; official KM 8xxx is ≥ 5 mm from the panel, plus ≥ 75 mm to the drawer base). Since 2026-11-23 a MERIVOBOX box is not cut but moves down (its metal sides cannot be trimmed), and the export stops if it no longer fits above the carcass bottom. The top **N** box ends at 850.5; with the **12 mm** compact-HPL panel (underside 867, thickness `guess:`) that is a **16.5 mm** gap to the box top and **85 mm** to the box base (official ≥ 5 / ≥ 75, repo ≥ 8).
 
 In IFC the worktop's rebate is a second extrusion layer. The slab is one 14.5 mm layer with the through holes and one 5.5 mm top layer with the rebate. In the 3D model the rebate is a pocket.
 
@@ -382,12 +382,12 @@ Petr asked to model the Miele KM 8665 FL ventilation in the island west cabinet 
 
 | Item | Value | Source |
 | --- | --- | --- |
-| Intake panel | Miele air-intake-optimised base panel, no gap to the hob underside (z 867–879), no intermediate shelf; takes air from the drawer below. Two Ø **80** mm holes (official 60–80, **guess:** the 80 mm max) at X 78 / 210 and Y 138 from the cut-out centre, Y toward the rear. Facing the front, 78 is left (−a, north) and 210 is right (+a, south). Centre-to-centre 288 mm, 208 mm between holes (≥ 15). **guess: 12 mm** carpenter board (MDF / plywood). 16 mm would leave 9 mm to the K box top (854); 18 mm would leave 7 and fail the conservative 8 mm `MinDrawerGap` | Petr t942u; thickness is a guess; placement and holes are Miele |
-| Safety from the panel underside | 13 mm to the K box top 854 (≥ 5 official, ≥ 8 conservative); 142 mm to the box base 725 (≥ 75) | Miele; derived |
+| Intake panel | Miele air-intake-optimised base panel, no gap to the hob underside (z **867–879**), no intermediate shelf; takes air from the drawer below. Two Ø **80** mm holes (official 60–80, **guess:** the 80 mm max) at X 78 / 210 and Y 138 from the cut-out centre, Y toward the rear. Facing the front, 78 is left (−a, north) and 210 is right (+a, south). Centre-to-centre 288 mm, 208 mm between holes (≥ 15). **guess: 12 mm compact HPL** (thickness not confirmed). Holes stay as in the Miele manual | Petr t976u; thickness is a guess; placement and holes are Miele |
+| Safety from the panel underside | **16.5 mm** to the N box top 850.5 (≥ 5 official, ≥ 8 conservative); **85 mm** to the box base 782 (≥ 75) | Miele; derived, t976u |
 | Drawer NL | **500** (was 600). Petr: fit only 500 or 550. NL 550 + any sealing back T ≥ 1 cannot leave a ≥ 50 mm channel (T=18 → 32 mm, T=8 → 42 mm). NL 500 + T=18 → **82 mm** | Petr t937u–t938u; Blum NL |
 | Moved-forward back | 18 mm (same as the carcass; thickness is `open:`, see below), inner face at y 521 (18 + 500 + 3), outer at 539. The ≥ 45 × 550 mm cut-out is at the top, opening into the channel. Dividers already run to the central back and form the channel cheeks (clear width 599 > 550) | modelled |
 | Channel | **82 mm** clear, full cabinet width, sealed from the drawer space, open down into this cabinet's underside / west plinth void (the carcass bottom stops at the new back) | ≥ 50 required |
-| Fronts / box sides | unchanged: D1 K 197, D2 M 97, D3 E 507, pinned with `Layout: "drawer 0.2 box=K \| drawer 0.1 box=M \| drawer * box=E"`. Without the pin, NL 500 would auto-pick N for the 97 mm band (N is not sold in NL 600). Inside depth 558 → **458**, Gridfinity 13×13 → **10×13** (slack 36), profile 453.6001B → **453.5001B**, extension 596 → **496**. Load stays 70 kg | derived |
+| Fronts / box sides | t977u: D1 **N** 140 mm (768.5–908.5, box 782–850.5), D2 **M** 108 mm (657.5–765.5, box 671–762, 20 mm below the N box at 782, 105 mm below the panel at 867), D3 **K** 207 mm (447.5–654.5, box 461–590), D4 **E** 344.5 mm (100–444.5, box 143–335), pinned with `Layout: "drawer 0.143 box=N \| drawer 0.111 box=M \| drawer 0.210 box=K \| drawer * box=E"`. Inside depth 558 → **458**, Gridfinity **13×10** (slack 36; an 11th row would need 464, 6 mm over the NL 500 inside). Profile 453.5001B, extension 496. Load stays 70 kg | Petr t977u; NL 500 since t939u |
 
 The housing rear is at y 513.5, **7.5 mm** in front of the new back's inner face. The mains connection box may project through the rear cut-out into the channel (the cut-out is for ventilation and the cable).
 
@@ -397,7 +397,7 @@ The housing rear is at y 513.5, **7.5 mm** in front of the new back's inner face
 - **Fillets at the two 90° turns** (top: hob exhaust into the channel; bottom: channel into the plinth). A 45° / 40 mm board at each corner was one option, so the flow is not choked.
 - **Back-panel thickness.** Modelled as 18 mm, the same as the carcass, giving the 82 mm channel. A thinner back (for example 8 mm, which would leave a 92 mm channel, still with NL 500) is an option.
 
-`open:` flush-fit vs surface-mounted, as before. The west kickboard is the natural intake face of the island; whatever outlet is chosen should stay away from it so the two do not recirculate. `open:` the intake panel thickness (12 mm is a guess).
+`open:` flush-fit vs surface-mounted, as before. The west kickboard is the natural intake face of the island; whatever outlet is chosen should stay away from it so the two do not recirculate. `open:` the intake panel thickness (**12 mm compact HPL** is a guess, not confirmed).
 
 ## West run end cladding
 
@@ -545,9 +545,10 @@ A bay's `Pset_Fronts.Layout` lists its bands top to bottom, split by `|`. Each b
 | `niche` | An appliance niche. The height is the clear niche height. A board goes under it. | `clear=` (metres) narrows the opening with a packer on each side |
 | `front` | One slab front (a band the plan does not describe). | — |
 | `none` | Nothing. | — |
+| `gap` | Height only: no front or box. Holds a lower drawer still when the one above grew. No board around it; the next drawer's `stack_top` is the gap's floor. | — |
 | `Sections` (with `Layout<N>`, `Contents<N>`) | Splits the bay into side-by-side sections with 18 dividers, each its own layout (see “Fronts everywhere”). | `"7"`, `"0.6 0.6 0.3 0.6 0.6"` |
 
-- A board separates two bands unless both are drawers.
+- A board separates two bands unless both are drawers, or a `gap` sits next to a drawer.
 - Drawer and pull-out boxes stop 10 mm under any obstacle above them: a sink bowl, a disposer, or 8 mm under the hob (`ObstacleClearance`, `guess:`). The box records how much was cut (`Trimmed`).
 - The new IKEA-like defaults are in `IKEA_DEFAULTS_MM`: `ShelfSetback` 20, `RackDepth` 80, `RackHeight` 70, `RackInset` 40, `BinGap` 10. All are `guess:`.
 - In IFC, every front, door, shelf, board, filler and packer is a run part, `IfcSystemFurnitureElement` PANEL. Pull-outs are USERDEFINED, like drawers. Each one has `Pset_KitchenFront` (Zone, Kind, Hinge, Contents, box sizes …).
@@ -1837,7 +1838,7 @@ Every cream front, end panel, cladding and plinth (`kitchen-front-cream`) is **m
   - drawers and doors up to 1200 high: **top edge** (horizontal);
   - doors over 1200 high: **the vertical edge away from the hinge** (side), full height, like IKEA's [VOXTORP “vertical handle” tall doors](https://www.ikea.com/de/en/p/voxtorp-door-oak-effect-vertical-handle-20648994/);
   - doors starting above 1400 (the upper doors of the tall cabinets, SF-T3-DOOR1 and SF-TF-DOOR1/2): **bottom edge**, `guess:` (in reach from below; they are neither low nor tall).
-- `open:` **inner drawer inside depth (woodworker).** The MERIVOBOX inner drawers (island east SF-E…-D1-I1/-I2, dining SF-DN-S1…S4-D1-I1/-I2) compute the same inside depth as their main drawers (508 east, 358 dining) despite their own inner front: the main drawer uses Blum's NL − 26 − 16, the inner drawer its box − 2 × 19. The woodworker to verify both against the Blum catalogue (MERIVOBOX inner drawer with front piece vs. drawer with the front fixed to the sides); the Gridfinity counts (13 × 12 east inner, 14 × 8 dining) follow from it. See “Drawer boxes without a box front (2026-11-22 e)”.
+- `open:` **inner drawer inside depth (woodworker).** Since t978u the main drawer inside is Blum's NL − 26 − 16 (458 east, 358 dining) and an inner drawer is 19 mm shallower (439 / 339) because of its own front piece. The woodworker should still verify both against the Blum catalogue (inner drawer with front piece vs. drawer with the front fixed to the sides). East inner Gridfinity stays 13 × 10 (slack 17); dining inner stays 14 × 8 (1 mm slack). See “Drawer boxes without a box front (2026-11-22 e)”.
 - `open:` **grips around the fridge.** Petr, 2026-11-22 (t792u): “Im not sure about handle placement around the fridge (based on how much final chosen fridge model sticks out).” Undecided: where and which way the grips go on the fronts next to and over the fridge: SF-TF-DOOR1/2 over it (now bottom edge), SF-T1-DOOR1 west of it and SF-T2-DOOR1 east of it (now side, latch edge), the SF-T2 drawers under SF-T2-DOOR1 (top), and the filler SF-T1-FILLER1 (none). It depends on how far the final fridge model stands proud of the cabinet fronts (the model's Whirlpool WQ9I MO2L EF box is a placeholder): a proud fridge can cover a grip on the edge next to it or get in the fingers' way.
 - Grips since 2026-11-23 (t865u, Petr: “same J grip everywhere”): the full-height **pull-outs** SF-I300-D1, SF-A250-D1, SF-B800-D1, SF-C850-D1 and the dishwasher's **decor panel** SF-A600-PANEL get the top J grip like the drawers.
 - Not given a grip: the fixed **blank fronts** SF-LB-S1…S7-FRONT and SF-TC-FRONT2 (dead space, they do not open); the **filler** SF-T1-FILLER1; the **appliance doors** (oven, microwave, fridge: the maker's own fronts); the **lift-ups** (overhang below).
@@ -1888,7 +1889,7 @@ Petr, 2026-11-22 (t793u): real MAXIMERA / LEGRABOX-style drawers have only sides
 > - for the island east side, we want gridfinity on the inner drawer, the bottom main one doesnt need gridfinity (remove the gridfinity plate too)
 > - for the dining are base cabinets, the 450mm depth is given anyway, so we'll see how gridfinity works out (it doesnt have to match in the depth direction.
 
-- **Main drawers and pull-outs** (`drawer_boxes`, every kitchen run, the dining base and the living-room counters KR-LB / KR-TC, which use the same generator but have no drawers): sides, back, bottom; no box front (`BoxFrontPanel` 0; set 19 for the old drawing). The box keeps its length, so a MAXIMERA inside gains the 19. Blum MERIVOBOX insides stay Blum's (NL − 26 − 16); only the drawn box front is gone.
+- **Main drawers and pull-outs** (`drawer_boxes`, every kitchen run, the dining base and the living-room counters KR-LB / KR-TC, which use the same generator but have no drawers): sides, back, bottom; no box front (`BoxFrontPanel` 0; set 19 for the old drawing). Until t978u the box kept the old length (inside + 2 × 19), which left a 19 mm phantom cavity in front of the back wall — visible as ~55–57 mm behind a 10-row Gridfinity plate in an NL 500 drawer. **t978u:** box length is inside + the back wall only, so the visible inside matches Blum's NL − 26 − 16. Gridfinity still uses that Blum inside.
 - **Inner drawers** (`inner_drawer_boxes`): unchanged, their own low front piece and back; inside = box − 2 × 19.
 - **Island west** (SF-I600a, SF-I500b, SF-I600b; `Pset_Drawers.GridfinityFitDepth: true`): the box is cut to a whole number of cells deep. 12 rows would need a 505 inside, 23 more than the 482 the carcass now allows, so it stays **11 rows**; the box is **501 → 482** (19 shorter, 19 free at the back of the carcass), inside 463 (11 × 42 + 1), unchanged.
 - **Island east** (SF-E600a/b/c, SF-E700; `Pset_Drawers.GridfinityMain: false`): no baseplate in the main (bottom, F) drawer; the inner drawers (M and K, both) each have their own, sized to their inside: 13 × 12.
@@ -1906,7 +1907,7 @@ Petr, 2026-11-22 (t793u): real MAXIMERA / LEGRABOX-style drawers have only sides
 | KR-WEST pull-outs SF-A250, SF-B800, SF-C850; KR-TALL drawers SF-T2/T3/T4-D1, -D2 | 516 → 516 | × 478 → × **497** | — | — |
 
 - **Suspicious / unclear, left as is:**
-  - **MERIVOBOX insides (east and dining) are Blum's NL − 26 − 16 for the main drawer and the box − 2 × 19 for the inner drawer, and both come out the same (508 east, 358 dining)**: the inner drawers are not shallower than the main ones in the model. Blum's real inner-drawer inside (with its front piece) and the main drawer's (front fixed to the sides) need the Blum catalogue.
+  - **MERIVOBOX insides (t978u):** the main drawer is Blum's NL − 26 − 16 (458 east, 358 dining). An inner drawer is the (now shorter) box minus 2 × 19, so **19 mm shallower** (439 east, 339 dining) because of its own front piece. Dining inner 14 × 8 still fits (338 need, 1 mm slack). The woodworker should still check both against the Blum catalogue.
   - **Dining: 9 rows would need a 379 inside, 21 more than 358**; the main drawer as drawn (box 396 − 19 back) is 377, 2 short of 9 rows, but its inside is Blum's 358. Left at 8 rows, per Petr's “doesnt have to match in the depth direction”.
   - Both east inner drawers (M and K) get a baseplate; Petr wrote “the inner drawer” (one). Left on both.
   - Baskets and bins in pull-outs keep their positions (19 in from the box's front end).
@@ -2093,7 +2094,7 @@ Inside is width × depth × side height above the base. “Below front” is how
 
 ### Suspicious or open
 
-- **Island west top drawers (100 fronts) get M boxes that hang 26 (D1) and 34 (D2) below their fronts' own band**: the Blum space requirement of M is 108 and the top band loses 18 to the top rail. The box base shows below the front's lower edge when the drawer is open. Alternatives: N boxes (68.5, made for about 100 fronts) at **NL 550** (N is not made in 600), or taller top fronts. Under the hob only the 100 drawer drops (8).
+- **Island west stacks are fully modelled (t977u),** 3 mm gaps, D1 140 mm; the tall oils E is in the middle cabinet SF-I500b; see “Island west drawer stacks”. All those decor fronts meet Blum's minimum heights.
 - Tall run drawers (400 / 410 fronts) and every E box: E is the tallest European MERIVOBOX side (192), so the tall run's drawer insides drop from 274 / 284 to **176** high; inner pull-outs (E) behind the same fronts would win the height back. Same for SF-I300 and SF-A250's “shelves”, which stand for inner pull-outs or a rack behind the front (`guess:`).
 - ~~SF-A250 is 232 wide: below the usual MERIVOBOX range (275+).~~ Wrong: 275–1200 is SPACE TOWER's range, and SPACE TWIN (KB 150–250) is itself a MERIVOBOX application. See “SF-A250: SPACE TWIN”.
 - Every carcass with NL 600 / 500 is at Blum's minimum (NL + 3): a thicker front (`open:` for the woodworker) or a thicker back takes a whole NL step.
@@ -2587,3 +2588,104 @@ North-run drawers stay at **100 mm** above the floor, with the flush plinth (Pet
 
 `open:` confirm the drip-groove profile with the stonemason (square 5 × 3 mm is a `guess:`; a slightly deeper or V-groove is common). A 20 mm overhang plus a groove 10 mm in will stop typical spills from wrapping back onto the fronts, but it cannot guarantee that a soapy or wind-blown film never jumps the groove; see the PR write-up.
 
+
+## MERIVOBOX front coverage (2026-11-24, t949u / t950u)
+
+Petr (t949u) saw a shallow island drawer on main after #164: the J-grip front barely covers the box's open front, and the box bottom sticks out below the front. He asked whether that is what MERIVOBOX recommends.
+
+It is not. The hang is a model fallback (`Drawer.drop` / `BoxBelowFront`), not a Blum rule. It happens on four drawers: the island-west 97 mm M fronts in 100 mm bands, **SF-I600a-D1/D2** and **SF-I500b-D1/D2** (NL 600). Cause: M needs 108 mm in the cabinet, the top band also loses 18 mm to the front rail, and the code then drops the box so the metal side still fits under the rail or the drawer above. The 10 mm bottom-front lip and the flush north plinth are not involved (these are mid and top bands). **SF-I600b-D2** is the only other 97 mm M front: the box stays behind the front (5.5 mm above the front's lower edge, 0.5 mm of front above the box top) but the 97 mm front is still 11 mm short of Blum's minimum.
+
+### Blum's front-to-box relation
+
+Blum, *Catalogue and technical manual 2024/2025*, MERIVOBOX planning drawings “Space requirements in the cabinet” / “Platzbedarf im Korpus” and “Front installation dimensions for screw-on assembly” ([p. 257 planning M](https://publications.blum.com/2024/catalogue/en/257/)); the same drawings are in the [AU ordering and planning guide](https://asset.duluxgroup.com.au/asset/b912dcd6-cc03-4181-abb0-9d5c9fc9a8e0/Blum-MERIVOBOX-Ordering-Planning-Information.pdf) (N p. 6, M p. 8, K p. 12, E high-fronted pull-out p. 16). Read 2026-11-24.
+
+| Side | Side height | Space requirement (incl. 2 mm tilt) | Minimum decor-front height | Lower min.* | Upper min.** |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| N | 68.5 | 85.5 | **85.5** | 54 | 31.5 |
+| M | 91 | 108 | **108** | 54 | 54 |
+| K | 129 | 146 | **146** | 54 | 92 |
+| E | 192 | 209 | **209** | 54 | 155 |
+
+The * footnote is “+1 mm if the cabinet profile is installed before the cabinet is assembled.” The ** footnote is “Incl. 2 mm tilt adjustment.”
+
+The two stacked “min.” dimensions on the front are the official minimum front height; they sum to the space requirement. The lower figure is always **min. 54** and covers the cabinet profile and the lower side. The cabinet profile takes **15 mm** under the side and **2 mm** over it (space − side − tilt). So when the front is the minimum height and aligned with the opening, the **box base sits 15 mm above the front's lower edge**, and **2 mm** of front (the tilt allowance) stands above the side. In this kitchen the usual 1.5 mm half-gap puts the front 1.5 mm above the band floor, so the standard model offset is **13.5 mm** above the front's lower edge (and **25 mm** on a 10 mm bottom-lip front, whose extra lip is coverage below the carcass). The 28 mm figure on the same drawing is horizontal (profile setback), not this offset.
+
+A 97 mm front is 11 mm short of Blum's 108 mm minimum for M. Aligning the box bottom with the front bottom (the naive fix) is also not what Blum draws: the front is meant to cover the 15 mm profile under the side, and doing that on these stacked 100 mm bands would push D1's profile into D2's opening.
+
+### Agreed fronts kept; required layout listed, not applied
+
+Petr (t950u) is reworking drawer heights. The 100 mm toe-kick, the 10 mm bottom lip and the agreed front layout stay. Blum's 108 mm minimum for M would force a front-layout change, so it is listed here rather than applied. Boxes were not moved up on the four hanging drawers: raising them to sit behind the 97 mm fronts would run D1 into the 18 mm top rail (underside 892) and D2 into D1's profile.
+
+Recommended island-west layout for **SF-I600a** and **SF-I500b** if the M boxes and NL 600 stay (carcass 110–910, rail underside 892, 3 mm gaps, 10 mm lip, 100 mm visible toe-kick unchanged):
+
+| Band | Current front / band | Blum-required (M kept) |
+| --- | --- | --- |
+| D1 (top, under the rail) | 97 / 100 (front 811.5–908.5) | front **123** / band **126** (785.5–908.5 / 784–910): 108 mm clear under the rail, front covers the rail |
+| D2 | 97 / 100 (711.5–808.5) | front **108** / band **111** (674.5–782.5 / 673–784) |
+| D3 (bottom, `*`, 10 mm lip) | 608.5 / 600 (100–708.5) | front **571.5** / band **563** (100–671.5 / 110–673) |
+
+N (min. front 85.5, the side made for ~100 mm fronts) is **not sold in NL 600** (only 400–550), so it is not a drop-in replacement on these two bays without shortening the drawers.
+
+**SF-I600b-D2** is a pinned `box=M` in a 97 mm front (layout `drawer 0.2 box=K | drawer 0.1 box=M | drawer * box=E`). The box is already behind the front. Blum options, not applied: grow that front to **108** (band 100→111, D3 500/508.5 → 489/497.5; D1 K and the Miele intake-panel gap stay), or change the pin to `box=N` (N is made in this bay's NL 500; 97 ≥ 85.5).
+
+No other Merivobox decor-front drawer has a front shorter than Blum's minimum, and none of them has the box sticking out below the front. Inner-drawer aluminium front pieces are Blum parts the same height as the side (bottoms aligned); they are not this rule. SF-B800's hanging FILUR frame pull-out is unchanged (lid-to-bowl still 22 mm, tight). Raising no boxes leaves the SF-I600b Miele clearances unchanged.
+
+
+### J grip and Blum front fixings (2026-11-24, t953u)
+
+Petr (t953u): the 123 / 108 / 571.5 layout drawing left out the J grips; check that MERIVOBOX does not want a fastener into the front from the top of the side wall, which would land in the thin part of the J ([VoxtorpJGripSideView.png](sources/VoxtorpJGripSideView.png); the model's VOXTORP-like cup, see “J grip”).
+
+**For N, M and K, it does not.** The only front fixings are the lower left and right **front fixing brackets** (screw-on ZF4.1002, INSERTA ZF4.10I2, EXPANDO T ZF4.10T2). There is no “front fixing bracket, top” and no screw at the top of the side wall. **E (and F) high-fronted pull-outs add** a top bracket left and right (screw-on ZF4.5002 / ZF4.5012, INSERTA ZF4.50I2, EXPANDO T ZF4.50T2), about 13.5 mm below the top of the 192 mm E side.
+
+Sources (read 2026-11-24): Blum *Catalogue and technical manual 2024/2025*, MERIVOBOX “Front installation dimensions for screw-on assembly” and “Front drilling distances for INSERTA/EXPANDO T” ([p. 257 planning M](https://publications.blum.com/2024/catalogue/en/257/)); the same drawings in the [AU ordering and planning guide](https://asset.duluxgroup.com.au/asset/b912dcd6-cc03-4181-abb0-9d5c9fc9a8e0/Blum-MERIVOBOX-Ordering-Planning-Information.pdf) (N p. 6, M p. 8, K p. 12, E high-fronted pull-out p. 16); accessories ZF4.10T2 / ZF4.50T2 and EXPANDO T for fronts **8 mm or more** ([catalogue p. 596](https://publications.blum.com/2024/catalogue/en/596/)); ZF4.50T2 is sold for **drawer side height E / F only**, installation position top ([Blum NZ](https://shop.blum.nz/en/merivobox-front-fixing-bracket-for-drawer-side-height-176965593)). Screw-on front screws are not in the lower-bracket pack; Blum accessory 609.1700 is Ø 3.5 × 17, and the top screw-on bracket can come with a pre-fitted chipboard screw Ø 3.8 × 11.4. INSERTA / EXPANDO T: Ø 10 holes, depth 12 mm (min. 6 mm for EXPANDO T).
+
+The catalogue dimensions are measured from the same bottom datum as the 33.5* (the front's lower edge when the front is the minimum height and aligned with the opening, i.e. the cabinet-profile bottom; * +1 mm if the profile is installed before the cabinet is assembled). The brackets ride with the box, so in this model the holes are at **profile_z + 33.5** and **profile_z + 65.5** (33.5 + 32). For E a third hole is at **profile_z + 193.5** (33.5 + 32 + 128), which is 13.5 mm below the E side top.
+
+The J cup (top edge of every one of these drawer fronts) occupies the top **28 mm** of the front (`JGripCupDepth`); the crest is 21 mm below the edge; behind the cup the back wall is only **4 mm** (`JGripBackWall`) in an 18 mm front. A screw or a 12 mm INSERTA dowel in that zone would have only 4 mm of material from the back (EXPANDO T's 8 mm minimum front thickness would not be met either). Below the cup the front is solid 18 mm.
+
+| Front | Side | Holes, from front top / bottom (mm) | In the J cup (top 28)? | Remaining thickness at the screw |
+| --- | --- | --- | --- | --- |
+| Current 97 mm D1 (SF-I600a/I500b) | M | lower 91 / 6; pair 59 / 38 | no | 18 (but the lower hole is only 6 mm from the front's lower edge, below Blum's min. 33.5) |
+| Current 97 mm D2 (SF-I600a/I500b) | M | lower off the front (−2 from the bottom); pair 67 / 30 | no | lower: none (the hole misses the front); pair: 18, but 30 mm from the bottom, also below min. 33.5 |
+| Current 97 mm SF-I600b-D2 | M | lower 73 / 24; pair 41 / 56 | no (pair is 13 mm below the cup) | 18; lower hole 24 mm from the bottom, below min. 33.5 (8 mm drop) |
+| **Proposed D1 123** (785.5–908.5, box 799–890) | M | lower 91 / 32; pair 59 / 64 | **no** (pair is 31 mm below the cup) | **18** (INSERTA 12 leaves 6 to the face; Ø 3.5 × 17 leaves 1) |
+| **Proposed D2 108** (674.5–782.5, box 688–779) | M | lower 76 / 32; pair 44 / 64 | **no** (pair is 16 mm below the cup) | **18** |
+| Typical K, SF-I600b-D1 197 | K | lower 165 / 32; pair 133 / 64 | no | 18; no top bracket on K |
+| Typical E, proposed D3 571.5 (or current 608.5 / 508.5 / 808.5 / 694) | E | lower pair far below the cup; **top** 13.5 mm below the E side top, 287–587 mm below the front top | **no** | **18** at the E top screw too (the box top is 273–573 mm below the J) |
+
+Inner-drawer fronts are Blum aluminium front pieces (M min. 54* + min. 52, latch housing Ø 25 for a coupled top inner), not wooden J fronts; they are not this question.
+
+**Recommendation.** The listed 123 / 108 / 571.5 layout can keep the top J grip. Blum does not put a fastener at the top of an M side, so no screw lands in the thin lip or the 4 mm back wall. Do not fit an E top bracket (ZF4.50xx) on these M drawers — it is not a Blum application for N/M/K, and on a 108 or 123 mm front it would sit in the J. There is no Blum alternative top hole for M; none is needed. Lowering the box is not required for this. The current 97 mm hanging D1/D2 have a different fixing problem (the lower hole too close to, or off, the front's lower edge), which the listed front growth also fixes.
+
+`open:` confirm the woodworker's front-fixing method (screw-on, INSERTA or EXPANDO T) and that 18 mm is enough for the 4 mm J back wall (already an `open:` under “J grip”); no change to the fronts or boxes on this question.
+
+
+### Island west drawer stacks (2026-11-24, t976u / t977u)
+
+Petr (t976u) approved modelling the island-west stacks fully; t977u corrects which cabinet gets the tall oils E. D1 fronts stay **140 mm** (768.5–908.5). Fronts have the usual 3 mm gaps. East-row full-height D1s and the SF-I300 pull-out are unchanged.
+
+West-row order, north to south: SF-I500a (sink door) · **SF-I600a** · **SF-I500b** (the physical middle of the three stacks) · **SF-I600b** (hob) · SF-I300 (pull-out). The tall E (oils/condiments) is in **SF-I500b**, not under the hob.
+
+The box base sits **13.5 mm** above a mid-stack front's lower edge (Blum: profile 15 mm under the side, half-gap 1.5). The inside floor is 16 mm above that (`BoxBottomThickness`, Blum cutting list), so **front bottom + 29.5 mm**.
+
+| Bay | Front (height, z) | Box (side, z) | Inside floor | Notes |
+| --- | --- | --- | --- | --- |
+| SF-I600a D1 | 140, 768.5–908.5 | **M** 782–873 | 798 | North stack |
+| SF-I600a D2 | **108**, 657.5–765.5 | **M** 671–762 | 687 | Blum's M minimum. 80 mm jars in Gridfinity: 95 mm to the D1 box underside at 782; with the repo's 5 mm baseplate (`GridfinityHeight`, guess:) the leeway is **10 mm** |
+| SF-I600a D3 | **207**, 447.5–654.5 | **K** 461–590 | 477 | Aligns with I500b-D2 / I600b-D3 bottom |
+| SF-I600a D4 | **344.5**, 100–444.5 | **E** 143–335 | 159 | Bottom front aligned across all three columns |
+| SF-I500b D1 | 140, 768.5–908.5 | **M** 782–873 | 798 | Middle cabinet |
+| SF-I500b D2 | **318**, 447.5–765.5 | **E** 461–653 | 477 | Oils/condiments. Clear item height to the D1 box underside (782) is **305 mm** (≥ 300) |
+| SF-I500b D3 | **344.5**, 100–444.5 | **E** 143–335 | 159 | Same bottom front as the neighbours' D4 |
+| SF-I600b D1 | 140, 768.5–908.5 | **N** 782–850.5 | 798 | Under the 12 mm intake |
+| SF-I600b D2 | **108**, 657.5–765.5 | **M** 671–762 | 687 | 20 mm below the N box at 782, 105 mm below the panel underside at 867; no drop (box + 2 mm tilt 764 < N profile 767) |
+| SF-I600b D3 | **207**, 447.5–654.5 | **K** 461–590 | 477 | Same as SF-I600a-D3 |
+| SF-I600b D4 | **344.5**, 100–444.5 | **E** 143–335 | 159 | Same bottom front as the neighbours |
+
+The lowest drawers cannot take the mid-stack 13.5 mm offset: the cabinet profile stands on the 18 mm carcass bottom board (110–128), so the box base is at **143** (43 mm above the 100 mm lip front, inside floor 159 = front + 59). That is the repo/Blum lowest-band rule, not a silent change to the agreed fronts. E is the tallest European side (192, M plus a gallery / BOXCOVER / BOXCAP); the repo does not draw a separate gallery rail.
+
+**Intake panel (t976u):** **12 mm** compact HPL, 867–879, underside 867, thickness `guess:` (not confirmed). Holes stay as in the Miele KM 8665 FL manual. Clearances from the underside: **16.5 mm** to the N box top, **85 mm** to the box base (official ≥ 5 / ≥ 75, repo ≥ 8). Both pass.
+
+**Gridfinity under the hob (t978u):** Petr measured ~54.7 mm of free depth behind the 10-row plate in the viewer and asked for an 11th row. That gap was a model error, not a spare Blum inside. The drawn NL 500 box was **496** mm long (official inside 458 + 2 × 19) even after the front panel was removed (t795u), so the visible cavity was **477** mm (496 − 19 back). A 420 mm plate snapped to the front then left **57** mm to the inner back (Petr's ~54.7). A real MERIVOBOX base is NL − 26 with a 16 mm back, inside **458**. The box is now **477** mm (inside + back wall only); visible inside **458**; free depth behind the 10-row plate **38** mm (or 36 mm of official slack over 10 × 42 + 2). Eleven rows need **464** and are still **6 mm over**. The extra row is not added. The exhaust channel is unchanged (NL 500, 82 mm; the box back now sits 26 mm in front of the moved-forward back instead of 7). Sides stay 12×13 and 11×13 (NL 600). New drawers inherit `Gridfinity: true` like the others.
+
+`open:` intake panel thickness (12 mm compact HPL is a guess, not confirmed).

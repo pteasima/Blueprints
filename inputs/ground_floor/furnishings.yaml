@@ -477,17 +477,21 @@ systemFurniture:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-ISL
-      # Petr's sticky note next to this 600: "noze / naradi (lis na cesnek,
-      # hmozdir, vaha, ..) / dole nevim". Heights are IKEA METOD grid
-      # nominals in metres, top to bottom; "*" is the rest of the carcass.
+      # Petr, 2026-11-24 (t977u): north west stack, four drawers, 3 mm
+      # gaps, D1 kept at 140 mm (768.5–908.5). D2 M 108 mm (657.5–765.5,
+      # Blum minimum), D3 K 207 mm (447.5–654.5), D4 E front 100–444.5,
+      # aligned with SF-I600b. Boxes at front bottom + 13.5 except the
+      # lowest (profile on the carcass bottom board).
+      - Name: Pset_Fronts
+        Properties:
+          Layout: "drawer 0.143 box=M | drawer 0.111 box=M | drawer 0.210 box=K | drawer * box=E"
+          Contents: "nože; nářadí; ; dole nevím"
       - Name: Pset_Drawers
         Properties:
-          NominalHeights: "0.1 0.1 *"
           Gridfinity: true
           # GridfinityFitDepth (a box cut to whole cells, t795u) is gone: a
           # MERIVOBOX box is its NL long. The plate is the closest whole grid,
           # snapped to the front (Petr, 2026-11-23, t835u).
-          Contents: "nože; nářadí; dole nevím"
   - id: SF-I500b
     Name: "Ostrov západ 500"
     Description: "Island, west row. Red 500, between the knife-drawer 600 and the hob 600. Note: koření, oleje, octy, mouky, cukry, dochucovadla, hrnce. Faces west."
@@ -512,18 +516,20 @@ systemFurniture:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-ISL
-      # Note on this 500: "koreni / oleje, octy, mouky, cukry,
-      # dochucovadla / hrnce": three bullets, three drawers, like SF-I600a.
-      # Heights: IKEA METOD 20 + 20 + rest (guess:). open: oil bottles
-      # need more than a 20 cm front (kitchen-cabinets.md).
+      # Petr, 2026-11-24 (t977u): this is the middle west stack (between
+      # SF-I600a and the hob SF-I600b). D1 M 140 mm kept; D2 E 318 mm
+      # (447.5–765.5) for oils/condiments; D3 E, front 100–444.5, aligned
+      # with the other columns' bottom drawers.
+      - Name: Pset_Fronts
+        Properties:
+          Layout: "drawer 0.143 box=M | drawer 0.321 box=E | drawer * box=E"
+          Contents: "koření; oleje, octy, dochucovadla; hrnce"
       - Name: Pset_Drawers
         Properties:
-          NominalHeights: "0.1 0.1 *"
           Gridfinity: true
           # GridfinityFitDepth (a box cut to whole cells, t795u) is gone: a
           # MERIVOBOX box is its NL long. The plate is the closest whole grid,
           # snapped to the front (Petr, 2026-11-23, t835u).
-          Contents: "koření; oleje, octy, mouky, cukry, dochucovadla; hrnce"
   - id: SF-I600b
     Name: "Ostrov západ 600 varná deska"
     Description: "Island, west row. Second red 600, under the hob (the green rectangle with two circles on KitchenPlan.jpg). Note: příbory, vařečky, stěrky, naběračky, pánve. Faces west."
@@ -548,15 +554,15 @@ systemFurniture:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-ISL
-      # Note on this 600 (the hob): "pribory / varecky, sterky, naberacky /
-      # panve": three drawers under the hob, METOD 20 + 20 + rest (guess:).
-      # The top box keeps Miele's 8 mm under the intake panel (Pset_Hob).
-      # Layout pins K / M / E: NL 500 makes N available, and the 97 mm
-      # band would otherwise auto-pick N (N is not sold in NL 600). Fronts
-      # stay 197 / 97 / 507; only the box length changes (NL 600 → 500).
+      # Petr, 2026-11-24 (t977u): same four-drawer fronts as SF-I600a,
+      # not the tall oils E (that is SF-I500b, the physical middle).
+      # D1 N 140 mm kept (782–850.5) under a 12 mm compact-HPL intake
+      # panel (867–879). D2 M 108 mm (671–762), D3 K 207, D4 E 344.5.
+      # NL 500 still pins the exhaust channel.
       - Name: Pset_Fronts
         Properties:
-          Layout: "drawer 0.2 box=K | drawer 0.1 box=M | drawer * box=E"
+          Layout: "drawer 0.143 box=N | drawer 0.111 box=M | drawer 0.210 box=K | drawer * box=E"
+          Contents: "příbory; ; ; vařečky, stěrky, naběračky, pánve"
       - Name: Pset_Drawers
         Properties:
           # Petr, 2026-11-24 (t935u–t939u): NL 500 (not 550) so an 18 mm
@@ -568,7 +574,6 @@ systemFurniture:
           # GridfinityFitDepth (a box cut to whole cells, t795u) is gone: a
           # MERIVOBOX box is its NL long. The plate is the closest whole grid,
           # snapped to the front (Petr, 2026-11-23, t835u).
-          Contents: "příbory; vařečky, stěrky, naběračky; pánve"
       # Miele KM 8665 FL (Petr, 2026-11-11). Sizes: Miele installation
       # manual pp. 23, 29, see kitchen-cabinets.md "Induction hob".
       # Mounting: Petr has not chosen; flush-fit is guess:. FrontOffset is
@@ -596,11 +601,9 @@ systemFurniture:
           # ≥ 5 mm to the drawer upper edge and ≥ 75 mm to the drawer base,
           # measured from the intake-panel underside (manual pp. 19–20).
           MinDrawerGap: 0.008
-          # Petr, 2026-11-24 (t942u): Miele air-intake-optimised base
-          # panel, no gap to the hob underside, no intermediate shelf;
-          # takes air from the drawer below. guess: 12 mm carpenter board
-          # (MDF / plywood). 16 mm would leave 9 mm to the K box top (854);
-          # 18 mm would leave 7 and fail this 8 mm conservative gap.
+          # Petr, 2026-11-24 (t976u): 12 mm compact HPL, no gap to the
+          # hob underside (board 867–879). Thickness is guess: (not
+          # confirmed); holes stay as in the Miele manual.
           IntakePanelThickness: 0.012
           # Official Ø 60–80 mm; guess: the 80 mm maximum.
           IntakeHoleDiameter: 0.08

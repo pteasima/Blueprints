@@ -1487,17 +1487,28 @@ class _Builder:
         lo, hi = bay.clear_lo, bay.clear_hi
         stack_top = None  # the cabinet profile of the drawer just above (MERIVOBOX stacking)
         for i, zone in enumerate(bay.zones):
-            if zone.kind not in DRAWER_KINDS:
+            if zone.kind not in DRAWER_KINDS and zone.kind != "gap":
                 stack_top = None
             below = bay.zones[i + 1] if i + 1 < len(bay.zones) else None
             top_zone = i == 0
-            # A fixed board between two bands, except between drawers.
-            board_below = below is not None and not (zone.kind in DRAWER_KINDS and below.kind in DRAWER_KINDS)
+            # A fixed board between two bands, except between drawers
+            # (and a ``gap`` holding a pending drawer band).
+            board_below = below is not None and not (
+                zone.kind in _NO_BOARD_BETWEEN and below.kind in _NO_BOARD_BETWEEN)
             if board_below:
                 bc0, bc1 = self.c_range(bay, tf, back_y)
                 self.add(Part(f"{bay.id}-BOARD{zone.index}", f"Mezidno {zone.index}", "Board",
                               [(lo, hi, bc0, bc1, zone.slot_z0, zone.slot_z0 + t)],
                               props={"Zone": zone.index}), bay)
+            if zone.kind == "gap":
+                # No front or box. Pin the next drawer's stack to this
+                # floor so its box stays where it was (t972u).
+                stack_top = zone.slot_z0
+                self.run.notes.append(
+                    f"open: {bay.id} D2/D3 heights are pending Petr's next decision "
+                    f"(a {zone.nominal:.0f} mm gap holds the lower band still)"
+                )
+                continue
             # Clear interior of the band: above the board under it (or the
             # carcass bottom), below the board over it (or the top/rails).
             # The lowest band stands on the carcass bottom (``BottomThickness``).
@@ -2904,8 +2915,8 @@ class _Builder:
             f"{channel:.0f} mm (moved-forward back {back_t:.0f} mm) to the central back"
         )
         self.run.notes.append(
-            f"guess: {bay.id} intake panel {panel_t:.0f} mm carpenter board "
-            f"(MDF / plywood), no gap to the hob underside, holes Ø{hole_d:.0f} "
+            f"guess: {bay.id} intake panel {panel_t:.0f} mm compact HPL "
+            f"(thickness not confirmed), no gap to the hob underside, holes Ø{hole_d:.0f} "
             f"at Miele X {MIELE_INTAKE_X[0]:g}/{MIELE_INTAKE_X[1]:g}, Y {MIELE_INTAKE_Y:g}"
         )
         self.run.notes.append(
@@ -3091,7 +3102,10 @@ def _boxes_meet(a, b) -> bool:
 
 
 DRAWER_KINDS = ("drawer", "pullout")
-ZONE_KINDS = ("drawer", "pullout", "door", "doors", "lift", "flipout", "niche", "front", "dock", "none")
+# gap: a height placeholder with no front or box (a pending drawer).
+# No fixed board is inserted next to a gap or between drawers.
+ZONE_KINDS = ("drawer", "pullout", "door", "doors", "lift", "flipout", "niche", "front", "dock", "none", "gap")
+_NO_BOARD_BETWEEN = DRAWER_KINDS + ("gap",)
 
 
 def zone_spec(element: dict) -> list[tuple[str, str, dict]]:
@@ -3128,7 +3142,12 @@ def zone_spec(element: dict) -> list[tuple[str, str, dict]]:
       opening with a packer on each side. The appliance names the bay and
       the band in its ``Pset_BuiltIn``;
     - ``front``: one plain slab, nothing decided behind it;
-    - ``none``: an open band.
+    - ``none``: an open band;
+    - ``gap``: height only, no front or box. Used to hold a lower
+      drawer's band when the drawer above grew (t972u: island D2/D3
+      pending). No board is inserted around it; the next drawer's
+      ``stack_top`` is the gap's floor so that box does not rise into
+      the reserved band.
 
     Older forms still work: ``Pset_Drawers.NominalHeights`` (all drawers),
     ``Pset_KitchenBay.Front: none`` (no front) and nothing (one slab front).
@@ -3207,6 +3226,33 @@ def inner_side_height(p: dict, letter: str) -> float:
     if key not in p:
         raise ValueError(f"unknown Blum side height {letter!r} (N, M, K, E)")
     return p[key]
+
+
+# Blum planning drawings, "Space requirements in the cabinet" / front
+# "min." stack (AU planning guide N p. 6, M p. 8, K p. 12, E high-fronted
+# p. 16; catalogue 2024/2025, same drawings, M at p. 257). The lower min.
+# is always 54* (covers the cabinet profile); the upper min.** is 31.5 /
+# 54 / 92 / 155 (incl. 2 mm tilt). The sums are the space requirement and
+# the minimum decor-front height. See kitchen-cabinets.md "MERIVOBOX front
+# coverage".
+MERIVOBOX_MIN_FRONT = {"N": 85.5, "M": 108.0, "K": 146.0, "E": 209.0}
+
+
+def merivobox_space_requirement(p: dict, letter: str) -> float:
+    """Blum space requirement in the cabinet (mm): profile 15 + side +
+    tilt 2 (N 85.5, M 108, K 146, E 209, incl. 2 mm tilt)."""
+    return p["MerivoboxProfileBelow"] + inner_side_height(p, letter) + p["MerivoboxTilt"]
+
+
+def merivobox_min_front(letter: str) -> float:
+    """Blum minimum decor-front height (mm) for a standard drawer or
+    high-fronted pull-out. Equal to the space requirement (planning
+    drawing: min. 54* + the upper min.**). Inner-drawer aluminium front
+    pieces are Blum parts with different mins and are not this function."""
+    letter = str(letter).strip().upper()
+    if letter not in MERIVOBOX_MIN_FRONT:
+        raise ValueError(f"unknown Blum side {letter!r} (N, M, K, E)")
+    return MERIVOBOX_MIN_FRONT[letter]
 
 
 def inner_drawers(p: dict, dr: "Drawer", zone_top: float, letters: list, clear: float | None = None) -> list[tuple]:
@@ -3304,8 +3350,10 @@ def merivobox_side(p: dict, kind: str, room: float, nl: float, want: str | None 
     """The drawer side letter for one band: ``want`` (the band's ``box=``) if
     given, else for a pull-out E, else the tallest of E, K, M, N whose Blum
     space requirement (profile 15 + side + tilt 2) fits ``room`` and that is
-    made in ``nl``; if none fits, the lowest side made in ``nl`` (the box
-    then sits lower than its front, see ``_drawer``)."""
+    made in ``nl``; if none fits, the lowest side made in ``nl``. That
+    fallback is not Blum's front-coverage rule (min. front = space
+    requirement); hanging boxes are listed, not a reason to shrink the
+    front, see kitchen-cabinets.md "MERIVOBOX front coverage"."""
     if want:
         letter = str(want).strip().upper()
         if nl not in MERIVOBOX_NL_BY_SIDE.get(letter, ()):
@@ -3315,7 +3363,7 @@ def merivobox_side(p: dict, kind: str, room: float, nl: float, want: str | None 
         return "E"
     made = [x for x in MERIVOBOX_AUTO_SIDES if nl in MERIVOBOX_NL_BY_SIDE[x]]
     for letter in made:
-        need = p["MerivoboxProfileBelow"] + inner_side_height(p, letter) + p["MerivoboxTilt"]
+        need = merivobox_space_requirement(p, letter)
         if need <= room + TOL:
             return letter
     return made[-1]
@@ -3344,9 +3392,13 @@ def drawer_inside(bay: Bay, p: dict, back_y: float) -> tuple[float, float]:
 
 def drawer_box_length(bay: Bay, p: dict, back_y: float) -> float:
     """The drawn drawer box's length (mm), back of the decor front to the
-    box back: the Blum inside + 2 × BoxWall (as drawn since 2026-11-20 c)."""
+    box back: Blum inside plus the back wall, plus a box front panel if
+    there is one. After t795u the main drawer has no front panel
+    (``BoxFrontPanel`` 0); adding a second ``BoxWall`` here used to leave
+    a 19 mm phantom cavity behind the Gridfinity (visible slack 57 mm in
+    an NL 500 drawer that Blum's inside of 458 cannot use; Petr t978u)."""
     _w, inner_d = drawer_inside(bay, p, back_y)
-    return inner_d + 2 * p["BoxWall"]
+    return inner_d + p["BoxWall"] + p["BoxFrontPanel"]
 
 
 def gridfinity_main(element: dict) -> bool:
@@ -3381,10 +3433,14 @@ def _drawer(bay: Bay, p: dict, zone: Zone, number: int, back_y: float, ceiling: 
     side letter comes from ``merivobox_side``. Vertically, the cabinet
     profile sits on the band's floor (the carcass bottom or a board for the
     lowest band) and takes ``MerivoboxProfileBelow`` under the side and
-    ``MerivoboxTilt`` over it (Blum's space requirement). When that would
+    ``MerivoboxTilt`` over it (Blum's space requirement: the box base is
+    then 15 mm above a minimum-height front's lower edge). When that would
     reach the top rail, the hob limit or the profile of the drawer above
     (``stack_top``), the box moves down instead (``Drawer.drop``): metal
-    sides cannot be trimmed. See kitchen-cabinets.md "Drawers: Blum MERIVOBOX".
+    sides cannot be trimmed. A drop that puts the box below the decor front
+    is not a Blum recommendation; it happens only when the front is shorter
+    than ``merivobox_min_front`` (listed in kitchen-cabinets.md "MERIVOBOX
+    front coverage", agreed fronts not silently grown).
     """
     if zone.opts.get("frame"):
         return _frame_pullout(bay, p, zone, number, back_y, obstacles, carcass_z0, on_board)
