@@ -3392,9 +3392,13 @@ def drawer_inside(bay: Bay, p: dict, back_y: float) -> tuple[float, float]:
 
 def drawer_box_length(bay: Bay, p: dict, back_y: float) -> float:
     """The drawn drawer box's length (mm), back of the decor front to the
-    box back: the Blum inside + 2 × BoxWall (as drawn since 2026-11-20 c)."""
+    box back: Blum inside plus the back wall, plus a box front panel if
+    there is one. After t795u the main drawer has no front panel
+    (``BoxFrontPanel`` 0); adding a second ``BoxWall`` here used to leave
+    a 19 mm phantom cavity behind the Gridfinity (visible slack 57 mm in
+    an NL 500 drawer that Blum's inside of 458 cannot use; Petr t978u)."""
     _w, inner_d = drawer_inside(bay, p, back_y)
-    return inner_d + 2 * p["BoxWall"]
+    return inner_d + p["BoxWall"] + p["BoxFrontPanel"]
 
 
 def gridfinity_main(element: dict) -> bool:

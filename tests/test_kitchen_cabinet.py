@@ -98,7 +98,10 @@ def test_island_east_row_drawers_are_on_the_gridfinity_grid():
         # drawers' (same Blum inside as the main box).
         assert d.grid is None
         n, m = i1.drawer.grid
-        assert tuple(i1.drawer.inside[:2]) == pytest.approx(tuple(d.inside[:2]))
+        # t978u: the inner front piece now shows; inner depth is the main
+        # Blum inside less one BoxWall (458 → 439 on NL 500).
+        assert i1.drawer.inside[0] == pytest.approx(d.inside[0])
+        assert i1.drawer.inside[1] == pytest.approx(d.inside[1] - kc.IKEA_DEFAULTS_MM["BoxWall"])
         # Petr, 2026-11-20 c: "East island cabinets are 694,604,604,583
         # wide, they should be the same width. Three of these should fit
         # gridfinity, the fourth can be slightly differnt. Also, give them
@@ -408,7 +411,7 @@ def test_sf_i600a_drawers():
     assert all(d.grid == (12, 13) for d in drawers)  # 12 x 42 + 2 = 506
     # No box front (2026-11-22 e, t795u): the box is the inside + the 19
     # back, as long as the NL allows.
-    assert all(d.extension == pytest.approx(558.0 + 19.0 + 19.0) for d in drawers)
+    assert all(d.extension == pytest.approx(558.0 + 19.0) for d in drawers)  # inside + back wall only (t978u)
     # Upper boxes at Blum's 13.5 mm offset; the lowest sits on the carcass
     # bottom board (box 143, 43 mm above the 100 mm lip front).
     assert [d.front[4] for d in drawers] == pytest.approx([768.5, 657.5, 447.5, 100.0])
@@ -575,8 +578,8 @@ def test_ifc_groups_and_assembly():
     assert "Nad lednicí 908" in child_names
 
 
-EAST_SLIDE = 0.496  # MERIVOBOX NL 500: inside 458 + 2 x 19 (2026-11-23, t835u)
-DN_SLIDE = 0.396  # MERIVOBOX NL 400: inside 358 + 2 x 19 (2026-11-20 c)
+EAST_SLIDE = 0.477  # MERIVOBOX NL 500: inside 458 + back wall 19 (t978u; was + 2 x 19)
+DN_SLIDE = 0.377  # MERIVOBOX NL 400: inside 358 + back wall 19 (t978u)
 
 
 def test_drawer_motions_in_model():
@@ -591,10 +594,11 @@ def test_drawer_motions_in_model():
     )
     for m in drawers:
         assert m["element"] == m["id"]
-    # The slide is the full extension, the box length (Blum MERIVOBOX NL 600
-    # since 2026-11-23, t835u: inside 558 + 2 x 19).
+    # The slide is the full extension, the box length (inside + back wall;
+    # t978u dropped the phantom 19 mm front wall from the length).
     for m in island:
-        assert m["slide"] == pytest.approx([-0.596, 0.0, 0.0])
+        want = -0.477 if m["id"].startswith("SF-I600b") else -0.577
+        assert m["slide"] == pytest.approx([want, 0.0, 0.0])
     east = [m for m in drawers if m["id"].startswith("SF-E")]
     # MERIVOBOX NL 550 since 2026-11-20 c, NL 500 since 2026-11-23.
     assert len(east) == 12 and all(m["slide"] == pytest.approx([EAST_SLIDE, 0.0, 0.0]) for m in east)
@@ -605,7 +609,7 @@ def test_drawer_motions_in_model():
     assert [m["center"][2] for m in island[:3]] == pytest.approx([-13.0425] * 3, abs=1e-6)
     west = [m for m in drawers if m["id"] in ("SF-A250-D1", "SF-B800-D1", "SF-C850-D1")]
     # Blum MERIVOBOX NL 550 in the 600 west run (2026-11-23).
-    assert len(west) == 3 and all(m["slide"] == pytest.approx([0.546, 0.0, 0.0]) for m in west if m["id"] != "SF-B800-D1")
+    assert len(west) == 3 and all(m["slide"] == pytest.approx([0.527, 0.0, 0.0]) for m in west if m["id"] != "SF-B800-D1")
     # SF-B800's bin frame runs on MOVENTO NL 450 (2026-11-23, t842u).
     assert next(m for m in west if m["id"] == "SF-B800-D1")["slide"] == pytest.approx([0.45, 0.0, 0.0])
     # Dining base drawers slide south (glTF +z). The living counter is dead
@@ -698,10 +702,11 @@ def test_gridfinity_drawers_fit_the_grid():
         ) for i in ids
     ]
     # Petr, 2026-11-23 (t851u): 13 columns exactly in the north three.
-    east = {"SF-E600a": (548, 13, 0), "SF-E600b": (548, 13, 0), "SF-E600c": (548, 13, 0), "SF-E700": (562, 13, 14)}
+    # t978u: inner depth 439 (box minus the front piece and back), slack 17.
+    # E600a/E600b inners have no Gridfinity note in the current layout.
     assert [n for n in run.notes if "Gridfinity" in n] == west + [
-        f"open: {b}-D1-I{k} inside {w} x 458 is +{sl} / +36 off the Gridfinity {n}x10 size (scripts/gridfinity_fit.py)"
-        for b, (w, n, sl) in east.items() for k in (1, 2)]
+        f"open: {b}-D1-I{k} inside 548 x 439 is +0 / +17 off the Gridfinity 13x10 size (scripts/gridfinity_fit.py)"
+        for b in ("SF-E600c", "SF-E700") for k in (1, 2)]
 
 
 def test_drawer_boxes_have_no_box_front_and_east_grid_is_inner_only():
