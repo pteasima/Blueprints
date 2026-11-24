@@ -395,34 +395,12 @@ STONE_TYPES = frozenset({"Backsplash"})
 
 
 def _void_solid(void, z0: float, z1: float):
-    """A worktop cut-out as a solid, run frame mm (rounded corners if any).
-    A radius of half the shorter side is a circle (intake holes, t939u)."""
+    """A worktop cut-out as a solid, run frame mm (rounded corners if any)."""
     w, d = void.a1 - void.a0, void.c1 - void.c0
     pos = Pos((void.a0 + void.a1) / 2.0, (void.c0 + void.c1) / 2.0, z0)
-    h = z1 - z0
-    if void.radius > 0 and void.radius * 2 >= min(w, d) - 1e-6:
-        return pos * Cylinder(min(w, d) / 2.0, h, align=(Align.CENTER, Align.CENTER, Align.MIN))
     if void.radius > 0:
-        return pos * extrude(RectangleRounded(w, d, void.radius), amount=h)
-    return pos * Box(w, d, h, align=(Align.CENTER, Align.CENTER, Align.MIN))
-
-
-def _wedge_solid(box, corner: str, half: float):
-    """A right-triangular prism along a, run frame mm. ``corner`` is the
-    right-angle vertex: c0z0, c1z0, c0z1 or c1z1."""
-    a0, a1, c0, c1, z0, z1 = box
-    a0, a1 = a0 + half, a1 - half
-    c0, c1 = c0 + half, c1 - half
-    z0, z1 = z0 + half, z1 - half
-    pts = {
-        "c0z0": ((c0, z0), (c1, z0), (c0, z1)),
-        "c1z0": ((c1, z0), (c1, z1), (c0, z0)),
-        "c0z1": ((c0, z1), (c0, z0), (c1, z1)),
-        "c1z1": ((c1, z1), (c0, z1), (c1, z0)),
-    }[corner]
-    # Sketch in the (c, z) plane and extrude along a.
-    plane = Plane(origin=(a0, 0.0, 0.0), x_dir=(0.0, 1.0, 0.0), z_dir=(1.0, 0.0, 0.0))
-    return extrude(plane * Polygon(*pts, align=None), amount=a1 - a0, dir=(1.0, 0.0, 0.0))
+        return pos * extrude(RectangleRounded(w, d, void.radius), amount=z1 - z0)
+    return pos * Box(w, d, z1 - z0, align=(Align.CENTER, Align.CENTER, Align.MIN))
 
 
 def _cut_solid(tri, c0: float, c1: float):
@@ -550,20 +528,13 @@ def _kitchen_run_parts(run, motions=None, layers: dict | None = None) -> list:
             solid = Pos((a0 + a1) / 2.0, (c0 + c1) / 2.0, z0 + half) * Cylinder(
                 (a1 - a0) / 2.0 - half, z1 - z0 - 2 * half, align=(Align.CENTER, Align.CENTER, Align.MIN)
             )
-        elif part.shape == "wedge":
-            # Right-triangular prism along a (hob-vent fillets, t939u).
-            solid = _wedge_solid(part.boxes[0], part.props.get("Wedge", "c1z1"), 0.0)
         else:
             pieces = [_run_box(box, half) for box in part.boxes]
             solid = pieces[0] if len(pieces) == 1 else Compound(obj=pieces)
             z0, z1 = part.boxes[0][4], part.boxes[0][5]
             for void in part.voids:
-                if void.z_lo is not None and void.z_hi is not None:
-                    vz0, vz1 = void.z_lo, void.z_hi
-                else:
-                    vz0 = z0 - 1.0 if not void.depth else z1 - void.depth
-                    vz1 = z1 + 1.0
-                solid = solid - _void_solid(void, vz0, vz1)
+                bottom = z0 - 1.0 if not void.depth else z1 - void.depth
+                solid = solid - _void_solid(void, bottom, z1 + 1.0)
             for cut in part.cuts:
                 solid = solid - _cut_solid(cut, part.boxes[0][2], part.boxes[0][3])
             if part.grips:  # a decor panel's J grip (t865u), one unshrunk slab

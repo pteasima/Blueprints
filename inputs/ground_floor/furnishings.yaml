@@ -550,7 +550,7 @@ systemFurniture:
           Run: KR-ISL
       # Note on this 600 (the hob): "pribory / varecky, sterky, naberacky /
       # panve": three drawers under the hob, METOD 20 + 20 + rest (guess:).
-      # The top box keeps Miele's 8 mm under the intake panel (Pset_Hob).
+      # The top box keeps Miele's 8 mm under the hob (Pset_Hob).
       # Layout pins K / M / E: NL 500 makes N available, and the 97 mm
       # band would otherwise auto-pick N (N is not sold in NL 600). Fronts
       # stay 197 / 97 / 507; only the box length changes (NL 600 → 500).
@@ -592,18 +592,12 @@ systemFurniture:
           RebateHeight: 0.0055
           FrontOffset: 0.05
           MinBackEdge: 0.05
-          # Conservative 8 mm (KM 8xxx-2). Official KM 8xxx (this hob) is
-          # ≥ 5 mm to the drawer upper edge and ≥ 75 mm to the drawer base,
-          # measured from the intake-panel underside (manual pp. 19–20).
+          # Conservative 8 mm from the hob underside (KM 8xxx-2). Official
+          # KM 8xxx (this hob) is ≥ 5 mm to the drawer upper edge and ≥ 75 mm
+          # to the drawer base, measured from an intake-panel underside if
+          # one is fitted (manual pp. 19–20). The panel itself is open: to
+          # be settled with the woodworker and is not in the model.
           MinDrawerGap: 0.008
-          # Petr, 2026-11-24 (t935u–t939u): Miele air-intake-optimised
-          # base panel, no gap to the hob underside, no intermediate shelf.
-          # guess: 12 mm carpenter board (MDF / plywood). 16 mm would leave
-          # 9 mm to the K box top (854); 18 mm would leave 7 and fail this
-          # 8 mm conservative gap.
-          IntakePanelThickness: 0.012
-          # Official Ø 60–80 mm; guess: the 80 mm maximum.
-          IntakeHoleDiameter: 0.08
   - id: SF-I300
     Name: "Ostrov západ 300"
     Description: "Island, west row, south end. Red 300. Faces west."
