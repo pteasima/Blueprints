@@ -29,6 +29,11 @@ Labels: **Petr** is a fact Petr gave, with the date or document. **Blum** is fro
 > - Thicker fronts are not a front-only change: they move the carcass depth / front offsets (the bay boxes keep their outside depth, so the carcass gets shallower or the fronts stand further out), the drawer box depths (Blum MERIVOBOX needs NL + 3 inside the carcass, so a thicker front can cost a whole 50 mm NL step where the carcass is at its minimum: island west and east, the tall run), the **Gridfinity drawer inserts** (the grid fit in the SF-I600a, SF-I500b and SF-I600b drawers, the east row's inner drawers and the dining drawers; rerun `scripts/gridfinity_fit.py`), and the **Blum** front weights and power factors (MERIVOBOX load class, AVENTOS HF).
 > - Petr, 2026-11-22 (t787u): “if he chooses thicker fronts, it will affect cabinets and gridfinity in drawers etc.”
 
+> **`open:` for the woodworker: can he route this IKEA VOXTORP J-grip profile into the fronts?**
+>
+> - Petr (t951u) sent a 3D Warehouse side view as the target shape: [VoxtorpJGripSideView.png](sources/VoxtorpJGripSideView.png). He finds the current model reasonably close (“I think we got reasonably close in the model”); the model is unchanged.
+> - Details and the existing router-bit / front-thickness `open:` are in “J grip”.
+
 ## Deviations from Petr's original plan (2026-11-23)
 
 Petr's original document is the sticky-note plan [`KitchenPlan.jpg`](../../inputs/ground_floor/KitchenPlan.jpg) with his notes (quoted in `inputs/ground_floor/furnishings.yaml`), plus his rule of 2026-11-11 “when unsure of details and margins, default to IKEA METOD measurements”, which made the drawers IKEA MAXIMERA (2026-11-13). On **2026-11-23** (t835u) Petr switched every drawer to **Blum MERIVOBOX**: “Ok, time to pull the trigger. Remodel or drawers to use merivobox.” His standing rules: **soft-close (BLUMOTION) only, opening by hand; never TIP-ON (push to open) or SERVO-DRIVE (electric)** (Petr, 2026-11-23, t830u: “I never want anything push to open (nor electric). I do want soft close, but opening must be manual.”), and “existing docs probably say ‘assume ikea maximera’, that will have to go”. Each deviation, with its reason:
@@ -1819,6 +1824,13 @@ Every cream front, end panel, cladding and plinth (`kitchen-front-cream`) is **m
     - every number is a run parameter (`Pset_KitchenRun`, metres, like every `IKEA_DEFAULTS_MM` key), with `FrontThickness` (18). The model checks that the bowl reaches the crest and the corner fits.
   - Old → new: the J with an undercut pocket (notch 22 × 13, 4 lip, 9 × 15 pocket, 5 back wall, 37 from the edge) → this open cup, **28** from the edge (“not as deep”), 7 below the crest (was a 15 pocket).
   - `open:` **the woodworker**: the router bit, a J / cove profile cutter run along the edge (or two passes: a large-radius cove for the bowl and a 1 mm round-over for the crest), and **whether 18 is enough** for a 4 back wall 24 tall (VOXTORP's 22 would leave about 8). The front-thickness `open:` box at the top lists what a thicker front changes.
+- Petr (t951u) sent a side view of the IKEA VOXTORP J-grip front from 3D Warehouse as the **target shape**:
+
+  ![IKEA VOXTORP J-grip side view](sources/VoxtorpJGripSideView.png)
+
+  The front has a tall thin lip at the top, a rounded scoop / finger recess behind it, and the thicker body below. Petr finds the current model reasonably close (“I think we got reasonably close in the model”); the model is not changed.
+
+- `open:` **the woodworker**: ask whether he can route this VOXTORP profile into the fronts. The router-bit / 18 mm thickness `open:` just above stays.
 - The 3D model cuts the exact lines and arcs (four arcs, cylinders, so they shade smooth). The viewer outlines every CAD face, so the tangent seams between the arcs and the straight parts still show as thin lines. The IFC cuts the same outline as a polygon, arcs every 10°.
 - The grip is a real subtraction from the front solid in the GLB and in the IFC (an `IfcBooleanResult` DIFFERENCE of the profile extruded along the edge, `IfcExtrudedAreaSolid` of an `IfcArbitraryClosedProfileDef`, so the front is `CSG`), and rides with the drawer or door when it opens. Each front with a grip has `Grip: J top|bottom|side` in its properties.
 - **Which edge** (`kitchen_cabinet._grip_edge`), per front: the band's `grip=` option in `Pset_Fronts.Layout` (`top`, `bottom`, `side`, `none`) wins, so a tall door can be switched to a horizontal grip with `door:...,grip=top`. Otherwise:
