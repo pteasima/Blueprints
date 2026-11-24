@@ -137,6 +137,10 @@ IKEA_DEFAULTS_MM = {
     "FrontThickness": 18.0,  # METOD fronts
     "BackThickness": 8.0,  # single-row back panel (guess)
     "FrontGap": 3.0,  # 600×200 grid front is 597×197
+    # Bottom-row fronts on a recessed toe-kick (Petr, 2026-11-24, t947u):
+    # the front hangs this many mm below the carcass floor so it can be
+    # opened with a foot. 0 = the usual half-gap above the carcass bottom.
+    "BottomFrontOverhang": 0.0,
     # Integrated J grip (``Pset_KitchenRun.FrontGrip: J``; Petr, 2026-11-22 c:
     # "voxtorp J style on drawers and hinged doors"; t789u, a photo of a real
     # VOXTORP edge: "Not as deep and a little different detail (looks like
@@ -518,10 +522,21 @@ class Zone:
     dock: tuple | None = None  # dock band: clear opening from the floor (run frame) for a floor appliance
 
 
+# Underside drip groove (okapnik) along a worktop front overhang
+# (Petr, 2026-11-24, t947u). guess: 5 mm wide × 3 mm deep; centreline
+# 10 mm in from the edge (half of the 20 mm overhang); stopped 10 mm
+# short of each free end (and of a 45° mitre's inner edge).
+DRIP_GROOVE_WIDTH = 5.0
+DRIP_GROOVE_DEPTH = 3.0
+DRIP_GROOVE_CENTRE = 10.0
+DRIP_GROOVE_END_STOP = 10.0
+
+
 @dataclass(frozen=True)
 class Void:
-    """A worktop cut-out, run frame mm. ``depth`` None: through; else a
-    pocket that deep from the top (a flush-fit hob's rebate)."""
+    """A worktop cut-out or pocket, run frame mm. ``depth`` None: through;
+    else a pocket that deep, from the top (a flush-fit hob's rebate) or
+    from the underside when ``underside`` is true (a drip groove)."""
 
     a0: float
     a1: float
@@ -530,6 +545,7 @@ class Void:
     radius: float = 0.0
     depth: float | None = None
     name: str = ""
+    underside: bool = False
 
 
 @dataclass
@@ -1034,8 +1050,9 @@ class _Builder:
                                          label=_worktop_label(mat), material=mat,
                                          props={"Material": mat}), bay))
         if slabs:
-            self.add(Part(f"{run.id}-WORKTOP", "Pracovní deska", "Worktop", slabs, label=_worktop_label(material),
+            top = self.add(Part(f"{run.id}-WORKTOP", "Pracovní deska", "Worktop", slabs, label=_worktop_label(material),
                           material=material))
+            self._drip_grooves(top)
             if ul > 0:
                 # The same footprint, under the stone (Petr, 2026-11-20 f:
                 # "the dining part has 20 silestone and 20 oak below it").
@@ -1174,17 +1191,20 @@ class _Builder:
         # with the side panel's outer face (Petr, 2026-11-20 h: "Youve made
         # it recessed, which is clearly wrong. Needs to be flush with the
         # cabinet side.").
-        if kind != "Flush" and sides:
-            t, sb = p["BoardThickness"], p["PlinthSetback"]
+        if sides:
+            t, sb, tf = p["BoardThickness"], p["PlinthSetback"], p["FrontThickness"]
             own = _prop(self.run.element, PSET_RUN, "SideKickboardSetback")
             se = sb if own is None else float(own) * 1000.0
+            # A flush front plinth (north tall cabinets, 2026-11-24, t947u):
+            # the return starts at the front board's back, not at a recess.
+            y0 = tf if kind == "Flush" else sb + t
             ends = {self._end_name(-1.0): (row[0], a_lo + se, a_lo + se + t),
                     self._end_name(1.0): (row[-1], a_hi - se - t, a_hi - se)}
             for name in sides:
                 if name not in ends:
                     raise ValueError(f"{self.run.id}: SideKickboards {name!r} is not a run end ({', '.join(ends)})")
                 end_bay, s0, s1 = ends[name]
-                k0, k1 = self.c_range(end_bay, sb + t, back_y)
+                k0, k1 = self.c_range(end_bay, y0, back_y)
                 self.add(Part(f"{self.run.id}-PLINTH-{name}{tag}", f"Soklová lišta {name}", "Plinth",
                               [(s0, s1, k0, k1, end_bay.z_base, end_bay.z_base + p["PlinthHeight"])],
                               props={"Kind": "Kickboard", "Side": name, "Setback": round(se / 1000.0, 6)}),
@@ -1483,7 +1503,7 @@ class _Builder:
             # The lowest band stands on the carcass bottom (``BottomThickness``).
             in_z0 = zone.slot_z0 + ((p["BottomThickness"] or t) if below is None else t)
             in_z1 = zone.slot_z1 - (t if top_zone else 0.0)
-            front_box = (bay.a0 + g, bay.a1 - g, fc0, fc1, zone.slot_z0 + g, zone.slot_z1 - g)
+            front_box = (bay.a0 + g, bay.a1 - g, fc0, fc1, _front_z0(p, zone, z0), zone.slot_z1 - g)
             base = {"Zone": zone.index, "Kind": zone.kind, "NominalHeight": round(zone.nominal / 1000.0, 6),
                     "Contents": zone.content or None}
             if zone.kind in DRAWER_KINDS:
@@ -2699,8 +2719,9 @@ class _Builder:
         cuts = []
         if self._mitred():
             cuts = [_mitre_cut(a0, a0 + (zt - zb), zb, zt, "top"), _mitre_cut(a1, a1 - (zt - zb), zb, zt, "top")]
-        self.add(Part(f"{run.id}-WORKTOP", "Pracovní deska", "Worktop", [run.worktop],
+        top = self.add(Part(f"{run.id}-WORKTOP", "Pracovní deska", "Worktop", [run.worktop],
                       label="worktop", voids=voids, material=material, cuts=cuts))
+        self._drip_grooves(top)
 
     def _floor_ends(self) -> set:
         """``Pset_KitchenRun.EndsToFloor``: compass names of the run ends
@@ -2940,6 +2961,43 @@ class _Builder:
                       voids=[cutout],
                       props={"Kind": "ExhaustBack", "Channel": round(vent.channel / 1000.0, 6)}), bay)
 
+    def _drip_grooves(self, part: Part) -> None:
+        """Underside drip grooves (okapnik) along this slab's front overhangs
+        (Petr, 2026-11-24, t947u). guess: 5 mm wide × 3 mm deep, centreline
+        10 mm in from the edge (half of the 20 mm overhang). Stopped 10 mm
+        short of each free end, and of a 45° mitre's inner edge so the
+        groove stays on the underside. Where two overhangs meet at a
+        corner, the grooves join (one continuous centreline)."""
+        if part.role != "Worktop" or not part.boxes:
+            return
+        # Overhang on the c0 face (a front_low row) and/or the c1 face.
+        ov_lo = self._overhang(True) if any(b.front_low for b in self.run.bays) else 0.0
+        ov_hi = self._overhang(False) if any(not b.front_low for b in self.run.bays) else 0.0
+        width, depth = DRIP_GROOVE_WIDTH, DRIP_GROOVE_DEPTH
+        centre, stop = DRIP_GROOVE_CENTRE, DRIP_GROOVE_END_STOP
+        # A groove that would run past the front face onto the cabinets is
+        # skipped (the overhang is too shallow for this profile).
+        need = centre + width / 2.0
+        mitre = (self.p["WorktopThickness"] if self._mitred() else 0.0)
+        half = width / 2.0
+        for box in part.boxes:
+            a0, a1, c0, c1, _z0, _z1 = box
+            a_lo, a_hi = a0 + mitre + stop, a1 - mitre - stop
+            if a_hi - a_lo < width:
+                continue
+            lo = ov_lo >= need
+            hi = ov_hi >= need
+            if lo:
+                part.voids.append(Void(a_lo, a_hi, c0 + centre - half, c0 + centre + half,
+                                       depth=depth, name="drip-groove", underside=True))
+            if hi:
+                part.voids.append(Void(a_lo, a_hi, c1 - centre - half, c1 - centre + half,
+                                       depth=depth, name="drip-groove", underside=True))
+            # Opposite long edges do not meet. If a later run grows an end
+            # overhang that meets a side overhang, a short corner connector
+            # along c would be added here (the a-runs already stop at the
+            # same a_lo/a_hi, so they would meet a c-run at the corner).
+
     def _overhang(self, front_low: bool) -> float:
         """Front overhang of the edge a row facing c0 (``front_low``) or c1
         has: ``WorktopOverhang<compass>`` (metres, e.g. ``WorktopOverhangE``)
@@ -3110,6 +3168,16 @@ def zone_contents(element: dict) -> list[str]:
     if raw is None:
         raw = _prop(element, PSET_DRAWERS, "Contents", "")
     return [c.strip() for c in str(raw).split(";")] if str(raw).strip() else []
+
+
+def _front_z0(p: dict, zone: Zone, carcass_z0: float) -> float:
+    """Bottom of a decor front, mm. Normally a half-gap above the band.
+    On a recessed toe-kick run with ``BottomFrontOverhang`` the lowest
+    front hangs that many mm below the carcass floor so it can be opened
+    with a foot (Petr, 2026-11-24, t947u)."""
+    if p["BottomFrontOverhang"] > 0 and abs(zone.slot_z0 - carcass_z0) < TOL:
+        return zone.slot_z0 - p["BottomFrontOverhang"]
+    return zone.slot_z0 + p["FrontGap"] / 2.0
 
 
 def zones(element: dict, carcass_height: float, board: float, z0: float) -> list[Zone]:
@@ -3335,7 +3403,7 @@ def _drawer(bay: Bay, p: dict, zone: Zone, number: int, back_y: float, ceiling: 
     g = p["FrontGap"] / 2.0
     out_dir = -1.0 if bay.front_low else 1.0
     fc0, fc1 = _Builder.c_range(bay, 0.0, tf)
-    front = (bay.a0 + g, bay.a1 - g, fc0, fc1, zone.slot_z0 + g, zone.slot_z1 - g)
+    front = (bay.a0 + g, bay.a1 - g, fc0, fc1, _front_z0(p, zone, carcass_z0), zone.slot_z1 - g)
     lowest = abs(zone.slot_z0 - carcass_z0) < TOL
     # The profile stands on the carcass bottom or a fixed board under the
     # band (a dock); a band higher up starts on its own bottom line.
@@ -3441,7 +3509,7 @@ def _frame_pullout(bay: Bay, p: dict, zone: Zone, number: int, back_y: float, ob
     out_dir = -1.0 if bay.front_low else 1.0
     g = p["FrontGap"] / 2.0
     fc0, fc1 = _Builder.c_range(bay, 0.0, tf)
-    front = (bay.a0 + g, bay.a1 - g, fc0, fc1, zone.slot_z0 + g, zone.slot_z1 - g)
+    front = (bay.a0 + g, bay.a1 - g, fc0, fc1, _front_z0(p, zone, carcass_z0), zone.slot_z1 - g)
     depth = back_y - tf
     # Bins: offsets behind the carcass front (the decor front's back is tf).
     hole0 = tf + p["FrameFrontStrip"]
