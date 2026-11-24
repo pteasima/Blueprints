@@ -395,12 +395,16 @@ STONE_TYPES = frozenset({"Backsplash"})
 
 
 def _void_solid(void, z0: float, z1: float):
-    """A worktop cut-out as a solid, run frame mm (rounded corners if any)."""
+    """A worktop cut-out as a solid, run frame mm (rounded corners if any).
+    A radius of half the shorter side is a circle (intake holes)."""
     w, d = void.a1 - void.a0, void.c1 - void.c0
     pos = Pos((void.a0 + void.a1) / 2.0, (void.c0 + void.c1) / 2.0, z0)
+    h = z1 - z0
+    if void.radius > 0 and void.radius * 2 >= min(w, d) - 1e-6:
+        return pos * Cylinder(min(w, d) / 2.0, h, align=(Align.CENTER, Align.CENTER, Align.MIN))
     if void.radius > 0:
-        return pos * extrude(RectangleRounded(w, d, void.radius), amount=z1 - z0)
-    return pos * Box(w, d, z1 - z0, align=(Align.CENTER, Align.CENTER, Align.MIN))
+        return pos * extrude(RectangleRounded(w, d, void.radius), amount=h)
+    return pos * Box(w, d, h, align=(Align.CENTER, Align.CENTER, Align.MIN))
 
 
 def _cut_solid(tri, c0: float, c1: float):
