@@ -520,8 +520,10 @@ class Zone:
 
 @dataclass(frozen=True)
 class Void:
-    """A worktop cut-out, run frame mm. ``depth`` None: through; else a
-    pocket that deep from the top (a flush-fit hob's rebate)."""
+    """A cut-out, run frame mm. ``depth`` None: through the part's z;
+    else a pocket that deep from the top (a flush-fit hob's rebate).
+    ``z_lo`` / ``z_hi`` set an explicit z range (a plinth grille in a
+    tall end cladding)."""
 
     a0: float
     a1: float
@@ -530,6 +532,8 @@ class Void:
     radius: float = 0.0
     depth: float | None = None
     name: str = ""
+    z_lo: float | None = None
+    z_hi: float | None = None
 
 
 @dataclass
@@ -549,6 +553,37 @@ class Hob:
 
 
 @dataclass
+class HobVent:
+    """Sealed hob exhaust in one bay (Miele KM 8665 FL, Petr t935u–t939u).
+
+    Lengths in mm, from the bay's front face (y) unless noted. The moved-forward
+    back sits at ``inner_y``–``outer_y``; the clear channel is ``channel`` mm
+    to the inner face of the rear (or shared central) back.
+    """
+
+    nl: float
+    back_t: float
+    channel: float
+    inner_y: float
+    outer_y: float
+    back_y: float
+    panel_t: float
+    panel_z0: float
+    panel_z1: float
+    hole_d: float
+    cutout_h: float
+    cutout_w: float
+    fillet: float
+    grille_len: float
+    grille_h: float
+    grille_t: float
+    grille_free: float  # cm²
+    grille_article: str
+    baffle_y0: float
+    baffle_y1: float
+
+
+@dataclass
 class Part:
     id: str
     name: str
@@ -558,7 +593,7 @@ class Part:
     voids: list = field(default_factory=list)  # Void cut-outs (worktop)
     drawer: Drawer | None = None
     material: str | None = None
-    shape: str = "box"  # "cylinder": one vertical cylinder inscribed in boxes[0] (legs)
+    shape: str = "box"  # "cylinder": vertical cylinder in boxes[0] (legs); "wedge": right-triangular prism along a (hob vent fillets)
     # Mitre cuts: each a triangle [(a, z), (a, z), (a, z)] in the run frame,
     # cut through the part's whole depth (c). The island top and its end
     # panels meet at 45 degrees (Petr, 2026-11-20 f, ``MitreEnds``).
@@ -917,6 +952,7 @@ class _Builder:
             self._worktop(rows, z_base + height - wt, z_base + height)
         if _prop(run.element, PSET_RUN, "CladEnds"):
             self._cladding(rows, z_base, z_base + height - wt)
+        self._hob_vent_outlets()
         if self._flush_ends():
             self._end_panels(z_base, z_base + height - wt)
         if wt > 0 and _prop(run.element, PSET_RUN, "Backsplash"):
@@ -1233,7 +1269,11 @@ class _Builder:
         t, tf, bt = p["BoardThickness"], p["FrontThickness"], p["BackThickness"]
         lo, hi = bay.clear_lo, bay.clear_hi
         back_y = bay.depth - (t / 2 if shared_back else bt)
-        c_in0, c_in1 = self.c_range(bay, tf, back_y)
+        vent = self._hob_vent_plan(bay, z0, z1, back_y, p)
+        # A vented hob bay stops the bottom at the moved-forward back so
+        # the exhaust channel is open down into the plinth.
+        bottom_y = vent.outer_y if vent is not None else back_y
+        c_in0, c_in1 = self.c_range(bay, tf, bottom_y)
         tb = p["BottomThickness"] or t
         if _prop(run.element, PSET_RUN, "LedPanels"):
             self._led_bottom(bay, p, lo, hi, c_in0, c_in1, z0, tb)
@@ -1265,10 +1305,18 @@ class _Builder:
                     self.add(Part(f"{bay.id}-RAIL-{tag}", name, "Rail", [box]), bay)
         else:
             self.add(Part(f"{bay.id}-TOP", "Strop", "Top", [(lo, hi, c_in0, c_in1, z1 - t, z1)]), bay)
-        ceiling = None if hob is None else hob.underside - hob.min_drawer_gap
+        # Safety distances under an air-intake panel are from the panel
+        # underside (Miele pp. 19–20), not from the hob housing.
+        if hob is None:
+            ceiling = None
+        else:
+            panel_t = 0.0 if vent is None else vent.panel_t
+            ceiling = hob.underside - panel_t - hob.min_drawer_gap
         subs = self._sections(bay, p, z0, z1, back_y)
         for sub in subs or [bay]:
             self._fronts(sub, p, z0, z1, back_y, ceiling)
+        if vent is not None:
+            self._hob_vent_carcass(bay, z0, z1, p, vent)
 
     def _led_continuous(self) -> bool:
         return bool(_prop(self.run.element, PSET_RUN, "LedPanels")) and bool(
@@ -2807,6 +2855,262 @@ class _Builder:
         return Hob(hid, name, mounting, cutout, rebate, glass, housing, underside, back_edge,
                    mm("MinDrawerGap", 8.0))
 
+
+    def _hob_vent_plan(self, bay: Bay, z0, z1, back_y, p) -> HobVent | None:
+        """A sealed exhaust channel when this bay has a hob and a
+        ``Pset_Drawers.NominalLength`` shorter than the longest NL that
+        would fill the carcass (Petr, 2026-11-24, t935u–t939u)."""
+        hob = self.run.hobs.get(bay.id)
+        if hob is None or _prop(bay.element, PSET_DRAWERS, "NominalLength") is None:
+            return None
+        tf, t = p["FrontThickness"], p["BoardThickness"]
+        nl = merivobox_nl(p, back_y - tf, bay.element)
+        longest = merivobox_nl(p, back_y - tf, None)
+        if nl >= longest - TOL:
+            return None
+        inner_y = tf + nl + p["MerivoboxDepthClearance"]
+        back_t = t
+        outer_y = inner_y + back_t
+        channel = back_y - outer_y
+        if channel < HOB_VENT_CHANNEL_MIN - TOL:
+            raise ValueError(
+                f"{bay.id}: hob exhaust channel {channel:.1f} mm is under "
+                f"{HOB_VENT_CHANNEL_MIN:.0f} (NL {nl:g}, back {back_t:g}; "
+                f"a shorter NL or a thinner back is needed)"
+            )
+        panel_t = float(_prop(bay.element, PSET_HOB, "IntakePanelThickness", 0.012)) * 1000.0
+        if panel_t <= 0:
+            raise ValueError(f"{bay.id}: IntakePanelThickness must be > 0 when the bay is vented")
+        hole_d = float(_prop(bay.element, PSET_HOB, "IntakeHoleDiameter", 0.08)) * 1000.0
+        if not (MIELE_INTAKE_HOLE_D[0] - TOL <= hole_d <= MIELE_INTAKE_HOLE_D[1] + TOL):
+            raise ValueError(
+                f"{bay.id}: IntakeHoleDiameter {hole_d:g} mm is not in Miele's "
+                f"{MIELE_INTAKE_HOLE_D[0]:g}–{MIELE_INTAKE_HOLE_D[1]:g} mm"
+            )
+        fillet = min(HOB_VENT_FILLET, max(0.0, channel - 10.0))
+        # Baffle just behind the front legs, so the front plinth stays the
+        # intake path and the rear plinth is the sealed exhaust duct.
+        d, inset = p["LegDiameter"], p["LegInset"]
+        baffle_y0 = tf + inset + d / 2 + 10.0
+        baffle_y1 = baffle_y0 + t
+        vent = HobVent(
+            nl=nl, back_t=back_t, channel=channel, inner_y=inner_y, outer_y=outer_y,
+            back_y=back_y, panel_t=panel_t, panel_z0=hob.underside - panel_t,
+            panel_z1=hob.underside, hole_d=hole_d,
+            cutout_h=MIELE_REAR_CUTOUT_H, cutout_w=MIELE_REAR_CUTOUT_W, fillet=fillet,
+            grille_len=HAFELE_GRILLE_LEN, grille_h=HAFELE_GRILLE_H, grille_t=HAFELE_GRILLE_T,
+            grille_free=HAFELE_GRILLE_FREE, grille_article=HAFELE_GRILLE_ARTICLE,
+            baffle_y0=baffle_y0, baffle_y1=baffle_y1,
+        )
+        if not hasattr(self, "_hob_vents"):
+            self._hob_vents = {}
+        self._hob_vents[bay.id] = vent
+        self.run.notes.append(
+            f"guess: {bay.id} intake panel {panel_t:.0f} mm carpenter board "
+            f"(MDF / plywood), no gap to the hob underside, holes Ø{hole_d:.0f} "
+            f"at Miele X {MIELE_INTAKE_X[0]:g}/{MIELE_INTAKE_X[1]:g}, Y {MIELE_INTAKE_Y:g}"
+        )
+        self.run.notes.append(
+            f"{bay.id}: MERIVOBOX NL {longest:g} → {nl:g}, sealed exhaust channel "
+            f"{channel:.0f} mm (moved-forward back {back_t:.0f} mm) to the central back"
+        )
+        self.run.notes.append(
+            f"guess: {bay.id} plinth outlet Häfele {HAFELE_GRILLE_ARTICLE} "
+            f"{HAFELE_GRILLE_H:.0f} × {HAFELE_GRILLE_LEN:.0f} mm slotted aluminium, "
+            f"{HAFELE_GRILLE_FREE:.0f} cm² free area, in the nearer island end cladding"
+        )
+        return vent
+
+    def _hob_vent_carcass(self, bay: Bay, z0, z1, p, vent: HobVent):
+        """Intake panel, moved-forward back with the Miele rear cut-out, and
+        45° fillet boards at both 90° turns of the channel."""
+        run, hob = self.run, self.run.hobs[bay.id]
+        t, lo, hi = p["BoardThickness"], bay.clear_lo, bay.clear_hi
+        tb = p["BottomThickness"] or t
+        # Panel: no gap to the hob, sealed to the new back, holes at the
+        # official offsets from the cut-out centre. Facing the front, X1.1
+        # is to the left (−a) and X2.1 to the right (+a).
+        cut = hob.cutout
+        y_front = _prop(bay.element, PSET_HOB, "FrontOffset")
+        y_front = (float(y_front) * 1000.0) if y_front is not None else (
+            abs((cut.c0 if bay.front_low else cut.c1) - (bay.c0 if bay.front_low else bay.c1))
+        )
+        mid_a = (cut.a0 + cut.a1) / 2.0
+        mid_y = y_front + abs(cut.c1 - cut.c0) / 2.0
+        # c_range from the cut-out front to the new back inner face.
+        c_p0, c_p1 = self.c_range(bay, y_front, vent.inner_y)
+        r = vent.hole_d / 2.0
+        # Hole centres: Y toward the rear of the cut-out.
+        hy = mid_y + MIELE_INTAKE_Y
+        holes = []
+        for sign, x in ((-1, MIELE_INTAKE_X[0]), (1, MIELE_INTAKE_X[1])):
+            ha = mid_a + sign * x
+            hc0, hc1 = self.c_range(bay, hy - r, hy + r)
+            holes.append(Void(ha - r, ha + r, min(hc0, hc1), max(hc0, hc1),
+                              radius=r, name=f"intake {x:g}"))
+        gap = (MIELE_INTAKE_X[0] + MIELE_INTAKE_X[1]) - vent.hole_d
+        if gap < MIELE_INTAKE_HOLE_GAP - TOL:
+            raise ValueError(f"{bay.id}: intake holes {gap:.0f} mm apart, Miele needs ≥ {MIELE_INTAKE_HOLE_GAP:.0f}")
+        self.add(Part(f"{bay.id}-INTAKE", "Air-intake base panel", "Board",
+                      [(lo, hi, c_p0, c_p1, vent.panel_z0, vent.panel_z1)],
+                      voids=holes,
+                      props={"Kind": "IntakePanel", "Thickness": round(vent.panel_t / 1000.0, 6),
+                             "Guess": True}), bay)
+        # Moved-forward back, sealed to the dividers, rear cut-out at the top.
+        c_b0, c_b1 = self.c_range(bay, vent.inner_y, vent.outer_y)
+        am = mid_a
+        void_c0, void_c1 = min(c_b0, c_b1) - 1.0, max(c_b0, c_b1) + 1.0
+        cutout = Void(am - vent.cutout_w / 2.0, am + vent.cutout_w / 2.0,
+                      void_c0, void_c1, depth=vent.cutout_h, name="exhaust")
+        self.add(Part(f"{bay.id}-BACK", "Záda (exhaust)", "Back",
+                      [(lo, hi, c_b0, c_b1, z0 + tb, z1)],
+                      voids=[cutout],
+                      props={"Kind": "ExhaustBack", "Channel": round(vent.channel / 1000.0, 6)}), bay)
+        # 45° fillet boards: top (exhaust into the channel, against the
+        # central back) and bottom (channel into the plinth, against the
+        # new back's outer face).
+        if vent.fillet > TOL:
+            y_top0, y_top1 = vent.back_y - vent.fillet, vent.back_y
+            c_t0, c_t1 = self.c_range(bay, y_top0, y_top1)
+            corner_top = "c1z1" if bay.front_low else "c0z1"
+            self.add(Part(f"{bay.id}-VENT-FILLET-T", "Exhaust fillet, top", "Board",
+                          [(lo, hi, c_t0, c_t1, z1 - vent.fillet, z1)],
+                          shape="wedge", props={"Kind": "VentFillet", "Wedge": corner_top}), bay)
+            # Bottom fillet sits across the carcass / plinth line so the
+            # 90° from the channel down into the plinth is chamfered.
+            y_bot0, y_bot1 = vent.outer_y, vent.outer_y + vent.fillet
+            c_f0, c_f1 = self.c_range(bay, y_bot0, y_bot1)
+            corner_bot = "c0z0" if bay.front_low else "c1z0"
+            # The fillet's right angle is at the new back's outer face, at z0.
+            # For front_low, outer face is the lower c of this box... 
+            # c_range(outer, outer+fillet) = (c0+outer, c0+outer+fillet), so
+            # the back's outer face is c0 of the box = lower c. Corner c0z0.
+            self.add(Part(f"{bay.id}-VENT-FILLET-B", "Exhaust fillet, bottom", "Board",
+                          [(lo, hi, c_f0, c_f1, z0 - vent.fillet, z0)],
+                          shape="wedge", props={"Kind": "VentFillet", "Wedge": corner_bot}), bay)
+
+    def _hob_vent_outlet_end(self, bay: Bay) -> tuple[float, float]:
+        """The nearer run end (da, edge) along a, for the plinth duct."""
+        lo = min(b.a0 for b in self.run.bays)
+        hi = max(b.a1 for b in self.run.bays)
+        if (bay.a0 - lo) <= (hi - bay.a1):
+            return -1.0, lo
+        return 1.0, hi
+
+    def _hob_vent_outlets(self):
+        """Plinth baffle, sealed duct to the nearer island end, and a
+        slotted aluminium grille in that end's cladding."""
+        vents = getattr(self, "_hob_vents", None) or {}
+        if not vents:
+            return
+        run, p = self.run, self.p
+        t = p["BoardThickness"]
+        ph = p["PlinthHeight"]
+        for bay_id, vent in vents.items():
+            bay = run.bay(bay_id)
+            zb = bay.z_base
+            da, edge = self._hob_vent_outlet_end(bay)
+            name = self._end_name(da)
+            # Duct along a: from this bay's far side (away from the outlet
+            # end) to the inner face of the end cladding.
+            if da > 0:
+                a0, a1 = bay.clear_lo, edge
+            else:
+                a0, a1 = edge, bay.clear_hi
+            # West wall of the duct, under the moved-forward back, plus a
+            # front baffle under this bay only (intake in front, exhaust
+            # behind). The front baffle is just this bay's clear width; the
+            # duct wall runs to the end.
+            c_d0, c_d1 = self.c_range(bay, vent.outer_y - t, vent.outer_y)
+            self.add(Part(f"{bay.id}-VENT-DUCT", "Exhaust plinth duct wall", "Board",
+                          [(a0, a1, c_d0, c_d1, zb, zb + ph)],
+                          props={"Kind": "VentDuct"}), bay)
+            # Closer at the far end of the channel (this bay's other side).
+            if da > 0:
+                side_a0, side_a1 = bay.clear_lo, bay.clear_lo + t
+            else:
+                side_a0, side_a1 = bay.clear_hi - t, bay.clear_hi
+            c_s0, c_s1 = self.c_range(bay, vent.outer_y, vent.back_y)
+            self.add(Part(f"{bay.id}-VENT-SIDE", "Exhaust plinth closer", "Board",
+                          [(side_a0, side_a1, c_s0, c_s1, zb, zb + ph)],
+                          props={"Kind": "VentDuct"}), bay)
+            # Spine wall: continue the central back down through the plinth
+            # along the duct, so exhaust does not spill into the other row.
+            c_e0, c_e1 = self.c_range(bay, vent.back_y, vent.back_y + t)
+            self.add(Part(f"{bay.id}-VENT-SPINE", "Exhaust plinth spine", "Board",
+                          [(a0, a1, c_e0, c_e1, zb, zb + ph)],
+                          props={"Kind": "VentDuct"}), bay)
+            # Front baffle under this bay only, separating the front
+            # (intake, toe-kick) plinth from the rear exhaust.
+            c_f0, c_f1 = self.c_range(bay, vent.baffle_y0, vent.baffle_y1)
+            # Returns from the front baffle to the duct wall, so air cannot
+            # wrap around the baffle into the front plinth.
+            self.add(Part(f"{bay.id}-VENT-BAFFLE", "Plinth intake/exhaust baffle", "Board",
+                          [(bay.clear_lo, bay.clear_hi, c_f0, c_f1, zb, zb + ph)],
+                          props={"Kind": "VentBaffle"}), bay)
+            for tag, sa0, sa1 in (("N", bay.clear_lo, bay.clear_lo + t),
+                                  ("S", bay.clear_hi - t, bay.clear_hi)):
+                c_r0, c_r1 = self.c_range(bay, vent.baffle_y1, vent.outer_y - t)
+                if abs(c_r1 - c_r0) > TOL:
+                    self.add(Part(f"{bay.id}-VENT-BAFFLE-{tag}", "Plinth baffle return", "Board",
+                                  [(sa0, sa1, c_r0, c_r1, zb, zb + ph)],
+                                  props={"Kind": "VentBaffle"}), bay)
+            # Grille in the end cladding. A 1000 mm Häfele 100 mm strip,
+            # centred on the cladding's depth, 368 cm² (guess:).
+            clad_id = f"{run.id}-CLAD-{name}"
+            try:
+                clad = run.part(clad_id)
+            except (KeyError, ValueError):
+                self.run.notes.append(f"open: {bay.id} exhaust grille: no {clad_id} to cut")
+                continue
+            box = clad.boxes[0]
+            ca0, ca1, cc0, cc1, cz0, cz1 = box
+            # Opening through the cladding thickness (a), 100 mm high at
+            # the plinth, grille_len along c, centred, with a small margin.
+            margin = 30.0
+            span = cc1 - cc0
+            length = min(vent.grille_len, max(0.0, span - 2 * margin))
+            if length + TOL < vent.grille_len:
+                self.run.notes.append(
+                    f"open: {bay.id} end grille shortened to {length:.0f} mm "
+                    f"(cladding depth {span:.0f}); free area scales down"
+                )
+            mid_c = (cc0 + cc1) / 2.0
+            gc0, gc1 = mid_c - length / 2.0, mid_c + length / 2.0
+            # Cut slightly past both faces of the cladding.
+            va0, va1 = (min(ca0, ca1) - 1.0, max(ca0, ca1) + 1.0)
+            opening = Void(va0, va1, gc0, gc1, name="exhaust grille",
+                           z_lo=zb, z_hi=zb + vent.grille_h)
+            clad.voids.append(opening)
+            # The grille itself, 1.5 mm, flush with the outer face.
+            if da > 0:
+                g_a0, g_a1 = ca1 - vent.grille_t, ca1
+            else:
+                g_a0, g_a1 = ca0, ca0 + vent.grille_t
+            # A few long slots so the plate reads as a vent without a
+            # heavy mesh (Häfele 40 × 7.5 mm ovals, represented simply).
+            slots = []
+            n_slots = 6
+            slot_h = 7.5
+            pitch = (vent.grille_h - 16.0) / (n_slots - 1) if n_slots > 1 else 0.0
+            inset = 20.0
+            for i in range(n_slots):
+                zs = zb + 8.0 + i * pitch
+                slots.append(Void(va0, va1, gc0 + inset, gc1 - inset,
+                                  name=f"slot {i + 1}", z_lo=zs, z_hi=zs + slot_h))
+            free = vent.grille_free * (length / vent.grille_len)
+            self.add(Part(f"{bay.id}-VENT-GRILLE", "Plinth ventilation grille", "Plinth",
+                          [(g_a0, g_a1, gc0, gc1, zb, zb + vent.grille_h)],
+                          label="appliance", material="aluminium-anodised",
+                          voids=slots,
+                          props={"Kind": "VentGrille", "Article": vent.grille_article,
+                                 "FreeArea_cm2": round(free, 1), "Guess": True}), bay)
+            if free + TOL < MIELE_EXHAUST_FREE_AREA:
+                self.run.notes.append(
+                    f"open: {bay.id} grille free area {free:.0f} cm² is under "
+                    f"Miele's {MIELE_EXHAUST_FREE_AREA:.0f} cm²"
+                )
+
     def _overhang(self, front_low: bool) -> float:
         """Front overhang of the edge a row facing c0 (``front_low``) or c1
         has: ``WorktopOverhang<compass>`` (metres, e.g. ``WorktopOverhangE``)
@@ -3051,6 +3355,29 @@ MERIVOBOX_NL_BY_SIDE = {
     "F": MERIVOBOX_NL[:-1],
 }
 MERIVOBOX_70KG_NL = (450.0, 500.0, 550.0, 600.0)
+
+# Miele KM 8xxx air-intake-optimised base panel and rear cut-out (KM 8665 FL
+# installation manual, en-GB M.-Nr. 12 985 350, pp. 19–20). X and Y are from
+# the cut-out centre; Y is toward the rear. Safety distances under the panel
+# (variant 3, no intermediate shelf) are ≥ 5 mm to a drawer upper edge and
+# ≥ 75 mm to a drawer base. The modelled MinDrawerGap may be tighter.
+MIELE_INTAKE_HOLE_D = (60.0, 80.0)
+MIELE_INTAKE_X = (78.0, 210.0)  # X1.1, X2.1, mm from mid-width (left, right facing the front)
+MIELE_INTAKE_Y = 138.0
+MIELE_INTAKE_HOLE_GAP = 15.0
+MIELE_REAR_CUTOUT_H = 45.0
+MIELE_REAR_CUTOUT_W = 550.0
+MIELE_DRAWER_GAP_EDGE = 5.0
+MIELE_DRAWER_GAP_BASE = 75.0
+MIELE_EXHAUST_FREE_AREA = 250.0  # cm², plinth / end grille
+HOB_VENT_CHANNEL_MIN = 50.0
+# guess: Häfele 575.20.035, 100 × 1000 mm slotted alu, 368 cm² (catalogue).
+HAFELE_GRILLE_ARTICLE = "575.20.035"
+HAFELE_GRILLE_H = 100.0
+HAFELE_GRILLE_LEN = 1000.0
+HAFELE_GRILLE_T = 1.5
+HAFELE_GRILLE_FREE = 368.0
+HOB_VENT_FILLET = 40.0
 # Drawer sides tallest first, for picking the tallest box a band can take.
 # F is left out: it is not in Blum's European catalogue.
 MERIVOBOX_AUTO_SIDES = ("E", "K", "M", "N")

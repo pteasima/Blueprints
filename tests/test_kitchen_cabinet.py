@@ -626,8 +626,11 @@ def test_gridfinity_drawers_fit_the_grid():
             d = run.part(f"{bay}-D{i}").drawer
             n, m = d.grid
             # Blum MERIVOBOX (2026-11-23): clear − 51 is exactly n x 42 + 2
-            # since t841u (2 mm play); NL 600 leaves 10 in depth.
-            assert d.inside[0] == pytest.approx(n * 42 + 2) and d.inside[1] == pytest.approx(m * 42 + 2 + 10)
+            # since t841u (2 mm play). NL 600 leaves 10 in depth; SF-I600b
+            # is NL 500 (exhaust channel, t939u) and leaves 36, like the
+            # east inner drawers.
+            slack = 36 if bay == "SF-I600b" else 10
+            assert d.inside[0] == pytest.approx(n * 42 + 2) and d.inside[1] == pytest.approx(m * 42 + 2 + slack)
             # The baseplate rides in the drawer: n × m cells, on the inside
             # floor, snapped to the front (Petr, t835u).
             plate = d.items[0]
@@ -636,8 +639,14 @@ def test_gridfinity_drawers_fit_the_grid():
             assert plate[2] == pytest.approx(d.box[2]) == pytest.approx(d.front[3])
     # East: inner drawers only (2026-11-22 e, t795u); the middle bays 9 over
     # across; NL 500 since 2026-11-23 leaves 37 in depth.
-    west = [f"open: {b}-D{i} inside {w} x 558 is +0 / +10 off the Gridfinity {n}x13 size (scripts/gridfinity_fit.py)"
-            for b, w, n in (("SF-I600a", 506, 12), ("SF-I500b", 464, 11), ("SF-I600b", 548, 13)) for i in (1, 2, 3)]
+    west = [
+        f"open: {b}-D{i} inside {w} x {d} is +0 / +{sl} off the Gridfinity {n}x{rows} size (scripts/gridfinity_fit.py)"
+        for b, w, n, d, sl, rows in (
+            ("SF-I600a", 506, 12, 558, 10, 13),
+            ("SF-I500b", 464, 11, 558, 10, 13),
+            ("SF-I600b", 548, 13, 458, 36, 10),  # NL 500, t939u
+        ) for i in (1, 2, 3)
+    ]
     # Petr, 2026-11-23 (t851u): 13 columns exactly in the north three.
     east = {"SF-E600a": (548, 13, 0), "SF-E600b": (548, 13, 0), "SF-E600c": (548, 13, 0), "SF-E700": (562, 13, 14)}
     assert [n for n in run.notes if "Gridfinity" in n] == west + [
@@ -667,7 +676,79 @@ def test_drawers_under_the_hob_clear_it():
     run = _runs()["KR-ISL"]
     hob = run.hobs["SF-I600b"]
     top = run.part("SF-I600b-D1").drawer
-    assert top.box[5] <= hob.underside - 8.0 + 1e-6
+    panel = run.part("SF-I600b-INTAKE")
+    pz0, pz1 = panel.boxes[0][4], panel.boxes[0][5]
+    assert pz1 == pytest.approx(hob.underside)  # no gap to the hob
+    assert pz1 - pz0 == pytest.approx(12.0)
+    # Conservative 8 mm and official 5 / 75 mm, from the panel underside.
+    assert top.box[5] <= pz0 - 8.0 + 1e-6
+    assert top.box[4] <= pz0 - 75.0 + 1e-6
+
+
+def test_hob_ventilation_in_sf_i600b():
+    """Petr, 2026-11-24 (t935u–t939u): intake panel, NL 500, 82 mm channel,
+    south-end plinth grille."""
+    run = _runs()["KR-ISL"]
+    bay = run.bay("SF-I600b")
+    d1 = run.part("SF-I600b-D1").drawer
+    assert d1.props.get("NominalLength") in (0.5, 500, "0.5") or d1.inside[1] == pytest.approx(458.0)
+    assert d1.grid == (13, 10)
+    for i, side in ((1, "K"), (2, "M"), (3, "E")):
+        part = run.part(f"SF-I600b-D{i}")
+        assert part.props["DrawerSide"] == side
+        assert part.drawer.inside[1] == pytest.approx(458.0)
+        # Front heights unchanged.
+    fronts = [run.part(f"SF-I600b-D{i}").drawer.front[5] - run.part(f"SF-I600b-D{i}").drawer.front[4] for i in (1, 2, 3)]
+    assert [round(h) for h in fronts] == [197, 97, 507]
+    back = run.part("SF-I600b-BACK")
+    # Channel = inner face of central back (621) − outer face of new back.
+    b = back.boxes[0]
+    c0, c1 = b[2], b[3]
+    # West row is front_low: inner face is the smaller-y? front at low c,
+    # inner face of the back is the front-facing face = lower c (c0).
+    # outer is c1. Channel is back_y (621 from front = c of central inner)
+    # minus c1. We'll just check the back is 18 mm and the channel ≥ 50.
+    assert abs(c1 - c0) == pytest.approx(18.0)
+    # Central back inner at 621 from the west front.
+    # Find KR-ISL-BACK and measure.
+    central = run.part("KR-ISL-BACK")
+    cb = central.boxes[0]
+    # Channel: distance from back outer (max c of SF-I600b-BACK, front_low)
+    # to the nearer face of the central back.
+    back_outer = max(c0, c1)
+    central_inner = min(cb[2], cb[3]) if abs(min(cb[2], cb[3]) - back_outer) < 200 else max(cb[2], cb[3])
+    # More reliably: the gap between the two parts along c.
+    gap = min(abs(c0 - cb[2]), abs(c0 - cb[3]), abs(c1 - cb[2]), abs(c1 - cb[3]))
+    # That's the distance between nearest faces... actually min of those
+    # could be small if they nearly touch. They should be 82 mm apart.
+    # Distance between intervals (c0,c1) and (cb[2],cb[3]):
+    def interval_gap(a0, a1, b0, b1):
+        a0, a1 = min(a0, a1), max(a0, a1)
+        b0, b1 = min(b0, b1), max(b0, b1)
+        if a1 < b0:
+            return b0 - a1
+        if b1 < a0:
+            return a0 - b1
+        return 0.0
+    channel = interval_gap(c0, c1, cb[2], cb[3])
+    assert channel == pytest.approx(82.0)
+    assert any(v.name == "exhaust" and v.depth == pytest.approx(45.0) for v in back.voids)
+    assert abs((max(v.a1 - v.a0 for v in back.voids if v.name == "exhaust") or 0) - 550.0) < 1e-6 or         any(abs((v.a1 - v.a0) - 550.0) < 1e-6 for v in back.voids)
+    bottom = run.part("SF-I600b-BOTTOM").boxes[0]
+    # Bottom must not cover the channel (it stops at the new back).
+    bot_c0, bot_c1 = bottom[2], bottom[3]
+    assert interval_gap(bot_c0, bot_c1, cb[2], cb[3]) >= 82.0 - 1e-6
+    fillet_t = run.part("SF-I600b-VENT-FILLET-T")
+    fillet_b = run.part("SF-I600b-VENT-FILLET-B")
+    assert fillet_t.shape == "wedge" and fillet_b.shape == "wedge"
+    grille = run.part("SF-I600b-VENT-GRILLE")
+    assert grille.material == "aluminium-anodised"
+    assert grille.props.get("FreeArea_cm2") >= 250.0
+    # Grille is in the south cladding, not the west kickboard.
+    clad = run.part("KR-ISL-CLAD-S")
+    assert any(v.name == "exhaust grille" for v in clad.voids)
+    # Fronts of the other west bays are untouched (sanity).
+    assert run.part("SF-I600a-D1").drawer.inside[1] == pytest.approx(558.0)
 
 
 def test_west_backsplash_up_to_wall_cabinets():

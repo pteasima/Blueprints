@@ -361,13 +361,33 @@ The hob is on **SF-I600b**, the island's west row, second 600 from the north (y 
 | Housing | 533 × 427, from 879 to 926 | Miele (51 installation height) |
 | Hob underside | **879**, 31 below the carcass top (910) | derived |
 | Front rail in SF-I600b | **left out**: the housing (86.5–513.5 behind the front face) drops into the rail (18–98) | `guess:` |
-| Drawers | three: fronts 197 / 97 / 507, Blum MERIVOBOX boxes K (725–854), M (617–708), E (133–325), NL 600 (since 2026-11-23). Housing 533 in a 589 clear, 28 a side | yaml, see “MERIVOBOX remodel” |
+| Drawers | three: fronts 197 / 97 / 507, Blum MERIVOBOX boxes K (725–854), M (617–708), E (133–325), **NL 500** (was 600 until 2026-11-24, t939u, so a sealed exhaust channel fits). Housing 533 in a 599 clear | yaml, see “MERIVOBOX remodel” and “Hob ventilation” |
 
-If a bay under a hob has drawers, the top drawer box stays 8 mm below the hob underside (`MinDrawerGap`): since 2026-11-23 a MERIVOBOX box is not cut but moves down (its metal sides cannot be trimmed), and the export stops if it no longer fits above the carcass bottom. The top K box ends at 854, 25 below the hob.
+If a bay under a hob has drawers, the top drawer box stays 8 mm below the **intake-panel underside** (`MinDrawerGap`; official KM 8xxx is ≥ 5 mm from the panel, plus ≥ 75 mm to the drawer base). Since 2026-11-23 a MERIVOBOX box is not cut but moves down (its metal sides cannot be trimmed), and the export stops if it no longer fits above the carcass bottom. The top K box ends at 854; with the 12 mm panel (underside 867) that is a 13 mm gap.
 
 In IFC the worktop's rebate is a second extrusion layer. The slab is one 14.5 mm layer with the through holes and one 5.5 mm top layer with the rebate. In the 3D model the rebate is a pocket.
 
-`open:` surface-mounted or flush-fit (Petr). Surface-mounted is `Mounting: SurfaceMounted`: the glass then rests on the stone (top 934) and there is no rebate. `open:` the cut-out's position in the bay depth. `open:` fan airflow (the air-intake base panel holes) is not modelled.
+`open:` surface-mounted or flush-fit (Petr). Surface-mounted is `Mounting: SurfaceMounted`: the glass then rests on the stone (top 934) and there is no rebate. `open:` the cut-out's position in the bay depth.
+
+### Hob ventilation (SF-I600b, 2026-11-24, t935u–t939u)
+
+Petr asked to model the Miele KM 8665 FL ventilation in the island west cabinet under the hob. The official path (installation manual, en-GB M.-Nr. 12 985 350, pp. 19–20, variant 3: air-intake-optimised base panel, no intermediate shelf) is: intake air from the front toe-kick / drawer gap, through two holes in a carpenter-board panel tight under the hob; exhaust through a rear cut-out (≥ 45 × 550 mm) into a sealed vertical channel, down into this cabinet's plinth, and out through a grille away from the front intake.
+
+| Item | Value | Source |
+| --- | --- | --- |
+| Intake panel | **guess: 12 mm** carpenter board (MDF / plywood), no gap to the hob underside (z 867–879). 16 mm would leave 9 mm to the K box top (854); 18 mm would leave 7 and fail the conservative 8 mm `MinDrawerGap` | thickness is a guess; placement is Miele (“no gap”) |
+| Fan holes | two Ø **80** mm (official 60–80, guess: the 80 mm max) at X 78 / 210 and Y 138 from the cut-out centre, Y toward the rear. Facing the front, 78 is left (−a, north) and 210 is right (+a, south). Centre-to-centre 288 mm, 208 mm between holes (≥ 15) | Miele pp. 19–20 |
+| Safety from the panel underside | 13 mm to the K box top 854 (≥ 5 official, ≥ 8 conservative); 142 mm to the box base 725 (≥ 75) | Miele; derived |
+| Drawer NL | **500** (was 600). Petr: fit only 500 or 550. NL 550 + any sealing back T ≥ 1 cannot leave a ≥ 50 mm channel (T=18 → 32 mm, T=8 → 42 mm). NL 500 + T=18 → **82 mm** | Petr t937u–t938u; Blum NL |
+| Moved-forward back | 18 mm (same as the carcass), inner face at y 521 (18 + 500 + 3), outer at 539. The ≥ 45 × 550 mm cut-out is at the top, opening into the channel. Dividers already run to the central back and form the channel cheeks (clear width 599 > 550) | modelled |
+| Channel | **82 mm** clear, full cabinet width, sealed from the drawer space, open down into the west plinth (the carcass bottom stops at the new back) | ≥ 50 required |
+| 45° fillets | 40 mm boards at both 90° turns: top, against the central back, where the hob exhaust enters the channel; bottom, against the new back, where the channel turns into the plinth | Petr |
+| Outlet | **guess:** Häfele 575.20.035, 100 × 1000 mm slotted aluminium (catalogue **368 cm²** ≥ 250), 1.5 mm, silver anodised, in the **south island end cladding** (the nearer end: SF-I300 is 305 mm south). A sealed plinth duct runs from the channel under SF-I600b and SF-I300 to that opening. A baffle under SF-I600b (just behind the front legs) separates the front toe-kick (intake) from the rear exhaust, so the two do not recirculate under this bay | Häfele catalogue; placement per Petr (“rear of the plinth or the island end side”) |
+| Fronts / box sides | unchanged: D1 K 197, D2 M 97, D3 E 507, pinned with `Layout: "drawer 0.2 box=K \| drawer 0.1 box=M \| drawer * box=E"`. Without the pin, NL 500 would auto-pick N for the 97 mm band (N is sold in 500, not in 600). Inside depth 558 → **458**, Gridfinity 13×13 → **10×13** (slack 36), profile 453.6001B → **453.5001B**, extension 596 → **496**. Load stays 70 kg | derived |
+
+`open:` panel thickness (12 mm is a guess). `open:` whether to use a thinner back (8 mm would give a 92 mm channel, still with NL 500). `open:` the south-end grille cuts the Silestone cladding at plinth height; a rear floor vent under the island has no true exterior face (the west front kickboard is the intake and must stay clear). `open:` the island's back legs sit at y 541 (LegInset 80 from the central back), so the two back legs of SF-I600b and those of SF-I300 stand in the exhaust plinth duct; they were not moved. `open:` flush-fit vs surface-mounted, as before. The mains connection box may project through the rear cut-out into the channel (the cut-out is for ventilation and the cable); the housing rear is at y 513.5, **7.5 mm** in front of the new back's inner face.
+
+The west kickboard stays the intake face; the grille is not in it.
 
 ## West run end cladding
 
