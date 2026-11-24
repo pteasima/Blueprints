@@ -477,21 +477,21 @@ systemFurniture:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-ISL
-      # Petr, 2026-11-24 (t972u): all island-west D1 fronts 140 mm
-      # (768.5–908.5, band 143). M box at front bottom + 13.5 (782–873).
-      # D2 omitted for now (it would overlap the new D1); a 57 mm gap
-      # holds the bottom drawer (old D3) at 110–710. open: D2/D3 heights.
+      # Petr, 2026-11-24 (t976u): four-drawer stack, 3 mm gaps, D1 kept at
+      # 140 mm (768.5–908.5). D2 M 108 mm (657.5–765.5, Blum minimum), D3
+      # K 207 mm (447.5–654.5), D4 E front 100–444.5, aligned with the
+      # other west stacks. Boxes at front bottom + 13.5 except the lowest
+      # (profile on the carcass bottom board).
       - Name: Pset_Fronts
         Properties:
-          Layout: "drawer 0.143 box=M | gap 0.057 | drawer *"
-          Contents: "nože; ; dole nevím"
+          Layout: "drawer 0.143 box=M | drawer 0.111 box=M | drawer 0.210 box=K | drawer * box=E"
+          Contents: "nože; nářadí; ; dole nevím"
       - Name: Pset_Drawers
         Properties:
           Gridfinity: true
           # GridfinityFitDepth (a box cut to whole cells, t795u) is gone: a
           # MERIVOBOX box is its NL long. The plate is the closest whole grid,
           # snapped to the front (Petr, 2026-11-23, t835u).
-          # nářadí was the omitted D2; restored when D2/D3 are set.
   - id: SF-I500b
     Name: "Ostrov západ 500"
     Description: "Island, west row. Red 500, between the knife-drawer 600 and the hob 600. Note: koření, oleje, octy, mouky, cukry, dochucovadla, hrnce. Faces west."
@@ -516,20 +516,19 @@ systemFurniture:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-ISL
-      # Petr, 2026-11-24 (t972u): D1 140 mm as on SF-I600a (M box 782–873).
-      # D2 omitted (overlap); 57 mm gap keeps the bottom drawer at old D3.
-      # open: D2/D3 heights. Oil-bottle height still open once D2 is set.
+      # Petr, 2026-11-24 (t976u): same four-drawer fronts as SF-I600a.
+      # D2 M 108 mm holds 80 mm jars in Gridfinity. Oils/condiments move
+      # to the taller E in SF-I600b-D2.
       - Name: Pset_Fronts
         Properties:
-          Layout: "drawer 0.143 box=M | gap 0.057 | drawer *"
-          Contents: "koření; ; hrnce"
+          Layout: "drawer 0.143 box=M | drawer 0.111 box=M | drawer 0.210 box=K | drawer * box=E"
+          Contents: "koření; ; ; hrnce"
       - Name: Pset_Drawers
         Properties:
           Gridfinity: true
           # GridfinityFitDepth (a box cut to whole cells, t795u) is gone: a
           # MERIVOBOX box is its NL long. The plate is the closest whole grid,
           # snapped to the front (Petr, 2026-11-23, t835u).
-          # "oleje, octy, mouky, cukry, dochucovadla" was the omitted D2.
   - id: SF-I600b
     Name: "Ostrov západ 600 varná deska"
     Description: "Island, west row. Second red 600, under the hob (the green rectangle with two circles on KitchenPlan.jpg). Note: příbory, vařečky, stěrky, naběračky, pánve. Faces west."
@@ -554,16 +553,15 @@ systemFurniture:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-ISL
-      # Petr, 2026-11-24 (t972u): D1 front 140 mm like the neighbours, N
-      # box (782–850.5) under a 10 mm compact-HPL intake panel (869–879).
-      # D2 and D3 bands left as they were (100 / rest) after a 57 mm gap
-      # so they do not move. open: D2/D3 heights.
-      # The top box keeps Miele's 8 mm under the intake panel (Pset_Hob).
-      # Layout pins N / M / E: NL 500 makes N available.
+      # Petr, 2026-11-24 (t976u): three-drawer stack. D1 N 140 mm kept
+      # (782–850.5) under a 12 mm compact-HPL intake panel (867–879).
+      # D2 E (oils/condiments), front 447.5–765.5, ≥ 300 mm clear under
+      # the D1 box at 782. D3 E, front 100–444.5, aligned with the side
+      # stacks' bottom drawers. NL 500 still pins the exhaust channel.
       - Name: Pset_Fronts
         Properties:
-          Layout: "drawer 0.143 box=N | gap 0.057 | drawer 0.1 box=M | drawer * box=E"
-          Contents: "příbory; ; vařečky, stěrky, naběračky; pánve"
+          Layout: "drawer 0.143 box=N | drawer 0.321 box=E | drawer * box=E"
+          Contents: "příbory; oleje, octy, dochucovadla; vařečky, stěrky, naběračky, pánve"
       - Name: Pset_Drawers
         Properties:
           # Petr, 2026-11-24 (t935u–t939u): NL 500 (not 550) so an 18 mm
@@ -602,11 +600,10 @@ systemFurniture:
           # ≥ 5 mm to the drawer upper edge and ≥ 75 mm to the drawer base,
           # measured from the intake-panel underside (manual pp. 19–20).
           MinDrawerGap: 0.008
-          # Petr, 2026-11-24 (t972u): 10 mm compact HPL, no gap to the
-          # hob underside (board 869–879). Thickness is guess: (not
-          # confirmed); holes stay as in the Miele manual. Replaces the
-          # earlier 12 mm carpenter-board guess (t942u).
-          IntakePanelThickness: 0.010
+          # Petr, 2026-11-24 (t976u): 12 mm compact HPL, no gap to the
+          # hob underside (board 867–879). Thickness is guess: (not
+          # confirmed); holes stay as in the Miele manual.
+          IntakePanelThickness: 0.012
           # Official Ø 60–80 mm; guess: the 80 mm maximum.
           IntakeHoleDiameter: 0.08
   - id: SF-I300

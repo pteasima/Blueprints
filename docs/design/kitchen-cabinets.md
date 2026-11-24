@@ -50,7 +50,7 @@ Petr's original document is the sticky-note plan [`KitchenPlan.jpg`](../../input
 | 8 | Gridfinity: west boxes cut to whole cells (`GridfinityFitDepth`), plates centred | **No cut** (a MERIVOBOX box is its NL long); the plate is the closest whole grid for the new inside and is **snapped to the drawer front**, the slack at the back | Petr: “gridfinity plates stay (closest match to drawer length) and are snapped to the front of the drawer”; t836u: re-check the width too (see “MERIVOBOX remodel”) |
 | 9 | Sink base SF-B800: a full-height pull-out with two equal bins trimmed under the disposer | (superseded by row 16) A low **MERIVOBOX M** box (back 83 high, passes under the disposer) with **two IKEA FILUR 42 l** standing on its base, one each side of the disposer | Petr: “assume merivobox with upright Ikea Filur bins under main sink (the one you recommended)” |
 | 10 | Recycling SF-C850: three equal bins (`guess:`) | **Empty**, deepest MERIVOBOX that fits: NL 550, E, 70 kg | Petr: “assume deepest merivobox for southwest recycling cabinet, leave empty without bins for now” |
-| 11 | Island west top drawers: MAXIMERA low (78 box in a 100 front), then (t949u) MERIVOBOX M behind 97 mm fronts, hanging | **t972u:** all island-west D1 fronts **140 mm** (768.5–908.5). Neighbours: M box 782–873 (Blum 13.5 mm offset). Under the hob (SF-I600b-D1): **N** box 782–850.5 and a **10 mm** compact-HPL intake panel (869–879, thickness `guess:`). D2/D3 not reworked; I600a/I500b D2 omitted (overlap). See “Island west D1 fronts 140 mm” | Petr, 2026-11-24 (t972u) |
+| 11 | Island west top drawers: MAXIMERA low, then hanging 97 mm M fronts, then (t972u) D1 only at 140 mm | **t976u:** full west stacks, 3 mm gaps, D1 **140 mm** kept (768.5–908.5). Sides (I600a/I500b): D2 M 108, D3 K 207, D4 E 344.5. Hob (I600b): D2 E 318, D3 E 344.5. Boxes at front bottom + 13.5 except the lowest (43 mm, profile on the carcass bottom board). 12 mm compact-HPL intake (867–879, `guess:`). See “Island west drawer stacks” | Petr, 2026-11-24 (t976u) |
 | 12 | Gridfinity play 1 mm (inside n × 42 + 1) | **2 mm** (inside n × 42 + 2, `GridfinityPlay`) | Petr, 2026-11-23 (t841u), approving the 2 mm leeway |
 | 13 | Island west widths 500 / 607 / 481 / 607 / 305 (row 7: unchanged) | **470 / 575 / 533 / 617 / 305** (SF-I500a / SF-I600a / SF-I500b / SF-I600b / SF-I300), still 2500. Insides 506 / 464 / 548 = **12 / 11 / 13 columns exactly** (were 12 / 9 / 12 with 33 spare). Ids keep their old nominal names | Petr (t837u): “when you say island west drawers have spare room in width, then you should change them … The south 300 stays. The hob drawer gets wider to fit gridfinity”; t841u: “can we make the middle two drawers closer in size (12 and 11 gridfinities instead of 13 and 10)?” |
 | 14 | Island sink SN-RS1840 against the south divider (t834u; landing 320) | **Cut-out 45 from the divider face**: rim a 218–438, cut-out a 240–416 in the 470 bay; **landing 258** | Petr (t840u): “are you positive it can be mounted this close to the cabinet edge? Its undermount”; t841u: “Im ok with 258 landing”. Teka sheet 61401450: clip hole Ø10 × 16 deep, **30 mm from the cut-out edge**; the rim (220 × 440) runs 22 past the cut-out. The old rim lay 9 mm on the divider and the south clip hole fell over it. `guess:` the clip plate reaches about 12 past its screw + 3 play → 45. `open:` ask the stone fabricator (clip count and positions, or glue + battens) |
@@ -366,9 +366,9 @@ The hob is on **SF-I600b**, the island's west row, second 600 from the north (y 
 | Housing | 533 × 427, from 879 to 926 | Miele (51 installation height) |
 | Hob underside | **879**, 31 below the carcass top (910) | derived |
 | Front rail in SF-I600b | **left out**: the housing (86.5–513.5 behind the front face) drops into the rail (18–98) | `guess:` |
-| Drawers | three: fronts **140** / 97 / 508.5, Blum MERIVOBOX boxes **N** (782–850.5), M (617–708, unchanged), E (unchanged, 110–710 band), **NL 500**. A 57 mm `gap` between D1 and D2 holds D2/D3 still. Housing 533 in a 599 clear | yaml, t972u; see “Island west D1 fronts 140 mm” and “Hob ventilation” |
+| Drawers | three: fronts **140** / **318** / **344.5**, boxes **N** (782–850.5), **E** (461–653), **E** (143–335), **NL 500**. Housing 533 in a 599 clear | yaml, t976u; see “Island west drawer stacks” and “Hob ventilation” |
 
-If a bay under a hob has drawers, the top drawer box stays 8 mm below the **intake-panel underside** (`MinDrawerGap`; official KM 8xxx is ≥ 5 mm from the panel, plus ≥ 75 mm to the drawer base). Since 2026-11-23 a MERIVOBOX box is not cut but moves down (its metal sides cannot be trimmed), and the export stops if it no longer fits above the carcass bottom. The top **N** box ends at 850.5; with the **10 mm** compact-HPL panel (underside 869, thickness `guess:`) that is an **18.5 mm** gap to the box top and **87 mm** to the box base (official ≥ 5 / ≥ 75, repo ≥ 8).
+If a bay under a hob has drawers, the top drawer box stays 8 mm below the **intake-panel underside** (`MinDrawerGap`; official KM 8xxx is ≥ 5 mm from the panel, plus ≥ 75 mm to the drawer base). Since 2026-11-23 a MERIVOBOX box is not cut but moves down (its metal sides cannot be trimmed), and the export stops if it no longer fits above the carcass bottom. The top **N** box ends at 850.5; with the **12 mm** compact-HPL panel (underside 867, thickness `guess:`) that is a **16.5 mm** gap to the box top and **85 mm** to the box base (official ≥ 5 / ≥ 75, repo ≥ 8).
 
 In IFC the worktop's rebate is a second extrusion layer. The slab is one 14.5 mm layer with the through holes and one 5.5 mm top layer with the rebate. In the 3D model the rebate is a pocket.
 
@@ -382,12 +382,12 @@ Petr asked to model the Miele KM 8665 FL ventilation in the island west cabinet 
 
 | Item | Value | Source |
 | --- | --- | --- |
-| Intake panel | Miele air-intake-optimised base panel, no gap to the hob underside (z **869–879**), no intermediate shelf; takes air from the drawer below. Two Ø **80** mm holes (official 60–80, **guess:** the 80 mm max) at X 78 / 210 and Y 138 from the cut-out centre, Y toward the rear. Facing the front, 78 is left (−a, north) and 210 is right (+a, south). Centre-to-centre 288 mm, 208 mm between holes (≥ 15). **guess: 10 mm compact HPL** (thickness not confirmed). Replaces the earlier 12 mm carpenter-board guess (t942u). Holes stay as in the Miele manual | Petr t972u; thickness is a guess; placement and holes are Miele |
-| Safety from the panel underside | **18.5 mm** to the N box top 850.5 (≥ 5 official, ≥ 8 conservative); **87 mm** to the box base 782 (≥ 75) | Miele; derived, t972u |
+| Intake panel | Miele air-intake-optimised base panel, no gap to the hob underside (z **867–879**), no intermediate shelf; takes air from the drawer below. Two Ø **80** mm holes (official 60–80, **guess:** the 80 mm max) at X 78 / 210 and Y 138 from the cut-out centre, Y toward the rear. Facing the front, 78 is left (−a, north) and 210 is right (+a, south). Centre-to-centre 288 mm, 208 mm between holes (≥ 15). **guess: 12 mm compact HPL** (thickness not confirmed). Holes stay as in the Miele manual | Petr t976u; thickness is a guess; placement and holes are Miele |
+| Safety from the panel underside | **16.5 mm** to the N box top 850.5 (≥ 5 official, ≥ 8 conservative); **85 mm** to the box base 782 (≥ 75) | Miele; derived, t976u |
 | Drawer NL | **500** (was 600). Petr: fit only 500 or 550. NL 550 + any sealing back T ≥ 1 cannot leave a ≥ 50 mm channel (T=18 → 32 mm, T=8 → 42 mm). NL 500 + T=18 → **82 mm** | Petr t937u–t938u; Blum NL |
 | Moved-forward back | 18 mm (same as the carcass; thickness is `open:`, see below), inner face at y 521 (18 + 500 + 3), outer at 539. The ≥ 45 × 550 mm cut-out is at the top, opening into the channel. Dividers already run to the central back and form the channel cheeks (clear width 599 > 550) | modelled |
 | Channel | **82 mm** clear, full cabinet width, sealed from the drawer space, open down into this cabinet's underside / west plinth void (the carcass bottom stops at the new back) | ≥ 50 required |
-| Fronts / box sides | t972u: D1 **N** 140 mm (768.5–908.5, box 782–850.5), then a 57 mm `gap`, D2 M 97 and D3 E 508.5 left as they were, pinned with `Layout: "drawer 0.143 box=N \| gap 0.057 \| drawer 0.1 box=M \| drawer * box=E"`. Inside depth 558 → **458**, Gridfinity 13×13 → **10×13** (slack 36), profile 453.6001B → **453.5001B**, extension 596 → **496**. Load stays 70 kg | Petr t972u; NL 500 since t939u |
+| Fronts / box sides | t976u: D1 **N** 140 mm (768.5–908.5, box 782–850.5), D2 **E** 318 mm (447.5–765.5, box 461–653), D3 **E** 344.5 mm (100–444.5, box 143–335), pinned with `Layout: "drawer 0.143 box=N \| drawer 0.321 box=E \| drawer * box=E"`. Inside depth 558 → **458**, Gridfinity **13×10** (slack 36; an 11th row would need 464, 6 mm over the NL 500 inside). Profile 453.5001B, extension 496. Load stays 70 kg | Petr t976u; NL 500 since t939u |
 
 The housing rear is at y 513.5, **7.5 mm** in front of the new back's inner face. The mains connection box may project through the rear cut-out into the channel (the cut-out is for ventilation and the cable).
 
@@ -397,7 +397,7 @@ The housing rear is at y 513.5, **7.5 mm** in front of the new back's inner face
 - **Fillets at the two 90° turns** (top: hob exhaust into the channel; bottom: channel into the plinth). A 45° / 40 mm board at each corner was one option, so the flow is not choked.
 - **Back-panel thickness.** Modelled as 18 mm, the same as the carcass, giving the 82 mm channel. A thinner back (for example 8 mm, which would leave a 92 mm channel, still with NL 500) is an option.
 
-`open:` flush-fit vs surface-mounted, as before. The west kickboard is the natural intake face of the island; whatever outlet is chosen should stay away from it so the two do not recirculate. `open:` the intake panel thickness (**10 mm compact HPL** is a guess, not confirmed). `open:` island-west D2/D3 heights (pending Petr; t972u).
+`open:` flush-fit vs surface-mounted, as before. The west kickboard is the natural intake face of the island; whatever outlet is chosen should stay away from it so the two do not recirculate. `open:` the intake panel thickness (**12 mm compact HPL** is a guess, not confirmed).
 
 ## West run end cladding
 
@@ -2094,7 +2094,7 @@ Inside is width × depth × side height above the base. “Below front” is how
 
 ### Suspicious or open
 
-- **Island west D1 fronts are 140 mm (t972u),** with M boxes behind the neighbours and an N box under the hob; see “Island west D1 fronts 140 mm”. SF-I600b-D2 is still a 97 mm M front, short of Blum's 108 mm minimum, but the box stays behind the front. `open:` island-west D2/D3 heights (pending Petr).
+- **Island west stacks are fully modelled (t976u),** 3 mm gaps, D1 140 mm; see “Island west drawer stacks”. All those decor fronts meet Blum's minimum heights.
 - Tall run drawers (400 / 410 fronts) and every E box: E is the tallest European MERIVOBOX side (192), so the tall run's drawer insides drop from 274 / 284 to **176** high; inner pull-outs (E) behind the same fronts would win the height back. Same for SF-I300 and SF-A250's “shelves”, which stand for inner pull-outs or a rack behind the front (`guess:`).
 - ~~SF-A250 is 232 wide: below the usual MERIVOBOX range (275+).~~ Wrong: 275–1200 is SPACE TOWER's range, and SPACE TWIN (KB 150–250) is itself a MERIVOBOX application. See “SF-A250: SPACE TWIN”.
 - Every carcass with NL 600 / 500 is at Blum's minimum (NL + 3): a thicker front (`open:` for the woodworker) or a thicker back takes a whole NL step.
@@ -2660,20 +2660,26 @@ Inner-drawer fronts are Blum aluminium front pieces (M min. 54* + min. 52, latch
 `open:` confirm the woodworker's front-fixing method (screw-on, INSERTA or EXPANDO T) and that 18 mm is enough for the 4 mm J back wall (already an `open:` under “J grip”); no change to the fronts or boxes on this question.
 
 
-### Island west D1 fronts 140 mm (2026-11-24, t972u)
+### Island west drawer stacks (2026-11-24, t976u)
 
-Petr (t972u): model all island-west D1 (top drawer) fronts as **140 mm** tall. The front top stays at 908.5 (1.5 mm gap under the worktop), so the front is **768.5–908.5** (band 143 mm, 767–910). East-row full-height D1s and the SF-I300 pull-out are unchanged.
+Petr (t976u) approved modelling the island-west stacks fully. D1 fronts stay **140 mm** (768.5–908.5) as in t972u. Fronts have the usual 3 mm gaps. The temporary 57 mm `gap` band and the “temporarily numbered D2” hack are gone. East-row full-height D1s and the SF-I300 pull-out are unchanged.
 
-| Bay | D1 front | D1 box | Notes |
-| --- | --- | --- | --- |
-| SF-I600a, SF-I500b | 140 mm, 768.5–908.5 | **M** (91), **782–873**, Blum offset 13.5 mm above the front bottom; no drop under the 18 mm rail at 892 | 80 mm CITRONHAJ jars standing in Gridfinity: inside floor 798, about 7 mm leeway under the rail (Petr's plan, not modelled) |
-| SF-I600b (under the hob) | same 140 mm front | **N** (68.5), **782–850.5**, same offset | 10 mm compact-HPL intake panel **869–879** (underside 869). Clearances from the panel underside: **18.5 mm** to the box top (official ≥ 5, repo ≥ 8), **87 mm** to the box base (≥ 75). Both pass |
+The box base sits **13.5 mm** above a mid-stack front's lower edge (Blum: profile 15 mm under the side, half-gap 1.5). The inside floor is 16 mm above that (`BoxBottomThickness`, Blum cutting list), so **front bottom + 29.5 mm**, matching Petr's estimate.
 
-**D2 / D3** were not reworked. A 57 mm `gap` band (710–767) sits under each new D1 so the bands below stay where they were.
+| Bay | Front (height, z) | Box (side, z) | Inside floor | Notes |
+| --- | --- | --- | --- | --- |
+| SF-I600a / SF-I500b D1 | 140, 768.5–908.5 | **M** 782–873 | 798 | Unchanged from t972u |
+| SF-I600a / SF-I500b D2 | **108**, 657.5–765.5 | **M** 671–762 | 687 | Blum's M minimum. 80 mm jars in Gridfinity: 95 mm to the D1 box underside at 782; with the repo's 5 mm baseplate (`GridfinityHeight`, guess:) the leeway is **10 mm** (Petr expected about 8, likely a ~7 mm plate) |
+| SF-I600a / SF-I500b D3 | **207**, 447.5–654.5 | **K** 461–590 | 477 | Bottom edge aligns with the hob D2 E front |
+| SF-I600a / SF-I500b D4 | **344.5**, 100–444.5 | **E** 143–335 | 159 | Aligned across all three columns |
+| SF-I600b D1 | 140, 768.5–908.5 | **N** 782–850.5 | 798 | Under the 12 mm intake |
+| SF-I600b D2 | **318**, 447.5–765.5 | **E** 461–653 | 477 | Oils/condiments. Clear item height to the D1 box underside (782) is **305 mm** (≥ 300, including a few mm of play) |
+| SF-I600b D3 | **344.5**, 100–444.5 | **E** 143–335 | 159 | Same bottom front as the side D4s |
 
-- **SF-I600a / SF-I500b D2** would have overlapped the new D1 front (old D2 front 711.5–808.5 vs new D1 768.5–908.5). Their geometry is **omitted**; the bottom drawer stays at the old D3 band (110–710, front 100–708.5) and is temporarily numbered **D2**.
-- **SF-I600b D2 / D3** are left geometrically as they were (D2 M front 611.5–708.5, box 617–708; D3 E, front 100–608.5). The same 57 mm gap sits between D1 and D2, so the west elevation has a uniform 60 mm opening (708.5–768.5) until D2/D3 are set.
+The lowest drawers cannot take the mid-stack 13.5 mm offset: the cabinet profile stands on the 18 mm carcass bottom board (110–128), so the box base is at **143** (43 mm above the 100 mm lip front, inside floor 159 = front + 59). That is the repo/Blum lowest-band rule, not a silent change to the agreed fronts. E is the tallest European side (192, M plus a gallery / BOXCOVER / BOXCAP); the repo does not draw a separate gallery rail.
 
-`open:` island-west D2/D3 heights are pending Petr's next decision. `open:` intake panel thickness (10 mm compact HPL is a guess, not confirmed); hole positions and diameters stay as in the Miele KM 8665 FL installation manual.
+**Intake panel (t976u):** **12 mm** compact HPL, 867–879, underside 867, thickness `guess:` (not confirmed). Holes stay as in the Miele KM 8665 FL manual. Clearances from the underside: **16.5 mm** to the N box top, **85 mm** to the box base (official ≥ 5 / ≥ 75, repo ≥ 8). Both pass.
 
-The 123 / 108 / 571.5 layout listed under “MERIVOBOX front coverage” / “J grip and Blum front fixings” was not applied; t972u supersedes it for D1.
+**Gridfinity under the hob:** Petr asked for one more row in depth in the N drawer. The bay is pinned at NL 500 (exhaust channel 82 mm; NL 550 cannot leave ≥ 50 mm). Inside depth is **458** (NL − 26 − 16). Ten rows need 422 (slack 36); eleven rows need **464** and are **6 mm over**. The extra row is not modelled. NL 550 is not used. Sides stay 12×13 and 11×13 (NL 600, slack 10 in depth). New D2/D3/D4 drawers inherit `Gridfinity: true` like the others.
+
+`open:` intake panel thickness (12 mm compact HPL is a guess, not confirmed).
