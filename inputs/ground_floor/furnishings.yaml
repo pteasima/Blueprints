@@ -2014,10 +2014,9 @@ furniture:
           FrontGrip: J
           FrontFinish: matt lacquered MDF (RAL 1015 cream)
           WorktopThickness: 0.0
-          # Petr, 2026-11-24 (t947u): plinth flush with the fronts (was a
-          # 50 mm recessed board). Height stays 100; drawer heights above
-          # the floor are unchanged. open: whether 100 mm is the right
-          # lift for the north run (could go lower to reclaim drawer space).
+          # Petr, 2026-11-24 (t947u, t948u): plinth flush with the fronts
+          # (was a 50 mm recessed board). Height stays 100; north-run
+          # drawers stay at 100 mm above the floor (decided, t948u).
           PlinthHeight: 0.10
           PlinthKind: Flush
   - id: KR-TALL
@@ -2035,10 +2034,9 @@ furniture:
           FrontGrip: J
           FrontFinish: matt lacquered MDF (RAL 1015 cream)
           WorktopThickness: 0.0
-          # Petr, 2026-11-24 (t947u): plinth flush with the fronts (was a
-          # 50 mm recessed board). Height stays 100; drawer heights above
-          # the floor are unchanged. open: whether 100 mm is the right
-          # lift for the north run (could go lower to reclaim drawer space).
+          # Petr, 2026-11-24 (t947u, t948u): plinth flush with the fronts
+          # (was a 50 mm recessed board). Height stays 100; north-run
+          # drawers stay at 100 mm above the floor (decided, t948u).
           PlinthHeight: 0.10
           PlinthKind: Flush
           # Petr, 2026-11-20 d: "Please add a bit of kickboard between the

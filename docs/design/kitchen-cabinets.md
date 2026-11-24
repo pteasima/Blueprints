@@ -2571,7 +2571,7 @@ Drip grooves (`guess:` 5 mm wide × 3 mm deep, centreline 10 mm in from the edge
 - East aisle: cabinet fronts stay at x 21.660; the worktop edge is now at **21.680** (20 mm closer to the table). Table west edge was 1.427 m from the east face; it is **1.407 m** from the new worktop edge. West aisle unchanged (fronts 1100, worktop edges 1060).
 - Island overall depth is now **exactly 1200** (Petr had earlier asked to stay closely below 1200 when choosing the east NL; the 20 mm east overhang is a later, explicit request).
 
-`open:` whether 100 mm is also the right lift for the north-run drawers (Petr: could go lower on the whole north run and reclaim drawer space, but not so low that opening a drawer hits the foot). The flush plinth has no toe recess, so standing close already means the toes meet the plinth; **100 mm is a comfortable default**, and going much below about 80–100 mm is usually not ergonomic. Left at 100 until that is decided.
+North-run drawers stay at **100 mm** above the floor, with the flush plinth (Petr, 2026-11-24, t948u: decided; was `open:` whether to lower the whole north run and reclaim drawer space).
 
 `open:` confirm the drip-groove profile with the stonemason (square 5 × 3 mm is a `guess:`; a slightly deeper or V-groove is common). A 20 mm overhang plus a groove 10 mm in will stop typical spills from wrapping back onto the fronts, but it cannot guarantee that a soapy or wind-blown film never jumps the groove; see the PR write-up.
 
