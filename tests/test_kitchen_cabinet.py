@@ -51,19 +51,22 @@ def test_zone_spec_grammar():
 def test_island_drawer_bays_follow_the_notes():
     run = _runs()["KR-ISL"]
     for bay_id, contents in (
-        ("SF-I500b", ["koření", "oleje, octy, mouky, cukry, dochucovadla", "hrnce"]),
+        ("SF-I600a", ["nože", "dole nevím"]),
+        ("SF-I500b", ["koření", "hrnce"]),
         ("SF-I600b", ["příbory", "vařečky, stěrky, naběračky", "pánve"]),
     ):
-        drawers = [run.part(f"{bay_id}-D{i}").drawer for i in (1, 2, 3)]
+        drawers = [run.part(f"{bay_id}-D{i}").drawer for i in range(1, len(contents) + 1)]
         assert [d.content for d in drawers] == contents
-    # Petr, 2026-11-13: the top drawers are MAXIMERA's lowest (band 100, box
-    # 78); the bottom drawer takes the rest. Under the hob the top band stays
-    # 200 (a 100 band leaves 61 mm to the hob limit, the low box is 78).
-    fronts = {b: [run.part(f"{b}-D{i}").drawer.front[5] - run.part(f"{b}-D{i}").drawer.front[4]
-                  for i in (1, 2, 3)] for b in ("SF-I600a", "SF-I500b", "SF-I600b")}
-    assert fronts["SF-I600a"] == pytest.approx([97.0, 97.0, 608.5])
-    assert fronts["SF-I500b"] == pytest.approx([97.0, 97.0, 608.5])
-    assert fronts["SF-I600b"] == pytest.approx([197.0, 97.0, 508.5])
+    # Petr, 2026-11-24 (t972u): all island-west D1 fronts 140 mm. I600a /
+    # I500b D2 omitted (overlap); the bottom drawer stays at the old D3
+    # band and is numbered D2 until D2/D3 are set. I600b D2/D3 unchanged.
+    fronts = {}
+    for b, ids in (("SF-I600a", (1, 2)), ("SF-I500b", (1, 2)), ("SF-I600b", (1, 2, 3))):
+        fronts[b] = [run.part(f"{b}-D{i}").drawer.front[5] - run.part(f"{b}-D{i}").drawer.front[4]
+                     for i in ids]
+    assert fronts["SF-I600a"] == pytest.approx([140.0, 608.5])
+    assert fronts["SF-I500b"] == pytest.approx([140.0, 608.5])
+    assert fronts["SF-I600b"] == pytest.approx([140.0, 97.0, 508.5])
     # Best effort, 2026-11-19: the sink bay a door, the 300 a pull-out.
     # Petr, 2026-11-20: "east side of kitchen island are 4 large full height drawers".
     assert run.part("SF-I500a-DOOR1").door.hinge == "L"
@@ -392,24 +395,27 @@ def test_divider_is_in_both_bays_once():
 
 def test_sf_i600a_drawers():
     run = _runs()["KR-ISL"]
-    drawers = [run.part(f"SF-I600a-D{i}").drawer for i in (1, 2, 3)]
-    assert [d.nominal for d in drawers] == [100.0, 100.0, 600.0]
-    assert [d.content for d in drawers] == ["nože", "nářadí", "dole nevím"]
+    # t972u: D2 omitted; the bottom drawer (old D3) is numbered D2.
+    drawers = [run.part(f"SF-I600a-D{i}").drawer for i in (1, 2)]
+    assert [d.nominal for d in drawers] == [143.0, 600.0]
+    assert [d.content for d in drawers] == ["nože", "dole nevím"]
     assert [(round(d.front[1] - d.front[0]), round(d.front[5] - d.front[4])) for d in drawers] == [
-        (572, 97), (572, 97), (572, 608)]  # 608.5 rounded
+        (572, 140), (572, 608)]  # 608.5 rounded
     # Blum MERIVOBOX NL 600 (Petr, 2026-11-23, t835u): inside = clear 557 − 51
-    # by NL 600 − 26 − 16; sides M, M, E. 557 since t841u (12 columns).
+    # by NL 600 − 26 − 16; sides M, E. 557 since t841u (12 columns).
     assert all((round(d.inside[0]), round(d.inside[1])) == (506, 558) for d in drawers)
-    assert [round(d.box[5] - d.box[4]) for d in drawers] == [91, 91, 192]
-    assert [d.side for d in drawers] == ["M", "M", "E"] and all(d.nl == pytest.approx(600.0) for d in drawers)
+    assert [round(d.box[5] - d.box[4]) for d in drawers] == [91, 192]
+    assert [d.side for d in drawers] == ["M", "E"] and all(d.nl == pytest.approx(600.0) for d in drawers)
     assert all(d.grid == (12, 13) for d in drawers)  # 12 x 42 + 2 = 506
     # No box front (2026-11-22 e, t795u): the box is the inside + the 19
     # back, as long as the NL allows.
     assert all(d.extension == pytest.approx(558.0 + 19.0 + 19.0) for d in drawers)
-    # The 97 mm fronts are short of Blum's 108 mm minimum for M, so the
-    # box still hangs below (listed, fronts not silently grown; t949u / t950u).
-    assert [d.drop for d in drawers] == pytest.approx([26.0, 34.0, 0.0])
+    # D1 M at Blum's 13.5 mm offset (782–873) behind the 140 mm front; no drop.
+    assert [d.front[4] for d in drawers] == pytest.approx([768.5, 100.0])
+    assert drawers[0].box[4:6] == pytest.approx((782.0, 873.0))
+    assert [d.drop for d in drawers] == pytest.approx([0.0, 0.0])
     assert run.carcass_z1 - run.carcass_z0 == pytest.approx(800.0)
+    assert not any(p.id == "SF-I600a-D3" for p in run.parts)
 
 
 def test_merivobox_front_covers_box_per_blum():
@@ -436,9 +442,10 @@ def test_merivobox_front_covers_box_per_blum():
                 # Covered: the box does not stick out below or above the front.
                 assert d.box[4] >= d.front[4] - 1e-6
                 assert d.box[5] <= d.front[5] + 1e-6
-    # Four island-west 97 mm M drawers hang; I600b-D2 is short of 108 but covered.
-    assert hanging == ["SF-I600a-D1", "SF-I600a-D2", "SF-I500b-D1", "SF-I500b-D2"]
-    assert short == ["SF-I600a-D1", "SF-I600a-D2", "SF-I500b-D1", "SF-I500b-D2", "SF-I600b-D2"]
+    # t972u: island D1s now meet Blum's minimum (140 mm M / N). I600b-D2
+    # is still a 97 mm M front, short of 108, but the box stays behind it.
+    assert hanging == []
+    assert short == ["SF-I600b-D2"]
     assert kc.merivobox_min_front("N") == 85.5
     assert kc.merivobox_min_front("M") == 108.0
     assert kc.merivobox_min_front("K") == 146.0
@@ -496,8 +503,9 @@ def test_height_change_follows():
             e["Height"] = 1.03
     run = _runs(doc)["KR-ISL"]
     assert run.carcass_z1 - run.carcass_z0 == pytest.approx(900.0)
-    d3 = run.part("SF-I600a-D3").drawer
-    assert d3.nominal == pytest.approx(700.0)
+    # Bottom drawer is numbered D2 (t972u: D3 id gone while D2 is omitted).
+    d2 = run.part("SF-I600a-D2").drawer
+    assert d2.nominal == pytest.approx(700.0)
     assert run.worktop[5] == pytest.approx(1030.0)
     assert run.part("KR-ISL-CLAD-N").boxes[0][5] == pytest.approx(1030.0)
 
@@ -574,8 +582,11 @@ def test_drawer_motions_in_model():
     _shape, meta = build()
     drawers = [m for m in meta["door_motions"] if m["kind"] == "drawer"]
     island = [m for m in drawers if m["id"].startswith("SF-I")]
-    assert [m["id"] for m in island] == [f"{b}-D{i}" for b in ("SF-I600a", "SF-I500b", "SF-I600b") for i in (1, 2, 3)] + [
-        "SF-I300-D1"]
+    assert [m["id"] for m in island] == (
+        [f"{b}-D{i}" for b in ("SF-I600a", "SF-I500b") for i in (1, 2)]
+        + [f"SF-I600b-D{i}" for i in (1, 2, 3)]
+        + ["SF-I300-D1"]
+    )
     for m in drawers:
         assert m["element"] == m["id"]
     # The slide is the full extension, the box length (Blum MERIVOBOX NL 600
@@ -657,8 +668,9 @@ def test_hob_flush_fit_in_sf_i600b():
 def test_gridfinity_drawers_fit_the_grid():
     run = _runs()["KR-ISL"]
     p = run.params
-    for bay in ("SF-I600a", "SF-I500b", "SF-I600b"):
-        for i in (1, 2, 3):
+    drawers_of = {"SF-I600a": (1, 2), "SF-I500b": (1, 2), "SF-I600b": (1, 2, 3)}
+    for bay, ids in drawers_of.items():
+        for i in ids:
             d = run.part(f"{bay}-D{i}").drawer
             n, m = d.grid
             # Blum MERIVOBOX (2026-11-23): clear − 51 is exactly n x 42 + 2
@@ -677,11 +689,11 @@ def test_gridfinity_drawers_fit_the_grid():
     # across; NL 500 since 2026-11-23 leaves 37 in depth.
     west = [
         f"open: {b}-D{i} inside {w} x {d} is +0 / +{sl} off the Gridfinity {n}x{rows} size (scripts/gridfinity_fit.py)"
-        for b, w, n, d, sl, rows in (
-            ("SF-I600a", 506, 12, 558, 10, 13),
-            ("SF-I500b", 464, 11, 558, 10, 13),
-            ("SF-I600b", 548, 13, 458, 36, 10),  # NL 500, t939u
-        ) for i in (1, 2, 3)
+        for b, w, n, d, sl, rows, ids in (
+            ("SF-I600a", 506, 12, 558, 10, 13, (1, 2)),
+            ("SF-I500b", 464, 11, 558, 10, 13, (1, 2)),
+            ("SF-I600b", 548, 13, 458, 36, 10, (1, 2, 3)),  # NL 500, t939u
+        ) for i in ids
     ]
     # Petr, 2026-11-23 (t851u): 13 columns exactly in the north three.
     east = {"SF-E600a": (548, 13, 0), "SF-E600b": (548, 13, 0), "SF-E600c": (548, 13, 0), "SF-E700": (562, 13, 14)}
@@ -715,8 +727,13 @@ def test_drawers_under_the_hob_clear_it():
     panel = run.part("SF-I600b-INTAKE")
     pz0, pz1 = panel.boxes[0][4], panel.boxes[0][5]
     assert pz1 == pytest.approx(hob.underside)  # no gap to the hob
-    assert pz1 - pz0 == pytest.approx(12.0)
-    # Conservative 8 mm and official 5 / 75 mm, from the panel underside.
+    assert pz1 - pz0 == pytest.approx(10.0)  # t972u: 10 mm compact HPL (guess:)
+    assert pz0 == pytest.approx(869.0)
+    # N box 782–850.5: 18.5 mm to the panel (>= 5 official, >= 8 repo), 87 mm to the base (>= 75).
+    assert top.box[4:6] == pytest.approx((782.0, 850.5))
+    assert top.side == "N"
+    assert pz0 - top.box[5] == pytest.approx(18.5)
+    assert pz0 - top.box[4] == pytest.approx(87.0)
     assert top.box[5] <= pz0 - 8.0 + 1e-6
     assert top.box[4] <= pz0 - 75.0 + 1e-6
 
@@ -730,13 +747,14 @@ def test_hob_ventilation_in_sf_i600b():
     d1 = run.part("SF-I600b-D1").drawer
     assert d1.props.get("NominalLength") in (0.5, 500, "0.5") or d1.inside[1] == pytest.approx(458.0)
     assert d1.grid == (13, 10)
-    for i, side in ((1, "K"), (2, "M"), (3, "E")):
+    for i, side in ((1, "N"), (2, "M"), (3, "E")):
         part = run.part(f"SF-I600b-D{i}")
         assert part.props["DrawerSide"] == side
         assert part.drawer.inside[1] == pytest.approx(458.0)
-        # Front heights unchanged.
     fronts = [run.part(f"SF-I600b-D{i}").drawer.front[5] - run.part(f"SF-I600b-D{i}").drawer.front[4] for i in (1, 2, 3)]
-    assert fronts == pytest.approx([197.0, 97.0, 508.5])
+    assert fronts == pytest.approx([140.0, 97.0, 508.5])
+    # D2/D3 bands left as they were (t972u); D2 box still behind the 97 mm front.
+    assert run.part("SF-I600b-D2").drawer.box[4:6] == pytest.approx((617.0, 708.0))
     back = run.part("SF-I600b-BACK")
     # Channel = inner face of central back (621) − outer face of new back.
     b = back.boxes[0]
@@ -1237,7 +1255,7 @@ def test_toekick_front_lip_east_overhang_and_drip_groove():
     assert isl.carcass_z0 == pytest.approx(110.0) and west.carcass_z0 == pytest.approx(110.0)
     assert isl.worktop[5] == pytest.approx(930.0) and west.worktop[5] == pytest.approx(930.0)
     # Bottom fronts hang 10 mm below the carcass; 100 mm to the finished floor.
-    for run, pid in ((isl, "SF-I600a-D3"), (isl, "SF-E600a-D1"), (west, "SF-C850-D1"), (west, "SF-A600-PANEL")):
+    for run, pid in ((isl, "SF-I600a-D2"), (isl, "SF-E600a-D1"), (west, "SF-C850-D1"), (west, "SF-A600-PANEL")):
         part = run.part(pid)
         front = part.drawer.front if part.drawer else part.boxes[0]
         assert front[4] == pytest.approx(100.0)
