@@ -2504,3 +2504,11 @@ Clearances, t929u (cradle, 13.2°) → t930u (hooks, 13.8°):
 
 - `guess:` hook-plate size, 2 mm thickness, 8 mm lip / stand-off, 40 × 18 mm plates, 30 mm inset from each bin side; 8 mm clearances as before.
 - `open:` a specific buyable hook-and-bracket article if Petr wants a named product instead of the generic plates; whether the Elletipi Easy single nylon support should be tried with the 8 L bin anyway (it is not catalogued for SP34).
+
+#### Tap-to-open and Dreame drawer front (2026-11-24, t931u)
+
+> Petr (t931u): the flip-out no longer opened on tap; the drawer fronts either side of the Dreame vacuum station showed white "ears" instead of a full cream panel. Merge after the fix.
+
+**Tap-to-open.** Replacing the cradle with `SF-F053-BRACKETS` / `SF-F053-HOOKS` left the linkage membership intact (front, bin, brackets and hooks still share one joint), and the viewer still bound all four parts. The generated record listed members by `(joint index, id)`, so `record.element` and the viewer's `binding.host` (the extended tap target) were `SF-F053-BIN`, not the front. `_linkage_motion` now puts the Door / Front (or the part whose id is the group) first: `record.element` is `SF-F053-FLIP`, and a tap on the front — and on the bin, brackets or hooks — tilts all four together to 13.8° and back.
+
+**White ears on the Dreame drawer.** SF-DN section 1 uses `dock … front=notch`: one cream drawer front with a 440 × 160 notch, the legs either side of the opening running down to the kickboard (`_dock` inserts those legs at `above.boxes[1:1]`). Commit e75bff4 (t866u, 2026-11-23) split drawer export into a cream `boxes[0]` front and a white `boxes[1:]` `-BOX` child (Blum SW-M silk white MERIVOBOX). The inserted legs became `boxes[1]` and `boxes[2]`, so they painted as white ears. The white MERIVOBOX split stays; boxes that share the front's c-range stay with the cream front, and only the deeper box pieces go to `-BOX`.

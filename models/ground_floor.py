@@ -468,17 +468,27 @@ def _kitchen_run_parts(run, motions=None, layers: dict | None = None) -> list:
                 # the bin frame) are two painted children of one drawer
                 # node, so the viewer still moves them as one; the box
                 # child's id ends in -BOX for the material catalogue.
-                front = _run_box(boxes[0], 0.0)
+                # A dock front=notch inserts the cream legs either side of
+                # the opening at boxes[1:1] (same c-range as the front).
+                # Those stay with the cream front, not the white -BOX child
+                # (t931u: the "white ears" either side of the Dreame dock).
+                front_boxes, body_boxes = _front_plane_boxes(boxes)
+                front = _run_box(front_boxes[0], 0.0)
+                for box in front_boxes[1:]:
+                    front = front + _run_box(box, 0.0)
                 for grip in part.grips:  # the routed J grip (FrontGrip)
                     front = front - _grip_solid(grip)
-                body = _run_box(boxes[1], 0.0)
-                for box in boxes[2:]:
-                    body = body + _run_box(box, 0.0)
                 front_part = _paint(plane * (Pos(0.0, inward, 0.0) * front), LABEL_CABINET)
                 front_part.element_id = part.id
-                box_part = _paint(plane * (Pos(0.0, inward, 0.0) * body), LABEL_CABINET)
-                box_part.element_id = f"{part.id}-BOX"
-                placed = Compound(children=[front_part, box_part])
+                if body_boxes:
+                    body = _run_box(body_boxes[0], 0.0)
+                    for box in body_boxes[1:]:
+                        body = body + _run_box(box, 0.0)
+                    box_part = _paint(plane * (Pos(0.0, inward, 0.0) * body), LABEL_CABINET)
+                    box_part.element_id = f"{part.id}-BOX"
+                    placed = Compound(children=[front_part, box_part])
+                else:
+                    placed = front_part
                 placed.label = LABEL_CABINET
                 placed.color = _color(LABEL_CABINET)
                 solid = None
@@ -581,6 +591,25 @@ def _kitchen_run_parts(run, motions=None, layers: dict | None = None) -> list:
 LINKAGE_MS = 900
 
 
+
+def _front_plane_boxes(boxes):
+    """Split a drawer's boxes into the cream decor front and the box behind.
+
+    Boxes that share the first box's c-range (the front plane, within 1 mm)
+    stay cream. That includes the two legs a dock ``front=notch`` inserts
+    at ``boxes[1:1]`` either side of the opening. Deeper boxes (MERIVOBOX
+    sides, back, bottom, inners) are the white ``-BOX`` child.
+    """
+    front = boxes[0]
+    cream, body = [], []
+    for box in boxes:
+        if abs(box[2] - front[2]) <= 1.0 and abs(box[3] - front[3]) <= 1.0:
+            cream.append(box)
+        else:
+            body.append(box)
+    return cream, body
+
+
 def _linkage_motion(frame, group: str, members: list) -> dict:
     """A ``kind: "linkage"`` record (the viewer's doors.js): a lift front,
     its folding lower front and its lever arms, each a joint turning about
@@ -593,8 +622,15 @@ def _linkage_motion(frame, group: str, members: list) -> dict:
     the pivot, shut) by ``scales``, one per angle (a telescoping arm). Each
     element names a part mesh and its shut bbox centre, to find it.
     """
+    def _member_key(p):
+        # The Door / Front (or the part whose id is the group) first, so
+        # record.element and the viewer's binding.host — the extended tap
+        # target — are the front, not a later-sorted bin or hook plate.
+        is_front = 0 if (p.id == group or p.role in ("Door", "Front")) else 1
+        return (p.lift.index, is_front, p.id)
+
     joints: dict[int, dict] = {}
-    for part in sorted(members, key=lambda p: (p.lift.index, p.id)):
+    for part in sorted(members, key=_member_key):
         lj = part.lift
         boxes = part.boxes
         a = (min(b[0] for b in boxes) + max(b[1] for b in boxes)) / 2.0

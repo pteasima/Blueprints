@@ -1094,7 +1094,11 @@ def test_dining_column_flipout_is_a_linkage():
     links = {m["id"]: m for m in meta["door_motions"] if m["kind"] == "linkage"}
     rec = links["SF-F053-FLIP"]
     assert rec["id"] == "SF-F053-FLIP"
+    # The front is first so record.element / the viewer's pick host is the
+    # door, not the alphabetically earlier bin (t931u).
+    assert rec["element"] == "SF-F053-FLIP"
     joint = rec["joints"][0]
+    assert joint["elements"][0]["element"] == "SF-F053-FLIP"
     assert {e["element"] for e in joint["elements"]} == {
         "SF-F053-FLIP", "SF-F053-BRACKETS", "SF-F053-HOOKS", "SF-F053-BIN",
     }
