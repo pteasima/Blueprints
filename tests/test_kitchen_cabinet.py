@@ -406,9 +406,43 @@ def test_sf_i600a_drawers():
     # No box front (2026-11-22 e, t795u): the box is the inside + the 19
     # back, as long as the NL allows.
     assert all(d.extension == pytest.approx(558.0 + 19.0 + 19.0) for d in drawers)
-    # The 100 fronts are too low for an M box (space 108): the box hangs below.
+    # The 97 mm fronts are short of Blum's 108 mm minimum for M, so the
+    # box still hangs below (listed, fronts not silently grown; t949u / t950u).
     assert [d.drop for d in drawers] == pytest.approx([26.0, 34.0, 0.0])
     assert run.carcass_z1 - run.carcass_z0 == pytest.approx(800.0)
+
+
+def test_merivobox_front_covers_box_per_blum():
+    """Decor-front MERIVOBOX boxes sit behind their fronts when the front
+    meets Blum's minimum height (N 85.5, M 108, K 146, E 209). Shorter
+    fronts are listed, not silently grown (t949u / t950u)."""
+    p = kc.IKEA_DEFAULTS_MM
+    hanging, short = [], []
+    for run in _runs().values():
+        for part in run.parts:
+            d = getattr(part, "drawer", None)
+            # Decor fronts only: not inner-drawer aluminium front pieces,
+            # not appliances riding in a drawer, not the SF-B800 frame pull-out.
+            if d is None or not d.side or d.frame or part.role not in ("Drawer", "PullOut"):
+                continue
+            front_h = d.front[5] - d.front[4]
+            min_h = kc.merivobox_min_front(d.side)
+            assert kc.merivobox_space_requirement(p, d.side) == pytest.approx(min_h)
+            if front_h + 1e-6 < min_h:
+                short.append(part.id)
+            if d.box[4] < d.front[4] - 1e-6:
+                hanging.append(part.id)
+            else:
+                # Covered: the box does not stick out below or above the front.
+                assert d.box[4] >= d.front[4] - 1e-6
+                assert d.box[5] <= d.front[5] + 1e-6
+    # Four island-west 97 mm M drawers hang; I600b-D2 is short of 108 but covered.
+    assert hanging == ["SF-I600a-D1", "SF-I600a-D2", "SF-I500b-D1", "SF-I500b-D2"]
+    assert short == ["SF-I600a-D1", "SF-I600a-D2", "SF-I500b-D1", "SF-I500b-D2", "SF-I600b-D2"]
+    assert kc.merivobox_min_front("N") == 85.5
+    assert kc.merivobox_min_front("M") == 108.0
+    assert kc.merivobox_min_front("K") == 146.0
+    assert kc.merivobox_min_front("E") == 209.0
 
 
 def test_island_worktop_and_cladding():

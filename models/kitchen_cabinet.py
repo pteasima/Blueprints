@@ -3209,6 +3209,33 @@ def inner_side_height(p: dict, letter: str) -> float:
     return p[key]
 
 
+# Blum planning drawings, "Space requirements in the cabinet" / front
+# "min." stack (AU planning guide N p. 6, M p. 8, K p. 12, E high-fronted
+# p. 16; catalogue 2024/2025, same drawings, M at p. 257). The lower min.
+# is always 54* (covers the cabinet profile); the upper min.** is 31.5 /
+# 54 / 92 / 155 (incl. 2 mm tilt). The sums are the space requirement and
+# the minimum decor-front height. See kitchen-cabinets.md "MERIVOBOX front
+# coverage".
+MERIVOBOX_MIN_FRONT = {"N": 85.5, "M": 108.0, "K": 146.0, "E": 209.0}
+
+
+def merivobox_space_requirement(p: dict, letter: str) -> float:
+    """Blum space requirement in the cabinet (mm): profile 15 + side +
+    tilt 2 (N 85.5, M 108, K 146, E 209, incl. 2 mm tilt)."""
+    return p["MerivoboxProfileBelow"] + inner_side_height(p, letter) + p["MerivoboxTilt"]
+
+
+def merivobox_min_front(letter: str) -> float:
+    """Blum minimum decor-front height (mm) for a standard drawer or
+    high-fronted pull-out. Equal to the space requirement (planning
+    drawing: min. 54* + the upper min.**). Inner-drawer aluminium front
+    pieces are Blum parts with different mins and are not this function."""
+    letter = str(letter).strip().upper()
+    if letter not in MERIVOBOX_MIN_FRONT:
+        raise ValueError(f"unknown Blum side {letter!r} (N, M, K, E)")
+    return MERIVOBOX_MIN_FRONT[letter]
+
+
 def inner_drawers(p: dict, dr: "Drawer", zone_top: float, letters: list, clear: float | None = None) -> list[tuple]:
     """Inner drawer boxes behind one outer front (run frame mm), top first:
     the top one ``InnerTopGap`` under ``zone_top``, the rest spaced evenly
@@ -3304,8 +3331,10 @@ def merivobox_side(p: dict, kind: str, room: float, nl: float, want: str | None 
     """The drawer side letter for one band: ``want`` (the band's ``box=``) if
     given, else for a pull-out E, else the tallest of E, K, M, N whose Blum
     space requirement (profile 15 + side + tilt 2) fits ``room`` and that is
-    made in ``nl``; if none fits, the lowest side made in ``nl`` (the box
-    then sits lower than its front, see ``_drawer``)."""
+    made in ``nl``; if none fits, the lowest side made in ``nl``. That
+    fallback is not Blum's front-coverage rule (min. front = space
+    requirement); hanging boxes are listed, not a reason to shrink the
+    front, see kitchen-cabinets.md "MERIVOBOX front coverage"."""
     if want:
         letter = str(want).strip().upper()
         if nl not in MERIVOBOX_NL_BY_SIDE.get(letter, ()):
@@ -3315,7 +3344,7 @@ def merivobox_side(p: dict, kind: str, room: float, nl: float, want: str | None 
         return "E"
     made = [x for x in MERIVOBOX_AUTO_SIDES if nl in MERIVOBOX_NL_BY_SIDE[x]]
     for letter in made:
-        need = p["MerivoboxProfileBelow"] + inner_side_height(p, letter) + p["MerivoboxTilt"]
+        need = merivobox_space_requirement(p, letter)
         if need <= room + TOL:
             return letter
     return made[-1]
@@ -3381,10 +3410,14 @@ def _drawer(bay: Bay, p: dict, zone: Zone, number: int, back_y: float, ceiling: 
     side letter comes from ``merivobox_side``. Vertically, the cabinet
     profile sits on the band's floor (the carcass bottom or a board for the
     lowest band) and takes ``MerivoboxProfileBelow`` under the side and
-    ``MerivoboxTilt`` over it (Blum's space requirement). When that would
+    ``MerivoboxTilt`` over it (Blum's space requirement: the box base is
+    then 15 mm above a minimum-height front's lower edge). When that would
     reach the top rail, the hob limit or the profile of the drawer above
     (``stack_top``), the box moves down instead (``Drawer.drop``): metal
-    sides cannot be trimmed. See kitchen-cabinets.md "Drawers: Blum MERIVOBOX".
+    sides cannot be trimmed. A drop that puts the box below the decor front
+    is not a Blum recommendation; it happens only when the front is shorter
+    than ``merivobox_min_front`` (listed in kitchen-cabinets.md "MERIVOBOX
+    front coverage", agreed fronts not silently grown).
     """
     if zone.opts.get("frame"):
         return _frame_pullout(bay, p, zone, number, back_y, obstacles, carcass_z0, on_board)
