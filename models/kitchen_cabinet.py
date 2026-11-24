@@ -1249,8 +1249,15 @@ class _Builder:
                 rails = [("F", "Přední lišta", self.c_range(bay, tf, tf + p["RailDepth"]))]
                 if not shared_back:
                     rails.append(("B", "Zadní lišta", self.c_range(bay, back_y - p["RailDepth"], back_y)))
+                flipout = any(kind == "flipout" for kind, _h, _o in zone_spec(bay.element))
                 for tag, name, (c0, c1) in rails:
                     box = (lo, hi, c0, c1, z1 - t, z1)
+                    if tag == "F" and flipout:
+                        # Petr, 2026-11-24 (t928u): a tilt-out bin has to
+                        # swing through the front opening; the front rail
+                        # would clip the rim. The back rail stays.
+                        self.run.notes.append(f"{bay.id}: rail F left out, the flip-out bin swings through the opening")
+                        continue
                     if hob is not None and _boxes_meet(box, hob.housing):
                         # The hob housing drops into the rail: no rail (guess:).
                         self.run.notes.append(f"{bay.id}: rail {tag} left out, the hob housing sits there")
@@ -1645,6 +1652,8 @@ class _Builder:
                                   [(a0, a1, fc0, fc1, front_box[4], front_box[5])], props={"Zone": zone.index}), bay)
                 self._shelves(bay, p, zone, in_z0, in_z1, back_y, racks=int(zone.opts.get("racks", 0)))
                 self.run.door_bands.append((bay, zone, in_z0, in_z1, back_y, int(zone.opts.get("racks", 0))))
+            elif zone.kind == "flipout":
+                self._flipout(bay, p, zone, front_box, in_z0, in_z1, back_y, base)
             elif zone.kind == "lift":
                 # The lowest front of a wall cabinet hangs ``WallFrontOverhang``
                 # below the carcass bottom (and closes the half gap under it).
@@ -1909,6 +1918,161 @@ class _Builder:
             aa = (lambda u: a0 + u) if latch_low else (lambda u: a1 - u)
             return [Grip("z", z0 - 1.0, z1 + 1.0, [[(aa(u), face + inward * d) for d, u in sg] for sg in prof])], edge
         raise ValueError(f"{bay.id}: grip={edge!r}, one of top, bottom, side, none")
+
+    def _flipout(self, bay: Bay, p: dict, zone: Zone, front_box, in_z0, in_z1, back_y, base):
+        """Bottom-hinged tilt-out front with a bin in a cradle on its inside.
+
+        Petr, 2026-11-24 (t928u): the shallow dining filler by pier W-053
+        (near the Harvey corner) becomes a flip-out trashcan for the
+        Elletipi Cover Box Small 8 L (340 × 225 × 150, H × W × D).
+        """
+        tf = p["FrontThickness"]
+        g = p["FrontGap"] / 2.0
+        out = -1.0 if bay.front_low else 1.0
+        raw_bin = str(zone.opts.get("bin", "0.225x0.150x0.340")).lower().replace("×", "x")
+        bw, bd, bh = (float(v) * 1000.0 for v in raw_bin.split("x"))
+        angle = float(zone.opts.get("angle", 40.0))
+        # guess: 8 mm under the worktop at the peak of the rear rim's swing.
+        clearance = 8.0 if zone.opts.get("clearance") is None else float(zone.opts["clearance"]) * 1000.0
+        # guess: 12 mm plywood cradle (floor, two cheeks, a low back stop).
+        cr = 12.0 if zone.opts.get("cradle") is None else float(zone.opts["cradle"]) * 1000.0
+        fc0, fc1 = front_box[2], front_box[3]
+        fz0, fz1 = front_box[4], front_box[5]
+        front = (bay.a0 + g, bay.a1 - g, fc0, fc1, fz0, fz1)
+        # Piano / tilt-out hinge along the front's bottom outer edge.
+        pivot_c = fc0 if bay.front_low else fc1
+        pivot_z = fz0
+        inner_c = (fc0 + tf) if bay.front_low else (fc1 - tf)
+        mid = (bay.clear_lo + bay.clear_hi) / 2.0
+        ba0, ba1 = mid - bw / 2.0, mid + bw / 2.0
+        if ba0 < bay.clear_lo + cr + 1.0 or ba1 > bay.clear_hi - cr - 1.0:
+            raise ValueError(
+                f"{bay.id}: flip-out bin {bw:g} mm wide does not fit the "
+                f"{bay.clear_hi - bay.clear_lo:g} mm clear width with a {cr:g} mm cradle"
+            )
+        if bay.front_low:
+            bc0, bc1 = inner_c, inner_c + bd
+        else:
+            bc0, bc1 = inner_c - bd, inner_c
+        bc0, bc1 = sorted((bc0, bc1))
+        worktop_z = zone.slot_z1
+        back_rail_z0 = worktop_z - p["BoardThickness"]
+        rail_c0, rail_c1 = sorted(self.c_range(bay, back_y - p["RailDepth"], back_y))
+        c_rear = bc1 if bay.front_low else bc0
+        c_rel = abs(c_rear - pivot_c)
+        r_max = worktop_z - clearance - pivot_z
+        if r_max <= c_rel + 1.0:
+            raise ValueError(f"{bay.id}: flip-out bin depth leaves no swing under the worktop")
+        z_rel_max = math.sqrt(r_max * r_max - c_rel * c_rel)
+        # Also keep the rear rim under the back rail, with the same clearance,
+        # for every angle while the rim is still in the rail's c-range.
+        # (A bin set only by the worktop peak would clip the rail in the
+        # first few degrees of the swing.)
+        def _clears(z_top: float) -> bool:
+            if z_top > back_rail_z0 - clearance + TOL:
+                return False
+            for i in range(25):
+                a = math.radians(angle) * i / 24.0
+                ca, za = _tilt_point(c_rear, z_top, pivot_c, pivot_z, a, out)
+                if rail_c0 - 0.5 <= ca <= rail_c1 + 0.5 and za > back_rail_z0 - clearance + TOL:
+                    return False
+            return True
+        lo, hi = in_z0 + cr + bh, min(back_rail_z0 - clearance, pivot_z + z_rel_max)
+        if hi < lo:
+            raise ValueError(f"{bay.id}: flip-out bin {bh:g} mm high does not fit the opening")
+        if not _clears(hi):
+            a, b = lo, hi
+            for _ in range(24):
+                mid = (a + b) / 2.0
+                if _clears(mid):
+                    a = mid
+                else:
+                    b = mid
+            hi = a
+            if not _clears(hi):
+                raise ValueError(f"{bay.id}: flip-out bin rim would hit the back rail as it tilts out")
+        z_top = hi
+        z_bot = z_top - bh
+        if z_bot < in_z0 + cr - TOL:
+            raise ValueError(
+                f"{bay.id}: flip-out bin {bh:g} mm high does not fit under the "
+                f"worktop with {clearance:g} mm swing clearance"
+            )
+        back_face = back_y
+        if bay.front_low:
+            far = bc1 + cr
+            if far > back_face + TOL:
+                raise ValueError(
+                    f"{bay.id}: flip-out bin {bd:g} mm deep plus a {cr:g} mm "
+                    f"stop does not fit the {back_face - inner_c:g} mm clear depth"
+                )
+            floor_c0, floor_c1 = inner_c, bc1 + cr
+            stop = (ba0 - cr, ba1 + cr, bc1, bc1 + cr, z_bot, z_bot + 50.0)
+        else:
+            far = bc0 - cr
+            if far < back_face - TOL:
+                raise ValueError(
+                    f"{bay.id}: flip-out bin {bd:g} mm deep plus a {cr:g} mm "
+                    f"stop does not fit the clear depth"
+                )
+            floor_c0, floor_c1 = bc0 - cr, inner_c
+            stop = (ba0 - cr, ba1 + cr, bc0 - cr, bc0, z_bot, z_bot + 50.0)
+        cheek_h = min(80.0, bh)
+        cheeks = [
+            (ba0 - cr, ba0, floor_c0, floor_c1, z_bot, z_bot + cheek_h),
+            (ba1, ba1 + cr, floor_c0, floor_c1, z_bot, z_bot + cheek_h),
+        ]
+        floor = (ba0 - cr, ba1 + cr, floor_c0, floor_c1, z_bot - cr, z_bot)
+        wall = p["BinWall"]
+        bin_boxes = [
+            (ba0, ba1, bc0, bc1, z_bot, z_bot + wall),
+            (ba0, ba0 + wall, bc0, bc1, z_bot + wall, z_top),
+            (ba1 - wall, ba1, bc0, bc1, z_bot + wall, z_top),
+            (ba0 + wall, ba1 - wall, bc0, bc0 + wall, z_bot + wall, z_top),
+            (ba0 + wall, ba1 - wall, bc1 - wall, bc1, z_bot + wall, z_top),
+        ]
+        # LiftJoint positive swings the lower edge out, so a bottom hinge
+        # uses negative angles: the upper edge and the bin swing out.
+        n = 25
+        open_rad = math.radians(angle)
+        thetas = tuple(-open_rad * i / (n - 1) for i in range(n))
+        group = f"{bay.id}-FLIP"
+        lift = LiftJoint(group, 0, None, pivot_c, pivot_z, out, thetas)
+        peak_z = pivot_z + math.hypot(c_rel, z_top - pivot_z)
+        worktop_gap = worktop_z - peak_z
+        ca, za = _tilt_point(c_rear, z_top, pivot_c, pivot_z, open_rad, out)
+        grips, edge = self._grips(bay, p, zone, "Door", front, None)
+        props = dict(
+            base,
+            Hinge="bottom",
+            Grip=f"J {edge}" if edge else None,
+            LeafWidth=round((front[1] - front[0]) / 1000.0, 6),
+            LeafHeight=round((front[5] - front[4]) / 1000.0, 6),
+            Bin="Elletipi Cover Box Small 8 L",
+            BinSize=f"{bw:g}x{bd:g}x{bh:g}",
+            OpeningAngle=round(angle, 2),
+            PeakZ=round(peak_z / 1000.0, 6),
+            WorktopClearance=round(worktop_gap / 1000.0, 6),
+            ClosedTop=round(z_top / 1000.0, 6),
+            PivotZ=round(pivot_z / 1000.0, 6),
+        )
+        self.add(Part(f"{bay.id}-FLIP", "Výklopná dvířka", "Door", [front],
+                      lift=lift, grips=grips, props=props), bay)
+        self.add(Part(f"{bay.id}-CRADLE", "Držák koše", "Cradle",
+                      [floor, *cheeks, stop], lift=lift,
+                      props={"Zone": zone.index, "Kind": "cradle", "Thickness": round(cr / 1000.0, 6)}), bay)
+        self.add(Part(f"{bay.id}-BIN", "Elletipi Small 8 L", "Bin", bin_boxes,
+                      lift=lift, props={"Zone": zone.index, "Kind": "bin",
+                                        "Product": "Elletipi PTM SP34 C97 M",
+                                        "Volume": 0.008,
+                                        "Size": f"{bw:g}x{bd:g}x{bh:g}"}), bay)
+        self.run.notes.append(
+            f"{bay.id}: flip-out Elletipi Small 8 L {bw:.0f}×{bd:.0f}×{bh:.0f} mm "
+            f"(W×D×H), hinge at c {pivot_c:.1f} z {pivot_z:.1f}, opens to {angle:g}°, "
+            f"bin closed z {z_bot:.1f}–{z_top:.1f}, rear-rim peak z {peak_z:.1f} "
+            f"clears the worktop at {worktop_z:.1f} by {worktop_gap:.1f} mm; "
+            f"open rear rim at c {ca:.1f}, z {za:.1f}"
+        )
 
     def _lift(self, bay: Bay, p: dict, zone: Zone, front_box: tuple, in_z1: float, back_y: float,
               base: dict, drop: float = 0.0) -> list:
@@ -2647,12 +2811,27 @@ def _worktop_label(material) -> str:
     return "oak" if material and "oak" in str(material).lower() else "worktop"
 
 
+
+def _tilt_point(c: float, z: float, pivot_c: float, pivot_z: float, angle: float, out: float) -> tuple:
+    """A (c, z) point after a bottom-hinged tilt of ``angle`` radians.
+
+    ``angle`` > 0 swings the upper edge towards ``out`` (+1 / −1 in c),
+    the opposite of ``LiftJoint``'s sign (which swings the lower edge out).
+    """
+    sign = -1.0 if out > 0 else 1.0
+    dc = (c - pivot_c) * sign
+    dz = z - pivot_z
+    ca = dc * math.cos(angle) - dz * math.sin(angle)
+    za = dc * math.sin(angle) + dz * math.cos(angle)
+    return (pivot_c + ca * sign, pivot_z + za)
+
+
 def _boxes_meet(a, b) -> bool:
     return all(a[2 * i] < b[2 * i + 1] - TOL and b[2 * i] < a[2 * i + 1] - TOL for i in range(3))
 
 
 DRAWER_KINDS = ("drawer", "pullout")
-ZONE_KINDS = ("drawer", "pullout", "door", "doors", "lift", "niche", "front", "dock", "none")
+ZONE_KINDS = ("drawer", "pullout", "door", "doors", "lift", "flipout", "niche", "front", "dock", "none")
 
 
 def zone_spec(element: dict) -> list[tuple[str, str, dict]]:
@@ -2675,6 +2854,12 @@ def zone_spec(element: dict) -> list[tuple[str, str, dict]]:
       upper front for an asymmetrical pair; ``angle=`` an opening-angle
       stop (HF: 116, 107, 97, 88, 81; default the largest). ``shelves=N``,
       ``first=`` as a door. The cabinet must be inside the fitting's Blum ranges;
+    - ``flipout``: a bottom-hinged tilt-out front (a trash bin on a cradle
+      fixed to the inside of the front). ``bin=W×D×H`` metres (default the
+      Elletipi Cover Box Small 8 L, 0.225×0.150×0.340), ``angle=`` the
+      opening stop in degrees (default 40), ``clearance=`` metres under
+      the worktop at the peak of the swing (default 0.008). The front
+      rail is omitted so the bin can swing through the opening;
     - ``niche``: an appliance niche; the height is the *clear* niche height,
       the band adds one board under it; ``clear=`` (metres) narrows the
       opening with a packer on each side. The appliance names the bay and

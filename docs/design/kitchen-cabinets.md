@@ -1808,7 +1808,7 @@ Every cream front, end panel, cladding and plinth (`kitchen-front-cream`) is **m
 | Front | Grip | Band (run frame) |
 |---|---|---|
 | Island: SF-I500a-DOOR1, SF-I600a-D1…D3, SF-I500b-D1…D3, SF-I600b-D1…D3, SF-E600a/b/c-D1, SF-E700-D1 (14) | top | VOXTORP J cup: crest 21, bottom 28 from the edge, bowl R7, back wall 4, along the top edge |
-| Dining base: SF-F052-DOOR1, SF-DN-S1…S4-D1, SF-F053-DOOR1 (6) | top | same |
+| Dining base: SF-F052-DOOR1, SF-DN-S1…S4-D1, SF-F053-FLIP (6) | top | same |
 | Tall: SF-T2/T3/T4-D1, -D2 (6 drawers under the doors) | top | same |
 | Tall doors: SF-T1-DOOR1 (101–2449), SF-T2-DOOR1, SF-T4-DOOR1 (911–2449), SF-TC-DOOR1 (701–2449) | side | the same along the latch edge, full height |
 | Upper doors: SF-T3-DOOR1 (1776–2449 since t870u; 1794 t869u, 1904 before), SF-TF-DOOR1/2 (1927–2449) | bottom | the same along the bottom edge (`guess:`) |
@@ -2397,3 +2397,33 @@ The same change is tabulated in [furnishings.md](furnishings.md#continuous-oak-f
 | Front sections | 7 equal, 4150/7 ≈ **592.86 mm** | **2 equal, 2075 mm** (one 18 mm divider on the centre line; each front **2072 mm**, with the usual 1.5 mm gaps at the ends and at the mid joint) |
 
 2075 mm is within a standard 2800 mm MDF sheet, which is why two panels rather than one (Petr: "I assume it cant be a single panel").
+
+
+### Flip-out trashcan in SF-F053 (2026-11-24, t928u)
+
+> Petr (t928u): "Make that shallow base cabinet by the column in dining area, near the corner of couch into a flip out trashcan. Afaik it should fit this https://www.alza.cz/maxi/elletipi-plastovy-kos-s-rukojetmi-small-8-l-sedy-34-x-15-x-22-5-cm-d7442476.htm"
+
+The shallow filler `SF-F053` in front of pier W-053 (300 × 200 × 930, x 25.15–25.45, y 15.15–15.35), next to the Livom Harvey's west-north corner (x 25.52, y 15.15), is a **bottom-hinged flip-out** with the Elletipi Cover Box Small 8 L sitting in a cradle on the inside of the front. It is still run `KR-DN`, cream, under the oak top that `KR-LB` lends over this bay (890–930). SF-F052, the other pier filler, is unchanged (side-hinged door, two shelves).
+
+Verified bin dimensions, **340 × 225 × 150 mm (H × W × D)**, 8 L, no lid. Sources: Alza product [ELLOK705](https://www.alza.cz/maxi/elletipi-plastovy-kos-s-rukojetmi-small-8-l-sedy-34-x-15-x-22-5-cm-d7442476.htm) (parameters: výška 34 cm, šířka 22,5 cm, hloubka 15 cm; also written 34 × 22,5 × 15 cm V×Š×H; the title's 34 × 15 × 22,5 is the same numbers in a different order), and the Elletipi Cover Box datasheet for **PTM SP34 C97 M** (340 × 225 × 150, 8 L). `guess:` those overall extents include the rim; the multi-function handles fold on the rim and are not added on top of 340 / 225 / 150. No lid is modelled (the listed article is sold without one).
+
+`Pset_Fronts.Layout: "flipout * bin=0.225x0.150x0.340 angle=40"`. The viewer record is `kind: "linkage"` (`SF-F053-FLIP`), one joint at the front's bottom outer edge (c 0, z 101.5); a negative angle tilts the top out into the room. The front, the cradle and the bin share that joint, so a tap opens all three together.
+
+| | Old | New |
+| --- | --- | --- |
+| Front | `SF-F053-DOOR1`, side hinge R, 297 × 787, z 101.5–888.5, J grip on the top edge | `SF-F053-FLIP`, **bottom hinge**, same leaf 297 × 787, z 101.5–888.5, J grip still on the top edge (the pull) |
+| Interior | two shelves (`shelves=2`) | shelves removed; 12 mm plywood cradle (`guess:`) and the Elletipi 8 L bin, 225 × 150 × 340, centred in the 264 mm clear width |
+| Front rail | c 18–98, z 872–890 | **omitted**, so the rim can swing through the opening |
+| Back rail | c 112–192, z 872–890 | **unchanged** |
+| Oak top / plinth / carcass | 40 mm oak 890–930 (from KR-LB), flush plinth 0–100, body 100–890, 18 mm sides, 8 mm back | **unchanged** |
+| Open angle | — | **40°** (`guess:`, in the 35–45° band, with a stay / limiter) |
+| Bin, closed | — | z **516.0–856.0**, against the inner face of the front (c 18–168). 16 mm under the back rail when shut; **7.5 mm** from each 12 mm cheek to the carcass side; **12 mm** from the back stop (c 168–180) to the back (c 192) |
+| Rear rim at the peak of the swing | — | z **874.5**, **15.5 mm** under the oak soffit (890). The bin is a little lower than the worktop-only limit so the rim also keeps **8 mm** off the back rail through the first degrees of the tilt (`guess:` 8 mm, same band as other swing clearances) |
+| Open (40°) | — | rear rim at c **−356**, z **788** (about 790 mm above the floor, 356 mm in front of the cabinet); door top at c **−506**, z **704** |
+| Sofa | west face x **25.52**, y ≤ 15.15 | the swinging front's east edge stays at x **25.4485**; **71.5 mm** of clear air to the sofa. The motion is in depth and height only, so that gap does not close |
+| Floor / plinth | flush plinth z 0–100, c 0–18 | hinge at z **101.5** (1.5 mm above the plinth); the front's bottom edge stays on that line, so it does not hit the floor or the plinth |
+
+The bin **fits** the 264 × 174 × 754 mm clear cavity (width × depth to the back × height under the rails). Width and depth are comfortable; the tight points are the swing past the back rail (the bin was lowered to keep an 8 mm gap) and the **7.5 mm** cheek-to-side and **12 mm** stop-to-back gaps.
+
+- `guess:` 12 mm plywood cradle; 40° opening with a stay / limiter; 8 mm swing clearance to the back rail and to the worktop; listed Elletipi extents include the rim / folded handles.
+- `open:` the exact tilt-out hinge / stay article; whether Petr wants a lid (Elletipi sells one separately, not on the Alza 8 L listing); whether 40° is the stop he wants.

@@ -1144,7 +1144,7 @@ systemFurniture:
           Layout1: "drawer * box=K inner=M,K | dock 0.16 width=0.44 side=C front=notch"
   - id: SF-F053
     Name: "Výplň W-053"
-    Description: "Shallow filler in front of pier W-053. 300 wide, 200 deep, front flush at y=15.15. Still west of the sofa, counter 930. Cream like the kitchen (natural oak until 2026-11-20)."
+    Description: "Shallow filler in front of pier W-053. 300 wide, 200 deep, front flush at y=15.15. Still west of the sofa, counter 930. Cream like the kitchen (natural oak until 2026-11-20). Petr, 2026-11-24 (t928u): bottom-hinged flip-out trashcan for the Elletipi Cover Box Small 8 L (340 × 225 × 150 mm, H × W × D)."
     PredefinedType: USERDEFINED
     ObjectType: FillerCabinet
     ContainedInStructure: SP-1.02
@@ -1170,11 +1170,12 @@ systemFurniture:
         Properties:
           Material: "kitchen cream (RAL 1015 matt)"
           Form: "lacquered or laminate, like the kitchen fronts"
-      # 2026-11-19 (best effort, see SF-T2): a shallow cupboard, one door
-      # hinged R with two shelves (guess:). Hinged R like SF-F052.
+      # Petr, 2026-11-24 (t928u): "Make that shallow base cabinet by the
+      # column in dining area, near the corner of couch into a flip out
+      # trashcan." Elletipi Small 8 L, 0.225 × 0.150 × 0.340 (W × D × H).
       - Name: Pset_Fronts
         Properties:
-          Layout: "door * hinge=R shelves=2"
+          Layout: "flipout * bin=0.225x0.150x0.340 angle=40"
   # Petr, 2026-11-13: "I want the living room part of the counter (behind
   # sofa) to continue at the same 930 height as the dining area. It will be
   # oak veneer, not silestone. We'll work out the details of where the two
