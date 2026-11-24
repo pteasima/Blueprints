@@ -2407,7 +2407,7 @@ The shallow filler `SF-F053` in front of pier W-053 (300 × 200 × 930, x 25.15�
 
 Verified bin dimensions, **340 × 225 × 150 mm (H × W × D)**, 8 L, no lid. Sources: Alza product [ELLOK705](https://www.alza.cz/maxi/elletipi-plastovy-kos-s-rukojetmi-small-8-l-sedy-34-x-15-x-22-5-cm-d7442476.htm) (parameters: výška 34 cm, šířka 22,5 cm, hloubka 15 cm; also written 34 × 22,5 × 15 cm V×Š×H; the title's 34 × 15 × 22,5 is the same numbers in a different order), and the Elletipi Cover Box datasheet for **PTM SP34 C97 M** (340 × 225 × 150, 8 L). `guess:` those overall extents include the rim; the multi-function handles fold on the rim and are not added on top of 340 / 225 / 150. No lid is modelled (the listed article is sold without one).
 
-`Pset_Fronts.Layout: "flipout * bin=0.225x0.150x0.340 angle=40"`. The viewer record is `kind: "linkage"` (`SF-F053-FLIP`), one joint at the front's bottom outer edge (c 0, z 101.5); a negative angle tilts the top out into the room. The front, the cradle and the bin share that joint, so a tap opens all three together.
+`Pset_Fronts.Layout: "flipout * bin=0.225x0.150x0.340 angle=13.2"` (was `angle=40` at t928u). The viewer record is `kind: "linkage"` (`SF-F053-FLIP`), one joint at the front's bottom outer edge (c 0, z 101.5), standing in for a Häfele piano hinge (see the t929u hardware note below); a negative angle tilts the top out into the room. The front, the cradle and the bin share that joint, so a tap opens all three together.
 
 | | Old | New |
 | --- | --- | --- |
@@ -2416,14 +2416,64 @@ Verified bin dimensions, **340 × 225 × 150 mm (H × W × D)**, 8 L, no lid. So
 | Front rail | c 18–98, z 872–890 | **omitted**, so the rim can swing through the opening |
 | Back rail | c 112–192, z 872–890 | **unchanged** |
 | Oak top / plinth / carcass | 40 mm oak 890–930 (from KR-LB), flush plinth 0–100, body 100–890, 18 mm sides, 8 mm back | **unchanged** |
-| Open angle | — | **40°** (`guess:`, in the 35–45° band, with a stay / limiter) |
+| Open angle | — (t928u: **40°**, `guess:` in the 35–45° band) | **13.2°** (t929u). Smallest stop at which the rear rim of the 225 × 150 opening is 8 mm in front of the worktop edge (c **−8.7**, z **874.4**), so the full mouth is clear of the oak soffit from above. 12.55° would put the rear rim exactly at c 0, at its peak z 874.5; 13.2° is that plus the same 8 mm clearance used on the rail / soffit. |
 | Bin, closed | — | z **516.0–856.0**, against the inner face of the front (c 18–168). 16 mm under the back rail when shut; **7.5 mm** from each 12 mm cheek to the carcass side; **12 mm** from the back stop (c 168–180) to the back (c 192) |
 | Rear rim at the peak of the swing | — | z **874.5**, **15.5 mm** under the oak soffit (890). The bin is a little lower than the worktop-only limit so the rim also keeps **8 mm** off the back rail through the first degrees of the tilt (`guess:` 8 mm, same band as other swing clearances) |
-| Open (40°) | — | rear rim at c **−356**, z **788** (about 790 mm above the floor, 356 mm in front of the cabinet); door top at c **−506**, z **704** |
+| Open | t928u at 40°: rear rim c **−356**, z **788**; door top c **−506**, z **704** | **13.2°**: rear rim c **−8.7**, z **874.4**; door top c **−180**, z **868**. The mouth stays just in front of the oak edge, at roughly counter height. |
 | Sofa | west face x **25.52**, y ≤ 15.15 | the swinging front's east edge stays at x **25.4485**; **71.5 mm** of clear air to the sofa. The motion is in depth and height only, so that gap does not close |
 | Floor / plinth | flush plinth z 0–100, c 0–18 | hinge at z **101.5** (1.5 mm above the plinth); the front's bottom edge stays on that line, so it does not hit the floor or the plinth |
 
 The bin **fits** the 264 × 174 × 754 mm clear cavity (width × depth to the back × height under the rails). Width and depth are comfortable; the tight points are the swing past the back rail (the bin was lowered to keep an 8 mm gap) and the **7.5 mm** cheek-to-side and **12 mm** stop-to-back gaps.
 
-- `guess:` 12 mm plywood cradle; 40° opening with a stay / limiter; 8 mm swing clearance to the back rail and to the worktop; listed Elletipi extents include the rim / folded handles.
-- `open:` the exact tilt-out hinge / stay article; whether Petr wants a lid (Elletipi sells one separately, not on the Alza 8 L listing); whether 40° is the stop he wants.
+- `guess:` 12 mm plywood cradle; 8 mm swing clearance to the back rail and to the worktop, and 8 mm past the worktop edge for the expose stop; listed Elletipi extents include the rim / folded handles.
+- `open:` whether Petr wants a lid (Elletipi sells one separately, not on the Alza 8 L listing). The 40° stop is superseded (t929u).
+
+#### Hardware and 13.2° stop (2026-11-24, t929u)
+
+> Petr (t929u): "That flips out way too much, it should only open so that the trashcan entry is fully exposed (like all flip out trashcans do). Also, I need you to choose a specific hinge mechanism (from Blum or otherwise) and make sure we fit within its limits."
+
+**No catalogued tilt-out waste fitting (Kippauszug / sklopný koš) publishes a complete limit set — min/max front height and width, load, opening angle, min cabinet depth, mounting — that this 300 × 200 carcass with a 787 mm front meets.**
+
+Blum has no bottom-hinged tilt-out trash hinge. Their waste systems are MOVENTO / SERVO-DRIVE pull-outs; AVENTOS is a lift-up, not a fall-flap.
+
+What was checked (datasheet facts only, then a short inference where needed):
+
+| Article | Datasheet limits | Versus SF-F053 |
+| --- | --- | --- |
+| Häfele / Kesseböhmer 30 L tilting waste, [502.05.706](https://www.haefele.de/) (install drawing) | Fixed **26°** stop; two tension springs, 166 N each at max deflection; min cabinet width **500 mm**, min install depth **320 mm**, min install height 430 mm, plinth min 100 mm | Height and plinth would pass; **width 300 and depth 200 do not**. This is the closest *waste-specific* tilt with a published stop, and 26° is the typical “flip-out trash” angle, but the cabinet cannot take it. |
+| Häfele Seilzugklappenhalter, [P-00915892](https://www.haefele.de/de/produkt/seilzugklappenhalter-bremskraft-und-oeffnungswinkel-einstellbar/P-00915892/) (housing 89 × 23 × 163 mm) | Korpushöhe **200–480 mm**; Korpustiefe **≥110 mm**; Klappengewicht **≤12 kg**; opening angle and braking force adjustable (the page does not state the angle *range* in degrees) | Depth and the ~8.2 kg load would pass the 12 kg cap; **the 787 mm tilting front is above 480 mm**. |
+| Häfele Seilzugklappenhalter 365.46.050 (Model A) and 365.47.900 family (DGH-M 2026, MB 4.360 / 4.361) | 365.46: Korpushöhe 200–550 mm, ≤12 kg, Model A min depth **230 mm**; 365.47 with adjustable brake: Korpushöhe 200–480 mm, min depth **290 mm** | **Depth and front height both fail.** |
+| Hettich Schuhschrankbeschlag **42473**, EAN 4023149424731, leaflet 048 612-05/11 ([Démos Trade PDF](https://www.demos-trade.cz/product-file/download/17043)) | Width-independent; min interior depth **135 mm**; min front height **265 mm*** (* at that minimum the bays only take shoes ≤240 mm); side parts take 14 mm each side (X = clear width − 2×14). **Opening angle, max front height and load are not stated.** | 174 mm clear depth and the 265 mm minimum height pass. The mechanism is a side *Drehlager*, not a bottom piano hinge. Inference, not datasheet: the 1-compartment installation drawing shows a large open tilt, on the order of 40°, which is already “way too much” for this bin. Unpublished load / max front on a 787 mm leaf plus a full bin is a risk. |
+| Salice Pacta (SO-TECH) | 90° fall-flap, up to 20 kg, front height up to 400 mm | 90° is far too much; **787 mm exceeds 400 mm**. |
+| Hailo Pico / Elletipi City / Peka Müllboy / Ninka one2nine, Häfele tip-out *tray* hinges | Various; typically ≥300–400 mm interior depth, or a bin *behind a side-hung door*, or a ~97 mm sink false front | Wrong kinematics or too deep / wide for 200 × 300. |
+
+**Chosen, as the closest workable option for this 200 mm carcass:** Häfele **Stangenscharnier 351.01.735**, a nickel-plated steel piano hinge, open width 32 mm, dimension C 17 ± 0.1 mm, leaf thickness 0.7 mm, knuckle diameter 3.3 mm, stock length 3.5 m, cut to the 297 mm front (fixed lengths on request). Product page: [Stangenscharnier, zum Schrauben, aus Stahl](https://www.haefele.de/de/produkt/stangenscharnier-zum-schrauben-aus-stahl/P-00899169/). Catalog: DGH Technik, *Stangenscharniere* (art. 351.01.735). Buyable in the EU/CZ through Häfele.
+
+Datasheet / catalog states those dimensions, rolled steel, screw-on, 3.5 m / cut lengths. Datasheet does **not** state a max or min front height, a max load, an opening angle, or a min cabinet depth. There is **no built-in stop**.
+
+Inference, not datasheet: a continuous 32 mm piano hinge on this 297 × 18 mm leaf can carry the load below; the knuckle is modelled as a simple axis at the front's bottom outer edge (c 0, z 101.5). A 3.3 mm knuckle may offset the pin by a couple of millimetres (`guess:`). The 13.2° stop is a **separate fixed limiter** (a strap or a block) set to that angle — not a catalog stay, because no stay found here both fits 200 mm depth, a 787 mm front, and a ~13° stop. The pivot geometry is unchanged from t928u, so the cradle and bin stay put.
+
+Load check (front + cradle + bin + full trash) versus published limits:
+
+| Part | Mass | Source |
+| --- | --- | --- |
+| Cream front 297 × 787 × 18 mm | **3.16 kg** | `guess:` lacquered MDF at 750 kg/m³ (700–800 kg/m³ would be 2.95–3.37 kg) |
+| 12 mm plywood cradle (floor, two cheeks, back stop) | **0.61 kg** | `guess:` plywood at 650 kg/m³; volumes from the modelled parts |
+| Elletipi Cover Box Small 8 L, empty | **0.44 kg** | Elletipi / retailer listings for PTM SP34 / Cover Box Small 8 L (dokose lists ~0.43 kg) |
+| Full trash | **4 kg** | `guess:` as asked (8 L, household waste, not packed dense) |
+| **Total** | **≈ 8.2 kg** | |
+
+The chosen piano hinge has **no published load limit** to compare. The Häfele cable stays that do (≤12 kg) **do not cover a 787 mm front**, so this 8.2 kg figure is not a pass against a datasheet.
+
+Clearances, old (40°) → new (13.2°):
+
+| | 40° (t928u) | 13.2° (t929u) |
+| --- | --- | --- |
+| Closed bin / cradle | z 516.0–856.0, c 18–168, cheeks **7.5 mm** to each side, stop **12 mm** to the back | **unchanged** (the rear-rim peak still occurs at 12.55°, which the new stop passes through, so the rail-clearance lowering stays) |
+| Rear-rim peak / oak soffit | z **874.5**, **15.5 mm** under 890 | **unchanged** |
+| Open rear rim | c **−356**, z **788** | c **−8.7**, z **874.4** |
+| Open door top | c **−506**, z **704** | c **−180**, z **868** |
+| Sofa west face x 25.52 | **71.5 mm** to the front's east edge x 25.4485; motion in c–z only | **unchanged** |
+| Floor / flush plinth 0–100 | hinge at z 101.5; bottom edge stays on that line | **unchanged** |
+
+- `open:` confirm how the piano hinge is applied (wrapped around the bottom outer edge, as modelled, versus both leaves inside, which would move the pin a few millimetres); the exact stop article (strap vs block); whether Petr would rather split the 787 mm front to ≤480 mm so a Häfele Seilzugklappenhalter could be used inside its table; whether he wants the typical 26° Kesseböhmer waste angle instead of this geometric minimum (that hardware itself still would not fit this cabinet).
