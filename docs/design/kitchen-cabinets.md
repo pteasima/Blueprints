@@ -2537,3 +2537,41 @@ Clearances, t929u (cradle, 13.2°) → t930u (hooks, 13.8°):
 **Tap-to-open.** Replacing the cradle with `SF-F053-BRACKETS` / `SF-F053-HOOKS` left the linkage membership intact (front, bin, brackets and hooks still share one joint), and the viewer still bound all four parts. The generated record listed members by `(joint index, id)`, so `record.element` and the viewer's `binding.host` (the extended tap target) were `SF-F053-BIN`, not the front. `_linkage_motion` now puts the Door / Front (or the part whose id is the group) first: `record.element` is `SF-F053-FLIP`, and a tap on the front — and on the bin, brackets or hooks — tilts all four together to 13.8° and back.
 
 **White ears on the Dreame drawer.** SF-DN section 1 uses `dock … front=notch`: one cream drawer front with a 440 × 160 notch, the legs either side of the opening running down to the kickboard (`_dock` inserts those legs at `above.boxes[1:1]`). Commit e75bff4 (t866u, 2026-11-23) split drawer export into a cream `boxes[0]` front and a white `boxes[1:]` `-BOX` child (Blum SW-M silk white MERIVOBOX). The inserted legs became `boxes[1]` and `boxes[2]`, so they painted as white ears. The white MERIVOBOX split stays; boxes that share the front's c-range stay with the cream front, and only the deeper box pieces go to `-BOX`.
+
+
+### Toe-kick lip, flush tall plinths, east overhang, drip groove (2026-11-24, t947u)
+
+Petr (t947u): raise the carcass floor of every recessed toe-kick (west run, island both sides) by 10 mm so a 10 mm bottom-front lip can hang below the carcass and still leave a 100 mm visible toe-kick; make the north tall plinths flush with the fronts, without moving those drawers; add a 20 mm Silestone overhang on the island east; and cut a drip groove (okapnik) on the underside of all three counter overhangs.
+
+**Worktop height is unchanged** (top still 930). The 10 mm comes out of the carcass (`*` bands shrink by 10 mm).
+
+| | Old | New |
+| --- | --- | --- |
+| Island / west carcass floor (`PlinthHeight`) | 100 | **110** |
+| Island / west carcass height | 810 | **800** |
+| Bottom-row front bottom (island, west) | 101.5 (half-gap above the carcass) | **100** (10 mm below the carcass; `BottomFrontOverhang` 10) |
+| Visible toe-kick / front-to-finished-floor gap | 101.5 | **100** |
+| Kickboard / legs | 100 high, set back 50 | **110** high, set back 50 (unchanged) |
+| Worktop top | 930 | **930** |
+| Island worktop | 2540 × 1180, x 20.480–21.660, east overhang 0 | **2540 × 1200**, x 20.480–**21.680**, east overhang **20** (matches the west) |
+| West-run worktop | 2500 × 620, 20 mm front overhang | unchanged |
+| North tall plinth (KR-TALL, KR-TALL-W) | recessed 50, 100 high | **flush** with the fronts (0 setback), still 100 high |
+| North tall drawer / door bottoms | 101.5 | **101.5** (unchanged) |
+| KR-TALL-PLINTH-E (already flush with the side) | c 68–621 (started behind the recess) | **c 18–621** (meets the flush front plinth) |
+
+Drip grooves (`guess:` 5 mm wide × 3 mm deep, centreline 10 mm in from the edge, half the 20 mm overhang), continuous along each overhang, stopped 10 mm short of each free end. On the island the ends are 45° mitred, so the underside already stops 20 mm in from the outer corner; the groove starts 10 mm inside that underside edge (a 10 … 2490). The three overhangs are the island west, the island east and the west-run front; they do not meet at a corner, so there is no corner connector. No other Silestone piece is cut (cladding, backsplash, dining top).
+
+#### Consequences
+
+- Bottom `*` drawer / door / pull-out bands shrink 10 mm (fronts of those bands are 1.5 mm taller because the 10 mm lip replaces the old 1.5 mm gap and the band lost 10 mm): island D3 610/607 → **600/608.5**, SF-I600b D3 510/507 → **500/508.5**, full-height east and west fronts 810/807 → **800/808.5**. Merivobox side letters are unchanged (E / M / K as before).
+- The lower inner drawers in SF-E600c and SF-E700 (K) sit **5 mm higher** (483.5–612.5 → **488.5–617.5**): the 10 mm lost carcass height is split into the even gap between the two inners. The top inner M stays at 771–862. Gap between inners 158.5 → 153.5 (Blum needs 17).
+- SF-B800 hanging FILUR bins rise 10 mm with the carcass floor. Lid-to-bowl clearance **32 → 22** mm (`FrameTopClearance` is 20). **Tight** (2 mm over the minimum). Plate-to-bowl 62 → 52. `open:` confirm the lids still clear the Teka bowl, trap and outlet in the real sink.
+- The SF-I600b exhaust channel still opens under the carcass bottom into the west plinth void; that void is 10 mm taller (110). No change to the intake panel, the 82 mm channel or the rear cut-out.
+- Dreame dock (SF-DN-S1, dining, already flush) is unchanged.
+- East aisle: cabinet fronts stay at x 21.660; the worktop edge is now at **21.680** (20 mm closer to the table). Table west edge was 1.427 m from the east face; it is **1.407 m** from the new worktop edge. West aisle unchanged (fronts 1100, worktop edges 1060).
+- Island overall depth is now **exactly 1200** (Petr had earlier asked to stay closely below 1200 when choosing the east NL; the 20 mm east overhang is a later, explicit request).
+
+North-run drawers stay at **100 mm** above the floor, with the flush plinth (Petr, 2026-11-24, t948u: decided; was `open:` whether to lower the whole north run and reclaim drawer space).
+
+`open:` confirm the drip-groove profile with the stonemason (square 5 × 3 mm is a `guess:`; a slightly deeper or V-groove is common). A 20 mm overhang plus a groove 10 mm in will stop typical spills from wrapping back onto the fronts, but it cannot guarantee that a soapy or wind-blown film never jumps the groove; see the PR write-up.
+

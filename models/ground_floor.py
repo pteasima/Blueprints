@@ -537,8 +537,13 @@ def _kitchen_run_parts(run, motions=None, layers: dict | None = None) -> list:
             solid = pieces[0] if len(pieces) == 1 else Compound(obj=pieces)
             z0, z1 = part.boxes[0][4], part.boxes[0][5]
             for void in part.voids:
-                bottom = z0 - 1.0 if not void.depth else z1 - void.depth
-                solid = solid - _void_solid(void, bottom, z1 + 1.0)
+                if not void.depth:
+                    bottom, top = z0 - 1.0, z1 + 1.0
+                elif getattr(void, "underside", False):
+                    bottom, top = z0 - 1.0, z0 + void.depth
+                else:
+                    bottom, top = z1 - void.depth, z1 + 1.0
+                solid = solid - _void_solid(void, bottom, top)
             for cut in part.cuts:
                 solid = solid - _cut_solid(cut, part.boxes[0][2], part.boxes[0][3])
             if part.grips:  # a decor panel's J grip (t865u), one unshrunk slab

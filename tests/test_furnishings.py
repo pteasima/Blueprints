@@ -484,7 +484,7 @@ def test_living_room_boxes_follow_plan_v3():
     table = _world_box(next(row for row in furnishing_records() if row["id"] == "FN-GATTA"))
     # The island moved 68 west on 2026-11-20 (east face 21.672) and its west
     # row got 19 shallower on 2026-11-22 (t803u, east face 21.653); the table did not.
-    # Blum MERIVOBOX (Petr, 2026-11-23, t835u): island 1180, east face 21.660.
+    # East cabinet face 21.660 (unchanged); worktop east edge 21.680 since t947u.
     assert table[0] - 21.66 == pytest.approx(1.427, abs=1e-6)
     assert 25.52 - table[3] == pytest.approx(1.333, abs=1e-6)
     assert table[5] - table[2] == pytest.approx(0.76, abs=1e-6)

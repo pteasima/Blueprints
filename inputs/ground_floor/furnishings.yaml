@@ -68,7 +68,7 @@
 #   so the drawer insides are whole Gridfinity cells (MAXIMERA deductions,
 #   scripts/gridfinity_fit.py, kitchen-cabinets.md "Gridfinity drawers").
 #   Blum MERIVOBOX (Petr, 2026-11-23, t835u): west row 630 deep (NL 600),
-#   east row 530 (NL 500), island 1180 overall; widths unchanged
+#   east row 530 (NL 500), island 1200 overall (20 west + 630 + 530 + 20 east, t947u); widths unchanged
 #   (kitchen-cabinets.md "Deviations from Petr's original plan").
 #   West row, faces west. RefDirection [0, -1]: Origin is the north-west
 #   corner, Width runs south, Depth runs east. Modules north to south
@@ -640,8 +640,8 @@ systemFurniture:
     ContainedInStructure: SP-1.02
     RefDirection: [0, 1]
     # Petr, 2026-11-23 (t835u): "on island east use whatever gets us closely
-    # below 1200mm total island depth". 20 overhang + 630 west + 530 east =
-    # 1180: MERIVOBOX NL 500 (needs 503: 18 front + 503 + 9 = 530); NL 550
+    # below 1200mm total island depth". 20 + 630 west + 530 east + 20 east
+    # overhang (t947u) = 1200: MERIVOBOX NL 500 (needs 503: 18 front + 503 + 9 = 530); NL 550
     # would make it 1230. Was 586 (NL 550).
     Depth: 0.53
     Height: 0.93
@@ -697,8 +697,8 @@ systemFurniture:
     ContainedInStructure: SP-1.02
     RefDirection: [0, 1]
     # Petr, 2026-11-23 (t835u): "on island east use whatever gets us closely
-    # below 1200mm total island depth". 20 overhang + 630 west + 530 east =
-    # 1180: MERIVOBOX NL 500 (needs 503: 18 front + 503 + 9 = 530); NL 550
+    # below 1200mm total island depth". 20 + 630 west + 530 east + 20 east
+    # overhang (t947u) = 1200: MERIVOBOX NL 500 (needs 503: 18 front + 503 + 9 = 530); NL 550
     # would make it 1230. Was 586 (NL 550).
     Depth: 0.53
     Height: 0.93
@@ -752,8 +752,8 @@ systemFurniture:
     ContainedInStructure: SP-1.02
     RefDirection: [0, 1]
     # Petr, 2026-11-23 (t835u): "on island east use whatever gets us closely
-    # below 1200mm total island depth". 20 overhang + 630 west + 530 east =
-    # 1180: MERIVOBOX NL 500 (needs 503: 18 front + 503 + 9 = 530); NL 550
+    # below 1200mm total island depth". 20 + 630 west + 530 east + 20 east
+    # overhang (t947u) = 1200: MERIVOBOX NL 500 (needs 503: 18 front + 503 + 9 = 530); NL 550
     # would make it 1230. Was 586 (NL 550).
     Depth: 0.53
     Height: 0.93
@@ -801,8 +801,8 @@ systemFurniture:
     ContainedInStructure: SP-1.02
     RefDirection: [0, 1]
     # Petr, 2026-11-23 (t835u): "on island east use whatever gets us closely
-    # below 1200mm total island depth". 20 overhang + 630 west + 530 east =
-    # 1180: MERIVOBOX NL 500 (needs 503: 18 front + 503 + 9 = 530); NL 550
+    # below 1200mm total island depth". 20 + 630 west + 530 east + 20 east
+    # overhang (t947u) = 1200: MERIVOBOX NL 500 (needs 503: 18 front + 503 + 9 = 530); NL 550
     # would make it 1230. Was 586 (NL 550).
     Depth: 0.53
     Height: 0.93
@@ -1746,7 +1746,7 @@ furniture:
   # docs/design/kitchen-cabinets.md.
   - id: KR-ISL
     Name: "Ostrov"
-    Description: "Island monoblock: west row (5 bays) and east row (4 bays) back to back on one shared central back. Silestone Blanco Maple worktop (20 mm, linked to the catalogue), 20 mm overhang on the west front, flush with the east row's fronts (2026-11-20 f), Silestone cladding on both ends, 45 degree mitre joints between the top and the end panels (2026-11-20 f)."
+    Description: "Island monoblock: west row (5 bays) and east row (4 bays) back to back on one shared central back. Silestone Blanco Maple worktop (20 mm, linked to the catalogue), 20 mm overhang on the west and east fronts (east was flush, 2026-11-20 f; 20 mm since 2026-11-24 t947u), Silestone cladding on both ends, 45 degree mitre joints between the top and the end panels (2026-11-20 f)."
     PredefinedType: USERDEFINED
     ObjectType: KitchenRun
     ContainedInStructure: SP-1.02
@@ -1765,21 +1765,20 @@ furniture:
           FrontGrip: J
           FrontFinish: matt lacquered MDF (RAL 1015 cream)
           WorktopOverhang: 0.02
-          # Petr, 2026-11-20 f: "dining area and east island side have zero
-          # overhang". The east edge is flush with the east row's fronts.
-          WorktopOverhangE: 0.0
+          # Petr, 2026-11-24 (t947u): add a 20 mm east overhang, matching
+          # the west. Was 0 (flush with the east fronts, 2026-11-20 f).
+          WorktopOverhangE: 0.02
           WorktopMaterial: "Silestone Blanco Maple"
           CladEnds: true
           # Petr, 2026-11-20 f: "island top and sides use a 45 degree joint"
           # (sides of island stay silestone).
           MitreEnds: true
-          # Petr, 2026-11-12: "Ok, 100mm it is." Lowest plinth the robot
-          # vacuum fits under (Dreame X60 Pro Master 89 mm); open legs.
-          # Petr, 2026-11-20 b: "add kickboard (cover) to the existing plinth
-          # / toe-kick areas": a kickboard clipped to the legs, set back 50
-          # like IKEA METOD (guess:); the front legs move back to clear it
-          # (LegInset 50 -> 80, guess:). The robot no longer drives under (open:).
-          PlinthHeight: 0.10
+          # Petr, 2026-11-24 (t947u): carcass floor raised 10 mm (plinth
+          # 110) so a 10 mm bottom-front lip can hang below the carcass
+          # and the visible toe-kick / front-to-floor gap stays 100 mm.
+          # Kickboard still set back 50; the robot no longer drives under (open:).
+          PlinthHeight: 0.11
+          BottomFrontOverhang: 0.01
           PlinthKind: Legs
           Kickboard: true
           LegInset: 0.08
@@ -1806,13 +1805,12 @@ furniture:
           FrontFinish: matt lacquered MDF (RAL 1015 cream)
           WorktopOverhang: 0.02
           WorktopMaterial: "Silestone Blanco Maple"
-          # Petr, 2026-11-12: "Ok, 100mm it is." Lowest plinth the robot
-          # vacuum fits under (Dreame X60 Pro Master 89 mm); open legs.
-          # Petr, 2026-11-20 b: "add kickboard (cover) to the existing plinth
-          # / toe-kick areas": a kickboard clipped to the legs, set back 50
-          # like IKEA METOD (guess:); the front legs move back to clear it
-          # (LegInset 50 -> 80, guess:). The robot no longer drives under (open:).
-          PlinthHeight: 0.10
+          # Petr, 2026-11-24 (t947u): carcass floor raised 10 mm (plinth
+          # 110) so a 10 mm bottom-front lip can hang below the carcass
+          # and the visible toe-kick / front-to-floor gap stays 100 mm.
+          # Kickboard still set back 50; the robot no longer drives under (open:).
+          PlinthHeight: 0.11
+          BottomFrontOverhang: 0.01
           PlinthKind: Legs
           Kickboard: true
           LegInset: 0.08
@@ -2016,8 +2014,11 @@ furniture:
           FrontGrip: J
           FrontFinish: matt lacquered MDF (RAL 1015 cream)
           WorktopThickness: 0.0
-          # 100 like the bases (Petr, 2026-11-12); total stays 2450, carcass 2350.
+          # Petr, 2026-11-24 (t947u, t948u): plinth flush with the fronts
+          # (was a 50 mm recessed board). Height stays 100; north-run
+          # drawers stay at 100 mm above the floor (decided, t948u).
           PlinthHeight: 0.10
+          PlinthKind: Flush
   - id: KR-TALL
     Name: "Vysoké skříně"
     Description: "Tall monoblock east of the fridge: T2, T3 (oven column), T4."
@@ -2033,8 +2034,11 @@ furniture:
           FrontGrip: J
           FrontFinish: matt lacquered MDF (RAL 1015 cream)
           WorktopThickness: 0.0
-          # 100 like the bases (Petr, 2026-11-12); total stays 2450, carcass 2350.
+          # Petr, 2026-11-24 (t947u, t948u): plinth flush with the fronts
+          # (was a 50 mm recessed board). Height stays 100; north-run
+          # drawers stay at 100 mm above the floor (decided, t948u).
           PlinthHeight: 0.10
+          PlinthKind: Flush
           # Petr, 2026-11-20 d: "Please add a bit of kickboard between the
           # kitchen and dining areas in the south-north direction (the side
           # of the tall kitchen cabinet has a hole with no kickboard)". The

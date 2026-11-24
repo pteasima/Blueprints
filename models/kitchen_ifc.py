@@ -322,20 +322,35 @@ def _inside(v, w) -> bool:
 
 
 def _layers(box, voids):
-    """Split a slab with pockets (a flush hob rebate) into a lower slab with
-    the through holes and a top layer with the pockets, so each stays one
-    extruded profile. Returns [(box, voids)]."""
-    pockets = [v for v in voids if v.depth]
+    """Split a slab with pockets into extruded-profile layers: underside
+    pockets (a drip groove), a middle with through holes, and a top layer
+    with top pockets (a flush hob rebate). Returns [(box, voids)]."""
+    underside = [v for v in voids if v.depth and getattr(v, "underside", False)]
+    pockets = [v for v in voids if v.depth and not getattr(v, "underside", False)]
     through = [v for v in voids if not v.depth]
-    if not pockets:
+    if not pockets and not underside:
         return [(box, through)]
-    depths = {round(v.depth, 3) for v in pockets}
-    if len(depths) != 1:
-        raise ValueError(f"one pocket depth per worktop, got {sorted(depths)}")
-    d = pockets[0].depth
     a0, a1, c0, c1, z0, z1 = box
-    top = pockets + [v for v in through if not any(_inside(v, w) for w in pockets)]
-    return [((a0, a1, c0, c1, z0, z1 - d), through), ((a0, a1, c0, c1, z1 - d, z1), top)]
+    layers = []
+    mid_z0 = z0
+    if underside:
+        depths = {round(v.depth, 3) for v in underside}
+        if len(depths) != 1:
+            raise ValueError(f"one underside pocket depth per worktop, got {sorted(depths)}")
+        ud = underside[0].depth
+        layers.append(((a0, a1, c0, c1, z0, z0 + ud), through + underside))
+        mid_z0 = z0 + ud
+    if pockets:
+        depths = {round(v.depth, 3) for v in pockets}
+        if len(depths) != 1:
+            raise ValueError(f"one pocket depth per worktop, got {sorted(depths)}")
+        d = pockets[0].depth
+        top = pockets + [v for v in through if not any(_inside(v, w) for w in pockets)]
+        layers.append(((a0, a1, c0, c1, mid_z0, z1 - d), through))
+        layers.append(((a0, a1, c0, c1, z1 - d, z1), top))
+    else:
+        layers.append(((a0, a1, c0, c1, mid_z0, z1), through))
+    return layers
 
 
 def _bbox(part: kc.Part) -> tuple[float, float, float]:
