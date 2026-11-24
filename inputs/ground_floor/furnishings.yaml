@@ -1173,11 +1173,12 @@ systemFurniture:
       # Petr, 2026-11-24 (t928u): "Make that shallow base cabinet by the
       # column in dining area, near the corner of couch into a flip out
       # trashcan." Elletipi Small 8 L, 0.225 × 0.150 × 0.340 (W × D × H).
-      # t929u: angle 40 → 13.2 (min that fully exposes the rim, 8 mm past
-      # the worktop edge). Pivot: Häfele Stangenscharnier 351.01.735.
+      # t929u: angle 40 → 13.2. t930u: 13.2 → 13.8 (bin hangs 8 mm off the
+      # door on two hook plates, no cradle); 13.8 is the new minimum that
+      # fully exposes the rim, 8 mm past the worktop edge.
       - Name: Pset_Fronts
         Properties:
-          Layout: "flipout * bin=0.225x0.150x0.340 angle=13.2"
+          Layout: "flipout * bin=0.225x0.150x0.340 angle=13.8"
   # Petr, 2026-11-13: "I want the living room part of the counter (behind
   # sofa) to continue at the same 930 height as the dining area. It will be
   # oak veneer, not silestone. We'll work out the details of where the two

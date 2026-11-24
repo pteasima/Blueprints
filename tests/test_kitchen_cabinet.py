@@ -1052,31 +1052,39 @@ def test_kenwood_rides_its_inner_drawer():
 
 
 def test_dining_column_flipout_trashcan():
-    # Petr, 2026-11-24 (t928u): shallow filler by pier W-053, near the
-    # Harvey corner, is a bottom-hinged flip-out for the Elletipi Small 8 L.
+    # Petr, 2026-11-24 (t928u / t930u): shallow filler by pier W-053, near
+    # the Harvey corner, is a bottom-hinged flip-out for the Elletipi Small
+    # 8 L, hanging on two hook-in brackets (no cradle, no inner shelf).
     run = _runs()["KR-DN"]
-    front, cradle, bin_ = run.part("SF-F053-FLIP"), run.part("SF-F053-CRADLE"), run.part("SF-F053-BIN")
-    assert front.lift is not None and cradle.lift is not None and bin_.lift is not None
+    front = run.part("SF-F053-FLIP")
+    brackets, hooks, bin_ = run.part("SF-F053-BRACKETS"), run.part("SF-F053-HOOKS"), run.part("SF-F053-BIN")
+    assert front.lift is not None and brackets.lift is not None and hooks.lift is not None and bin_.lift is not None
     assert front.lift.group == "SF-F053-FLIP"
+    assert run.part("SF-F053-CRADLE") is None
     assert front.props["Hinge"] == "bottom" and front.props["Grip"] == "J top"
     # Catalogue: 340 × 225 × 150 (H × W × D), Alza / Elletipi PTM SP34 C97 M.
     a0, a1, c0, c1, z0, z1 = min(b[0] for b in bin_.boxes), max(b[1] for b in bin_.boxes), \
         min(b[2] for b in bin_.boxes), max(b[3] for b in bin_.boxes), \
         min(b[4] for b in bin_.boxes), max(b[5] for b in bin_.boxes)
     assert (a1 - a0, c1 - c0, z1 - z0) == (pytest.approx(225.0), pytest.approx(150.0), pytest.approx(340.0))
-    # 264 mm clear width, 12 mm cheeks: 7.5 mm to each carcass side.
-    assert a0 - 12 == pytest.approx(3018.0 + 7.5)
-    assert 3282.0 - (a1 + 12) == pytest.approx(7.5)
-    # Front rail omitted; back rail stays. No shelves. Door size unchanged.
+    # 264 mm clear width, no cheeks: 19.5 mm to each carcass side.
+    assert a0 == pytest.approx(3018.0 + 19.5)
+    assert 3282.0 - a1 == pytest.approx(19.5)
+    # 8 mm hang stand-off from the door inner face (c 18); 16 mm to the back at 192.
+    assert (c0, c1) == (pytest.approx(26.0), pytest.approx(176.0))
+    # Front rail omitted; back rail stays. No shelves, no cradle. Door size unchanged.
     assert not any(p.id == "SF-F053-RAIL-F" or p.id.startswith("SF-F053-SH") for p in run.parts)
     assert run.part("SF-F053-RAIL-B") is not None
     assert front.boxes[0] == (pytest.approx(3001.5), pytest.approx(3298.5), pytest.approx(0.0),
                               pytest.approx(18.0), pytest.approx(101.5), pytest.approx(888.5))
-    assert math.degrees(front.lift.angles[-1]) == pytest.approx(-13.2)
+    assert math.degrees(front.lift.angles[-1]) == pytest.approx(-13.8)
     # Rear rim keeps 8 mm off the back rail through the swing; peak clears
-    # the 890 worktop underside by more than that (about 15.5 mm).
-    assert front.props["WorktopClearance"] == pytest.approx(0.015515, abs=1e-5)
-    assert front.props["PeakZ"] == pytest.approx(0.874485, abs=1e-5)
+    # the 890 worktop underside by more than that (about 16.9 mm).
+    assert front.props["WorktopClearance"] == pytest.approx(0.016886, abs=1e-5)
+    assert front.props["PeakZ"] == pytest.approx(0.873114, abs=1e-5)
+    assert z0 == pytest.approx(512.8, abs=0.1) and z1 == pytest.approx(852.8, abs=0.1)
+    # Two hook plates on the door, two hooks on the bin, near the rim.
+    assert len(brackets.boxes) == 4 and len(hooks.boxes) == 4
     # Sofa west face x=25.52; the front's east edge is at x=25.4485 (71.5 mm).
     # The swing is in c–z only, so that gap does not close.
 
@@ -1087,8 +1095,10 @@ def test_dining_column_flipout_is_a_linkage():
     rec = links["SF-F053-FLIP"]
     assert rec["id"] == "SF-F053-FLIP"
     joint = rec["joints"][0]
-    assert {e["element"] for e in joint["elements"]} == {"SF-F053-FLIP", "SF-F053-CRADLE", "SF-F053-BIN"}
-    assert math.degrees(joint["angles"][-1]) == pytest.approx(-13.2)
+    assert {e["element"] for e in joint["elements"]} == {
+        "SF-F053-FLIP", "SF-F053-BRACKETS", "SF-F053-HOOKS", "SF-F053-BIN",
+    }
+    assert math.degrees(joint["angles"][-1]) == pytest.approx(-13.8)
     # Hinge at the door's bottom outer edge; a negative angle tilts the top out into the room (south, glTF +z).
     assert rec["joints"][0]["pivot"][1] == pytest.approx(0.1015)
 
