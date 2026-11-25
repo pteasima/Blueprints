@@ -34,6 +34,8 @@ Labels: **Petr** is a fact Petr gave, with the date or document. **Blum** is fro
 > - Petr (t951u) sent a 3D Warehouse side view as the target shape: [VoxtorpJGripSideView.png](sources/VoxtorpJGripSideView.png). He finds the current model reasonably close (“I think we got reasonably close in the model”); the model is unchanged.
 > - Details and the existing router-bit / front-thickness `open:` are in “J grip”.
 
+> **`open:` for the woodworker (t993u): the living-room oak counter is one notched piece, 4450 × 450, with a 300 × 250 cut-out at pier W-053.** There is no joint at the column. If the stock is shorter than 4450 mm he may put a joint mid-length, not at the column. Also **`open:` measure on site** that the trashcan cabinet (SF-F053), now 40 mm past the pier to the bookshelf sidewall (x 25.49), is still not blocked by the couch (the model leaves a 30 mm gap to the sofa's west back FN-BW1 at x 25.52). Details: “Dining side splashes, trashcan +40 mm and one-piece oak counter (2026-11-25, t993u)”.
+
 ## Deviations from Petr's original plan (2026-11-23)
 
 Petr's original document is the sticky-note plan [`KitchenPlan.jpg`](../../inputs/ground_floor/KitchenPlan.jpg) with his notes (quoted in `inputs/ground_floor/furnishings.yaml`), plus his rule of 2026-11-11 “when unsure of details and margins, default to IKEA METOD measurements”, which made the drawers IKEA MAXIMERA (2026-11-13). On **2026-11-23** (t835u) Petr switched every drawer to **Blum MERIVOBOX**: “Ok, time to pull the trigger. Remodel or drawers to use merivobox.” His standing rules: **soft-close (BLUMOTION) only, opening by hand; never TIP-ON (push to open) or SERVO-DRIVE (electric)** (Petr, 2026-11-23, t830u: “I never want anything push to open (nor electric). I do want soft close, but opening must be manual.”), and “existing docs probably say ‘assume ikea maximera’, that will have to go”. Each deviation, with its reason:
@@ -446,7 +448,7 @@ Petr, 2026-11-12: “As well as the back wall above countertop, below top cabine
 | --- | --- | --- | --- | --- |
 | `KR-WEST-BACKSPLASH` | west wall, on the west worktop, y 11.35–13.85 (OP24 to OP25 jamb, not over the clad ends' extra 20), x 18.800–18.812 | 2500 × 12 × **630**, 930 → **1560** (was 620, → 1550) | underside of SF-CH850 / SF-BH800 / SF-AH850 | derived by `kitchen_cabinet` (`Backsplash: true`): the lowest box over the strip |
 | `CV-BS-DN` | north wall behind SF-DN, x 22.45–25.15, y 15.588–15.600 | 2700 × 12 × 630, 930 → 1560 (was 620, → 1550) | underside of SF-DH | yaml `coverings` |
-| `CV-BS-R052`, `CV-BS-R053W` | the piers' faces facing each other in the dining bay, y 15.35–15.588 | 238 × 12 × 630 each | under SF-DH | `guess:` the stone wraps the piers |
+| `CV-BS-R052`, `CV-BS-R053W` | the piers' faces facing each other in the dining bay, y 15.35–15.588 | 238 × 12 × 630 each (2026-11-12; superseded: **20 × 230** from 2026-11-20, then **20 × 256**, y 15.324–15.580, since t993u — see “Silestone thickness” and t993u) | under SF-DH | `guess:` the stone wraps the piers |
 | `CV-BS-P052` | front of pier W-052 over filler SF-F052, x 22.158–22.462, y 15.338–15.35 | 304 × 12 × 630 | **1560, `open:`** (nothing above) | `guess:` wrap |
 | `CV-BS-P053` | front of pier W-053 over filler SF-F053, x 25.138–25.462 | 324 × 12 × 630 | **1560, `open:`** | `guess:` wrap |
 | `CV-BS-R053E` | W-053's east face over SF-DN70, x 25.450–25.462, y 15.35–15.588 | 238 × 12 × 630 | **1560, `open:`** | `guess:` wrap |
@@ -1419,11 +1421,46 @@ stone was already 20, so no carcass height moves. Changes, old → new:
 |---|---|---|
 | KR-WEST-BACKSPLASH | 12 thick, run c 588–600 | **20**, c 580–600 (the top in front of it: 608 → 600 visible) |
 | CV-BS-DN | 12, y 15.588–15.600 | **20**, y 15.580–15.600 (wall face kept) |
-| CV-BS-R052 | 12 × 238, x 22.450–22.462 | **20 × 230**, x 22.450–22.470 |
-| CV-BS-R053W | 12 × 238, x 25.138–25.150 | **20 × 230**, x 25.130–25.150 |
-| CV-SLAT-W052 | x 22.150–22.462 (312) | x 22.150–**22.470** (320), linked to the return |
-| CV-SLAT-W053 | x 25.138–25.450 (312) | x **25.130**–25.450 (320), linked to the return |
-| SF-DH-LINING notches | x 22.15–22.462 / 25.138–25.45 | 22.15–22.47 / 25.13–25.45 (linked to the slats) |
+| CV-BS-R052 | 12 × 238, x 22.450–22.462 | **20 × 230**, x 22.450–22.470 (then **20 × 256**, y 15.324–15.580, t993u) |
+| CV-BS-R053W | 12 × 238, x 25.138–25.150 | **20 × 230**, x 25.130–25.150 (then **20 × 256**, y 15.324–15.580, t993u) |
+| CV-SLAT-W052 | x 22.150–22.462 (312) | x 22.150–**22.470** (320), linked to the return (then **300**, x 22.150–22.450, t993u) |
+| CV-SLAT-W053 | x 25.138–25.450 (312) | x **25.130**–25.450 (320), linked to the return (then **300**, x 25.150–25.450, t993u) |
+| SF-DH-LINING notches | x 22.15–22.462 / 25.138–25.45 | 22.15–22.47 / 25.13–25.45 (linked to the slats; then 22.15–22.45 / 25.15–25.45, t993u) |
+
+### Silestone nesting: all 20 mm, 3 jumbo (decision kept, t993u)
+
+The current setup stays **all 20 mm**. The dining backsplash `CV-BS-DN` (2700 × 630) is cut as **two 1350** pieces, split under the SF-DH divider (x 23.80). That packing uses **3 Cosentino jumbo slabs** (3250 × 1590, 3 × 5.17 = **15.50 m²**).
+
+Petr (t993u): keep this, but we are willing to switch if the stonemason's quote comes out cheaper, to:
+
+- **12 mm:** the entire dining area (dining top, dining backsplash, dining side splashes) and the west kitchen backsplash
+- **20 mm:** the rest (island top, island end panels, west worktop)
+
+That split, from the nesting on `c4079e2`, needs **5 slabs** (2 × 12 mm + 3 × 20 mm standard 3060 × 1400, **21.42 m²**) versus the 3 jumbo 20 mm (15.50 m²). At 12 mm the side splashes were **238** mm deep, not 230 (the 20 mm backsplash eats 8 mm more of the return). Since t993u the returns also cover the 26 mm acoustic panel, so a 12 mm switch would now be **264** mm (238 + 26), not 238; the 20 mm returns are **256** (230 + 26). The 3-jumbo 20 mm plan still fits with the 256 mm returns (same 3 slabs, 15.50 m²).
+
+### Dining side splashes, trashcan +40 mm and one-piece oak counter (2026-11-25, t993u)
+
+Petr (t993u):
+
+> in dining area, the side wall silestone slabs should cover the perpendicular accoustic panel, not vice versa. So the silestone grows a bit and its edges are visible from the front. The accoustic panel shrinks a bit.
+>
+> at the column where dining area meets living area, the trashcan cabinet should extend by 40mm to align with the bookshelf sidewall. Also, the oak counter should be one piece (I realize that might not be possible, the woodworker will cut it somewhere in the middle, but they definitely wont cut it at the column like you have it). Note in docs that we might measure on site that trashcan cabinet still isnt blocked by couch.
+
+**Side-wall Silestone covers the acoustic panel.** The perpendicular panel on each pier front is the oak slat cladding (`CV-SLAT-W052` / `CV-SLAT-W053`): **26 mm** overall (`guess:` 20 mm slats + 6 mm oak-veneer backing), y 15.324–15.350. Until t993u the slats ran over the stone returns' edges (the stone stopped at the pier face, y 15.35, depth **230**). Now the returns start at the slat front (y 15.324) and are **256** mm deep (230 + 26), x still 20 mm thick, so the stone edge is visible from the front. The slats shrink to the pier faces only (**300** mm wide, was 320).
+
+| Piece | Before (t993u) | After |
+| --- | --- | --- |
+| CV-BS-R052 | 20 × 230 × 630, x 22.450–22.470, y 15.350–15.580 | **20 × 256 × 630**, x 22.450–22.470, y **15.324**–15.580 |
+| CV-BS-R053W | 20 × 230 × 630, x 25.130–25.150, y 15.350–15.580 | **20 × 256 × 630**, x 25.130–25.150, y **15.324**–15.580 |
+| CV-SLAT-W052 | 320 × 26, x 22.150–22.470 | **300** × 26, x 22.150–**22.450** |
+| CV-SLAT-W053 | 320 × 26, x 25.130–25.450 | **300** × 26, x **25.150**–25.450 |
+| SF-DH-LINING notches (linked to the slats) | 22.15–22.47 / 25.13–25.45 | **22.15–22.45 / 25.15–25.45** |
+
+**Trashcan +40 mm, aligned with the bookshelf sidewall.** SF-F053 goes from **300** to **340** mm (x 25.15–**25.49**). The bookshelf (`FN-BK`) still starts at the pier's east face (x 25.45); its west side is 40 mm (`BoardThickness`), inner face x **25.49**. SF-LB starts there (width 4150 → **4110**). The slats on W-053 still end at the pier (x 25.45), not at the new cabinet east.
+
+In the model this does **not** collide with the couch, the column, or the bookshelf. The nearest sofa part is the west back `FN-BW1` at x 25.52–25.82, y 13.99–15.15 (height 760). The cabinet front is at y 15.15; the gap at the front plane is **30 mm** (was 70 mm). **`open:` measure on site** that the extended cabinet is still not blocked by the couch. The 40 mm strip east of the pier, behind the 200 mm cabinet (x 25.45–25.49, y 15.35–15.60, under the bookshelf side), has no carcass; the one-piece oak top covers it.
+
+**Oak counter is one notched piece**, not two slabs joined at the column. `KR-LB-WORKTOP` is one 40 mm oak-veneer part: **4450 × 450** (x 25.15–29.60, y 15.15–15.60), with a through cut-out **300 × 250** at the pier (x 25.15–25.45, y 15.35–15.60). **`open:`** if the available stock is shorter than 4450 mm, the woodworker may put a joint mid-length, not at the column.
 
 ### Zero overhang: dining run and island east edge
 
