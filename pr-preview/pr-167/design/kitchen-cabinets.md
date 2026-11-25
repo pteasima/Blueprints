@@ -34,7 +34,7 @@ Labels: **Petr** is a fact Petr gave, with the date or document. **Blum** is fro
 > - Petr (t951u) sent a 3D Warehouse side view as the target shape: [VoxtorpJGripSideView.png](sources/VoxtorpJGripSideView.png). He finds the current model reasonably close (“I think we got reasonably close in the model”); the model is unchanged.
 > - Details and the existing router-bit / front-thickness `open:` are in “J grip”.
 
-> **`open:` for the woodworker: every drawer that holds an electric appliance needs an EVOline Wing (Schulte Elektrotechnik) or a similar drawer cable-management system, and he must verify it fits.** The Wing is not in the model. Details, official dimensions and the fit check of the two island east appliance drawers (SF-E600a sealer, SF-E600b Kenwood) are in “EVOline Wing on appliance drawers (2026-11-25, t981u / t982u)”.
+> **`open:` for the woodworker: every drawer that holds an electric appliance needs an EVOline Wing (Schulte Elektrotechnik) or a similar drawer cable-management system, and he must verify it fits.** The Wing is not in the model. The appliances sit on the inner K of SF-E600a / SF-E600b; the as-drawn 26 mm behind that inner box is a side-effect of t978u and may only be 7 mm if the inner keeps its front-piece envelope — in which case it is 16 mm short of EVOline’s > 23 mm. Details: “EVOline Wing on appliance drawers (2026-11-25, t981u / t982u)”.
 
 ## Deviations from Petr's original plan (2026-11-23)
 
@@ -2432,30 +2432,44 @@ A May 2022 BMA (Stand 05/2022, 7040 2160 0000; superseded by the 8/2025 instruct
 
 ### The two island drawers, and whether the Wing fits
 
-The only drawers in the model that currently hold an electric appliance are the two on the **island east row, facing east** (the island has no south-facing drawer row):
+The only drawers in the model that currently hold an electric appliance are the two on the **island east row, facing east** (the island has no south-facing drawer row). Both appliances sit on the **inner K**, not on the outer E:
 
-| Bay | Appliance | Front / boxes |
+| Bay | Appliance (on the inner K) | Front / boxes |
 | --- | --- | --- |
-| **SF-E600a-D1** (northmost east bay, 640 wide) | Maxxo Chamber Line 40 sealer on **SF-E600a-D1-I1** | Full-height front 100–908.5; outer E box 143–335; inner K 621–750 |
-| **SF-E600b-D1** (next south, 617 wide) | Kenwood Chef XL on **SF-E600b-D1-I1** | Full-height front 100–908.5; outer E box 143–335; inner K 501–630 |
+| **SF-E600a-D1** (northmost east bay, 640 wide) | Maxxo Chamber Line 40 sealer on **SF-E600a-D1-I1** | Full-height front 100–908.5; outer E 143–335; inner K 621–750 |
+| **SF-E600b-D1** (next south, 617 wide) | Kenwood Chef XL on **SF-E600b-D1-I1** | Full-height front 100–908.5; outer E 143–335; inner K 501–630 |
 
-Both are MERIVOBOX **NL 500**, drawn box length **477** (Blum inside 458 + back wall 19; inner-drawer inside 439, but the inner box's outer back is at the same place). East bay depth 530: 18 front + **503** clear + 9 (half of the 18 mm shared central back `KR-ISL-BACK`, c 621–639). Box from the back of the decor front (c 1142) to c **665**. Free depth behind both the outer and the inner box: **665 − 639 = 26 mm**. The same 26 mm in both bays.
+The two bays share one depth chain (east front at c 1160, central back `KR-ISL-BACK` c 621–639). Bay depth 530 = 18 decor front + **503** clear + 9 (half of the 18 mm back). Both are NL 500. The inner K is not a shorter box sitting further back: `inner_drawers()` copies the outer box's plan (`c0`, `c1`), and `inner_drawer_boxes()` then puts a 19 mm front piece at the **front** of that same envelope (immediately behind the decor front). The two backs therefore coincide.
 
-**Option A — directly behind the drawer (the official requirement).**
+Depth chain, both bays, millimetres, from the east front face inward:
 
-| Check | EVOline (current) | This model | Result |
+| Step | Outer E (main) | Inner K (holds the appliance) |
+| --- | ---: | ---: |
+| Decor front (outer face c 1160 → inner face c 1142) | **18** | 18 (the inner sits behind this) |
+| Box / front-piece start | box starts at c **1142** (no box front panel; `BoxFrontPanel` 0; the decor front closes it) | 19 mm front piece c **1123–1142**, so the envelope still starts at c **1142** |
+| Drawn box length | **477** = Blum inside 458 + back wall 19 | **477** (same envelope; inside = 477 − 2 × 19 = **439**) |
+| NL | 500 | 500 (same) |
+| Box back | c **665** | c **665** (same) |
+| Rear gap to back inner face (c 639) | **26** | **26** (same, not 7) |
+
+So the 26 mm reported for the Evoline check is behind **both** boxes, including the inner K that holds the appliance. It is not a 26 mm gap only behind the outer E, with the inner filling the rest.
+
+**How that 26 mm appeared, and what “optimized to just fit the inner drawers” meant.** Island east was set to 530 / NL 500 in the MERIVOBOX remodel, 2026-11-23 (t835u, commit `997130e`, PR #149). Petr: “on island east use whatever gets us closely below 1200mm total island depth. The inner drawers matter, the bottom one can be the same length.” The remodel table’s “Left behind the box” column is **inside − NL − 3** (cabinet inside 503 minus the Blum minimum LT ≥ NL + 3). That value is **0**. It does not mean the wooden box fills the carcass. A correctly sized NL 500 box is shorter than 503: official base NL − 26 = 474, which would leave 29 mm to the back; the drawn box is 477, which leaves **26**. NL 550 would need 553 inside and a 550 carcass, making the island 1230, so the east end is already at the longest NL that fits. “Petr expected about 20 unused” in that write-up was *extra* carcass beyond NL + 3 (530 → 550, island 1200), which was not added.
+
+**t978u / PR #166 did create 19 mm of the 26 mm rear gap**, and it did so on the inner K as well as on the outer E. Until then `drawer_box_length` was official inside + 2 × 19 = **496**, so the rear gap behind both boxes (the inner already copied the outer plan) was **7 mm**, and the inner *inside* was 496 − 38 = **458**, the same as the main. Dropping the phantom front wall shortened the outer box to 477 (correct for a main drawer with `BoxFrontPanel` 0). Because the inner still inherits that plan, the inner box also became 477, the gap behind it grew 7 → 26, and its inside fell 458 → 439. The carcass was not deepened.
+
+**Option A — directly behind the drawer that holds the appliance (the official EVOline requirement).**
+
+| Check | EVOline (current) | As drawn, inner K | Result as drawn |
 | --- | --- | --- | --- |
-| Free depth behind the box | **> 23 mm** | **26 mm** | **Fits, 3 mm surplus** |
-| Clear width | **> 380 mm** | E600a inside **613**, E600b **599**; arm 378 | Fits |
+| Free depth behind the **inner K** back | **> 23 mm** | **26 mm** | Fits on the current drawing, 3 mm surplus |
+| Clear width | **> 380 mm** | E600a carcass inside **613**, E600b **599**; arm 378 | Fits |
 | Drawer depth | **< 590 mm** | box **477**, NL 500 | Fits |
-| Height on an E back (upper edge 335, side 192) | metal adapter **126 mm** below the upper edge | 192 | Fits (66 spare) |
-| Height on a K inner back (side 129) | 126 mm | 129 | Fits, only **3 mm** spare |
+| Height on the inner K back (side 129) | metal adapter **126 mm** below the upper edge | **129** | Fits, only **3 mm** spare |
 
-A real Blum base of NL − 26 = 474 with a 16 mm back, starting at the same decor-front back, would put the box back at c 668 and leave **29 mm** behind it. Either figure is over 23 mm.
+`open:` that 26 mm behind the inner K is a side-effect of t978u. An inner drawer still has a 19 mm front piece, so a 496 mm envelope (inside 458 + front 19 + back 19) would be consistent with the pre-t978u inner and with “the inner drawers matter.” That would put the inner back at c 646 and leave only **7 mm** behind it — **16 mm short** of EVOline’s > 23. The model is not changed here. The woodworker must size the real inner box and the Wing together; do not take the as-drawn 26 mm behind the inner as a decided spare.
 
-Obstacles in that rear gap: the bound is the 18 mm shared central back. The east bottom board fills c 639–1142 at z 110–128, so the 26 mm gap exists only **above z 128**. The front rail (c 1062–1142, z 892–910) is at the front, not in the gap. The east plinth is at the front (c 1092–1110). Silestone is the worktop (z 910–930, 20 mm overhangs) and the north/south end cladding; it does not enter the gap. The hob exhaust channel is on the **west** side of the central back, not in this gap. No services are modelled in the 26 mm void.
-
-Because 26 > 23, **no deeper carcass and no shorter NL are required** for the official behind-the-drawer layout. The surplus is only 3 mm, so the woodworker must still verify the real metal adapter, the MERIVOBOX back, and the cable on the opened and closed drawer.
+Obstacles in the as-drawn 26 mm gap: the bound is the 18 mm shared central back. The east bottom board fills c 639–1142 at z 110–128, so the gap exists only **above z 128**. The front rail (c 1062–1142, z 892–910) is at the front, not in the gap. The east plinth is at the front (c 1092–1110). Silestone is the worktop (z 910–930, 20 mm overhangs) and the north/south end cladding; it does not enter the gap. The hob exhaust channel is on the **west** side of the central back, not in this gap. No services are modelled in the void.
 
 **Option B — arm fixed above or below the drawer (Petr t982u).**
 
@@ -2468,7 +2482,7 @@ Space that is actually there, behind the full-height front (the front itself goe
 | Between the outer E top (335) and the inner K | **286 mm** (335–621) | **166 mm** (335–501) |
 | Below the outer E (box base 143) | 15 mm profile onto the bottom board at 128; not a usable cavity | same |
 
-Those voids are larger than the arm's 126 mm height, so there is room *for the arm's height* above the inner drawers and between the two boxes. That does **not**, on EVOline's own documents, replace the **> 23 mm behind the drawer**: they still dimension that gap, they still describe the cable as running behind the drawer, and the drawer-side adapter is on the drawer back, so in the closed position the arm still has to live at that back. The official behind-the-drawer check already passes (26 vs 23), so a depth change is not needed on either reading.
+Those voids are larger than the arm's 126 mm height, so there is room *for the arm's height* above the inner drawers and between the two boxes. That does **not**, on EVOline's own documents, replace the **> 23 mm behind the drawer**: they still dimension that gap, they still describe the cable as running behind the drawer, and the drawer-side adapter is on the drawer back, so in the closed position the arm still has to live at that back. Whether that rear gap is the as-drawn 26 mm or a 7 mm inner (see the `open:` above) is for the woodworker to settle; above/below space does not officially remove the need for it.
 
 
 ## All MERIVOBOX heavy duty where Blum makes it (2026-11-23, t895u)
