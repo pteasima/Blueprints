@@ -34,6 +34,8 @@ Labels: **Petr** is a fact Petr gave, with the date or document. **Blum** is fro
 > - Petr (t951u) sent a 3D Warehouse side view as the target shape: [VoxtorpJGripSideView.png](sources/VoxtorpJGripSideView.png). He finds the current model reasonably close (“I think we got reasonably close in the model”); the model is unchanged.
 > - Details and the existing router-bit / front-thickness `open:` are in “J grip”.
 
+> **`open:` for the woodworker: every drawer that holds an electric appliance needs an EVOline Wing (Schulte Elektrotechnik) or a similar drawer cable-management system, and he must verify it fits.** The Wing is not in the model. Details, official dimensions and the fit check of the two island east appliance drawers (SF-E600a sealer, SF-E600b Kenwood) are in “EVOline Wing on appliance drawers (2026-11-25, t981u / t982u)”.
+
 ## Deviations from Petr's original plan (2026-11-23)
 
 Petr's original document is the sticky-note plan [`KitchenPlan.jpg`](../../inputs/ground_floor/KitchenPlan.jpg) with his notes (quoted in `inputs/ground_floor/furnishings.yaml`), plus his rule of 2026-11-11 “when unsure of details and margins, default to IKEA METOD measurements”, which made the drawers IKEA MAXIMERA (2026-11-13). On **2026-11-23** (t835u) Petr switched every drawer to **Blum MERIVOBOX**: “Ok, time to pull the trigger. Remodel or drawers to use merivobox.” His standing rules: **soft-close (BLUMOTION) only, opening by hand; never TIP-ON (push to open) or SERVO-DRIVE (electric)** (Petr, 2026-11-23, t830u: “I never want anything push to open (nor electric). I do want soft close, but opening must be manual.”), and “existing docs probably say ‘assume ikea maximera’, that will have to go”. Each deviation, with its reason:
@@ -623,6 +625,7 @@ Built-ins are yaml elements with no box: `electricAppliances` or `sanitaryTermin
 - The microwave's 372 fascia laps 8 over the niche at the top and bottom. The fronts above and below stop a gap short of the fascias.
 - The sBox (the hose box under the island tap) is not modelled. Petr's note says it has to be turned to avoid the disposer: `open:`.
 - The kettle and grinder sit 50 off the backsplash, at the cards' places along SF-DN (`guess:`). They are members of SF-DN's group because they stand on its top.
+- **Cable management in appliance drawers (Petr, 2026-11-25, t981u):** every drawer that holds an electric appliance needs an EVOline Wing or a similar drawer cable-management system; the woodworker must verify it fits. The two island east drawers that currently hold appliances are SF-E600a-D1 (Maxxo Chamber Line 40 sealer on I1) and SF-E600b-D1 (Kenwood Chef XL on I1). They face east (the island has no south-facing drawer row). Fit numbers and sources: “EVOline Wing on appliance drawers (2026-11-25, t981u / t982u)”.
 
 ### What changed on existing items (2026-11-12)
 
@@ -2388,6 +2391,84 @@ Petr: "just like we hid the vacuum sealer in a drawer, lets hide a Kenwood Chef 
 - **Layout**: `drawer * box=E inner=K inner_clear=0.375`: the top inner drawer (M) is gone, the K one's floor is 375 under the band top (345 + 30, as the sealer's 225 + 30). Inside 548 × 458: 268 spare along the run, 73 along the depth.
 - **Viewer**: a standing appliance's record names its inner drawer in `rides` (models/ground_floor.py); doors.js `attachRiders` hangs its mesh under that drawer's pivot, so it slides with it and a tap on it drives the drawer. Before, the sealer had its own motion (parent the outer drawer) and moved on its own.
 
+
+## EVOline Wing on appliance drawers (2026-11-25, t981u / t982u)
+
+Petr (t981u): note in the docs that every drawer with an electric appliance needs an EVOline Wing or a similar cable-management system, and the woodworker must check that it fits; also check whether it currently fits behind the two island drawers that hold those appliances, or how much more room is needed. Petr (t982u): there is enough vertical space above and below these drawers, so if the Wing arm can be fixed there (not directly behind the drawer), no drawer-depth change is needed.
+
+The model is unchanged.
+
+### Official EVOline facts
+
+Sources, all Schulte Elektrotechnik GmbH & Co. KG (EVOline), Lüdenscheid:
+
+- Data sheet, Stand 08/2025 (the product page lists it as issued 09/2025): [EVOline-Datenblatt-Wing_25.pdf](https://www.evoline.com/fileadmin/Medien/Produkte/SmartDrawers/EVOline_Wing/EVOline-Datenblatt-Wing_25.pdf)
+- Operating and assembly instructions, Stand 8/2025, document 7040 2160 0003 (the product page lists this file as issued 12/2025; the PDF footer is 8/2025): [EVOline_Wing-BMA.pdf](https://www.evoline.com/fileadmin/Medien/Produkte/SmartDrawers/EVOline_Wing/EVOline_Wing-BMA.pdf)
+- Product page (EN / DE): [evoline.com/en/products/smartdrawers/wing](https://www.evoline.com/en/products/smartdrawers/wing), [evoline.com/produkte/smartdrawers/wing](https://www.evoline.com/produkte/smartdrawers/wing)
+- SmartDrawers brochure, issued 02/2026: [SmartDrawers_Broschuere_DE_GB.pdf](https://www.evoline.com/fileadmin/Medien/Produkte/SmartDrawers/SmartDrawers_Broschuere_DE_GB.pdf)
+
+**Area of application (data sheet):** drawers with a wooden or metal back panel. Two adapters: one to screw onto a wooden back, one to clamp onto a metal back. Suitable for flexible connection cables up to 3 × 2.5 mm²; not suitable for rigid cables (e.g. NYM). The BMA adds that cables smaller than 1.5 mm² must be additionally fixed (e.g. with cable ties). The BMA lists **Blum Merivo-Box** (and Tandembox, Grass Nova Pro, Hettich ArciTech / Innotech) as an example for the metal-back adapter (type A).
+
+**Installation requirements**, dimensioned on the data sheet and again on the BMA (plan of the cabinet, drawer closed or nearly closed):
+
+- **> 23 mm** free depth **behind the drawer** (the gap between the drawer back and the carcass back).
+- **> 380 mm** clear width of the cabinet.
+- **< 590 mm** drawer depth (the dashed drawer body in that plan).
+
+The product page: the Wing “ensures secure cable management **behind the drawer**”; “It uses the space **behind the drawer**”; “As a built-in solution, the Wing can be found **behind any drawer or pull-out shelf**. The articulated arm can be mounted **left, right, horizontally or vertically** in the respective part of the furniture.” The German page is the same: “Kabelführung **hinter der Schublade**”; “Der Gelenkarm kann **links, rechts, waagerecht oder senkrecht** im jeweiligen Möbelteil montiert werden.” The 02/2026 brochure: the Wing is a cable manager “für alle beweglichen und ausziehbaren Möbelteile — **waagerecht und senkrecht**” and “führt Leitungen platzsparend **hinter dem Schubfach**.”
+
+**Drawn sizes (data sheet 08/2025; the 02/2026 brochure agrees on 378 / 305 / 126 / 17):**
+
+- Articulated arm overall length **378 mm**. Metal-back adapter **305 mm** along the drawer back (73 + 305); wooden / universal adapter 66 + 312.
+- Arm thickness in plan: **17 mm** along the chain (brochure and both adapter drawings). On the wooden / universal adapter the cabinet-side bracket is **23 mm** in that same direction.
+- Height below the “upper edge of drawer” line: metal adapter **111 mm** and **126 mm**; wooden / universal adapter **108 mm** and **121 mm**. The cabinet-side triangle is 70 mm tall (12 + 20 + 12 hole spacing) with a 13 + 28 mm base.
+- The drawer-side guide sits on the **drawer back panel**, referenced to the upper edge of the drawer. The cabinet-side part is the triangular mounting bracket in the carcass. The BMA shows it in the rear of the cabinet, left or right (“The Wing can also be mounted on the opposite side”).
+
+EVOline does **not** publish a dimensioned installation that parks the folded arm only above or below the drawer and omits the **> 23 mm** rear gap, and they do not say that “horizontally or vertically” waives that gap. All of their dimensioned plans put that 23 mm behind the drawer back.
+
+`guess:` “vertically” / “senkrecht” means the 378 mm arm can be rotated onto a vertical furniture part (a side or the back), still in that rear zone. It is not evidence that the folded arm can live entirely in the space above or below the drawer in front of the carcass back.
+
+A May 2022 BMA (Stand 05/2022, 7040 2160 0000; superseded by the 8/2025 instructions above) showed the cabinet bracket on the vertical wall in the rear corner at an “individual height” from the cabinet top, a 58 mm inset, a metal-back rear gap of > 20 mm, and a side-view height > 126 mm. Those older limits are not used in the fit check; the current official rear gap is **> 23 mm**.
+
+### The two island drawers, and whether the Wing fits
+
+The only drawers in the model that currently hold an electric appliance are the two on the **island east row, facing east** (the island has no south-facing drawer row):
+
+| Bay | Appliance | Front / boxes |
+| --- | --- | --- |
+| **SF-E600a-D1** (northmost east bay, 640 wide) | Maxxo Chamber Line 40 sealer on **SF-E600a-D1-I1** | Full-height front 100–908.5; outer E box 143–335; inner K 621–750 |
+| **SF-E600b-D1** (next south, 617 wide) | Kenwood Chef XL on **SF-E600b-D1-I1** | Full-height front 100–908.5; outer E box 143–335; inner K 501–630 |
+
+Both are MERIVOBOX **NL 500**, drawn box length **477** (Blum inside 458 + back wall 19; inner-drawer inside 439, but the inner box's outer back is at the same place). East bay depth 530: 18 front + **503** clear + 9 (half of the 18 mm shared central back `KR-ISL-BACK`, c 621–639). Box from the back of the decor front (c 1142) to c **665**. Free depth behind both the outer and the inner box: **665 − 639 = 26 mm**. The same 26 mm in both bays.
+
+**Option A — directly behind the drawer (the official requirement).**
+
+| Check | EVOline (current) | This model | Result |
+| --- | --- | --- | --- |
+| Free depth behind the box | **> 23 mm** | **26 mm** | **Fits, 3 mm surplus** |
+| Clear width | **> 380 mm** | E600a inside **613**, E600b **599**; arm 378 | Fits |
+| Drawer depth | **< 590 mm** | box **477**, NL 500 | Fits |
+| Height on an E back (upper edge 335, side 192) | metal adapter **126 mm** below the upper edge | 192 | Fits (66 spare) |
+| Height on a K inner back (side 129) | 126 mm | 129 | Fits, only **3 mm** spare |
+
+A real Blum base of NL − 26 = 474 with a 16 mm back, starting at the same decor-front back, would put the box back at c 668 and leave **29 mm** behind it. Either figure is over 23 mm.
+
+Obstacles in that rear gap: the bound is the 18 mm shared central back. The east bottom board fills c 639–1142 at z 110–128, so the 26 mm gap exists only **above z 128**. The front rail (c 1062–1142, z 892–910) is at the front, not in the gap. The east plinth is at the front (c 1092–1110). Silestone is the worktop (z 910–930, 20 mm overhangs) and the north/south end cladding; it does not enter the gap. The hob exhaust channel is on the **west** side of the central back, not in this gap. No services are modelled in the 26 mm void.
+
+Because 26 > 23, **no deeper carcass and no shorter NL are required** for the official behind-the-drawer layout. The surplus is only 3 mm, so the woodworker must still verify the real metal adapter, the MERIVOBOX back, and the cable on the opened and closed drawer.
+
+**Option B — arm fixed above or below the drawer (Petr t982u).**
+
+Space that is actually there, behind the full-height front (the front itself goes to 908.5, almost to the carcass top at 910):
+
+| Void | SF-E600a | SF-E600b |
+| --- | --- | --- |
+| Above the inner K, at the back, to the carcass top (910) | **160 mm** (750–910) | **280 mm** (630–910) |
+| Above the inner K, under the front rail (892) | **142 mm** | **262 mm** |
+| Between the outer E top (335) and the inner K | **286 mm** (335–621) | **166 mm** (335–501) |
+| Below the outer E (box base 143) | 15 mm profile onto the bottom board at 128; not a usable cavity | same |
+
+Those voids are larger than the arm's 126 mm height, so there is room *for the arm's height* above the inner drawers and between the two boxes. That does **not**, on EVOline's own documents, replace the **> 23 mm behind the drawer**: they still dimension that gap, they still describe the cable as running behind the drawer, and the drawer-side adapter is on the drawer back, so in the closed position the arm still has to live at that back. The official behind-the-drawer check already passes (26 vs 23), so a depth change is not needed on either reading.
 
 
 ## All MERIVOBOX heavy duty where Blum makes it (2026-11-23, t895u)
