@@ -115,6 +115,23 @@ IKEA_DEFAULTS_MM = {
     "MerivoboxBaseDeduction": 26.0,
     "MerivoboxBackThickness": 16.0,
     "MerivoboxInnerFrontDeduction": 126.0,
+    # Cabinet profile (runner) drawn as a simple box on each cabinet side
+    # (Petr t991u). Length and underside follow Blum (NL, 15 mm under the
+    # side). Inward width and the box height are drawing sizes, guess:.
+    "MerivoboxProfileWidth": 16.0,  # guess: inward from the cabinet side; official 28 mm is side + profile together
+    "MerivoboxProfileHeight": 20.0,  # guess: visual body; official underside is MerivoboxProfileBelow under the side
+    # EVOline Wing, Schulte Elektrotechnik data sheet Stand 08/2025 / BMA
+    # 7040 2160 0003. Used on appliance inners with a custom tall back
+    # (t991u). The custom back is not a Blum part (guess: woodworker).
+    "EvolineWingArmLength": 378.0,
+    "EvolineWingArmThickness": 17.0,  # plan thickness of the chain
+    "EvolineWingWoodHang": 121.0,  # overall below the upper edge, wood/universal adapter
+    "EvolineWingMetalHang": 126.0,  # overall below the upper edge, metal adapter (170 mm back was sized from this)
+    "EvolineWingBracketHeight": 70.0,  # cabinet-side triangle (12+20+12)
+    "EvolineWingBracketBase": 41.0,  # 13+28
+    "EvolineWingWoodPlan": 23.0,  # wood cabinet bracket in plan
+    "EvolineWingAdapterWidth": 40.0,  # guess: drawer-side guide across the back
+    "EvolineWingAdapterHeight": 60.0,  # official hook-body height on the data sheet
     # 70 kg profiles (453.xxx1B) exist for NL 450-600 only (Blum). Petr,
     # 2026-11-23 (t895u): "go all out, all heavy duty where they fit": every
     # MERIVOBOX drawer, pull-out and inner drawer at NL 450-600 is 70 kg,
@@ -1468,6 +1485,59 @@ class _Builder:
 
     # --- fronts and interiors (Pset_Fronts) ---------------------------------
 
+    def _add_merivobox_profiles(self, bay: Bay, p: dict, drawer_id: str, dr: "Drawer"):
+        """Blum cabinet profiles (runners) as simple carcass-fixed boxes,
+        length NL, underside at ``dr.profile_z``. SPACE TWIN uses one
+        profile per box, diagonally offset (lower left, upper right)."""
+        article = merivobox_profile_article(dr.load, dr.nl)
+        if dr.twin:
+            sides_z = (("L", dr.profile_z), ("R", dr.twin["profile_z"]))
+        else:
+            sides_z = (("L", dr.profile_z), ("R", dr.profile_z))
+        for side, pz in sides_z:
+            boxes = merivobox_cabinet_profile_boxes(p, bay, dr.nl, pz, sides=(side,))
+            self.add(Part(f"{drawer_id}-PROFILE-{side}", f"Korpusová lišta {side}", "CabinetProfile",
+                          [boxes[side]],
+                          props={"ParentDrawer": drawer_id, "Side": side,
+                                 "NominalLength": round(dr.nl / 1000.0, 6),
+                                 "ProfileArticle": article, "LoadClass": dr.load,
+                                 "ProfileZ": round(pz / 1000.0, 6),
+                                 "Width": round(p["MerivoboxProfileWidth"] / 1000.0, 6),
+                                 "Height": round(p["MerivoboxProfileHeight"] / 1000.0, 6),
+                                 "WidthNote": "guess: inward width; official 28 mm is side + profile together",
+                                 "HeightNote": "guess: drawn body; official underside is 15 mm under the side"}), bay)
+
+    def _add_evoline_wing(self, bay: Bay, p: dict, drawer_id: str, box: tuple,
+                          back_height: float, out: float, back_y: float, opening_top: float):
+        """Folded EVOline Wing: the drawer-side adapter rides with the inner
+        drawer; the arm and the cabinet triangle stay on the carcass in the
+        closed position."""
+        moving, fixed = evoline_wing_boxes(p, bay, box, back_height, out, back_y)
+        back_top = box[4] + back_height
+        spare_rail = opening_top - back_top
+        spare_hang = (back_top - p["EvolineWingWoodHang"]) - (box[4] + 42.0)
+        props = {"ParentDrawer": drawer_id, "System": "EVOline Wing (Schulte Elektrotechnik)",
+                 "Adapter": "wood/universal (custom wood back)",
+                 "ArmLength": round(p["EvolineWingArmLength"] / 1000.0, 6),
+                 "ArmThickness": round(p["EvolineWingArmThickness"] / 1000.0, 6),
+                 "Hang": round(p["EvolineWingWoodHang"] / 1000.0, 6),
+                 "BracketHeight": round(p["EvolineWingBracketHeight"] / 1000.0, 6),
+                 "BracketBase": round(p["EvolineWingBracketBase"] / 1000.0, 6),
+                 "CustomBackHeight": round(back_height / 1000.0, 6),
+                 "ClearUnderOpening": round(spare_rail / 1000.0, 6),
+                 "ClearAboveRunner": round(spare_hang / 1000.0, 6),
+                 "State": "folded (closed)",
+                 "AdapterWidth": "guess: 40 mm across the back",
+                 "Note": "170 mm back sized from 126 mm metal hang + 42 mm runner zone, rounded up"}
+        self.add(Part(f"{drawer_id}-WING-ADAPTER", "EVOline Wing adapter", "EvolineWing",
+                      moving, props=dict(props, Kind="drawer-side adapter")), bay)
+        self.add(Part(f"{drawer_id}-WING", "EVOline Wing (folded)", "EvolineWing",
+                      fixed, props=dict(props, Kind="folded arm and cabinet bracket")), bay)
+        self.run.notes.append(
+            f"{drawer_id}: EVOline Wing folded; custom back {back_height:g} mm, "
+            f"{spare_rail:.0f} mm under the opening/rail, arm bottom {spare_hang:.0f} mm above the 42 mm runner-zone top"
+        )
+
     def _fronts(self, bay: Bay, p: dict, z0: float, z1: float, back_y: float, ceiling: float | None):
         """Every front, drawer, door, shelf and niche of one bay, from its
         zones (``Pset_Fronts.Layout``, see ``zones``) and the parameters.
@@ -1629,6 +1699,8 @@ class _Builder:
                     props.update(Grip=f"J {edge}")
                 outer = self.add(Part(f"{bay.id}-D{drawer_no}", name.strip(), "Drawer" if zone.kind == "drawer" else "PullOut",
                                       boxes, drawer=dr, props=props, grips=grips), bay)
+                if not dr.frame:
+                    self._add_merivobox_profiles(bay, p, f"{bay.id}-D{drawer_no}", dr)
                 if zone.opts.get("shelf") is not None:
                     # Petr, 2026-11-23 (t871u): a FIXED shelf in the carcass
                     # behind the drawer front, over the drawer's box, for
@@ -1651,10 +1723,17 @@ class _Builder:
                 # opening only with the front open (``Parent``); the coupled
                 # top one (ZI7.0M07) opens with the front, the front closing
                 # closes them all (viewer: doors.js).
+                inner_back_raw = zone.opts.get("inner_back")
+                inner_back = float(inner_back_raw) * 1000.0 if inner_back_raw is not None else None
                 for k, ib in enumerate(inner_boxes, start=1):
                     coupled = k == 1 and latch == "top"
                     ifloor = ib[4] + p["BoxBottomThickness"]
-                    iboxes = inner_drawer_boxes(p, ib, dr.out)
+                    if inner_back is not None and inner_back + TOL < (ib[5] - ib[4]):
+                        raise ValueError(f"{bay.id}-D{drawer_no}-I{k}: inner_back {inner_back:g} is shorter than the side {ib[5] - ib[4]:g}")
+                    if inner_back is not None and ib[4] + inner_back > in_z1 + TOL:
+                        raise ValueError(f"{bay.id}-D{drawer_no}-I{k}: custom back {inner_back:g} mm from z {ib[4]:g} "
+                                         f"does not clear the opening underside {in_z1:g} (rail / band top)")
+                    iboxes = inner_drawer_boxes(p, ib, dr.out, back_height=inner_back)
                     igrid, iplate = None, []
                     # Its own front piece and back: inside = box − 2 walls deep.
                     iw, idp = dr.inside[0], abs(ib[3] - ib[2]) - 2 * p["BoxWall"]
@@ -1677,25 +1756,33 @@ class _Builder:
                                                   f"(scripts/gridfinity_fit.py)")
                     if coupled:
                         iboxes += latch_boxes(p, dr, ib)[1:]
+                    ipz = ib[4] - p["MerivoboxProfileBelow"]
                     idr = replace(dr, front=iboxes[0], box=ib, items=list(iplate), baseplate=list(iplate), side=inner[k - 1].strip().upper(),
                                   load=merivobox_load(p, "drawer", inner[k - 1].strip().upper(), iw, dr.nl),
-                                  grid=igrid, floor_z=ifloor,
+                                  grid=igrid, floor_z=ifloor, profile_z=ipz,
                                   inside=(iw, idp, ib[5] - ifloor))
+                    iprops = {"Zone": zone.index, "Kind": "inner", "System": "Blum MERIVOBOX",
+                              "BoxColour": MERIVOBOX_COLOUR,
+                              "NominalLength": round(dr.nl / 1000.0, 6),
+                              "DrawerSide": inner[k - 1].strip().upper(),
+                              "FrontPieceLength": round((bay.clear_width - p["MerivoboxInnerFrontDeduction"]) / 1000.0, 6),
+                              "SideHeight": round((ib[5] - ib[4]) / 1000.0, 6), "Latched": coupled,
+                              "ClearAbove": round((in_z1 - ifloor) / 1000.0, 6),
+                              "Latch": "Blum ZI7.0M07" if coupled else None, "Parent": outer.id, "LoadClass": idr.load,
+                              "ProfileArticle": merivobox_profile_article(idr.load, dr.nl),
+                              "InsideWidth": round(iw / 1000.0, 6), "InsideDepth": round(idp / 1000.0, 6),
+                              "Gridfinity": f"{igrid[0]}x{igrid[1]}" if igrid else None,
+                              "GridfinitySlackWidth": round(gridfinity_cells(p, iw)[1] / 1000.0, 6) if igrid else None,
+                              "GridfinitySlackDepth": round(gridfinity_cells(p, idp)[1] / 1000.0, 6) if igrid else None}
+                    if inner_back is not None:
+                        iprops["CustomBackHeight"] = round(inner_back / 1000.0, 6)
+                        iprops["CustomBack"] = (f"guess: custom {inner_back:g} mm wood back, not a Blum part "
+                                                "(t991u: tall enough for the EVOline Wing above the runner)")
                     self.add(Part(f"{bay.id}-D{drawer_no}-I{k}", f"Vnitřní šuplík {k}", "InnerDrawer",
-                                  iboxes + iplate, drawer=idr,
-                                  props={"Zone": zone.index, "Kind": "inner", "System": "Blum MERIVOBOX",
-                                         "BoxColour": MERIVOBOX_COLOUR,
-                                         "NominalLength": round(dr.nl / 1000.0, 6),
-                                         "DrawerSide": inner[k - 1].strip().upper(),
-                                         "FrontPieceLength": round((bay.clear_width - p["MerivoboxInnerFrontDeduction"]) / 1000.0, 6),
-                                         "SideHeight": round((ib[5] - ib[4]) / 1000.0, 6), "Latched": coupled,
-                                         "ClearAbove": round((in_z1 - ifloor) / 1000.0, 6),
-                                         "Latch": "Blum ZI7.0M07" if coupled else None, "Parent": outer.id, "LoadClass": idr.load,
-                                         "ProfileArticle": merivobox_profile_article(idr.load, dr.nl),
-                                         "InsideWidth": round(iw / 1000.0, 6), "InsideDepth": round(idp / 1000.0, 6),
-                                         "Gridfinity": f"{igrid[0]}x{igrid[1]}" if igrid else None,
-                                         "GridfinitySlackWidth": round(gridfinity_cells(p, iw)[1] / 1000.0, 6) if igrid else None,
-                                         "GridfinitySlackDepth": round(gridfinity_cells(p, idp)[1] / 1000.0, 6) if igrid else None}), bay)
+                                  iboxes + iplate, drawer=idr, props=iprops), bay)
+                    self._add_merivobox_profiles(bay, p, f"{bay.id}-D{drawer_no}-I{k}", idr)
+                    if str(zone.opts.get("wing", "")).strip().lower() == "evoline" and inner_back is not None:
+                        self._add_evoline_wing(bay, p, f"{bay.id}-D{drawer_no}-I{k}", ib, inner_back, dr.out, back_y, in_z1)
             elif zone.kind in ("door", "doors"):
                 leaves = _leaves(bay, p, zone, front_box)
                 for hinge, a0, a1 in leaves["doors"]:
@@ -3115,7 +3202,12 @@ def zone_spec(element: dict) -> list[tuple[str, str, dict]]:
     each ``<kind> <height> [key=value ...]``. The height is metres or ``*``
     (the rest of the carcass, at most one). Kinds:
 
-    - ``drawer``: a drawer (front, box on full-extension slides);
+    - ``drawer``: a drawer (front, box on full-extension slides). Optional
+      ``inner=`` (MERIVOBOX side letters, e.g. ``M`` or ``M,K``),
+      ``inner_clear=`` (metres of room over the top inner floor),
+      ``inner_back=`` (metres, a custom tall back on those inners, guess:
+      not a Blum part) and ``wing=evoline`` (folded EVOline Wing on an
+      inner that has ``inner_back=``);
     - ``pullout``: a full-height pull-out; ``items=shelves|bins``, ``n=N``;
     - ``door``: one hinged door, ``hinge=L|R`` as you face it, optional
       ``width=`` (metres, the rest of the band is a fixed filler on the
@@ -3380,6 +3472,95 @@ def merivobox_profile_article(load: int, nl: float) -> str:
     for 40 kg, 453.xxx1B for 70 kg (NL 450-600 only), e.g. 453.5001B for NL
     500 (MERIVOBOX ordering information, "Cabinet profile left/right")."""
     return f"{450 if load == 40 else 453}.{int(round(nl))}1B"
+
+
+def merivobox_cabinet_profile_boxes(p: dict, bay: "Bay", nl: float, profile_z: float,
+                                    sides: tuple = ("L", "R")) -> dict:
+    """Simple boxes for the Blum cabinet profile (the runner), fixed to the
+    carcass. Official: length NL, underside ``profile_z`` = box bottom minus
+    ``MerivoboxProfileBelow`` (15 mm). Inward width and the drawn height are
+    guess: (see those parameters). ``L`` is the low-a cabinet side
+    (``clear_lo``), ``R`` the high-a side."""
+    tf = p["FrontThickness"]
+    width, height = p["MerivoboxProfileWidth"], p["MerivoboxProfileHeight"]
+    c0, c1 = _Builder.c_range(bay, tf, tf + nl)
+    z0, z1 = profile_z, profile_z + height
+    out = {}
+    if "L" in sides:
+        out["L"] = (bay.clear_lo, bay.clear_lo + width, c0, c1, z0, z1)
+    if "R" in sides:
+        out["R"] = (bay.clear_hi - width, bay.clear_hi, c0, c1, z0, z1)
+    return out
+
+
+def evoline_wing_boxes(p: dict, bay: "Bay", box: tuple, back_height: float, out: float,
+                       back_y: float) -> tuple[list, list]:
+    """EVOline Wing in the closed (folded) position, simple boxes.
+
+    Official sizes (data sheet 08/2025): arm 378 × 17 mm in plan, wood
+    adapter overall 121 mm below the upper edge of the drawer, cabinet
+    triangle 70 mm tall with a 41 mm (13+28) base, wood bracket 23 mm in
+    plan. The drawer-side adapter width and exactly where the folded arm
+    sits across the back are guess:. The custom back is wood, so the wood
+    adapter figures are used; the 170 mm back was sized from the 126 mm
+    metal hang (it still clears 121 + 42).
+
+    Returns (boxes that ride with the drawer, boxes fixed to the carcass).
+    """
+    wall = p["BoxWall"]
+    a0, a1, c0, c1, z0, _z1 = box
+    back_top = z0 + back_height
+    hang = p["EvolineWingWoodHang"]
+    arm_t = p["EvolineWingArmThickness"]
+    arm_l = p["EvolineWingArmLength"]
+    br_h, br_base = p["EvolineWingBracketHeight"], p["EvolineWingBracketBase"]
+    ad_w, ad_h = p["EvolineWingAdapterWidth"], p["EvolineWingAdapterHeight"]
+    back_lo = out > 0  # back is at the low-c end
+    back_face = c0 if back_lo else c1  # outer face of the back, toward the carcass back
+    into = -1.0 if back_lo else 1.0  # from the back face toward the carcass back
+    carcass_back = sum(_Builder.c_range(bay, back_y, back_y)) / 2.0  # inner face
+    gap_lo, gap_hi = sorted((back_face, carcass_back))
+
+    def in_gap(face, thick):
+        c_a, c_b = sorted((face, face + into * thick))
+        return (max(c_a, gap_lo), min(c_b, gap_hi))
+
+    # Adapter on the outer face of the tall back, at the upper edge, on the
+    # low-a side (the same side as the cabinet bracket).
+    side_a = a0 + wall
+    ad_c0, ad_c1 = in_gap(back_face, arm_t)
+    adapter = (side_a, side_a + ad_w, ad_c0, ad_c1, max(z0, back_top - ad_h), back_top)
+
+    # Folded arm in the rear gap, along the back, 17 mm in plan, hanging
+    # 121 mm below the back's upper edge (wood adapter).
+    arm_a0, arm_a1 = side_a, side_a + arm_l
+    if arm_a1 > a1 - wall + TOL:
+        arm_a1 = a1 - wall
+        arm_a0 = max(a0 + wall, arm_a1 - arm_l)
+    arm_c0, arm_c1 = in_gap(back_face, arm_t)
+    arm = (arm_a0, arm_a1, arm_c0, arm_c1, back_top - hang, back_top)
+
+    # Cabinet triangle on the low-a carcass side, in the rear corner, above
+    # the runner, inside the hang band. Thickness against the side is
+    # guess: (uses the drawn profile width). Base 41 mm from the carcass
+    # back toward the drawer.
+    pw = p["MerivoboxProfileWidth"]
+    br_a0, br_a1 = bay.clear_lo, bay.clear_lo + pw
+    toward = 1.0 if back_lo else -1.0  # from carcass back into the cabinet
+    br_c0, br_c1 = sorted((carcass_back, carcass_back + toward * br_base))
+    br_c0, br_c1 = max(br_c0, gap_lo), min(br_c1, gap_hi)
+    # Conservative runner-zone top is 42 mm above the box bottom (Blum N
+    # p. 10: min. 54 from the profile underside, underside 12 mm below the
+    # side; kitchen-cabinets.md t988u).
+    runner_top = z0 + 42.0
+    br_z0 = max(back_top - hang, runner_top)
+    br_z1 = br_z0 + br_h
+    if br_z1 > back_top + TOL:
+        br_z1 = back_top
+        br_z0 = br_z1 - br_h
+    bracket = (br_a0, br_a1, br_c0, br_c1, br_z0, br_z1)
+    return [adapter], [arm, bracket]
+
 
 
 def drawer_inside(bay: Bay, p: dict, back_y: float) -> tuple[float, float]:
@@ -3868,16 +4049,21 @@ def drawer_boxes(dr: Drawer, p: dict) -> list:
     return [*out, back, *dr.items]
 
 
-def inner_drawer_boxes(p: dict, box: tuple, out: float) -> list:
+def inner_drawer_boxes(p: dict, box: tuple, out: float, back_height: float | None = None) -> list:
     """An inner drawer: its low front piece (full side height, at the pull
     end), bottom, two sides and back, run frame mm. Blum's front piece is a
-    steel profile; drawn ``BoxWall`` thick like the outer box."""
+    steel profile; drawn ``BoxWall`` thick like the outer box. ``back_height``
+    (mm), if set, is a custom tall back from the box bottom, taller than the
+    sides (Petr t991u: 170 mm on the appliance inners so the EVOline Wing
+    sits above the runner; guess: not a Blum part, the woodworker builds it)."""
     wall = p["BoxWall"]
     a0, a1, c0, c1, z0, z1 = box
     front_lo = out < 0  # pulls toward -c: its front piece is at c0
     lo_wall = (a0, a1, c0, c0 + wall, z0, z1)
     hi_wall = (a0, a1, c1 - wall, c1, z0, z1)
     front, back = (lo_wall, hi_wall) if front_lo else (hi_wall, lo_wall)
+    bz1 = z0 + back_height if back_height is not None else z1
+    back = (back[0], back[1], back[2], back[3], z0, bz1)
     return [front, (a0, a1, c0, c1, z0, z0 + p["BoxBottomThickness"]),
             (a0, a0 + wall, c0, c1, z0, z1), (a1 - wall, a1, c0, c1, z0, z1), back]
 

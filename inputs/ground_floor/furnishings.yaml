@@ -666,10 +666,13 @@ systemFurniture:
           # MERIVOBOX inner drawers behind the front (M coupled, K), as in
           # the dining run; the F box stays at the bottom.
           # Petr, 2026-11-23 (t883u): the vacuum sealer goes in here, facing
-          # north; the top inner drawer (M) is gone, the middle one (K)
-          # carries the sealer with just its closed height + 30 over its
-          # floor (225 + 30 = 255 to the band top).
-          Layout: "drawer * box=E inner=K inner_clear=0.255"
+          # north, with just its closed height + 30 over the inner floor
+          # (225 + 30 = 255 to the band top).
+          # Petr, 2026-11-25 (t991u): inner M (low sides) with a 170 mm
+          # custom tall back so the EVOline Wing sits above the runner;
+          # 170 is the 168 mm (runner-zone top + 126 mm metal-adapter hang)
+          # rounded up, guess: not a Blum part, the woodworker builds it.
+          Layout: "drawer * box=E inner=M inner_clear=0.255 inner_back=0.170 wing=evoline"
       - Name: Pset_Drawers
         Properties:
           # t883u: no Gridfinity plate under the sealer (its inner drawer).
@@ -719,12 +722,11 @@ systemFurniture:
           # island east, please double check that you've added them." Two
           # MERIVOBOX inner drawers behind the front (M coupled, K), as in
           # the dining run; the F box stays at the bottom.
-          # Petr, 2026-11-23 (t889u): "lets hide a Kenwood Chef XL in the
-          # drawer next to it [the sealer's]. It should barely fit the
-          # drawer height with no attachments." Like the sealer: the top
-          # inner drawer (M) is gone, the K one carries the machine with
-          # its height + 30 over its floor (345 + 30 = 375 to the band top).
-          Layout: "drawer * box=E inner=K inner_clear=0.375"
+          # Petr, 2026-11-23 (t889u): Kenwood Chef XL on the inner floor
+          # with its height + 30 (345 + 30 = 375 to the band top).
+          # Petr, 2026-11-25 (t991u): inner M (low sides) with a 170 mm
+          # custom tall back and an EVOline Wing, same as SF-E600a.
+          Layout: "drawer * box=E inner=M inner_clear=0.375 inner_back=0.170 wing=evoline"
       - Name: Pset_Drawers
         Properties:
           # t889u: no Gridfinity plate under the Kenwood (its inner drawer).
