@@ -34,6 +34,8 @@ Labels: **Petr** is a fact Petr gave, with the date or document. **Blum** is fro
 > - Petr (t951u) sent a 3D Warehouse side view as the target shape: [VoxtorpJGripSideView.png](sources/VoxtorpJGripSideView.png). He finds the current model reasonably close (“I think we got reasonably close in the model”); the model is unchanged.
 > - Details and the existing router-bit / front-thickness `open:` are in “J grip”.
 
+> **`open:` for the woodworker: every drawer that holds an electric appliance needs an EVOline Wing (Schulte Elektrotechnik) or a similar drawer cable-management system, and he must verify it fits.** The two appliance inners are SF-E600a-D1-I1 and SF-E600b-D1-I1: official Blum inner **M** (low sides) with a **170 mm custom tall back** (`guess:` not a Blum part; he builds it) and a folded EVOline Wing in the model. The 170 mm is the 168 mm figure (42 mm runner-zone top + 126 mm metal-adapter hang) rounded up. Behind the box there are **26 mm** as drawn (official 29 mm with a 16 mm back), which covers EVOline’s > 23 mm on the behind-the-box reading; the Wing sits above the runner, so the 3 mm behind the NL 500 profile is no longer the limiting gap. He still checks the official cabinet triangle (41 mm base) in that 26 mm rear corner, and that the custom back clears the east front rail. Details: “EVOline Wing on appliance drawers (2026-11-25, t981u–t991u)”.
+
 ## Deviations from Petr's original plan (2026-11-23)
 
 Petr's original document is the sticky-note plan [`KitchenPlan.jpg`](../../inputs/ground_floor/KitchenPlan.jpg) with his notes (quoted in `inputs/ground_floor/furnishings.yaml`), plus his rule of 2026-11-11 “when unsure of details and margins, default to IKEA METOD measurements”, which made the drawers IKEA MAXIMERA (2026-11-13). On **2026-11-23** (t835u) Petr switched every drawer to **Blum MERIVOBOX**: “Ok, time to pull the trigger. Remodel or drawers to use merivobox.” His standing rules: **soft-close (BLUMOTION) only, opening by hand; never TIP-ON (push to open) or SERVO-DRIVE (electric)** (Petr, 2026-11-23, t830u: “I never want anything push to open (nor electric). I do want soft close, but opening must be manual.”), and “existing docs probably say ‘assume ikea maximera’, that will have to go”. Each deviation, with its reason:
@@ -623,6 +625,7 @@ Built-ins are yaml elements with no box: `electricAppliances` or `sanitaryTermin
 - The microwave's 372 fascia laps 8 over the niche at the top and bottom. The fronts above and below stop a gap short of the fascias.
 - The sBox (the hose box under the island tap) is not modelled. Petr's note says it has to be turned to avoid the disposer: `open:`.
 - The kettle and grinder sit 50 off the backsplash, at the cards' places along SF-DN (`guess:`). They are members of SF-DN's group because they stand on its top.
+- **Cable management in appliance drawers (Petr, 2026-11-25, t981u):** every drawer that holds an electric appliance needs an EVOline Wing or a similar drawer cable-management system; the woodworker must verify it fits. The two island east drawers that currently hold appliances are SF-E600a-D1 (Maxxo Chamber Line 40 sealer on I1) and SF-E600b-D1 (Kenwood Chef XL on I1). They face east (the island has no south-facing drawer row). They are inner **M** with a 170 mm custom tall back and a folded EVOline Wing in the model (t991u). Fit numbers and sources: “EVOline Wing on appliance drawers (2026-11-25, t981u–t991u)”.
 
 ### What changed on existing items (2026-11-12)
 
@@ -2370,7 +2373,7 @@ Read as: the steam oven niche (and the pantry floor, and T4's door band) starts 
 > Petr (t883u): remove the vacuum sealer from the tall cabinet, return a regular shelf there; the sealer goes into the northmost drawer on the island's east side, facing north (operated from the side with the drawer pulled out); its top inner drawer is removed, the middle one carries the sealer and is just tall enough for it closed with about 30 above; the island east widths change so this northmost one is off the Gridfinity grid instead of the southmost; all tall cabinets on the north wall get upside-down J grips at their bottom edge; the westmost one is split into two, both hinged.
 
 - **Sealer** (`EA-MAXXO-CL40`, `Pset_BuiltIn.InnerDrawer: SF-E600a-D1-I1`, `Rotation: 90`, `Faces: N`): 285 along the run × 345 across the drawer's depth × 225, on the K inner drawer's floor (z 637), against its north side. Inside 562 × 458: **277 spare along the run, 113 across the depth, 30 over the closed sealer** to the band top (892, under the front rail). It slides with the inner drawer (coupled to the front). `open:` the inner drawer's K side (129 high) covers the lower part of the sealer's north face; the controls are on its top/front edge (`guess:`, check the real unit). The lid-open height (510) needs the drawer pulled out.
-- **SF-E600a**: `inner=K inner_clear=0.255` (new option: the top inner drawer's floor that far under the band top). The E box (133–325) stays; 296 free between it and the inner drawer.
+- **SF-E600a**: `inner=K inner_clear=0.255` (new option: the top inner drawer's floor that far under the band top). The E box (133–325) stays; 296 free between it and the inner drawer. Since t991u the inner is **M** with `inner_back=0.170 wing=evoline` (same floor, lower sides, custom tall back); see “EVOline Wing on appliance drawers”.
 - **Island east, N→S**: SF-E600a 626 → **640** (clear 613, inside 562, off the grid), SF-E600b / SF-E600c 617 (unchanged), SF-E700 640 → **626** (inside 548 = 13 × 42 + 2).
 - **Grips**: `grip=bottom` on SF-T1 (both doors), SF-T2, SF-T4, SF-TC; the J profile is mirrored at the bottom edge (upside down). SF-T3's top door and the cabinet over the fridge (SF-TF) already had it.
 - **SF-T1**: `door * … | door 1.175 …`: two equal bands of 1175 from the plinth top, doors 597 × 1172 each (gap 3 between them), hinged L with the filler on the wall side as before.
@@ -2385,10 +2388,272 @@ Petr: "just like we hid the vacuum sealer in a drawer, lets hide a Kenwood Chef 
 - guess: 385 is column to bowl and 280 across; the 345 is the head down, the bowl on, no tool. Stored like that (no tool, no splash guard).
 - guess: the model is a basic machine (base, column, head, bowl); the control / display is a black patch on the head's north side next to the column; the bowl is at the drawer's front (east).
 - open: which Chef XL Petr has. Others for comparison (Kenwood listings): Chef XL Sense KVL6100 350 H × 430 × 300 (25 over it, fits); Titanium Chef Baker XL KVL85 370 H × 400 × 225 (5 over it).
-- **Layout**: `drawer * box=E inner=K inner_clear=0.375`: the top inner drawer (M) is gone, the K one's floor is 375 under the band top (345 + 30, as the sealer's 225 + 30). Inside 548 × 458: 268 spare along the run, 73 along the depth.
+- **Layout**: was `drawer * box=E inner=K inner_clear=0.375` (t889u): the top inner drawer (M) is gone, the then-K one's floor is 375 under the band top (345 + 30, as the sealer's 225 + 30). Inside 548 × 439 as drawn after t978u. Since t991u: `inner=M inner_clear=0.375 inner_back=0.170 wing=evoline`.
 - **Viewer**: a standing appliance's record names its inner drawer in `rides` (models/ground_floor.py); doors.js `attachRiders` hangs its mesh under that drawer's pivot, so it slides with it and a tap on it drives the drawer. Before, the sealer had its own motion (parent the outer drawer) and moved on its own.
 
 
+## EVOline Wing on appliance drawers (2026-11-25, t981u–t991u)
+
+Petr (t981u): note in the docs that every drawer with an electric appliance needs an EVOline Wing or a similar cable-management system, and the woodworker must check that it fits; also check whether it currently fits behind the two island drawers that hold those appliances, or how much more room is needed. Petr (t982u): there is enough vertical space above and below these drawers, so if the Wing arm can be fixed there (not directly behind the drawer), no drawer-depth change is needed. Petr (t983u / t986u): how the 26 mm rear gap appeared, and whether the east 503 mm clear was sized so the inner just fits (the outer then having spare because its front sits further forward). Petr (t987u): he reads EVOline’s > 23 mm as behind the **runner**, not only behind the box. Petr (t988u): use the shallowest MERIVOBOX (N) with a tall custom back so the whole Wing sits above the runner. Petr (t989u): a definitive inner-vs-outer depth chain before any modelling — whether the inner sits further back by the front-piece thickness (option 1) or the inner front eats into the box and the runner is shorter or not fully used (option 2). Petr (t991u), after accepting the t989u reading: change those two inners from K to **M**, give them a **170 mm custom tall back**, and model the Blum cabinet profiles on every MERIVOBOX drawer plus the folded EVOline Wing on those two inners.
+
+The research in the subsections below is unchanged; the model change is in “Modelled (t991u)”.
+
+### Official EVOline facts
+
+Sources, all Schulte Elektrotechnik GmbH & Co. KG (EVOline), Lüdenscheid:
+
+- Data sheet, Stand 08/2025 (the product page lists it as issued 09/2025): [EVOline-Datenblatt-Wing_25.pdf](https://www.evoline.com/fileadmin/Medien/Produkte/SmartDrawers/EVOline_Wing/EVOline-Datenblatt-Wing_25.pdf)
+- Operating and assembly instructions, Stand 8/2025, document 7040 2160 0003 (the product page lists this file as issued 12/2025; the PDF footer is 8/2025): [EVOline_Wing-BMA.pdf](https://www.evoline.com/fileadmin/Medien/Produkte/SmartDrawers/EVOline_Wing/EVOline_Wing-BMA.pdf)
+- Product page (EN / DE): [evoline.com/en/products/smartdrawers/wing](https://www.evoline.com/en/products/smartdrawers/wing), [evoline.com/produkte/smartdrawers/wing](https://www.evoline.com/produkte/smartdrawers/wing)
+- SmartDrawers brochure, issued 02/2026: [SmartDrawers_Broschuere_DE_GB.pdf](https://www.evoline.com/fileadmin/Medien/Produkte/SmartDrawers/SmartDrawers_Broschuere_DE_GB.pdf)
+
+**Area of application (data sheet):** drawers with a wooden or metal back panel. Two adapters: one to screw onto a wooden back, one to clamp onto a metal back. Suitable for flexible connection cables up to 3 × 2.5 mm²; not suitable for rigid cables (e.g. NYM). The BMA adds that cables smaller than 1.5 mm² must be additionally fixed (e.g. with cable ties). The BMA lists **Blum Merivo-Box** (and Tandembox, Grass Nova Pro, Hettich ArciTech / Innotech) as an example for the metal-back adapter (type A).
+
+**Installation requirements**, dimensioned on the data sheet and again on the BMA (plan of the cabinet, drawer closed or nearly closed):
+
+- **> 23 mm** free depth at the back of the cabinet, dimensioned on the data-sheet and BMA plan from the inner face of the carcass back to a **dashed rectangular outline of the closed drawer** (a full-width, slightly side-inset box). The drawing does **not** label that outline as the runner or as the drawer back. See “The > 23 mm rear gap vs the runner (t987u)” below.
+- **> 380 mm** clear width of the cabinet.
+- **< 590 mm** drawer depth (the dashed drawer body in that plan).
+
+The product page: the Wing “ensures secure cable management **behind the drawer**”; “It uses the space **behind the drawer**”; “As a built-in solution, the Wing can be found **behind any drawer or pull-out shelf**. The articulated arm can be mounted **left, right, horizontally or vertically** in the respective part of the furniture.” The German page is the same: “Kabelführung **hinter der Schublade**”; “Der Gelenkarm kann **links, rechts, waagerecht oder senkrecht** im jeweiligen Möbelteil montiert werden.” The 02/2026 brochure: the Wing is a cable manager “für alle beweglichen und ausziehbaren Möbelteile — **waagerecht und senkrecht**” and “führt Leitungen platzsparend **hinter dem Schubfach**.”
+
+**Drawn sizes (data sheet 08/2025; the 02/2026 brochure agrees on 378 / 305 / 126 / 17):**
+
+- Articulated arm overall length **378 mm**. Metal-back adapter **305 mm** along the drawer back (73 + 305); wooden / universal adapter 66 + 312.
+- Arm thickness in plan: **17 mm** along the chain (brochure and both adapter drawings). On the wooden / universal adapter the cabinet-side bracket is **23 mm** in that same direction.
+- Height below the “upper edge of drawer” line: metal adapter **111 mm** and **126 mm**; wooden / universal adapter **108 mm** and **121 mm**. The cabinet-side triangle is 70 mm tall (12 + 20 + 12 hole spacing) with a 13 + 28 mm base.
+- The drawer-side guide sits on the **drawer back panel**, referenced to the upper edge of the drawer. The cabinet-side part is the triangular mounting bracket in the carcass. The BMA shows it in the rear of the cabinet, left or right (“The Wing can also be mounted on the opposite side”).
+
+EVOline does **not** publish a dimensioned installation that parks the folded arm only above or below the drawer and omits the **> 23 mm** rear gap, and they do not say that “horizontally or vertically” waives that gap. All of their dimensioned plans put that 23 mm behind the drawer back.
+
+`guess:` “vertically” / “senkrecht” means the 378 mm arm can be rotated onto a vertical furniture part (a side or the back), still in that rear zone. It is not evidence that the folded arm can live entirely in the space above or below the drawer in front of the carcass back.
+
+A May 2022 BMA (Stand 05/2022, 7040 2160 0000; superseded by the 8/2025 instructions above) showed the cabinet bracket on the vertical wall in the rear corner at an “individual height” from the cabinet top, a 58 mm inset, a metal-back rear gap of > 20 mm, and a side-view height > 126 mm. Those older limits are not used in the fit check; the current official rear gap is **> 23 mm**.
+
+### The two island drawers, and whether the Wing fits
+
+The only drawers in the model that currently hold an electric appliance are the two on the **island east row, facing east** (the island has no south-facing drawer row). Both appliances sit on the **inner K**, not on the outer E:
+
+| Bay | Appliance (on the inner K) | Front / boxes |
+| --- | --- | --- |
+| **SF-E600a-D1** (northmost east bay, 640 wide) | Maxxo Chamber Line 40 sealer on **SF-E600a-D1-I1** | Full-height front 100–908.5; outer E 143–335; inner K 621–750 |
+| **SF-E600b-D1** (next south, 617 wide) | Kenwood Chef XL on **SF-E600b-D1-I1** | Full-height front 100–908.5; outer E 143–335; inner K 501–630 |
+
+The two bays share one depth chain (east front at c 1160, central back `KR-ISL-BACK` c 621–639). Bay depth 530 = 18 decor front + **503** clear + 9 (half of the 18 mm back). Both are NL 500. The inner K is not a shorter box sitting further back: `inner_drawers()` copies the outer box's plan (`c0`, `c1`), and `inner_drawer_boxes()` then puts a 19 mm front piece at the **front** of that same envelope (immediately behind the decor front). The two backs therefore coincide.
+
+Depth chain, both bays, millimetres, from the east front face inward:
+
+| Step | Outer E (main) | Inner K (holds the appliance) |
+| --- | ---: | ---: |
+| Decor front (outer face c 1160 → inner face c 1142) | **18** | 18 (the inner sits behind this) |
+| Box / front-piece start | box starts at c **1142** (no box front panel; `BoxFrontPanel` 0; the decor front closes it) | 19 mm front piece c **1123–1142**, so the envelope still starts at c **1142** |
+| Drawn box length | **477** = Blum inside 458 + back wall 19 | **477** (same envelope; inside = 477 − 2 × 19 = **439**) |
+| NL | 500 | 500 (same) |
+| Box back | c **665** | c **665** (same) |
+| Rear gap to back inner face (c 639) | **26** | **26** (same, not 7) |
+
+So the 26 mm reported for the Evoline check is behind **both** boxes, including the inner K that holds the appliance. It is not a 26 mm gap only behind the outer E, with the inner filling the rest.
+
+**How that 26 mm appeared, and what “optimized to just fit the inner drawers” meant.** Island east was set to 530 / NL 500 in the MERIVOBOX remodel, 2026-11-23 (t835u, commit `997130e`, PR #149). Petr: “on island east use whatever gets us closely below 1200mm total island depth. The inner drawers matter, the bottom one can be the same length.” The remodel table’s “Left behind the box” column is **inside − NL − 3** (cabinet inside 503 minus the Blum minimum LT ≥ NL + 3). That value is **0**. It does not mean the wooden box fills the carcass. A correctly sized NL 500 box is shorter than 503: official base NL − 26 = 474, which would leave 29 mm to the back; the drawn box is 477, which leaves **26**. NL 550 would need 553 inside and a 550 carcass, making the island 1230, so the east end is already at the longest NL that fits. “Petr expected about 20 unused” in that write-up was *extra* carcass beyond NL + 3 (530 → 550, island 1200), which was not added.
+
+**t978u / PR #166 did create 19 mm of the 26 mm rear gap**, and it did so on the inner K as well as on the outer E. Until then `drawer_box_length` was official inside + 2 × 19 = **496**, so the rear gap behind both boxes (the inner already copied the outer plan) was **7 mm**, and the inner *inside* was 496 − 38 = **458**, the same as the main. Dropping the phantom front wall shortened the outer box to 477 (correct for a main drawer with `BoxFrontPanel` 0). Because the inner still inherits that plan, the inner box also became 477, the gap behind it grew 7 → 26, and its inside fell 458 → 439. The carcass was not deepened.
+
+**Option A — directly behind the drawer that holds the appliance (the official EVOline requirement).**
+
+| Check | EVOline (current) | As drawn, inner K | Result as drawn |
+| --- | --- | --- | --- |
+| Free depth behind the **inner K** back | **> 23 mm** | **26 mm** | Fits on the current drawing, 3 mm surplus |
+| Clear width | **> 380 mm** | E600a carcass inside **613**, E600b **599**; arm 378 | Fits |
+| Drawer depth | **< 590 mm** | box **477**, NL 500 | Fits |
+| Height on the inner K back (side 129) | metal adapter **126 mm** below the upper edge | **129** | Fits, only **3 mm** spare |
+
+The 26 mm “fits” row is the behind-the-box reading of EVOline’s 23 mm. If 23 mm must be behind the runner, only **3 mm** is free — **20 mm short**. Details in “The > 23 mm rear gap vs the runner (t987u)”.
+
+`open:` that 26 mm behind the inner K is a side-effect of t978u. An inner drawer still has a 19 mm front piece, so a 496 mm envelope (inside 458 + front 19 + back 19) would be consistent with the pre-t978u inner and with “the inner drawers matter.” That would put the inner back at c 646 and leave only **7 mm** behind it — **16 mm short** of EVOline’s > 23. The model is not changed here. The woodworker must size the real inner box and the Wing together; do not take the as-drawn 26 mm behind the inner as a decided spare.
+
+Obstacles in the as-drawn 26 mm gap: the bound is the 18 mm shared central back. The east bottom board fills c 639–1142 at z 110–128, so the gap exists only **above z 128**. The front rail (c 1062–1142, z 892–910) is at the front, not in the gap. The east plinth is at the front (c 1092–1110). Silestone is the worktop (z 910–930, 20 mm overhangs) and the north/south end cladding; it does not enter the gap. The hob exhaust channel is on the **west** side of the central back, not in this gap. No services are modelled in the void.
+
+**Option B — arm fixed above or below the drawer (Petr t982u).**
+
+Space that is actually there, behind the full-height front (the front itself goes to 908.5, almost to the carcass top at 910):
+
+| Void | SF-E600a | SF-E600b |
+| --- | --- | --- |
+| Above the inner K, at the back, to the carcass top (910) | **160 mm** (750–910) | **280 mm** (630–910) |
+| Above the inner K, under the front rail (892) | **142 mm** | **262 mm** |
+| Between the outer E top (335) and the inner K | **286 mm** (335–621) | **166 mm** (335–501) |
+| Below the outer E (box base 143) | 15 mm profile onto the bottom board at 128; not a usable cavity | same |
+
+Those voids are larger than the arm's 126 mm height, so there is room *for the arm's height* above the inner drawers and between the two boxes. That does **not**, on EVOline's own documents, replace the **> 23 mm behind the drawer**: they still dimension that gap, they still describe the cable as running behind the drawer, and the drawer-side adapter is on the drawer back, so in the closed position the arm still has to live at that back. Whether that rear gap is the as-drawn 26 mm or a 7 mm inner (see the `open:` above) is for the woodworker to settle; above/below space does not officially remove the need for it.
+
+
+
+### Blum MERIVOBOX inner vs outer depth (t986u)
+
+Sources, all Julius Blum GmbH:
+
+- *MERIVOBOX Ordering and planning information*, IDNR 962.544.7 EP-530/5 EN-IL/12.24: [d2.blum.com planning PDF](https://d2.blum.com/services/BEC003/me25532842_ep_dok_bau_$sen-il_$aof_$v5.pdf) (80 pp.)
+- Programme / range: [blum.com/eu/en/products/boxsystems/merivobox/programme](https://www.blum.com/eu/en/products/boxsystems/merivobox/programme/)
+- *MERIVOBOX Installation Guide* (Blum, Inc., 2024, US; AL = actual cabinet profile length): the US guide’s “rear fixing brackets” snap the **drawer back** into the rear of the **drawer** profiles; they are not a cabinet-profile extension past NL
+
+**Inner heights.** Planning PDF p. 7 and the programme page: drawer / high-fronted pull-out heights are N 68.5, M 91, K 129 and E 192. **Inner drawers are height M and K only.** There is no MERIVOBOX inner drawer in height N. An inner *pull-out* exists in height E (front piece with gallery / BOXCAP / design element).
+
+**Depth chain, official, outer and inner alike** (planning PDF space-requirement and cutting pages: outer N p. 8 / 11, outer M p. 12 / 15, inner M p. 16 / 19, inner K p. 24 / 27; the same figures repeat for K / E):
+
+- Cabinet inside depth **LT min = NL + 3**.
+- Wooden base length **NL − 26** (16 mm chipboard). Steel-back alternative **NL − 22**.
+- **Identical position of the cabinet profile** for the inner and the outer (“Identical position of the cabinet profile”). The cabinet profile (Korpusschiene) is the runner; its nominal length is NL, measured over the whole profile when inserted.
+- The outer decor front is an overlay **in front of** the cabinet (front overlay FA), not inside the 503 mm clear.
+- The inner aluminium **front piece** (Blum part **ZV4.1042M**, “front piece without groove”) is cut to **LW − 126**. It is held by the front fixing set (ZI4.0MS1 on inner M, ZI4.1KS1 on inner K). An optional latch (ZI7.0M07) mounts on the front piece; the latch housing is drilled into the outer decor front (planning PDF p. 17 / 25, p. 18 / 26). The planning PDF does **not** label the front piece’s thickness. The **28 mm** on the inner (and outer) “Space requirements in the cabinet” drawings (inner M p. 18, inner K p. 26, outer M p. 14) is the sideways setback of the side + cabinet profile from the cabinet wall, not a depth and not the front-piece thickness. See “Inner vs outer depth chain (t989u)” below.
+- Chipboard back width **LW − 51**. Official chipboard **back height** is fixed per side: **N 60.5 / M 83 / K 121 / E 184** mm. The matching chipboard back fixings are height-specific (ZB4N000S, ZB4M000S, ZB4K000S, …).
+
+**Vs the model.** Both the outer E and the inner K on SF-E600a/b have a 477 mm envelope, backs at c 665, and a 26 mm rear gap (503 − 477). Official 16 mm back and base NL − 26 = 474 would leave **29 mm**. The drawn `BoxWall` 19 vs official 16 accounts for 3 mm of that. The equal rear position of outer and inner is what Blum draws (same base, same profile). Pre-#166’s 496 mm envelope was too long for a main drawer with no box front wall; it is also longer than an official NL − 26 base if the inner front piece sits *in front of* that base rather than adding to the box past the back.
+
+**Petr’s reading that the east 503 mm clear was sized so the inner just fits, and the outer has spare at the back because its decor front sits in front of the inner: not supported by Blum.** Both boxes share the same official rear position. The outer overlay sits outside the 503 mm, so it does not create extra rear gap for the outer. The model’s equal backs agree with Blum on that point (apart from the 3 mm 19-vs-16 wall).
+
+### The > 23 mm rear gap vs the runner (t987u)
+
+Petr (t987u), from the Evoline assembly instructions, believes the > 23 mm is required behind the **runner**, not only behind the box.
+
+**What EVOline actually dimensions.** On the current data sheet and on the BMA plan (doc 7040 2160 0003, Stand 8/2025) the **> 23 mm** is the gap between the inner face of the cabinet back and a **dashed rectangular outline of the closed drawer** (full width, slightly inset from the cabinet sides). The drawing does not label that outline as “runner” or “drawer back,” and no separate runner rear line is drawn. The same dimension appears on the data-sheet installation plan. The most natural reading is that 23 mm is behind the **closed drawer body**. It is *not* an official, labelled “behind the runner” dimension.
+
+**Free depth behind the actual Blum runner.** The cabinet profile length is **NL**. In a carcass at Blum’s minimum LT = NL + 3, the profile rear end is 3 mm from the back inner face. East clear is 503 mm, NL 500, so **3 mm** remains behind the profile rear, **the same for the outer E and the inner K** (identical profile position). Planning PDF p. 58 (cabinet profile fixing, 40 kg and 70 kg) places the fixing screws along the profile; the 70 kg (453) NL 450–550 row’s last marked positions are 389 / 403 / 421 mm, still inside NL 500. Nothing in that drawing, or in the US installation guide, shows a cabinet-profile rear bracket that extends **past NL**. (The US “rear fixing brackets” are on the drawer back, as above.)
+
+So:
+
+| Reading of the 23 mm | Free depth in the 503 mm east clear (NL 500) | Result |
+| --- | --- | --- |
+| Behind the **box** (the dashed outline’s most natural reading) | As-drawn **26 mm** (3 mm surplus). Official 16 mm back, base 474: **29 mm**. | Fits on that reading, with the t978u `open:` below if the inner were 496 mm (then 7 mm, **16 mm short**) |
+| Behind the **runner** (Petr t987u) | **3 mm** behind the profile rear, outer and inner | **Does not fit; 20 mm short** |
+
+If 23 mm must be behind the runner, the options (no model change here) are a deeper carcass / island, a shorter NL, or mounting the Wing **outside the runner’s height zone** if that is acceptable (see t988u below). At runner height the side wall has only those 3 mm behind the profile, so the 70 mm cabinet-side triangle cannot sit behind the runner at runner height in this carcass.
+
+The t983u `open:` still applies on the behind-the-box reading: the as-drawn 26 mm behind the inner K is a side-effect of t978u; a 496 mm inner envelope would leave 7 mm.
+
+### Shallowest box (N) with a tall custom back, Wing above the runner (t988u)
+
+Petr (t988u), after the runner question: use the shallowest MERIVOBOX (**N**) on the appliance drawers, with a **tall custom back**, so the whole Wing sits **above the runner** (low sides give better side access to the appliances). He later chose official inner **M** (there is no official inner N) and a **170 mm** custom back, and confirmed the model change in t991u.
+
+**Is the MERIVOBOX back customizable in height?** On Blum’s own documents, **no documented option.**
+
+- Official chipboard back height is a single cutting figure per side, not a min / max: **N 60.5 mm** (planning PDF p. 11), M 83, K 121, E 184. The back fixings are height-specific (ZB4N000S “suitable for system height N”; ZB4M000S, ZB4K000S, …). Steel backs are also height-specific.
+- The planning PDF and the programme page do not describe a taller-than-spec wood / custom back, a maximum back height for N sides, or an adapter that puts an M / K / E back or fixing onto N sides. The only “adapter piece” in that PDF is for an inner-E **front piece** with a low design element, not for the back.
+- BOXFIX plus / BOXFIX E-M (planning PDF p. 62) accept “back heights up to 250 mm (wood and steel).” That is a **jig capacity**, not a published permission to use a 250 mm back on N sides.
+- There is **no official inner drawer in height N** (planning PDF p. 7; programme page). The shallowest official inner is **M** (side 91 mm, official back 83 mm, space requirement 108 mm, 106 mm for the inner). A tall custom back is equally undocumented on M.
+
+`guess:` a woodworker could screw a taller wood panel to the official 60.5 mm N back or to the N fixings. That is not a Blum-documented method.
+
+**Back height needed so the Wing and its cabinet bracket sit entirely above the runner.**
+
+EVOline data sheet, Stand 08/2025, “upper edge of drawer” / “Oberkante Schublade”:
+
+- Metal-back adapter: **111 mm** and **126 mm** below that line. Use **126 mm** as the overall height of the assembly.
+- Wood / universal adapter (the one that would be used on a custom wood back): **108 mm** and **121 mm**. Use **121 mm**.
+- On both drawings the cabinet-side triangle is **70 mm** tall (12 + 20 + 12) and sits inside that overall height, so the 126 / 121 mm figure already covers the bracket.
+
+Blum, planning PDF p. 10 (drawer height N, “Space requirements in the cabinet”):
+
+- **min. 54\*** from the underside of the cabinet profile up to the profile screw (the conservative top of the runner zone on the side wall). The \* is +1 mm if the profile is installed before the cabinet is assembled.
+- **80.5 mm** from that same underside to the top of the N side. The side is 68.5 mm (p. 8), so the profile underside is **12 mm** below the side / box bottom (80.5 − 68.5).
+- Conservative runner-zone top = 54 − 12 = **42 mm** above the box bottom. (The kitchen’s usual “15 mm under the side” = space requirement 85.5 − 68.5 − 2 would put that top at 39 mm; 42 mm is the more conservative reading from the labelled 80.5.)
+
+If the custom back starts at the box bottom, as in Blum’s cutting drawing, the minimum back height Y with no added clearance is:
+
+- Metal adapter: 126 + 42 = **168 mm**
+- Wood adapter: 121 + 42 = **163 mm**
+
+`guess:` a few millimetres more for tolerance. Official N back 60.5 mm is **107.5 mm** short of 168 (metal) / **102.5 mm** short of 163 (wood). Official inner K back 121 mm is also short of sitting *entirely* above the runner (only 121 − 42 = 79 mm of hang would be above the 42 mm zone). Official E back 184 mm would clear (184 − 42 = 142 ≥ 126).
+
+**Fit under the east front rail and the worktop**, if the boxes keep their current z₀ (the appliances stay at the current floors) and only the back grows — computed, not applied:
+
+- Front rail `SF-E600a/b-RAIL-F` (Přední lišta): z **892–910**, c 1062–1142. The tall back must pass under **892** when the drawer opens.
+- There is no back rail on the east (shared central back `KR-ISL-BACK`, c 621–639, z 110–910). Closed, at the drawer back (c 665), the limit is the carcass / worktop underside at **910**.
+- The cabinet bracket is fixed in the carcass and does not travel under the rail; at the rear it is clear to 910.
+
+| Position (current z₀ kept) | Box z₀ | Back top at Y = 168 | Spare under rail 892 (opening) | Spare under carcass 910 (closed, rear) | Cabinet-bracket zone (back top − 126) vs 910 |
+| --- | ---: | ---: | ---: | ---: | --- |
+| SF-E600a-D1-I1 (inner, today K) | 621 | 789 | **103 mm** | **121 mm** | 663–789, 121 mm spare |
+| SF-E600b-D1-I1 (inner, today K) | 501 | 669 | **223 mm** | **241 mm** | 543–669, 241 mm spare |
+| SF-E600a/b-D1 (outer, today E) | 143 | 311 | **581 mm** under the rail; also 190 mm below E600b’s inner at 501 and 310 mm below E600a’s inner at 621 | plenty | 185–311, plenty |
+
+A 163 mm wood-adapter back has 5 mm more spare than the table. A 250 mm back (BOXFIX jig maximum, not official on N) would still pass under the E600a rail (271 mm from z 621 to 892, 21 mm spare) and easily on E600b and the outers.
+
+**If the Wing is raised entirely above the runner**, the 23 mm that matters is the rear gap **behind the box** at that height (the runner is not in that zone). As-drawn **26 mm** vs > 23 (3 mm surplus); official 16 mm back would leave **29 mm**. The 3 mm behind the runner at runner height no longer blocks the side-wall bracket.
+
+**Still open, and not applied in the model** until Petr confirms:
+
+- There is no official inner N. If the appliances stay on an inner drawer, the shallowest official inner is M, and a tall back is equally undocumented on M.
+- A tall custom back on N is not Blum-documented.
+- Alternatively, the appliances could move onto an **outer** N (official N exists for drawers / high-fronted pull-outs) with the same undocumented tall back.
+
+
+### Inner vs outer depth chain (t989u)
+
+Petr (t989u), before any modelling: the outer drawer has no Blum front, only a custom decor panel mounted in front; the inner drawer has a Blum-supplied inner front. So either (1) the whole inner assembly is the same length as the outer but sits further back by exactly the inner-front thickness, because when closed the inner front touches the outer decor panel, or (2) the inner front eats into the inner box, so the inner assembly is shorter and the runner is shorter or is not fully used. He had been told (1), and then that there is no extra space behind the outer — which would contradict (1).
+
+**Verdict: neither (1) nor (2) as stated. The last report (same box length, same runner position, same NL + 3 cabinet inside, no spare behind the outer) was the correct Blum reading. Option (1) was wrong.** The apparent contradiction came from mixing (1) with that reading. Blum does not shift the inner back, and does not use a shorter or only partly used runner.
+
+Sources, Julius Blum GmbH, *MERIVOBOX Ordering and planning information*, IDNR 962.544.7 EP-530/5 EN-IL/12.24 ([planning PDF](https://d2.blum.com/services/BEC003/me25532842_ep_dok_bau_$sen-il_$aof_$v5.pdf)): inner M pp. 16–19, inner K pp. 24–27, compared with outer M pp. 12–15 (the same figures repeat for other heights). The US *MERIVOBOX Installation Guide* (Blum, Inc., 2024) “M Height Interior Roll-out” pp. 28–31 agrees (AL = actual cabinet profile length; AL + 3). A live Blum E-SERVICES / Product Configurator session was not available; official shop attributes for ZV4.1042M list length 1042.2 mm and height 98.8 mm and do not list a thickness.
+
+**Cabinet profile (the runner), NL, and cabinet inside depth.**
+
+- Inner product description (p. 16 / p. 24): “**Identical position of the cabinet profile**.” The same cabinet-profile articles and the same NL range as the matching outer (for NL 500, 40 kg 450.5001B and 70 kg 453.5001B on both outer M p. 12 and inner M p. 16). The drawer-side articles for a given height are also the same (e.g. 470M5002S on both).
+- The space-requirement isometric (inner p. 16, outer p. 12) dimensions the **cabinet inside depth** as **NL + 3**. The planning PDF does not use the abbreviation “LT” on these pages. That dimension is drawn on the carcass, from the front opening to the back inner face. The outer decor front is **outside** this measurement (outer p. 14, “Front installation dimensions for screw-on assembly”, overlay **FA**). The inner front piece is drawn **inside** the dashed cabinet, at the front of the inner box (inner p. 16 isometric).
+- The same NL is specified for inner and outer in the same carcass. Blum does **not** specify a shorter NL, or a different NL + 3 minimum, for inner drawers. “+ 1 mm if cabinet profile is installed before cabinet is assembled” is a footnote on the space-requirement / front-drilling dimensions (p. 14 / p. 18), not a different runner length.
+- Blum does not publish a labelled setback of the form “inner runner starts outer-front-thickness + gap further back.” The US cabinet-profile installation drawing (US p. 30) shows the same profile, with its front at the cabinet front (a 4 mm dimension at the front tip is a profile detail, not a shift of the inner relative to the outer).
+
+**The inner front.**
+
+- It is a separate Blum part: **front piece without groove**, aluminium, **ZV4.1042M**, cut to **LW − 126**, for cabinet width KB up to 1200 mm (p. 17 / p. 25). Front fixing set ZI4.0MS1 (inner M) or ZI4.1KS1 (inner K). Optional latch ZI7.0M07 “must be mounted on the front piece”; the housing is drilled into the **outer** decor front (p. 18 / p. 26, “Front drilling distances for latch housing”).
+- It is not a fixing for a wooden or glass inner front on these inner-M / inner-K pages; it *is* the closed aluminium front. (Wooden / glass inner fronts are a different topic, not on these pages.)
+- **Thickness is not labelled** in the planning PDF, nor in the official shop attributes above. The only 12 mm on the inner planning pages is in the latch-housing drilling figure (p. 18 / p. 26, also US p. 31): a 12 mm thickness in section beside the outer-front elevation. The figure is for drilling the latch housing into the outer front; the PDF does not caption that 12 mm as the ZV4.1042M thickness. (The article-code fragment “ST 12” is also the pack quantity 12 in distributor listings and is not used here as a thickness.)
+- The wooden base and back cuttings are the **same** as the outer: base **NL − 26**, back 16 mm, width LW − 51 (inner M p. 19, inner K p. 27, same as outer M p. 15). There is no shorter official base for the inner, and no deduction of a front-piece thickness from the base length.
+
+**Exact depth chain in the east carcass** (18 mm decor, 503 mm clear, NL 500). Facts and the model are in separate columns. c is millimetres from the west, east front face at c 1160, back inner face at c 639.
+
+| Step | Official (planning PDF) | Model (SF-E600a/b, unchanged) |
+| --- | --- | --- |
+| East front face | c 1160 | c 1160 |
+| Outer decor front (custom overlay, not a Blum front) | 18 mm, **outside** the cabinet (FA, outer p. 14). Inner face = carcass front, c 1142 | 18 mm, c 1160–1142 |
+| Cabinet inside | **NL + 3 = 503**, c 1142–639. Drawn the same for inner and outer | 503 |
+| Cabinet profile start (inner and outer) | **Identical position**, length NL. Front at the cabinet opening (c 1142), or +1 mm if the profile is pre-installed | NL 500, not drawn as a separate solid |
+| Cabinet profile end | 500 mm from the start → c ~642; **3 mm** to the back inner face c 639. Same for inner and outer | same 3 mm (503 − 500) |
+| Inner front piece ZV4.1042M | At the **front of the inner box, inside the cabinet** (p. 16 isometric). Thickness **not labelled** | Drawn **19 mm** (`BoxWall`) at c **1123–1142**, at the front of the same envelope |
+| Wooden base | **NL − 26 = 474** for **both** (p. 15 / 19 / 27) | Envelope length **477** for both (official inside 458 + drawn back 19) |
+| Box back | Same official rear position for both (same base, same profile, same NL + 3) | Both at c **665** |
+| Rear gap behind the box | **29 mm** if the envelope is the 474 mm base (503 − 474). Same for inner and outer | **26 mm** for both (503 − 477). The 3 mm difference is 19 vs 16 mm back |
+| Rear gap behind the runner | **3 mm**, inner and outer | 3 mm |
+
+**Which of Petr’s options is true.** Not (1): the inner assembly is not shifted back by the front-piece thickness, the runner is not set back, and there is no extra rear gap behind the outer. The outer decor front sits *in front of the cabinet*, outside the 503 mm, so it does not move the outer box forward relative to the inner. Not (2) as stated: the inner sides, base, back and runner are not shorter, and the runner is the same NL in the same position, so it is fully used. What *is* true: the Blum front piece is an extra part at the front of that same-length box, inside the cabinet, so the **usable inner inside** is shorter than the outer inside by however much the front piece occupies. That thickness is not labelled in the planning PDF.
+
+**Vs the model.** The model already follows this: `inner_drawers()` copies the outer box plan (`c0`, `c1`), so the backs coincide, and `inner_drawer_boxes()` puts the front piece at the **front** of that envelope, eating into the inside (outer inside 458, inner inside 439). That is not option (1). Differences from official cuttings are the usual ones: drawn `BoxWall` 19 vs official 16 mm back (477 / 26 mm gap vs 474 / 29 mm), and the 19 mm front piece is a model drawing size, not a Blum-quoted thickness. The t991u model change does not alter this depth chain; it adds the cabinet profiles in that same position, and a custom back / Wing on the two appliance inners only.
+
+
+### Modelled (t991u)
+
+Petr (t991u): the 3 mm behind the runner and the 26 mm behind the box are already the Blum minima; mount the Wing by using a taller custom back. For the two inner drawers that hold the appliances, use an **M** (low sides; the previous K sides were needlessly tall) and a **170 mm** custom back, and model everything: the back, the Blum cabinet profiles on **all** MERIVOBOX drawers, and the EVOline Wing, folded (closed).
+
+**The two appliance inners** (layout only; no other bay changed):
+
+- SF-E600a: `drawer * box=E inner=M inner_clear=0.255 inner_back=0.170 wing=evoline`
+- SF-E600b: `drawer * box=E inner=M inner_clear=0.375 inner_back=0.170 wing=evoline`
+
+The `inner_clear` floors stay where they were (sealer floor z 637, Kenwood floor z 517). Changing K → M only lowers the sides (91 mm, box tops 712 / 592). Official inner M: planning PDF pp. 16–19, side 91 mm, official chipboard back 83 mm, space requirement 106 / 108 mm.
+
+**Custom back, 170 mm** (`guess:` not a Blum part; the woodworker builds it). Official M back is 83 mm; Blum does not document a taller back (t988u). 170 mm is the 168 mm figure (conservative runner-zone top 42 mm above the box bottom + 126 mm EVOline metal-adapter hang) rounded up. The custom back is wood, so the modelled Wing uses the wood/universal adapter figures (121 mm hang, 23 mm plan); 170 mm still clears 121 + 42 = 163 mm.
+
+Built (east, c from the west, z up). There is **no drawer above** these inners. The east front rail underside is z 892 (`in_z1`); the carcass/worktop underside is z 910.
+
+| Drawer | Side / box z | Floor | Back top | Spare under rail 892 | Spare under 910 | Runner underside | Runner-zone top (z0+42) | Wood-hang floor (back top − 121) | Hang above runner zone |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| SF-E600a-D1-I1 | M, 621–712 | 637 | **791** | **101 mm** | **119 mm** | 606 | 663 | 670 | **7 mm** |
+| SF-E600b-D1-I1 | M, 501–592 | 517 | **671** | **221 mm** | **239 mm** | 486 | 543 | 550 | **7 mm** |
+
+The 7 mm is the rounding 170 − 168 plus the 5 mm difference between the metal 126 mm hang (used to size the back) and the wood 121 mm hang actually drawn.
+
+**Cabinet profiles (runners) on every MERIVOBOX drawer.** Simple boxes, length **NL**, front at the cabinet opening, underside **15 mm** under the box bottom (`MerivoboxProfileBelow`, official enough). Inward width **16 mm** and drawn height **20 mm** are `guess:` (the official 28 mm on the space-requirement drawings is the side + profile together, not the profile alone). They are carcass-fixed parts (`CabinetProfile`), not in the drawer’s boxes, so they do not open with the front. SPACE TWIN keeps the diagonal offset (lower left, upper right). The hanging-bin pull-out (`frame=`, MOVENTO) has no MERIVOBOX profiles. Behind the NL 500 east profiles the gap to the back inner face is **3 mm**, as already documented.
+
+**EVOline Wing, folded, on those two inners.** Simple boxes. Official (data sheet 08/2025 / BMA 7040 2160 0003): arm **378 × 17 mm** in plan, wood hang **121 mm** below the upper edge of the drawer, cabinet triangle **70 mm** tall (12+20+12) with a **41 mm** (13+28) base, wood bracket 23 mm in plan. The drawer-side adapter (40 × 60 mm) is `guess:` for the guide across the back; it sits on the outer face of the tall back and moves with the drawer. The folded arm and the cabinet triangle are carcass-fixed in the rear gap, on the low-a (north) side, in the 121 mm band below the back top and above the runner. The official 41 mm triangle base is **clamped to the 26 mm** as-drawn rear gap (15 mm short of 41; official 29 mm with a 16 mm back would still be 12 mm short). `open:` the woodworker places the official bracket in that rear corner (against the side and the back) and confirms it in the real carcass.
 
 ## All MERIVOBOX heavy duty where Blum makes it (2026-11-23, t895u)
 

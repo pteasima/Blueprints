@@ -58,8 +58,12 @@ COLORS = {
     "Plinth": "#555555",
     "Worktop": "#ece9e2",
     "Cladding": "#d9d5cc",
+    "CabinetProfile": "#4a4a4a",
+    "EvolineWing": "#2a6f97",
+    "InnerDrawer": "#f1f0ea",
 }
-ALPHA = {"Worktop": 0.35, "Cladding": 0.45, "Front": 0.55, "Door": 0.6, "Lift": 0.6, "Clearance": 0.12}
+ALPHA = {"Worktop": 0.35, "Cladding": 0.45, "Front": 0.55, "Door": 0.6, "Lift": 0.6, "Clearance": 0.12,
+         "CabinetProfile": 0.9, "EvolineWing": 0.95}
 FRONT_ROLES = ("Front", "Drawer", "PullOut", "Door", "Lift", "Filler", "Appliance", "DecorPanel", "ApplianceDoor")
 
 
