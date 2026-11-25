@@ -1168,12 +1168,12 @@ systemFurniture:
           Layout1: "drawer * box=K inner=M,K | dock 0.16 width=0.44 side=C front=notch"
   - id: SF-F053
     Name: "Výplň W-053"
-    Description: "Shallow filler in front of pier W-053. 300 wide, 200 deep, front flush at y=15.15. Still west of the sofa, counter 930. Cream like the kitchen (natural oak until 2026-11-20). Petr, 2026-11-24 (t928u): bottom-hinged flip-out trashcan for the Elletipi Cover Box Small 8 L (340 × 225 × 150 mm, H × W × D)."
+    Description: "Shallow filler in front of pier W-053. 340 wide (300 until 2026-11-25, t993u: extends 40 mm past the pier's east face to align with the bookshelf's west sidewall), 200 deep, front flush at y=15.15. Still west of the sofa, counter 930. Cream like the kitchen (natural oak until 2026-11-20). Petr, 2026-11-24 (t928u): bottom-hinged flip-out trashcan for the Elletipi Cover Box Small 8 L (340 × 225 × 150 mm, H × W × D). open: measure on site that the extra 40 mm is still not blocked by the couch."
     PredefinedType: USERDEFINED
     ObjectType: FillerCabinet
     ContainedInStructure: SP-1.02
     Origin: [25.15, 15.15]
-    Width: 0.3
+    Width: 0.34
     Depth: 0.2
     Height: 0.93
     PropertySets:
@@ -1185,6 +1185,11 @@ systemFurniture:
           # oak-veneer worktop extends over this cupboard (SF-DN70, the 70 strip
           # it also covered until 2026-11-20 c, is gone: SF-LB runs to the pier).
           WorktopRun: KR-LB
+          # t993u: the oak counter is one notched piece; this is the pier
+          # width (300 mm from the bay's west), the only cut-out, so the
+          # joint is not at the column. The extra 40 mm of this bay is
+          # past the pier and has a full-depth top.
+          WorktopNotchWidth: 0.3
       # 2026-11-20 f: that counter's thickness (40, the bookshelf boards').
       - Name: Pset_Links
         Properties:
@@ -1211,7 +1216,7 @@ systemFurniture:
   # bodies stop at 910), 30 front overhang like KR-DN.
   - id: SF-LB
     Name: "Obývák nízká"
-    Description: "Low base behind the sofa, from W-053's east face (x 25.45, the face of SF-F053) to SF-TC's west face (x 29.60), both linked (2026-11-20 c; was x 25.52–29.70 with the 70 strip SF-DN70 at the pier). 450 deep, front y=15.15. Counter 930, the dining-run height (was 800), oak veneer top. 170 mm above the 760 sofa back. Cream like the kitchen since 2026-11-20 (was natural oak); dead space behind blank fronts since 2026-11-20. Petr, 2026-11-23 (t915u, t916u): two equal blank front panels (was seven)."
+    Description: "Low base behind the sofa, from the inner face of the bookshelf's west sidewall (x 25.49, SF-F053's east face since t993u; was W-053's east face x 25.45) to SF-TC's west face (x 29.60), both linked (2026-11-20 c; was x 25.52–29.70 with the 70 strip SF-DN70 at the pier). 450 deep, front y=15.15. Counter 930, the dining-run height (was 800), oak veneer top. 170 mm above the 760 sofa back. Cream like the kitchen since 2026-11-20 (was natural oak); dead space behind blank fronts since 2026-11-20. Petr, 2026-11-23 (t915u, t916u): two equal blank front panels (was seven)."
     PredefinedType: USERDEFINED
     ObjectType: BaseCabinet
     ContainedInStructure: SP-1.02
@@ -2367,7 +2372,9 @@ furniture:
           # the side of the tall corner cabinet". Box front on the counter
           # front (SF-LB.Y), back on the north wall (15.60); CaseDepth keeps
           # the 276 case.
-          X: "SF-LB.X"
+          # t993u: the trashcan (SF-F053) extends 40 mm past the pier, but
+          # the bookshelf still starts at the pier's east face (X + 0.3).
+          X: "SF-F053.X + 0.3"
           Y: "SF-LB.Y"
           Depth: "15.60 - SF-LB.Y"
           East: "SF-TC.X"
@@ -2594,7 +2601,7 @@ coverings:
           Material: "Silestone Blanco Maple"
   - id: CV-BS-R052
     Name: "Obklad boku pilíře W-052"
-    Description: "Return on W-052's east face, between the pier front and the main panel, under SF-DH. guess: the stone wraps the pier."
+    Description: "Return on W-052's east face, under SF-DH. Since t993u it covers the end of the perpendicular acoustic slat panel (26 mm, 20 slat + 6 mm backing, guess:), so the stone starts at the slat front (y 15.324) and its 20 mm edge is visible from the front; was y 15.35–15.580 (230) until then. guess: the stone wraps the pier."
     PredefinedType: CLADDING
     ObjectType: Backsplash
     ContainedInStructure: SP-1.02
@@ -2605,13 +2612,15 @@ coverings:
       - Name: Pset_Links
         Properties:
           Width: "mat:silestone-blanco-maple.Thickness"
-          Depth: "CV-BS-DN.Y - 15.35"
+          # t993u: cover the acoustic panel, don't let the slats cover the stone.
+          Y: "CV-SLAT-W052.Y"
+          Depth: "CV-BS-DN.Y - CV-SLAT-W052.Y"
       - Name: Pset_Finish
         Properties:
           Material: "Silestone Blanco Maple"
   - id: CV-BS-R053W
     Name: "Obklad boku pilíře W-053 západ"
-    Description: "Return on W-053's west face, under SF-DH. guess: the stone wraps the pier."
+    Description: "Return on W-053's west face, under SF-DH. Since t993u it covers the end of the perpendicular acoustic slat panel (26 mm, same as CV-BS-R052). guess: the stone wraps the pier."
     PredefinedType: CLADDING
     ObjectType: Backsplash
     ContainedInStructure: SP-1.02
@@ -2623,13 +2632,14 @@ coverings:
         Properties:
           Width: "mat:silestone-blanco-maple.Thickness"
           East: "25.15"
-          Depth: "CV-BS-DN.Y - 15.35"
+          Y: "CV-SLAT-W053.Y"
+          Depth: "CV-BS-DN.Y - CV-SLAT-W053.Y"
       - Name: Pset_Finish
         Properties:
           Material: "Silestone Blanco Maple"
   - id: CV-SLAT-W052
     Name: "Dubové lamely pilíře W-052"
-    Description: "Vertical oak slats on W-052's front face (the concrete column), x 22.150–22.470 (from SF-T4's east face over the 20 mm stone return in the niche, linked; 22.462 over the 12 mm one until 2026-11-20 f), from the worktop (930) to the ceiling line (2450). 40 wide, 20 apart, 20 thick (guess:), on a 6 mm oak-veneer backing (2026-11-20 b, guess:), 26 overall, y 15.324–15.350. Replaces the stone piece CV-BS-P052 (2026-11-20)."
+    Description: "Vertical oak slats on W-052's front face (the concrete column), x 22.150–22.450 (from SF-T4's east face to the pier's east face; the 20 mm stone return now covers the slat ends, t993u; was 22.150–22.470 over the stone edge, and 22.462 over the 12 mm one until 2026-11-20 f), from the worktop (930) to the ceiling line (2450). 40 wide, 20 apart, 20 thick (guess:), on a 6 mm oak-veneer backing (2026-11-20 b, guess:), 26 overall, y 15.324–15.350. Replaces the stone piece CV-BS-P052 (2026-11-20)."
     PredefinedType: CLADDING
     ObjectType: SlatCladding
     ContainedInStructure: SP-1.02
@@ -2639,11 +2649,12 @@ coverings:
     Height: 1.52
     PropertySets:
       # 2026-11-20 f: linked. The slats stand on the pier's front face
-      # (y 15.35) and run over the (now 20 mm) stone return's edge.
+      # (y 15.35). t993u: they stop at the pier's east face (the stone
+      # return's inner face); the stone covers the slat ends, not vice versa.
       - Name: Pset_Links
         Properties:
           Y: "15.35 - Depth"
-          East: "CV-BS-R052.East"
+          East: "CV-BS-R052.X"
       # Petr, 2026-11-20: "Im attaching screenshot of all material details in
       # this area, so please adjust the concrete column cladding and
       # everything too (dining table stays wooden though)." The screenshot,
@@ -2668,7 +2679,7 @@ coverings:
           BackingMaterial: "oak veneer"
   - id: CV-SLAT-W053
     Name: "Dubové lamely pilíře W-053"
-    Description: "Vertical oak slats on W-053's front face (the concrete column), x 25.130–25.450 (over the 20 mm stone return on the niche side, linked; 25.138 over the 12 mm one until 2026-11-20 f; to the pier's east face, linked, where the living base and bookshelf now meet it, 2026-11-20 c; was to 25.462 over the removed east return CV-BS-R053E), from the worktop (930) to the ceiling line (2450). 40 wide, 20 apart, 20 thick (guess:), on a 6 mm oak-veneer backing (2026-11-20 b, guess:), 26 overall, y 15.324–15.350. Replaces the stone piece CV-BS-P053 (2026-11-20)."
+    Description: "Vertical oak slats on W-053's front face (the concrete column), x 25.150–25.450 (the pier's faces; the 20 mm stone return now covers the slat ends, t993u; was 25.130–25.450 over the stone edge, 25.138 over the 12 mm one until 2026-11-20 f; was to 25.462 over the removed east return CV-BS-R053E), from the worktop (930) to the ceiling line (2450). 40 wide, 20 apart, 20 thick (guess:), on a 6 mm oak-veneer backing (2026-11-20 b, guess:), 26 overall, y 15.324–15.350. Replaces the stone piece CV-BS-P053 (2026-11-20)."
     PredefinedType: CLADDING
     ObjectType: SlatCladding
     ContainedInStructure: SP-1.02
@@ -2701,11 +2712,13 @@ coverings:
           BackingMaterial: "oak veneer"
       - Name: Pset_Links
         Properties:
-          # 2026-11-20 f: from the (20 mm) stone return's face, on the
-          # pier's front face (y 15.35).
-          X: "CV-BS-R053W.X"
+          # 2026-11-20 f / t993u: on the pier's front face (y 15.35),
+          # between the pier's west and east faces. The stone return covers
+          # the slat ends. East is the pier's east face (SF-F053 is 40 mm
+          # wider than the pier since t993u, so not SF-F053.East).
+          X: "CV-BS-R053W.East"
           Y: "15.35 - Depth"
-          East: "SF-F053.East"
+          East: "SF-F053.X + 0.3"
   - id: CV-RUG
     Name: "Koberec"
     Description: "Rug 2800 × 3780 × 10. x 26.65–29.45, y 11.37–15.15, from Petr's markup. Seats are not lifted onto it."
