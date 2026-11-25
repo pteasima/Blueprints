@@ -4018,6 +4018,78 @@ def runs(doc: dict) -> list[Run]:
     return out
 
 
+
+def _merge_notched_worktop(top: Part, run: "Run", piece: tuple | None = None,
+                           notch_width: float | None = None) -> None:
+    """If a worktop is two butted rectangles of one L / notch, store it as
+    one outer box plus a through void for the missing rectangle.
+
+    Petr (t993u): the oak counter at the dining / living column is one
+    continuous notched piece, not two slabs joined at the column. A mid-
+    length joint is still an ``open:`` for the woodworker if the stock is
+    shorter than the finished length.
+
+    ``notch_width`` (mm), when set, is the pier cut-out from the lent
+    slab's start along +a, behind the shallow cabinet; any leftover of
+    that slab past the pier keeps a full-depth top.
+    """
+    if notch_width is not None and piece is not None and len(top.boxes) >= 2:
+        A0, A1 = min(b[0] for b in top.boxes), max(b[1] for b in top.boxes)
+        C0, C1 = min(b[2] for b in top.boxes), max(b[3] for b in top.boxes)
+        z0, z1 = top.boxes[0][4], top.boxes[0][5]
+        n0, n1 = piece[0], piece[0] + notch_width
+        # Behind the shallow lent slab (its larger-c face to the outer back).
+        hole_c0, hole_c1 = piece[3], C1
+        if hole_c1 - hole_c0 > TOL and n1 - n0 > TOL:
+            top.boxes[:] = [(A0, A1, C0, C1, z0, z1)]
+            top.voids.append(Void(n0, n1, hole_c0, hole_c1, name="pier"))
+            top.props["OnePiece"] = True
+            top.props["OnePieceNote"] = (
+                "one notched slab (t993u: no joint at the column); "
+                "open: the woodworker may need a mid-length joint if the stock is shorter"
+            )
+            if run.worktop is not None:
+                run.worktop = (A0, A1, C0, C1, z0, z1)
+        return
+    if len(top.boxes) != 2:
+        return
+    a, b = top.boxes
+    if not (_near(a[4], b[4]) and _near(a[5], b[5])):
+        return
+    z0, z1 = a[4], a[5]
+    A0, A1 = min(a[0], b[0]), max(a[1], b[1])
+    C0, C1 = min(a[2], b[2]), max(a[3], b[3])
+    # The AABB minus the two boxes should be one axis-aligned rectangle.
+    # Sample the four possible corner leftovers.
+    leftovers = []
+    for x0, x1 in ((A0, a[0]), (a[1], A1), (A0, b[0]), (b[1], A1)):
+        for y0, y1 in ((C0, a[2]), (a[3], C1), (C0, b[2]), (b[3], C1)):
+            if x1 - x0 > TOL and y1 - y0 > TOL:
+                leftovers.append((x0, x1, y0, y1))
+    # Unique leftover rectangles (dedup near-equal)
+    uniq = []
+    for r in leftovers:
+        if any(_near(r[0], u[0]) and _near(r[1], u[1]) and _near(r[2], u[2]) and _near(r[3], u[3]) for u in uniq):
+            continue
+        # drop leftovers that sit inside either box
+        cx, cy = (r[0] + r[1]) / 2, (r[2] + r[3]) / 2
+        if any(p[0] - TOL <= cx <= p[1] + TOL and p[2] - TOL <= cy <= p[3] + TOL for p in (a, b)):
+            continue
+        uniq.append(r)
+    if len(uniq) != 1:
+        return
+    hole = uniq[0]
+    top.boxes[:] = [(A0, A1, C0, C1, z0, z1)]
+    top.voids.append(Void(hole[0], hole[1], hole[2], hole[3], name="notch"))
+    top.props["OnePiece"] = True
+    top.props["OnePieceNote"] = (
+        "one notched slab (t993u: no joint at the column); "
+        "open: the woodworker may need a mid-length joint if the stock is shorter"
+    )
+    if run.worktop is not None:
+        run.worktop = (A0, A1, C0, C1, z0, z1)
+
+
 def _join_worktops(runs_: list) -> None:
     """Slabs a bay lends to another run's counter (``Pset_KitchenBay.WorktopRun``)
     join that run's worktop part, in its frame (both frames must be
@@ -4049,6 +4121,9 @@ def _join_worktops(runs_: list) -> None:
             if other.worktop is not None:
                 w = other.worktop
                 other.worktop = (min(w[0], piece[0]), max(w[1], piece[1]), min(w[2], piece[2]), max(w[3], piece[3]), w[4], w[5])
+            bay = next((b for b in run.bays if b.id == bay_id), None)
+            notch = _prop(bay.element, PSET_BAY, "WorktopNotchWidth") if bay is not None else None
+            _merge_notched_worktop(top, other, piece, float(notch) * 1000.0 if notch is not None else None)
 
 
 def bay_summary(run: Run) -> list[dict]:
