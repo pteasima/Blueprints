@@ -2601,7 +2601,7 @@ coverings:
           Material: "Silestone Blanco Maple"
   - id: CV-BS-R052
     Name: "Obklad boku pilíře W-052"
-    Description: "Return on W-052's east face, under SF-DH. Since t993u it covers the end of the perpendicular acoustic slat panel (26 mm, 20 slat + 6 mm backing, guess:), so the stone starts at the slat front (y 15.324) and its 20 mm edge is visible from the front; was y 15.35–15.580 (230) until then. guess: the stone wraps the pier."
+    Description: "Return on W-052's east face, under SF-DH. Since t1003u the stone is flush with the SF-DH carcass front (y 15.342, SF-DH.Y + FrontThickness 18 mm), behind the 18 mm door, so the 10 mm lower-leaf overhang (to z 1550) does not clip the stone; was y 15.324–15.580 (256) from t993u, when it started at the slat/door front. That front is 2 mm shy of the acoustic-panel backboard (slats 20 + backing 6, backboard face y 15.344, guess:). open: find or build acoustic panels whose battens/lamellas match the top-cabinet door thickness, or rethink this detail. guess: the stone wraps the pier."
     PredefinedType: CLADDING
     ObjectType: Backsplash
     ContainedInStructure: SP-1.02
@@ -2612,15 +2612,16 @@ coverings:
       - Name: Pset_Links
         Properties:
           Width: "mat:silestone-blanco-maple.Thickness"
-          # t993u: cover the acoustic panel, don't let the slats cover the stone.
-          Y: "CV-SLAT-W052.Y"
-          Depth: "CV-BS-DN.Y - CV-SLAT-W052.Y"
+          # t1003u: flush with the SF-DH carcass front (behind the door),
+          # not the slat/door front. 0.018 is FrontThickness (METOD).
+          Y: "SF-DH.Y + 0.018"
+          Depth: "CV-BS-DN.Y - Y"
       - Name: Pset_Finish
         Properties:
           Material: "Silestone Blanco Maple"
   - id: CV-BS-R053W
     Name: "Obklad boku pilíře W-053 západ"
-    Description: "Return on W-053's west face, under SF-DH. Since t993u it covers the end of the perpendicular acoustic slat panel (26 mm, same as CV-BS-R052). guess: the stone wraps the pier."
+    Description: "Return on W-053's west face, under SF-DH. Since t1003u the stone is flush with the SF-DH carcass front (y 15.342, same as CV-BS-R052), behind the door. guess: the stone wraps the pier."
     PredefinedType: CLADDING
     ObjectType: Backsplash
     ContainedInStructure: SP-1.02
@@ -2632,8 +2633,8 @@ coverings:
         Properties:
           Width: "mat:silestone-blanco-maple.Thickness"
           East: "25.15"
-          Y: "CV-SLAT-W053.Y"
-          Depth: "CV-BS-DN.Y - CV-SLAT-W053.Y"
+          Y: "SF-DH.Y + 0.018"
+          Depth: "CV-BS-DN.Y - Y"
       - Name: Pset_Finish
         Properties:
           Material: "Silestone Blanco Maple"
