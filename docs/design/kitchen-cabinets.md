@@ -36,6 +36,8 @@ Labels: **Petr** is a fact Petr gave, with the date or document. **Blum** is fro
 
 > **`open:` for the woodworker (t993u): the living-room oak counter is one notched piece, 4450 × 450, with a 300 × 250 cut-out at pier W-053.** There is no joint at the column. If the stock is shorter than 4450 mm he may put a joint mid-length, not at the column. Also **`open:` measure on site** that the trashcan cabinet (SF-F053), now 40 mm past the pier to the bookshelf sidewall (x 25.49), is still not blocked by the couch (the model leaves a 30 mm gap to the sofa's west back FN-BW1 at x 25.52). Details: “Dining side splashes, trashcan +40 mm and one-piece oak counter (2026-11-25, t993u)”.
 
+> **`open:` (t1003u): find or build acoustic panels whose battens/lamellas have the same thickness as the SF-DH door, or rethink this detail later.** The dining side Silestone returns (`CV-BS-R052`, `CV-BS-R053W`) are now flush with the SF-DH carcass front (behind the 18 mm door) so they do not clip the 10 mm door overhang, and are roughly flush with the acoustic-panel backboard (2 mm off: slats are 20 mm `guess:`, doors are 18 mm METOD). The acoustic panels themselves are unchanged. Details: “Dining side splashes sit behind the SF-DH door overhang (2026-11-26, t1003u)”.
+
 ## Deviations from Petr's original plan (2026-11-23)
 
 Petr's original document is the sticky-note plan [`KitchenPlan.jpg`](../../inputs/ground_floor/KitchenPlan.jpg) with his notes (quoted in `inputs/ground_floor/furnishings.yaml`), plus his rule of 2026-11-11 “when unsure of details and margins, default to IKEA METOD measurements”, which made the drawers IKEA MAXIMERA (2026-11-13). On **2026-11-23** (t835u) Petr switched every drawer to **Blum MERIVOBOX**: “Ok, time to pull the trigger. Remodel or drawers to use merivobox.” His standing rules: **soft-close (BLUMOTION) only, opening by hand; never TIP-ON (push to open) or SERVO-DRIVE (electric)** (Petr, 2026-11-23, t830u: “I never want anything push to open (nor electric). I do want soft close, but opening must be manual.”), and “existing docs probably say ‘assume ikea maximera’, that will have to go”. Each deviation, with its reason:
@@ -448,7 +450,7 @@ Petr, 2026-11-12: “As well as the back wall above countertop, below top cabine
 | --- | --- | --- | --- | --- |
 | `KR-WEST-BACKSPLASH` | west wall, on the west worktop, y 11.35–13.85 (OP24 to OP25 jamb, not over the clad ends' extra 20), x 18.800–18.812 | 2500 × 12 × **630**, 930 → **1560** (was 620, → 1550) | underside of SF-CH850 / SF-BH800 / SF-AH850 | derived by `kitchen_cabinet` (`Backsplash: true`): the lowest box over the strip |
 | `CV-BS-DN` | north wall behind SF-DN, x 22.45–25.15, y 15.588–15.600 | 2700 × 12 × 630, 930 → 1560 (was 620, → 1550) | underside of SF-DH | yaml `coverings` |
-| `CV-BS-R052`, `CV-BS-R053W` | the piers' faces facing each other in the dining bay, y 15.35–15.588 | 238 × 12 × 630 each (2026-11-12; superseded: **20 × 230** from 2026-11-20, then **20 × 256**, y 15.324–15.580, since t993u — see “Silestone thickness” and t993u) | under SF-DH | `guess:` the stone wraps the piers |
+| `CV-BS-R052`, `CV-BS-R053W` | the piers' faces facing each other in the dining bay, y 15.35–15.588 | 238 × 12 × 630 each (2026-11-12; superseded: **20 × 230** from 2026-11-20, then **20 × 256**, y 15.324–15.580, t993u, then **20 × 238**, y 15.342–15.580, since t1003u, flush with the SF-DH carcass — see “Silestone thickness” and t1003u) | under SF-DH | `guess:` the stone wraps the piers |
 | `CV-BS-P052` | front of pier W-052 over filler SF-F052, x 22.158–22.462, y 15.338–15.35 | 304 × 12 × 630 | **1560, `open:`** (nothing above) | `guess:` wrap |
 | `CV-BS-P053` | front of pier W-053 over filler SF-F053, x 25.138–25.462 | 324 × 12 × 630 | **1560, `open:`** | `guess:` wrap |
 | `CV-BS-R053E` | W-053's east face over SF-DN70, x 25.450–25.462, y 15.35–15.588 | 238 × 12 × 630 | **1560, `open:`** | `guess:` wrap |
@@ -1421,8 +1423,8 @@ stone was already 20, so no carcass height moves. Changes, old → new:
 |---|---|---|
 | KR-WEST-BACKSPLASH | 12 thick, run c 588–600 | **20**, c 580–600 (the top in front of it: 608 → 600 visible) |
 | CV-BS-DN | 12, y 15.588–15.600 | **20**, y 15.580–15.600 (wall face kept) |
-| CV-BS-R052 | 12 × 238, x 22.450–22.462 | **20 × 230**, x 22.450–22.470 (then **20 × 256**, y 15.324–15.580, t993u) |
-| CV-BS-R053W | 12 × 238, x 25.138–25.150 | **20 × 230**, x 25.130–25.150 (then **20 × 256**, y 15.324–15.580, t993u) |
+| CV-BS-R052 | 12 × 238, x 22.450–22.462 | **20 × 230**, x 22.450–22.470 (then **20 × 256**, y 15.324–15.580, t993u; then **20 × 238**, y 15.342–15.580, t1003u) |
+| CV-BS-R053W | 12 × 238, x 25.138–25.150 | **20 × 230**, x 25.130–25.150 (then **20 × 256**, y 15.324–15.580, t993u; then **20 × 238**, y 15.342–15.580, t1003u) |
 | CV-SLAT-W052 | x 22.150–22.462 (312) | x 22.150–**22.470** (320), linked to the return (then **300**, x 22.150–22.450, t993u) |
 | CV-SLAT-W053 | x 25.138–25.450 (312) | x **25.130**–25.450 (320), linked to the return (then **300**, x 25.150–25.450, t993u) |
 | SF-DH-LINING notches | x 22.15–22.462 / 25.138–25.45 | 22.15–22.47 / 25.13–25.45 (linked to the slats; then 22.15–22.45 / 25.15–25.45, t993u) |
@@ -1436,7 +1438,7 @@ Petr (t993u): keep this, but we are willing to switch if the stonemason's quote 
 - **12 mm:** the entire dining area (dining top, dining backsplash, dining side splashes) and the west kitchen backsplash
 - **20 mm:** the rest (island top, island end panels, west worktop)
 
-That split, from the nesting on `c4079e2`, needs **5 slabs** (2 × 12 mm + 3 × 20 mm standard 3060 × 1400, **21.42 m²**) versus the 3 jumbo 20 mm (15.50 m²). At 12 mm the side splashes were **238** mm deep, not 230 (the 20 mm backsplash eats 8 mm more of the return). Since t993u the returns also cover the 26 mm acoustic panel, so a 12 mm switch would now be **264** mm (238 + 26), not 238; the 20 mm returns are **256** (230 + 26). The 3-jumbo 20 mm plan still fits with the 256 mm returns (same 3 slabs, 15.50 m²).
+That split, from the nesting on `c4079e2`, needs **5 slabs** (2 × 12 mm + 3 × 20 mm standard 3060 × 1400, **21.42 m²**) versus the 3 jumbo 20 mm (15.50 m²). At 12 mm the side splashes were **238** mm deep, not 230 (the 20 mm backsplash eats 8 mm more of the return). t993u grew the 20 mm returns to **256** (230 + 26) to cover the acoustic panel; t1003u set them back 18 mm to the SF-DH carcass front, so they are **238** mm again (y 15.342–15.580) — the same number as the old 12 mm depth, but now 20 mm thick and starting at the carcass, not at y 15.35. A 12 mm switch would now be **246** mm (returns still start at the carcass; the 12 mm dining backsplash's front is at y 15.588). The 3-jumbo 20 mm plan still fits with the 238 mm returns (same 3 slabs, 15.50 m²).
 
 ### Dining side splashes, trashcan +40 mm and one-piece oak counter (2026-11-25, t993u)
 
@@ -1461,6 +1463,23 @@ Petr (t993u):
 In the model this does **not** collide with the couch, the column, or the bookshelf. The nearest sofa part is the west back `FN-BW1` at x 25.52–25.82, y 13.99–15.15 (height 760). The cabinet front is at y 15.15; the gap at the front plane is **30 mm** (was 70 mm). **`open:` measure on site** that the extended cabinet is still not blocked by the couch. The 40 mm strip east of the pier, behind the 200 mm cabinet (x 25.45–25.49, y 15.35–15.60, under the bookshelf side), has no carcass; the one-piece oak top covers it.
 
 **Oak counter is one notched piece**, not two slabs joined at the column. `KR-LB-WORKTOP` is one 40 mm oak-veneer part: **4450 × 450** (x 25.15–29.60, y 15.15–15.60), with a through cut-out **300 × 250** at the pier (x 25.15–25.45, y 15.35–15.60). **`open:`** if the available stock is shorter than 4450 mm, the woodworker may put a joint mid-length, not at the column.
+
+### Dining side splashes sit behind the SF-DH door overhang (2026-11-26, t1003u)
+
+Petr (t1003u):
+
+> Make the side silestone slabs a little shallower so they don't clip into the top cabinet door overhang. So silestone will be flush with top cabinet frame and roughly flush with the backboard of the accoustic panels (we'll have to find/build panels whose battens/lamelas have the same thickness as top cabinet door, or rethink this detail, but this is what we're going for now.
+
+The t993u returns started at the slat / door front (y **15.324**, depth **256**) and met the lower AVENTOS HF leaf, which hangs **10 mm** below the SF-DH carcass (`WallFrontOverhang`, z **1550–1560**) in the **18 mm** door thickness (y 15.324–15.342, `FrontThickness`, METOD). That was the clip.
+
+The returns now start at the SF-DH carcass front (`Y: SF-DH.Y + 0.018`), y **15.342–15.580**, depth **238** mm, still 20 mm thick. The door overhang sits in front of the stone. The acoustic-panel backboard face is at y **15.344** (20 mm slats + 6 mm oak-veneer backing, `guess:`, panel y 15.324–15.350), **2 mm** behind the carcass; the stone is roughly flush with that backboard. The acoustic panels (`CV-SLAT-W052` / `W053`) and SF-DH are unchanged.
+
+**`open:`** find or build acoustic panels whose battens / lamellas have the same thickness as the top cabinet door (18 mm in the model; the woodworker may choose 19–22, see the front-thickness `open:`), or rethink this detail later.
+
+| Piece | Before (t1003u) | After |
+| --- | --- | --- |
+| CV-BS-R052 | 20 × 256 × 630, x 22.450–22.470, y 15.324–15.580 | **20 × 238 × 630**, x 22.450–22.470, y **15.342**–15.580 |
+| CV-BS-R053W | 20 × 256 × 630, x 25.130–25.150, y 15.324–15.580 | **20 × 238 × 630**, x 25.130–25.150, y **15.342**–15.580 |
 
 ### Zero overhang: dining run and island east edge
 
