@@ -38,6 +38,9 @@ Labels: **Petr** is a fact Petr gave, with the date or document. **Blum** is fro
 
 > **`open:` (t1003u): find or build acoustic panels whose battens/lamellas have the same thickness as the SF-DH door, or rethink this detail later.** The dining side Silestone returns (`CV-BS-R052`, `CV-BS-R053W`) are now flush with the SF-DH carcass front (behind the 18 mm door) so they do not clip the 10 mm door overhang, and are roughly flush with the acoustic-panel backboard (2 mm off: slats are 20 mm `guess:`, doors are 18 mm METOD). The acoustic panels themselves are unchanged. Details: “Dining side splashes sit behind the SF-DH door overhang (2026-11-26, t1003u)”.
 
+> **`open:` for the woodworker (t1004u): the west-run dishwasher furniture door is 615 mm, not 597 mm.** It covers the 18 mm north end panel the same way the south drawer front covers `KR-WEST-END-S` (1.5 mm half-gap from the OP25 jamb). The 600 mm niche and the Bosch SBD6ECX12E body (598 mm) are unchanged; the panel overhangs the appliance by 17.5 mm on the north. Details: “West run: dishwasher front covers the north end panel; body behind the plinth (2026-11-26, t1004u)”.
+
+
 ## Deviations from Petr's original plan (2026-11-23)
 
 Petr's original document is the sticky-note plan [`KitchenPlan.jpg`](../../inputs/ground_floor/KitchenPlan.jpg) with his notes (quoted in `inputs/ground_floor/furnishings.yaml`), plus his rule of 2026-11-11 “when unsure of details and margins, default to IKEA METOD measurements”, which made the drawers IKEA MAXIMERA (2026-11-13). On **2026-11-23** (t835u) Petr switched every drawer to **Blum MERIVOBOX**: “Ok, time to pull the trigger. Remodel or drawers to use merivobox.” His standing rules: **soft-close (BLUMOTION) only, opening by hand; never TIP-ON (push to open) or SERVO-DRIVE (electric)** (Petr, 2026-11-23, t830u: “I never want anything push to open (nor electric). I do want soft close, but opening must be manual.”), and “existing docs probably say ‘assume ikea maximera’, that will have to go”. Each deviation, with its reason:
@@ -2031,14 +2034,14 @@ Petr, 2026-11-22 (t806u): “lets make that cream color more yellowish. I don't 
 
 The two 20 mm claddings KR-WEST-CLAD-S / -N and the worktop over them stood 20 mm into the pocket-door openings OP24 (y 10.25–11.35) and OP25 (y 13.85–14.95), and the south end legs 11 mm. Petr, 2026-11-22 (option 2): use the carcass end sides themselves as the cream (RAL 1015) end panels, flush with the wall segment y 11.35–13.85; nothing (end panels, worktop, legs, kickboard) in the door openings.
 
-New run flag `Pset_KitchenRun.FlushEnds` (excludes `CladEnds`): no cladding; a run end that is a carcass keeps its end side as the visible panel; a run end that is a niche gets an 18 panel `{run}-NICHE-END-{N/S}` (floor to the worktop underside, wall to the fronts' face) just outside the niche; the worktop and backsplash stop flush with the outer panel faces; the end legs sit with their face on the end side's outer face (centre at max(board, leg diameter) / 2 in from the end, was board / 2).
+New run flag `Pset_KitchenRun.FlushEnds` (excludes `CladEnds`): no cladding; a run end that is a carcass keeps its end side as the visible panel; a run end that is a niche gets an 18 panel `{run}-NICHE-END-{N/S}` (floor to the worktop underside, wall to the back of the fronts, so the front covers it, like a carcass end side; until t1004u it ran to the fronts' face) just outside the niche; the worktop and backsplash stop flush with the outer panel faces; the end legs sit with their face on the end side's outer face (centre at max(board, leg diameter) / 2 in from the end, was board / 2).
 
 The north end is the dishwasher slot, with no end side, and its 600 can't shrink. So the 18 panel came out of SF-A250, the only bay with spare width: **SF-A250's outer width changed, 250 → 232** (the brief said to keep the bays' outer widths). The 850 section A is now 232 + 600 + 18; SF-AH850 above still matches it.
 
 | What | Before | Now |
 | --- | --- | --- |
 | South end panel | KR-WEST-CLAD-S, 20 × 620 × 910, y 11.33–11.35 (in OP24) | **the carcass end side KR-WEST-END-S**, 18, y 11.350–11.368, z 100–910 (cream already, the `END-[NSEW]` selector) |
-| North end panel | KR-WEST-CLAD-N, 20 × 620 × 910, y 13.85–13.87 (in OP25) | **KR-WEST-NICHE-END-N**, 18 × 600 × 910, y 13.832–13.850, x 18.80–19.40, z 0–910, cream |
+| North end panel | KR-WEST-CLAD-N, 20 × 620 × 910, y 13.85–13.87 (in OP25) | **KR-WEST-NICHE-END-N**, 18 × 600 × 910, y 13.832–13.850, x 18.80–19.40, z 0–910, cream (then **18 × 582 × 910**, x 18.80–**19.382**, t1004u: behind the front, which now covers it) |
 | Worktop KR-WEST-WORKTOP | 2540, y 11.33–13.87 | **2500, y 11.35–13.85** (flush, front overhang 20 unchanged) |
 | Backsplash KR-WEST-BACKSPLASH | 2500, y 11.35–13.85 | 2500, y 11.35–13.85 (now over the north panel, same span) |
 | South end legs SF-C850-S-F / -B | y 11.339–11.379 (11 in OP24) | **y 11.350–11.390** |
@@ -2297,6 +2300,29 @@ Blum, catalogue 2024/25 [p. 282](https://publications.blum.com/2024/catalogue/en
 - `open:` **the end side to the floor** is a normal construction (a side “bis zum Boden” with the bottom fixed between the sides on connectors or angle brackets, `guess:`), but the side cannot be levelled by the legs: it needs scribing to the floor or its own levelling glides, and the floor must be flat along 582 mm. SF-C850's MERIVOBOX profile (z 118) on that side is unchanged. No conflict with SF-A250 (it is at the north end) or the dishwasher niche.
 - `open:` **pocket doors behind the run.** D-OP24 slides north into W-050 behind SF-C850 / SF-B800 (y 11.35–12.45) and D-OP25 south behind the dishwasher (y 12.75–13.85): no screws into the wall there (base fixing, the wall cabinets SF-CH850 / SF-AH850, the backsplash) without checking the pocket cassette.
 
+
+### West run: dishwasher front covers the north end panel; body behind the plinth (2026-11-26, t1004u)
+
+Petr (t1004u):
+
+> in the west run of kitchen base cabinets, theres an inconsistency: On the south side, the drawer front panel covers the side panel (this is what we want). But in the north, the dishwasher's front panel should also cover the side panel, not vice versa.
+
+> oh, while you're at it, make the dishwasher not stick out of the plinth (just making it shallower should do it)
+
+**South end (unchanged, the pattern to match).** `KR-WEST-END-S` is 18 mm, y 11.350–11.368, x 18.800–19.382 (behind the 18 mm front), z 0–910. The SF-C850 drawer front is y 11.3515–12.1835, x 19.382–19.400: it covers the end panel except the 1.5 mm half-gap at the OP24 jamb.
+
+**North end panel and decor front.** Until t1004u, `KR-WEST-NICHE-END-N` ran to the fronts' face (x 18.800–19.400, depth 600) and the dishwasher decor panel `SF-A600-PANEL` was only the 600 mm niche minus the 3 mm front gaps (**597** mm, y 13.2335–13.8305). The side panel was visible at the front, covering rather than covered. The 600 mm niche (`SF-A600`, y 13.232–13.832) cannot include the end panel (the Bosch needs that slot). So the panel now stops behind the front, and the decor front grows over it, same rule as the south drawer (outer edge = end-panel outer face minus half-gap).
+
+| Piece | Before (t1004u) | After |
+| --- | --- | --- |
+| KR-WEST-NICHE-END-N | 18 × 600 × 910, y 13.832–13.850, x 18.800–19.400 | **18 × 582 × 910**, y 13.832–13.850, x 18.800–**19.382** (c 18–600) |
+| SF-A600-PANEL | 597 × 808.5 × 18, y 13.2335–13.8305, x 19.382–19.400 | **615** × 808.5 × 18, y 13.2335–**13.8485**, x 19.382–19.400 |
+| SF-A600 niche | 600, y 13.232–13.832 | unchanged |
+| Bosch body EA-SBD6ECX | 598 × 550 × 865, y 13.233–13.831, x 18.832–19.382 | 598 × **550** × 865, y 13.233–13.831, x **18.800–19.350** (front on the plinth plane, back on the wall) |
+
+**`open:` for the woodworker:** the furniture door is **615 mm**, not a 597/600 mm door. It overhangs the 598 mm appliance by **17.5 mm** on the north (and 0.5 mm on the south, as before). The 600 mm niche is unchanged.
+
+**Dishwasher body vs the plinth.** The kickboard face is at x **19.350** (50 mm setback from the front plane at 19.400). After t865u the 550 mm body had its front at 19.382 (carcass front line) so it stood **32 mm** proud of the plinth, down to the floor (z 0–865). The body is still 550 mm (the Bosch size); it is tucked back so its front is on the plinth plane (x 19.350) and its back is on the wall (x 18.800 — the yaml already said that; it had been 18.832). The decor panel stays on the fronts' plane, flush with the other fronts.
 
 ### FILUR frame without walls, white MERIVOBOX, decor panel colour (2026-11-23, t866u)
 

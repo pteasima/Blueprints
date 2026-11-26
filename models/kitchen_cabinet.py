@@ -2606,7 +2606,19 @@ class _Builder:
                 raise ValueError(f"{bay.id}: DecorPanel needs another front in the run to match")
             z0, z1 = min(b[4] for b in fronts), max(b[5] for b in fronts)
             fc0, fc1 = self.c_range(bay, 0.0, tf)
-            box = (bay.a0 + g, bay.a1 - g, fc0, fc1, z0, z1)
+            a0, a1 = bay.a0 + g, bay.a1 - g
+            # t1004u: if this niche sits at a FlushEnds run end, the front
+            # covers the end panel the same way a drawer front covers a
+            # carcass end side (bay width includes the end, minus half-gap).
+            if self._flush_ends():
+                t = p["BoardThickness"]
+                for da, edge in self._niche_ends():
+                    if _near(bay.a0 if da < 0 else bay.a1, edge):
+                        if da < 0:
+                            a0 = edge - t + g
+                        else:
+                            a1 = edge + t - g
+            box = (a0, a1, fc0, fc1, z0, z1)
             out = -1.0 if bay.front_low else 1.0
             face = fc0 if bay.front_low else fc1
             zone = Zone(0, "front", z1 - z0, z0, z1, {})
@@ -2773,14 +2785,15 @@ class _Builder:
 
     def _end_panels(self, zb, zt):
         """The ``FlushEnds`` end panel beside an end niche: floor to the
-        worktop underside, wall to the fronts' face, ``BoardThickness``
+        worktop underside, wall to the back of the fronts (so the front
+        covers the panel, like a carcass end side), ``BoardThickness``
         thick, in the run's end-side material (cream)."""
         run, p = self.run, self.p
-        t = p["BoardThickness"]
+        t, tf = p["BoardThickness"], p["FrontThickness"]
         for da, edge in self._niche_ends():
             name = self._end_name(da)
             bay = next(b for b in run.bays if _near(b.a0 if da < 0 else b.a1, edge))
-            c0, c1 = self.c_range(bay, 0.0, bay.depth)
+            c0, c1 = self.c_range(bay, tf, bay.depth)
             a_range = (edge - t, edge) if da < 0 else (edge, edge + t)
             self.add(Part(f"{run.id}-NICHE-END-{name}", f"Bok {name} (u niky)", "EndSide",
                           [(*a_range, c0, c1, zb, zt)], label="cabinet"), bay)
