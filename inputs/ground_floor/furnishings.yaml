@@ -1504,21 +1504,26 @@ electricAppliances:
           Thickness: 0.06
   - id: EA-SBD6ECX
     Name: "Bosch SBD6ECX12E"
-    Description: "Fully integrated dishwasher, 598×550×865, in the north 600 of section A. Right when facing the west wall. Back on the wall (x 18.800), front on the plinth plane (x 19.350), 1 mm clear of each side of the niche. The cream decor panel SF-A600-PANEL stays on the fronts' plane (19.382–19.400) and, since t1004u, covers the north end panel like the south drawer front."
+    Description: "Fully integrated dishwasher, 598×550×865 (Bosch), in the north 600 of section A. Right when facing the west wall. In the model the stainless body is 530 mm deep (x 18.800–19.330) so it sits fully behind the kickboard (back face x 19.332) and the decor panel; 1 mm clear of each side of the niche. The cream decor panel SF-A600-PANEL stays on the fronts' plane (19.382–19.400) and, since t1004u, covers the north end panel like the south drawer front."
     PredefinedType: DISHWASHER
     ContainedInStructure: SP-1.02
     # 2026-11-22: 18 south with the slot (13.251 before).
     # Petr, 2026-11-23 (t865u): flush with the other fronts — the decor
     # panel is on the fronts' plane (19.382–19.400). The body sat with its
-    # door face at 19.382 and stuck 32 mm out past the kickboard (plinth
-    # face x 19.350). Petr, 2026-11-26 (t1004u): do not stick out of the
-    # plinth; making it shallower should do it. The 550 mm body is tucked
-    # back: front x 19.350, back on the wall at 18.800 (the description
-    # already said that; it had been 18.832).
-    Origin: [19.35, 13.233]
+    # door face at 19.382 and stuck 32 mm out past the kickboard.
+    # Petr, 2026-11-26 (t1004u): do not stick out of the plinth; the body
+    # was moved to front x 19.350 (plinth face) / back 18.800.
+    # Petr, 2026-11-26 (t1006u): the stainless shouldn't show at all; a
+    # fully integrated dishwasher is fully hidden behind the plinth. The
+    # kickboard already runs across SF-A600 (y 13.232–13.832, x 19.332–
+    # 19.350). The body was coplanar with the plinth face (z-fighting /
+    # visible stainless). Model body is now 530 mm, x 18.800–19.330: 2 mm
+    # behind the kickboard's back face. The real Bosch depth stays 550 mm;
+    # 530 is only how the body is drawn so it is concealed.
+    Origin: [19.33, 13.233]
     RefDirection: [0, 1]
     Width: 0.598
-    Depth: 0.55
+    Depth: 0.53
     Height: 0.865
   # Built-in appliances and sink fittings with no box: models/kitchen_cabinet.py
   # lays each one out from its Pset_BuiltIn (the bay band or the sink it
