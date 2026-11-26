@@ -885,7 +885,7 @@ systemFurniture:
           Contents: "úklid (do myčky, jar, odmašťovač, houbičky)"
   - id: SF-A600
     Name: "Západ 600 myčka"
-    Description: "Section A, north side. The 600 dishwasher slot of the 850 section, y 13.232–13.832 (13.25–13.85 until 2026-11-22). No carcass of its own: the worktop runs over it, SF-A250's end side is its south wall and the 18 end panel KR-WEST-NICHE-END-N its north wall. The Bosch SBD6ECX12E stands in it. Right when facing the west wall."
+    Description: "Section A, north side. The 600 dishwasher slot of the 850 section, y 13.232–13.832 (13.25–13.85 until 2026-11-22). No carcass of its own: the worktop runs over it, SF-A250's end side is its south wall and the 18 end panel KR-WEST-NICHE-END-N its north wall (since t1004u the panel stops behind the front, and SF-A600-PANEL covers it like the south drawer front). The Bosch SBD6ECX12E stands in it. Right when facing the west wall."
     PredefinedType: USERDEFINED
     ObjectType: ApplianceNiche
     ContainedInStructure: SP-1.02
@@ -1504,14 +1504,18 @@ electricAppliances:
           Thickness: 0.06
   - id: EA-SBD6ECX
     Name: "Bosch SBD6ECX12E"
-    Description: "Fully integrated dishwasher, 598×550×865, in the north 600 of section A. Right when facing the west wall. Back on the wall, 1 mm clear of each side of the niche."
+    Description: "Fully integrated dishwasher, 598×550×865, in the north 600 of section A. Right when facing the west wall. Back on the wall (x 18.800), front on the plinth plane (x 19.350), 1 mm clear of each side of the niche. The cream decor panel SF-A600-PANEL stays on the fronts' plane (19.382–19.400) and, since t1004u, covers the north end panel like the south drawer front."
     PredefinedType: DISHWASHER
     ContainedInStructure: SP-1.02
     # 2026-11-22: 18 south with the slot (13.251 before).
-    # Petr, 2026-11-23 (t865u): flush with the other fronts. The door face
-    # sits on the carcass front line (x 19.382), so the decor panel on it is
-    # on the fronts' plane (19.382-19.400). Was 19.35 (32 back).
-    Origin: [19.382, 13.233]
+    # Petr, 2026-11-23 (t865u): flush with the other fronts — the decor
+    # panel is on the fronts' plane (19.382–19.400). The body sat with its
+    # door face at 19.382 and stuck 32 mm out past the kickboard (plinth
+    # face x 19.350). Petr, 2026-11-26 (t1004u): do not stick out of the
+    # plinth; making it shallower should do it. The 550 mm body is tucked
+    # back: front x 19.350, back on the wall at 18.800 (the description
+    # already said that; it had been 18.832).
+    Origin: [19.35, 13.233]
     RefDirection: [0, 1]
     Width: 0.598
     Depth: 0.55
