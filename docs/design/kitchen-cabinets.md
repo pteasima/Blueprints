@@ -2324,6 +2324,25 @@ Petr (t1004u):
 
 **Dishwasher body vs the plinth.** The kickboard face is at x **19.350** (50 mm setback from the front plane at 19.400). After t865u the 550 mm body had its front at 19.382 (carcass front line) so it stood **32 mm** proud of the plinth, down to the floor (z 0–865). The body is still 550 mm (the Bosch size); it is tucked back so its front is on the plinth plane (x 19.350) and its back is on the wall (x 18.800 — the yaml already said that; it had been 18.832). The decor panel stays on the fronts' plane, flush with the other fronts.
 
+### Dishwasher body fully hidden behind the plinth (2026-11-26, t1006u)
+
+Petr (t1006u):
+
+> sorry i wasn't clear. The stainless dishwasher shouldn't show at all. Its standard that the dishwasher is fully hidden behind the plinth. Do that.
+
+The kickboard already runs across the dishwasher bay: `SF-A600-PLINTH-E`, y 13.232–13.832, x 19.332–19.350, z 0–110, abutting `KR-WEST-PLINTH-E` at y 13.232. It was not a missing plinth.
+
+The stainless showed because, after t1004u, the body front sat **on the plinth face** (x 19.350), coplanar with it, so the steel was visible in the 3D view (z-fighting / the body face in the kickboard plane). The decor panel (`SF-A600-PANEL`, 615 mm) and the north end panel (`KR-WEST-NICHE-END-N`, 582 mm) are unchanged.
+
+The model body is now **530** mm, x **18.800–19.330**: its front is **2 mm** behind the kickboard's back face (x 19.332), back still on the wall. The real Bosch SBD6ECX12E remains 550 mm deep; 530 is only how the body is drawn so a fully integrated dishwasher is completely hidden behind the plinth and the furniture door.
+
+| Piece | After t1004u | After t1006u |
+| --- | --- | --- |
+| EA-SBD6ECX body | 598 × 550 × 865, x 18.800–19.350 (front on the plinth face) | 598 × **530** × 865, x 18.800–**19.330** (2 mm behind the plinth back) |
+| SF-A600-PLINTH-E | y 13.232–13.832, x 19.332–19.350 | unchanged (already covers the bay) |
+| SF-A600-PANEL / KR-WEST-NICHE-END-N | 615 mm / 582 mm | unchanged |
+
+
 ### FILUR frame without walls, white MERIVOBOX, decor panel colour (2026-11-23, t866u)
 
 > Petr (t866u): the dishwasher decor panel the same colour as the other fronts; the FILUR frame “must have NO side walls. MOVENTO runners screw to the MDF frame; the bins hang freely below with no wooden box around them”, 90° angle brackets inside from the MDF to the front for rigidity; MERIVOBOX hardware white (“Blum offers silk white / white; cream isn't an option”).
