@@ -1,7 +1,7 @@
 # Performance budget for the ground-floor model: fails when the exported GLBs grow
 # past the limits in scripts/model_budget.mjs (docs/viewer/Performance.md,
-# "Modeling rules and budget"). Node only, so it runs while the pytest workflow
-# is paused. Pulls only the two GLBs from LFS.
+# "Modeling rules and budget"). Node only, so it stays a fast check independent of the
+# pytest lane. Pulls only the two GLBs from LFS.
 name: model-budget
 
 on:
