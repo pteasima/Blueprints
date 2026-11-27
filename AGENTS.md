@@ -12,7 +12,7 @@ Petr's long-term plans (layers and IFC groups, edit mode and the inspector, clea
 
 ## Pull requests
 
-Open every pull request as a draft. A draft means agents are still working. Ready for review means it is the repo owner's turn. Mark a pull request ready only when CI is green and you have reviewed the diff yourself. If another agent launched you, leave the pull request as a draft and report back to that agent instead.
+Open every pull request as a draft. A draft means agents are still working. Ready for review means it is the repo owner's turn. Mark a pull request ready only when you have reviewed the diff yourself and the fast checks that ran (`viewer-js`, `model-budget`) are green. The pytest lane is asynchronous and is not a gate (see Tests); do not wait for it before sending the preview link or reporting that the work is done. If another agent launched you, leave the pull request as a draft and report back to that agent instead.
 
 When a pull request branch is behind `main`, rebase that feature branch onto `main` and force-push the feature branch. Do not merge `main` into the feature branch. Pull requests merge to `main` only by squash, so a merge from `main` would fold upstream history into that squash; a rebase keeps the branch a linear stack of its own work. Force-push only the feature branch. The ruleset on `main` blocks force-pushes and deletion. The only exception is a branch that someone else is also committing to, because a rebase would rewrite commits they still have locally.
 
@@ -155,15 +155,17 @@ source .venv/bin/activate
 python -m pytest
 ```
 
-GitHub Actions runs this suite on pull requests and on pushes to `main`, with a read-only token (`permissions: contents: read`).
+GitHub Actions runs the pytest suite on pull requests, on pushes to `main`, and on `workflow_dispatch`, with a read-only token (`permissions: contents: read`). The workflow (`.github/workflows/tests.yml`) has its own concurrency group (`tests-${{ github.ref }}`) and never shares the `pages-site` group, so it cannot block or cancel PR previews or production deploys.
 
-**Tests paused: temporary exception (Petr, 2026-11-11).** The `tests` workflow is disabled in GitHub (`gh workflow disable tests.yml`) after the Ubuntu package mirrors kept failing its "Install Cairo" step. Petr: "I don't want local test runs. Just disable tests." While paused, don't run the suite locally and don't wait for CI; mark a pull request ready once you have reviewed the diff. To undo: `gh workflow enable tests.yml` and delete this paragraph.
+This pytest lane is asynchronous and non-blocking. A pull request is done once it is pushed, the preview link has been sent (see [Export and the preview link](#export-and-the-preview-link)), and the fast path-filtered checks that apply (`viewer-js`, `model-budget`) have been considered. Do not wait for the pytest lane. It writes JUnit XML and a short failing-test list to the job summary so a failure listener can read the names without watching the log.
 
-The viewer's JS tests (`src/blueprints/viewer/*.test.mjs`) run in the separate `viewer-js` workflow, which needs only Node and is not paused. It also builds the viewer bundle and checks its size budget (`scripts/bundle_budget.mjs`, [docs/viewer/Performance.md](docs/viewer/Performance.md#bundle-size-and-code-splitting)). Wait for it on pull requests that touch the viewer.
+The suite was paused on 2026-11-11 (`gh workflow disable tests.yml`) after Ubuntu apt mirrors failed the Cairo install. `cairosvg` is lazy-imported; the Cairo/GLU apt step is now retried and cached so those flakes do not fail the run. The workflow file is on `main` again as this non-blocking lane; if GitHub still has it disabled, enable it with `gh workflow enable tests.yml`.
+
+The viewer's JS tests (`src/blueprints/viewer/*.test.mjs`) run in the separate `viewer-js` workflow, which needs only Node. It also builds the viewer bundle and checks its size budget (`scripts/bundle_budget.mjs`, [docs/viewer/Performance.md](docs/viewer/Performance.md#bundle-size-and-code-splitting)). That workflow, and `model-budget`, are the fast checks; they are not the pytest lane.
 
 The viewer bundle is built, never committed: `npm ci && npm run build` in `src/blueprints/viewer` (the install script does it) writes `dist/` for the Pages site and `viewer.iife.js` for the offline HTML export, and `pages-content` builds it in CI. Rebuild after editing viewer JS before a local preview or export.
 
-Planned improvements to the suite (faster shared builds, all JS tests in CI, invariants instead of copied numbers): [docs/TestSuitePlan.md](docs/TestSuitePlan.md).
+Test-suite design (session fixtures, YAML round-trip, overlap errors, invariant-only design-decision tests, this async CI lane): [docs/TestSuitePlan.md](docs/TestSuitePlan.md).
 
 Default to **asking the human to test UI changes manually** (especially phone / Safari / Quick Look). Do **not** start `computerUse` / GUI walkthroughs unless the human asks for that, or a non-UI bug needs interactive reproduction after automated checks fail. Prefer `pytest`, export smoke, and the live Pages URL for verification. The agent desktop cannot stand in for a phone, Safari, or Quick Look.
 

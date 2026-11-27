@@ -872,25 +872,37 @@ function slabFor(record, size, name) {
 // The committed ground floor: each wall cabinet's AVENTOS HF bi-fold binds as
 // one linkage: upper front, lower front riding on it, and the two levers.
 // Open, the lower front hangs partly folded (Petr, 2026-11-13).
+// Other linkages (dishwasher decor panel, waste-bin flip, oven door) are
+// single-joint records; do not treat every linkage as an HF bi-fold.
 {
   const records = JSON.parse(
     readFileSync(new URL("../../../docs/models/ground_floor.doors.json", import.meta.url), "utf8"),
   );
   const lifts = records.filter((r) => r.kind === "linkage");
+  for (const r of lifts) assert.ok(isLinkageRecord(r), r.id);
+  const isHfBifold = (r) =>
+    r.joints.length === 3 &&
+    r.joints[0].parent == null &&
+    r.joints[1].parent === 0 &&
+    r.joints[2].parent == null &&
+    r.joints[2].elements.length === 2;
+  const hf = lifts.filter(isHfBifold);
   assert.deepEqual(
-    lifts.map((r) => r.id),
+    hf.map((r) => r.id),
     // SF-DH's two sections since 2026-11-20 (Petr: "same flip out opening as
     // kitchen top cabinets, same 88deg setting").
     ["SF-DH-S1-LIFT", "SF-DH-S2-LIFT", "SF-AH850-LIFT", "SF-BH800-LIFT", "SF-CH850-LIFT"],
   );
-  for (const r of lifts) {
-    assert.ok(isLinkageRecord(r), r.id);
+  for (const r of hf) {
     assert.deepEqual(r.joints.map((j) => j.parent), [null, 0, null]);
     near1(r.joints[0].angles.at(-1), (88 * Math.PI) / 180, "HF top at its 88° stop (Petr 2026-11-13)");
     const hang = r.joints[0].angles.at(-1) + r.joints[1].angles.at(-1);
     assert.ok(Math.abs(hang) < (30 * Math.PI) / 180, `lower front hangs, not folded flat: ${hang}`);
-    assert.equal(r.joints[2].elements.length, 2, "a lever on each side");
     assert.ok(!r.joints[2].stretch, "the levers are rigid");
+  }
+  for (const r of lifts.filter((r) => !isHfBifold(r))) {
+    assert.equal(r.joints.length, 1, `${r.id}: non-HF linkage is a single joint`);
+    assert.equal(r.joints[0].parent, null, r.id);
   }
 }
 

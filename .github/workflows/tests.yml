@@ -1,15 +1,26 @@
 # Full pytest suite. Python 3.12 matches pages-content and the Cloud Agent image.
 # `pip install -e ".[dev]"` installs pyproject deps (including ifcopenshell==0.9.0.post1)
 # and exposes the vendored package at vendor/yaml-ifc via setuptools.
+#
+# This lane is asynchronous and non-blocking: it must never share the
+# `pages-site` concurrency group, so it cannot cancel or delay PR previews
+# or production deploys. cairosvg is lazy-imported; Cairo/GLU are still
+# installed (some tests export PNG, and gmsh needs libglu1-mesa) with apt
+# package caching and retries so Ubuntu mirror flakes do not fail the run.
 name: tests
 
 on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
@@ -20,17 +31,42 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
+          cache: pip
 
-      - name: Install Cairo
+      - name: Cache apt packages
+        uses: actions/cache@v4
+        with:
+          path: ~/apt-cache
+          key: apt-cairo-glu-${{ runner.os }}-v1
+
+      - name: Install Cairo and GLU
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            libcairo2 \
-            libglu1-mesa \
-            libpango-1.0-0 \
-            libpangocairo-1.0-0 \
-            libgdk-pixbuf-2.0-0 \
-            shared-mime-info
+          set -euo pipefail
+          sudo mkdir -p /var/cache/apt/archives/partial
+          if [ -d "${HOME}/apt-cache" ]; then
+            sudo cp -a "${HOME}/apt-cache/." /var/cache/apt/archives/ || true
+          fi
+          install_pkgs() {
+            sudo apt-get update -o Acquire::Retries=5
+            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+              libcairo2 \
+              libglu1-mesa \
+              libpango-1.0-0 \
+              libpangocairo-1.0-0 \
+              libgdk-pixbuf-2.0-0 \
+              shared-mime-info
+          }
+          n=0
+          until install_pkgs; do
+            n=$((n + 1))
+            if [ "$n" -ge 5 ]; then
+              echo "apt install failed after ${n} attempts" >&2
+              exit 1
+            fi
+            sleep $((n * 8))
+          done
+          mkdir -p "${HOME}/apt-cache"
+          find /var/cache/apt/archives -maxdepth 1 -name '*.deb' -exec cp -a {} "${HOME}/apt-cache/" \;
 
       # Export embeds the viewer bundle, which is built, not committed.
       - uses: actions/setup-node@v7
@@ -49,4 +85,67 @@ jobs:
         run: python -m pip install -e ".[dev]"
 
       - name: Run tests
-        run: python -m pytest
+        run: |
+          set +e
+          mkdir -p test-results
+          python -m pytest --junitxml=test-results/pytest.xml
+          status=$?
+          python - <<'PY' >> "${GITHUB_STEP_SUMMARY}"
+          import os
+          import sys
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          path = Path("test-results/pytest.xml")
+          print("## Pytest")
+          if not path.exists():
+              print()
+              print("No JUnit file was written.")
+              sys.exit(0)
+
+          root = ET.parse(path).getroot()
+          suites = [root] if root.tag == "testsuite" else list(root.findall("testsuite"))
+          tests = failures = errors = skipped = 0
+          failed = []
+          for suite in suites:
+              tests += int(suite.attrib.get("tests", 0))
+              failures += int(suite.attrib.get("failures", 0))
+              errors += int(suite.attrib.get("errors", 0))
+              skipped += int(suite.attrib.get("skipped", 0))
+              for case in suite.findall("testcase"):
+                  bad = case.find("failure")
+                  kind = "failure"
+                  if bad is None:
+                      bad = case.find("error")
+                      kind = "error"
+                  if bad is None:
+                      continue
+                  classname = case.attrib.get("classname") or ""
+                  name = case.attrib.get("name") or ""
+                  label = f"{classname}::{name}" if classname else name
+                  failed.append((label, kind))
+
+          print()
+          print(f"- tests: {tests}")
+          print(f"- failed: {failures}")
+          print(f"- errors: {errors}")
+          print(f"- skipped: {skipped}")
+          if failed:
+              print()
+              print("### Failed tests")
+              print()
+              for label, kind in failed:
+                  print(f"- `{label}` ({kind})")
+          else:
+              print()
+              print("All tests passed.")
+          PY
+          exit "${status}"
+
+      - name: Upload JUnit results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-junit
+          path: test-results/pytest.xml
+          if-no-files-found: ignore

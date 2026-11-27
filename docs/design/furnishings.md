@@ -159,7 +159,7 @@ Rug 2800 × 3780 × 10, x 26.65–29.45, y 11.37–15.15. Furniture is not lifte
 
 ## What not to copy from the other layout
 
-**open:** PR #83 keeps the island, the fridge and a dining table. The wave study deletes all three and uses a 4.0 × 4.0 m sofa. Which room is current is not settled. Sources: `furnishings.yaml` on main, the PR #83 header, and the furniture comment in `src/blueprints/acoustics/roomwave/geometry.py`.
+**open:** the living-room furniture on main (from PR #83, now in `furnishings.yaml`) keeps the island, the fridge and a dining table. The wave study deletes all three and uses a 4.0 × 4.0 m sofa. Which room is current is not settled. The wave study is outdated and frozen; see [acoustics.md](acoustics.md). Sources: `furnishings.yaml` on main, and the furniture comment in `src/blueprints/acoustics/roomwave/geometry.py`.
 
 ## Continuous oak frame, dining to living (2026-11-23, t904u)
 

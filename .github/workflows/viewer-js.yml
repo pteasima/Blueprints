@@ -1,6 +1,6 @@
 # Viewer JS: build the bundle, check its size budget, run the unit tests
 # (`src/blueprints/viewer/*.test.mjs`). Node only, no apt packages, so this
-# keeps running while the pytest workflow is paused (AGENTS.md, Tests). First
+# is the fast Node-only check (AGENTS.md, Tests). First
 # part of docs/TestSuitePlan.md item 2.
 name: viewer-js
 
