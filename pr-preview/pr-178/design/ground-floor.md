@@ -101,6 +101,8 @@ The scenes are unchanged copies: `scenes()` in `models/ground_floor.py` picks th
 
 ## Floor EPS take-off
 
+> **Outdated and frozen.** `docs/podlaha-eps.xlsx` and `docs/podlaha-eps-souhrn.csv` (from `scripts/export_podlaha_eps.py`) are kept for reference. Their inputs have drifted from the current model. They may be rebuilt later; do not treat the quantities as current.
+
 `scripts/export_podlaha_eps.py` writes `docs/podlaha-eps.xlsx` and `docs/podlaha-eps-souhrn.csv`. It is a quantity file, not a solid.
 
 | Fact | Source |

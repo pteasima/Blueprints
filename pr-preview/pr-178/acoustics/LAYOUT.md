@@ -1,5 +1,8 @@
 # Obývák layout for the wave model
 
+
+> **Outdated and frozen.** The obývák acoustics and wave study uses pre-PR #77 ceiling heights (interior eave 3151 mm, false ridge 5206 mm) and an older furniture layout. It is kept for historical reference and may be revisited later. Current section: [docs/design/obyvak.md](../design/obyvak.md). Current furniture: [docs/design/furnishings.md](../design/furnishings.md). Do not treat the tables or figures below as the current ceiling or the current sofa.
+
 > **Status:** this page describes the ceiling from before PR #77. Interior eave 3151 mm, false ridge height 5206 mm. The pixel alignment below was made at that eave. The tables were not recomputed. The current section, measured from `ObyvakLayout`, is an eave of 3019.97 mm and a false ridge of 5075.77 mm. False ridge X = 2450 mm is unchanged. Current facts: [docs/design/obyvak.md](../design/obyvak.md). How this furniture disagrees with the furnishing files is [docs/design/acoustics.md](../design/acoustics.md).
 
 Furniture Petr approved for the wave study.

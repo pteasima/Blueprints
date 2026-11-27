@@ -4,6 +4,10 @@ Facts the living-room section uses. Geometry is `models/obyvak_geom.py` and `mod
 
 Measured figures below come from constructing `ObyvakLayout(ObyvakParams())` while writing this file. They are derived, not extra inputs.
 
+## Bill of materials (skladba)
+
+> **Outdated and frozen.** `docs/obyvak-skladba-materialu.xlsx`, `docs/obyvak-skladba-souhrn.csv` and `docs/skladba.html` (from `scripts/export_obyvak_skladba.py`) are kept for reference. Their inputs have drifted from the current model. They may be rebuilt later; do not treat the quantities or prices as current.
+
 ## Visual centre is the false ridge
 
 The room’s visual centre is the false ridge: the middle of the clear width, which is the room width minus the 450 mm north cabinets. It is not the middle of the wall-to-wall width.

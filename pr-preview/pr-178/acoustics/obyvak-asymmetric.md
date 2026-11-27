@@ -1,5 +1,8 @@
 # Asymmetric slopes
 
+
+> **Outdated and frozen.** The obývák acoustics and wave study uses pre-PR #77 ceiling heights (interior eave 3151 mm, false ridge 5206 mm) and an older furniture layout. It is kept for historical reference and may be revisited later. Current section: [docs/design/obyvak.md](../design/obyvak.md). Current furniture: [docs/design/furnishings.md](../design/furnishings.md). Do not treat the tables or figures below as the current ceiling or the current sofa.
+
 > **Status:** archived acoustic run. Current slopes are NaturHeld 140 at 100 mm on both sides, with GKF and StoSilent Top Basic / Top Finish. The wool everywhere is mineral wool λ 0.039. The tables below were not recomputed for that.
 
 Left is the window slope, from the eave up to the false ridge. Right is the cabinet slope, from the ridge down to the soffit. The subwoofer sits against that cabinet wall, at the TV gable. In the cross-section the window slope is on the left and the cabinet slope on the right.

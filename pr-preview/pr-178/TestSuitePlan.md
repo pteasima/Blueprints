@@ -1,10 +1,17 @@
 # Test suite improvement plan
 
-Status: partly done. Session-scoped builds, YAML validation of every `inputs/ground_floor/*.yaml`, and overlap helpers that raise on an OCC boolean error landed on `refactor/test-harness` (2026-11-27). The tests workflow stays paused. Remaining items below are still planned. Source: a read-only review of the suite on `main` at `85d5cd0` (2026-11-11), requested by Petr: "I wanna make sure these are bringing actual value, by testing actual logic. Not just checking measurements that then need to be updated on every model change." Petr approved this plan the same day. Line numbers below refer to `85d5cd0` and will drift.
+Status: the approved test design is in place for the harness and the CI lane. Session-scoped builds, YAML validation of every `inputs/ground_floor/*.yaml`, and overlap helpers that raise on an OCC boolean error are on `main` (2026-11-27). The pytest workflow runs on pull requests and on `main` as an asynchronous, non-blocking lane (its own concurrency group, never `pages-site`); it emits JUnit XML and a failing-test list in the job summary. Remaining items below are still planned, including an invariant-only `test_design_decisions.py` plus relational checks, and pruning of copy/snapshot tests (a parallel change). Source: a read-only review of the suite on `main` at `85d5cd0` (2026-11-11), requested by Petr: "I wanna make sure these are bringing actual value, by testing actual logic. Not just checking measurements that then need to be updated on every model change." Petr approved this plan the same day, and later the async CI setup (2026-11-27). Line numbers below refer to `85d5cd0` and will drift.
 
 ## Goal
 
 Tests should check logic and invariants that would catch a real mistake. They shouldn't restate numbers that already live in the YAML or the model parameters, because then every design edit means editing two files while the test catches nothing new.
+
+## Approved CI shape (2026-11-27)
+
+- Session fixtures in `tests/conftest.py` share the model builds and must not be mutated.
+- YAML round-trip covers every yaml-ifc file under `inputs/ground_floor/`; overlap helpers raise on an OCC boolean error.
+- The `tests` workflow runs pytest on pull requests and on pushes to `main` (and `workflow_dispatch`) in a concurrency group of its own. It does not block or cancel PR previews or production deploys. Nobody waits for this lane; a failure listener reads the JUnit artifact and the job-summary list of failing test names.
+- `test_design_decisions.py` should hold only real design-decision numbers (with their source in `docs/design/`), plus relational invariants over every YAML record. Copy/snapshot checks are to be pruned separately.
 
 ## What the suite looked like (2026-11-11)
 
