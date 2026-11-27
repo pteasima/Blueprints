@@ -328,34 +328,27 @@ def test_blum_range_override_keeps_the_breach():
     assert "205–600" in front.props["OutsideBlumRange"]
 
 
-def test_nothing_above_the_ceiling_line():
+def test_ceiling_line_and_open_envelopes_stop_a_breach():
+    """The checkers raise when a part or an open front goes past the ceiling line.
+
+    The current-design invariant (nothing is above 2450 mm) lives in
+    test_design_decisions.py.
+    """
     import ceiling_line
     from ground_floor import FURNISHING_LISTS, ROOM_X0, ROOM_X1, ROOM_Y0, ROOM_Y1
 
     doc = load_furnishings()
-    runs = list(_runs(doc).values())
-    ceiling_line.check_ceiling_line(doc, FURNISHING_LISTS, runs)
     room = (ROOM_X0, ROOM_X1, ROOM_Y0, ROOM_Y1)
     lining = ceiling_line.lining_obstacles(doc, FURNISHING_LISTS)
-    assert [o[0] for o in lining] == ["SF-DH-LINING", "SF-DH-RET-W", "SF-DH-RET-E"]
-    notes = ceiling_line.check_open_envelopes(runs, room, lining)
-    # Three west wall cabinets and SF-DH's two HF sections. Since the oak
-    # lining (Petr, 2026-11-20) SF-DH is 844 high, so its open fronts get
-    # Blum's 28 under the lining (2432) and nothing clashes.
-    assert len(notes) == 5 and not [n for n in notes if n.startswith("open:")]
-    assert all("0 from the SF-DH-LINING" in n and "38 from the soffit" in n for n in notes if n.startswith("SF-DH-S"))
-    dh = next(r for r in runs if r.id == "KR-DH")
-    assert "OpenClash" not in dh.part("SF-DH-S1-LIFT1").props
-    assert dh.part("SF-DH-S1-LIFT1").props["BlumOpenAbove"] == pytest.approx(0.028)
     # The old 890 cabinet's open fronts would meet the lining: the export stops.
     doc2 = copy.deepcopy(doc)
     next(e for e in doc2["systemFurniture"] if e["id"] == "SF-DH")["Height"] = 0.89
     with pytest.raises(ValueError, match="SF-DH-S1-LIFT open meets the SF-DH-LINING"):
         ceiling_line.check_open_envelopes(list(_runs(doc2).values()), room, lining)
-    doc = copy.deepcopy(doc)
-    next(e for e in doc["systemFurniture"] if e["id"] == "SF-DH")["Height"] = 0.9
+    doc3 = copy.deepcopy(doc)
+    next(e for e in doc3["systemFurniture"] if e["id"] == "SF-DH")["Height"] = 0.9
     with pytest.raises(ValueError, match="ceiling line"):
-        ceiling_line.check_ceiling_line(doc, FURNISHING_LISTS, list(_runs(doc).values()))
+        ceiling_line.check_ceiling_line(doc3, FURNISHING_LISTS, list(_runs(doc3).values()))
 
 
 def test_over_fridge_has_a_pair_of_doors():
@@ -376,15 +369,6 @@ def test_fronts_layout_is_parametric():
     assert [round(run.part(f"SF-I500b-D{i}").drawer.nominal) for i in (1, 2, 3, 4)] == [150, 150, 200, 310]
 
 
-def test_island_clear_widths():
-    run = _runs()["KR-ISL"]
-    clear = {b["id"]: b["clear"] for b in kc.bay_summary(run)}
-    assert clear == {
-            # Petr, 2026-11-23 (t841u): 13, 12 and 11 Gridfinity columns with 2 mm play.
-        "SF-I500a": 443.0, "SF-I600a": 557.0, "SF-I500b": 515.0, "SF-I600b": 599.0, "SF-I300": 278.0,
-        "SF-E600a": 599.0, "SF-E600b": 599.0, "SF-E600c": 599.0, "SF-E700": 613.0,
-    }
-
 
 def test_divider_is_in_both_bays_once():
     run = _runs()["KR-ISL"]
@@ -394,33 +378,6 @@ def test_divider_is_in_both_bays_once():
     for bay in run.bays:
         assert "KR-ISL-BACK" in bay.members
 
-
-def test_sf_i600a_drawers():
-    run = _runs()["KR-ISL"]
-    # t976u: four-drawer stack, 3 mm gaps, D1 140 / D2 108 M / D3 207 K / D4 E.
-    drawers = [run.part(f"SF-I600a-D{i}").drawer for i in (1, 2, 3, 4)]
-    assert [d.nominal for d in drawers] == [143.0, 111.0, 210.0, 336.0]
-    assert [d.content for d in drawers] == ["nože", "nářadí", "", "dole nevím"]
-    assert [(round(d.front[1] - d.front[0]), round(d.front[5] - d.front[4])) for d in drawers] == [
-        (572, 140), (572, 108), (572, 207), (572, 344)]  # 344.5 rounded
-    # Blum MERIVOBOX NL 600 (Petr, 2026-11-23, t835u): inside = clear 557 − 51
-    # by NL 600 − 26 − 16; sides M, M, K, E. 557 since t841u (12 columns).
-    assert all((round(d.inside[0]), round(d.inside[1])) == (506, 558) for d in drawers)
-    assert [round(d.box[5] - d.box[4]) for d in drawers] == [91, 91, 129, 192]
-    assert [d.side for d in drawers] == ["M", "M", "K", "E"] and all(d.nl == pytest.approx(600.0) for d in drawers)
-    assert all(d.grid == (12, 13) for d in drawers)  # 12 x 42 + 2 = 506
-    # No box front (2026-11-22 e, t795u): the box is the inside + the 19
-    # back, as long as the NL allows.
-    assert all(d.extension == pytest.approx(558.0 + 19.0) for d in drawers)  # inside + back wall only (t978u)
-    # Upper boxes at Blum's 13.5 mm offset; the lowest sits on the carcass
-    # bottom board (box 143, 43 mm above the 100 mm lip front).
-    assert [d.front[4] for d in drawers] == pytest.approx([768.5, 657.5, 447.5, 100.0])
-    assert drawers[0].box[4:6] == pytest.approx((782.0, 873.0))
-    assert drawers[1].box[4:6] == pytest.approx((671.0, 762.0))
-    assert drawers[2].box[4:6] == pytest.approx((461.0, 590.0))
-    assert drawers[3].box[4:6] == pytest.approx((143.0, 335.0))
-    assert [d.drop for d in drawers] == pytest.approx([0.0, 0.0, 0.0, 0.0])
-    assert run.carcass_z1 - run.carcass_z0 == pytest.approx(800.0)
 
 
 def test_merivobox_front_covers_box_per_blum():

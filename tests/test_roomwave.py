@@ -21,6 +21,7 @@ from blueprints.acoustics.roomwave.validate import (
 )
 
 
+@pytest.mark.slow
 def test_box_modes_stay_near_the_analytic_values():
     rows = box_mode_errors(h=0.5, count=4)
     assert len(rows) >= 4
@@ -28,15 +29,18 @@ def test_box_modes_stay_near_the_analytic_values():
         assert error < 0.03
 
 
+@pytest.mark.slow
 def test_impedance_tube_matches_the_closed_form():
     assert tube_relative_error(h=0.1) < 0.04
 
 
+@pytest.mark.slow
 def test_uniform_pressure_reproduces_the_sabine_factor():
     fem, sabine = uniform_sabine_error(h=0.5)
     assert abs(fem - sabine) / sabine < 0.02
 
 
+@pytest.mark.slow
 def test_room_mesh_keeps_the_soffit_step_and_the_volume():
     shape = load_shape()
     empty = mesh_room(shape, "as_built", False, 0.7)

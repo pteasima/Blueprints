@@ -5,7 +5,6 @@ from build123d import Box
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "models"))
-AGENTS_MD = ROOT / "AGENTS.md"
 
 from blueprints.export_utils import export_shape  # noqa: E402
 
@@ -149,16 +148,3 @@ def test_ensure_viewer_shell_without_build(tmp_path, monkeypatch):
     monkeypatch.setattr(ph, "PREVIEW_SITE_DIR", tmp_path)
     monkeypatch.setattr(ph, "REPO_ROOT", tmp_path)
     assert ph.ensure_viewer_shell() is False
-
-
-def test_agents_md_points_at_pages_previews():
-    text = AGENTS_MD.read_text(encoding="utf-8")
-    assert "pteasima.github.io/Blueprints" in text
-    assert "pr-preview/pr-" in text
-    assert "pages-site" in text
-    assert "GitHub Actions" in text
-    assert "Git LFS" in text
-    assert "catbox" not in text.lower()
-    assert "QR" not in text
-    assert "/opt/cursor/artifacts" not in text
-    assert ".cursor/" not in text

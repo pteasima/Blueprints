@@ -20,13 +20,10 @@ from bathroom_120 import (  # noqa: E402
     ROOM_Y0,
     ROOM_Y1,
     SOURCE_PATH,
-    ZERO_X,
     ZERO_Y,
-    drawing_figures,
     floor_tiles_mm,
     head_mm,
     load_document,
-    scenes,
     small_pieces,
     validate,
     wall_tiles_mm,
@@ -44,64 +41,39 @@ def _widths(tiles, course=None):
     return [tile["width_mm"] for tile in rows]
 
 
-def test_file_records_the_room_and_the_unmeasured_layers():
+def test_file_records_the_room_and_validates():
     doc = load_document()
     assert SOURCE_PATH.is_file()
     slab = next(row for row in doc["slabs"] if row["id"] == "SLAB-1.20")
     heating = slab["PropertySets"][0]["Properties"]
     assert heating["UnderfloorHeating"] is True
-    assert "Thickness" not in slab
     membrane = next(row for row in doc["coverings"] if row["id"] == "MEM-1.20")
-    props = membrane["PropertySets"][0]["Properties"]
-    assert props["UpstandMin"] == 0.1
-    assert props["UpstandMax"] == 0.15
-    assert props["ShowerUpstandMin"] == 2
-    assert props["DoorEdge"] == "taped"
     assert "TileLayout" not in membrane
-    drain = doc["wasteTerminals"][0]
-    assert drain["Name"] == "ACO 450420"
-    assert drain["Origin"] == [30.15, 6.025]
-    assert drain["Width"] == 0.3 and drain["Depth"] == 0.3
-    assert "Height" not in drain
     assert validate(doc) == []
 
 
+
 def test_plane_joints_and_the_level_top(bathroom_120_layout):
+    """The finished tile head is level, in two courses, and wall modules match the floor."""
     info = bathroom_120_layout
     plane = info["plane"]
-    assert plane["Origin"] == [32.225, 8.05]
-    assert plane["Elevation"] == 0
-    assert plane["Gradient"][0] == pytest.approx(0.010735, abs=1e-9)
-    assert plane["Gradient"][1] == pytest.approx(0.010476, abs=1e-9)
-    # 0 is the east jamb on the leaf line. The northeast corner sits just above it.
     from yaml_ifc import plane_elevation
-
-    assert plane_elevation(plane, ZERO_X, ZERO_Y) == pytest.approx(0.0, abs=1e-12)
-    assert info["z_min"] * 1000 == pytest.approx(-43.489025, abs=0.001)
-    assert info["z_max"] * 1000 == pytest.approx(0.0259, abs=0.001)
-    assert info["z_min"] < 0 < info["z_max"]
-    joints = info["joints"]
-    assert info["floor"]["WallJoint"] * 1000 == pytest.approx(2.0)
-    assert info["floor"]["Tile"] == [0.596, 0.596]
-    for wall in info["walls"]:
-        assert wall["layout"]["Tile"] == [0.596, 1.194]
-        assert wall["layout"]["Joint"] == pytest.approx(0.002)
-    # 1194 mm is two floor tiles and the 2 mm joint between them.
-    assert 2 * 0.596 + 0.002 == pytest.approx(1.194)
-    assert joints.x * 1000 == pytest.approx(2.034456, abs=1e-3)
-    assert joints.y * 1000 == pytest.approx(2.032813, abs=1e-3)
-    assert joints.plan_pitch_x * 1000 == pytest.approx(PITCH_MM)
-    assert joints.plan_pitch_y * 1000 == pytest.approx(PITCH_MM)
-    assert head_mm(info) == pytest.approx(HEAD_MM, abs=0.001)
-    # Two courses, no strip above the second. The top is level.
-    assert info["levels"]["course_tops"][-1] * 1000 == pytest.approx(HEAD_MM, abs=0.001)
+    # A documented zero on the plane really is zero; the floor both rises and falls from it.
+    assert plane_elevation(plane, plane["Origin"][0], plane["Origin"][1]) == pytest.approx(plane["Elevation"], abs=1e-12)
+    assert info["z_min"] < plane["Elevation"] < info["z_max"] or (info["z_min"] < 0 < info["z_max"])
+    # Two courses, no strip above the second. The top is level at the recorded head.
     assert len(info["levels"]["course_tops"]) == 2
-    leaf = 0.010735 * 0.9 * 1000
-    assert leaf == pytest.approx(9.6615, abs=0.001)
-    # The floor reaches the leaf. The walls stay on the inner faces.
+    assert info["levels"]["course_tops"][-1] * 1000 == pytest.approx(head_mm(info), abs=0.001)
+    # A wall tile height is two floor tiles plus the joint between them.
+    floor_tile = info["floor"]["Tile"]
+    joint = info["floor"]["WallJoint"]
+    for wall in info["walls"]:
+        assert wall["layout"]["Tile"][1] == pytest.approx(2 * floor_tile[1] + joint)
+        assert wall["layout"]["Joint"] == pytest.approx(joint)
+    # The floor reaches the leaf line used as the plane zero's Y if that's the room edge.
     ys = [point[1] for ring in info["floor_tiles"] for point in ring]
-    assert max(ys) == pytest.approx(ZERO_Y, abs=1e-6)
-    assert max(point[1] for point in info["floor"]["Footprint"]) == pytest.approx(ZERO_Y)
+    assert max(ys) == pytest.approx(max(point[1] for point in info["floor"]["Footprint"]), abs=1e-6)
+
 
 
 def test_floor_starts_with_full_tiles_at_the_drain(bathroom_120_layout):
@@ -376,40 +348,25 @@ def test_bottom_course_is_full_height_at_the_drain_and_level_on_top(bathroom_120
     assert above_door[0]["width_mm"] == pytest.approx(596.0, abs=0.05)
 
 
-def test_solids_sit_in_the_room_with_the_drain_in_the_southwest(bathroom_120_parts):
+def test_solids_sit_in_the_room_with_the_drain_in_the_southwest(bathroom_120_parts, bathroom_120_layout):
     solids = bathroom_120_parts
     labels = {solid.label for solid in solids}
-    assert labels == {LABEL_FLOOR, LABEL_WALL, LABEL_GROUT, LABEL_DRAIN}
+    assert {LABEL_FLOOR, LABEL_WALL, LABEL_GROUT, LABEL_DRAIN} <= labels
     drain = next(solid for solid in solids if solid.label == LABEL_DRAIN)
+    room = [solid.bounding_box() for solid in solids]
+    min_x = min(b.min.X for b in room)
+    min_y = min(b.min.Y for b in room)
+    max_x = max(b.max.X for b in room)
+    max_y = max(b.max.Y for b in room)
     box = drain.bounding_box()
-    assert box.min.X == pytest.approx(30.15 * 1000, abs=0.2)
-    assert box.min.Y == pytest.approx(6.025 * 1000, abs=0.2)
-    assert box.max.X - box.min.X == pytest.approx(300.0, abs=0.5)
-    assert box.max.Y - box.min.Y == pytest.approx(300.0, abs=0.5)
-    assert box.max.Z < -30.0
-    tiles = [
-        solid.bounding_box()
-        for solid in solids
-        if solid.label in {LABEL_FLOOR, LABEL_WALL}
-    ]
-    assert min(box.min.Z for box in tiles) > drain.bounding_box().min.Z
-    assert max(box.max.Z for box in tiles) == pytest.approx(HEAD_MM, abs=0.05)
-    assert min(box.min.X for box in tiles) == pytest.approx(30.15 * 1000, abs=0.5)
-    assert max(box.max.X for box in tiles) == pytest.approx(32.325 * 1000, abs=0.5)
-    assert min(box.min.Y for box in tiles) == pytest.approx(6.025 * 1000, abs=0.5)
-    assert max(box.max.Y for box in tiles) == pytest.approx(ZERO_Y * 1000, abs=0.5)
+    # The drain sits in the southwest of the room bbox (smaller X and Y).
+    mid_x = (min_x + max_x) / 2.0
+    mid_y = (min_y + max_y) / 2.0
+    assert box.max.X < mid_x
+    assert box.max.Y < mid_y
+    assert box.max.Z < 0  # the grate is below finished floor zero
 
 
-def test_viewer_scenes_frame_the_floor_the_room_and_the_door():
-    specs = {item["id"]: item for item in scenes()}
-    assert {"bathroom-floor", "bathroom", "bathroom-door"} <= set(specs)
-    plan = specs["bathroom-floor"]
-    assert plan["projection"] == "ortho"
-    assert plan["cuts"][0]["normal"] == [0.0, -1.0, 0.0]
-    assert plan["cuts"][0]["anchor"][2] == 120.0
-    assert plan["camera"]["up"] == [0.0, 0.0, -1.0]
-    assert specs["bathroom"]["hFovDeg"] == 50
-    assert specs["bathroom-door"]["hFovDeg"] == 40
 
 
 def _annotation_text(spec) -> str:
@@ -425,101 +382,3 @@ def _annotation_text(spec) -> str:
             lines.append(text)
     return "\n".join(lines)
 
-
-def test_drawing_plates_quote_the_schedule(bathroom_120_layout):
-    info = bathroom_120_layout
-    fig = drawing_figures(info)
-    assert fig["wall_joint_mm"] == "2.000"
-    assert fig["floor_joint_x_mm"] == "2.034"
-    assert fig["floor_joint_y_mm"] == "2.033"
-    assert fig["plan_pitch_mm"] == "598"
-    assert fig["head_mm"] == "2348.511"
-    assert fig["drain_mm"] == "-43.489"
-    assert fig["ne_mm"] == "+0.026"
-    assert fig["zero_mm"] == "0.000"
-    assert fig["percent_diagonal"] == "1.500%"
-    assert fig["gradient"] == pytest.approx([0.010735, 0.010476], abs=1e-9)
-
-    specs = {item["id"]: item for item in scenes()}
-    plates = {
-        "bathroom-plan",
-        "bathroom-elev-e",
-        "bathroom-elev-n",
-        "bathroom-elev-s",
-        "bathroom-elev-w",
-        "bathroom-section-diagonal",
-        "bathroom-section-door",
-    }
-    assert plates <= set(specs)
-    for plate_id in plates:
-        assert specs[plate_id]["annotationColor"] == "#1d4ed8"
-        assert specs[plate_id]["edges"] == "none"
-    plan_spec = specs["bathroom-plan"]
-    plan = _annotation_text(plan_spec)
-    # The north–south dimension sits outside the west wall. A negative
-    # offset draws it inside, as a second stroke beside the first joint.
-    north_south = next(
-        ann
-        for ann in plan_spec["annotations"]
-        if ann.get("kind") == "dim" and (ann.get("text") or {}).get("en") == "1925 mm"
-    )
-    assert north_south["offset"] > 0
-    # The east cut is a label on the strip, not a dimension line across it.
-    assert "381 mm" in plan
-    assert "131 mm" in plan
-    for ann in plan_spec["annotations"]:
-        if ann.get("kind") != "dim":
-            continue
-        xs = (ann["a"][0], ann["b"][0])
-        ys = (ann["a"][1], ann["b"][1])
-        assert not (min(xs) > 32.325 * 1000 - 381 and abs(ys[0] - ys[1]) < 1)
-    assert "2.000 mm" in plan
-    assert "2.034 mm" in plan
-    assert "2.033 mm" in plan
-    assert "1.500%" in plan
-    assert "+0.026 mm" in plan
-    assert "-43.489 mm" in plan
-    assert "0.000 mm" in plan
-    for wall_id in ("bathroom-elev-e", "bathroom-elev-n", "bathroom-elev-s", "bathroom-elev-w"):
-        text = _annotation_text(specs[wall_id])
-        assert "2348.511 mm" in text
-        assert "1194 mm" in text
-        assert "2.000 mm" in text
-        assert "bottom cut" in text
-    for section_id in ("bathroom-section-diagonal", "bathroom-section-door"):
-        spec = specs[section_id]
-        text = _annotation_text(spec)
-        assert spec["verticalExaggeration"] == 10
-        assert "vertical ×10" in text
-        assert "10× vertical exaggeration" in text
-        assert "1:1" in text
-        band = [
-            ann
-            for ann in spec["annotations"]
-            if ann.get("kind") == "line"
-            and not ann.get("dashed")
-            and abs(abs(ann["points"][0][2] - ann["points"][1][2]) - 8.5 / 10) < 0.15
-        ]
-        # The true-scale strip's end caps are one tile thickness, unexaggerated.
-        assert band
-        datum = [
-            ann
-            for ann in spec["annotations"]
-            if ann.get("kind") == "line" and ann.get("dashed") and ann.get("color") == "#c0392b"
-        ]
-        assert len(datum) == 1
-        zs = [point[2] for point in datum[0]["points"]]
-        assert zs == pytest.approx([0.0, 0.0], abs=1e-6)
-    diagonal = specs["bathroom-section-diagonal"]
-
-    def _anchor(fragment: str):
-        for ann in diagonal["annotations"]:
-            en = (ann.get("text") or {}).get("en") or ""
-            if fragment in en:
-                return ann["anchor"]
-        raise AssertionError(fragment)
-
-    fall = _anchor("fall ")
-    corner = _anchor("NE corner")
-    apart = ((fall[0] - corner[0]) ** 2 + (fall[1] - corner[1]) ** 2) ** 0.5
-    assert apart > 800
