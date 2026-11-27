@@ -32,7 +32,7 @@ viewer edits ─▶ Export JSON ─▶ Cody
 2. Re-export the model (`python -m blueprints.export ground_floor`) and open a PR with the overrides file and the exports, as for any model change.
 3. After the deploy, a refresh (or a new visit) shows the new model. Unsaved edits do not survive the reload, so they cannot override a later export.
 
-Every room device YAML is loaded through `blueprints.fixture_overrides.load_fixture_document` (`models/bedroom_111.py` `load_document`, `models/electrical_rooms.py` `load_document` for every `electrical-<room>.yaml` ([Rooms.md](Rooms.md)), and `models/ground_floor.py` `ifc_index` for every document it indexes). A new room's device file has to be loaded the same way, or its edits will not reach the export. An override whose id is not in a document is ignored there.
+Every room device YAML is loaded through `blueprints.fixture_overrides.load_fixture_document` (`models/bedroom_111.py` `load_document`, `models/electrical_rooms.py` `load_document` for every `electrical-<room>.yaml` ([Rooms.md](Rooms.md)), and `models/ground_floor/` `ifc_index` for every document it indexes). A new room's device file has to be loaded the same way, or its edits will not reach the export. An override whose id is not in a document is ignored there.
 
 ## Overrides file
 

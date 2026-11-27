@@ -90,7 +90,7 @@ class Leaf:
 @dataclass
 class LiftJoint:
     """One joint of a lift front's linkage, run frame mm (the viewer's
-    ``kind: "linkage"`` record, models/ground_floor.py).
+    ``kind: "linkage"`` record, models/ground_floor/).
 
     The joint turns about a line along the run's a axis through
     (``pivot_c``, ``pivot_z``). ``angles`` are radians, relative to the
