@@ -1,5 +1,8 @@
 # Obývák fill and slope
 
+
+> **Outdated and frozen.** The obývák acoustics and wave study uses pre-PR #77 ceiling heights (interior eave 3151 mm, false ridge 5206 mm) and an older furniture layout. It is kept for historical reference and may be revisited later. Current section: [docs/design/obyvak.md](../design/obyvak.md). Current furniture: [docs/design/furnishings.md](../design/furnishings.md). Do not treat the tables or figures below as the current ceiling or the current sofa.
+
 > **Status:** “the current 80 mm build” below is the baseline of this search, not the section as built now. The section is 100 mm NaturHeld on both slopes, and the ceiling is the lowered one (eave 3019.97 mm, false ridge 5075.77 mm). These tables were not recomputed. See [docs/design/obyvak.md](../design/obyvak.md).
 
 The outlines stay as drawn. StoSilent on the slopes and on the soffit face stays. The slope board is 60, 80 or 100 mm of NaturHeld 140. Inside the soffit (774 mm of wool plus air) and inside the two traps (kitchen cavity 178 mm with at least 47 mm of air, living cavity 438 mm with at least 20 mm of air) the wool thickness and the wool type can change. Wool is mineral wool at 12 000 Pa·s/m² or wood-fibre flex at 8 000 Pa·s/m².
