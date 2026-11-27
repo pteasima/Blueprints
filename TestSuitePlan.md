@@ -26,7 +26,7 @@ Tests should check logic and invariants that would catch a real mistake. They sh
 ## Plan, most valuable first
 
 1. **Build each model once per test session.** Done: `tests/conftest.py` session fixtures (`obyvak_model`, `ground_floor_model`, bathroom layouts/parts, and the 2D section/elevation builds) are shared and must not be mutated. Remaining: mark the export and study tests (USDZ, STEP/STL, `run_study`) `@pytest.mark.slow` and optionally run them only on `main`.
-2. **Run every viewer JS test in CI**, e.g. switch to `node --test` or loop over `*.test.mjs` in the workflow. Fix or delete `layerDepthBias.test.mjs`. Partly done 2026-11-12: the `viewer-js` workflow loops over `*.test.mjs` and skips only `layerDepthBias.test.mjs`, which still needs fixing or deleting.
+2. **Run every viewer JS test in CI**, e.g. switch to `node --test` or loop over `*.test.mjs` in the workflow. Done: since 2026-11-12 the `viewer-js` workflow loops over `*.test.mjs`; on 2026-11-27 `layerDepthBias.test.mjs` was deleted (it tested a constant `edges.js` no longer has) and the loop runs every file before failing.
 3. **Derive expectations from the source of truth instead of copying numbers.**
    - `test_furnishings.py`: delete the hard-coded kitchen table (22 IDs with origin, size and hinge) and the second table of world-mm boxes, and use the existing `_world_box(record)` comparison for every record. The same goes for the hard-coded sofa, TV and table coordinates.
    - `test_ground_floor.py`: compare derived counts with `len(doc["walls"])` etc. instead of `67`, `50`, `24`, `55`, and drop the literal bathroom head height and the exact sliding-door ID set.

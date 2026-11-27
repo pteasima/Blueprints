@@ -119,3 +119,45 @@ What changed: the baseplates are no longer fused into their drawers in `ground_f
 To fuse them back into the drawers: set `GRIDFINITY_ON_DEMAND = False` in `models/ground_floor.py` and export. The plates are fused into the drawers again and the layer files are removed.
 
 Other heavy groups on main (bb58c41), primitives: bathroom grout 1,182 (5.7 %; 13 % once the plates are out), cabinet carcasses 870, cabinet drawers 852, lights 822, oak furniture 762 (the bookcase alone 450), outlets 708. None is a tenth of the baseplates' cost, so none is hidden.
+
+## Bundle size and code splitting
+
+2026-11-27 (Blueprints refactoring plan, items S5/S6, O2, O3).
+
+**Built, not committed.** `npm run build` in `src/blueprints/viewer` runs `build.mjs`, which writes two bundles from the same sources. Neither is in git; CI builds them (`pages-content` before `build-preview-hub.py`, `viewer-js` for the budget, `tests` for the export tests), and so do `scripts/cloud-agent-install.sh` and, when it is missing, the offline HTML export.
+
+- `dist/viewer.js` and `dist/chunks/*.js`: ES modules for the Pages site. `docs/viewer/index.html` loads the entry with `import()` next to the GLB fetch, so the two download in parallel. `preview_hub.ensure_viewer_shell` copies the build into `docs/viewer/` and stamps `./viewer.js?v=<hash of the entry and every chunk>`; chunk names carry esbuild's content hash, so they need no stamp.
+- `viewer.iife.js`: one classic script with the same code (esbuild inlines the `import()` calls), embedded by the self-contained HTML export (`export_utils._viewer_iife`).
+
+**Lazy chunks.** Features that the first picture does not need are loaded with `import()`:
+
+| chunk | loads | size |
+| --- | --- | ---: |
+| edit mode (`editMode.js`, TransformControls, fixture and cable edits) | right after `mountViewer` (it also draws cable routes for the Parts leaf and `?cables=1`) | 82 KiB |
+| walk (`walkMode.js`, `walkPhysics.js`, three-mesh-bvh) | right after `mountViewer`; a saved walk pose re-enters once it is in | 63 KiB |
+| measure (`measure.js`) | right after `mountViewer` | 13 KiB |
+| Realistic catalogue parser (`catalogueYaml.js`, js-yaml) | when Realistic is first chosen | 43 KiB |
+| AR export (`USDZExporter`, fflate) | on the first AR tap | 25 KiB |
+
+`editMode`, `walk` and `measureTool` in `main.js` were already nullable everywhere, so until a chunk arrives its button does nothing. `BlueprintsViewer.edit` and `BlueprintsViewer.walk` are getters (null until loaded) and `BlueprintsViewer.featuresReady` resolves when the three start-up chunks are in, for headless checks. The person-height helpers and `yawPitchOf` that the entry needs moved to `walkBasics.js`; `walkPhysics.js` and `walkMode.js` re-export them. Not split: the IFC inspector (14 KiB, mounted at start-up) and Drawing (2 KiB).
+
+| JS (minified) | before (one IIFE) | after |
+| --- | ---: | ---: |
+| loaded before the first picture | 1,163 KiB (335 KiB gzip) | 936 KiB (262 KiB gzip) |
+| total | 1,163 KiB | 1,162 KiB (338 KiB gzip) |
+
+three.js itself is 581 KiB of the 936. Headless Chrome, iPhone profile (390×844 at 3×, 4× CPU throttle, 9 Mbit/s, uncompressed local server, Home off): time to the model shown 12.84 → 12.48 s (median of 3; most of it is the 7.3 MB GLB download), JS heap 125 → 117 MB. Every view, Realistic, walk (and walk restored after a reload), edit mode, measure and AR export behave as before; screenshots of Shaded and Realistic match pixel for pixel outside the top bar.
+
+**Budget.** `node scripts/bundle_budget.mjs` (after `npm run build -- --meta`) reads esbuild's metafile and fails when the start-up JS (the entry and every chunk it imports statically) or all JS together is over its limit, raw and gzipped. Limits, about 1.15× today: start-up 1,100 KiB / 300 KiB gzip, total 1,350 KiB / 390 KiB gzip. `viewer-js` runs it on every pull request that touches the viewer. A new heavy feature should usually be another lazy chunk (`loadFeature` in `main.js`) rather than a raised limit.
+
+## GLB compression: measured, not adopted (2026-11-27)
+
+Item O1 of the refactoring plan was meshopt compression (`EXT_meshopt_compression`) with quantization for `ground_floor.glb` and `ground_floor.gridfinity.glb`. Measured on main (2b58d83) and left out:
+
+- GitHub Pages already serves the GLBs gzipped: `ground_floor.glb` is 7.3 MB on disk and 515 KB over the wire.
+- Two thirds of the file is the JSON chunk (4.8 MB, 37,324 accessors: four per CAD face). Meshopt compresses only the binary chunk (2.5 MB, which gzip already takes to 179 KB).
+- Encoding the four existing buffer views in place (nodes, meshes, primitives, accessors and materials untouched): lossless 7.33 → 5.99 MB on disk but 499 → 541 KB gzipped; with lossy exponential filters (positions 20 bits, normals 10, UVs 14) 5.57 MB on disk, 483 KB gzipped (−3 %). Gridfinity layer: 160 → 142–146 KB gzipped.
+- gltf-transform's `quantize`/`meshopt` path deduplicates accessors (37,324 → 8,166), so identical primitives would share one geometry in three.js, and position quantization moves node transforms and stores normalized int16 positions that `edges.js` and `mergePrimitives.js` read raw. Both break the per-element features above.
+
+So the download would shrink by at most a few per cent while every load pays a WASM decode. The cost to attack is the JSON (accessor count): merge faces per element in the exporter (see "Not done" above), keeping `bpPrimitiveRanges` for the edge pass.
+
