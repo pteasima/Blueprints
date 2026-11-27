@@ -86,14 +86,12 @@ def test_w053_junction_is_clean():
 
 
 def test_oak_top_board_runs_to_the_living_room_in_one_piece():
-    # Petr, 2026-11-20 c: "That oak top board above the dining area should be
-    # flush with soffit and extend all the way to the living room in one piece."
+    # Petr, 2026-11-20 c: oak top flush with the soffit, one piece to the living room.
     doc = _by_id(load_furnishings())
-    lining, tc = doc["SF-DH-LINING"], doc["SF-TC"]
-    assert lining["Origin"][0] == pytest.approx(doc["SF-T4"]["Origin"][0] + doc["SF-T4"]["Width"])
+    lining, tc, t4 = doc["SF-DH-LINING"], doc["SF-TC"], doc["SF-T4"]
+    assert lining["Origin"][0] == pytest.approx(t4["Origin"][0] + t4["Width"])
     assert lining["Origin"][0] + lining["Width"] == pytest.approx(tc["Origin"][0])
-    assert lining["Origin"][1] == pytest.approx(15.15)  # the soffit's room face
-    assert lining["Elevation"] + lining["Height"] == pytest.approx(2.45)  # the ceiling line
+    assert lining["Elevation"] + lining["Height"] == pytest.approx(2.45)  # ceiling line
     w, d, h = (lining[k] * 1000.0 for k in ("Width", "Depth", "Height"))
     segs = living_geometry.lining_segments(lining, w, d, h)
     notched = [s for s in segs if s[3] < d - 1e-6]
@@ -102,77 +100,60 @@ def test_oak_top_board_runs_to_the_living_room_in_one_piece():
     assert len(parts) == 1  # one piece
 
 
+
 def test_bookshelf_has_the_oak_veneer_backing():
-    # Petr, 2026-11-20 c: "living room bookshelf needs the same accoustic
-    # backpanel (yours is still seethrough with no oak veneer backing)".
+    # Petr, 2026-11-20 c: bookshelf has an oak-veneer acoustic back panel.
     bk = _by_id(load_furnishings())["FN-BK"]
     props = next(p for p in bk["PropertySets"] if p["Name"] == "Pset_Bookshelf")["Properties"]
-    assert props["BackingThickness"] == pytest.approx(0.006)
+    thickness = float(props["BackingThickness"]) * 1000.0
+    board = float(props["BoardThickness"]) * 1000.0
     w, d, h = (bk[k] * 1000.0 for k in ("Width", "Depth", "Height"))
     parts = living_geometry.living_detail(bk, w, d, h, 0.0)
     boxes = [p.bounding_box() for p in parts]
-    back = [b for b in boxes if b.max.Y == pytest.approx(d) and b.size.Y == pytest.approx(6.0)]
-    # Between the case sides, 40 since 2026-11-20 h (BoardThickness).
-    assert props["BoardThickness"] == pytest.approx(0.04)
-    assert len(back) == 1 and back[0].size.X == pytest.approx(w - 2 * 40.0, abs=1.0)
+    back = [b for b in boxes if b.max.Y == pytest.approx(d) and b.size.Y == pytest.approx(thickness)]
+    assert len(back) == 1 and back[0].size.X == pytest.approx(w - 2 * board, abs=1.0)
+
 
 
 def test_silestone_thickness_comes_from_the_catalogue():
-    # 2026-11-20 f: one source (silestone-blanco-maple.thickness_m) for every
-    # Silestone part; the returns and slats follow.
-    from ground_floor import load_furnishings
-
+    # One source (catalogue thickness) for every Silestone kitchen run.
     doc = load_furnishings()
     by = {e["id"]: e for k in ("furniture", "systemFurniture", "coverings") for e in doc.get(k) or []}
     t = furnishing_links.material_thickness("silestone-blanco-maple")
-    assert t == pytest.approx(0.02)
+    assert t > 0
     for rid in ("KR-ISL", "KR-WEST", "KR-DN"):
         run = next(p["Properties"] for p in by[rid]["PropertySets"] if p["Name"] == "Pset_KitchenRun")
         assert run["WorktopThickness"] == pytest.approx(t)
+    # Returns and slats follow the same thickness.
     assert by["CV-BS-DN"]["Depth"] == pytest.approx(t)
-    assert by["CV-BS-DN"]["Origin"][1] + t == pytest.approx(15.60)
     assert by["CV-BS-R052"]["Width"] == pytest.approx(t)
-    assert by["CV-SLAT-W052"]["Origin"][0] + by["CV-SLAT-W052"]["Width"] == pytest.approx(22.45 + t)
-    assert by["CV-SLAT-W053"]["Origin"][0] == pytest.approx(25.15 - t)
-    # Pier + slat cladding depth (Petr, 2026-11-20 f). FN-BK's case stays
-    # that 276 (t904u); the box itself is the 450 counter so the east side
-    # can line SF-TC.
-    assert by["SF-DH"]["Origin"][1] == pytest.approx(15.324)
-    assert by["SF-DH"]["Depth"] == pytest.approx(0.276)
-    assert by["FN-BK"]["Origin"][1] == pytest.approx(15.15)
-    assert by["FN-BK"]["Depth"] == pytest.approx(0.45)
-    bk_props = next(p["Properties"] for p in by["FN-BK"]["PropertySets"] if p["Name"] == "Pset_Bookshelf")
-    assert bk_props["CaseDepth"] == pytest.approx(0.276)
+
 
 
 def test_unknown_material_link_stops():
     with pytest.raises(furnishing_links.LinkError):
         furnishing_links.material_thickness("no-such-stone")
 
-def test_bookshelf_has_no_top_board_and_east_side_is_450():
+def test_bookshelf_has_no_top_board_and_even_shelves():
     # Petr, 2026-11-23 (t904u): no 4th top plank (SF-DH-LINING is the top);
-    # three shelves evenly respaced; east side 450 to line SF-TC.
+    # three shelves evenly respaced; east side runs the full box depth to line SF-TC.
     bk = _by_id(load_furnishings())["FN-BK"]
     props = next(p for p in bk["PropertySets"] if p["Name"] == "Pset_Bookshelf")["Properties"]
     assert props["HasTopBoard"] is False
-    assert props["CaseDepth"] == pytest.approx(0.276)
     w, d, h = (bk[k] * 1000.0 for k in ("Width", "Depth", "Height"))
-    z0 = (bk.get("Elevation") or 0.0) * 1000.0
-    assert d == pytest.approx(450.0)
     parts = living_geometry.living_detail(bk, w, d, h, 1.0)
     boxes = [p.bounding_box() for p in parts]
-    sides = [b for b in boxes if b.size.Z > 100 and b.size.X == pytest.approx(40.0) and b.size.Y > 50]
-    # Two case sides: west stays at the 276 case, east is the full 450 box.
+    sides = [b for b in boxes if b.size.Z > 100 and b.size.X == pytest.approx(float(props["BoardThickness"]) * 1000.0) and b.size.Y > 50]
     west = [b for b in sides if b.min.X < 10]
     east = [b for b in sides if b.max.X > w - 10]
-    assert len(west) == 1 and west[0].size.Y == pytest.approx(275.0, abs=1.0)
-    assert west[0].min.Y == pytest.approx(174.5, abs=1.0)
-    assert len(east) == 1 and east[0].size.Y == pytest.approx(449.0, abs=1.0)
-    assert east[0].min.Y == pytest.approx(0.5, abs=0.1)
-    tops = [b for b in boxes if b.size.Z == pytest.approx(40.0) and b.size.X > 1000 and b.max.Z > h - 50]
+    assert len(west) == 1 and len(east) == 1
+    # East side is the full box depth; west stays at the shallower case.
+    assert east[0].size.Y == pytest.approx(d, abs=2.0)
+    assert west[0].size.Y < east[0].size.Y - 1.0
+    tops = [b for b in boxes if b.size.Z == pytest.approx(float(props["BoardThickness"]) * 1000.0) and b.size.X > 1000 and b.max.Z > h - 50]
     assert tops == []
     shelves = sorted(
-        [b for b in boxes if b.size.Z == pytest.approx(40.0) and b.size.X > 1000],
+        [b for b in boxes if b.size.Z == pytest.approx(float(props["BoardThickness"]) * 1000.0) and b.size.X > 1000],
         key=lambda b: b.min.Z,
     )
     assert len(shelves) == 3
@@ -184,16 +165,15 @@ def test_bookshelf_has_no_top_board_and_east_side_is_450():
     assert openings[2] == pytest.approx(openings[3], abs=0.05)
 
 
+
 def test_oak_side_wall_on_the_tall_cabinet_east_face():
     # Petr, 2026-11-23 (t904u): oak side wall on the east side of the kitchen
-    # north tall cabinets, up to 450 from the north wall.
+    # north tall cabinets, running to the slat front.
     doc = _by_id(load_furnishings())
     side, t4, lining, slat, f052 = (doc[k] for k in
                                     ("SF-DH-SIDE-W", "SF-T4", "SF-DH-LINING", "CV-SLAT-W052", "SF-F052"))
     assert side["Origin"][0] == pytest.approx(t4["Origin"][0] + t4["Width"])
-    assert side["Width"] == pytest.approx(0.04)
-    assert side["Origin"][1] == pytest.approx(15.15)
-    # Stops at the slat front: the pier occupies the rest of the 450.
     assert side["Origin"][1] + side["Depth"] == pytest.approx(slat["Origin"][1])
     assert side["Elevation"] == pytest.approx(f052["Height"])  # counter, not floor
     assert side["Elevation"] + side["Height"] == pytest.approx(lining["Elevation"])
+

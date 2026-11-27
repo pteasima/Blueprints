@@ -37,6 +37,9 @@ where = ["src", "vendor/yaml-ifc"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "slow: uses gmsh or otherwise takes long; skip with -m 'not slow'",
+]
 
 [tool.setuptools.package-data]
 blueprints = ["viewer/viewer.iife.js", "viewer/main.js", "viewer/package.json"]

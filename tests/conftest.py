@@ -94,3 +94,19 @@ def bedroom_111_parts():
     from bedroom_111 import parts
 
     return parts()
+
+
+@pytest.fixture(scope="session")
+def furnishings_doc():
+    """Resolved furnishings.yaml. Shared — tests must not mutate it."""
+    from ground_floor import load_furnishings
+
+    return load_furnishings()
+
+
+@pytest.fixture(scope="session")
+def kitchen_runs(furnishings_doc):
+    """Kitchen monoblock runs for the default furnishings document."""
+    import kitchen_cabinet as kc
+
+    return {run.id: run for run in kc.runs(furnishings_doc)}
