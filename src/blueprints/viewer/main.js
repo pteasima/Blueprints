@@ -6,200 +6,96 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { meshToClippedExportMesh } from "./clipGeometry.js";
-import { isSectionCap, syncSectionCaps } from "./sectionCaps.js";
-import { applyArPlacement, computeArPlacement } from "./arPlacement.js";
+
+import { syncSectionCaps } from "./sectionCaps.js";
+
 import { BG_DARK, BG_LIGHT, initSheetChrome } from "./chrome.js";
 import { createCooperativeRange } from "./coopRange.js";
-import {
-  MODE_REALISTIC,
-  MODE_SHADED,
-  MODE_SOLID,
-  applyMaterialMode,
-  applyOpacityToMeshes,
-  collectLeafIds,
-  expandOpacityGroups,
-  loadMaterialMode,
-  resolvePartOutline,
-  saveMaterialMode,
-} from "./materials.js";
+import { loadMaterialMode } from "./materials.js";
 import {
   applyStaticI18n,
   getLocale,
   initLocale,
   onLocaleChange,
-  setLocale,
   t as tr,
 } from "./i18n.js";
-import {
-  applyEdgeClipping,
-  clearEdgeOverlays,
-  EDGE_MODE_NONE,
-  EDGE_MODE_OPAQUE,
-  EDGE_MODE_TRANSPARENT,
-  isEdgeOverlay,
-  loadEdgeMode,
-  saveEdgeMode,
-  setEdgeOverlayResolution,
-  syncEdgeOverlays,
-} from "./edges.js";
-import { createDepthPeelRenderer, isSeeThroughOpacity } from "./depthPeel.js";
+import { loadEdgeMode } from "./edges.js";
+import { createDepthPeelRenderer } from "./depthPeel.js";
 import { createRealistic } from "./realistic.js";
-import {
-  HEIGHT_DETENTS_CM,
-  HEIGHT_MAX_CM,
-  HEIGHT_MIN_CM,
-  eyeHeightM,
-  snapHeightCm,
-  yawPitchOf,
-} from "./walkBasics.js";
-import { createDoorController, swingAngle } from "./doors.js";
-import { createWindowSlides, windowOperable } from "./windows.js";
-import { createFeedbackLayer, rotateAboutY } from "./feedback.js";
+import { eyeHeightM, yawPitchOf } from "./walkBasics.js";
+import { createDoorController } from "./doors.js";
+import { createWindowSlides } from "./windows.js";
+import { createFeedbackLayer } from "./feedback.js";
 import { registerElementActions } from "./elementActions.js";
 import {
   createHomeClient,
   deviceLines,
   indexHasHomeDevices,
   LIGHT_OFF_HEX,
-  lightLook,
   lightOnHex,
-  pressTarget,
   resolveHomeConfig,
-  rockersOf,
-  saveHomeMode,
 } from "./homeLive.js";
 import { mountIfcInspector } from "./ifcInspector.js";
 import { createVisibility } from "./ifcHide.js";
-import {
-  IFC_LOCK_PREFIX,
-  clearVisibility,
-  defaultLocks,
-  ifcElementLocked,
-  loadVisibility,
-  lockStates,
-  lockedLeafIds,
-  saveVisibility,
-  urlLayerSwitch,
-  VISIBILITY_VERSION,
-} from "./visibilityState.js";
-import {
-  CAMERA_VERSION,
-  loadCamera,
-  saveCamera,
-} from "./cameraState.js";
-import { normalizeIndex, subtreeIds } from "./ifcTree.js";
+import { IFC_LOCK_PREFIX, loadVisibility, urlLayerSwitch } from "./visibilityState.js";
+
+import { normalizeIndex } from "./ifcTree.js";
 import { isSceneSolid } from "./interactions.js";
 import {
   centerOccluded,
   isOpaqueMaterialOf,
   isRenderedHit,
   projectTarget,
-  switchTargetCenters,
 } from "./tapTargets.js";
 import { createFixtureModels } from "./fixtureModels.js";
-import { identityOf, meshIdentity, nodeKeyMap } from "./meshIdentity.js";
+import { nodeKeyMap } from "./meshIdentity.js";
 import { gltfPrimitiveTest, mergeSiblingPrimitives } from "./mergePrimitives.js";
 import { attachPivotNav } from "./pivotNav.js";
-import { cadMmToGltf, createAnnotations } from "./annotations.js";
-import { DRAW_H, DRAW_W, downloadBlob, plateFromCanvas } from "./drawing.js";
-
-/** Query param for a named custom scene (`?m=<id>&scene=<sceneId>`). */
-const SCENE_QUERY = "scene";
-
-/**
- * @returns {string}
- */
-function readSceneQuery() {
-  try {
-    return (new URLSearchParams(location.search).get(SCENE_QUERY) || "").trim();
-  } catch {
-    return "";
-  }
-}
-
-/**
- * Keep the address bar in sync so a selected scene is copy-paste shareable.
- * Builtin presets / orbit clear the param (same lifetime as the View highlight).
- * @param {string | null | undefined} sceneId
- */
-function writeSceneQuery(sceneId) {
-  try {
-    const url = new URL(location.href);
-    const id = sceneId != null ? String(sceneId).trim() : "";
-    if (id) url.searchParams.set(SCENE_QUERY, id);
-    else url.searchParams.delete(SCENE_QUERY);
-    const next = `${url.pathname}${url.search}${url.hash}`;
-    const cur = `${location.pathname}${location.search}${location.hash}`;
-    if (next !== cur) history.replaceState(null, "", next);
-  } catch {
-    /* file:// or opaque origins may reject history writes */
-  }
-}
+import { createAnnotations } from "./annotations.js";
+import { downloadBlob } from "./drawing.js";
+import {
+  CABLE_LEAF,
+  LAZY_LAYER_DEFAULT_ON,
+  loadFeature,
+  readSceneQuery,
+} from "./viewerBoot.js";
+import { attachSceneSetup } from "./sceneSetup.js";
+import { attachModelLoad } from "./modelLoad.js";
+import { attachCameraNav } from "./cameraNav.js";
+import { attachScenes } from "./scenes.js";
+import { attachPartsVisibility } from "./partsVisibility.js";
+import { attachSectionCuts } from "./sectionCuts.js";
+import { attachHud } from "./hud.js";
+import { attachDrawingExport } from "./drawingExport.js";
+import { attachInspect } from "./inspect.js";
+import { attachHomeInteractions } from "./homeInteractions.js";
+import { attachRenderLoop } from "./renderLoop.js";
 
 /**
  * @param {HTMLCanvasElement} canvas
  * @param {ArrayBuffer} glbBuffer
  * @param {{ scenes?: object[], scene?: string, partGroups?: object[], doors?: object[], windows?: object[], ifc?: object, modelId?: string, materialsUrl?: string, materialsText?: string, fixtureAssets?: object[], fixtureModelsUrl?: string, lazyLayers?: { id: string, url: string }[] }} [options]
  */
-/** Layer leaf id of the cable routes (under the "electrical" group). */
-const CABLE_LEAF = "cables";
-
-/** The part groups with the cable leaf added under "electrical" (else it lands in "other"). */
-function withCableLeaf(groups) {
-  const src = Array.isArray(groups) ? groups : [];
-  let placed = false;
-  const walk = (nodes) =>
-    nodes.map((node) => {
-      if (!node || typeof node !== "object") return node;
-      const children = walk(node.children || []);
-      if (node.id === "electrical" && !placed) {
-        placed = true;
-        return { ...node, children: [...children, CABLE_LEAF] };
-      }
-      return { ...node, children };
-    });
-  return walk(src);
-}
-
-/**
- * On-demand layers start on (Petr, 2026-11-20: "put back gridfinity
- * baseplates"; cheap since mergePrimitives.js, docs/viewer/Performance.md).
- */
-const LAZY_LAYER_DEFAULT_ON = true;
-
-/**
- * Load a lazy feature chunk (build.mjs) and hand its module to `init`. A
- * failed load leaves that feature off instead of breaking the viewer.
- * @template T
- * @param {string} name
- * @param {() => Promise<T>} load
- * @param {(mod: T) => void} init
- */
-function loadFeature(name, load, init) {
-  return load()
-    .then(init)
-    .catch((err) => console.error(`Viewer feature "${name}" did not load:`, err));
-}
-
 export function mountViewer(canvas, glbBuffer, options = {}) {
+  const ctx = { canvas, glbBuffer, options };
+
   /** Custom named scenes (model-specific); shown alongside Iso/Front/Side/Top. */
-  const customScenes = Array.isArray(options.scenes) ? options.scenes : [];
+  ctx.customScenes = Array.isArray(options.scenes) ? options.scenes : [];
   /** Model-owned Parts tree (ids only); empty → leftovers under Other. */
-  const partGroups = Array.isArray(options.partGroups) ? options.partGroups : [];
+  ctx.partGroups = Array.isArray(options.partGroups) ? options.partGroups : [];
   /** Hinged leaves: centre, hinge, sign. Empty for models without doors. */
-  const doorRecords = Array.isArray(options.doors) ? options.doors : [];
+  ctx.doorRecords = Array.isArray(options.doors) ? options.doors : [];
   /** Window panes: which open and how (`<id>.windows.json`, windows.js). */
-  const windowRecords = Array.isArray(options.windows) ? options.windows : [];
-  const ifcIndex = normalizeIndex(options.ifc);
+  ctx.windowRecords = Array.isArray(options.windows) ? options.windows : [];
+  ctx.ifcIndex = normalizeIndex(options.ifc);
   /** Node-name key → yaml id for ids GLTFLoader renamed (dots dropped). */
-  const idForNodeKey = nodeKeyMap(Object.values(ifcIndex.elements || {}).map((element) => element?.id));
+  ctx.idForNodeKey = nodeKeyMap(Object.values(ctx.ifcIndex.elements || {}).map((element) => element?.id));
   /** yaml id → meshes. Filled when the GLB arrives. */
-  const meshesByKey = new Map();
+  ctx.meshesByKey = new Map();
   /** @type {(pt: { clientX: number, clientY: number }) => void} */
-  let inspectAt = () => {};
+  ctx.inspectAt = () => {};
   /** Prefer explicit option; otherwise `?scene=` from the current URL. */
-  const initialSceneId = String(
+  ctx.initialSceneId = String(
     options.scene != null ? options.scene : readSceneQuery(),
   ).trim();
 
@@ -207,55 +103,55 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   applyStaticI18n(document);
 
   /** @type {import("./materials.js").OutlineNode[]} */
-  let partOutline = [];
+  ctx.partOutline = [];
 
   /** @type {THREE.Scene | null} */
-  let scene = null;
-  let sceneBg = BG_DARK;
-  let isDarkTheme = true;
+  ctx.scene = null;
+  ctx.sceneBg = BG_DARK;
+  ctx.isDarkTheme = true;
   /** @type {string} */
-  let materialMode = loadMaterialMode();
+  ctx.materialMode = loadMaterialMode();
   /** CAD hard-edge overlay mode: none | transparent | opaque. */
-  let edgeMode = loadEdgeMode();
+  ctx.edgeMode = loadEdgeMode();
   /** @type {Map<string, THREE.Object3D[]>} */
-  const parts = new Map();
+  ctx.parts = new Map();
   /** Current opacity 0–1 per leaf label. */
-  const partOpacity = new Map();
+  ctx.partOpacity = new Map();
   /** Last non-zero opacity per leaf (for tap-toggle). */
-  const partLastNonZero = new Map();
+  ctx.partLastNonZero = new Map();
   // Cable routes (docs/electrical/CableRoutes.md): a layer leaf under
   // Electrical with no meshes of its own; cables.js draws them. Hidden by
   // default (Petr, 2026-11-19: "make cables a layer under "electrical",
   // hidden by default but I can show them without going to edit"); views and
   // scenes leave it alone, and ?cables=1 starts with it on.
-  const hasCables = Array.isArray(options.cables?.routes) && options.cables.routes.length > 0;
+  ctx.hasCables = Array.isArray(options.cables?.routes) && options.cables.routes.length > 0;
   // Remembered visibility (visibilityState.js; Petr, 2026-11-19: "remember
   // state locally (doesn't get reflected in URL ...)"). Per model, in
   // localStorage; an explicit `?cables=1` / `?<layer>=1` still wins.
   /** @type {Storage | null} */
-  let visStorage = null;
+  ctx.visStorage = null;
   try {
-    visStorage = typeof localStorage !== "undefined" ? localStorage : null;
+    ctx.visStorage = typeof localStorage !== "undefined" ? localStorage : null;
   } catch {
-    visStorage = null;
+    ctx.visStorage = null;
   }
-  const visModelId = String(options.modelId || "").trim();
-  const savedVis = visModelId ? loadVisibility(visStorage, visModelId) : null;
+  ctx.visModelId = String(options.modelId || "").trim();
+  ctx.savedVis = ctx.visModelId ? loadVisibility(ctx.visStorage, ctx.visModelId) : null;
   /**
    * Layer leaf on at start: URL switch, else remembered, else `fallback`.
    * `ignoreV1` skips an opacity remembered by a v1 entry (on-demand layers
    * were off by default then, so its 0 was rarely a choice).
    */
-  const layerOnAtStart = (id, fallback = false, ignoreV1 = false) => {
+  ctx.layerOnAtStart = (id, fallback = false, ignoreV1 = false) => {
     const fromUrl = urlLayerSwitch(typeof location !== "undefined" ? location.search : "", id);
     if (fromUrl != null) return fromUrl;
-    const saved = ignoreV1 && savedVis?.fromVersion === 1 ? undefined : savedVis?.opacity?.[id];
+    const saved = ignoreV1 && ctx.savedVis?.fromVersion === 1 ? undefined : ctx.savedVis?.opacity?.[id];
     return saved == null ? fallback : saved > 1e-3;
   };
-  if (hasCables) {
-    const on = layerOnAtStart(CABLE_LEAF);
-    partOpacity.set(CABLE_LEAF, on ? 1 : 0);
-    partLastNonZero.set(CABLE_LEAF, 1);
+  if (ctx.hasCables) {
+    const on = ctx.layerOnAtStart(CABLE_LEAF);
+    ctx.partOpacity.set(CABLE_LEAF, on ? 1 : 0);
+    ctx.partLastNonZero.set(CABLE_LEAF, 1);
   }
   // On-demand layers (README "On-demand layers"; `<model>.layers.json`):
   // a Parts leaf whose meshes live in their own GLB, fetched and parsed
@@ -266,78 +162,77 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   // views and scenes. ground_floor's Gridfinity baseplates are the one
   // layer (docs/viewer/Performance.md).
   /** @type {Map<string, { url: string, state: "idle" | "loading" | "loaded" | "failed", promise: Promise<void> | null }>} */
-  const lazyLayers = new Map();
+  ctx.lazyLayers = new Map();
   /** Lazy leaves to load as soon as the model is in (default, `?<id>=1`). */
-  const lazyAtStart = [];
+  ctx.lazyAtStart = [];
   for (const entry of Array.isArray(options.lazyLayers) ? options.lazyLayers : []) {
     const id = String(entry?.id || "").trim();
     const url = String(entry?.url || "").trim();
-    if (!id || !url || id === CABLE_LEAF || lazyLayers.has(id)) continue;
-    lazyLayers.set(id, { url, state: "idle", promise: null });
-    const on = layerOnAtStart(id, LAZY_LAYER_DEFAULT_ON, true);
-    partOpacity.set(id, on ? 1 : 0);
-    partLastNonZero.set(id, 1);
-    if (on) lazyAtStart.push(id);
+    if (!id || !url || id === CABLE_LEAF || ctx.lazyLayers.has(id)) continue;
+    ctx.lazyLayers.set(id, { url, state: "idle", promise: null });
+    const on = ctx.layerOnAtStart(id, LAZY_LAYER_DEFAULT_ON, true);
+    ctx.partOpacity.set(id, on ? 1 : 0);
+    ctx.partLastNonZero.set(id, 1);
+    if (on) ctx.lazyAtStart.push(id);
   }
   /** Bumped when a lazy layer's meshes arrive (peel batches, colliders). */
-  let lazyRevision = 0;
+  ctx.lazyRevision = 0;
   /** Cables and on-demand layers: leaves no group slider, view or scene drives. */
-  const isLayerLeaf = (name) => name === CABLE_LEAF || lazyLayers.has(name);
+  ctx.isLayerLeaf = (name) => name === CABLE_LEAF || ctx.lazyLayers.has(name);
   /** Reset / first-load opacity of a layer leaf: cables off, on-demand layers on. */
-  const layerDefaultOpacity = (name) => (lazyLayers.has(name) ? (LAZY_LAYER_DEFAULT_ON ? 1 : 0) : 0);
+  ctx.layerDefaultOpacity = (name) => (ctx.lazyLayers.has(name) ? (LAZY_LAYER_DEFAULT_ON ? 1 : 0) : 0);
   /** Last opacity written via a group slider (when children diverge). */
-  const groupSliderOpacity = new Map();
+  ctx.groupSliderOpacity = new Map();
   /**
    * Leaf ids whose opacity was edited independently of their parent group.
    * Group slider skips these until the user taps Sync.
    */
-  const detachedLeaves = new Set();
+  ctx.detachedLeaves = new Set();
   /** @type {Map<string, ReturnType<typeof createCooperativeRange>>} */
-  const leafOpacityRanges = new Map();
+  ctx.leafOpacityRanges = new Map();
   /** @type {Map<string, ReturnType<typeof createCooperativeRange>>} */
-  const groupOpacityRanges = new Map();
+  ctx.groupOpacityRanges = new Map();
   /** @type {Map<string, HTMLButtonElement>} */
-  const leafSyncButtons = new Map();
+  ctx.leafSyncButtons = new Map();
   /** Expanded disclosure group ids. */
-  const expandedGroups = new Set();
+  ctx.expandedGroups = new Set();
   /**
    * Lock ids: Parts group/leaf ids and `ifc:<GlobalId>` inspector rows
    * (visibilityState.js). null until the Parts outline exists, then the
    * model's default locks (`"locked": true` in parts.json).
    * @type {Set<string> | null}
    */
-  let partLocks = savedVis?.locks ? new Set(savedVis.locks) : null;
+  ctx.partLocks = ctx.savedVis?.locks ? new Set(ctx.savedVis.locks) : null;
   /** Leaf ids locked directly or through a group (derived from partLocks). */
-  let lockedLeaves = new Set();
+  ctx.lockedLeaves = new Set();
   /** GlobalIds locked from the inspector (derived from partLocks). */
-  let ifcLocks = new Set();
+  ctx.ifcLocks = new Set();
   /** @type {Map<string, { row: HTMLElement, btn: HTMLButtonElement, label: string }>} */
-  const lockButtons = new Map();
+  ctx.lockButtons = new Map();
 
   /** @type {ReturnType<typeof initSheetChrome> | null} */
-  let chromeApi = null;
+  ctx.chromeApi = null;
 
-  chromeApi = initSheetChrome((isDark) => {
-    isDarkTheme = isDark;
-    sceneBg = isDark ? BG_DARK : BG_LIGHT;
-    if (scene) scene.background = new THREE.Color(sceneBg);
+  attachSceneSetup(ctx);
+  attachModelLoad(ctx);
+  attachCameraNav(ctx);
+  attachScenes(ctx);
+  attachPartsVisibility(ctx);
+  attachSectionCuts(ctx);
+  attachHud(ctx);
+  attachDrawingExport(ctx);
+  attachInspect(ctx);
+  attachHomeInteractions(ctx);
+  attachRenderLoop(ctx);
+
+  ctx.chromeApi = initSheetChrome((isDark) => {
+    ctx.isDarkTheme = isDark;
+    ctx.sceneBg = isDark ? BG_DARK : BG_LIGHT;
+    if (ctx.scene) ctx.scene.background = new THREE.Color(ctx.sceneBg);
     document.documentElement.style.colorScheme = isDark ? "dark" : "light";
-    if (parts.size) refreshMaterials();
+    if (ctx.parts.size) ctx.refreshMaterials();
   });
-
-  /**
-   * Drawing-buffer scale. Phones (coarse pointer, short side ≤ 500 CSS px)
-   * stop at 1.5: an iPhone at 2× is 780×1688 with 4× MSAA plus the
-   * full-size peel targets, and iOS Safari reloads the tab when GPU memory
-   * runs out. Everything else stops at 2. docs/viewer/Performance.md.
-   */
-  function viewerPixelRatio() {
-    const dpr = window.devicePixelRatio || 1;
-    const coarse = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
-    const shortSide = Math.min(window.screen?.width || 1e4, window.screen?.height || 1e4);
-    return Math.min(dpr, coarse && shortSide <= 500 ? 1.5 : 2);
-  }
-  const renderer = new THREE.WebGLRenderer({
+  ctx.renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: true,
     alpha: false,
@@ -349,238 +244,206 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     // 24-bit buffer — coplanar CAD faces otherwise flicker while orbiting.
     logarithmicDepthBuffer: true,
   });
-  renderer.setPixelRatio(viewerPixelRatio());
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
-  renderer.localClippingEnabled = true;
+  ctx.renderer.setPixelRatio(ctx.viewerPixelRatio());
+  ctx.renderer.outputColorSpace = THREE.SRGBColorSpace;
+  ctx.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  ctx.renderer.toneMappingExposure = 1.05;
+  ctx.renderer.localClippingEnabled = true;
 
-  const depthPeel = createDepthPeelRenderer(renderer);
+  ctx.depthPeel = createDepthPeelRenderer(ctx.renderer);
 
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(sceneBg);
+  ctx.scene = new THREE.Scene();
+  ctx.scene.background = new THREE.Color(ctx.sceneBg);
   /** Scales glTF Y (CAD Z) about elevation 0. 1 on every scene that does not ask. */
-  let verticalExaggeration = 1;
-  const zScaleGroup = new THREE.Group();
-  zScaleGroup.name = "VerticalExaggeration";
-  scene.add(zScaleGroup);
-
-  function setVerticalExaggeration(factor) {
-    const k = Number(factor);
-    verticalExaggeration = Number.isFinite(k) && k > 0 ? k : 1;
-    zScaleGroup.scale.set(1, verticalExaggeration, 1);
-  }
+  ctx.verticalExaggeration = 1;
+  ctx.zScaleGroup = new THREE.Group();
+  ctx.zScaleGroup.name = "VerticalExaggeration";
+  ctx.scene.add(ctx.zScaleGroup);
 
   /** Horizontal FOV degrees (user-facing). Three.js uses vertical FOV. */
-  const FOV_MIN = 30;
-  const FOV_MAX = 120;
-  const FOV_DEFAULT = 75;
+  ctx.FOV_MIN = 30;
+  ctx.FOV_MAX = 120;
+  ctx.FOV_DEFAULT = 75;
   /** Slider value past FOV_MAX — orthographic ISO detent. */
-  const ISO_SLIDER = 125;
+  ctx.ISO_SLIDER = 125;
 
   /** @type {"perspective" | "ortho"} */
-  let projection = "perspective";
-  let hFovDeg = FOV_DEFAULT;
-  let lastHFovDeg = FOV_DEFAULT;
+  ctx.projection = "perspective";
+  ctx.hFovDeg = ctx.FOV_DEFAULT;
+  ctx.lastHFovDeg = ctx.FOV_DEFAULT;
   /** Orbit dolly zoom for ortho (perspective keeps this at 1). */
-  let viewZoom = 1;
+  ctx.viewZoom = 1;
   /** True while applying sheet frame / FOV so OrbitControls zoom sync is ignored. */
-  let suppressViewZoomSync = false;
+  ctx.suppressViewZoomSync = false;
 
-  const perspCamera = new THREE.PerspectiveCamera(45, 1, 0.01, 1e6);
-  const orthoCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 1e6);
+  ctx.perspCamera = new THREE.PerspectiveCamera(45, 1, 0.01, 1e6);
+  ctx.orthoCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 1e6);
   /** @type {THREE.PerspectiveCamera | THREE.OrthographicCamera} */
-  let camera = perspCamera;
-  const controls = new OrbitControls(camera, canvas);
-  controls.enableDamping = false;
-  controls.screenSpacePanning = true;
+  ctx.camera = ctx.perspCamera;
+  ctx.controls = new OrbitControls(ctx.camera, canvas);
+  ctx.controls.enableDamping = false;
+  ctx.controls.screenSpacePanning = true;
   /** Measure owns taps while it is on; set once that tool exists. */
-  let doorInputBlocked = () => false;
+  ctx.doorInputBlocked = () => false;
   /**
    * Fixture edit mode (editMode.js). Owns taps while it is on.
    * @type {ReturnType<typeof createEditMode> | null}
    */
-  let editMode = null;
-  const doorCtrl = createDoorController({
+  ctx.editMode = null;
+  ctx.doorCtrl = createDoorController({
     canvas,
-    getCamera: () => camera,
-    records: doorRecords,
+    getCamera: () => ctx.camera,
+    records: ctx.doorRecords,
     // Edit mode blocks door and switch taps but not pivotNav's zoom and pan.
-    isBlocked: () => doorInputBlocked() || Boolean(editMode?.blocksTaps()),
-    onLongPress: (pt) => inspectAt(pt),
-    onToggle: (binding, move) => doorFeedback(binding, move),
+    isBlocked: () => ctx.doorInputBlocked() || Boolean(ctx.editMode?.blocksTaps()),
+    onLongPress: (pt) => ctx.inspectAt(pt),
+    onToggle: (binding, move) => ctx.doorFeedback(binding, move),
   });
-  const feedback = createFeedbackLayer({ canvas, getCamera: () => camera });
+  ctx.feedback = createFeedbackLayer({ canvas, getCamera: () => ctx.camera });
   /** Debugging: `blueprintsFeedback.showFeedback({ worldPos: [x, y, z], kind: "switch", direction: "up" })`. */
-  window.blueprintsFeedback = feedback;
+  window.blueprintsFeedback = ctx.feedback;
   /**
    * Real fixture models instead of boxes (fixtureModels.js,
    * docs/electrical/FixtureModels.md). Off without `fixtureModelsUrl`.
    */
-  const fixtureModels = createFixtureModels({
+  ctx.fixtureModels = createFixtureModels({
     baseUrl: options.fixtureModelsUrl || "",
-    elements: () => Object.values(ifcIndex.elements || {}),
-    meshesForElement: (element) => meshesForElement(element),
+    elements: () => Object.values(ctx.ifcIndex.elements || {}),
+    meshesForElement: (element) => ctx.meshesForElement(element),
     onChange: () => {
-      if (!root) return;
+      if (!ctx.root) return;
       // A model arrived: put it in the current mode, then redraw.
-      fixtureModels.sync(materialMode, lockedClipPlanes());
-      refreshEdges();
-      syncSectionCaps(parts, lockedClipPlanes());
-      viewDirty = true;
-      realisticCtl?.stage.markDirty();
+      ctx.fixtureModels.sync(ctx.materialMode, ctx.lockedClipPlanes());
+      ctx.refreshEdges();
+      syncSectionCaps(ctx.parts, ctx.lockedClipPlanes());
+      ctx.viewDirty = true;
+      ctx.realisticCtl?.stage.markDirty();
     },
   });
-  const lightOn = new Map();
-  const windowOpen = new Map();
+  ctx.lightOn = new Map();
+  ctx.windowOpen = new Map();
   /** Pane slide animation per window (windows.js). */
-  const windowSlides = createWindowSlides(windowRecords);
+  ctx.windowSlides = createWindowSlides(ctx.windowRecords);
   /**
    * Offline tap toggles between these. On is a warm 3000 K glow, off a dull
    * grey, the same looks live mode uses (homeLive.js lightOnHex).
    */
-  const OFFLINE_LIGHT = { on: true, level: 1, color: lightOnHex(3000) };
-  const OFFLINE_LIGHT_OFF = { on: false, level: 1, color: LIGHT_OFF_HEX };
+  ctx.OFFLINE_LIGHT = { on: true, level: 1, color: lightOnHex(3000) };
+  ctx.OFFLINE_LIGHT_OFF = { on: false, level: 1, color: LIGHT_OFF_HEX };
   /** globalId → look applied, so material rebuilds can re-apply it. */
-  const lightLooks = new Map();
+  ctx.lightLooks = new Map();
 
   /** Set once the Home client exists (after the inspector mounts). */
   /** @type {ReturnType<typeof createHomeClient> | null} */
-  let home = null;
-  /** Live record for an element, only while connected. */
-  const liveDevice = (el) => (el && home ? home.device(el.globalId) : undefined);
-  registerElementActions(doorCtrl.taps, {
-    elementOf: (obj) => elementFromMesh(obj),
-    isOn: (el) => Boolean(lightOn.get(el.globalId)),
+  ctx.home = null;
+  registerElementActions(ctx.doorCtrl.taps, {
+    elementOf: (obj) => ctx.elementFromMesh(obj),
+    isOn: (el) => Boolean(ctx.lightOn.get(el.globalId)),
     isOpen: (el) => {
-      const cover = liveDevice(el);
+      const cover = ctx.liveDevice(el);
       if (cover?.deviceType === "WindowCovering") {
         const pos = cover.state?.windowCovering?.targetPositionLiftPercent100ths;
         return pos != null && pos < 5000;
       }
-      return Boolean(windowOpen.get(el.globalId));
+      return Boolean(ctx.windowOpen.get(el.globalId));
     },
-    isLive: (el) => Boolean(liveDevice(el)),
-    onLight: (el) => liveLightTap(el),
-    onSwitch: (el, hit) => liveSwitchTap(el, hit),
-    switchActions: (el) => liveSwitchActions(el),
-    onCover: (el) => liveCoverTap(el),
-    coverActions: (el) => liveCoverActions(el),
-    onWindow: (el) => toggleWindow(el),
+    isLive: (el) => Boolean(ctx.liveDevice(el)),
+    onLight: (el) => ctx.liveLightTap(el),
+    onSwitch: (el, hit) => ctx.liveSwitchTap(el, hit),
+    switchActions: (el) => ctx.liveSwitchActions(el),
+    onCover: (el) => ctx.liveCoverTap(el),
+    coverActions: (el) => ctx.liveCoverActions(el),
+    onWindow: (el) => ctx.toggleWindow(el),
     // Fixed glazing (and the fixed pane of a part-opening window) claims no
     // tap; only a pane that opens does (windows.js).
-    windowAccepts: (el, hit) => windowPaneOperable(el, hit?.object),
-    targetsFor: (type, ctx) => tapTargetsFor(type, ctx),
+    windowAccepts: (el, hit) => ctx.windowPaneOperable(el, hit?.object),
+    targetsFor: (type, tapCtx) => ctx.tapTargetsFor(type, tapCtx),
   });
 
-  const annotations = createAnnotations({
-    scene,
-    getCamera: () => camera,
+  ctx.annotations = createAnnotations({
+    scene: ctx.scene,
+    getCamera: () => ctx.camera,
     getCanvas: () => canvas,
     getLocale,
     getVisibleWidthM: () => {
-      if (!camera.isOrthographicCamera) return null;
-      const zoom = Math.max(camera.zoom, 1e-6);
-      return (camera.right - camera.left) / zoom;
+      if (!ctx.camera.isOrthographicCamera) return null;
+      const zoom = Math.max(ctx.camera.zoom, 1e-6);
+      return (ctx.camera.right - ctx.camera.left) / zoom;
     },
-    getTarget: () => controls.target,
-    getExaggeration: () => verticalExaggeration,
+    getTarget: () => ctx.controls.target,
+    getExaggeration: () => ctx.verticalExaggeration,
   });
 
   /** @type {ReturnType<typeof createCooperativeRange> | null} */
-  let fovRange = null;
+  ctx.fovRange = null;
   /** @type {HTMLElement | null} */
-  let fovValueEl = null;
+  ctx.fovValueEl = null;
 
-  const ambient = new THREE.AmbientLight(0xffffff, 0.45);
-  scene.add(ambient);
-  const key = new THREE.DirectionalLight(0xffffff, 1.15);
-  key.position.set(0.6, 1.0, 0.4);
-  scene.add(key);
-  const fill = new THREE.DirectionalLight(0xffffff, 0.4);
-  fill.position.set(-0.5, 0.2, -0.6);
-  scene.add(fill);
+  ctx.ambient = new THREE.AmbientLight(0xffffff, 0.45);
+  ctx.scene.add(ctx.ambient);
+  ctx.key = new THREE.DirectionalLight(0xffffff, 1.15);
+  ctx.key.position.set(0.6, 1.0, 0.4);
+  ctx.scene.add(ctx.key);
+  ctx.fill = new THREE.DirectionalLight(0xffffff, 0.4);
+  ctx.fill.position.set(-0.5, 0.2, -0.6);
+  ctx.scene.add(ctx.fill);
   // Soft IBL so Realistic metal/clearcoat/roughness differences read clearly.
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-  pmrem.dispose();
+  ctx.pmrem = new THREE.PMREMGenerator(ctx.renderer);
+  ctx.scene.environment = ctx.pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  ctx.pmrem.dispose();
 
   /**
    * Realistic mode (realistic.js). Created on first use, so the catalogue,
    * textures, sun and shadow map cost nothing until the mode is chosen.
    * @type {ReturnType<typeof createRealistic> | null}
    */
-  let realisticCtl = null;
-  function ensureRealistic() {
-    if (realisticCtl) return realisticCtl;
-    realisticCtl = createRealistic({
-      renderer,
-      scene,
-      baseLights: [ambient, key, fill],
-      catalogueUrl: options.materialsUrl || null,
-      catalogueText: options.materialsText || null,
-      assetSlots: Array.isArray(options.fixtureAssets) ? options.fixtureAssets : [],
-      onChange: () => {
-        // A texture arrived. Lit lights wear clones (eachMaterial); give
-        // them the texture too, then redraw.
-        root?.traverse((obj) => {
-          if (!obj.isMesh) return;
-          const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-          for (const m of mats) {
-            if (m?.userData?.bpOwned && m.userData.bpCatalogueId) realisticCtl?.registry.bind(m);
-          }
-        });
-        viewDirty = true;
-      },
-    });
-    return realisticCtl;
-  }
+  ctx.realisticCtl = null;
   /** Debugging and checks: `blueprintsRealistic.report()` lists catalogue gaps. */
   window.blueprintsRealistic = {
-    report: () => (realisticCtl ? realisticCtl.report(parts) : null),
-    renderer,
+    report: () => (ctx.realisticCtl ? ctx.realisticCtl.report(ctx.parts) : null),
+    renderer: ctx.renderer,
     /** Light elements in the model: `[{ globalId, name }]`. */
     lights: () =>
-      Object.values(ifcIndex.elements)
+      Object.values(ctx.ifcIndex.elements)
         .filter((el) => {
-          const meshes = el ? meshesForElement(el) : [];
+          const meshes = el ? ctx.meshesForElement(el) : [];
           return meshes.length > 0 && meshes.every((m) => m.userData.bpPart === "light");
         })
         .map((el) => ({ globalId: el.globalId, name: el.name })),
     /** Toggle one light as a tap would offline. */
     toggleLight: (globalId) => {
-      const element = ifcIndex.elements[globalId];
-      if (element) toggleLight(element);
+      const element = ctx.ifcIndex.elements[globalId];
+      if (element) ctx.toggleLight(element);
     },
     get controller() {
-      return realisticCtl;
+      return ctx.realisticCtl;
     },
   };
 
   /** @type {THREE.Object3D | null} */
-  let root = null;
+  ctx.root = null;
   /**
    * First-person walk mode (walkMode.js). Created after the Measure tool.
    * @type {ReturnType<typeof createWalkMode> | null}
    */
-  let walk = null;
+  ctx.walk = null;
   /** A saved walk pose that arrived before walkMode.js did (restoreSavedCamera). */
-  let pendingWalkRestore = null;
+  ctx.pendingWalkRestore = null;
   // Surface-anchored zoom / pan / close-up orbit. Installed after `root` exists
   // in the closure; the GLB is assigned later, and taps still reach the doors.
   attachPivotNav({
     canvas,
-    controls,
-    getCamera: () => camera,
-    getRoot: () => root,
-    isBlocked: () => doorInputBlocked() || controls.enabled === false,
+    controls: ctx.controls,
+    getCamera: () => ctx.camera,
+    getRoot: () => ctx.root,
+    isBlocked: () => ctx.doorInputBlocked() || ctx.controls.enabled === false,
   });
-  const box = new THREE.Box3();
-  const size = new THREE.Vector3();
-  const center = new THREE.Vector3();
-  const _look = new THREE.Vector3();
-  const _point = new THREE.Vector3();
-  const _corner = new THREE.Vector3();
+  ctx.box = new THREE.Box3();
+  ctx.size = new THREE.Vector3();
+  ctx.center = new THREE.Vector3();
+  ctx._look = new THREE.Vector3();
+  ctx._point = new THREE.Vector3();
+  ctx._corner = new THREE.Vector3();
 
   /**
    * @typedef {{
@@ -592,189 +455,64 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
    * }} Cut
    */
   /** @type {Cut[]} */
-  const cuts = [];
-  let nextCutId = 1;
+  ctx.cuts = [];
+  ctx.nextCutId = 1;
   /** After a lock, camera must move before a new draft slider appears. */
-  let cameraMovedSinceLock = false;
+  ctx.cameraMovedSinceLock = false;
   /** Ignore OrbitControls change events caused by framing / presets. */
-  let suppressCameraChange = false;
+  ctx.suppressCameraChange = false;
   /** True while a section slider is being dragged (avoid rebuilding that row). */
-  let cutSliderActive = false;
-
-  /**
-   * Index one model mesh by part label and element (Parts rows, inspector,
-   * hides). The node is `masonry__W-001__`; the mesh under it is just
-   * `masonry`.
-   * @param {THREE.Object3D} obj
-   */
-  function registerMesh(obj) {
-    if (!obj.isMesh) return;
-    const ident = identityOf(obj);
-    if (ident.element) ident.element = idForNodeKey.get(ident.element) || ident.element;
-    obj.userData.bpPart = ident.part;
-    obj.userData.bpElementKey = ident.element;
-    if (ident.element) {
-      if (!meshesByKey.has(ident.element)) meshesByKey.set(ident.element, []);
-      meshesByKey.get(ident.element).push(obj);
-    }
-    const name = ident.part;
-    if (!parts.has(name)) parts.set(name, []);
-    parts.get(name).push(obj);
-    if (obj.material) {
-      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-      for (const m of mats) {
-        if ("side" in m) m.side = THREE.DoubleSide;
-      }
-    }
-  }
-
-  /**
-   * The element node (`cabinet__SF-E700-D1__`) a mesh belongs to.
-   * @param {THREE.Object3D} obj
-   * @returns {THREE.Object3D}
-   */
-  function elementNodeOf(obj) {
-    let node = obj;
-    while (node && !meshIdentity(node.name || "").element) node = node.parent;
-    return node || obj;
-  }
-
-  /**
-   * Fetch, parse and hang in one on-demand layer (`lazyLayers`). Each node
-   * (`gridfinity__SF-E700-D1__`) is in the main GLB's frame and goes under
-   * its element's own node in the model (the drawer), placed as if that
-   * drawer were shut, so it slides, hides and highlights with it. A node
-   * with no such element goes under the model root.
-   * @param {string} id
-   * @returns {Promise<void>}
-   */
-  function loadLazyLayer(id) {
-    const layer = lazyLayers.get(id);
-    if (!layer) return Promise.resolve();
-    if (layer.promise) return layer.promise;
-    layer.state = "loading";
-    layer.promise = new GLTFLoader()
-      .loadAsync(layer.url)
-      .then((gltf) => {
-        if (!root) throw new Error("model not loaded");
-        const holder = gltf.scene;
-        // One draw per element and material, not per CAD face (mergePrimitives.js).
-        mergeSiblingPrimitives(holder, { isPrimitive: gltfPrimitiveTest(gltf) });
-        // Same parent and frame as the main model's scene.
-        zScaleGroup.add(holder);
-        holder.updateMatrixWorld(true);
-        /** @type {THREE.Object3D[]} */
-        const nodes = [];
-        holder.traverse((obj) => {
-          const ident = meshIdentity(obj.name || "");
-          if (ident.element && !meshIdentity(obj.parent?.name || "").element) nodes.push(obj);
-        });
-        for (const node of nodes) {
-          const raw = meshIdentity(node.name || "").element;
-          const key = idForNodeKey.get(raw) || raw;
-          const anchor = (meshesByKey.get(key) || []).find((m) => m.userData.bpPart !== id);
-          const host = anchor ? elementNodeOf(anchor) : root;
-          const binding = anchor ? anchor.userData.bpDoor : null;
-          // Attach as if shut: a drawer pivot rests at its parent's origin.
-          const pivot = binding?.kind === "drawer" ? binding.pivot : null;
-          const saved = pivot ? pivot.position.clone() : null;
-          if (pivot) {
-            pivot.position.set(0, 0, 0);
-            pivot.updateMatrixWorld(true);
-          }
-          host.attach(node);
-          if (pivot && saved) {
-            pivot.position.copy(saved);
-            pivot.updateMatrixWorld(true);
-          }
-          node.traverse((obj) => {
-            if (binding) obj.userData.bpDoor = binding;
-            registerMesh(obj);
-          });
-        }
-        zScaleGroup.remove(holder);
-        if (!parts.has(id)) parts.set(id, []);
-        layer.state = "loaded";
-        lazyRevision += 1;
-        applyInspectorVisibility();
-        refreshMaterials();
-        updateBox();
-        walk?.markColliderStale();
-        realisticCtl?.stage.markDirty();
-        viewDirty = true;
-      })
-      .catch((err) => {
-        layer.state = "failed";
-        layer.promise = null;
-        console.warn(`Layer ${id} did not load:`, err);
-      });
-    return layer.promise;
-  }
-
-  /**
-   * Windows with a pane that opens keep one mesh per face: windows.js sorts
-   * meshes into panes by their centre, and a merged node spanning two panes
-   * would slide whole. (Today every pane is its own node, so this is a guard
-   * for future models, ~70 extra draws.)
-   * @param {THREE.Object3D} node
-   */
-  function keepFacesSeparate(node) {
-    const raw = meshIdentity(node.name || "").element;
-    if (!raw) return false;
-    const key = idForNodeKey.get(raw) || raw;
-    const record = windowRecords.find((r) => String(r?.id ?? "") === key);
-    return Boolean(record) && windowOperable(record);
-  }
+  ctx.cutSliderActive = false;
   /** Meshes before/after mergeSiblingPrimitives (exposed for perf checks). */
-  let mergeStats = { before: 0, after: 0 };
-  const loader = new GLTFLoader();
-  loader.parse(
+  ctx.mergeStats = { before: 0, after: 0 };
+  ctx.loader = new GLTFLoader();
+  ctx.loader.parse(
     glbBuffer,
     "",
     (gltf) => {
-      root = gltf.scene;
+      ctx.root = gltf.scene;
       // One draw per element and material, not per CAD face: 8,850 meshes →
       // 1,299 on ground_floor (mergePrimitives.js, docs/viewer/Performance.md).
-      mergeStats = mergeSiblingPrimitives(root, { isPrimitive: gltfPrimitiveTest(gltf), keepSeparate: keepFacesSeparate });
-      zScaleGroup.add(root);
-      doorCtrl.bind(root);
-      root.traverse(registerMesh);
-      frameIso();
-      buildMaterialToggle();
-      buildEdgesToggle();
-      restoreSavedOpacities();
-      buildPartToggles();
-      buildLocaleToggle();
+      ctx.mergeStats = mergeSiblingPrimitives(ctx.root, { isPrimitive: gltfPrimitiveTest(gltf), keepSeparate: ctx.keepFacesSeparate });
+      ctx.zScaleGroup.add(ctx.root);
+      ctx.doorCtrl.bind(ctx.root);
+      ctx.root.traverse(ctx.registerMesh);
+      ctx.frameIso();
+      ctx.buildMaterialToggle();
+      ctx.buildEdgesToggle();
+      ctx.restoreSavedOpacities();
+      ctx.buildPartToggles();
+      ctx.buildLocaleToggle();
       // Resolve ?scene= / options.scene before building View buttons so the
       // matching custom scene starts highlighted.
-      const initialSpec = findCustomScene(initialSceneId);
+      const initialSpec = ctx.findCustomScene(ctx.initialSceneId);
       if (initialSpec) {
-        activeCameraPreset = `scene:${String(initialSpec.id).trim()}`;
+        ctx.activeCameraPreset = `scene:${String(initialSpec.id).trim()}`;
       }
-      buildCameraButtons();
-      buildFovControl();
-      buildWalkHeightControl();
-      ensureDraftCut();
-      buildCutUI();
-      refreshMaterials();
+      ctx.buildCameraButtons();
+      ctx.buildFovControl();
+      ctx.buildWalkHeightControl();
+      ctx.ensureDraftCut();
+      ctx.buildCutUI();
+      ctx.refreshMaterials();
       // Real fixture models (fixtureModels.js); boxes until they arrive.
-      void fixtureModels.install();
-      for (const id of lazyAtStart) void loadLazyLayer(id);
-      restoreSavedSession();
-      cameraReady = true;
-      if (initialSpec) applyScene(initialSpec);
-      else restoreSavedCamera();
-      syncSceneUrl();
-      chromeApi?.refreshPartialHeight();
-      showArButton();
-      showMeasureButton();
-      syncWalkButton();
-      syncDrawingButton();
-      syncLabelButton();
-      editMode?.showButton(editMode.hasFixtures());
+      void ctx.fixtureModels.install();
+      for (const id of ctx.lazyAtStart) void ctx.loadLazyLayer(id);
+      ctx.restoreSavedSession();
+      ctx.cameraReady = true;
+      if (initialSpec) ctx.applyScene(initialSpec);
+      else ctx.restoreSavedCamera();
+      ctx.syncSceneUrl();
+      ctx.chromeApi?.refreshPartialHeight();
+      ctx.showArButton();
+      ctx.showMeasureButton();
+      ctx.syncWalkButton();
+      ctx.syncDrawingButton();
+      ctx.syncLabelButton();
+      ctx.editMode?.showButton(ctx.editMode.hasFixtures());
     },
     (err) => {
-      fail(String(err?.message || err));
+      ctx.fail(String(err?.message || err));
     },
   );
 
@@ -784,1692 +522,51 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     el.style.display = "block";
     el.textContent = msg;
   }
-
-  function updateBox() {
-    if (!root) return;
-    box.setFromObject(root);
-    box.getSize(size);
-    box.getCenter(center);
-  }
-
-  function canvasAspect() {
-    const w = Math.max(1, canvas.clientWidth);
-    const h = Math.max(1, canvas.clientHeight);
-    return w / h;
-  }
-
-  /**
-   * Horizontal FOV (deg) → vertical FOV (rad) for Three.js PerspectiveCamera.
-   * @param {number} hDeg
-   * @param {number} aspect
-   */
-  function hFovDegToVFovRad(hDeg, aspect) {
-    const hRad = (hDeg * Math.PI) / 180;
-    return 2 * Math.atan(Math.tan(hRad / 2) / Math.max(aspect, 1e-6));
-  }
-
-  /** Apply stored horizontal FOV onto the perspective camera. */
-  function applyPerspFovFromState() {
-    const aspect = canvasAspect();
-    perspCamera.aspect = aspect;
-    perspCamera.fov = (hFovDegToVFovRad(hFovDeg, aspect) * 180) / Math.PI;
-    perspCamera.updateProjectionMatrix();
-  }
-
-  /**
-   * Size ortho frustum so visible height at `dist` matches perspective FOV.
-   * @param {number} dist
-   * @param {number} vFovRad
-   */
-  function sizeOrthoFrustum(dist, vFovRad) {
-    const aspect = canvasAspect();
-    const halfH = Math.max(dist, 1e-6) * Math.tan(vFovRad / 2);
-    const halfW = halfH * aspect;
-    orthoCamera.left = -halfW;
-    orthoCamera.right = halfW;
-    orthoCamera.top = halfH;
-    orthoCamera.bottom = -halfH;
-    orthoCamera.updateProjectionMatrix();
-  }
-
-  /** Keep ortho width/height ratio after resize (preserve half-height). */
-  function refreshOrthoAspect() {
-    const aspect = canvasAspect();
-    const halfH = Math.max(orthoCamera.top, 1e-6);
-    const halfW = halfH * aspect;
-    orthoCamera.left = -halfW;
-    orthoCamera.right = halfW;
-    orthoCamera.updateProjectionMatrix();
-  }
-
-  /**
-   * Size ortho frustum to cover content half-extents (metres) with letterboxing.
-   * @param {number} contentHalfW
-   * @param {number} contentHalfH
-   */
-  function sizeOrthoToContent(contentHalfW, contentHalfH) {
-    const aspect = canvasAspect();
-    const wantW = Math.max(contentHalfW, 1e-6);
-    const wantH = Math.max(contentHalfH, 1e-6);
-    let halfH = wantH;
-    let halfW = halfH * aspect;
-    if (halfW < wantW) {
-      halfW = wantW;
-      halfH = halfW / Math.max(aspect, 1e-6);
-    }
-    viewZoom = 1;
-    orthoCamera.left = -halfW;
-    orthoCamera.right = halfW;
-    orthoCamera.top = halfH;
-    orthoCamera.bottom = -halfH;
-    orthoCamera.updateProjectionMatrix();
-    applyCombinedZoom();
-  }
-
-  /**
-   * Move camera along the look vector so distance to target becomes `dist`.
-   * @param {number} dist
-   */
-  function setCameraDistance(dist) {
-    const d = Math.max(dist, 1e-4);
-    const dir = _look.copy(camera.position).sub(controls.target);
-    if (dir.lengthSq() < 1e-12) dir.set(0, 0, 1);
-    else dir.normalize();
-    camera.position.copy(controls.target).addScaledVector(dir, d);
-  }
-
-  /**
-   * @param {THREE.PerspectiveCamera | THREE.OrthographicCamera} next
-   */
-  function setActiveCamera(next) {
-    if (next === camera) return;
-    next.position.copy(camera.position);
-    next.quaternion.copy(camera.quaternion);
-    next.up.copy(camera.up);
-    next.near = camera.near;
-    next.far = camera.far;
-    camera = next;
-    controls.object = camera;
-    controls.update();
-  }
-
-  function combinedZoom() {
-    const fz =
-      Math.abs(frameOffX) > 0.05 ||
-      Math.abs(frameOffY) > 0.05 ||
-      Math.abs(frameZoom - 1) > 0.001
-        ? frameZoom
-        : 1;
-    return viewZoom * fz;
-  }
-
-  function applyCombinedZoom() {
-    camera.zoom = combinedZoom();
-    camera.updateProjectionMatrix();
-  }
-
-  function syncViewZoomFromCamera() {
-    if (suppressViewZoomSync || suppressCameraChange) return;
-    if (!camera.isOrthographicCamera) return;
-    const fz =
-      Math.abs(frameOffX) > 0.05 ||
-      Math.abs(frameOffY) > 0.05 ||
-      Math.abs(frameZoom - 1) > 0.001
-        ? frameZoom
-        : 1;
-    viewZoom = Math.max(camera.zoom / Math.max(fz, 1e-6), 1e-6);
-  }
-
-  function enterOrtho() {
-    // Known issue (see viewer README “Known ISO issues”):
-    // FOV → ISO can show a phantom near-plane clip that looks like a section
-    // cut with no cut active. Orbiting alone in ISO usually does not.
-    // Likely near/far or frustum handoff below — not fixed yet.
-    // Coplanar face fights are handled by applyLayerDepthBias, not polygonOffset.
-    if (projection === "ortho") return;
-    lastHFovDeg = hFovDeg;
-    const dist = camera.position.distanceTo(controls.target);
-    const vFovRad = hFovDegToVFovRad(hFovDeg, canvasAspect());
-    sizeOrthoFrustum(dist, vFovRad);
-    viewZoom = 1;
-    withSuppressedCameraChange(() => {
-      suppressViewZoomSync = true;
-      setActiveCamera(orthoCamera);
-      projection = "ortho";
-      applyCombinedZoom();
-      suppressViewZoomSync = false;
-    });
-    syncFovUi();
-  }
-
-  /**
-   * @param {number} [restoreHFov]
-   */
-  function leaveOrtho(restoreHFov) {
-    if (projection !== "ortho") return;
-    const targetFov = clampFov(
-      restoreHFov != null ? restoreHFov : lastHFovDeg,
-    );
-    const halfH = Math.max(orthoCamera.top, 1e-6) / Math.max(viewZoom, 1e-6);
-    const vFovRad = hFovDegToVFovRad(targetFov, canvasAspect());
-    const dist = halfH / Math.max(Math.tan(vFovRad / 2), 1e-8);
-    hFovDeg = targetFov;
-    lastHFovDeg = targetFov;
-    viewZoom = 1;
-    withSuppressedCameraChange(() => {
-      suppressViewZoomSync = true;
-      setActiveCamera(perspCamera);
-      projection = "perspective";
-      applyPerspFovFromState();
-      setCameraDistance(dist);
-      applyCombinedZoom();
-      updateCameraClipPlanes();
-      controls.update();
-      suppressViewZoomSync = false;
-    });
-    syncFovUi();
-  }
-
-  /**
-   * @param {number} deg
-   * @param {{ reframe?: boolean }} [opts]
-   */
-  function setHFov(deg, opts = {}) {
-    const next = clampFov(deg);
-    if (projection === "ortho") {
-      leaveOrtho(next);
-      return;
-    }
-    const aspect = canvasAspect();
-    const oldV = hFovDegToVFovRad(hFovDeg, aspect);
-    const newV = hFovDegToVFovRad(next, aspect);
-    const dist = camera.position.distanceTo(controls.target);
-    hFovDeg = next;
-    lastHFovDeg = next;
-    withSuppressedCameraChange(() => {
-      applyPerspFovFromState();
-      if (opts.reframe !== false) {
-        const scale = Math.tan(oldV / 2) / Math.max(Math.tan(newV / 2), 1e-8);
-        setCameraDistance(dist * scale);
-        updateCameraClipPlanes();
-        controls.update();
-      }
-      applyCombinedZoom();
-    });
-    syncFovUi();
-  }
-
-  function toggleFovIso() {
-    if (projection === "ortho") leaveOrtho(lastHFovDeg);
-    else enterOrtho();
-  }
-
-  /**
-   * @param {number} v
-   */
-  function clampFov(v) {
-    return Math.min(FOV_MAX, Math.max(FOV_MIN, v));
-  }
-
-  function sliderValueFromState() {
-    return projection === "ortho" ? ISO_SLIDER : hFovDeg;
-  }
-
-  function formatFovSlider(v) {
-    if (v > FOV_MAX) return "ISO";
-    return `${Math.round(v)}°`;
-  }
-
-  function syncFovUi() {
-    if (fovRange) fovRange.value = sliderValueFromState();
-    if (fovValueEl) {
-      fovValueEl.textContent =
-        projection === "ortho" ? "ISO" : `${Math.round(hFovDeg)}°`;
-    }
-    fovRange?.refresh();
-  }
-
-  /**
-   * @param {number} v
-   */
-  function applyFovSliderValue(v) {
-    if (v > FOV_MAX) {
-      if (projection !== "ortho") enterOrtho();
-      else syncFovUi();
-      return;
-    }
-    const fov = clampFov(v);
-    if (projection === "ortho") leaveOrtho(fov);
-    else setHFov(fov, { reframe: true });
-  }
-
-  function buildFovControl() {
-    const host = document.getElementById("fov");
-    if (!host) return;
-    host.replaceChildren();
-
-    const row = document.createElement("div");
-    row.className = "fov-row";
-
-    const label = document.createElement("span");
-    label.className = "fov-label";
-    label.textContent = tr("ui.fov");
-
-    fovValueEl = document.createElement("span");
-    fovValueEl.className = "fov-value";
-    fovValueEl.textContent = `${Math.round(hFovDeg)}°`;
-
-    fovRange = createCooperativeRange({
-      min: FOV_MIN,
-      max: ISO_SLIDER,
-      step: 1,
-      value: sliderValueFromState(),
-      ariaLabel: "Field of view",
-      formatAriaValue: formatFovSlider,
-      onInput: (v) => applyFovSliderValue(v),
-      onChange: (v) => applyFovSliderValue(v),
-      onTap: () => toggleFovIso(),
-    });
-    fovRange.el.classList.add("fov-range");
-
-    // Visual detent mark at the FOV→ISO boundary.
-    const detent = document.createElement("div");
-    detent.className = "fov-detent";
-    detent.setAttribute("aria-hidden", "true");
-    const t = (FOV_MAX - FOV_MIN) / (ISO_SLIDER - FOV_MIN);
-    detent.style.left = `${t * 100}%`;
-    const track = fovRange.el.querySelector(".coop-range-track");
-    track?.append(detent);
-
-    row.append(label, fovRange.el, fovValueEl);
-    host.append(row);
-    syncFovUi();
-  }
+  ctx.fail = fail;
 
   /** @type {ReturnType<typeof createCooperativeRange> | null} */
-  let walkHeightRange = null;
-
-  /**
-   * Person height for walk mode (View section, under FOV). Snaps to the
-   * 174 and 186 cm detents (walkPhysics.js).
-   */
-  function buildWalkHeightControl() {
-    const host = document.getElementById("walk-height");
-    if (!host) return;
-    host.replaceChildren();
-    const row = document.createElement("div");
-    row.className = "fov-row";
-    const label = document.createElement("span");
-    label.className = "fov-label";
-    label.textContent = tr("ui.personHeight");
-    const value = document.createElement("span");
-    value.className = "fov-value";
-    const cm = walk ? walk.heightCm : snapHeightCm(Number.NaN);
-    value.textContent = `${cm} cm`;
-    const apply = (v) => {
-      const snapped = walk ? walk.setHeight(v) : snapHeightCm(v);
-      if (walkHeightRange && walkHeightRange.value !== snapped) walkHeightRange.value = snapped;
-      value.textContent = `${snapped} cm`;
-    };
-    walkHeightRange = createCooperativeRange({
-      min: HEIGHT_MIN_CM,
-      max: HEIGHT_MAX_CM,
-      step: 1,
-      value: cm,
-      ariaLabel: tr("ui.personHeight"),
-      formatAriaValue: (v) => `${Math.round(v)} cm`,
-      onInput: apply,
-      onChange: apply,
-    });
-    walkHeightRange.el.classList.add("fov-range");
-    const track = walkHeightRange.el.querySelector(".coop-range-track");
-    for (const d of HEIGHT_DETENTS_CM) {
-      const mark = document.createElement("div");
-      mark.className = "fov-detent";
-      mark.setAttribute("aria-hidden", "true");
-      mark.style.left = `${((d - HEIGHT_MIN_CM) / (HEIGHT_MAX_CM - HEIGHT_MIN_CM)) * 100}%`;
-      track?.append(mark);
-    }
-    row.append(label, walkHeightRange.el, value);
-    host.append(row);
-  }
-
-  /** Keep near/far tight around the model so depth precision stays usable. */
-  function updateCameraClipPlanes() {
-    const span = Math.max(size.x, size.y, size.z, 0.01);
-    const dist = camera.position.distanceTo(controls.target);
-    // Pull near plane in when close; keep far just past the far side of the model.
-    // Quantize so sub-millimetre orbit noise does not dirty the projection
-    // every frame and defeat the idle redraw skip.
-    const near =
-      Math.round(
-        Math.min(Math.max(dist / 200, span / 5000, 0.001), dist / 10) * 1e4,
-      ) / 1e4;
-    const far =
-      Math.round(Math.max(dist + span * 4, span * 8, 10) * 1e4) / 1e4;
-    if (camera.near === near && camera.far === far) return;
-    camera.near = near;
-    camera.far = far;
-    camera.updateProjectionMatrix();
-  }
-
-  function withSuppressedCameraChange(fn) {
-    suppressCameraChange = true;
-    try {
-      fn();
-    } finally {
-      requestAnimationFrame(() => {
-        suppressCameraChange = false;
-      });
-    }
-  }
+  ctx.walkHeightRange = null;
 
   // Default FOV before first frame / GLB load.
-  applyPerspFovFromState();
-
-  function frameIso() {
-    if (!root) return;
-    withSuppressedCameraChange(() => {
-      updateBox();
-      controls.target.copy(center);
-      const span = Math.max(size.x, size.y, size.z, 1);
-      const dist = span * 1.85;
-      camera.position.set(
-        center.x + dist * 0.75,
-        center.y + dist * 0.55,
-        center.z + dist * 0.75,
-      );
-      updateCameraClipPlanes();
-      controls.update();
-    });
-    maybeSpawnDraftFromCamera();
-    scheduleCameraSave();
-  }
-
-  /** Iso and the other builtin views show every part. */
-  function resetDefaultOpacities() {
-    for (const name of parts.keys()) {
-      if (lazyLayers.has(name) || lockedLeaves.has(name)) continue;
-      partOpacity.set(name, 1);
-      partLastNonZero.set(name, 1);
-      applyOpacityToMeshes(parts.get(name) || [], 1, { edgeMode });
-    }
-    scheduleVisibilitySave();
-    updateBox();
-    syncPartOpacityUi();
-  }
-
-  function setCameraPreset(name) {
-    if (!root) return;
-    if (walk?.active) walk.exit({ keepCamera: true });
-    activeSceneSpec = null;
-    annotations.clear();
-    setVerticalExaggeration(1);
-    resetDefaultOpacities();
-    syncDrawingButton();
-    syncLabelButton();
-    // Builtin presets assume default world-up (Three Y).
-    perspCamera.up.set(0, 1, 0);
-    orthoCamera.up.set(0, 1, 0);
-    camera.up.set(0, 1, 0);
-    if (name === "iso") {
-      frameIso();
-      return;
-    }
-    withSuppressedCameraChange(() => {
-      updateBox();
-      const span = Math.max(size.x, size.y, size.z, 1);
-      const dist = span * 1.85;
-      const c = center;
-      // Front/side: eye-level (same Y as target) so look is horizontal —
-      // true elevation in ISO; no foreshortened floor. Top keeps a tiny
-      // Z nudge so OrbitControls up does not align with the look axis.
-      // Side from −X (window wall), not +X.
-      if (name === "front") {
-        camera.position.set(c.x, c.y, c.z + dist);
-      } else if (name === "top") {
-        camera.position.set(c.x, c.y + dist, c.z + span * 0.01);
-      } else if (name === "side") {
-        camera.position.set(c.x - dist, c.y, c.z);
-      }
-      controls.target.copy(c);
-      updateCameraClipPlanes();
-      controls.update();
-    });
-    maybeSpawnDraftFromCamera();
-    scheduleCameraSave();
-  }
-
-  /**
-   * Apply a named custom scene (camera, optional FOV/ISO, cuts, opacities).
-   * @param {object} spec
-   */
-  function applyScene(spec) {
-    if (!root || !spec) return;
-    if (walk?.active) walk.exit({ keepCamera: true });
-    activeSceneSpec = spec;
-    setVerticalExaggeration(spec.verticalExaggeration);
-    const zScale = verticalExaggeration;
-
-    const hasOpacity =
-      spec.opacityDefault != null ||
-      (spec.opacity && typeof spec.opacity === "object");
-    if (hasOpacity) {
-      const def =
-        spec.opacityDefault != null ? Number(spec.opacityDefault) : 1;
-      const rawOverrides =
-        spec.opacity && typeof spec.opacity === "object" ? spec.opacity : {};
-      const overrides = expandOpacityGroups(rawOverrides, partOutline);
-      for (const name of parts.keys()) {
-        if (lazyLayers.has(name)) continue;
-        const raw =
-          Object.prototype.hasOwnProperty.call(overrides, name)
-            ? overrides[name]
-            : def;
-        // One clip + edge rebuild after the loop. Per-part applyClipping
-        // rebuilt every fat line once per leaf and made scene changes stall.
-        setPartOpacity(name, raw, { skipUi: true, skipClip: true });
-      }
-      updateBox();
-      syncPartOpacityUi();
-    }
-
-    if (Object.prototype.hasOwnProperty.call(spec, "cuts")) {
-      const list = Array.isArray(spec.cuts) ? spec.cuts : [];
-      cuts.length = 0;
-      for (const c of list) {
-        const n = c?.normal;
-        if (!Array.isArray(n) || n.length < 3) continue;
-        const normal = new THREE.Vector3(
-          Number(n[0]) || 0,
-          Number(n[1]) || 0,
-          Number(n[2]) || 0,
-        );
-        if (normal.lengthSq() < 1e-12) continue;
-        normal.normalize();
-        /** @type {THREE.Vector3 | null} */
-        let anchor = null;
-        let cutT = Math.min(1, Math.max(0, Number(c.t) || 0));
-        if (Array.isArray(c.anchor) && c.anchor.length >= 3) {
-          anchor = cadMmToGltf(c.anchor);
-          anchor.y *= zScale;
-          const { near, far } = projectBoxOntoNormal(normal);
-          const s = anchor.dot(normal);
-          cutT = Math.min(1, Math.max(0, (s - near) / Math.max(far - near, 1e-6)));
-        }
-        cuts.push({
-          id: nextCutId++,
-          normal,
-          t: cutT,
-          anchor,
-          locked: true,
-          label: formatAngleLabel(normal),
-        });
-      }
-      cameraMovedSinceLock = false;
-      applyClipping();
-      ensureDraftCut();
-      buildCutUI();
-      chromeApi?.refreshPartialHeight();
-    }
-
-    if (spec.projection === "ortho") {
-      if (projection !== "ortho") enterOrtho();
-      else syncFovUi();
-    } else if (spec.hFovDeg != null && Number.isFinite(Number(spec.hFovDeg))) {
-      setHFov(Number(spec.hFovDeg), { reframe: false });
-    }
-
-    const cam = spec.camera;
-    if (cam && Array.isArray(cam.target) && Array.isArray(cam.position)) {
-      withSuppressedCameraChange(() => {
-        suppressViewZoomSync = true;
-        const up = new THREE.Vector3(0, 1, 0);
-        if (Array.isArray(cam.up) && cam.up.length >= 3) {
-          up.set(
-            Number(cam.up[0]) || 0,
-            Number(cam.up[1]) || 0,
-            Number(cam.up[2]) || 0,
-          );
-          if (up.lengthSq() < 1e-12) up.set(0, 1, 0);
-          else up.normalize();
-        }
-        // Keep both projection cameras in sync — enterOrtho switches objects.
-        perspCamera.up.copy(up);
-        orthoCamera.up.copy(up);
-        camera.up.copy(up);
-        controls.target.set(
-          Number(cam.target[0]) || 0,
-          (Number(cam.target[1]) || 0) * zScale,
-          Number(cam.target[2]) || 0,
-        );
-        camera.position.set(
-          Number(cam.position[0]) || 0,
-          (Number(cam.position[1]) || 0) * zScale,
-          Number(cam.position[2]) || 0,
-        );
-        camera.lookAt(controls.target);
-        if (
-          projection === "ortho" &&
-          Array.isArray(cam.orthoFit) &&
-          cam.orthoFit.length >= 2
-        ) {
-          sizeOrthoToContent(
-            Number(cam.orthoFit[0]) || 0.1,
-            (Number(cam.orthoFit[1]) || 0.1) * zScale,
-          );
-        }
-        updateBox();
-        updateCameraClipPlanes();
-        controls.update();
-        suppressViewZoomSync = false;
-      });
-    }
-
-    maybeSpawnDraftFromCamera();
-    scheduleCameraSave();
-    const edge = spec.edges;
-    if (edge === "none" || edge === "transparent" || edge === "opaque") {
-      edgeMode = edge;
-      refreshEdges();
-    }
-    annotations.setSpec(spec);
-    syncDrawingButton();
-    syncLabelButton();
-  }
-
-  /**
-   * @param {string} name
-   * @param {number} opacity
-   * @param {{ skipUi?: boolean, detach?: boolean, skipClip?: boolean }} [opts]
-   */
-  function setPartOpacity(name, opacity, opts = {}) {
-    // A locked leaf keeps its visibility until it is unlocked (or Reset).
-    if (!opts.force && lockedLeaves.has(name)) return;
-    const o = Math.max(0, Math.min(1, Number(opacity) || 0));
-    partOpacity.set(name, o);
-    if (o > 0) partLastNonZero.set(name, o);
-    if (opts.detach) detachedLeaves.add(name);
-    if (o > 0 && lazyLayers.get(name)?.state === "idle") void loadLazyLayer(name);
-    applyOpacityToMeshes(parts.get(name) || [], o, { edgeMode });
-    scheduleVisibilitySave();
-    if (opts.skipClip) return;
-    updateBox();
-    if (!opts.skipUi) syncPartOpacityUi();
-  }
-
-  /**
-   * @param {string[]} leafIds
-   * @param {number} opacity 0–1
-   * @param {string} [groupId]
-   */
-  function setGroupOpacity(leafIds, opacity, groupId) {
-    const o = Math.max(0, Math.min(1, Number(opacity) || 0));
-    if (groupId) groupSliderOpacity.set(groupId, o);
-    for (const id of leafIds) {
-      if (detachedLeaves.has(id) || lockedLeaves.has(id)) continue;
-      partOpacity.set(id, o);
-      if (o > 0) partLastNonZero.set(id, o);
-      applyOpacityToMeshes(parts.get(id) || [], o, { edgeMode });
-    }
-    scheduleVisibilitySave();
-    updateBox();
-    syncPartOpacityUi();
-  }
-
-  /**
-   * Reattach a leaf to its parent group and match the group's current opacity.
-   * @param {string} leafId
-   * @param {string} groupId
-   * @param {string[]} groupLeafIds
-   */
-  function syncLeafToGroup(leafId, groupId, groupLeafIds) {
-    if (lockedLeaves.has(leafId)) return;
-    detachedLeaves.delete(leafId);
-    const attached = groupLeafIds.filter((id) => !detachedLeaves.has(id));
-    const o = groupDisplayOpacity(groupId, attached);
-    partOpacity.set(leafId, o);
-    if (o > 0) partLastNonZero.set(leafId, o);
-    applyOpacityToMeshes(parts.get(leafId) || [], o, { edgeMode });
-    scheduleVisibilitySave();
-    updateBox();
-    syncPartOpacityUi();
-  }
-
-  /**
-   * @param {string[]} leafIds
-   * @returns {number}
-   */
-  function commonOpacity(leafIds) {
-    if (!leafIds.length) return 1;
-    const first = partOpacity.get(leafIds[0]) ?? 1;
-    for (let i = 1; i < leafIds.length; i++) {
-      const v = partOpacity.get(leafIds[i]) ?? 1;
-      if (Math.abs(v - first) > 1e-4) return NaN;
-    }
-    return first;
-  }
-
-  /**
-   * @param {string} groupId
-   * @param {string[]} leafIds
-   * @returns {number}
-   */
-  function groupDisplayOpacity(groupId, leafIds) {
-    const attached = leafIds.filter((id) => !detachedLeaves.has(id));
-    const common = commonOpacity(attached.length ? attached : leafIds);
-    if (!Number.isNaN(common)) return common;
-    return groupSliderOpacity.get(groupId) ?? 1;
-  }
-
-  function syncPartOpacityUi() {
-    for (const [id, range] of leafOpacityRanges) {
-      range.value = (partOpacity.get(id) ?? 1) * 100;
-    }
-    for (const [gid, range] of groupOpacityRanges) {
-      const leaves = (range.el.dataset.leaves || "")
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-      range.value = groupDisplayOpacity(gid, leaves) * 100;
-    }
-    for (const [id, btn] of leafSyncButtons) {
-      const detached = detachedLeaves.has(id);
-      btn.hidden = !detached;
-      btn.setAttribute("aria-hidden", detached ? "false" : "true");
-    }
-  }
-
-  function lockedClipPlanes() {
-    return cuts.filter((c) => c.locked).map((c) => planeForCut(c));
-  }
-
-  function edgeResolution() {
-    const size = new THREE.Vector2();
-    renderer.getDrawingBufferSize(size);
-    return { x: size.x, y: size.y };
-  }
-
-  function refreshEdges() {
-    if (!parts.size) return;
-    if (edgeMode === EDGE_MODE_NONE) {
-      clearEdgeOverlays(root);
-      return;
-    }
-    syncEdgeOverlays(parts, true, {
-      clippingPlanes: lockedClipPlanes(),
-      resolution: edgeResolution(),
-      edgeMode,
-    });
-  }
+  ctx.applyPerspFovFromState();
 
   /** Bumped per refresh so a slow catalogue fetch cannot paint a stale mode. */
-  let materialsRequest = 0;
-
-  function refreshMaterials() {
-    if (!parts.size) return;
-    const request = ++materialsRequest;
-    if (materialMode === MODE_REALISTIC) {
-      const ctl = ensureRealistic();
-      ctl.load().then(() => {
-        if (request !== materialsRequest || materialMode !== MODE_REALISTIC || !root) return;
-        ctl.apply(parts, root, {
-          clippingPlanes: lockedClipPlanes(),
-          opacityByLabel: partOpacity,
-          edgeMode,
-        });
-        finishMaterialRefresh();
-      });
-      return;
-    }
-    if (realisticCtl?.stage.enabled) realisticCtl.leave(parts);
-    applyMaterialMode(parts, materialMode, {
-      isDark: isDarkTheme,
-      clippingPlanes: lockedClipPlanes(),
-      opacityByLabel: partOpacity,
-      edgeMode,
-    });
-    finishMaterialRefresh();
-  }
-
-  function finishMaterialRefresh() {
-    if (materialMode === MODE_REALISTIC) {
-      // Filmic curve for PBR; exposure tuned against the staged sun + IBL.
-      renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.0;
-    } else if (materialMode === MODE_SHADED) {
-      renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.05;
-    } else {
-      // Solid uses unlit MeshBasicMaterial — skip ACES so chroma stays punchy.
-      renderer.toneMapping = THREE.NoToneMapping;
-      renderer.toneMappingExposure = 1;
-    }
-    // Before edges and caps: a box a model stands in for gets neither.
-    fixtureModels.sync(materialMode, lockedClipPlanes());
-    refreshEdges();
-    syncSectionCaps(parts, lockedClipPlanes());
-    if (materialMode === MODE_REALISTIC) realisticCtl?.afterRefresh();
-    reapplyLightLooks();
-    viewDirty = true;
-  }
-
-  function buildMaterialToggle() {
-    const host = document.getElementById("mats");
-    if (!host) return;
-    host.replaceChildren();
-    for (const [id, labelKey] of [
-      [MODE_SOLID, "ui.solid"],
-      [MODE_SHADED, "ui.shaded"],
-      [MODE_REALISTIC, "ui.realistic"],
-    ]) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.dataset.mode = id;
-      btn.textContent = tr(labelKey);
-      if (id === materialMode) btn.classList.add("is-active");
-      btn.addEventListener("click", () => {
-        materialMode = id;
-        saveMaterialMode(id);
-        host.querySelectorAll("button").forEach((el) => {
-          el.classList.toggle("is-active", el.dataset.mode === id);
-        });
-        refreshMaterials();
-      });
-      host.append(btn);
-    }
-  }
-
-  function buildEdgesToggle() {
-    const host = document.getElementById("edges");
-    if (!host) return;
-    host.replaceChildren();
-    for (const [id, labelKey] of [
-      [EDGE_MODE_NONE, "ui.edgesNone"],
-      [EDGE_MODE_TRANSPARENT, "ui.edgesTransparent"],
-      [EDGE_MODE_OPAQUE, "ui.edgesOpaque"],
-    ]) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.dataset.edgeMode = id;
-      btn.textContent = tr(labelKey);
-      if (id === edgeMode) btn.classList.add("is-active");
-      btn.addEventListener("click", () => {
-        edgeMode = id;
-        saveEdgeMode(id);
-        host.querySelectorAll("button").forEach((el) => {
-          el.classList.toggle("is-active", el.dataset.edgeMode === id);
-        });
-        // Rebuild overlays then re-apply face opacities so stroke alpha matches mode.
-        refreshEdges();
-        healOpacitiesFromState();
-      });
-      host.append(btn);
-    }
-  }
-
-  /**
-   * Tap toggles 0 ↔ lastNonZero; horizontal drag on the thumb scrubs.
-   * Uses cooperative range (no native click-to-seek).
-   * @param {string} aria
-   * @param {number} pct0to100
-   * @param {() => number} getLastNonZero 0–1
-   * @param {(opacity: number) => void} apply
-   * @returns {{ wrap: HTMLDivElement, range: ReturnType<typeof createCooperativeRange> }}
-   */
-  function makeOpacityRange(aria, pct0to100, getLastNonZero, apply) {
-    const wrap = document.createElement("div");
-    wrap.className = "part-opacity-wrap";
-
-    /** @type {ReturnType<typeof createCooperativeRange>} */
-    let range;
-    const toggle = () => {
-      const cur = range.value / 100;
-      if (cur > 0) apply(0);
-      else {
-        const last = getLastNonZero();
-        apply(last > 0 ? last : 1);
-      }
-    };
-
-    range = createCooperativeRange({
-      min: 0,
-      max: 100,
-      step: 1,
-      value: Math.round(pct0to100),
-      ariaLabel: aria,
-      formatAriaValue: (v) => `${Math.round(v)}%`,
-      thumbScrubOnly: true,
-      onInput: (v) => apply(v / 100),
-      onChange: (v) => apply(v / 100),
-      onTap: toggle,
-    });
-    range.el.classList.add("part-opacity");
-    wrap.append(range.el);
-    return { wrap, range };
-  }
-
-  /**
-   * Size the name column to the longest visible label; sliders fill the rest.
-   */
-  function relayoutPartNameColumn() {
-    const host = document.getElementById("parts");
-    if (!host) return;
-    host.style.removeProperty("--part-name-col");
-    let max = 0;
-    for (const el of host.querySelectorAll(".part-name")) {
-      const nest = el.closest(".part-children");
-      if (nest?.hidden) continue;
-      // Force intrinsic width so overflow:hidden does not shrink scrollWidth.
-      const prev = el.style.width;
-      el.style.width = "max-content";
-      max = Math.max(max, Math.ceil(el.getBoundingClientRect().width));
-      el.style.width = prev;
-    }
-    if (max > 0) {
-      host.style.setProperty("--part-name-col", `${max}px`);
-    }
-  }
-
-  /**
-   * @param {import("./materials.js").OutlineNode} node
-   * @param {HTMLElement} parent
-   * @param {number} depth
-   * @param {{ groupId: string, leafIds: string[] } | null} [parentGroup]
-   */
-  function appendOutlineNode(node, parent, depth, parentGroup = null) {
-    if (node.type === "leaf") {
-      const row = document.createElement("div");
-      row.className = "part-row part-leaf";
-      row.style.setProperty("--part-depth", String(depth));
-      row.dataset.leaf = node.id;
-
-      const spacer = document.createElement("span");
-      spacer.className = "part-disclosure-spacer";
-      spacer.setAttribute("aria-hidden", "true");
-
-      const nameEl = document.createElement("span");
-      nameEl.className = "part-name";
-      nameEl.textContent = node.label;
-
-      const { wrap, range } = makeOpacityRange(
-        `${node.label} opacity`,
-        (partOpacity.get(node.id) ?? 1) * 100,
-        () => partLastNonZero.get(node.id) ?? 1,
-        (o) => {
-          if (lockedLeaves.has(node.id)) return;
-          setPartOpacity(node.id, o, {
-            detach: Boolean(parentGroup),
-          });
-        },
-      );
-      range.el.dataset.leaf = node.id;
-      leafOpacityRanges.set(node.id, range);
-
-      /** @type {HTMLButtonElement | null} */
-      let syncBtn = null;
-      if (parentGroup) {
-        syncBtn = document.createElement("button");
-        syncBtn.type = "button";
-        syncBtn.className = "part-sync";
-        syncBtn.textContent = tr("ui.sync");
-        syncBtn.setAttribute("aria-label", `${tr("ui.sync")} ${node.label}`);
-        const detached = detachedLeaves.has(node.id);
-        syncBtn.hidden = !detached;
-        syncBtn.setAttribute("aria-hidden", detached ? "false" : "true");
-        syncBtn.addEventListener("click", (ev) => {
-          ev.stopPropagation();
-          syncLeafToGroup(
-            node.id,
-            parentGroup.groupId,
-            parentGroup.leafIds,
-          );
-        });
-        leafSyncButtons.set(node.id, syncBtn);
-      }
-
-      const lockBtn = makeLockButton(node.id, node.label, row);
-      if (syncBtn) row.append(spacer, nameEl, wrap, syncBtn, lockBtn);
-      else row.append(spacer, nameEl, wrap, lockBtn);
-      parent.append(row);
-      return;
-    }
-
-    // The cable layer is not driven by its group's slider.
-    const leafIds = collectLeafIds(node).filter((id) => !isLayerLeaf(id));
-    const groupWrap = document.createElement("div");
-    groupWrap.className = "part-group";
-    groupWrap.dataset.group = node.id;
-
-    const row = document.createElement("div");
-    row.className = "part-row part-group-row";
-    row.style.setProperty("--part-depth", String(depth));
-    row.setAttribute("role", "button");
-    row.tabIndex = 0;
-
-    const disclosure = document.createElement("button");
-    disclosure.type = "button";
-    disclosure.className = "part-disclosure";
-    disclosure.setAttribute("aria-label", `Expand ${node.label}`);
-    disclosure.setAttribute("aria-expanded", "false");
-
-    const nameEl = document.createElement("span");
-    nameEl.className = "part-name";
-    nameEl.textContent = node.label;
-
-    /** Last non-zero for the group slider itself. */
-    let groupLastNonZero = groupDisplayOpacity(node.id, leafIds) || 1;
-    if (groupLastNonZero <= 0) groupLastNonZero = 1;
-
-    const { wrap, range } = makeOpacityRange(
-      `${node.label} opacity`,
-      groupDisplayOpacity(node.id, leafIds) * 100,
-      () => groupLastNonZero,
-      (o) => {
-        if (lockStates(partOutline, partLocks || []).has(node.id)) return;
-        if (o > 0) groupLastNonZero = o;
-        setGroupOpacity(leafIds, o, node.id);
-      },
-    );
-    range.el.dataset.group = node.id;
-    range.el.dataset.leaves = leafIds.join(",");
-    groupOpacityRanges.set(node.id, range);
-
-    // Stop row toggle when interacting with the slider.
-    wrap.addEventListener("click", (ev) => ev.stopPropagation());
-    wrap.addEventListener("pointerdown", (ev) => ev.stopPropagation());
-
-    const children = document.createElement("div");
-    children.className = "part-children";
-    children.hidden = true;
-
-    function setExpanded(open) {
-      if (open) expandedGroups.add(node.id);
-      else expandedGroups.delete(node.id);
-      children.hidden = !open;
-      groupWrap.classList.toggle("is-expanded", open);
-      disclosure.setAttribute("aria-expanded", open ? "true" : "false");
-      disclosure.setAttribute(
-        "aria-label",
-        open ? `Collapse ${node.label}` : `Expand ${node.label}`,
-      );
-      requestAnimationFrame(() => relayoutPartNameColumn());
-    }
-
-    function toggleExpanded() {
-      setExpanded(!expandedGroups.has(node.id));
-    }
-
-    disclosure.addEventListener("click", (ev) => {
-      ev.stopPropagation();
-      toggleExpanded();
-    });
-    row.addEventListener("click", (ev) => {
-      if (wrap.contains(/** @type {Node} */ (ev.target))) {
-        return;
-      }
-      toggleExpanded();
-    });
-    row.addEventListener("keydown", (ev) => {
-      if (ev.key === "Enter" || ev.key === " ") {
-        ev.preventDefault();
-        toggleExpanded();
-      }
-    });
-
-    const lockBtn = makeLockButton(node.id, node.label, row);
-    row.append(disclosure, nameEl, wrap, lockBtn);
-    groupWrap.append(row, children);
-    parent.append(groupWrap);
-
-    const childParent = { groupId: node.id, leafIds };
-    for (const child of node.children) {
-      appendOutlineNode(child, children, depth + 1, isLayerLeaf(child.id) ? null : childParent);
-    }
-
-    // Restore expand state if rebuilding; default collapsed.
-    setExpanded(expandedGroups.has(node.id));
-  }
-
-  function buildPartToggles() {
-    const host = document.getElementById("parts");
-    if (!host) return;
-    host.replaceChildren();
-    leafOpacityRanges.clear();
-    groupOpacityRanges.clear();
-    leafSyncButtons.clear();
-
-    for (const name of parts.keys()) {
-      if (!partOpacity.has(name)) {
-        partOpacity.set(name, 1);
-        applyOpacityToMeshes(parts.get(name) || [], 1, { edgeMode });
-      }
-      if (!partLastNonZero.has(name)) partLastNonZero.set(name, 1);
-    }
-
-    const lazyIds = [...lazyLayers.keys()].filter((id) => !parts.has(id));
-    const outline = hasCables
-      ? resolvePartOutline([...parts.keys(), ...lazyIds, CABLE_LEAF], withCableLeaf(partGroups), tr)
-      : resolvePartOutline([...parts.keys(), ...lazyIds], partGroups, tr);
-    partOutline = outline;
-    if (!partLocks) partLocks = new Set(defaultLocks(outline));
-    recomputeLocks();
-    lockButtons.clear();
-    for (const node of outline) {
-      appendOutlineNode(node, host, 0, null);
-    }
-    const footer = document.createElement("div");
-    footer.className = "parts-footer";
-    const resetBtn = document.createElement("button");
-    resetBtn.type = "button";
-    resetBtn.id = "parts-reset";
-    resetBtn.className = "parts-reset";
-    resetBtn.textContent = tr("ui.resetVisibility");
-    resetBtn.addEventListener("click", () => resetVisibility());
-    footer.append(resetBtn);
-    host.append(footer);
-    syncLockUi();
-    requestAnimationFrame(() => relayoutPartNameColumn());
-  }
+  ctx.materialsRequest = 0;
 
   // ---- Locks and remembered visibility (visibilityState.js) ----
 
-  const PADLOCK_CLOSED =
+  ctx.PADLOCK_CLOSED =
     '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M7 10V7a5 5 0 0 1 10 0v3h1a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h1zm2 0h6V7a3 3 0 0 0-6 0v3z"/></svg>';
-  const PADLOCK_OPEN =
+  ctx.PADLOCK_OPEN =
     '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M8 11V7a4 4 0 0 1 7.75-1.4"/><rect x="5" y="11" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
 
-  /**
-   * Padlock on a Parts row (44 pt target). Tap locks or unlocks that row;
-   * a row locked by its group shows a dimmed closed padlock and is inert.
-   * @param {string} id
-   * @param {string} label
-   * @param {HTMLElement} row
-   */
-  function makeLockButton(id, label, row) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "part-lock";
-    btn.dataset.lock = id;
-    btn.addEventListener("click", (ev) => {
-      ev.stopPropagation();
-      if (btn.disabled) return;
-      toggleLock(id);
-    });
-    btn.addEventListener("pointerdown", (ev) => ev.stopPropagation());
-    lockButtons.set(id, { row, btn, label });
-    return btn;
-  }
-
-  function recomputeLocks() {
-    const locks = partLocks || new Set();
-    lockedLeaves = lockedLeafIds(partOutline, locks);
-    ifcLocks = new Set(
-      [...locks].filter((id) => id.startsWith(IFC_LOCK_PREFIX)).map((id) => id.slice(IFC_LOCK_PREFIX.length)),
-    );
-  }
-
-  function syncLockUi() {
-    const states = lockStates(partOutline, partLocks || []);
-    for (const [id, { row, btn, label }] of lockButtons) {
-      const state = states.get(id) || null;
-      row.classList.toggle("is-locked", Boolean(state));
-      row.classList.toggle("is-lock-inherited", state === "inherited");
-      btn.classList.toggle("is-on", state === "self");
-      btn.classList.toggle("is-inherited", state === "inherited");
-      btn.disabled = state === "inherited";
-      btn.setAttribute("aria-pressed", state ? "true" : "false");
-      const verb = state === "inherited" ? tr("ui.lockedByGroup") : state ? tr("ui.unlock") : tr("ui.lock");
-      btn.setAttribute("aria-label", `${verb} ${label}`);
-      btn.title = verb;
-      btn.innerHTML = state ? PADLOCK_CLOSED : PADLOCK_OPEN;
-    }
-  }
-
-  /** @param {string} id Parts group/leaf id or `ifc:<GlobalId>` */
-  function toggleLock(id) {
-    if (!partLocks) partLocks = new Set(defaultLocks(partOutline));
-    if (partLocks.has(id)) partLocks.delete(id);
-    else partLocks.add(id);
-    recomputeLocks();
-    syncLockUi();
-    // Locked meshes come back if a session hide had them.
-    applyInspectorVisibility();
-    ifcUiRef?.refresh();
-    scheduleVisibilitySave();
-  }
-
-  /** True when this yaml id (mesh key) has a mesh on a locked leaf. */
-  function keyLocked(key) {
-    if (!key || !lockedLeaves.size) return false;
-    for (const mesh of meshesByKey.get(key) || []) {
-      if (lockedLeaves.has(mesh.userData.bpPart)) return true;
-    }
-    return false;
-  }
-
-  /** Inspector-side lock: an IFC lock, or any of its meshes on a locked leaf. */
-  function elementLocked(globalId) {
-    if (ifcElementLocked(ifcIndex, globalId, ifcLocks)) return true;
-    const element = ifcIndex.elements?.[globalId];
-    return Boolean(element?.id && keyLocked(element.id));
-  }
-
   /** @type {{ refresh: () => void } | null} */
-  let ifcUiRef = null;
+  ctx.ifcUiRef = null;
   /** @type {ReturnType<typeof createVisibility> | null} */
-  let ifcVisibilityRef = null;
+  ctx.ifcVisibilityRef = null;
   /** Bumped whenever applyInspectorVisibility runs (content signature). */
-  let visibilitySigRevision = 0;
-  let visSaveTimer = 0;
-  let visRestoring = false;
-  let camSaveTimer = 0;
-  let camRestoring = false;
+  ctx.visibilitySigRevision = 0;
+  ctx.visSaveTimer = 0;
+  ctx.visRestoring = false;
+  ctx.camSaveTimer = 0;
+  ctx.camRestoring = false;
   /** False until the initial scene or remembered camera has been applied. */
-  let cameraReady = false;
-
-  function collectVisibilityState() {
-    /** @type {Record<string, number>} */
-    const opacity = {};
-    for (const [k, v] of partOpacity) opacity[k] = Number(Number(v).toFixed(3));
-    /** @type {Record<string, number>} */
-    const groupSlider = {};
-    for (const [k, v] of groupSliderOpacity) groupSlider[k] = Number(Number(v).toFixed(3));
-    const state = {
-      v: VISIBILITY_VERSION,
-      opacity,
-      groupSlider,
-      detached: [...detachedLeaves],
-      locks: partLocks ? [...partLocks] : null,
-      ifcHidden: ifcVisibilityRef ? ifcVisibilityRef.hiddenIds() : [],
-    };
-    return state;
-  }
-
-  function flushVisibilitySave() {
-    if (visSaveTimer) clearTimeout(visSaveTimer);
-    visSaveTimer = 0;
-    if (!visModelId || visRestoring || !root) return;
-    saveVisibility(visStorage, visModelId, collectVisibilityState());
-  }
-
-  function scheduleVisibilitySave() {
-    if (!visModelId || visRestoring) return;
-    if (visSaveTimer) clearTimeout(visSaveTimer);
-    visSaveTimer = setTimeout(flushVisibilitySave, 300);
-  }
-
-  function cameraBounds() {
-    updateBox();
-    return {
-      min: [box.min.x, box.min.y, box.min.z],
-      max: [box.max.x, box.max.y, box.max.z],
-    };
-  }
-
-  function collectCameraState() {
-    return {
-      v: CAMERA_VERSION,
-      mode: walk?.active ? "walk" : "orbit",
-      position: [camera.position.x, camera.position.y, camera.position.z],
-      target: [controls.target.x, controls.target.y, controls.target.z],
-      heightCm: walk?.heightCm,
-    };
-  }
-
-  function flushCameraSave() {
-    if (camSaveTimer) clearTimeout(camSaveTimer);
-    camSaveTimer = 0;
-    if (!visModelId || camRestoring || !cameraReady || !root) return;
-    saveCamera(visStorage, visModelId, collectCameraState());
-  }
-
-  function scheduleCameraSave() {
-    if (!visModelId || camRestoring || !cameraReady) return;
-    if (camSaveTimer) clearTimeout(camSaveTimer);
-    camSaveTimer = setTimeout(flushCameraSave, 300);
-  }
-
-  function restoreSavedCamera() {
-    if (!visModelId || !root) return;
-    const saved = loadCamera(visStorage, visModelId, cameraBounds());
-    if (!saved) return;
-    camRestoring = true;
-    try {
-      withSuppressedCameraChange(() => {
-        camera.position.set(saved.position[0], saved.position[1], saved.position[2]);
-        controls.target.set(saved.target[0], saved.target[1], saved.target[2]);
-        camera.lookAt(controls.target);
-        updateCameraClipPlanes();
-        controls.update();
-      });
-      if (saved.mode === "walk" && !walk) {
-        // Walk mode is a lazy chunk; it re-enters once it loads.
-        pendingWalkRestore = saved;
-      } else if (saved.mode === "walk" && walk) {
-        if (saved.heightCm != null) walk.setHeight(saved.heightCm);
-        const eye = eyeHeightM(walk.heightCm);
-        const feet = [
-          saved.position[0],
-          saved.position[1] - eye,
-          saved.position[2],
-        ];
-        const look = yawPitchOf(camera);
-        walk.enter({ pose: { feet, yaw: look.yaw, pitch: look.pitch }, lock: false });
-      }
-    } finally {
-      camRestoring = false;
-    }
-  }
+  ctx.cameraReady = false;
 
   if (typeof window !== "undefined") {
     window.addEventListener("pagehide", () => {
-      if (visSaveTimer) flushVisibilitySave();
-      flushCameraSave();
+      if (ctx.visSaveTimer) ctx.flushVisibilitySave();
+      ctx.flushCameraSave();
     });
-  }
-
-  /** Put the remembered opacities back before the Parts panel is built. */
-  function restoreSavedOpacities() {
-    if (!savedVis) return;
-    visRestoring = true;
-    try {
-      for (const name of parts.keys()) {
-        if (isLayerLeaf(name)) continue;
-        const v = savedVis.opacity[name];
-        if (v == null) continue;
-        setPartOpacity(name, v, { force: true, skipUi: true, skipClip: true });
-      }
-      for (const id of savedVis.detached) detachedLeaves.add(id);
-      for (const [k, v] of Object.entries(savedVis.groupSlider)) groupSliderOpacity.set(k, v);
-    } finally {
-      visRestoring = false;
-    }
-  }
-
-  /** Inspector hides, once the inspector exists. */
-  function restoreSavedSession() {
-    if (!savedVis) return;
-    visRestoring = true;
-    try {
-      if (ifcVisibilityRef && savedVis.ifcHidden.length) {
-        ifcVisibilityRef.restore(savedVis.ifcHidden.filter((id) => ifcIndex.elements?.[id]));
-      }
-    } finally {
-      visRestoring = false;
-    }
-    applyInspectorVisibility();
-    ifcUiRef?.refresh();
-  }
-
-  /**
-   * Parts panel Reset: every part and on-demand layer (Gridfinity) on,
-   * cables off, no inspector hides, the model's default locks. Clears the
-   * remembered entry.
-   */
-  function resetVisibility() {
-    if (visSaveTimer) clearTimeout(visSaveTimer);
-    visSaveTimer = 0;
-    clearVisibility(visStorage, visModelId);
-    visRestoring = true;
-    try {
-      detachedLeaves.clear();
-      groupSliderOpacity.clear();
-      partLocks = new Set(defaultLocks(partOutline));
-      recomputeLocks();
-      const ids = new Set([...parts.keys(), ...lazyLayers.keys()]);
-      if (hasCables) ids.add(CABLE_LEAF);
-      for (const name of ids) {
-        setPartOpacity(name, isLayerLeaf(name) ? layerDefaultOpacity(name) : 1, { force: true, skipUi: true, skipClip: true });
-        partLastNonZero.set(name, 1);
-      }
-      ifcVisibilityRef?.showAll();
-    } finally {
-      visRestoring = false;
-    }
-    updateBox();
-    buildPartToggles();
-    applyInspectorVisibility();
-    ifcUiRef?.refresh();
   }
 
   /** @type {string | null} */
-  let activeCameraPreset = "iso";
+  ctx.activeCameraPreset = "iso";
   /** Last custom scene, kept across orbit so Drawing can restore its camera. */
   /** @type {object | null} */
-  let activeSceneSpec = null;
+  ctx.activeSceneSpec = null;
   /** While true, the animation loop does not render (drawing capture). */
-  let pauseTick = false;
-
-  /**
-   * @param {string} sceneId
-   * @returns {object | null}
-   */
-  function findCustomScene(sceneId) {
-    const want = String(sceneId || "").trim();
-    if (!want) return null;
-    for (const spec of customScenes) {
-      if (String(spec?.id || "").trim() === want) return spec;
-    }
-    return null;
-  }
-
-  /** Mirror the active custom scene (or lack of one) into `?scene=`. */
-  function syncSceneUrl() {
-    const preset = activeCameraPreset;
-    if (preset && preset.startsWith("scene:")) {
-      writeSceneQuery(preset.slice("scene:".length));
-    } else {
-      writeSceneQuery(null);
-    }
-  }
-
-  function viewButtons() {
-    return document.querySelectorAll("#cams button, #scenes button");
-  }
-
-  function clearCameraPresetHighlight() {
-    if (activeCameraPreset == null) return;
-    activeCameraPreset = null;
-    viewButtons().forEach((el) => {
-      el.classList.remove("is-active");
-    });
-    syncSceneUrl();
-  }
-
-  function sceneButtonHost() {
-    let host = document.getElementById("scenes");
-    if (!host) {
-      const cams = document.getElementById("cams");
-      host = document.createElement("div");
-      host.id = "scenes";
-      host.className = "scene-list";
-      cams?.insertAdjacentElement("afterend", host);
-    }
-    return host;
-  }
-
-  function buildCameraButtons() {
-    const host = document.getElementById("cams");
-    if (!host) return;
-    host.replaceChildren();
-    const scenesHost = sceneButtonHost();
-    scenesHost.replaceChildren();
-
-    /** @param {HTMLElement} parent @param {string} id @param {string} label @param {() => void} onClick */
-    function addBtn(parent, id, label, onClick) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.dataset.preset = id;
-      btn.textContent = label;
-      if (id === activeCameraPreset) btn.classList.add("is-active");
-      btn.addEventListener("click", () => {
-        activeCameraPreset = id;
-        viewButtons().forEach((el) => {
-          el.classList.toggle("is-active", el.dataset.preset === id);
-        });
-        onClick();
-        syncSceneUrl();
-      });
-      parent.append(btn);
-    }
-
-    for (const [id, labelKey] of [
-      ["iso", "ui.iso"],
-      ["front", "ui.front"],
-      ["side", "ui.side"],
-      ["top", "ui.top"],
-    ]) {
-      addBtn(host, id, tr(labelKey), () => setCameraPreset(id));
-    }
-    for (const spec of customScenes) {
-      const id = String(spec?.id || "").trim();
-      if (!id) continue;
-      const label = tr(`scene.${id}`);
-      addBtn(scenesHost, `scene:${id}`, label, () => applyScene(spec));
-    }
-    scenesHost.hidden = scenesHost.childElementCount === 0;
-  }
-
-  function lookDirection(out = _look) {
-    return out.copy(controls.target).sub(camera.position).normalize();
-  }
-
-  function formatAngleLabel(normal) {
-    const horiz = Math.hypot(normal.x, normal.z);
-    const bearing = ((Math.atan2(normal.x, normal.z) * 180) / Math.PI + 360) % 360;
-    const elev = (Math.atan2(normal.y, horiz) * 180) / Math.PI;
-    const elevAbs = Math.abs(elev).toFixed(0);
-    const elevMark = elev >= 0 ? "↑" : "↓";
-    return `${bearing.toFixed(0)}° / ${elevAbs}°${elevMark}`;
-  }
-
-  function hasDraftCut() {
-    return cuts.some((c) => !c.locked);
-  }
-
-  function lockedCuts() {
-    return cuts.filter((c) => c.locked);
-  }
-
-  function ensureDraftCut() {
-    if (hasDraftCut()) return;
-    const shouldHaveDraft =
-      lockedCuts().length === 0 || cameraMovedSinceLock;
-    if (!shouldHaveDraft) return;
-    cuts.push({
-      id: nextCutId++,
-      normal: new THREE.Vector3(0, 0, 1),
-      t: 0,
-      locked: false,
-      label: tr("ui.cut"),
-    });
-  }
-
-  function refreshCutRow(cut) {
-    const host = document.getElementById("cuts");
-    if (!host) return;
-    const row = host.querySelector(`[data-cut-id="${cut.id}"]`);
-    if (!row) {
-      buildCutUI();
-      return;
-    }
-    const labelEl = row.querySelector(".cut-label");
-    if (labelEl) labelEl.textContent = cut.locked ? cut.label : tr("ui.cut");
-    if (cut.locked && !row.querySelector(".cut-remove")) {
-      const remove = document.createElement("button");
-      remove.type = "button";
-      remove.className = "cut-remove";
-      remove.setAttribute("aria-label", tr("ui.removeSection"));
-      remove.textContent = "×";
-      remove.addEventListener("click", () => removeCut(cut.id));
-      row.append(remove);
-    }
-  }
-
-  function lockCut(cut) {
-    if (cut.locked) return;
-    lookDirection(cut.normal);
-    cut.locked = true;
-    cut.label = formatAngleLabel(cut.normal);
-    cameraMovedSinceLock = false;
-    applyClipping();
-    // Update in place so an active slider drag is not destroyed.
-    refreshCutRow(cut);
-  }
-
-  function maybeSpawnDraftFromCamera() {
-    if (lockedCuts().length === 0) return;
-    if (hasDraftCut()) return;
-    cameraMovedSinceLock = true;
-    if (cutSliderActive) return;
-    ensureDraftCut();
-    buildCutUI();
-  }
-
-  function flushDeferredDraft() {
-    // Called when a slider drag ends: only create a draft if the camera moved
-    // while the thumb was held (deferred by cutSliderActive).
-    if (!cameraMovedSinceLock) return;
-    if (hasDraftCut()) return;
-    if (lockedCuts().length === 0) return;
-    ensureDraftCut();
-    buildCutUI();
-  }
-
-  function setCutT(id, cutT) {
-    const cut = cuts.find((c) => c.id === id);
-    if (!cut) return;
-    if (!cut.locked) lockCut(cut);
-    cut.t = Math.min(1, Math.max(0, Number(cutT)));
-    cut.anchor = null;
-    // While the thumb is down, only move the clip planes. Rebuilding every
-    // fat line on each tick is what made the slider feel stuck. Silhouettes
-    // and caps catch up once, on release.
-    if (cutSliderActive) {
-      applyClipPlanes();
-      return;
-    }
-    applyClipping();
-  }
-
-  function removeCut(id) {
-    const idx = cuts.findIndex((c) => c.id === id);
-    if (idx < 0) return;
-    cuts.splice(idx, 1);
-    if (lockedCuts().length === 0) {
-      cameraMovedSinceLock = false;
-      if (!hasDraftCut()) ensureDraftCut();
-    } else if (cameraMovedSinceLock && !hasDraftCut()) {
-      ensureDraftCut();
-    }
-    applyClipping();
-    buildCutUI();
-    chromeApi?.refreshPartialHeight();
-  }
-
-  function projectBoxOntoNormal(normal) {
-    updateBox();
-    if (box.isEmpty()) {
-      return { near: -1, far: 1 };
-    }
-    const min = box.min;
-    const max = box.max;
-    let minS = Infinity;
-    let maxS = -Infinity;
-    for (let ix = 0; ix < 2; ix++) {
-      for (let iy = 0; iy < 2; iy++) {
-        for (let iz = 0; iz < 2; iz++) {
-          _corner.set(ix ? max.x : min.x, iy ? max.y : min.y, iz ? max.z : min.z);
-          const s = _corner.dot(normal);
-          if (s < minS) minS = s;
-          if (s > maxS) maxS = s;
-        }
-      }
-    }
-    const span = Math.max(maxS - minS, 1e-6);
-    const margin = span * 0.02;
-    return { near: minS - margin, far: maxS + margin };
-  }
-
-  function planeForCut(cut) {
-    if (cut.anchor) {
-      return new THREE.Plane().setFromNormalAndCoplanarPoint(cut.normal, cut.anchor);
-    }
-    const { near, far } = projectBoxOntoNormal(cut.normal);
-    const s = near + (far - near) * cut.t;
-    _point.copy(cut.normal).multiplyScalar(s);
-    return new THREE.Plane().setFromNormalAndCoplanarPoint(cut.normal, _point);
-  }
-
-  /**
-   * Point materials and edge strokes at the current cut planes.
-   * Does not rebuild line geometry or caps.
-   * @returns {THREE.Plane[]}
-   */
-  function applyClipPlanes() {
-    const planes = lockedClipPlanes();
-    if (!root) return planes;
-    root.traverse((obj) => {
-      if (!obj.isMesh || !obj.material) return;
-      if (isEdgeOverlay(obj) || isSectionCap(obj)) return;
-      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-      for (const m of mats) {
-        if (!m) continue;
-        const prevCount = m.clippingPlanes ? m.clippingPlanes.length : 0;
-        m.clippingPlanes = planes;
-        m.clipIntersection = false;
-        if (prevCount !== planes.length) m.needsUpdate = true;
-      }
-    });
-    applyEdgeClipping(root, planes);
-    return planes;
-  }
-
-  function applyClipping() {
-    const planes = applyClipPlanes();
-    if (!root) return;
-    // Fill the cut. Clipping only discards fragments; without these faces a
-    // solid opened on both ends reads as an empty tube.
-    syncSectionCaps(parts, planes);
-    // Rebuild hard+cut edge geometry so section faces get silhouette strokes.
-    if (edgeMode !== EDGE_MODE_NONE) refreshEdges();
-    else applyEdgeClipping(root, planes);
-  }
-
-  function buildCutUI() {
-    const host = document.getElementById("cuts");
-    if (!host) return;
-    host.replaceChildren();
-    for (const cut of cuts) {
-      const row = document.createElement("div");
-      row.className = "cut-row";
-      row.dataset.cutId = String(cut.id);
-
-      const label = document.createElement("span");
-      label.className = "cut-label";
-      label.textContent = cut.locked ? cut.label : tr("ui.cut");
-
-      const endSlider = () => {
-        if (!cutSliderActive) return;
-        cutSliderActive = false;
-        applyClipping();
-        flushDeferredDraft();
-      };
-      const range = createCooperativeRange({
-        min: 0,
-        max: 1,
-        step: 0.001,
-        value: cut.t,
-        ariaLabel: cut.locked ? `Section ${cut.label}` : "Section cut",
-        onScrubStart: () => {
-          cutSliderActive = true;
-          if (!cut.locked) lockCut(cut);
-        },
-        onScrubEnd: endSlider,
-        onInput: (v) => setCutT(cut.id, v),
-        onChange: (v) => {
-          setCutT(cut.id, v);
-          endSlider();
-        },
-      });
-
-      row.append(label, range.el);
-
-      if (cut.locked) {
-        const remove = document.createElement("button");
-        remove.type = "button";
-        remove.className = "cut-remove";
-        remove.setAttribute("aria-label", tr("ui.removeSection"));
-        remove.textContent = "×";
-        remove.addEventListener("click", () => removeCut(cut.id));
-        row.append(remove);
-      }
-
-      host.append(row);
-    }
-    chromeApi?.refreshPartialHeight();
-  }
+  ctx.pauseTick = false;
 
   // Spawn a draft after the user finishes orbiting/panning — not on every
   // damping `change`, which would rebuild the cut UI mid-slider-drag.
@@ -2479,378 +576,72 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   // stopped. A timer here just delays a hitch; the settled frame itself has
   // to be cheap. Pointer-down forces the single sorted-alpha draw so a touch
   // is never stuck behind the peel.
-  let peelPointerDown = false;
-  const peelCamPos = new THREE.Vector3();
-  const peelCamTarget = new THREE.Vector3();
-  let peelCamInited = false;
+  ctx.peelPointerDown = false;
+  ctx.peelCamPos = new THREE.Vector3();
+  ctx.peelCamTarget = new THREE.Vector3();
+  ctx.peelCamInited = false;
 
   canvas.addEventListener(
     "pointerdown",
     () => {
-      peelPointerDown = true;
+      ctx.peelPointerDown = true;
     },
     { capture: true },
   );
-  const notePeelPointerUp = () => {
-    peelPointerDown = false;
-  };
-  window.addEventListener("pointerup", notePeelPointerUp, { capture: true });
-  window.addEventListener("pointercancel", notePeelPointerUp, { capture: true });
+  window.addEventListener("pointerup", ctx.notePeelPointerUp, { capture: true });
+  window.addEventListener("pointercancel", ctx.notePeelPointerUp, { capture: true });
 
-  controls.addEventListener("start", () => {
-    clearCameraPresetHighlight();
-    peelPointerDown = true;
+  ctx.controls.addEventListener("start", () => {
+    ctx.clearCameraPresetHighlight();
+    ctx.peelPointerDown = true;
   });
-  controls.addEventListener("change", () => {
-    syncViewZoomFromCamera();
+  ctx.controls.addEventListener("change", () => {
+    ctx.syncViewZoomFromCamera();
   });
-  controls.addEventListener("end", () => {
-    peelPointerDown = false;
-    if (suppressCameraChange) return;
-    maybeSpawnDraftFromCamera();
-    flushCameraSave();
+  ctx.controls.addEventListener("end", () => {
+    ctx.peelPointerDown = false;
+    if (ctx.suppressCameraChange) return;
+    ctx.maybeSpawnDraftFromCamera();
+    ctx.flushCameraSave();
   });
 
   /** Animated safe-area framing: shift into uncovered rect + slight zoom-out. */
-  let frameZoom = 1;
-  let frameOffX = 0;
-  let frameOffY = 0;
-  let frameZoomT = 1;
-  let frameOffXT = 0;
-  let frameOffYT = 0;
-  let frameAnimFromZoom = 1;
-  let frameAnimFromX = 0;
-  let frameAnimFromY = 0;
-  let frameAnim = 0;
-  const FRAME_MS = 280;
-
-  function computeFrameTargets() {
-    const w = Math.max(1, canvas.clientWidth);
-    const h = Math.max(1, canvas.clientHeight);
-    if (!chromeApi) {
-      return { zoom: 1, offX: 0, offY: 0, w, h };
-    }
-    const { bottom, right } = editMode?.active ? editMode.getSafeInsets() : chromeApi.getSafeInsets();
-    if (bottom <= 0 && right <= 0) {
-      return { zoom: 1, offX: 0, offY: 0, w, h };
-    }
-    const safeW = Math.max(1, w - right);
-    const safeH = Math.max(1, h - bottom);
-    // Zoom out so the previous full-frame content still fits in the safe rect.
-    const zoom = Math.min(safeW / w, safeH / h);
-    // Positive offsetY moves the frustum window down → content appears higher
-    // (above the sheet). Same idea for a right-side sheet (offsetX).
-    const offX = right / 2;
-    const offY = bottom / 2;
-    return { zoom, offX, offY, w, h };
-  }
-
-  function applyFrameProjection(w, h) {
-    withSuppressedCameraChange(() => {
-      suppressViewZoomSync = true;
-      if (
-        Math.abs(frameOffX) > 0.05 ||
-        Math.abs(frameOffY) > 0.05 ||
-        Math.abs(frameZoom - 1) > 0.001
-      ) {
-        camera.zoom = viewZoom * frameZoom;
-        camera.setViewOffset(w, h, frameOffX, frameOffY, w, h);
-      } else {
-        camera.clearViewOffset();
-        camera.zoom = viewZoom;
-        frameZoom = 1;
-        frameOffX = 0;
-        frameOffY = 0;
-      }
-      camera.updateProjectionMatrix();
-      suppressViewZoomSync = false;
-    });
-  }
-
-  function applySafeViewOffset(animate = true) {
-    const { zoom, offX, offY, w, h } = computeFrameTargets();
-    frameZoomT = zoom;
-    frameOffXT = offX;
-    frameOffYT = offY;
-    if (!animate) {
-      frameZoom = zoom;
-      frameOffX = offX;
-      frameOffY = offY;
-      frameAnim = 0;
-      applyFrameProjection(w, h);
-      return;
-    }
-    frameAnimFromZoom = frameZoom;
-    frameAnimFromX = frameOffX;
-    frameAnimFromY = frameOffY;
-    frameAnim = performance.now();
-  }
-
-  function stepFrameAnim(now) {
-    if (!frameAnim) return;
-    const t = Math.min(1, (now - frameAnim) / FRAME_MS);
-    const e = 1 - (1 - t) ** 3;
-    frameZoom = frameAnimFromZoom + (frameZoomT - frameAnimFromZoom) * e;
-    frameOffX = frameAnimFromX + (frameOffXT - frameAnimFromX) * e;
-    frameOffY = frameAnimFromY + (frameOffYT - frameAnimFromY) * e;
-    const w = Math.max(1, canvas.clientWidth);
-    const h = Math.max(1, canvas.clientHeight);
-    applyFrameProjection(w, h);
-    if (t >= 1) frameAnim = 0;
-  }
-
-  function resize() {
-    const w = Math.max(1, canvas.clientWidth);
-    const h = Math.max(1, canvas.clientHeight);
-    renderer.setSize(w, h, false);
-    if (projection === "perspective") {
-      applyPerspFovFromState();
-    } else {
-      refreshOrthoAspect();
-    }
-    applySafeViewOffset(false);
-    const buf = edgeResolution();
-    setEdgeOverlayResolution(root, buf.x, buf.y);
-  }
-  resize();
-  window.addEventListener("resize", resize);
-  chromeApi?.onDetentChange(() => {
-    applySafeViewOffset(true);
+  ctx.frameZoom = 1;
+  ctx.frameOffX = 0;
+  ctx.frameOffY = 0;
+  ctx.frameZoomT = 1;
+  ctx.frameOffXT = 0;
+  ctx.frameOffYT = 0;
+  ctx.frameAnimFromZoom = 1;
+  ctx.frameAnimFromX = 0;
+  ctx.frameAnimFromY = 0;
+  ctx.frameAnim = 0;
+  ctx.FRAME_MS = 280;
+  ctx.resize();
+  window.addEventListener("resize", ctx.resize);
+  ctx.chromeApi?.onDetentChange(() => {
+    ctx.applySafeViewOffset(true);
   });
 
   /** @type {HTMLButtonElement | null} */
-  const arBtn = document.getElementById("ar");
+  ctx.arBtn = document.getElementById("ar");
   /** @type {HTMLButtonElement | null} */
-  const measureBtn = document.getElementById("measure");
+  ctx.measureBtn = document.getElementById("measure");
   /** @type {HTMLButtonElement | null} */
-  const walkBtn = document.getElementById("walk");
+  ctx.walkBtn = document.getElementById("walk");
+  ctx.arBusy = false;
+  ctx.MEASURE_LABEL = () => tr("ui.measure");
 
-  function syncWalkButton() {
-    if (!walkBtn) return;
-    walkBtn.hidden = !root;
-    const on = Boolean(walk?.active);
-    walkBtn.textContent = tr("ui.walk");
-    walkBtn.classList.toggle("is-active", on);
-    walkBtn.setAttribute("aria-pressed", on ? "true" : "false");
-  }
-  let arBusy = false;
-  const MEASURE_LABEL = () => tr("ui.measure");
+  onLocaleChange(() => ctx.relocalizeUi());
 
-  function buildLocaleToggle() {
-    const host = document.getElementById("locale");
-    if (!host) return;
-    host.replaceChildren();
-    for (const [id, label] of [
-      ["cs", "CS"],
-      ["en", "EN"],
-    ]) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.dataset.locale = id;
-      btn.textContent = label;
-      if (id === getLocale()) btn.classList.add("is-active");
-      btn.addEventListener("click", () => {
-        setLocale(/** @type {"en"|"cs"} */ (id));
-      });
-      host.append(btn);
-    }
-  }
+  ctx.drawBtn = document.getElementById("drawing");
+  ctx.labelBtn = document.getElementById("labels");
+  ctx.labelsOn = true;
 
-  function relocalizeUi() {
-    applyStaticI18n(document);
-    if (arBtn && !arBusy) arBtn.textContent = tr("ui.ar");
-    if (measureBtn) measureBtn.textContent = MEASURE_LABEL();
-    syncWalkButton();
-    syncDrawingButton();
-    syncLabelButton();
-    annotations.relocalize();
-    try {
-      buildMaterialToggle();
-      buildEdgesToggle();
-      buildCameraButtons();
-      buildFovControl();
-      buildWalkHeightControl();
-      buildPartToggles();
-      buildCutUI();
-      buildLocaleToggle();
-      buildHomeSection();
-    } catch (err) {
-      console.error("relocalizeUi", err);
-      // Still refresh the locale control if an earlier rebuild failed.
-      try {
-        buildLocaleToggle();
-      } catch {
-        /* ignore */
-      }
-    }
-    chromeApi?.refreshPartialHeight();
-  }
-
-  onLocaleChange(() => relocalizeUi());
-
-  function showArButton() {
-    if (arBtn) {
-      arBtn.hidden = false;
-      if (!arBusy) arBtn.textContent = tr("ui.ar");
-    }
-  }
-
-  function showMeasureButton() {
-    if (measureBtn) {
-      measureBtn.hidden = false;
-      measureBtn.textContent = MEASURE_LABEL();
-    }
-  }
-
-  const drawBtn = document.getElementById("drawing");
-  const labelBtn = document.getElementById("labels");
-  let labelsOn = true;
-
-  function syncDrawingButton() {
-    if (!drawBtn) return;
-    drawBtn.hidden = false;
-    drawBtn.disabled = !activeSceneSpec || drawBusy;
-    drawBtn.textContent = tr("ui.drawing");
-  }
-
-  function syncLabelButton() {
-    if (!labelBtn) return;
-    const has = Boolean(activeSceneSpec);
-    labelBtn.hidden = !has;
-    labelBtn.disabled = !has;
-    labelBtn.setAttribute("aria-pressed", labelsOn ? "true" : "false");
-    labelBtn.classList.toggle("is-active", has && labelsOn);
-    labelBtn.textContent = tr("ui.labels");
-  }
-
-  function modelFileId() {
-    try {
-      const id = new URLSearchParams(window.location.search).get("m");
-      if (id && id.trim()) return id.trim();
-    } catch {
-      /* ignore */
-    }
-    return "model";
-  }
-
-  /**
-   * Zero the sheet's view offset so the plate is the full orthographic frame.
-   */
-  /**
-   * Grow the ortho frame (or dolly a perspective camera) so callout glyphs
-   * that hang off the plate move back inside. Capped so the model stays
-   * readable. Offsets are in NDC, so this only recovers a modest overflow.
-   */
-  function fitLabelsOnPlate() {
-    const pad = 0.04;
-    let grown = 1;
-    const maxGrow = 1.35;
-    for (let step = 0; step < 6; step += 1) {
-      annotations.update();
-      const bounds = annotations.glyphBoundsNdc();
-      if (!bounds) return;
-      const over = Math.max(
-        -1 + pad - bounds.minX,
-        bounds.maxX - (1 - pad),
-        -1 + pad - bounds.minY,
-        bounds.maxY - (1 - pad),
-        0,
-      );
-      if (over < 0.012) return;
-      if (grown >= maxGrow - 0.01) return;
-      const factor = Math.min(maxGrow / grown, Math.max(1.05, 1 + over * 1.6));
-      grown *= factor;
-      if (camera.isOrthographicCamera) {
-        orthoCamera.left *= factor;
-        orthoCamera.right *= factor;
-        orthoCamera.top *= factor;
-        orthoCamera.bottom *= factor;
-        orthoCamera.updateProjectionMatrix();
-      } else {
-        _look.copy(camera.position).sub(controls.target).multiplyScalar(factor);
-        camera.position.copy(controls.target).add(_look);
-        updateCameraClipPlanes();
-      }
-    }
-  }
-
-  function lockPlateFrame() {
-    frameAnim = 0;
-    frameZoom = 1;
-    frameOffX = 0;
-    frameOffY = 0;
-    frameZoomT = 1;
-    frameOffXT = 0;
-    frameOffYT = 0;
-    camera.clearViewOffset();
-    camera.zoom = viewZoom;
-    camera.updateProjectionMatrix();
-  }
-
-  let drawBusy = false;
-
-  async function captureDrawing() {
-    if (drawBusy || !root || !activeSceneSpec) return null;
-    drawBusy = true;
-    syncDrawingButton();
-    pauseTick = true;
-    const spec = activeSceneSpec;
-    const prevEdge = edgeMode;
-    const prevBg = scene.background;
-    const prevRatio = renderer.getPixelRatio();
-    const prevStyleW = canvas.style.width;
-    const prevStyleH = canvas.style.height;
-    const prevDetent = chromeApi?.getDetent?.() ?? null;
-    const measureWas = measureTool?.isActive() ?? false;
-    const labelsWere = annotations.isVisible();
-    try {
-      if (measureWas) measureTool?.setActive(false);
-      annotations.setVisible(true);
-      chromeApi?.setDetent("closed");
-      canvas.style.width = `${DRAW_W}px`;
-      canvas.style.height = `${DRAW_H}px`;
-      renderer.setPixelRatio(1);
-      resize();
-      lockPlateFrame();
-      edgeMode = EDGE_MODE_OPAQUE;
-      refreshEdges();
-      scene.background = new THREE.Color(0xffffff);
-      annotations.setInk("plate");
-      applyScene(spec);
-      lockPlateFrame();
-      // Czech notes are wider than the English ones the frames were built
-      // for. Zoom the plate out until the glyphs sit inside the sheet.
-      // A line that is still wider than the sheet has to be broken in the
-      // scene text; zooming alone cannot shrink the plate font.
-      fitLabelsOnPlate();
-      annotations.update();
-      depthPeel.render(scene, camera, root, anyPartFaded, { quality: "high" });
-      const { png, pdf } = await plateFromCanvas(canvas);
-      const stem = `${modelFileId()}_${String(spec.id || "scene")}`;
-      return { png, pdf, stem };
-    } finally {
-      canvas.style.width = prevStyleW;
-      canvas.style.height = prevStyleH;
-      renderer.setPixelRatio(prevRatio);
-      edgeMode = prevEdge;
-      scene.background = prevBg;
-      annotations.setInk("viewer");
-      annotations.setVisible(labelsWere);
-      if (prevDetent) chromeApi?.setDetent(prevDetent);
-      resize();
-      refreshEdges();
-      if (spec) applyScene(spec);
-      if (measureWas) measureTool?.setActive(true);
-      pauseTick = false;
-      drawBusy = false;
-      syncDrawingButton();
-      syncLabelButton();
-      requestAnimationFrame(tick);
-    }
-  }
+  ctx.drawBusy = false;
 
   window.blueprintCaptureDrawing = async () => {
-    const plate = await captureDrawing();
+    const plate = await ctx.captureDrawing();
     if (!plate) return null;
     return { png: plate.png, pdf: plate.pdf, stem: plate.stem };
   };
@@ -2866,70 +657,70 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
    * }} opts
    */
   window.blueprintSetView = (opts = {}) => {
-    if (!root || !opts) return false;
+    if (!ctx.root || !opts) return false;
     const proj = opts.projection === "ortho" ? "ortho" : "perspective";
-    const fov = Number.isFinite(Number(opts.hFovDeg)) ? Number(opts.hFovDeg) : hFovDeg;
-    if (proj === "perspective" && projection === "ortho") leaveOrtho(fov);
-    if (proj === "perspective") setHFov(fov, { reframe: false });
-    withSuppressedCameraChange(() => {
-      suppressViewZoomSync = true;
+    const fov = Number.isFinite(Number(opts.hFovDeg)) ? Number(opts.hFovDeg) : ctx.hFovDeg;
+    if (proj === "perspective" && ctx.projection === "ortho") ctx.leaveOrtho(fov);
+    if (proj === "perspective") ctx.setHFov(fov, { reframe: false });
+    ctx.withSuppressedCameraChange(() => {
+      ctx.suppressViewZoomSync = true;
       const up = new THREE.Vector3(0, 1, 0);
       if (Array.isArray(opts.up) && opts.up.length >= 3) {
         up.set(Number(opts.up[0]) || 0, Number(opts.up[1]) || 0, Number(opts.up[2]) || 0);
         if (up.lengthSq() > 1e-12) up.normalize();
         else up.set(0, 1, 0);
       }
-      perspCamera.up.copy(up);
-      orthoCamera.up.copy(up);
-      camera.up.copy(up);
+      ctx.perspCamera.up.copy(up);
+      ctx.orthoCamera.up.copy(up);
+      ctx.camera.up.copy(up);
       if (Array.isArray(opts.target)) {
-        controls.target.set(
+        ctx.controls.target.set(
           Number(opts.target[0]) || 0,
           Number(opts.target[1]) || 0,
           Number(opts.target[2]) || 0,
         );
       }
       if (Array.isArray(opts.position)) {
-        camera.position.set(
+        ctx.camera.position.set(
           Number(opts.position[0]) || 0,
           Number(opts.position[1]) || 0,
           Number(opts.position[2]) || 0,
         );
       }
-      camera.lookAt(controls.target);
+      ctx.camera.lookAt(ctx.controls.target);
       if (proj === "ortho") {
-        const dist = camera.position.distanceTo(controls.target);
-        const vFovRad = hFovDegToVFovRad(fov, canvasAspect());
-        sizeOrthoFrustum(dist, vFovRad);
-        viewZoom = 1;
-        if (projection !== "ortho") {
-          setActiveCamera(orthoCamera);
-          projection = "ortho";
+        const dist = ctx.camera.position.distanceTo(ctx.controls.target);
+        const vFovRad = ctx.hFovDegToVFovRad(fov, ctx.canvasAspect());
+        ctx.sizeOrthoFrustum(dist, vFovRad);
+        ctx.viewZoom = 1;
+        if (ctx.projection !== "ortho") {
+          ctx.setActiveCamera(ctx.orthoCamera);
+          ctx.projection = "ortho";
         }
-        applyCombinedZoom();
-        syncFovUi();
+        ctx.applyCombinedZoom();
+        ctx.syncFovUi();
       }
-      updateBox();
-      updateCameraClipPlanes();
-      controls.update();
-      suppressViewZoomSync = false;
+      ctx.updateBox();
+      ctx.updateCameraClipPlanes();
+      ctx.controls.update();
+      ctx.suppressViewZoomSync = false;
     });
-    viewDirty = true;
+    ctx.viewDirty = true;
     return true;
   };
 
-  if (labelBtn) {
-    labelBtn.addEventListener("click", () => {
-      labelsOn = !labelsOn;
-      annotations.setVisible(labelsOn);
-      syncLabelButton();
+  if (ctx.labelBtn) {
+    ctx.labelBtn.addEventListener("click", () => {
+      ctx.labelsOn = !ctx.labelsOn;
+      ctx.annotations.setVisible(ctx.labelsOn);
+      ctx.syncLabelButton();
     });
   }
 
-  if (drawBtn) {
-    drawBtn.addEventListener("click", () => {
+  if (ctx.drawBtn) {
+    ctx.drawBtn.addEventListener("click", () => {
       void (async () => {
-        const plate = await captureDrawing();
+        const plate = await ctx.captureDrawing();
         if (!plate) return;
         downloadBlob(plate.png, `${plate.stem}.png`);
         downloadBlob(plate.pdf, `${plate.stem}.pdf`);
@@ -2942,1355 +733,366 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
    * null until it loads, and every caller already allows that.
    * @type {ReturnType<typeof import("./measure.js").createMeasureTool> | null}
    */
-  let measureTool = null;
-  let measureReady = Promise.resolve();
-  if (scene) {
-    measureReady = loadFeature("measure", () => import("./measure.js"), ({ createMeasureTool }) => {
-      measureTool = createMeasureTool({
-        scene,
+  ctx.measureTool = null;
+  ctx.measureReady = Promise.resolve();
+  if (ctx.scene) {
+    ctx.measureReady = loadFeature("measure", () => import("./measure.js"), ({ createMeasureTool }) => {
+      ctx.measureTool = createMeasureTool({
+        scene: ctx.scene,
         canvas,
-        getCamera: () => camera,
-        controls,
-        getRoot: () => root,
-        getClipPlanes: () => lockedClipPlanes(),
+        getCamera: () => ctx.camera,
+        controls: ctx.controls,
+        getRoot: () => ctx.root,
+        getClipPlanes: () => ctx.lockedClipPlanes(),
         onLiveLength: (label) => {
-          if (!measureBtn) return;
+          if (!ctx.measureBtn) return;
           if (label) {
-            measureBtn.textContent = label;
-            measureBtn.classList.add("is-live");
+            ctx.measureBtn.textContent = label;
+            ctx.measureBtn.classList.add("is-live");
           } else {
-            measureBtn.textContent = MEASURE_LABEL();
-            measureBtn.classList.remove("is-live");
+            ctx.measureBtn.textContent = ctx.MEASURE_LABEL();
+            ctx.measureBtn.classList.remove("is-live");
           }
         },
         onActiveChange: (on) => {
-          viewDirty = true;
-          if (!measureBtn) return;
-          measureBtn.classList.toggle("is-active", on);
-          measureBtn.setAttribute("aria-pressed", on ? "true" : "false");
+          ctx.viewDirty = true;
+          if (!ctx.measureBtn) return;
+          ctx.measureBtn.classList.toggle("is-active", on);
+          ctx.measureBtn.setAttribute("aria-pressed", on ? "true" : "false");
           if (!on) {
-            measureBtn.textContent = MEASURE_LABEL();
-            measureBtn.classList.remove("is-live");
+            ctx.measureBtn.textContent = ctx.MEASURE_LABEL();
+            ctx.measureBtn.classList.remove("is-live");
           }
         },
       });
-      viewDirty = true;
+      ctx.viewDirty = true;
     });
   }
 
-  if (measureBtn) {
-    measureBtn.addEventListener("click", () => {
-      if (!measureTool) return;
-      if (editMode?.active) editMode.setActive(false);
-      measureTool.setActive(!measureTool.isActive());
+  if (ctx.measureBtn) {
+    ctx.measureBtn.addEventListener("click", () => {
+      if (!ctx.measureTool) return;
+      if (ctx.editMode?.active) ctx.editMode.setActive(false);
+      ctx.measureTool.setActive(!ctx.measureTool.isActive());
     });
   }
   /** Window elements whose panes slide: they collide where they are now. */
-  const slidingWindowKeys = new Set(windowRecords.map((r) => String(r?.id ?? "")));
+  ctx.slidingWindowKeys = new Set(ctx.windowRecords.map((r) => String(r?.id ?? "")));
   // Walk (walkMode.js, walkPhysics.js, three-mesh-bvh) is a lazy chunk
   // (build.mjs). Height and yaw helpers it shares with the entry live in
   // walkBasics.js.
-  const walkReady = loadFeature("walk", () => import("./walkMode.js"), ({ createWalkMode }) => {
-    walk = createWalkMode({
+  ctx.walkReady = loadFeature("walk", () => import("./walkMode.js"), ({ createWalkMode }) => {
+    ctx.walk = createWalkMode({
       canvas,
-      scene,
-      getRoot: () => root,
-      getCamera: () => camera,
+      scene: ctx.scene,
+      getRoot: () => ctx.root,
+      getCamera: () => ctx.camera,
       isDynamic: (mesh) =>
-        Boolean(mesh.userData.bpDoor) || slidingWindowKeys.has(String(mesh.userData.bpElementKey ?? "")),
-      pickAt: (x, y) => doorCtrl.pickAt(x, y),
+        Boolean(mesh.userData.bpDoor) || ctx.slidingWindowKeys.has(String(mesh.userData.bpElementKey ?? "")),
+      pickAt: (x, y) => ctx.doorCtrl.pickAt(x, y),
       onBeforeEnter: () => {
-        if (measureTool?.isActive()) measureTool.setActive(false);
-        if (projection === "ortho") leaveOrtho(lastHFovDeg);
-        camFly = null;
-        clearCameraPresetHighlight();
+        if (ctx.measureTool?.isActive()) ctx.measureTool.setActive(false);
+        if (ctx.projection === "ortho") ctx.leaveOrtho(ctx.lastHFovDeg);
+        ctx.camFly = null;
+        ctx.clearCameraPresetHighlight();
       },
       onEnter: () => {
-        controls.enabled = false;
-        syncWalkButton();
-        realisticCtl?.stage.markDirty();
-        scheduleCameraSave();
+        ctx.controls.enabled = false;
+        ctx.syncWalkButton();
+        ctx.realisticCtl?.stage.markDirty();
+        ctx.scheduleCameraSave();
       },
       onExit: (pose) => {
-        controls.enabled = true;
+        ctx.controls.enabled = true;
         if (pose) {
-          withSuppressedCameraChange(() => {
-            camera.position.copy(pose.position);
-            controls.target.copy(pose.target);
-            updateCameraClipPlanes();
-            controls.update();
+          ctx.withSuppressedCameraChange(() => {
+            ctx.camera.position.copy(pose.position);
+            ctx.controls.target.copy(pose.target);
+            ctx.updateCameraClipPlanes();
+            ctx.controls.update();
           });
         }
-        syncWalkButton();
-        realisticCtl?.stage.markDirty();
-        flushCameraSave();
+        ctx.syncWalkButton();
+        ctx.realisticCtl?.stage.markDirty();
+        ctx.flushCameraSave();
       },
-      onCamera: (target) => controls.target.copy(target),
+      onCamera: (target) => ctx.controls.target.copy(target),
       onChange: () => {
-        viewDirty = true;
-        scheduleCameraSave();
+        ctx.viewDirty = true;
+        ctx.scheduleCameraSave();
       },
       t: tr,
     });
-    if (root) buildWalkHeightControl();
-    syncWalkButton();
-    if (pendingWalkRestore && root) {
-      const saved = pendingWalkRestore;
-      pendingWalkRestore = null;
-      camRestoring = true;
+    if (ctx.root) ctx.buildWalkHeightControl();
+    ctx.syncWalkButton();
+    if (ctx.pendingWalkRestore && ctx.root) {
+      const saved = ctx.pendingWalkRestore;
+      ctx.pendingWalkRestore = null;
+      ctx.camRestoring = true;
       try {
-        if (saved.heightCm != null) walk.setHeight(saved.heightCm);
-        const eye = eyeHeightM(walk.heightCm);
+        if (saved.heightCm != null) ctx.walk.setHeight(saved.heightCm);
+        const eye = eyeHeightM(ctx.walk.heightCm);
         const feet = [saved.position[0], saved.position[1] - eye, saved.position[2]];
-        const look = yawPitchOf(camera);
-        walk.enter({ pose: { feet, yaw: look.yaw, pitch: look.pitch }, lock: false });
+        const look = yawPitchOf(ctx.camera);
+        ctx.walk.enter({ pose: { feet, yaw: look.yaw, pitch: look.pitch }, lock: false });
       } finally {
-        camRestoring = false;
+        ctx.camRestoring = false;
       }
     }
-    viewDirty = true;
+    ctx.viewDirty = true;
   });
-  doorInputBlocked = () => Boolean(measureTool?.isActive()) || Boolean(walk?.blocksPointerTaps());
+  ctx.doorInputBlocked = () => Boolean(ctx.measureTool?.isActive()) || Boolean(ctx.walk?.blocksPointerTaps());
 
-  if (walkBtn) {
-    walkBtn.addEventListener("click", () => {
-      if (editMode?.active) editMode.setActive(false);
-      walk?.toggle({ lock: true });
-      syncWalkButton();
+  if (ctx.walkBtn) {
+    ctx.walkBtn.addEventListener("click", () => {
+      if (ctx.editMode?.active) ctx.editMode.setActive(false);
+      ctx.walk?.toggle({ lock: true });
+      ctx.syncWalkButton();
     });
   }
 
-  function buildArExportScene() {
-    if (!root) return null;
-    root.updateWorldMatrix(true, true);
-    const planes = lockedCuts().map((c) => planeForCut(c));
-    const content = new THREE.Group();
-    content.name = "ARContent";
-
-    root.traverse((obj) => {
-      if (!obj.isMesh || !obj.visible) return;
-      if (isEdgeOverlay(obj)) return;
-      const clipped = meshToClippedExportMesh(obj, planes);
-      if (clipped) content.add(clipped);
-    });
-
-    if (!content.children.length) return null;
-
-    // Meshes are already in world space from clipping; reset local xforms.
-    content.updateMatrixWorld(true);
-    const placement = computeArPlacement(content);
-    const group = new THREE.Group();
-    group.name = "ARExport";
-    group.add(content);
-    applyArPlacement(content, placement);
-    group.userData.arPlacement = placement;
-    return group;
-  }
-
-  async function openArQuickLook() {
-    if (arBusy || !root) return;
-    arBusy = true;
-    const label = arBtn?.textContent || "AR";
-    if (arBtn) {
-      arBtn.disabled = true;
-      arBtn.textContent = "…";
-    }
-    try {
-      const exportScene = buildArExportScene();
-      if (!exportScene) {
-        throw new Error("Nothing visible to export. Show at least one part.");
-      }
-      // USDZExporter and its zip library are a lazy chunk (build.mjs).
-      const { USDZExporter } = await import("three/addons/exporters/USDZExporter.js");
-      const exporter = new USDZExporter();
-      const arrayBuffer = await exporter.parseAsync(exportScene, {
-        quickLookCompatible: true,
-        includeAnchoringProperties: true,
-        ar: {
-          anchoring: { type: "plane" },
-          planeAnchoring: { alignment: "horizontal" },
-        },
-      });
-      const blob = new Blob([arrayBuffer], { type: "model/vnd.usdz+zip" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.rel = "ar";
-      a.href = url;
-      a.download = "view.usdz";
-      const img = document.createElement("img");
-      img.alt = "AR";
-      a.appendChild(img);
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch (err) {
-      fail(String(err?.message || err));
-    } finally {
-      arBusy = false;
-      if (arBtn) {
-        arBtn.disabled = false;
-        arBtn.textContent = label;
-      }
-    }
-  }
-
-  if (arBtn) {
-    arBtn.addEventListener("click", () => {
-      void openArQuickLook();
+  if (ctx.arBtn) {
+    ctx.arBtn.addEventListener("click", () => {
+      void ctx.openArQuickLook();
     });
   }
 
   // Public hook for future agent-driven features (flyover, blink, …).
-  const api = {
-    scene,
+  ctx.api = {
+    scene: ctx.scene,
     /** Real fixture models (fixtureModels.js). */
-    fixtureModels,
+    fixtureModels: ctx.fixtureModels,
     get camera() {
-      return camera;
+      return ctx.camera;
     },
-    controls,
-    parts,
-    partOpacity,
+    controls: ctx.controls,
+    parts: ctx.parts,
+    partOpacity: ctx.partOpacity,
     /** Meshes before/after the per-face primitive merge (mergePrimitives.js). */
     get mergeStats() {
-      return { ...mergeStats };
+      return { ...ctx.mergeStats };
     },
     /** renderer.info for perf checks (draws, triangles, GPU geometries/textures). */
     get rendererInfo() {
-      return { render: { ...renderer.info.render }, memory: { ...renderer.info.memory }, programs: renderer.info.programs?.length || 0, pixelRatio: renderer.getPixelRatio() };
+      return { render: { ...ctx.renderer.info.render }, memory: { ...ctx.renderer.info.memory }, programs: ctx.renderer.info.programs?.length || 0, pixelRatio: ctx.renderer.getPixelRatio() };
     },
-    cuts,
-    scenes: customScenes,
-    setPartOpacity,
-    setCameraPreset,
-    applyScene,
-    setHFov,
-    toggleFovIso,
+    cuts: ctx.cuts,
+    scenes: ctx.customScenes,
+    setPartOpacity: ctx.setPartOpacity,
+    setCameraPreset: ctx.setCameraPreset,
+    applyScene: ctx.applyScene,
+    setHFov: ctx.setHFov,
+    toggleFovIso: ctx.toggleFovIso,
     get projection() {
-      return projection;
+      return ctx.projection;
     },
     get hFovDeg() {
-      return hFovDeg;
+      return ctx.hFovDeg;
     },
-    setCutT,
-    removeCut,
-    frameIso,
-    openArQuickLook,
-    buildArExportScene,
+    setCutT: ctx.setCutT,
+    removeCut: ctx.removeCut,
+    frameIso: ctx.frameIso,
+    openArQuickLook: ctx.openArQuickLook,
+    buildArExportScene: ctx.buildArExportScene,
     /** @returns {"fast" | "high"} */
-    getPeelQuality: () => lastPeelQuality,
+    getPeelQuality: () => ctx.lastPeelQuality,
     /** First-person walk mode (walkMode.js). */
     get walk() {
-      return walk;
+      return ctx.walk;
     },
     /** Remembered camera (cameraState.js); headless checks. */
     cameraState: {
-      state: () => collectCameraState(),
-      flush: () => flushCameraSave(),
+      state: () => ctx.collectCameraState(),
+      flush: () => ctx.flushCameraSave(),
     },
     /** Remembered visibility and locks (visibilityState.js); headless checks. */
     visibility: {
-      state: () => collectVisibilityState(),
-      reset: () => resetVisibility(),
-      toggleLock: (id) => toggleLock(id),
-      lockedLeaves: () => [...lockedLeaves],
-      elementLocked: (globalId) => elementLocked(globalId),
+      state: () => ctx.collectVisibilityState(),
+      reset: () => ctx.resetVisibility(),
+      toggleLock: (id) => ctx.toggleLock(id),
+      lockedLeaves: () => [...ctx.lockedLeaves],
+      elementLocked: (globalId) => ctx.elementLocked(globalId),
       /** Same as the inspector row menu's "Hide all others". */
       hideOthers: (globalId) => {
-        ifcVisibility.hideOthers(globalId);
-        applyInspectorVisibility();
-        ifcUi.refresh();
+        ctx.ifcVisibility.hideOthers(globalId);
+        ctx.applyInspectorVisibility();
+        ctx.ifcUi.refresh();
       },
       hiddenMeshCount: () => {
         let n = 0;
-        for (const meshes of meshesByKey.values()) for (const m of meshes) if (m.userData.bpIfcHidden) n++;
+        for (const meshes of ctx.meshesByKey.values()) for (const m of meshes) if (m.userData.bpIfcHidden) n++;
         return n;
       },
     },
   };
-  window.BlueprintsViewer = api;
+  window.BlueprintsViewer = ctx.api;
 
-  function anyPartFaded() {
-    for (const [name, o] of partOpacity) {
-      if (name === CABLE_LEAF) continue;
-      // An on-demand layer that is off (or not in yet) has nothing to fade.
-      if (lazyLayers.has(name) && (o <= 1e-4 || lazyLayers.get(name)?.state !== "loaded")) continue;
-      // A part at 0% is hidden (visible = false), not see-through; it needs
-      // no peel. Counting it sent every "hide this layer" view down the peel
-      // path, whose still frame lost the Realistic floor (Petr, 2026-11-19).
-      if (isSeeThroughOpacity(o)) return true;
-    }
-    return false;
-  }
-
-  function healOpacitiesFromState() {
-    for (const [name, meshes] of parts) {
-      const o = partOpacity.get(name) ?? 1;
-      applyOpacityToMeshes(meshes, o, { edgeMode });
-    }
-  }
-
-  let prevUsedPeel = false;
+  ctx.prevUsedPeel = false;
   /** Force a redraw (measure cursor, anything the stamps miss). */
-  let viewDirty = true;
+  ctx.viewDirty = true;
   /** @type {{ meshes: object[], clones: object[], t0: number } | null} */
-  let pulse = null;
+  ctx.pulse = null;
 
-  const ifcVisibility = createVisibility(ifcIndex, {
+  ctx.ifcVisibility = createVisibility(ctx.ifcIndex, {
     // Locked rows and leaves never go hidden from the inspector.
-    isLocked: (id) => elementLocked(id),
+    isLocked: (id) => ctx.elementLocked(id),
   });
-  ifcVisibilityRef = ifcVisibility;
-  const ifcRaycaster = new THREE.Raycaster();
-  const ifcPointer = new THREE.Vector2();
-  const ifcUi = mountIfcInspector({
-    index: ifcIndex,
-    visibility: ifcVisibility,
+  ctx.ifcVisibilityRef = ctx.ifcVisibility;
+  ctx.ifcRaycaster = new THREE.Raycaster();
+  ctx.ifcPointer = new THREE.Vector2();
+  ctx.ifcUi = mountIfcInspector({
+    index: ctx.ifcIndex,
+    visibility: ctx.ifcVisibility,
     t: tr,
     openSheet() {
       const wide = window.matchMedia("(min-width: 768px)").matches;
       // Phone: half-height detent, so the framed element stays in the
       // visible band above the sheet. Wide layout has only an open pane.
-      chromeApi?.setDetent(wide ? "open" : "partial");
+      ctx.chromeApi?.setDetent(wide ? "open" : "partial");
     },
     onFrame: (id, detail) => {
-      if (detail?.move) frameElement(id);
-      else pulseElement(id);
+      if (detail?.move) ctx.frameElement(id);
+      else ctx.pulseElement(id);
     },
-    onVisibility: () => applyInspectorVisibility(),
+    onVisibility: () => ctx.applyInspectorVisibility(),
     locks: {
-      isLocked: (id) => elementLocked(id),
-      isLockedSelf: (id) => Boolean(partLocks?.has(IFC_LOCK_PREFIX + id)),
-      toggle: (id) => toggleLock(IFC_LOCK_PREFIX + id),
+      isLocked: (id) => ctx.elementLocked(id),
+      isLockedSelf: (id) => Boolean(ctx.partLocks?.has(IFC_LOCK_PREFIX + id)),
+      toggle: (id) => ctx.toggleLock(IFC_LOCK_PREFIX + id),
     },
-    actionsFor: (element) => actionsForElement(element),
+    actionsFor: (element) => ctx.actionsForElement(element),
     liveLines: (element) => {
-      const device = home?.lastKnown(element.globalId);
+      const device = ctx.home?.lastKnown(element.globalId);
       return device ? deviceLines(device, tr) : [];
     },
   });
-  ifcUiRef = ifcUi;
+  ctx.ifcUiRef = ctx.ifcUi;
 
-  function elementFromMesh(obj) {
-    let node = obj;
-    while (node) {
-      const key = node.userData?.bpElementKey || meshIdentity(node.name || "").element;
-      if (key) {
-        for (const element of Object.values(ifcIndex.elements)) {
-          if (element.id === key) return element;
-        }
-      }
-      node = node.parent;
-    }
-    return null;
-  }
-
-  function meshesForKey(key) {
-    return key ? meshesByKey.get(key) || [] : [];
-  }
-
-  function meshesForElement(element) {
-    if (!element) return [];
-    const own = meshesForKey(element.id);
-    if (own.length) return own;
-    const found = [];
-    for (const id of subtreeIds(ifcIndex, element.globalId)) {
-      const child = ifcIndex.elements[id];
-      if (child && child !== element) found.push(...meshesForKey(child.id));
-    }
-    return found;
-  }
-
-  /**
-   * @param {object[]} meshes
-   */
-  function worldBoxOf(meshes) {
-    const box3 = new THREE.Box3();
-    const corner = new THREE.Vector3();
-    for (const mesh of meshes) {
-      const geom = mesh.geometry;
-      if (!geom) continue;
-      if (!geom.boundingBox) geom.computeBoundingBox();
-      const bb = geom.boundingBox;
-      if (!bb) continue;
-      mesh.updateWorldMatrix(true, false);
-      for (const x of [bb.min.x, bb.max.x]) {
-        for (const y of [bb.min.y, bb.max.y]) {
-          for (const z of [bb.min.z, bb.max.z]) {
-            corner.set(x, y, z).applyMatrix4(mesh.matrixWorld);
-            box3.expandByPoint(corner);
-          }
-        }
-      }
-    }
-    return box3;
-  }
-
-  const CAM_FLY_MS = 480;
+  ctx.CAM_FLY_MS = 480;
   /** @type {{ t0: number, fromPos: THREE.Vector3, toPos: THREE.Vector3, fromTarget: THREE.Vector3, toTarget: THREE.Vector3, span: number } | null} */
-  let camFly = null;
-
-  function easeInOutCubic(t) {
-    const x = Math.min(1, Math.max(0, t));
-    return x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2;
-  }
-
-  /**
-   * End pose for framing `box3`, keeping the current view direction.
-   * @param {THREE.Box3} box3
-   */
-  function framePose(box3) {
-    const fit = box3.getSize(_corner);
-    const span = Math.max(fit.x, fit.y, fit.z, 0.2);
-    const center = box3.getCenter(new THREE.Vector3());
-    const dir = camera.position.clone().sub(controls.target);
-    if (dir.lengthSq() < 1e-8) dir.set(0.75, 0.55, 0.75);
-    else dir.normalize();
-    let dist;
-    if (camera.isOrthographicCamera) {
-      dist = Math.max(camera.position.distanceTo(controls.target), span * 1.4);
-    } else {
-      const vFov = ((camera.fov || 45) * Math.PI) / 180;
-      dist = Math.max((span * 0.62) / Math.max(Math.tan(vFov / 2), 1e-3), span * 1.25);
-    }
-    return { center, position: center.clone().addScaledVector(dir, dist), span };
-  }
-
-  /**
-   * @param {ReturnType<typeof framePose>} pose
-   */
-  function flyCamera(pose) {
-    camFly = {
-      t0: performance.now(),
-      fromPos: camera.position.clone(),
-      toPos: pose.position,
-      fromTarget: controls.target.clone(),
-      toTarget: pose.center,
-      span: pose.span,
-    };
-    viewDirty = true;
-  }
-
-  function stepCamFly(now) {
-    if (!camFly) return;
-    const t = Math.min(1, (now - camFly.t0) / CAM_FLY_MS);
-    const e = easeInOutCubic(t);
-    camera.position.lerpVectors(camFly.fromPos, camFly.toPos, e);
-    controls.target.lerpVectors(camFly.fromTarget, camFly.toTarget, e);
-    if (camera.isOrthographicCamera) sizeOrthoToContent(camFly.span * 0.62, camFly.span * 0.62);
-    suppressCameraChange = true;
-    controls.update();
-    updateBox();
-    updateCameraClipPlanes();
-    viewDirty = true;
-    if (t >= 1) {
-      camFly = null;
-      requestAnimationFrame(() => {
-        suppressCameraChange = false;
-      });
-      scheduleCameraSave();
-    }
-  }
-
-  function pulseElement(id) {
-    const meshes = meshesForElement(ifcIndex.elements[id]);
-    if (meshes.length) startPulse(meshes);
-    viewDirty = true;
-  }
-
-  function frameElement(id) {
-    const element = ifcIndex.elements[id];
-    const meshes = meshesForElement(element);
-    if (!meshes.length) return;
-    const box3 = worldBoxOf(meshes);
-    if (box3.isEmpty()) return;
-    flyCamera(framePose(box3));
-    startPulse(meshes);
-    viewDirty = true;
-  }
-
-  function startPulse(meshes) {
-    if (pulse) finishPulse();
-    meshes = [...meshes, ...fixtureModels.displayMeshesForMeshes(meshes)];
-    const clones = [];
-    for (const mesh of meshes) {
-      if (!mesh.isMesh || !mesh.material) continue;
-      const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-      const next = list.map((mat) => {
-        const clone = mat.clone();
-        if (clone.emissive) {
-          clone.emissive.setHex(0xffb020);
-          clone.emissiveIntensity = 0;
-        } else if (clone.color) {
-          clone.userData.bpPulseBase = clone.color.getHex();
-        }
-        clones.push(clone);
-        return clone;
-      });
-      mesh.userData.bpPulseMaterial = list;
-      mesh.material = next.length === 1 ? next[0] : next;
-    }
-    pulse = { meshes, clones, t0: performance.now() };
-  }
-
-  function finishPulse() {
-    if (!pulse) return;
-    for (const mesh of pulse.meshes) {
-      const saved = mesh.userData.bpPulseMaterial;
-      if (saved) mesh.material = saved.length === 1 ? saved[0] : saved;
-      delete mesh.userData.bpPulseMaterial;
-    }
-    for (const mat of pulse.clones) mat.dispose?.();
-    pulse = null;
-  }
-
-  function stepPulse(now) {
-    if (!pulse) return;
-    const u = (now - pulse.t0) / 900;
-    if (u >= 1) {
-      finishPulse();
-      viewDirty = true;
-      return;
-    }
-    const mag = Math.sin(Math.min(u, 1) * Math.PI);
-    for (const mat of pulse.clones) {
-      if (mat.emissive) mat.emissiveIntensity = 0.85 * mag;
-      else if (mat.color && mat.userData.bpPulseBase != null) {
-        mat.color.setHex(mat.userData.bpPulseBase).offsetHSL(0.08, 0.2, 0.18 * mag);
-      }
-    }
-    viewDirty = true;
-  }
-
-  function applyInspectorVisibility() {
-    const hiddenKeys = new Set();
-    for (const element of Object.values(ifcIndex.elements)) {
-      if (!element.id) continue;
-      if (ifcVisibility.isHidden(element.globalId)) {
-        // A locked element stays drawn whatever hid it.
-        if (!elementLocked(element.globalId)) hiddenKeys.add(element.id);
-      }
-    }
-    for (const [key, meshes] of meshesByKey) {
-      const hidden = hiddenKeys.has(key);
-      for (const mesh of meshes) {
-        mesh.userData.bpIfcHidden = hidden;
-        for (const child of mesh.children || []) {
-          if (child?.userData?.isEdgeOverlay || child?.userData?.isSectionCap) {
-            child.visible = !hidden;
-          }
-        }
-      }
-    }
-    for (const binding of doorCtrl.bindings) {
-      // A linkage moves several parts; each hides with its own element.
-      for (const host of binding.hosts || [binding.host]) {
-        const key = meshIdentity(host?.name || "").element;
-        const hidden = Boolean(key && hiddenKeys.has(key));
-        if (host) host.userData.bpIfcHidden = hidden;
-      }
-    }
-    for (const [name, meshes] of parts) {
-      applyOpacityToMeshes(meshes, partOpacity.get(name) ?? 1, { edgeMode });
-    }
-    viewDirty = true;
-    visibilitySigRevision += 1;
-    scheduleVisibilitySave();
-  }
-
-  function eachMaterial(mesh, fn) {
-    const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-    const next = list.map((mat) => {
-      if (!mat) return mat;
-      if (mat.userData.bpOwned) return fn(mat);
-      const clone = mat.clone();
-      clone.userData.bpOwned = true;
-      return fn(clone);
-    });
-    mesh.material = next.length === 1 ? next[0] : next;
-  }
-
-  /**
-   * Draws a light on or off. Off is a dull grey with no glow; on is the
-   * look's colour at full strength, as the base colour (so unlit Solid mode
-   * shows it) and as emissive in Realistic. `restore` puts the model's own
-   * fixture colour back (offline, as on load).
-   * @param {object} element
-   * @param {{ on: boolean, level?: number, color: number } | { restore: true }} look
-   */
-  function setLightLook(element, look) {
-    const restore = "restore" in look && look.restore;
-    const on = !restore && Boolean(look.on);
-    lightOn.set(element.globalId, on);
-    if (restore) lightLooks.delete(element.globalId);
-    else lightLooks.set(element.globalId, look);
-    const level = restore ? 1 : Math.min(Math.max(look.level ?? 1, 0), 1);
-    const target = new THREE.Color(restore ? 0 : look.color);
-    if (on) {
-      // A dimmed light stays clearly lit; only the glow strength drops.
-      target.lerp(new THREE.Color(LIGHT_OFF_HEX), 0.35 * (1 - level));
-    }
-    for (const mesh of meshesForElement(element)) {
-      eachMaterial(mesh, (mat) => {
-        if (mat.color) {
-          if (mat.userData.bpLightBase == null) mat.userData.bpLightBase = mat.color.getHex();
-          if (restore) mat.color.setHex(mat.userData.bpLightBase);
-          else mat.color.copy(target);
-        }
-        if (mat.emissive) {
-          if (on) {
-            // Kept below 1: ACES tone mapping bleaches a stronger glow to
-            // pale cream, which reads as "off" (Petr, 2026-11-12).
-            mat.emissive.copy(target);
-            mat.emissiveIntensity = 0.3 + 0.35 * level;
-          } else {
-            mat.emissive.setHex(0x000000);
-            mat.emissiveIntensity = 0;
-          }
-        }
-        return mat;
-      });
-    }
-    // A real model glows only in its diffuser.
-    fixtureModels.setLightLook(element, restore ? null : { on, color: target.clone(), level });
-    viewDirty = true;
-  }
-
-  function toggleLight(element) {
-    const on = !lightOn.get(element.globalId);
-    setLightLook(element, on ? OFFLINE_LIGHT : OFFLINE_LIGHT_OFF);
-  }
-
-  /** Material mode swaps materials; put the glow back on lit fixtures. */
-  function reapplyLightLooks() {
-    for (const [gid, look] of [...lightLooks]) {
-      const element = ifcIndex.elements[gid];
-      if (element) setLightLook(element, look);
-    }
-  }
-
-  // --- Live Home (homeLive.js). Offline behaviour is the fallback. ---
-
-  function reportHomeFailure(res) {
-    if (res?.ok) return;
-    console.warn("Home command failed", res);
-    homeFlash = `${tr("home.failed")}${res?.status ? ` (${res.status})` : ""}${res?.error ? `: ${res.error}` : ""}`;
-    syncHomeStatus();
-    window.setTimeout(() => {
-      homeFlash = "";
-      syncHomeStatus();
-    }, 4000);
-  }
-
-  function liveLightTap(element) {
-    lightFeedback(element);
-    const device = liveDevice(element);
-    if (device?.deviceType !== "ColorTemperatureLight") {
-      toggleLight(element);
-      return;
-    }
-    // Light state changes only when Home says so (WebSocket `state`).
-    home.command(element.globalId, { type: "toggle" }).then(reportHomeFailure);
-  }
-
-  /**
-   * Where a tap landed on a switch: up/down from the vertical offset, and
-   * left/right as seen from the camera (for double rockers).
-   */
-  function switchHitOffsets(element, hit) {
-    const meshes = meshesForElement(element);
-    if (!hit?.point || !meshes.length) return { dy: 1, side: -1 };
-    const b = worldBoxOf(meshes);
-    const c = b.getCenter(new THREE.Vector3());
-    const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
-    const d = hit.point.clone().sub(c);
-    return { dy: d.y, side: d.dot(right) };
-  }
+  ctx.camFly = null;
 
   /** @type {Map<string, object[]>} IFC elements by type, built on first use. */
-  const elementsByType = new Map();
-  function elementsOfType(type) {
-    let list = elementsByType.get(type);
-    if (!list) {
-      list = Object.values(ifcIndex.elements).filter((el) => el.type === type);
-      elementsByType.set(type, list);
-    }
-    return list;
-  }
-
-  /**
-   * Extended tap targets (tapTargets.js) for one IFC type: the centre of each
-   * shown element's world box, or of each rocker half for a switch.
-   * @param {string} type
-   * @param {{ camera?: THREE.Camera }} ctx
-   */
-  function tapTargetsFor(type, ctx) {
-    const cam = ctx?.camera || camera;
-    const right = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 0);
-    const out = [];
-    for (const element of elementsOfType(type)) {
-      if (ifcVisibility.isHidden(element.globalId)) continue;
-      const meshes = meshesForElement(element).filter((m) => {
-        if (!isSceneSolid(m)) return false;
-        for (let n = m; n; n = n.parent) if (!n.visible) return false;
-        return true;
-      });
-      if (type === "IfcWindow") {
-        // Only panes that open are targets; fixed glazing has none.
-        const opens = new Set(windowSlides.operableMeshes(element.id, meshesForElement(element)));
-        for (let i = meshes.length - 1; i >= 0; i--) if (!opens.has(meshes[i])) meshes.splice(i, 1);
-      }
-      if (!meshes.length) continue;
-      const box = worldBoxOf(meshes);
-      if (box.isEmpty()) continue;
-      const own = new Set(meshes);
-      const owns = (obj) => {
-        for (let n = obj; n; n = n.parent) if (own.has(n)) return true;
-        return elementFromMesh(obj) === element;
-      };
-      const object = meshes[0];
-      const centers =
-        type === "IfcSwitchingDevice"
-          ? switchTargetCenters(box, rockersOf(element), right).map((half) => half.center)
-          : [box.getCenter(new THREE.Vector3())];
-      for (const center of centers) {
-        out.push({ element, center, group: element.globalId, hit: { object, point: center }, owns });
-      }
-    }
-    return out;
-  }
+  ctx.elementsByType = new Map();
 
   /** globalId → time of our own press, so Home's echo does not animate twice. */
-  const localPressAt = new Map();
-
-  // --- Interaction feedback (feedback.js). Called where actions dispatch. ---
-
-  /** World anchor of the pressed rocker half: a quarter of the plate off centre. */
-  function switchFeedback(element, target, haptic = true) {
-    const meshes = meshesForElement(element);
-    if (!meshes.length) return;
-    const b = worldBoxOf(meshes);
-    const c = b.getCenter(new THREE.Vector3());
-    const size = b.getSize(new THREE.Vector3());
-    const up = target.position === "down" ? -1 : 1;
-    c.y += (up * size.y) / 4;
-    const rockers = rockersOf(element);
-    if (rockers.length > 1) {
-      const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
-      right.y = 0;
-      if (right.lengthSq() > 1e-9) {
-        right.normalize();
-        const side = target.rocker === rockers[0] ? -1 : 1;
-        c.addScaledVector(right, (side * Math.max(size.x, size.z)) / 4);
-      }
-    }
-    if (fixtureModels.press(element, target)) viewDirty = true;
-    feedback.showFeedback({ worldPos: c, kind: "switch", direction: target.position, haptic });
-  }
-
-  function lightFeedback(element) {
-    const meshes = meshesForElement(element);
-    if (!meshes.length) return;
-    feedback.showFeedback({ worldPos: worldBoxOf(meshes).getCenter(new THREE.Vector3()), kind: "light" });
-  }
-
-  /**
-   * Drawer: straight arrow along its slide. Sliding door: one straight arrow
-   * per panel, along that panel's slide. Sectional door and lift-up front
-   * (linkage): up or down arrow.
-   * Hinged leaf: arc along the swing.
-   */
-  function doorFeedback(binding, move) {
-    if (!binding?.host || move.from === move.to) return;
-    const box = new THREE.Box3().setFromObject(binding.host);
-    if (box.isEmpty()) return;
-    const center = box.getCenter(new THREE.Vector3());
-    const opening = move.to > move.from;
-    if (binding.sections || binding.joints) {
-      feedback.showFeedback({ worldPos: center, kind: "lift", direction: opening ? "up" : "down" });
-      return;
-    }
-    if (binding.panels) {
-      const parent = binding.pivot.parent;
-      if (!parent) return;
-      parent.updateWorldMatrix(true, false);
-      // One haptic tap for the whole door, not one per panel.
-      binding.panels.forEach((panel, i) => {
-        const at = new THREE.Box3().setFromObject(panel.pivot);
-        if (at.isEmpty()) return;
-        const dir = panel.slideLocal.clone().transformDirection(parent.matrixWorld);
-        if (!opening) dir.negate();
-        const worldPos = at.getCenter(new THREE.Vector3());
-        feedback.showFeedback({ worldPos, kind: "slide", worldDir: dir, haptic: i === 0 });
-      });
-      return;
-    }
-    if (binding.slideLocal) {
-      const parent = binding.pivot.parent;
-      if (!parent) return;
-      parent.updateWorldMatrix(true, false);
-      const dir = binding.slideLocal.clone().transformDirection(parent.matrixWorld);
-      if (!opening) dir.negate();
-      feedback.showFeedback({ worldPos: center, kind: "slide", worldDir: dir });
-      return;
-    }
-    const hinge = binding.pivot.getWorldPosition(new THREE.Vector3());
-    const delta = swingAngle(move.to, binding.sign) - swingAngle(move.from, binding.sign);
-    const to = rotateAboutY(center.toArray(), hinge.toArray(), delta);
-    feedback.showFeedback({ worldPos: center, kind: "hinge", hinge, to });
-  }
-
-  function windowFeedback(element, open) {
-    const all = meshesForElement(element);
-    const meshes = windowSlides.operableMeshes(element.id, all);
-    const mesh = meshes[0];
-    if (!mesh?.parent) return;
-    const slide = windowSlides.slideOf(element.id);
-    let dir;
-    if (slide) {
-      dir = new THREE.Vector3(slide[0], slide[1], slide[2]).normalize();
-      if (!open) dir.negate();
-    } else {
-      mesh.parent.updateWorldMatrix(true, false);
-      dir = new THREE.Vector3(open ? 1 : -1, 0, 0).transformDirection(mesh.parent.matrixWorld);
-    }
-    feedback.showFeedback({ worldPos: worldBoxOf(meshes).getCenter(new THREE.Vector3()), kind: "slide", worldDir: dir });
-  }
-
-  /** True when `obj` is (inside) a pane of `element` that opens. */
-  function windowPaneOperable(element, obj) {
-    if (!element) return false;
-    return windowSlides.acceptsHit(element.id, meshesForElement(element), obj);
-  }
-
-  function sendPress(element, target) {
-    switchFeedback(element, target);
-    pressSwitch(element);
-    localPressAt.set(element.globalId, performance.now());
-    home.press(element.globalId, target).then(reportHomeFailure);
-  }
-
-  function liveSwitchTap(element, hit) {
-    const device = liveDevice(element);
-    const target = pressTarget(element, switchHitOffsets(element, hit));
-    if (device?.deviceType !== "GenericSwitch" || !home.simulation()) {
-      switchFeedback(element, target);
-      pressSwitch(element);
-      return;
-    }
-    sendPress(element, target);
-  }
-
-  function liveSwitchActions(element) {
-    const device = liveDevice(element);
-    if (device?.deviceType !== "GenericSwitch" || !home.simulation()) return null;
-    const rockers = rockersOf(element);
-    const actions = [];
-    rockers.forEach((rocker, i) => {
-      for (const position of /** @type {const} */ (["up", "down"])) {
-        const word = tr(position === "up" ? "home.up" : "home.down");
-        actions.push({
-          id: `switch-${rocker}-${position}`,
-          labelKey: position === "up" ? "home.up" : "home.down",
-          label: rockers.length > 1 ? `${i + 1} ${word}` : word,
-          run: () => sendPress(element, { rocker, position, kind: "short" }),
-        });
-      }
-    });
-    return actions;
-  }
-
-  function liveCoverTap(element) {
-    const device = liveDevice(element);
-    if (device?.deviceType !== "WindowCovering") return;
-    const pos = device.state?.windowCovering?.targetPositionLiftPercent100ths;
-    const open = pos != null && pos < 5000;
-    home.command(element.globalId, { type: open ? "coverClose" : "coverOpen" }).then(reportHomeFailure);
-  }
-
-  function liveCoverActions(element) {
-    const device = liveDevice(element);
-    if (device?.deviceType !== "WindowCovering") return null;
-    return [
-      ["coverOpen", "ui.open"],
-      ["coverClose", "ui.close"],
-      ["coverStop", "home.stop"],
-    ].map(([type, labelKey]) => ({
-      id: type,
-      labelKey,
-      run: () => home.command(element.globalId, { type }).then(reportHomeFailure),
-    }));
-  }
-
-  function pressSwitch(element) {
-    // A real model tips its rocker instead (fixtureModels.press).
-    if (fixtureModels.placedFor(element)?.holder.visible) return;
-    for (const mesh of meshesForElement(element)) {
-      if (mesh.userData.bpPressing) continue;
-      mesh.userData.bpPressing = true;
-      const origin = mesh.position.y;
-      mesh.position.y = origin - 0.004;
-      window.setTimeout(() => {
-        mesh.position.y = origin;
-        mesh.userData.bpPressing = false;
-        viewDirty = true;
-      }, 160);
-    }
-    viewDirty = true;
-  }
-
-  function toggleWindow(element) {
-    const open = !windowOpen.get(element.globalId);
-    if (!windowSlides.slide(element.id, meshesForElement(element), open, performance.now())) return;
-    windowFeedback(element, open);
-    windowOpen.set(element.globalId, open);
-    viewDirty = true;
-  }
-
-  /**
-   * Interaction buttons for the inspector info screen (open/close, light,
-   * switch, live cover). Tries each of the element's meshes until a handler
-   * claims one, so a window still gets Open from an operable pane.
-   * @param {object | null} element
-   */
-  function actionsForElement(element) {
-    if (!element) return [];
-    const ctx = { now: performance.now() };
-    const keep = (item) => isSceneSolid(item.object);
-    for (const mesh of meshesForElement(element)) {
-      const found = doorCtrl.taps.resolve([{ object: mesh }], ctx, keep);
-      const actions = found?.claim?.actions;
-      if (Array.isArray(actions) && actions.length) return actions.slice();
-    }
-    return [];
-  }
-
-  function inspectAtPointer(pt) {
-    if (doorInputBlocked() || editMode?.blocksTaps()) return;
-    const cameraNow = camera;
-    if (!cameraNow || !root) return;
-    const rect = canvas.getBoundingClientRect();
-    const w = rect.width || canvas.clientWidth || 1;
-    const h = rect.height || canvas.clientHeight || 1;
-    ifcPointer.x = ((pt.clientX - rect.left) / w) * 2 - 1;
-    ifcPointer.y = -((pt.clientY - rect.top) / h) * 2 + 1;
-    ifcRaycaster.setFromCamera(ifcPointer, cameraNow);
-    // Only surfaces drawn at the hit (not under a hidden group, not cut away).
-    const hits = ifcRaycaster
-      .intersectObject(root, true)
-      .filter((hit) => isSceneSolid(hit.object) && isRenderedHit(hit));
-    let top = root;
-    while (top.parent) top = top.parent;
-    const ctx = {
-      raycaster: ifcRaycaster,
-      now: performance.now(),
-      camera: cameraNow,
-      root: top,
-      tap: { x: pt.clientX - rect.left, y: pt.clientY - rect.top },
-      size: { w, h },
-    };
-    // Same rule as a tap: a direct or extended (44 pt) target wins; else the
-    // front solid. Opens the inspector on that element's info screen.
-    const found = doorCtrl.taps.resolve(hits, ctx, (item) => isSceneSolid(item.object));
-    if (found && (found.kind === "direct" || found.kind === "extended") && found.hit?.object) {
-      const obj = found.hit.object;
-      const partName = obj.userData?.bpPart || meshIdentity(obj.name || "").part;
-      ifcUi.inspect(elementFromMesh(obj), { partName });
-      return;
-    }
-    const hit = hits[0];
-    if (!hit) return;
-    const element = elementFromMesh(hit.object);
-    const partName = hit.object.userData?.bpPart || meshIdentity(hit.object.name || "").part;
-    ifcUi.inspect(element, { partName });
-  }
-  inspectAt = inspectAtPointer;
+  ctx.localPressAt = new Map();
+  ctx.inspectAt = ctx.inspectAtPointer;
 
   // --- Home section and client lifecycle ---
-  const homeConfig = resolveHomeConfig({
+  ctx.homeConfig = resolveHomeConfig({
     search: typeof location !== "undefined" ? location.search : "",
     storage: typeof localStorage !== "undefined" ? localStorage : null,
   });
-  const homeCapable = indexHasHomeDevices(ifcIndex);
-  let homeMode = homeConfig.mode;
-  let homeFlash = "";
+  ctx.homeCapable = indexHasHomeDevices(ctx.ifcIndex);
+  ctx.homeMode = ctx.homeConfig.mode;
+  ctx.homeFlash = "";
   /** @type {HTMLElement | null} */
-  let homeStatusEl = null;
+  ctx.homeStatusEl = null;
 
-  function applyLiveDevice(device) {
-    const element = ifcIndex.elements[device.globalId];
-    if (!element) return;
-    if (device.deviceType === "ColorTemperatureLight") setLightLook(element, lightLook(device));
-  }
-
-  /** Back to the offline view: every light in its model colour, as on load. */
-  function resetToOffline() {
-    for (const gid of [...lightOn.keys()]) {
-      const element = ifcIndex.elements[gid];
-      if (element) setLightLook(element, { restore: true });
-    }
-  }
-
-  function syncHomeStatus() {
-    if (!homeStatusEl) return;
-    const status = home ? home.status() : "off";
-    const key =
-      status === "live"
-        ? home.simulation()
-          ? "home.statusLive"
-          : "home.statusLiveNoSim"
-        : status === "connecting"
-          ? "home.statusConnecting"
-          : status === "unreachable"
-            ? "home.statusUnreachable"
-            : "home.statusOff";
-    homeStatusEl.textContent = homeFlash || tr(key);
-    homeStatusEl.dataset.status = status;
-    homeStatusEl.title = status === "off" ? "" : homeConfig.baseUrl;
-  }
-
-  function buildHomeSection() {
-    if (!homeCapable) return;
-    let section = document.getElementById("section-home");
-    if (!section) {
-      const anchor = document.getElementById("section-locale");
-      if (!anchor?.parentNode) return;
-      section = document.createElement("section");
-      section.className = "sheet-section";
-      section.id = "section-home";
-      anchor.parentNode.insertBefore(section, anchor);
-    }
-    section.replaceChildren();
-    const title = document.createElement("h2");
-    title.className = "sheet-title";
-    title.textContent = tr("home.title");
-    const seg = document.createElement("div");
-    seg.className = "seg";
-    seg.id = "home-mode";
-    seg.setAttribute("role", "group");
-    seg.setAttribute("aria-label", tr("home.title"));
-    for (const [id, labelKey] of [
-      ["live", "home.live"],
-      ["off", "home.off"],
-    ]) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.dataset.homeMode = id;
-      btn.textContent = tr(labelKey);
-      if (id === homeMode) btn.classList.add("is-active");
-      btn.addEventListener("click", () => setHomeMode(/** @type {"live"|"off"} */ (id)));
-      seg.append(btn);
-    }
-    homeStatusEl = document.createElement("p");
-    homeStatusEl.className = "home-status";
-    homeStatusEl.setAttribute("aria-live", "polite");
-    homeStatusEl.style.cssText =
-      "margin:0.5rem 0 0;font-size:0.76rem;line-height:1.35;color:var(--fg-secondary)";
-    section.append(title, seg, homeStatusEl);
-    syncHomeStatus();
-  }
-
-  /** @param {"live" | "off"} mode */
-  function setHomeMode(mode) {
-    homeMode = mode;
-    saveHomeMode(typeof localStorage !== "undefined" ? localStorage : null, mode);
-    document.querySelectorAll("#home-mode button").forEach((el) => {
-      el.classList.toggle("is-active", /** @type {HTMLElement} */ (el).dataset.homeMode === mode);
-    });
-    if (!home) return;
-    if (mode === "live") home.start();
-    else {
-      home.stop();
-      resetToOffline();
-    }
-    syncHomeStatus();
-  }
-
-  if (homeCapable) {
-    home = createHomeClient({
-      baseUrl: homeConfig.baseUrl,
+  if (ctx.homeCapable) {
+    ctx.home = createHomeClient({
+      baseUrl: ctx.homeConfig.baseUrl,
       onStatus: () => {
-        syncHomeStatus();
-        viewDirty = true;
+        ctx.syncHomeStatus();
+        ctx.viewDirty = true;
       },
-      onDevice: (device) => applyLiveDevice(device),
+      onDevice: (device) => ctx.applyLiveDevice(device),
       onSwitch: (event) => {
         if (event.event !== "initialPress") return;
-        const element = ifcIndex.elements[event.globalId];
-        const ours = performance.now() - (localPressAt.get(event.globalId) ?? -Infinity) < 3000;
-        localPressAt.delete(event.globalId);
+        const element = ctx.ifcIndex.elements[event.globalId];
+        const ours = performance.now() - (ctx.localPressAt.get(event.globalId) ?? -Infinity) < 3000;
+        ctx.localPressAt.delete(event.globalId);
         if (element && !ours) {
           // Someone else pressed it: same arrow, no haptic.
           if (event.position === "up" || event.position === "down") {
-            switchFeedback(element, { rocker: event.rocker, position: event.position }, false);
+            ctx.switchFeedback(element, { rocker: event.rocker, position: event.position }, false);
           }
-          pressSwitch(element);
+          ctx.pressSwitch(element);
         }
       },
     });
-    buildHomeSection();
-    if (homeMode === "live") home.start();
-    window.blueprintsHome = home;
+    ctx.buildHomeSection();
+    if (ctx.homeMode === "live") ctx.home.start();
+    window.blueprintsHome = ctx.home;
   }
 
-  onLocaleChange(() => ifcUi.refresh());
+  onLocaleChange(() => ctx.ifcUi.refresh());
   /** @type {number[] | null} */
-  let camSig = null;
+  ctx.camSig = null;
   /** @type {string | null} */
-  let contentSig = null;
+  ctx.contentSig = null;
   /** @type {"fast" | "high"} */
-  let lastPeelQuality = "fast";
+  ctx.lastPeelQuality = "fast";
   /** @type {"fast" | "high" | null} */
-  let renderedPeelQuality = null;
+  ctx.renderedPeelQuality = null;
   /**
    * After a scene or setting change, show one fast frame before merging
    * batches, then peel on the following still frame. Camera let-go does not
    * set this, so a warm peel still happens on the next still frame.
    */
-  let holdFastForPrime = false;
+  ctx.holdFastForPrime = false;
 
   canvas.addEventListener("pointermove", () => {
-    if (measureTool?.isActive()) viewDirty = true;
+    if (ctx.measureTool?.isActive()) ctx.viewDirty = true;
   });
   canvas.addEventListener("pointerup", () => {
-    if (measureTool?.isActive()) viewDirty = true;
+    if (ctx.measureTool?.isActive()) ctx.viewDirty = true;
   });
 
-  /**
-   * Camera, projection, and drawing-buffer size. Idle frames compare this
-   * so a still view does not resubmit the scene.
-   * @returns {number[]}
-   */
-  function readCameraSig() {
-    const v = camera.view;
-    return [
-      camera.position.x,
-      camera.position.y,
-      camera.position.z,
-      camera.quaternion.x,
-      camera.quaternion.y,
-      camera.quaternion.z,
-      camera.quaternion.w,
-      camera.zoom,
-      camera.near,
-      camera.far,
-      camera.fov || 0,
-      camera.left,
-      camera.right,
-      camera.top,
-      camera.bottom,
-      controls.target.x,
-      controls.target.y,
-      controls.target.z,
-      canvas.width,
-      canvas.height,
-      v && v.enabled ? 1 : 0,
-      v ? v.offsetX : 0,
-      v ? v.offsetY : 0,
-      v ? v.fullWidth : 0,
-      v ? v.fullHeight : 0,
-      projection === "ortho" ? 1 : 0,
-    ];
-  }
-
-  function cameraSigChanged() {
-    const next = readCameraSig();
-    const prev = camSig;
-    let changed = !prev || prev.length !== next.length;
-    if (!changed && prev) {
-      for (let i = 0; i < next.length; i++) {
-        if (next[i] !== prev[i]) {
-          changed = true;
-          break;
-        }
-      }
-    }
-    if (changed) camSig = next;
-    return changed;
-  }
-
-  /**
-   * Cuts, opacities, material/edge mode, labels, locale, background.
-   * @returns {string}
-   */
-  function readContentSig() {
-    const bits = [
-      materialMode,
-      edgeMode,
-      getLocale(),
-      labelsOn ? "1" : "0",
-      String(sceneBg),
-      // Moved fixtures change the merged peel batches and the walk collider.
-      `edit${editMode ? editMode.revision() : 0}`,
-      // Meshes that arrive with an on-demand layer.
-      `lazy${lazyRevision}`,
-    ];
-    const bg = scene?.background;
-    if (bg && bg.isColor) bits.push(bg.getHexString());
-    for (const [k, v] of partOpacity) bits.push(k, Number(v).toFixed(3));
-    for (const c of cuts) {
-      bits.push(String(c.id), c.locked ? "1" : "0", Number(c.t).toFixed(4));
-    }
-    // The settled frame is a merged peel. Its cache key has to change when
-    // a session hide flips mesh visibility, or the old triangles stay drawn.
-    const hidden = ifcVisibility.hiddenIds();
-    bits.push(hidden.length ? hidden.slice().sort().join(",") : "-");
-    // Locks flip mesh visibility the same way.
-    bits.push(`x${visibilitySigRevision}`);
-    return bits.join("|");
-  }
-
   /** Walk physics time of the last frame (ms); `BlueprintsViewer.frameStats`. */
-  let walkFrameMs = 0;
+  ctx.walkFrameMs = 0;
   /** Rolling frame timings for headless checks. */
-  const frameStats = { frames: 0, totalMs: 0, renderMs: 0, walkMs: 0, reset() {
+  ctx.frameStats = { frames: 0, totalMs: 0, renderMs: 0, walkMs: 0, reset() {
     this.frames = 0;
     this.totalMs = 0;
     this.renderMs = 0;
     this.walkMs = 0;
   } };
-  api.frameStats = frameStats;
-
-  function tick() {
-    if (pauseTick) return;
-    const now = performance.now();
-    if (doorCtrl.step(now)) {
-      viewDirty = true;
-      realisticCtl?.stage.markDirty();
-    }
-    if (windowSlides.step(now)) {
-      viewDirty = true;
-      realisticCtl?.stage.markDirty();
-    }
-    stepPulse(now);
-    if (fixtureModels.step(now)) {
-      viewDirty = true;
-      realisticCtl?.stage.markDirty();
-    }
-    stepCamFly(now);
-    stepFrameAnim(now);
-    if (walk?.active) {
-      const w0 = performance.now();
-      if (walk.update(now)) viewDirty = true;
-      walkFrameMs = performance.now() - w0;
-    }
-    controls.update();
-    // Keep near/far tight as orbit distance changes.
-    if (root) updateCameraClipPlanes();
-
-    if (!peelCamInited) {
-      peelCamPos.copy(camera.position);
-      peelCamTarget.copy(controls.target);
-      peelCamInited = true;
-    }
-    const camMoved =
-      camera.position.distanceToSquared(peelCamPos) > 1e-8 ||
-      controls.target.distanceToSquared(peelCamTarget) > 1e-8;
-    peelCamPos.copy(camera.position);
-    peelCamTarget.copy(controls.target);
-
-    const contentNow = readContentSig();
-    const contentChanged = contentNow !== contentSig;
-    if (contentChanged) walk?.markColliderStale();
-    // Cuts and hides change what casts a shadow.
-    if (contentChanged) realisticCtl?.stage.markDirty();
-    const camChanged = cameraSigChanged();
-    // Still frame, after the first picture: correct transparency. Anything
-    // in motion stays on one sorted-alpha draw.
-    if (contentChanged) holdFastForPrime = true;
-    const wantHigh =
-      !peelPointerDown &&
-      !camMoved &&
-      !contentChanged &&
-      !cutSliderActive &&
-      !frameAnim &&
-      !holdFastForPrime;
-    lastPeelQuality = wantHigh ? "high" : "fast";
-    const qualityUpgrade = lastPeelQuality !== renderedPeelQuality;
-    if (!viewDirty && !contentChanged && !camChanged && !qualityUpgrade && !holdFastForPrime) {
-      requestAnimationFrame(tick);
-      return;
-    }
-    viewDirty = false;
-    contentSig = contentNow;
-    renderedPeelQuality = lastPeelQuality;
-    if (!contentChanged) holdFastForPrime = false;
-
-    measureTool?.update();
-    annotations.update();
-
-    const r0 = performance.now();
-    const usedPeel = depthPeel.render(scene, camera, root, anyPartFaded, {
-      quality: lastPeelQuality,
-      batchKey: contentNow,
-      // The frame that shows a new scene or slider value should paint before
-      // the geometry merge. The following still frame peels.
-      // While the thumb is down the clip plane moves and the filled cut face
-      // stays put until release. A snapshot from that pause is the leftover
-      // face once the view settles.
-      deferPrime: contentChanged || cutSliderActive,
-    });
-    // Re-apply slider opacities when leaving peel mode so materials cannot
-    // stay stuck translucent / depthWrite-off after a 100% scrub. The abort
-    // path already presented sorted alpha, so a forced redraw just runs the
-    // failing peel a second time.
-    if (prevUsedPeel && !usedPeel) {
-      healOpacitiesFromState();
-    }
-    prevUsedPeel = usedPeel;
-    // Selection outline and move arrows, drawn over the finished frame.
-    editMode?.renderOverlay(renderer, camera);
-    const r1 = performance.now();
-    frameStats.frames += 1;
-    frameStats.renderMs += r1 - r0;
-    frameStats.walkMs += walk?.active ? walkFrameMs : 0;
-    frameStats.totalMs += r1 - now;
-    requestAnimationFrame(tick);
-  }
+  ctx.api.frameStats = ctx.frameStats;
   // Edit mode (editMode.js, TransformControls, fixture and cable edits) is a
   // lazy chunk (build.mjs). It also draws the cable routes for the Parts
   // leaf and ?cables=1, so it starts loading now rather than on first tap.
-  const editReady = loadFeature("edit", () => import("./editMode.js"), ({ createEditMode }) => {
-    editMode = createEditMode({
+  ctx.editReady = loadFeature("edit", () => import("./editMode.js"), ({ createEditMode }) => {
+    ctx.editMode = createEditMode({
       canvas,
-      renderer,
-      controls,
-      getCamera: () => camera,
-      getRoot: () => root,
-      index: ifcIndex,
+      renderer: ctx.renderer,
+      controls: ctx.controls,
+      getCamera: () => ctx.camera,
+      getRoot: () => ctx.root,
+      index: ctx.ifcIndex,
       modelId: String(options.modelId || ""),
-      meshesForElement,
-      elementFromMesh,
+      meshesForElement: ctx.meshesForElement,
+      elementFromMesh: ctx.elementFromMesh,
       isSceneSolid,
       isRenderedHit,
       isOpaque: (obj) => isOpaqueMaterialOf(obj),
       centerOccluded,
       projectTarget,
-      flyTo: (pose) => flyCamera(pose),
-      pulse: (meshes) => startPulse(meshes),
+      flyTo: (pose) => ctx.flyCamera(pose),
+      pulse: (meshes) => ctx.startPulse(meshes),
       markDirty: () => {
-        viewDirty = true;
-        realisticCtl?.stage.markDirty();
+        ctx.viewDirty = true;
+        ctx.realisticCtl?.stage.markDirty();
       },
       beforeEnter: () => {
-        if (walk?.active) walk.exit();
-        if (measureTool?.isActive()) measureTool.setActive(false);
-        syncWalkButton();
+        if (ctx.walk?.active) ctx.walk.exit();
+        if (ctx.measureTool?.isActive()) ctx.measureTool.setActive(false);
+        ctx.syncWalkButton();
       },
-      onLayout: () => applySafeViewOffset(true),
+      onLayout: () => ctx.applySafeViewOffset(true),
       t: tr,
-      cablesLayer: () => hasCables && (partOpacity.get(CABLE_LEAF) ?? 0) > 1e-3,
+      cablesLayer: () => ctx.hasCables && (ctx.partOpacity.get(CABLE_LEAF) ?? 0) > 1e-3,
       cables: options.cables && typeof options.cables === "object" ? options.cables : null,
     });
-    if (root) editMode.showButton(editMode.hasFixtures());
-    viewDirty = true;
+    if (ctx.root) ctx.editMode.showButton(ctx.editMode.hasFixtures());
+    ctx.viewDirty = true;
   });
-  onLocaleChange(() => editMode?.refreshLocale());
+  onLocaleChange(() => ctx.editMode?.refreshLocale());
   /** Fixture edit mode, for headless checks: `BlueprintsViewer.edit` (null until loaded). */
-  Object.defineProperty(api, "edit", { get: () => editMode, enumerable: true, configurable: true });
+  Object.defineProperty(ctx.api, "edit", { get: () => ctx.editMode, enumerable: true, configurable: true });
   /** Resolves once the lazy feature chunks (edit, measure, walk) are in. */
-  api.featuresReady = Promise.all([editReady, measureReady, walkReady]).then(() => undefined);
-  tick();
-  return api;
+  ctx.api.featuresReady = Promise.all([ctx.editReady, ctx.measureReady, ctx.walkReady]).then(() => undefined);
+  ctx.tick();
+  return ctx.api;
 }

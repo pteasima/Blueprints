@@ -21,7 +21,7 @@ Why this and not `BatchedMesh` or one merged buffer per material across elements
 - `doors.js`: a door, drawer or cabinet node whose faces merged into one mesh still moves as one host. Before the merge it had many meshes and was never split; `splitDisconnectedMesh` would otherwise have split a front from its handle.
 - Operable windows (`windows.json` with a pane that opens) keep one mesh per face: `windows.js` sorts meshes into panes by their centre, so a node spanning two panes would slide whole. Today every pane is its own node, so this only guards future models (~70 extra draws).
 
-**Phones draw at 1.5× instead of 2×** (coarse pointer and a short screen side ≤ 500 CSS px; `viewerPixelRatio` in `main.js`). An iPhone at 2× is 780×1688 px with 4× MSAA: ~47 MB of colour and depth. At 1.5× it is 585×1266, ~27 MB. Tablets and desktops keep 2×. Lines and text in the canvas are slightly softer on a phone.
+**Phones draw at 1.5× instead of 2×** (coarse pointer and a short screen side ≤ 500 CSS px; `viewerPixelRatio` in `sceneSetup.js`). An iPhone at 2× is 780×1688 px with 4× MSAA: ~47 MB of colour and depth. At 1.5× it is 585×1266, ~27 MB. Tablets and desktops keep 2×. Lines and text in the canvas are slightly softer on a phone.
 
 **Depth-peel memory is released when nothing is see-through.** The still-frame peel (any part between 0 % and 100 %) allocates full-size float targets (~88 bytes a pixel, ~116 MB on an iPhone at 2×) and world-space batches of the scene. They used to stay allocated until the page closed; now they are freed on the first frame with nothing faded and rebuilt when something fades again.
 
@@ -148,7 +148,7 @@ Other heavy groups on main (bb58c41), primitives: bathroom grout 1,182 (5.7 %; 1
 
 three.js itself is 581 KiB of the 936. Headless Chrome, iPhone profile (390×844 at 3×, 4× CPU throttle, 9 Mbit/s, uncompressed local server, Home off): time to the model shown 12.84 → 12.48 s (median of 3; most of it is the 7.3 MB GLB download), JS heap 125 → 117 MB. Every view, Realistic, walk (and walk restored after a reload), edit mode, measure and AR export behave as before; screenshots of Shaded and Realistic match pixel for pixel outside the top bar.
 
-**Budget.** `node scripts/bundle_budget.mjs` (after `npm run build -- --meta`) reads esbuild's metafile and fails when the start-up JS (the entry and every chunk it imports statically) or all JS together is over its limit, raw and gzipped. Limits, about 1.15× today: start-up 1,100 KiB / 300 KiB gzip, total 1,350 KiB / 390 KiB gzip. `viewer-js` runs it on every pull request that touches the viewer. A new heavy feature should usually be another lazy chunk (`loadFeature` in `main.js`) rather than a raised limit.
+**Budget.** `node scripts/bundle_budget.mjs` (after `npm run build -- --meta`) reads esbuild's metafile and fails when the start-up JS (the entry and every chunk it imports statically) or all JS together is over its limit, raw and gzipped. Limits, about 1.15× today: start-up 1,100 KiB / 300 KiB gzip, total 1,350 KiB / 390 KiB gzip. `viewer-js` runs it on every pull request that touches the viewer. A new heavy feature should usually be another lazy chunk (`loadFeature` in `viewerBoot.js`, called from `main.js`) rather than a raised limit.
 
 ## GLB compression: measured, not adopted (2026-11-27)
 

@@ -17,12 +17,15 @@ import * as esbuild from "esbuild";
 import { rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { inlineAttachPlugin } from "./inlineAttachPlugin.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const dist = join(here, "dist");
 rmSync(dist, { recursive: true, force: true });
 
-const common = { absWorkingDir: here, bundle: true, minify: true, logLevel: "warning", legalComments: "none" };
+// inlineAttachPlugin folds attach*(ctx) modules back into mountViewer so
+// minification can rename locals (ctx.property names cannot be shortened).
+const common = { absWorkingDir: here, bundle: true, minify: true, logLevel: "warning", legalComments: "none", plugins: [inlineAttachPlugin()] };
 
 const esm = await esbuild.build({
   ...common,
