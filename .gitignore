@@ -36,7 +36,15 @@ docs/materials/catalogue.yaml
 .idea/
 .vscode/
 
-# Viewer toolchain (commit the built viewer.iife.js only)
+# Viewer toolchain and builds. `npm run build` (src/blueprints/viewer/build.mjs)
+# writes dist/ (ES modules for the site) and viewer.iife.js (offline HTML export);
+# CI builds them, nothing is committed. ensure_viewer_shell copies dist/ into
+# docs/viewer/.
 src/blueprints/viewer/node_modules/
+src/blueprints/viewer/dist/
+src/blueprints/viewer/viewer.iife.js
+docs/viewer/viewer.js
+docs/viewer/chunks/
+docs/viewer/viewer.iife.js
 exports/**/*.glb
 exports/**/*.html

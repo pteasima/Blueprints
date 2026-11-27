@@ -70,6 +70,28 @@ jobs:
         with:
           python-version: "3.12"
 
+      # The viewer bundle is not committed (src/blueprints/viewer/build.mjs);
+      # build it before build-preview-hub.py copies it into docs/viewer/.
+      - uses: actions/setup-node@v7
+        if: >
+          github.event_name != 'pull_request' ||
+          github.event.action != 'closed' ||
+          github.event.pull_request.merged
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: src/blueprints/viewer/package-lock.json
+
+      - name: Build the viewer bundle
+        if: >
+          github.event_name != 'pull_request' ||
+          github.event.action != 'closed' ||
+          github.event.pull_request.merged
+        working-directory: src/blueprints/viewer
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+
       - name: Build web-viewer hub
         if: >
           github.event_name != 'pull_request' ||

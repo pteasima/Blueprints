@@ -11,13 +11,13 @@ import { fileURLToPath } from "node:url";
 import { meshIdentity } from "./meshIdentity.js";
 import {
   catalogueCoverage,
-  parseCatalogue,
   parseSelector,
   resolveEntry,
   resolveMapUrl,
   sanitizeId,
   selectorScore,
 } from "./catalogue.js";
+import { parseCatalogue } from "./catalogueYaml.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = join(here, "..", "..", "..");

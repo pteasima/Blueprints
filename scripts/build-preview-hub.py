@@ -13,7 +13,13 @@ from blueprints.preview_hub import ensure_viewer_shell, write_preview_hub  # noq
 
 
 def main() -> int:
-    ensure_viewer_shell()
+    if not ensure_viewer_shell():
+        print(
+            "No viewer build in src/blueprints/viewer/dist; run "
+            "`npm ci && npm run build` there first.",
+            file=sys.stderr,
+        )
+        return 1
     path = write_preview_hub()
     print(f"wrote {path}")
     return 0

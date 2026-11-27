@@ -54,5 +54,5 @@ npm ci
 npm run build
 ```
 
-`viewer.iife.js` is committed so Python export does not need Node at runtime. The `viewer-js` workflow rebuilds it and fails if the committed bundle differs. Copy/sync into `docs/viewer/` via `ensure_viewer_shell()` on publish, or copy manually after build.
+Neither bundle is committed. `npm run build` writes `dist/viewer.js` (and chunks) for the Pages site and `viewer.iife.js` for the offline HTML export. CI builds them (`pages-content`, `viewer-js`, and `tests`). Copy/sync into `docs/viewer/` via `ensure_viewer_shell()` on publish, or copy manually after build.
 

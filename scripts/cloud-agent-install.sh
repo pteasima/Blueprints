@@ -25,3 +25,12 @@ source .venv/bin/activate
 python -m pip install -U pip
 python -m pip install -e ".[dev]"
 python -c "import build123d, cairosvg, gmsh, matplotlib, ifcopenshell, shapely, yaml_ifc; from pxr import Usd"
+
+# Viewer bundles (src/blueprints/viewer/build.mjs) are built, not committed:
+# the offline HTML export embeds viewer.iife.js and the Pages preview uses dist/.
+if command -v npm >/dev/null 2>&1; then
+  npm --prefix src/blueprints/viewer ci --no-audit --no-fund
+  npm --prefix src/blueprints/viewer run build
+else
+  echo "npm not found: install Node 24 to build the viewer (npm run build in src/blueprints/viewer)" >&2
+fi

@@ -97,7 +97,7 @@ def test_preview_hub_updates_models_for_pages(tmp_path, monkeypatch, capsys):
     assert paths["preview_hub"] == site / "index.html"
     assert (site / "models" / "hello_world.usdz").is_file()
     assert (site / "models" / "hello_world.glb").is_file()
-    assert (site / "viewer" / "viewer.iife.js").is_file()
+    assert (site / "viewer" / "viewer.js").is_file()
     assert (site / ".nojekyll").is_file()
     manifest = (site / "models" / "manifest.json").read_text(encoding="utf-8")
     assert '"id": "hello_world"' in manifest
@@ -133,29 +133,43 @@ def test_build_preview_hub_script(tmp_path, monkeypatch):
     assert "prefers-color-scheme: dark" in html.lower()
 
 
-def test_ensure_viewer_shell_cache_busts_iife(tmp_path, monkeypatch):
+def test_ensure_viewer_shell_copies_esm_build_and_cache_busts(tmp_path, monkeypatch):
     import blueprints.preview_hub as ph
 
     monkeypatch.setattr(ph, "PREVIEW_SITE_DIR", tmp_path)
     monkeypatch.setattr(ph, "REPO_ROOT", tmp_path)
-    viewer_src = tmp_path / "src" / "blueprints" / "viewer"
-    viewer_src.mkdir(parents=True)
-    (viewer_src / "viewer.iife.js").write_text("/* iife v1 */", encoding="utf-8")
+    dist = tmp_path / "src" / "blueprints" / "viewer" / "dist"
+    (dist / "chunks").mkdir(parents=True)
+    (dist / "viewer.js").write_text("/* entry v1 */", encoding="utf-8")
+    (dist / "chunks" / "editMode-AAAA.js").write_text("/* chunk */", encoding="utf-8")
     docs_viewer = tmp_path / "viewer"
-    docs_viewer.mkdir()
+    (docs_viewer / "chunks").mkdir(parents=True)
+    (docs_viewer / "chunks" / "stale-ZZZZ.js").write_text("/* old */", encoding="utf-8")
+    (docs_viewer / "viewer.iife.js").write_text("/* old iife */", encoding="utf-8")
     (docs_viewer / "index.html").write_text(
-        '<script src="viewer.iife.js"></script>\n', encoding="utf-8"
+        '<script>const m = import("./viewer.js");</script>\n', encoding="utf-8"
     )
-    ph.ensure_viewer_shell()
+    assert ph.ensure_viewer_shell()
     html = (docs_viewer / "index.html").read_text(encoding="utf-8")
-    assert 'src="viewer.iife.js?v=' in html
-    assert (docs_viewer / "viewer.iife.js").read_text(encoding="utf-8") == "/* iife v1 */"
-    # Second stamp with changed IIFE updates the query.
-    (viewer_src / "viewer.iife.js").write_text("/* iife v2 */", encoding="utf-8")
-    ph.ensure_viewer_shell()
+    assert 'import("./viewer.js?v=' in html
+    assert (docs_viewer / "viewer.js").read_text(encoding="utf-8") == "/* entry v1 */"
+    assert (docs_viewer / "chunks" / "editMode-AAAA.js").is_file()
+    assert not (docs_viewer / "chunks" / "stale-ZZZZ.js").exists()
+    assert not (docs_viewer / "viewer.iife.js").exists()
+    # A changed chunk alone changes the stamp.
+    (dist / "chunks" / "editMode-AAAA.js").write_text("/* chunk v2 */", encoding="utf-8")
+    assert ph.ensure_viewer_shell()
     html2 = (docs_viewer / "index.html").read_text(encoding="utf-8")
     assert html2 != html
-    assert 'src="viewer.iife.js?v=' in html2
+    assert 'import("./viewer.js?v=' in html2
+
+
+def test_ensure_viewer_shell_without_build(tmp_path, monkeypatch):
+    import blueprints.preview_hub as ph
+
+    monkeypatch.setattr(ph, "PREVIEW_SITE_DIR", tmp_path)
+    monkeypatch.setattr(ph, "REPO_ROOT", tmp_path)
+    assert ph.ensure_viewer_shell() is False
 
 
 def test_stl_to_usdz_roundtrip(tmp_path, monkeypatch):

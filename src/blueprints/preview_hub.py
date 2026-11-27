@@ -229,32 +229,58 @@ def preview_site_enabled() -> bool:
     return True
 
 
-def ensure_viewer_shell() -> None:
-    """Keep docs/viewer/ in sync with the packaged Three.js IIFE.
+def viewer_bundle_files(dist: Path) -> list[Path]:
+    """The ES-module viewer build: dist/viewer.js plus dist/chunks/*.js, sorted."""
+    entry = dist / "viewer.js"
+    if not entry.is_file():
+        return []
+    chunks = sorted((dist / "chunks").glob("*.js")) if (dist / "chunks").is_dir() else []
+    return [entry, *chunks]
 
-    Also stamps a content-hash query on the script src in index.html so Safari
-    / CDN caches cannot serve a stale IIFE after a chrome CSS/JS change.
+
+def ensure_viewer_shell() -> bool:
+    """Copy the built viewer into docs/viewer/ and cache-bust its entry.
+
+    ``npm run build`` in src/blueprints/viewer writes ``dist/viewer.js`` and its
+    code-split ``dist/chunks/*.js`` (build.mjs); none of it is committed. This
+    replaces ``docs/viewer/viewer.js`` and ``docs/viewer/chunks/`` with that
+    build and stamps ``./viewer.js?v=<hash of entry and chunks>`` in
+    index.html so Safari / CDN caches cannot serve a stale entry. Chunk names
+    carry esbuild's content hash, so they need no stamp. Returns False when
+    there is no build to copy (index.html is left as it is).
     """
     import hashlib
     import re
 
     viewer_dir = PREVIEW_SITE_DIR / "viewer"
     viewer_dir.mkdir(parents=True, exist_ok=True)
-    src_iife = REPO_ROOT / "src" / "blueprints" / "viewer" / "viewer.iife.js"
-    dst_iife = viewer_dir / "viewer.iife.js"
-    if src_iife.is_file():
-        shutil.copy2(src_iife, dst_iife)
-    iife_path = dst_iife if dst_iife.is_file() else src_iife
-    if not iife_path.is_file():
-        return
-    digest = hashlib.sha256(iife_path.read_bytes()).hexdigest()[:10]
+    # The classic-script bundle published before code splitting.
+    (viewer_dir / "viewer.iife.js").unlink(missing_ok=True)
+    src_dist = REPO_ROOT / "src" / "blueprints" / "viewer" / "dist"
+    src_files = viewer_bundle_files(src_dist)
+    if src_files:
+        (viewer_dir / "viewer.js").unlink(missing_ok=True)
+        shutil.rmtree(viewer_dir / "chunks", ignore_errors=True)
+        (viewer_dir / "chunks").mkdir()
+        for src in src_files:
+            rel = src.relative_to(src_dist)
+            shutil.copy2(src, viewer_dir / rel)
+    files = viewer_bundle_files(viewer_dir)
+    if not files:
+        return False
+    h = hashlib.sha256()
+    for f in files:
+        h.update(f.relative_to(viewer_dir).as_posix().encode())
+        h.update(b"\0")
+        h.update(f.read_bytes())
+    digest = h.hexdigest()[:10]
     index = viewer_dir / "index.html"
     if not index.is_file():
-        return
+        return True
     html = index.read_text(encoding="utf-8")
     updated, n = re.subn(
-        r'(src=["\'])viewer\.iife\.js(?:\?[^"\']*)?(["\'])',
-        rf"\1viewer.iife.js?v={digest}\2",
+        r'(["\'])\./viewer\.js(?:\?[^"\']*)?(["\'])',
+        rf"\1./viewer.js?v={digest}\2",
         html,
         count=1,
     )
@@ -268,6 +294,7 @@ def ensure_viewer_shell() -> None:
         )
     if updated != html:
         index.write_text(updated, encoding="utf-8")
+    return True
 
 
 MATERIALS_CATALOGUE = REPO_ROOT / "inputs" / "materials" / "catalogue.yaml"
