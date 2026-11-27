@@ -230,6 +230,57 @@ function formatImports(nameMap) {
   return lines.join("\n");
 }
 
+/**
+ * Brace depth (code only, not strings/comments) at every index of src.
+ * Throws when the braces do not balance, so a scanner miss (e.g. a regex
+ * literal containing a brace) fails the build instead of shipping a bad
+ * rewrite.
+ */
+function braceDepths(src) {
+  const depth = new Int32Array(src.length + 1);
+  const delta = new Int8Array(src.length);
+  scan(src, (type, text, a) => {
+    if (type !== "code") return;
+    if (text === "{") delta[a] = 1;
+    else if (text === "}") delta[a] = -1;
+  });
+  let d = 0;
+  for (let i = 0; i < src.length; i++) {
+    depth[i] = d;
+    d += delta[i];
+    if (d < 0) throw new Error(`inlineAttach: unbalanced braces at ${i}`);
+  }
+  depth[src.length] = d;
+  if (d !== 0) throw new Error("inlineAttach: unbalanced braces in mountViewer");
+  return depth;
+}
+
+/**
+ * `const/let name =` directly in mountViewer (depth 1: main.js's own top
+ * level and every inlined attach body) would collide with the hoisted
+ * `let name`, so it becomes `name =`. Declarations inside nested functions
+ * or blocks are left alone: they shadow the session variable on purpose
+ * (e.g. edgeResolution's `const size = new Vector2()`). Rewriting those
+ * clobbered the shared model `size`/`box`/`center`/`key` and blanked the
+ * canvas (camera near/far became NaN).
+ * @param {string} body source starting at `export function mountViewer`
+ * @param {Set<string>} letSet hoisted session names
+ */
+export function hoistTopLevelDecls(body, letSet) {
+  const depth = braceDepths(body);
+  const re = /^([ \t]*)(?:const|let)[ \t]+([A-Za-z_$][\w$]*)[ \t]*=/gm;
+  const ops = [];
+  let m;
+  while ((m = re.exec(body))) {
+    const at = m.index + m[1].length;
+    if (!letSet.has(m[2]) || depth[at] !== 1) continue;
+    ops.push({ start: m.index, end: m.index + m[0].length, text: `${m[1]}${m[2]} =` });
+  }
+  let out = body;
+  for (const op of ops.reverse()) out = out.slice(0, op.start) + op.text + out.slice(op.end);
+  return out;
+}
+
 export function inlineAttachContents(mainPath) {
   const dir = dirname(mainPath);
   let main = readFileSync(mainPath, "utf8");
@@ -280,13 +331,7 @@ export function inlineAttachContents(mainPath) {
 
   const letNames = [...keys].filter((k) => !PARAMS.has(k) && !fns.has(k)).sort();
   const letSet = new Set(letNames);
-  // Top-level `const/let name =` in inlined attach bodies would collide with
-  // the hoisted `let name`. Turn those into assignments.
-  body = body.replace(/^[ \t]*(?:const|let)[ \t]+([A-Za-z_$][\w$]*)[ \t]*=/gm, (m, name) => {
-    if (!letSet.has(name)) return m;
-    const indent = m.match(/^[ \t]*/)[0];
-    return `${indent}${name} =`;
-  });
+  body = hoistTopLevelDecls(body, letSet);
   const letDecl = `  let ${letNames.join(", ")};\n`;
   body = body.replace(
     /export function mountViewer\(canvas, glbBuffer, options = \{\}\) \{\n/,
