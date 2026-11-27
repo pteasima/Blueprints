@@ -67,7 +67,7 @@ Petr, 2026-11-20: "make sure perf doesn't deteriorate after Bob or other agents 
 
 The merge happens at load, so a model needs no extra work to get one draw per element. What still costs on a phone, and what anyone adding or changing furniture or other elements should keep in mind:
 
-- **Triangles per element.** Tessellation follows the CAD shape (`_stl_tolerance` in `export_utils.py`). Fillets, small chamfers, thread, knurls, text and dense splines multiply triangles; model them only where they are visible at room scale. Today the heaviest element in `ground_floor.glb` has 900 triangles (the oak bookcase); keep a single element under 5,000.
+- **Triangles per element.** Tessellation follows the CAD shape (`_stl_tolerance` in `export_utils/mesh.py`). Fillets, small chamfers, thread, knurls, text and dense splines multiply triangles; model them only where they are visible at room scale. Today the heaviest element in `ground_floor.glb` has 900 triangles (the oak bookcase); keep a single element under 5,000.
 - **CAD faces per element.** Each face is still a glTF primitive in the file (parse time, accessors, the per-face edge pass at load). The bookcase has 450 faces; keep one element under 1,000. Fuse solids that are one real part (`fuse()`), and do not split a flat panel into many faces.
 - **Few, shared materials.** The merge makes one mesh per element **and material**, so an element with five materials draws five times. Use the shared palette materials and one material per element where the real object is one finish; do not give each face its own colour or a near-duplicate material.
 - **No needless tiny elements.** Every element node is at least one draw, one edge overlay, a pick target and an IFC row. Screws, hinges, cable ties, feet that nobody needs to select: leave them out or fold them into their host. Real separate products (a fixture, a cabinet, a drawer front) stay separate elements.
@@ -127,13 +127,13 @@ Other heavy groups on main (bb58c41), primitives: bathroom grout 1,182 (5.7 %; 1
 **Built, not committed.** `npm run build` in `src/blueprints/viewer` runs `build.mjs`, which writes two bundles from the same sources. Neither is in git; CI builds them (`pages-content` before `build-preview-hub.py`, `viewer-js` for the budget, `tests` for the export tests), and so do `scripts/cloud-agent-install.sh` and, when it is missing, the offline HTML export.
 
 - `dist/viewer.js` and `dist/chunks/*.js`: ES modules for the Pages site. `docs/viewer/index.html` loads the entry with `import()` next to the GLB fetch, so the two download in parallel. `preview_hub.ensure_viewer_shell` copies the build into `docs/viewer/` and stamps `./viewer.js?v=<hash of the entry and every chunk>`; chunk names carry esbuild's content hash, so they need no stamp.
-- `viewer.iife.js`: one classic script with the same code (esbuild inlines the `import()` calls), embedded by the self-contained HTML export (`export_utils._viewer_iife`).
+- `viewer.iife.js`: one classic script with the same code (esbuild inlines the `import()` calls), embedded by the self-contained HTML export (`export_utils.html._viewer_iife`).
 
 **Lazy chunks.** Features that the first picture does not need are loaded with `import()`:
 
 | chunk | loads | size |
 | --- | --- | ---: |
-| edit mode (`editMode.js`, TransformControls, fixture and cable edits) | right after `mountViewer` (it also draws cable routes for the Parts leaf and `?cables=1`) | 82 KiB |
+| edit mode (`editMode.js` and its session modules, TransformControls, fixture and cable edits) | right after `mountViewer` (it also draws cable routes for the Parts leaf and `?cables=1`) | 90 KiB |
 | walk (`walkMode.js`, `walkPhysics.js`, three-mesh-bvh) | right after `mountViewer`; a saved walk pose re-enters once it is in | 63 KiB |
 | measure (`measure.js`) | right after `mountViewer` | 13 KiB |
 | Realistic catalogue parser (`catalogueYaml.js`, js-yaml) | when Realistic is first chosen | 43 KiB |
