@@ -16,7 +16,7 @@ sys.path.insert(0, str(ROOT / "models"))
 
 import kitchen_cabinet as kc  # noqa: E402
 import kitchen_ifc  # noqa: E402
-from ground_floor import build, load_furnishings  # noqa: E402
+from ground_floor import load_furnishings  # noqa: E402
 from yaml_ifc.to_ifc import build_ifc, validation_errors  # noqa: E402
 
 
@@ -582,8 +582,8 @@ EAST_SLIDE = 0.477  # MERIVOBOX NL 500: inside 458 + back wall 19 (t978u; was + 
 DN_SLIDE = 0.377  # MERIVOBOX NL 400: inside 358 + back wall 19 (t978u)
 
 
-def test_drawer_motions_in_model():
-    _shape, meta = build()
+def test_drawer_motions_in_model(ground_floor_model):
+    _shape, meta = ground_floor_model
     drawers = [m for m in meta["door_motions"] if m["kind"] == "drawer"]
     island = [m for m in drawers if m["id"].startswith("SF-I")]
     assert [m["id"] for m in island] == (
@@ -624,8 +624,8 @@ def test_drawer_motions_in_model():
     assert not [m for m in drawers if m["id"].startswith("SF-LB")]
 
 
-def test_cabinet_door_motions_swing_outward():
-    _shape, meta = build()
+def test_cabinet_door_motions_swing_outward(ground_floor_model):
+    _shape, meta = ground_floor_model
     doors = {m["id"]: m for m in meta["door_motions"] if m["kind"] == "hinged" and m["id"].startswith("SF-")}
     assert {"SF-T1-DOOR1", "SF-T2-DOOR1", "SF-TF-DOOR1", "SF-TF-DOOR2", "SF-T3-DOOR1", "SF-T4-DOOR1",
             "SF-I500a-DOOR1", "SF-F052-DOOR1", "SF-TC-DOOR1"} <= set(doors)
@@ -1236,8 +1236,8 @@ def test_dining_column_flipout_trashcan():
     # The swing is in c–z only, so that gap does not close.
 
 
-def test_dining_column_flipout_is_a_linkage():
-    _shape, meta = build()
+def test_dining_column_flipout_is_a_linkage(ground_floor_model):
+    _shape, meta = ground_floor_model
     links = {m["id"]: m for m in meta["door_motions"] if m["kind"] == "linkage"}
     rec = links["SF-F053-FLIP"]
     assert rec["id"] == "SF-F053-FLIP"

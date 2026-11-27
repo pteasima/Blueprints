@@ -26,9 +26,7 @@ from bathroom_107 import (  # noqa: E402
     LABEL_WALL,
     SOURCE_PATH,
     figures,
-    layout,
     load_document,
-    parts,
     scenes,
     screed_at_zero_mm,
     validate,
@@ -104,8 +102,8 @@ def test_room_is_a_rectangle_and_the_chase_left_the_bathroom():
     assert validate(doc) == []
 
 
-def test_fall_and_the_shower_screed():
-    info = layout()
+def test_fall_and_the_shower_screed(bathroom_107_layout):
+    info = bathroom_107_layout
     fig = figures(info)
     plane = info["shower_plane"]
     z_south = plane_elevation(plane, EAST, SOUTH)
@@ -141,8 +139,8 @@ def test_fall_and_the_shower_screed():
     assert set(shower_widths) == {549.0}
 
 
-def test_door_joint_two_tiles_and_plaster_above_the_shelf():
-    info = layout()
+def test_door_joint_two_tiles_and_plaster_above_the_shelf(bathroom_107_layout):
+    info = bathroom_107_layout
     grout = unary_union([Polygon(ring) for ring in info["level_grout"]])
     assert grout.intersects(Polygon([(11.999, 10.2), (12.001, 10.2), (12.001, 10.4), (11.999, 10.4)]))
     # The origin butt is opened into a 2 mm joint, so those two tiles lose 1 mm each.
@@ -232,7 +230,7 @@ def test_door_joint_two_tiles_and_plaster_above_the_shelf():
     assert not floor.covers(Point(11.45, 9.8))
 
 
-def test_fixtures_shelf_glass_and_the_plates():
+def test_fixtures_shelf_glass_and_the_plates(bathroom_107_parts):
     doc = load_document()
     tub = next(row for row in doc["sanitaryTerminals"] if row["id"] == "BATH-1.07")
     prewall = next(row for row in doc["furniture"] if row["id"] == "PW-VANITY")
@@ -247,7 +245,7 @@ def test_fixtures_shelf_glass_and_the_plates():
     assert shelf["Width"] == pytest.approx(0.18)
     assert shelf["Height"] == pytest.approx(tub["Height"])
     assert prewall["Height"] == pytest.approx(1.194)
-    solids_now = parts()
+    solids_now = bathroom_107_parts
     vanity = next(
         solid
         for solid in solids_now

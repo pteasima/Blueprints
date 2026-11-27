@@ -25,9 +25,7 @@ from bathroom_120 import (  # noqa: E402
     drawing_figures,
     floor_tiles_mm,
     head_mm,
-    layout,
     load_document,
-    parts,
     scenes,
     small_pieces,
     validate,
@@ -68,8 +66,8 @@ def test_file_records_the_room_and_the_unmeasured_layers():
     assert validate(doc) == []
 
 
-def test_plane_joints_and_the_level_top():
-    info = layout()
+def test_plane_joints_and_the_level_top(bathroom_120_layout):
+    info = bathroom_120_layout
     plane = info["plane"]
     assert plane["Origin"] == [32.225, 8.05]
     assert plane["Elevation"] == 0
@@ -106,8 +104,8 @@ def test_plane_joints_and_the_level_top():
     assert max(point[1] for point in info["floor"]["Footprint"]) == pytest.approx(ZERO_Y)
 
 
-def test_floor_starts_with_full_tiles_at_the_drain():
-    info = layout()
+def test_floor_starts_with_full_tiles_at_the_drain(bathroom_120_layout):
+    info = bathroom_120_layout
     rows = floor_tiles_mm(info)
     full = [row for row in rows if row["full"]]
     notched = [row for row in rows if row["notched"]]
@@ -180,8 +178,8 @@ def _vertical_edges(polygon, along_m, tol=1e-4):
     return hits
 
 
-def test_walls_continue_the_floor_grid():
-    info = layout()
+def test_walls_continue_the_floor_grid(bathroom_120_layout):
+    info = bathroom_120_layout
     walls = wall_tiles_mm(info)
     origin = info["floor"]["GridOrigin"]
     assert all(wall["layout"]["GridOrigin"] == origin for wall in info["walls"])
@@ -197,9 +195,9 @@ def test_walls_continue_the_floor_grid():
     assert small_pieces(info) == []
 
 
-def test_wall_floor_joints_meet_at_the_corners():
+def test_wall_floor_joints_meet_at_the_corners(bathroom_120_layout):
     """Module boundaries match. The plan-tile vs wall-tile joint edge stays under 0.1 mm."""
-    info = layout()
+    info = bathroom_120_layout
     pitch = info["joints"].plan_pitch_x
     origin = info["floor"]["GridOrigin"]
     floor_x, floor_y = set(), set()
@@ -247,8 +245,8 @@ def test_wall_floor_joints_meet_at_the_corners():
         assert _nearest(edge, west_y) < 1e-4
 
 
-def test_openings_notch_a_tile_instead_of_splitting_it():
-    info = layout()
+def test_openings_notch_a_tile_instead_of_splitting_it(bathroom_120_layout):
+    info = bathroom_120_layout
     by_id = {wall["id"]: wall for wall in info["walls"]}
     walls = wall_tiles_mm(info)
 
@@ -341,8 +339,8 @@ def test_openings_notch_a_tile_instead_of_splitting_it():
     assert head_edge[0][1] == pytest.approx(2.1, abs=1e-4)
 
 
-def test_bottom_course_is_full_height_at_the_drain_and_level_on_top():
-    info = layout()
+def test_bottom_course_is_full_height_at_the_drain_and_level_on_top(bathroom_120_layout):
+    info = bathroom_120_layout
     walls = wall_tiles_mm(info)
     south = next(
         tile
@@ -378,8 +376,8 @@ def test_bottom_course_is_full_height_at_the_drain_and_level_on_top():
     assert above_door[0]["width_mm"] == pytest.approx(596.0, abs=0.05)
 
 
-def test_solids_sit_in_the_room_with_the_drain_in_the_southwest():
-    solids = parts()
+def test_solids_sit_in_the_room_with_the_drain_in_the_southwest(bathroom_120_parts):
+    solids = bathroom_120_parts
     labels = {solid.label for solid in solids}
     assert labels == {LABEL_FLOOR, LABEL_WALL, LABEL_GROUT, LABEL_DRAIN}
     drain = next(solid for solid in solids if solid.label == LABEL_DRAIN)
@@ -428,8 +426,8 @@ def _annotation_text(spec) -> str:
     return "\n".join(lines)
 
 
-def test_drawing_plates_quote_the_schedule():
-    info = layout()
+def test_drawing_plates_quote_the_schedule(bathroom_120_layout):
+    info = bathroom_120_layout
     fig = drawing_figures(info)
     assert fig["wall_joint_mm"] == "2.000"
     assert fig["floor_joint_x_mm"] == "2.034"
