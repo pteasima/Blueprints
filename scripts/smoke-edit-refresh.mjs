@@ -4,9 +4,8 @@
  * while there are unsaved edits.
  *
  * Run: node scripts/smoke-edit-refresh.mjs
- * Needs Playwright and a current docs/viewer/viewer.iife.js (npm run build
- * in src/blueprints/viewer, then PYTHONPATH=src python3 -c
- * "from blueprints.preview_hub import ensure_viewer_shell; ensure_viewer_shell()").
+ * Needs Playwright and a current docs/viewer/viewer.js (npm run build in
+ * src/blueprints/viewer, then python3 scripts/build-preview-hub.py).
  */
 import { createServer } from "node:http";
 import { readFileSync, statSync } from "node:fs";

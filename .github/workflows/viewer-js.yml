@@ -1,17 +1,20 @@
-# Viewer JS tests (`src/blueprints/viewer/*.test.mjs`). Node only, no apt
-# packages, so this keeps running while the pytest workflow is paused
-# (AGENTS.md, Tests). First part of docs/TestSuitePlan.md item 2.
+# Viewer JS: build the bundle, check its size budget, run the unit tests
+# (`src/blueprints/viewer/*.test.mjs`). Node only, no apt packages, so this
+# keeps running while the pytest workflow is paused (AGENTS.md, Tests). First
+# part of docs/TestSuitePlan.md item 2.
 name: viewer-js
 
 on:
   pull_request:
     paths:
       - "src/blueprints/viewer/**"
+      - "scripts/bundle_budget*.mjs"
       - ".github/workflows/viewer-js.yml"
   push:
     branches: [main]
     paths:
       - "src/blueprints/viewer/**"
+      - "scripts/bundle_budget*.mjs"
       - ".github/workflows/viewer-js.yml"
 
 permissions:
@@ -29,27 +32,34 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
+          cache: npm
+          cache-dependency-path: src/blueprints/viewer/package-lock.json
 
       - name: Install viewer dependencies
         run: npm ci
 
-      # layerDepthBias.test.mjs imports EDGE_FRAG_DEPTH_BIAS, which edges.js no
-      # longer exports; docs/TestSuitePlan.md item 2 says fix or delete it.
+      # The bundle is not committed (build.mjs); this proves it builds.
+      - name: Build the viewer bundle
+        run: npm run build -- --meta
+
+      - name: Bundle size budget
+        working-directory: .
+        run: |
+          node scripts/bundle_budget.test.mjs
+          node scripts/bundle_budget.mjs
+
+      # Runs every file and fails at the end, so one broken test does not hide
+      # the others.
       - name: Run viewer tests
         run: |
-          set -euo pipefail
+          set -uo pipefail
+          failed=()
           for f in *.test.mjs; do
-            if [[ "$f" == "layerDepthBias.test.mjs" ]]; then
-              echo "skip $f (known broken, docs/TestSuitePlan.md)"
-              continue
-            fi
             echo "::group::$f"
-            node "$f"
+            node "$f" || failed+=("$f")
             echo "::endgroup::"
           done
-
-      - name: Committed bundle matches the sources
-        run: |
-          set -euo pipefail
-          npm run build
-          git diff --exit-code -- viewer.iife.js
+          if (( ${#failed[@]} )); then
+            echo "::error::failed: ${failed[*]}"
+            exit 1
+          fi

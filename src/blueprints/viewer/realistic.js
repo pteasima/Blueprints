@@ -19,7 +19,6 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { normalizeSlots, placeAsset, slotFor, swapCatalogueMaterials } from "./assetSlots.js";
 import {
   catalogueCoverage,
-  parseCatalogue,
   resolveEntry,
   resolveMapUrl,
 } from "./catalogue.js";
@@ -576,11 +575,13 @@ export function createRealistic(opts) {
         : Promise.resolve("");
     loading = text
       .catch(() => "")
-      .then((t) => {
+      .then(async (t) => {
         if (!t) {
           warnings.push(`no catalogue at ${opts.catalogueUrl}; every surface uses its fallback colour`);
           return [];
         }
+        // js-yaml is a lazy chunk (build.mjs): only Realistic mode needs it.
+        const { parseCatalogue } = await import("./catalogueYaml.js");
         const parsed = parseCatalogue(t);
         errors = parsed.errors;
         warnings = parsed.warnings;

@@ -6,7 +6,6 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { USDZExporter } from "three/addons/exporters/USDZExporter.js";
 import { meshToClippedExportMesh } from "./clipGeometry.js";
 import { isSectionCap, syncSectionCaps } from "./sectionCaps.js";
 import { applyArPlacement, computeArPlacement } from "./arPlacement.js";
@@ -46,15 +45,14 @@ import {
 } from "./edges.js";
 import { createDepthPeelRenderer, isSeeThroughOpacity } from "./depthPeel.js";
 import { createRealistic } from "./realistic.js";
-import { createMeasureTool } from "./measure.js";
-import { createWalkMode, yawPitchOf } from "./walkMode.js";
 import {
   HEIGHT_DETENTS_CM,
   HEIGHT_MAX_CM,
   HEIGHT_MIN_CM,
   eyeHeightM,
   snapHeightCm,
-} from "./walkPhysics.js";
+  yawPitchOf,
+} from "./walkBasics.js";
 import { createDoorController, swingAngle } from "./doors.js";
 import { createWindowSlides, windowOperable } from "./windows.js";
 import { createFeedbackLayer, rotateAboutY } from "./feedback.js";
@@ -99,7 +97,6 @@ import {
   projectTarget,
   switchTargetCenters,
 } from "./tapTargets.js";
-import { createEditMode } from "./editMode.js";
 import { createFixtureModels } from "./fixtureModels.js";
 import { identityOf, meshIdentity, nodeKeyMap } from "./meshIdentity.js";
 import { gltfPrimitiveTest, mergeSiblingPrimitives } from "./mergePrimitives.js";
@@ -170,6 +167,20 @@ function withCableLeaf(groups) {
  * baseplates"; cheap since mergePrimitives.js, docs/viewer/Performance.md).
  */
 const LAZY_LAYER_DEFAULT_ON = true;
+
+/**
+ * Load a lazy feature chunk (build.mjs) and hand its module to `init`. A
+ * failed load leaves that feature off instead of breaking the viewer.
+ * @template T
+ * @param {string} name
+ * @param {() => Promise<T>} load
+ * @param {(mod: T) => void} init
+ */
+function loadFeature(name, load, init) {
+  return load()
+    .then(init)
+    .catch((err) => console.error(`Viewer feature "${name}" did not load:`, err));
+}
 
 export function mountViewer(canvas, glbBuffer, options = {}) {
   /** Custom named scenes (model-specific); shown alongside Iso/Front/Side/Top. */
@@ -553,6 +564,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
    * @type {ReturnType<typeof createWalkMode> | null}
    */
   let walk = null;
+  /** A saved walk pose that arrived before walkMode.js did (restoreSavedCamera). */
+  let pendingWalkRestore = null;
   // Surface-anchored zoom / pan / close-up orbit. Installed after `root` exists
   // in the closure; the GLB is assigned later, and taps still reach the doors.
   attachPivotNav({
@@ -2030,7 +2043,10 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
         updateCameraClipPlanes();
         controls.update();
       });
-      if (saved.mode === "walk" && walk) {
+      if (saved.mode === "walk" && !walk) {
+        // Walk mode is a lazy chunk; it re-enters once it loads.
+        pendingWalkRestore = saved;
+      } else if (saved.mode === "walk" && walk) {
         if (saved.heightCm != null) walk.setHeight(saved.heightCm);
         const eye = eyeHeightM(walk.heightCm);
         const feet = [
@@ -2921,36 +2937,44 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     });
   }
 
-  /** @type {ReturnType<typeof createMeasureTool> | null} */
+  /**
+   * Measure (measure.js), a lazy chunk like walk and edit mode (build.mjs):
+   * null until it loads, and every caller already allows that.
+   * @type {ReturnType<typeof import("./measure.js").createMeasureTool> | null}
+   */
   let measureTool = null;
+  let measureReady = Promise.resolve();
   if (scene) {
-    measureTool = createMeasureTool({
-      scene,
-      canvas,
-      getCamera: () => camera,
-      controls,
-      getRoot: () => root,
-      getClipPlanes: () => lockedClipPlanes(),
-      onLiveLength: (label) => {
-        if (!measureBtn) return;
-        if (label) {
-          measureBtn.textContent = label;
-          measureBtn.classList.add("is-live");
-        } else {
-          measureBtn.textContent = MEASURE_LABEL();
-          measureBtn.classList.remove("is-live");
-        }
-      },
-      onActiveChange: (on) => {
-        viewDirty = true;
-        if (!measureBtn) return;
-        measureBtn.classList.toggle("is-active", on);
-        measureBtn.setAttribute("aria-pressed", on ? "true" : "false");
-        if (!on) {
-          measureBtn.textContent = MEASURE_LABEL();
-          measureBtn.classList.remove("is-live");
-        }
-      },
+    measureReady = loadFeature("measure", () => import("./measure.js"), ({ createMeasureTool }) => {
+      measureTool = createMeasureTool({
+        scene,
+        canvas,
+        getCamera: () => camera,
+        controls,
+        getRoot: () => root,
+        getClipPlanes: () => lockedClipPlanes(),
+        onLiveLength: (label) => {
+          if (!measureBtn) return;
+          if (label) {
+            measureBtn.textContent = label;
+            measureBtn.classList.add("is-live");
+          } else {
+            measureBtn.textContent = MEASURE_LABEL();
+            measureBtn.classList.remove("is-live");
+          }
+        },
+        onActiveChange: (on) => {
+          viewDirty = true;
+          if (!measureBtn) return;
+          measureBtn.classList.toggle("is-active", on);
+          measureBtn.setAttribute("aria-pressed", on ? "true" : "false");
+          if (!on) {
+            measureBtn.textContent = MEASURE_LABEL();
+            measureBtn.classList.remove("is-live");
+          }
+        },
+      });
+      viewDirty = true;
     });
   }
 
@@ -2963,46 +2987,68 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
   }
   /** Window elements whose panes slide: they collide where they are now. */
   const slidingWindowKeys = new Set(windowRecords.map((r) => String(r?.id ?? "")));
-  walk = createWalkMode({
-    canvas,
-    scene,
-    getRoot: () => root,
-    getCamera: () => camera,
-    isDynamic: (mesh) =>
-      Boolean(mesh.userData.bpDoor) || slidingWindowKeys.has(String(mesh.userData.bpElementKey ?? "")),
-    pickAt: (x, y) => doorCtrl.pickAt(x, y),
-    onBeforeEnter: () => {
-      if (measureTool?.isActive()) measureTool.setActive(false);
-      if (projection === "ortho") leaveOrtho(lastHFovDeg);
-      camFly = null;
-      clearCameraPresetHighlight();
-    },
-    onEnter: () => {
-      controls.enabled = false;
-      syncWalkButton();
-      realisticCtl?.stage.markDirty();
-      scheduleCameraSave();
-    },
-    onExit: (pose) => {
-      controls.enabled = true;
-      if (pose) {
-        withSuppressedCameraChange(() => {
-          camera.position.copy(pose.position);
-          controls.target.copy(pose.target);
-          updateCameraClipPlanes();
-          controls.update();
-        });
+  // Walk (walkMode.js, walkPhysics.js, three-mesh-bvh) is a lazy chunk
+  // (build.mjs). Height and yaw helpers it shares with the entry live in
+  // walkBasics.js.
+  const walkReady = loadFeature("walk", () => import("./walkMode.js"), ({ createWalkMode }) => {
+    walk = createWalkMode({
+      canvas,
+      scene,
+      getRoot: () => root,
+      getCamera: () => camera,
+      isDynamic: (mesh) =>
+        Boolean(mesh.userData.bpDoor) || slidingWindowKeys.has(String(mesh.userData.bpElementKey ?? "")),
+      pickAt: (x, y) => doorCtrl.pickAt(x, y),
+      onBeforeEnter: () => {
+        if (measureTool?.isActive()) measureTool.setActive(false);
+        if (projection === "ortho") leaveOrtho(lastHFovDeg);
+        camFly = null;
+        clearCameraPresetHighlight();
+      },
+      onEnter: () => {
+        controls.enabled = false;
+        syncWalkButton();
+        realisticCtl?.stage.markDirty();
+        scheduleCameraSave();
+      },
+      onExit: (pose) => {
+        controls.enabled = true;
+        if (pose) {
+          withSuppressedCameraChange(() => {
+            camera.position.copy(pose.position);
+            controls.target.copy(pose.target);
+            updateCameraClipPlanes();
+            controls.update();
+          });
+        }
+        syncWalkButton();
+        realisticCtl?.stage.markDirty();
+        flushCameraSave();
+      },
+      onCamera: (target) => controls.target.copy(target),
+      onChange: () => {
+        viewDirty = true;
+        scheduleCameraSave();
+      },
+      t: tr,
+    });
+    if (root) buildWalkHeightControl();
+    syncWalkButton();
+    if (pendingWalkRestore && root) {
+      const saved = pendingWalkRestore;
+      pendingWalkRestore = null;
+      camRestoring = true;
+      try {
+        if (saved.heightCm != null) walk.setHeight(saved.heightCm);
+        const eye = eyeHeightM(walk.heightCm);
+        const feet = [saved.position[0], saved.position[1] - eye, saved.position[2]];
+        const look = yawPitchOf(camera);
+        walk.enter({ pose: { feet, yaw: look.yaw, pitch: look.pitch }, lock: false });
+      } finally {
+        camRestoring = false;
       }
-      syncWalkButton();
-      realisticCtl?.stage.markDirty();
-      flushCameraSave();
-    },
-    onCamera: (target) => controls.target.copy(target),
-    onChange: () => {
-      viewDirty = true;
-      scheduleCameraSave();
-    },
-    t: tr,
+    }
+    viewDirty = true;
   });
   doorInputBlocked = () => Boolean(measureTool?.isActive()) || Boolean(walk?.blocksPointerTaps());
 
@@ -3054,6 +3100,8 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
       if (!exportScene) {
         throw new Error("Nothing visible to export. Show at least one part.");
       }
+      // USDZExporter and its zip library are a lazy chunk (build.mjs).
+      const { USDZExporter } = await import("three/addons/exporters/USDZExporter.js");
       const exporter = new USDZExporter();
       const arrayBuffer = await exporter.parseAsync(exportScene, {
         quickLookCompatible: true,
@@ -4200,41 +4248,49 @@ export function mountViewer(canvas, glbBuffer, options = {}) {
     frameStats.totalMs += r1 - now;
     requestAnimationFrame(tick);
   }
-  editMode = createEditMode({
-    canvas,
-    renderer,
-    controls,
-    getCamera: () => camera,
-    getRoot: () => root,
-    index: ifcIndex,
-    modelId: String(options.modelId || ""),
-    meshesForElement,
-    elementFromMesh,
-    isSceneSolid,
-    isRenderedHit,
-    isOpaque: (obj) => isOpaqueMaterialOf(obj),
-    centerOccluded,
-    projectTarget,
-    flyTo: (pose) => flyCamera(pose),
-    pulse: (meshes) => startPulse(meshes),
-    markDirty: () => {
-      viewDirty = true;
-      realisticCtl?.stage.markDirty();
-    },
-    beforeEnter: () => {
-      if (walk?.active) walk.exit();
-      if (measureTool?.isActive()) measureTool.setActive(false);
-      syncWalkButton();
-    },
-    onLayout: () => applySafeViewOffset(true),
-    t: tr,
-    cablesLayer: () => hasCables && (partOpacity.get(CABLE_LEAF) ?? 0) > 1e-3,
-    cables: options.cables && typeof options.cables === "object" ? options.cables : null,
+  // Edit mode (editMode.js, TransformControls, fixture and cable edits) is a
+  // lazy chunk (build.mjs). It also draws the cable routes for the Parts
+  // leaf and ?cables=1, so it starts loading now rather than on first tap.
+  const editReady = loadFeature("edit", () => import("./editMode.js"), ({ createEditMode }) => {
+    editMode = createEditMode({
+      canvas,
+      renderer,
+      controls,
+      getCamera: () => camera,
+      getRoot: () => root,
+      index: ifcIndex,
+      modelId: String(options.modelId || ""),
+      meshesForElement,
+      elementFromMesh,
+      isSceneSolid,
+      isRenderedHit,
+      isOpaque: (obj) => isOpaqueMaterialOf(obj),
+      centerOccluded,
+      projectTarget,
+      flyTo: (pose) => flyCamera(pose),
+      pulse: (meshes) => startPulse(meshes),
+      markDirty: () => {
+        viewDirty = true;
+        realisticCtl?.stage.markDirty();
+      },
+      beforeEnter: () => {
+        if (walk?.active) walk.exit();
+        if (measureTool?.isActive()) measureTool.setActive(false);
+        syncWalkButton();
+      },
+      onLayout: () => applySafeViewOffset(true),
+      t: tr,
+      cablesLayer: () => hasCables && (partOpacity.get(CABLE_LEAF) ?? 0) > 1e-3,
+      cables: options.cables && typeof options.cables === "object" ? options.cables : null,
+    });
+    if (root) editMode.showButton(editMode.hasFixtures());
+    viewDirty = true;
   });
-  if (root) editMode.showButton(editMode.hasFixtures());
   onLocaleChange(() => editMode?.refreshLocale());
-  /** Fixture edit mode, for headless checks: `BlueprintsViewer.edit`. */
-  api.edit = editMode;
+  /** Fixture edit mode, for headless checks: `BlueprintsViewer.edit` (null until loaded). */
+  Object.defineProperty(api, "edit", { get: () => editMode, enumerable: true, configurable: true });
+  /** Resolves once the lazy feature chunks (edit, measure, walk) are in. */
+  api.featuresReady = Promise.all([editReady, measureReady, walkReady]).then(() => undefined);
   tick();
   return api;
 }

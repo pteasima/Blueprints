@@ -159,7 +159,9 @@ GitHub Actions runs this suite on pull requests and on pushes to `main`, with a 
 
 **Tests paused: temporary exception (Petr, 2026-11-11).** The `tests` workflow is disabled in GitHub (`gh workflow disable tests.yml`) after the Ubuntu package mirrors kept failing its "Install Cairo" step. Petr: "I don't want local test runs. Just disable tests." While paused, don't run the suite locally and don't wait for CI; mark a pull request ready once you have reviewed the diff. To undo: `gh workflow enable tests.yml` and delete this paragraph.
 
-The viewer's JS tests (`src/blueprints/viewer/*.test.mjs`) run in the separate `viewer-js` workflow, which needs only Node and is not paused. It also rebuilds `viewer.iife.js` and fails if the committed bundle is stale. Wait for it on pull requests that touch the viewer.
+The viewer's JS tests (`src/blueprints/viewer/*.test.mjs`) run in the separate `viewer-js` workflow, which needs only Node and is not paused. It also builds the viewer bundle and checks its size budget (`scripts/bundle_budget.mjs`, [docs/viewer/Performance.md](docs/viewer/Performance.md#bundle-size-and-code-splitting)). Wait for it on pull requests that touch the viewer.
+
+The viewer bundle is built, never committed: `npm ci && npm run build` in `src/blueprints/viewer` (the install script does it) writes `dist/` for the Pages site and `viewer.iife.js` for the offline HTML export, and `pages-content` builds it in CI. Rebuild after editing viewer JS before a local preview or export.
 
 Planned improvements to the suite (faster shared builds, all JS tests in CI, invariants instead of copied numbers): [docs/TestSuitePlan.md](docs/TestSuitePlan.md).
 

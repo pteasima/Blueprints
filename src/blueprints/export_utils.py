@@ -1310,9 +1310,21 @@ _VIEWER_HTML = """<!DOCTYPE html>
 
 
 def _viewer_iife() -> str:
+    """The viewer as one classic script, for the self-contained HTML export.
+
+    Built by ``npm run build`` (viewer/build.mjs), not committed. A missing
+    bundle is built here once when npm is available.
+    """
+    if not VIEWER_IIFE_PATH.is_file() and shutil.which("npm"):
+        import subprocess
+
+        if not (VIEWER_DIR / "node_modules").is_dir():
+            subprocess.run(["npm", "ci", "--no-audit", "--no-fund"], cwd=VIEWER_DIR, check=True)
+        subprocess.run(["npm", "run", "build"], cwd=VIEWER_DIR, check=True)
     if not VIEWER_IIFE_PATH.is_file():
         raise FileNotFoundError(
-            f"Missing {VIEWER_IIFE_PATH}; run: npm --prefix src/blueprints/viewer run build"
+            f"Missing {VIEWER_IIFE_PATH}; run: npm --prefix src/blueprints/viewer ci && "
+            "npm --prefix src/blueprints/viewer run build"
         )
     return VIEWER_IIFE_PATH.read_text(encoding="utf-8")
 

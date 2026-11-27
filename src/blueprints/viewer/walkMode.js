@@ -17,6 +17,7 @@
  */
 import * as THREE from "three";
 import { createPersonFigure } from "./personFigure.js";
+import { yawPitchOf } from "./walkBasics.js";
 import {
   buildWalkWorld,
   createPlayer,
@@ -30,6 +31,8 @@ import {
   stepPlayer,
   bodyFits,
 } from "./walkPhysics.js";
+
+export { yawPitchOf };
 
 /** Radians of turn per pixel of locked mouse movement. */
 export const MOUSE_LOOK_RAD_PER_PX = 0.0022;
@@ -62,15 +65,6 @@ export function applyFirstPersonCamera(camera, player, eyeY) {
   camera.up.set(0, 1, 0);
   camera.quaternion.setFromEuler(new THREE.Euler(player.pitch, player.yaw, 0, "YXZ"));
   camera.updateMatrixWorld();
-}
-
-/**
- * Yaw and pitch of a camera's look direction.
- * @param {THREE.Camera} camera
- */
-export function yawPitchOf(camera) {
-  const d = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-  return { yaw: Math.atan2(-d.x, -d.z), pitch: Math.asin(Math.max(-1, Math.min(1, d.y))) };
 }
 
 /**

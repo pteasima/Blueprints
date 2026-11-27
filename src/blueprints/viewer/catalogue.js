@@ -15,7 +15,8 @@
  * Most specific wins: listed ids > id_pattern > label only
  * (`SELECTOR_WEIGHTS`). A tie goes to the entry listed first.
  */
-import yaml from "js-yaml";
+// YAML parsing (js-yaml, ~43 KB) lives in catalogueYaml.js, loaded with
+// Realistic mode, so the viewer entry bundle does not carry it.
 
 /** Specificity per selector kind: ids > id_pattern > label only. */
 export const SELECTOR_WEIGHTS = { label: 1, id_pattern: 10, ids: 100 };
@@ -250,19 +251,6 @@ export function normalizeCatalogue(raw) {
     });
   });
   return { entries, errors, warnings };
-}
-
-/**
- * @param {string} text YAML
- */
-export function parseCatalogue(text) {
-  let raw;
-  try {
-    raw = yaml.load(text);
-  } catch (err) {
-    return { entries: [], errors: [`catalogue YAML: ${err?.message || err}`], warnings: [] };
-  }
-  return normalizeCatalogue(raw);
 }
 
 /**
