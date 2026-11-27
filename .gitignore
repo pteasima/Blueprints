@@ -5,6 +5,8 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+# Content-addressed `python -m blueprints.export` outputs (STEP/STL/GLB, sidecars).
+.cache/
 dist/
 build/
 .DS_Store
