@@ -21,7 +21,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "module",
-        help="Python module under models/ (e.g. hello_world or models.hello_world)",
+        help="Python module under models/ (e.g. ground_floor or models.ground_floor)",
     )
     args = parser.parse_args(argv)
 

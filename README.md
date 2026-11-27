@@ -19,13 +19,13 @@ ezdxf remains available (it is a build123d dependency) for importing legacy DXF 
 bash scripts/cloud-agent-install.sh
 source .venv/bin/activate
 
-# Hello-world parametric box → exports/hello_world/
-python -m blueprints.export hello_world
+# Ground-floor model → exports/ground_floor/
+python -m blueprints.export ground_floor
 ```
 
-The same CLI is also `python -m blueprints hello_world` or `bp-export hello_world`.
+The same CLI is also `python -m blueprints ground_floor` or `bp-export ground_floor`.
 
-Generated artifacts: `STEP`/`STL` (desktop CAD), `USDZ`/`GLB` (Git LFS under `docs/models/`). 2D sections still write `SVG`/`DXF`/`PNG`. Labelled 3D plates are PNG/PDF from the viewer Drawing button. GitHub Actions builds `docs/index.html` (web-viewer hub) and deploys production at https://pteasima.github.io/Blueprints/ plus per-PR previews under `/pr-preview/pr-<N>/` (see `AGENTS.md` / `docs/Pages.md`).
+Generated artifacts: `STEP`/`STL` (desktop CAD), `GLB` (Git LFS under `docs/models/`). 2D sections still write `SVG`/`DXF`/`PNG`. Labelled 3D plates are PNG/PDF from the viewer Drawing button. In Safari, the viewer **AR** control generates a USDZ for Quick Look. GitHub Actions builds `docs/index.html` (web-viewer hub) and deploys production at https://pteasima.github.io/Blueprints/ plus per-PR previews under `/pr-preview/pr-<N>/` (see `AGENTS.md` / `docs/Pages.md`).
 
 ## Docs
 
@@ -51,12 +51,11 @@ models/             # parametric models (one module per design)
 exports/            # generated STEP / STL / SVG / DXF / PNG (gitignored binaries)
 inputs/             # source YAML, catalogues, and legacy DXF / Python used by the models
 docs/               # design and electrical notes; Pages hub sources (docs/models, docs/viewer)
-scripts/            # Cloud Agent / local bootstrap and one-off tools
+scripts/            # local bootstrap and one-off tools
 tests/              # pytest suite (async non-blocking CI lane; see AGENTS.md)
 vendor/             # vendored yaml-ifc (private upstream)
 .github/            # GitHub Actions (pages-content, viewer-js, model-budget, tests)
 AGENTS.md           # agent operating notes (preview link first, env)
-.cursor/            # cloud agent environment hints
 ```
 
 ## Agent workflow

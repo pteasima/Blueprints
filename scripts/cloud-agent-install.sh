@@ -24,7 +24,7 @@ fi
 source .venv/bin/activate
 python -m pip install -U pip
 python -m pip install -e ".[dev]"
-python -c "import build123d, cairosvg, gmsh, matplotlib, ifcopenshell, shapely, yaml_ifc; from pxr import Usd"
+python -c "import build123d, cairosvg, gmsh, matplotlib, ifcopenshell, shapely, yaml_ifc"
 
 # Viewer bundles (src/blueprints/viewer/build.mjs) are built, not committed:
 # the offline HTML export embeds viewer.iife.js and the Pages preview uses dist/.

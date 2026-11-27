@@ -47,7 +47,7 @@ If the work clearly exceeds the estimate given in the prompt, push what you have
 
 ## Environment
 
-Bootstrap (Cloud Agent `install` and local):
+Bootstrap:
 
 ```bash
 bash scripts/cloud-agent-install.sh
@@ -59,11 +59,7 @@ Then:
 source .venv/bin/activate
 ```
 
-The default Cloud Agent image does **not** include `ensurepip`. Creating `.venv` without `python3.12-venv` leaves a broken tree (Python symlink, no pip). If that happens, rerun the install script; do not debug pip by hand.
-
-Install also enables **Git LFS** (`docs/models/*.usdz`). Pull with LFS available so mesh pointers resolve.
-
-`.cursor/environment.json` is the repo copy of that bootstrap. The dashboard environment may also need **Save** after an agent proposes an install change.
+Install also enables **Git LFS** (`docs/models/*.glb`). Pull with LFS available so mesh pointers resolve.
 
 ## Export and the preview link
 
@@ -74,25 +70,13 @@ source .venv/bin/activate
 python -m blueprints.export <model>
 ```
 
-Example: `python -m blueprints.export hello_world`
+Example: `python -m blueprints.export ground_floor`
 
 Solids land in `exports/<model>/` as STEP/STL plus USDZ/GLB/HTML for the viewer. 2D modules (`obyvak_section`, `obyvak_elevation`) still write layered SVG/DXF/PNG. The HTML viewer is a self-contained offline WebGL page (embedded GLB + custom Three.js shell) with part toggles, camera presets, and scene drawings; USDZ remains for Quick Look/AR. Contractor plates — labels, dimensions, a named orthographic scene — come from the viewer **Drawing** button (PNG and PDF of that view).
 
 The first reply after the push is a plain explanation of what was done, plus the preview URL. If that explanation would benefit from extra images (2D plans, renders, a viewer drawing), say you are continuing to work on those. Unless he asks to cancel that work, send the images later. Images must never block the preview link. If you do later send a drawing, capture the viewer drawing, not a hidden-line dump of the solid.
 
 The viewer **Measure** tool (top bar, next to AR) is **experimental** and will be developed further — do not treat its current UX/snap behavior as a stable contract when changing the viewer. See `src/blueprints/viewer/README.md`.
-
-### Images in chat (after the preview link, and only if useful)
-
-Chat on iOS **and** web only *renders* `<img>` and `<video>`. Copy PNG (and optional orbit video) to `/opt/cursor/artifacts/` and embed with:
-
-```html
-<img src="/opt/cursor/artifacts/obyvak_sikmina-section.png" alt="šikmina section drawing" />
-```
-
-Only those `src` values are rewritten to a public artifact URL. **Do not** put `/opt/cursor/artifacts/…` in `<a href>` — the chat leaves the path as-is, the browser resolves it to `https://cursor.com/opt/cursor/artifacts/…`, and Cursor shows **404**. USDZ never appears as a tile.
-
-After a 3D export, still write `{model}_3d.usdz` into `/opt/cursor/artifacts/`. Do not attach STEP unless the user asks.
 
 A failed optional PNG or render does not block the preview link or the first reply. If a 2D module's own export fails, fix the export so the model is published, then send the link.
 
@@ -169,10 +153,3 @@ Test-suite design (session fixtures, YAML round-trip, overlap errors, invariant-
 
 Default to **asking the human to test UI changes manually** (especially phone / Safari / Quick Look). Do **not** start `computerUse` / GUI walkthroughs unless the human asks for that, or a non-UI bug needs interactive reproduction after automated checks fail. Prefer `pytest`, export smoke, and the live Pages URL for verification. The agent desktop cannot stand in for a phone, Safari, or Quick Look.
 
-## Cursor Cloud specific instructions
-
-- `install` must finish with a working `.venv` that can `import build123d`, `import cairosvg` (PNG), and `from pxr import Usd` (ARKit USDZ), plus `git lfs`.
-- Do not assume `python3 -m venv` works on the base image; install `python3.12-venv` first (`scripts/cloud-agent-install.sh`).
-- `libcairo2` is required at runtime for CairoSVG PNG export.
-- Gmsh (room-wave mesh) needs `libglu1-mesa` as well as the `gmsh` pip wheel. `scripts/cloud-agent-install.sh` installs both; `import gmsh` is the check.
-- Skip computer-use / screen-recording demos by default (see Tests); they are slow and block the human. Ask them to try the Pages preview instead.

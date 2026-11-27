@@ -12,7 +12,6 @@ Below: SDK face + local pouzdro pockets (not full-wall pouzdro).
 
     python -m blueprints.export obyvak_elevation
 
-Zdroj: inputs/obyvak/make_stit_bokorys_8bdb.py.
 450 mm předstěny u gauče není totéž jako 450 mm skříní u okapu v řezu.
 """
 
