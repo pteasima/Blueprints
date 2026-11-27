@@ -27,6 +27,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          lfs: false
+
+      # test_terrace_door_is_a_glazed_hinged_leaf and the materials
+      # catalogue read docs/models/ground_floor.glb (LFS). Without this
+      # pull the file is a pointer and json.loads of the JSON chunk fails.
+      - name: Pull the ground-floor GLBs from LFS
+        run: git lfs pull --include="docs/models/ground_floor.glb,docs/models/ground_floor.gridfinity.glb"
 
       - uses: actions/setup-python@v7
         with:

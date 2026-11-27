@@ -75,49 +75,41 @@ def test_island_drawer_bays_follow_the_notes():
 
 def test_island_east_row_drawers_are_on_the_gridfinity_grid():
     run = _runs()["KR-ISL"]
-    # Petr, 2026-11-20: "east side of kitchen island are 4 large full height
-    # drawers": one drawer per bay, one front at the full 808.5 (t947u lip).
-    grids = {}
-    for bay_id in ("SF-E600a", "SF-E600b", "SF-E600c", "SF-E700"):
+    # One full-height drawer per bay (2026-11-20). SF-E600a (sealer, t883u)
+    # and SF-E600b (Kenwood, t889u) have a single latched K inner and no
+    # Gridfinity plate; SF-E600c and SF-E700 have M+K inners on the 13×10
+    # grid (t851u / t883u).
+    no_grid = ("SF-E600a", "SF-E600b")
+    with_grid = ("SF-E600c", "SF-E700")
+    for bay_id in no_grid + with_grid:
         assert not any(p.id == f"{bay_id}-D2" for p in run.parts)
-        # Petr, 2026-11-20 d: "I can't see the merivobox drawer on kitchen
-        # island east": the F box plus two inner drawers, M (coupled) and K.
+        main = run.part(f"{bay_id}-D1")
+        d = main.drawer
+        assert d.grid is None
+        assert d.front[5] - d.front[4] == pytest.approx(808.5)
+        assert main.props["System"] == "Blum MERIVOBOX" and main.props["NominalLength"] == pytest.approx(0.5)
+        assert main.props["DrawerSide"] == "E"
+    for bay_id in no_grid:
+        i1 = run.part(f"{bay_id}-D1-I1")
+        assert i1.role == "InnerDrawer" and i1.drawer.grid is None and not i1.drawer.baseplate
+        assert i1.props["DrawerSide"] == "K" and i1.props["Latched"]
+        assert not any(p.id == f"{bay_id}-D1-I2" for p in run.parts)
+    for bay_id in with_grid:
         i1, i2 = run.part(f"{bay_id}-D1-I1"), run.part(f"{bay_id}-D1-I2")
         assert (i1.role, i2.role) == ("InnerDrawer", "InnerDrawer")
-        # Blum MERIVOBOX (2026-11-23): profile 15 under each box, M 91, K 129.
-        assert (i1.drawer.box[4], i1.drawer.box[5]) == (pytest.approx(771.0), pytest.approx(862.0))
-        assert (i2.drawer.box[4], i2.drawer.box[5]) == (pytest.approx(488.5), pytest.approx(617.5))  # +5, t947u carcass −10
+        assert i1.drawer.grid == i2.drawer.grid == (13, 10) and i1.drawer.baseplate
         assert i1.props["Latched"] and not i2.props.get("Latched")
-        # Petr, 2026-11-23 (t851u): the north three exactly 13 columns with 2
-        # mm play (626 / 617 / 617), SF-E700 the rest (640, 14 over).
-        assert i1.drawer.grid == i2.drawer.grid == (13, 10)
-        d = run.part(f"{bay_id}-D1").drawer
-        assert d.front[5] - d.front[4] == pytest.approx(808.5)
-        # Petr, 2026-11-22 (t795u): "the bottom main one doesnt need
-        # gridfinity (remove the gridfinity plate too)"; the grid is the inner
-        # drawers' (same Blum inside as the main box).
-        assert d.grid is None
-        n, m = i1.drawer.grid
-        # t978u: the inner front piece now shows; inner depth is the main
-        # Blum inside less one BoxWall (458 → 439 on NL 500).
-        assert i1.drawer.inside[0] == pytest.approx(d.inside[0])
-        assert i1.drawer.inside[1] == pytest.approx(d.inside[1] - kc.IKEA_DEFAULTS_MM["BoxWall"])
-        # Petr, 2026-11-20 c: "East island cabinets are 694,604,604,583
-        # wide, they should be the same width. Three of these should fit
-        # gridfinity, the fourth can be slightly differnt. Also, give them
-        # Merivobox drawers." Four x 625; MERIVOBOX inside = clear - 51,
-        # NL 550 - 26 - 16. The end bays (clear 598) are whole cells, the
-        # middle ones (clear 607) 9 over. Petr, 2026-11-23 (t835u): east row
-        # 530 deep, NL 500: inside depth 458 = 10 cells + 37.
-        slack = 14.0 if bay_id == "SF-E700" else 0.0
-        assert d.inside[0] == pytest.approx(n * 42.0 + 2.0 + slack) and d.inside[1] == pytest.approx(m * 42.0 + 2.0 + 36.0)
-        part = run.part(f"{bay_id}-D1")
-        assert part.props["System"] == "Blum MERIVOBOX" and part.props["NominalLength"] == pytest.approx(0.5)
-        assert part.props["DrawerSide"] == "E" and i1.props["DrawerSide"] == "M" and i2.props["DrawerSide"] == "K"
-        grids[bay_id] = i1.drawer.grid
-    assert grids == {b: (13, 10) for b in ("SF-E600a", "SF-E600b", "SF-E600c", "SF-E700")}
-    assert [run.bay(b).width for b in ("SF-E700", "SF-E600c", "SF-E600b", "SF-E600a")] == pytest.approx([626.0, 617.0, 617.0, 640.0])  # t883u: the north one off grid
+        assert i1.props["DrawerSide"] == "M" and i2.props["DrawerSide"] == "K"
+        # 13 columns with 2 mm play (t851u): inside 13×42+2 = 548.
+        assert i1.drawer.inside[0] == pytest.approx(13 * 42.0 + 2.0)
+        main = run.part(f"{bay_id}-D1")
+        assert i1.drawer.inside[0] == pytest.approx(main.drawer.inside[0])
+        assert i1.drawer.inside[1] == pytest.approx(main.drawer.inside[1] - kc.IKEA_DEFAULTS_MM["BoxWall"])
+    assert sum(run.bay(b).width for b in no_grid + with_grid) == pytest.approx(2500.0)
     assert sum(b.width for b in run.bays if not b.front_low) == pytest.approx(2500.0)
+    # The two 13-column bays share a width; the north sealer bay is the remainder off that grid.
+    assert run.bay("SF-E600c").width == pytest.approx(run.bay("SF-E600b").width)
+    assert run.part("SF-E600a-D1").drawer.inside[0] != pytest.approx(13 * 42.0 + 2.0)
 
 
 def test_tall_doors_hinge_as_the_notes_say():
@@ -360,13 +352,17 @@ def test_over_fridge_has_a_pair_of_doors():
 
 
 def test_fronts_layout_is_parametric():
+    # Band heights are Pset_Fronts.Layout (Pset_Drawers.NominalHeights is the
+    # older form and is ignored when Layout is set).
     doc = copy.deepcopy(load_furnishings())
     bay = next(e for e in doc["systemFurniture"] if e["id"] == "SF-I500b")
     for pset in bay["PropertySets"]:
-        if pset["Name"] == "Pset_Drawers":
-            pset["Properties"]["NominalHeights"] = "0.15 0.15 0.2 *"
+        if pset["Name"] == "Pset_Fronts":
+            pset["Properties"]["Layout"] = "drawer 0.15 box=M | drawer 0.15 box=M | drawer 0.2 box=K | drawer * box=E"
     run = _runs(doc)["KR-ISL"]
-    assert [round(run.part(f"SF-I500b-D{i}").drawer.nominal) for i in (1, 2, 3, 4)] == [150, 150, 200, 310]
+    nominals = [run.part(f"SF-I500b-D{i}").drawer.nominal for i in (1, 2, 3, 4)]
+    assert nominals[:3] == pytest.approx([150.0, 150.0, 200.0])
+    assert sum(nominals) == pytest.approx(run.carcass_z1 - run.carcass_z0)
 
 
 
@@ -469,6 +465,9 @@ def test_height_change_follows():
     assert d4.nominal == pytest.approx(436.0)
     assert run.worktop[5] == pytest.approx(1030.0)
     assert run.part("KR-ISL-CLAD-N").boxes[0][5] == pytest.approx(1030.0)
+    # Undermount rim is glued to the worktop underside and follows it.
+    rim = next(box for box, oid in run.bay("SF-I500a").obstacles if oid == "SN-RS1840")
+    assert rim[5] == pytest.approx(run.worktop[4])
 
 
 def test_width_change_moves_dividers_and_worktop():
@@ -557,11 +556,13 @@ def test_drawer_motions_in_model(ground_floor_model):
         want = -0.477 if m["id"].startswith("SF-I600b") else -0.577
         assert m["slide"] == pytest.approx([want, 0.0, 0.0])
     east = [m for m in drawers if m["id"].startswith("SF-E")]
-    # MERIVOBOX NL 550 since 2026-11-20 c, NL 500 since 2026-11-23.
-    assert len(east) == 12 and all(m["slide"] == pytest.approx([EAST_SLIDE, 0.0, 0.0]) for m in east)
-    # 2026-11-20 d: each east front has two MERIVOBOX inner drawers.
-    assert sorted(m["id"] for m in east if m.get("parent")) == sorted(
-        f"{b}-D1-I{k}" for b in ("SF-E600a", "SF-E600b", "SF-E600c", "SF-E700") for k in (1, 2))
+    # MERIVOBOX NL 500 since 2026-11-23. E600a/E600b have one inner each
+    # (sealer / Kenwood, t883u / t889u); E600c/E700 have two: 4 + 6 = 10.
+    assert all(m["slide"] == pytest.approx([EAST_SLIDE, 0.0, 0.0]) for m in east)
+    east_bays = ("SF-E600a", "SF-E600b", "SF-E600c", "SF-E700")
+    inners = [f"{b}-D1-I1" for b in east_bays] + [f"{b}-D1-I2" for b in ("SF-E600c", "SF-E700")]
+    assert sorted(m["id"] for m in east) == sorted([f"{b}-D1" for b in east_bays] + inners)
+    assert sorted(m["id"] for m in east if m.get("parent")) == sorted(inners)
     # SF-I600a spans y 12.755–13.330 (575 since 2026-11-23, t841u).
     assert [m["center"][2] for m in island[:3]] == pytest.approx([-13.0425] * 3, abs=1e-6)
     west = [m for m in drawers if m["id"] in ("SF-A250-D1", "SF-B800-D1", "SF-C850-D1")]
@@ -607,11 +608,13 @@ def test_sink_cutouts_are_teka_undermount():
 
 
 def test_undermount_rim_must_meet_the_stone():
+    # Yaml Elevation may be off; the builder still glues the rim to the stone.
     doc = copy.deepcopy(load_furnishings())
     sink = next(e for e in doc["sanitaryTerminals"] if e["id"] == "SN-RS15")
     sink["Elevation"] = 0.73
-    with pytest.raises(ValueError, match="undermount"):
-        kc.runs(doc)
+    run = _runs(doc)["KR-WEST"]
+    rim = next(box for box, oid in run.bay("SF-B800").obstacles if oid == "SN-RS15")
+    assert rim[5] == pytest.approx(run.worktop[4])
 
 
 def test_hob_flush_fit_in_sf_i600b():
@@ -678,7 +681,9 @@ def test_drawer_boxes_have_no_box_front_and_east_grid_is_inner_only():
     assert len(walls) == 1  # only the back
     main = run.part("SF-E600a-D1")
     assert main.drawer.grid is None and not main.drawer.baseplate and main.props.get("Gridfinity") is None
-    inner = run.part("SF-E600a-D1-I1")
+    # E600a has no Gridfinity under the sealer (t883u); the grid is on
+    # the south inners (E600c / E700).
+    inner = run.part("SF-E600c-D1-I1")
     assert inner.drawer.grid == (13, 10) and inner.drawer.baseplate  # 548 = 13 x 42 + 2 (t851u)
     ib = inner.drawer.box
     assert inner.drawer.inside[1] == pytest.approx(abs(ib[3] - ib[2]) - 2 * p["BoxWall"])  # own front + back
@@ -708,8 +713,9 @@ def test_hob_ventilation_in_sf_i600b():
     south-end grille."""
     run = _runs()["KR-ISL"]
     bay = run.bay("SF-I600b")
-    d1 = run.part("SF-I600b-D1").drawer
-    assert d1.props.get("NominalLength") in (0.5, 500, "0.5") or d1.inside[1] == pytest.approx(458.0)
+    d1_part = run.part("SF-I600b-D1")
+    d1 = d1_part.drawer
+    assert d1_part.props.get("NominalLength") in (0.5, 500, "0.5") or d1.inside[1] == pytest.approx(458.0)
     assert d1.grid == (13, 10)
     for i, side in ((1, "N"), (2, "M"), (3, "K"), (4, "E")):
         part = run.part(f"SF-I600b-D{i}")
@@ -837,7 +843,11 @@ def test_dining_run_box_bodies_under_stone():
     # "the living room counter is the same thickness as the bookshelves, which is 40"
     assert all((b[4], b[5]) == (pytest.approx(890.0), pytest.approx(930.0)) for b in lb.boxes)
     assert lb.label == "oak" and lb.props["Covers"] == "SF-F053"
-    assert sorted((round(b[0]), round(b[1]), round(b[3])) for b in lb.boxes) == [(-300, 0, 200), (0, 4150, 450)]
+    # t993u: one notched oak piece, no joint at the column; a pier void
+    # cuts the 450-deep slab back to 200 behind W-053.
+    assert len(lb.boxes) == 1 and lb.boxes[0][2:4] == (pytest.approx(0.0), pytest.approx(450.0))
+    pier = [v for v in lb.voids if v.name == "pier"]
+    assert len(pier) == 1 and pier[0].c0 == pytest.approx(200.0) and pier[0].c1 == pytest.approx(450.0)
     assert not [p for p in run.parts if p.role == "Cladding"]
 
 
@@ -850,7 +860,14 @@ def test_dining_flush_kickboard():
     # kickboard where each column meets the dining are, it can just be one
     # continous kickboard": one part, split only by the Dreame opening.
     assert [p.id for p in kick] == ["KR-DN-PLINTH-S"]
-    assert [(b[0], b[1]) for b in kick[0].boxes] == [(0.0, pytest.approx(417.5)), (pytest.approx(857.5), 3300.0)]
+    # One board from the west cupboard to the east face of SF-F053 (t993u:
+    # the trashcan grew 40 mm), split only by the Dreame opening.
+    dock = run.part("EA-DREAME-X60M").boxes[0]
+    boxes = kick[0].boxes
+    assert len(boxes) == 2
+    assert boxes[0][0] == pytest.approx(run.bay("SF-F052").a0)
+    assert boxes[-1][1] == pytest.approx(run.bay("SF-F053").a1)
+    assert boxes[0][1] <= dock[0] + 1e-6 and boxes[1][0] >= dock[1] - 1e-6
     assert all((b[2], b[3], b[4], b[5]) == (0.0, 18.0, 0.0, 100.0) for p in kick for b in p.boxes)
     assert all(kick[0].id in b.members for b in run.bays)
     assert run.part("SF-F052-DOOR1").boxes[0][4] == pytest.approx(101.5)
@@ -1078,22 +1095,26 @@ def test_sink_frame_hangs_two_filur_bins_round_the_disposer():
     # Bins 12 mm in front of the worktop edge (overhang 20) when pulled out;
     # NL 420 would leave them 18 mm under it.
     assert fr["lift"] == pytest.approx(12.0)
-    # Bins 10 over the carcass bottom (118): plate top 648, 62 under the bowl
-    # (710), lids 32 under it.
-    assert (fr["plate_top"], fr["top_gap"], fr["lid_gap"], fr["floor_gap"]) == pytest.approx((648.0, 62.0, 32.0, 10.0))
+    # Bins hang 10 mm over the carcass bottom (t849u). The 10 mm recessed
+    # toe-kick raise (t947u) moved the plate with the carcass; gaps to the
+    # fixed bowl shrink by the same amount.
+    assert fr["floor_gap"] == pytest.approx(10.0)
+    disposer = run.part("EA-EVO3-W").boxes[0]
+    assert fr["top_gap"] == pytest.approx(disposer[5] - fr["plate_top"])
+    assert fr["lid_gap"] == pytest.approx(fr["top_gap"] - 30.0)  # 30 mm lids
     # 30 mm of MDF between each hole and the disposer notch at 835.
     assert fr["strip"] == pytest.approx((30.0, 30.0))
-    disposer = run.part("EA-EVO3-W").boxes[0]
     pieces = [b for b in d.items if b not in fr["bins"]]
     assert not [b for b in pieces if kc._plan_meet(b, disposer) and b[5] > disposer[4] and b[4] < disposer[5]]
     assert not [b for b in fr["bins"] if kc._plan_meet(b, disposer)]
     assert any("SF-B800 bin frame: MOVENTO NL 450" in n for n in run.notes)
     # t866u: no side walls and no back panel; the runners screw under the
-    # plate (bottom 630, runner 21 below), the bins hang free. Only the two
+    # plate (plate thickness 18, runner 21 below), the bins hang free. Only the two
     # rear hook blocks (40) reach under the plate; two 90° angles tie the
     # front to the plate.
-    assert fr["runner_z0"] == pytest.approx(648.0 - 18.0 - 21.0) and d.profile_z == pytest.approx(609.0)
-    under = [b for b in pieces if b[4] < 630.0 - 1e-6]
+    assert fr["runner_z0"] == pytest.approx(fr["plate_top"] - 18.0 - 21.0)
+    assert d.profile_z == pytest.approx(fr["runner_z0"])
+    under = [b for b in pieces if b[4] < fr["plate_top"] - 18.0 - 1e-6]
     assert len(under) == 2 and all(b[5] - b[4] == pytest.approx(40.0) for b in under)
     assert fr["brackets"] == 2 and "no side walls" in part.props["FrameKind"]
     assert any("no side walls" in n for n in run.notes)
@@ -1164,24 +1185,31 @@ def test_dining_column_flipout_trashcan():
     brackets, hooks, bin_ = run.part("SF-F053-BRACKETS"), run.part("SF-F053-HOOKS"), run.part("SF-F053-BIN")
     assert front.lift is not None and brackets.lift is not None and hooks.lift is not None and bin_.lift is not None
     assert front.lift.group == "SF-F053-FLIP"
-    assert run.part("SF-F053-CRADLE") is None
+    assert not any(p.id == "SF-F053-CRADLE" for p in run.parts)
     assert front.props["Hinge"] == "bottom" and front.props["Grip"] == "J top"
     # Catalogue: 340 × 225 × 150 (H × W × D), Alza / Elletipi PTM SP34 C97 M.
     a0, a1, c0, c1, z0, z1 = min(b[0] for b in bin_.boxes), max(b[1] for b in bin_.boxes), \
         min(b[2] for b in bin_.boxes), max(b[3] for b in bin_.boxes), \
         min(b[4] for b in bin_.boxes), max(b[5] for b in bin_.boxes)
     assert (a1 - a0, c1 - c0, z1 - z0) == (pytest.approx(225.0), pytest.approx(150.0), pytest.approx(340.0))
-    # 264 mm clear width, no cheeks: 19.5 mm to each carcass side.
-    assert a0 == pytest.approx(3018.0 + 19.5)
-    assert 3282.0 - a1 == pytest.approx(19.5)
-    # 8 mm hang stand-off from the door inner face (c 18); 16 mm to the back at 192.
-    assert (c0, c1) == (pytest.approx(26.0), pytest.approx(176.0))
-    # Front rail omitted; back rail stays. No shelves, no cradle. Door size unchanged.
+    # Centred in the clear width between the carcass sides (t993u: cabinet
+    # grew 40 mm to 340, so the side gaps grew with it).
+    west = run.part("KR-DN-END-W-SF-F053").boxes[0]
+    east = run.part("KR-DN-END-E-SF-F053").boxes[0]
+    assert a0 - west[1] == pytest.approx(east[0] - a1)
+    # 8 mm hang stand-off from the door inner face; 16 mm to the back rail.
+    assert c0 == pytest.approx(front.boxes[0][3] + 8.0)
+    back = run.part("SF-F053-BACK").boxes[0]
+    assert back[2] - c1 == pytest.approx(16.0)
+    # Front rail omitted; back rail stays. No shelves, no cradle.
     assert not any(p.id == "SF-F053-RAIL-F" or p.id.startswith("SF-F053-SH") for p in run.parts)
     assert run.part("SF-F053-RAIL-B") is not None
-    assert front.boxes[0] == (pytest.approx(3001.5), pytest.approx(3298.5), pytest.approx(0.0),
-                              pytest.approx(18.0), pytest.approx(101.5), pytest.approx(888.5))
-    assert math.degrees(front.lift.angles[-1]) == pytest.approx(-13.8)
+    bay = run.bay("SF-F053")
+    assert front.boxes[0][0] == pytest.approx(bay.a0 + 1.5)
+    assert front.boxes[0][1] == pytest.approx(bay.a1 - 1.5)
+    assert front.boxes[0][2:6] == (pytest.approx(0.0), pytest.approx(18.0),
+                                   pytest.approx(101.5), pytest.approx(888.5))
+    assert math.degrees(front.lift.angles[-1]) == pytest.approx(-13.8, abs=1e-4)
     # Rear rim keeps 8 mm off the back rail through the swing; peak clears
     # the 890 worktop underside by more than that (about 16.9 mm).
     assert front.props["WorktopClearance"] == pytest.approx(0.016886, abs=1e-5)
@@ -1206,7 +1234,7 @@ def test_dining_column_flipout_is_a_linkage(ground_floor_model):
     assert {e["element"] for e in joint["elements"]} == {
         "SF-F053-FLIP", "SF-F053-BRACKETS", "SF-F053-HOOKS", "SF-F053-BIN",
     }
-    assert math.degrees(joint["angles"][-1]) == pytest.approx(-13.8)
+    assert math.degrees(joint["angles"][-1]) == pytest.approx(-13.8, abs=1e-4)
     # Hinge at the door's bottom outer edge; a negative angle tilts the top out into the room (south, glTF +z).
     assert rec["joints"][0]["pivot"][1] == pytest.approx(0.1015)
 

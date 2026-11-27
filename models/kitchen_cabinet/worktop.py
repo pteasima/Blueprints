@@ -184,6 +184,25 @@ def _box_plan(element: dict):
 
 
 class _WorktopMixin:
+    def _glue_undermount_sinks(self, zb: float) -> None:
+        """Keep an undermount rim glued to the worktop underside.
+
+        Yaml Elevation is the planned position under the default counter.
+        When the run height changes (or the yaml is a few millimetres off),
+        the rim follows the stone so the bowl, disposer and cut-out stay
+        consistent with the worktop.
+        """
+        for sink in self.sinks:
+            if sink["mounting"] != "Undermount" or _near(sink["top"], zb):
+                continue
+            dz = zb - sink["top"]
+            sink["top"] = zb
+            a0, a1, c0, c1, z0, z1 = sink["box"]
+            sink["box"] = (a0, a1, c0, c1, z0 + dz, z1 + dz)
+            ext = sink.get("element")
+            if ext is not None:
+                ext["Elevation"] = round((z0 + dz) / 1000.0, 6)
+
     def _worktop(self, rows, zb, zt):
         run, p = self.run, self.p
         bays = run.bays

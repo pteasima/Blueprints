@@ -144,3 +144,16 @@ def test_no_light_in_a_pocket_door_path():
             for did, b in paths:
                 for r in rects:
                     assert not (b[0] < r[1] and r[0] < b[1] and b[2] < r[3] and r[2] < b[3] and b[4] < r[5] and r[4] < b[5]), (rec["id"], did)
+
+
+def test_synthetic_furnishings_do_not_hide_kitchen_runs():
+    # #180 reused kitchen_cabinet.runs via a process-wide cache. Sharing an
+    # empty list (a synthetic furnishings document) must not make C180-S's
+    # PanelRun KR-WEST-H look missing.
+    import electrical_rooms as er
+
+    er.share_kitchen_runs([])
+    doc = load_document(ROOT / "inputs" / "ground_floor" / "electrical-1.02.yaml")
+    lights = {r["id"]: r for r in doc["lightFixtures"]}
+    west = er.panel_rects(lights["C180-S"])
+    assert west and "KR-WEST-H" in er._kitchen_runs(require="KR-WEST-H")

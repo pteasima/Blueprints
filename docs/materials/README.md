@@ -62,6 +62,7 @@ Swatches (0.3 m crops of each colour map, or the flat `base_color`): [`docs/prev
 | --- | --- | --- | --- | --- | --- |
 | **Oak veneer joinery (bathroom vanity, loose furniture), assumed** `oak-veneer-joinery` | `#aa7e60` | 0.45 / 0.0 | color, normal, roughness | `vanity`; `furniture` | [1](https://polyhaven.com/a/oak_veneer_01) |
 | **White melamine carcass (kitchen interiors)** `kitchen-carcass-white` | `#eeece6` | 0.5 / 0.0 | none | `cabinet` | [1](https://github.com/pteasima/Blueprints/blob/main/docs/design/kitchen-cabinets.md) |
+| **Gridfinity baseplate, mid-grey 3D-printed PETG** `gridfinity-petg-grey` | `#969a9c` | 0.6 / 0.0 | none | `gridfinity` | [1](https://gridfinity.xyz/) |
 | **Tile grout, sand beige, 2 mm** `grout-sand` | `#bbab93` | 0.85 / 0.0 | none | `grout` | none |
 | **Poured polyurethane floor, garage grey** `floor-pu-garage` | `#8f9294` | 0.4 / 0.0 | color, roughness | pending | [1](https://github.com/pteasima/Blueprints/blob/main/scripts/export_podlaha_eps.py) |
 | **Interior plaster, white paint** `paint-interior-white` | `#f3f2ee` | 0.9 / 0.0 | normal, roughness | `masonry`; `prewall`; `soffit_naturheld_140`; `soffit_gkb`; pending | [1](https://ambientcg.com/view?id=Plaster001) |

@@ -71,12 +71,17 @@ def test_tall_corner_cabinet_is_the_armrest_width():
 def test_w053_junction_is_clean():
     # Petr, 2026-11-20 c: "that whole bookshelf area and base cabinets below
     # it need to be tightened, the connection to the column is weird".
+    # t993u: SF-F053 grew 40 mm past the pier to the bookshelf west-side
+    # inner face; the slats and the bookshelf case still end at the pier.
     doc = _by_id(load_furnishings())
     assert not {"SF-DN70", "CV-BS-R053E", "CV-BS-DN70"} & set(doc)
     f053, slat, lb, bk, tc = (doc[k] for k in ("SF-F053", "CV-SLAT-W053", "SF-LB", "FN-BK", "SF-TC"))
-    pier_east = f053["Origin"][0] + f053["Width"]
-    assert slat["Origin"][0] + slat["Width"] == pytest.approx(pier_east)
-    assert lb["Origin"][0] == pytest.approx(pier_east) and bk["Origin"][0] == pytest.approx(pier_east)
+    pier_east = slat["Origin"][0] + slat["Width"]
+    assert slat["Origin"][0] == pytest.approx(f053["Origin"][0])
+    board = float(next(p for p in bk["PropertySets"] if p["Name"] == "Pset_Bookshelf")["Properties"]["BoardThickness"])
+    assert f053["Origin"][0] + f053["Width"] == pytest.approx(bk["Origin"][0] + board)
+    assert bk["Origin"][0] == pytest.approx(pier_east)
+    assert lb["Origin"][0] == pytest.approx(f053["Origin"][0] + f053["Width"])
     assert lb["Origin"][0] + lb["Width"] == pytest.approx(tc["Origin"][0])
     assert bk["Origin"][0] + bk["Width"] == pytest.approx(tc["Origin"][0])
     # The bookshelf stands on the counter and meets the oak top board.

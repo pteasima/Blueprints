@@ -226,6 +226,26 @@
     The cabinets are custom but sized on IKEA METOD (Petr, 2026-11-11, in
     kitchen-cabinets.md). Assumed the usual white melamine chipboard interior.
 
+- id: gridfinity-petg-grey
+  name: Gridfinity baseplate, mid-grey 3D-printed PETG
+  applies_to:
+    description: >-
+      Printed Gridfinity baseplates in the kitchen drawers (the on-demand
+      gridfinity layer in the viewer).
+    selectors:
+      - {label: gridfinity}
+  base_color: "#969a9c"
+  roughness: 0.6
+  metalness: 0.0
+  tile_size_m: [1.0, 1.0]
+  status: assumed
+  source:
+    - https://gridfinity.xyz/
+  notes: >-
+    No filament or colour is chosen. Assumed unpainted mid-grey PETG, the
+    usual printed look; the sRGB (#969a9c, 150 154 160) matches the
+    viewer's long-standing solid-mode fallback for the gridfinity label.
+
 # --------------------------------------------------------------- stone, tile
 
 - id: silestone-blanco-maple
