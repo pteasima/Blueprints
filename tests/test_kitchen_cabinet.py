@@ -955,8 +955,8 @@ def test_wide_bays_split_into_sections():
         assert up.props["FittingCode"] == "HF" and up.props["OpeningAngle"] == 88.0
         assert up.lift is not None and low.lift is not None
         assert up.boxes[0][1] - up.boxes[0][0] == pytest.approx(1347.0)
-    # 844 high under the oak lining since 2026-11-20 (top 2404 = 2450 − 18 − 28).
-    assert max(b[5] for p in dh.parts for b in p.boxes) == pytest.approx(2404.0)
+    # 822 high under the 40 mm oak lining since t1013u (top 2382 = 2450 − 40 − 28).
+    assert max(b[5] for p in dh.parts for b in p.boxes) == pytest.approx(2382.0)
     tc = runs["KR-TC"]
     assert tc.part("SF-TC-DOOR1").boxes[0][4] > 660.0  # over the sofa's east arm
 
@@ -1063,13 +1063,29 @@ def test_j_grips_and_wall_front_overhang():
     at_face = [q for q in g.profile if abs(q[0] - face) < 1e-6]
     assert min(q[1] for q in at_face) == pytest.approx(d.drawer.front[5] - 22.0)  # crest 21 + R1
     _r, door = parts["SF-T2-DOOR1"]
-    # t883u: tall north-wall doors get the upside-down J on the bottom edge.
-    assert door.props["Grip"] == "J bottom"
+    # t883u / t1013u: tall north-wall doors get the uneven U on the bottom edge
+    # (same scoop as the J, no 21 mm straight stem; cup 7 mm into the door).
+    assert door.props["Grip"] == "U bottom"
+    (ug,) = door.grips
+    _a0, _a1, _c0, _c1, uz0, uz1 = ug.bounds()
+    assert uz0 == pytest.approx(door.boxes[0][4] - 1.0)
+    assert uz1 == pytest.approx(door.boxes[0][4] + 7.0)
+    # West cover panel (SF-T1 fillers) continues the tall-run handle line.
+    assert parts["SF-T1-FILLER2"][1].props["Grip"] == "J top"
+    assert parts["SF-T1-FILLER1"][1].props["Grip"] == "U bottom"
+    # Behind-couch panels + SF-TC bottom are one front; the door sits on the 888.5 line.
+    assert "SF-TC-FRONT2" not in parts
+    assert parts["SF-LB-S2-FRONT"][1].boxes[0][1] == pytest.approx(4408.5)
+    assert parts["SF-LB-S2-FRONT"][1].props.get("Covers") == "SF-TC"
+    assert parts["SF-TC-DOOR1"][1].props["Grip"] == "U bottom"
+    assert parts["SF-TC-DOOR1"][1].boxes[0][4] == pytest.approx(891.5)
     # Petr, 2026-11-23 (t865u): "same J grip everywhere": pull-outs and the
     # dishwasher's decor panel get the top grip; fixed blank fronts do not.
     assert parts["SF-B800-D1"][1].grips and parts["SF-B800-D1"][1].props["Grip"] == "J top"
     assert parts["SF-A600-PANEL"][1].props["Grip"] == "J top"
-    assert not parts["SF-LB-S1-FRONT"][1].grips
+    # t1013u: the behind-couch panels get a fake top J on the north-wall line.
+    assert parts["SF-LB-S1-FRONT"][1].props["Grip"] == "J top"
+    assert parts["SF-LB-S1-FRONT"][1].grips
     for lift in ("SF-BH800-LIFT2", "SF-DH-S1-LIFT2"):
         assert parts[lift][1].boxes[0][4] == pytest.approx(1550.0)
     assert parts["SF-BH800-LIFT1"][1].boxes[0][5] == pytest.approx(2448.5)

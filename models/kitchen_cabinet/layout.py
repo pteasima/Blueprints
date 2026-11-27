@@ -7,6 +7,7 @@ from .hardware import BAY_LISTS, EXTERNAL_LISTS, KIND_NICHE, PSET_BAY, PSET_BUIL
 from .props import _params, _prop, is_run, run_of
 from .types import Bay, Frame, Run, _unit
 from .worktop import _box_plan, _join_worktops, _sink
+from .fronts import join_living_sofa_front
 
 
 # --- layout ------------------------------------------------------------------
@@ -92,6 +93,7 @@ def runs(doc: dict) -> list[Run]:
         _Builder(run, sinks, above, builtins, sanitary).build()
         out.append(run)
     _join_worktops(out)
+    join_living_sofa_front(out)
     return out
 
 

@@ -247,7 +247,9 @@ systemFurniture:
       - Name: Pset_Fronts
         Properties:
           # Petr, 2026-11-23 (t883u): "Westmost one is split into two (both
-          # halves stay hinged)", upside-down J grips on the bottom edges.
+          # halves stay hinged)", upside-down grips on the bottom edges
+          # (uneven U since t1013u). The west filler (cover panel) gets
+          # the same fake J (lower) + U (upper) on the handle line.
           # Two equal bands of 1175 (plinth top 100 to 2450), two shelves
           # each (placeholders; the lowest still 400 over the bottom).
           # t887u: the split matches the oven columns: the lower door's band
@@ -1247,7 +1249,10 @@ systemFurniture:
       - Name: Pset_Fronts
         Properties:
           Sections: "2"
-          Layout: "front *"
+          # t1013u: fake top J on both blank fronts, in line with the
+          # dining-run handle line (front top 888.5). The east front is
+          # then joined to SF-TC's lower band so there is no vertical cut.
+          Layout: "front * grip=top"
       # Petr, 2026-11-20 c: "that whole bookshelf area and base cabinets
       # below it need to be tightened, the connection to the column is weird,
       # these and extra thin sliver of panels and some gaps." The 70 strip
@@ -1260,7 +1265,7 @@ systemFurniture:
           East: "SF-TC.X"
   - id: SF-DH
     Name: "Jídelna horní"
-    Description: "Oak-front wall cabinet over the dining bay, x 22.45–25.15. Depth 276 (350 until 2026-11-20 f): the pier plus its slat cladding, front flush with the slats at y 15.324 (linked), bottom 1560 (Petr, 2026-11-13: top cabinets start at 1560), height 844, top 2404: 28 under the oak lining SF-DH-LINING (2432–2450), Blum AVENTOS HF's space above at the 88° stop. The ceiling line at 2450 is an invariant. Not carried across the piers. Its own run KR-DH. Two 1350 sections, each a Blum AVENTOS HF bi-fold at 88°, like the kitchen wall cabinets (2026-11-20)."
+    Description: "Oak-front wall cabinet over the dining bay, x 22.45–25.15. Depth 276 (350 until 2026-11-20 f): the pier plus its slat cladding, front flush with the slats at y 15.324 (linked), bottom 1560 (Petr, 2026-11-13: top cabinets start at 1560), height 822, top 2382: 28 under the oak lining SF-DH-LINING (2410–2450, 40 mm, t1013u), Blum AVENTOS HF's space above at the 88° stop. The ceiling line at 2450 is an invariant. Not carried across the piers. Its own run KR-DH. Two 1350 sections, each a Blum AVENTOS HF bi-fold at 88°, like the kitchen wall cabinets (2026-11-20)."
     PredefinedType: USERDEFINED
     ObjectType: WallCabinet
     ContainedInStructure: SP-1.02
@@ -1271,10 +1276,13 @@ systemFurniture:
     # and this new screenshot shows how the cabinet top extends past the
     # cabinets on the underside of the soffit. It also means that you do
     # need to worry about the room for the flip up cabinet door." The oak
-    # top (SF-DH-LINING, 18, 2432–2450) lines the soffit's underside out to
-    # its face; HF at 88° needs 28 above the cabinet top (Blum), so the top
-    # is 2450 − 18 − 28 = 2404 and the cabinet 844. Bottom stays 1560.
-    Height: 0.844
+    # top (SF-DH-LINING) lines the soffit's underside out to its face; HF
+    # at 88° needs 28 above the cabinet top (Blum). t1013u: the lining is
+    # 40 mm (same as the shelves, bookshelf sides and oak counter), still
+    # topped on the 2450 ceiling line, so 2410–2450 with the 20 mm gap to
+    # the soffit underside (2470) unchanged. The cabinet top is
+    # 2450 − 40 − 28 = 2382 and the cabinet 822. Bottom stays 1560.
+    Height: 0.822
     PropertySets:
       # Petr, 2026-11-20 f: "dining area top cabinets as well as living room
       # shelves are exactly the delth of columns + accoustic cladding".
@@ -1349,7 +1357,12 @@ systemFurniture:
       - Name: Pset_Fronts
         Properties:
           # t883u: bottom J grip on the tall door (was side).
-          Layout: "door * hinge=R shelves=4 grip=bottom | front 0.7"
+          # t1013u: the lower band is 890, level with the KR-LB carcass
+          # under the 40 mm oak top (front 1.5–888.5, same as SF-LB), and
+          # that front is joined to SF-LB-S2-FRONT (no vertical cut) with
+          # the fake top J. The door starts at 891.5, upside-down U at its
+          # bottom, so the north-wall handle line runs through the corner.
+          Layout: "door * hinge=R shelves=4 grip=bottom | front 0.89"
       # Petr, 2026-11-20 c: "That tall corner cabinet in living room should
       # be the exact width of the couch armrest." Width and east face from
       # the arm (FN-ARME), front on the arm's back end (the sofa back line).
@@ -1932,7 +1945,7 @@ furniture:
           Pset_KitchenRun.WorktopThickness: "FN-BK.Pset_Bookshelf.BoardThickness"
   - id: KR-DH
     Name: "Jídelna horní"
-    Description: "The oak wall cabinet over the dining run (SF-DH), a monoblock of one: three sections of doors (2026-11-19), two AVENTOS HF sections since 2026-11-20, 844 high under the oak soffit lining SF-DH-LINING."
+    Description: "The oak wall cabinet over the dining run (SF-DH), a monoblock of one: three sections of doors (2026-11-19), two AVENTOS HF sections since 2026-11-20, 822 high under the 40 mm oak soffit lining SF-DH-LINING (t1013u; was 844 under 18 mm)."
     PredefinedType: USERDEFINED
     ObjectType: KitchenRun
     ContainedInStructure: SP-1.02
@@ -2220,21 +2233,23 @@ furniture:
   # underside of the soffit. It also means that you do need to worry about
   # the room for the flip up cabinet door. Please adjust it and I'll send it
   # to the architect for approval (his model was too simplified)." Part of
-  # the cabinet (oak, furniture), not the drywall. 18 thick like the
-  # carcass board (guess:), top on the 2450 ceiling line, so the 20 gap to
-  # the GKB underside (2470) stays (guess: a shadow gap or a scribe). Out to
+  # the cabinet (oak, furniture), not the drywall. 40 thick since t1013u
+  # (Petr: same as the shelves, bookshelf side panels and oak counter; was
+  # 18, guess: carcass board). Top stays on the 2450 ceiling line, so the
+  # 20 gap to the GKB underside (2470) stays (guess: a shadow gap or a
+  # scribe). Out to
   # the soffit face y 15.15, back to the wall, between the piers. The open
   # HF fronts are checked against it (models/ceiling_line.py).
   - id: SF-DH-LINING
     Name: "Jídelna horní, dubový podhled"
-    Description: "Oak top board under the soffit, one piece from the east face of the kitchen north tall cabinets (SF-T4.East, x 22.15; was x 22.45, short of pier W-052, until 2026-11-23 t904u) to SF-TC (linked, x 29.60; was x 22.45–25.15 between the piers, 2026-11-20 c): front flush with the soffit's room face (y 15.15) back to the wall (15.60), notched round both pier slat panels (from their front face back), 18 thick, 2432–2450 under the 2450 line. guess: thickness, the 20 gap to the soffit's GKB above."
+    Description: "Oak top board under the soffit, one piece from the east face of the kitchen north tall cabinets (SF-T4.East, x 22.15; was x 22.45, short of pier W-052, until 2026-11-23 t904u) to SF-TC (linked, x 29.60; was x 22.45–25.15 between the piers, 2026-11-20 c): front flush with the soffit's room face (y 15.15) back to the wall (15.60), notched round both pier slat panels (from their front face back), 40 thick, 2410–2450 under the 2450 line (t1013u; was 18, 2432–2450). The 20 gap to the soffit's GKB above stays."
     PredefinedType: USERDEFINED
     ObjectType: CabinetLining
     ContainedInStructure: SP-1.02
     Origin: [0, 15.15]
-    Elevation: 2.432
+    Elevation: 2.410
     Depth: 0.45
-    Height: 0.018
+    Height: 0.040
     PropertySets:
       - Name: Pset_Finish
         Properties:
@@ -2267,12 +2282,12 @@ furniture:
   # the open fronts' sweep (to y 15.268) passes in front of them.
   - id: SF-DH-RET-W
     Name: "Jídelna horní, dubový bok západ"
-    Description: "West end return: SF-DH's oak side carried up from the cabinet top (2404) to the lining (2432), x 22.450–22.468, y 15.344–15.60 (linked to SF-DH; 15.27 until 2026-11-20 f). guess: the frame detail."
+    Description: "West end return: SF-DH's oak side carried up from the cabinet top (2382) to the lining (2410), x 22.450–22.468, y 15.344–15.60 (linked to SF-DH; 15.27 until 2026-11-20 f). guess: the frame detail."
     PredefinedType: USERDEFINED
     ObjectType: CabinetLining
     ContainedInStructure: SP-1.02
     Origin: [22.45, 0]
-    Elevation: 2.404
+    Elevation: 2.382
     Width: 0.018
     Height: 0.028
     PropertySets:
@@ -2290,12 +2305,12 @@ furniture:
           PartOf: SF-DH
   - id: SF-DH-RET-E
     Name: "Jídelna horní, dubový bok východ"
-    Description: "East end return: SF-DH's oak side carried up from the cabinet top (2404) to the lining (2432), x 25.132–25.150, y 15.344–15.60 (linked to SF-DH; 15.27 until 2026-11-20 f). guess: the frame detail."
+    Description: "East end return: SF-DH's oak side carried up from the cabinet top (2382) to the lining (2410), x 25.132–25.150, y 15.344–15.60 (linked to SF-DH; 15.27 until 2026-11-20 f). guess: the frame detail."
     PredefinedType: USERDEFINED
     ObjectType: CabinetLining
     ContainedInStructure: SP-1.02
     Origin: [25.132, 0]
-    Elevation: 2.404
+    Elevation: 2.382
     Width: 0.018
     Height: 0.028
     PropertySets:
@@ -2316,7 +2331,7 @@ furniture:
   # north wall." The west end of the continuous 450-deep oak frame.
   - id: SF-DH-SIDE-W
     Name: "Dubový bok u vysokých skříní"
-    Description: "Oak side wall on the east face of the kitchen north tall cabinets (SF-T4.East, x 22.15), the west end of the continuous dining-to-living oak frame (Petr, 2026-11-23 t904u). 40 thick, linked to the bookshelf boards (guess: the same 40). Starts at the SF-F052 counter (930), not the floor: the filler cupboard already fills y 15.15–15.35 up to 930. Stops at the W-052 slat front (y 15.324), not the full 450 back to the wall: pier W-052 and its slats occupy y 15.324–15.60 at this x. Up to the lining (2432)."
+    Description: "Oak side wall on the east face of the kitchen north tall cabinets (SF-T4.East, x 22.15), the west end of the continuous dining-to-living oak frame (Petr, 2026-11-23 t904u). 40 thick, linked to the bookshelf boards (guess: the same 40). Starts at the SF-F052 counter (930), not the floor: the filler cupboard already fills y 15.15–15.35 up to 930. Stops at the W-052 slat front (y 15.324), not the full 450 back to the wall: pier W-052 and its slats occupy y 15.324–15.60 at this x. Up to the lining underside (2410, linked; was 2432)."
     PredefinedType: USERDEFINED
     ObjectType: CabinetLining
     ContainedInStructure: SP-1.02
@@ -2338,7 +2353,7 @@ furniture:
           Top: "SF-DH-LINING.Elevation"
   - id: FN-BK
     Name: "Knihovna"
-    Description: "Open bookshelf above the sofa, from W-053's east face to SF-TC (linked, x 25.45–29.60; was 25.52–29.70). The case (west side, shelves, lamella) stays 276, front flush with the pier's slat face (linked; 250 until 2026-11-20 f). The east side is the full 450 of the oak counter, lining SF-TC's west face (Petr, 2026-11-23 t904u; the box front is on the counter front, y 15.15). Standing on the oak counter (930, linked; was 980, 50 above it), up to the oak top board SF-DH-LINING (2432, linked; was 2450). No top board of its own since t904u (the lining is the top); three shelves respaced evenly in the new clear height. Lamella back on a 6 mm oak-veneer backing (2026-11-20 c). Oak lamella back, slats 40 / gap 20 / thick 12. Sides and shelves 40 (Petr, 2026-11-20 f; 20 until then)."
+    Description: "Open bookshelf above the sofa, from W-053's east face to SF-TC (linked, x 25.45–29.60; was 25.52–29.70). The case (west side, shelves, lamella) stays 276, front flush with the pier's slat face (linked; 250 until 2026-11-20 f). The east side is the full 450 of the oak counter, lining SF-TC's west face (Petr, 2026-11-23 t904u; the box front is on the counter front, y 15.15). Standing on the oak counter (930, linked; was 980, 50 above it), up to the oak top board SF-DH-LINING (2410, linked; was 2432, then 2450). No top board of its own since t904u (the lining is the top); three shelves respaced evenly in the new clear height. Lamella back on a 6 mm oak-veneer backing (2026-11-20 c). Oak lamella back, slats 40 / gap 20 / thick 12. Sides and shelves 40 (Petr, 2026-11-20 f; 20 until then)."
     PredefinedType: SHELF
     ObjectType: Bookshelf
     ContainedInStructure: SP-1.02

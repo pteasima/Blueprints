@@ -63,6 +63,13 @@ def _grip_edge(zone: "Zone", role: str, box: tuple) -> str | None:
     return None
 
 
+def _grip_label(edge: str | None) -> str | None:
+    """'J top' / 'J side' / 'U bottom' — the upside-down J is the uneven U."""
+    if not edge or edge == "none":
+        return None
+    return ("U " if edge == "bottom" else "J ") + edge
+
+
 def _hinge_a(bay: Bay, hinge: str, a0: float, a1: float) -> float:
     """The hinge edge in the run frame. Facing the front you look into the
     carcass: along +c when the front is the c0 face, so your left is -a;
@@ -434,12 +441,16 @@ class _FrontsMixin:
                     grips, edge = self._grips(bay, p, zone, "Door", boxes[0], hinge_a)
                     self.add(Part(f"{bay.id}-DOOR{leaf_no}", f"Dvířka {leaf_no} ({hinge})", "Door", boxes, door=leaf,
                                   grips=grips,
-                                  props=dict(base, Hinge=hinge, Racks=racks or None, Grip=f"J {edge}" if edge else None,
+                                  props=dict(base, Hinge=hinge, Racks=racks or None, Grip=_grip_label(edge),
                                              LeafWidth=round((a1 - a0) / 1000.0, 6),
                                              LeafHeight=round((front_box[5] - front_box[4]) / 1000.0, 6))), bay)
                 for a0, a1 in leaves["fillers"]:
+                    fbox = (a0, a1, fc0, fc1, front_box[4], front_box[5])
+                    grips, edge = self._grips(bay, p, zone, "Filler", fbox)
                     self.add(Part(f"{bay.id}-FILLER{zone.index}", "Lišta", "Filler",
-                                  [(a0, a1, fc0, fc1, front_box[4], front_box[5])], props={"Zone": zone.index}), bay)
+                                  [fbox], grips=grips,
+                                  props={"Zone": zone.index, "Fixed": True,
+                                         "Grip": _grip_label(edge)}), bay)
                 self._shelves(bay, p, zone, in_z0, in_z1, back_y, racks=int(zone.opts.get("racks", 0)))
                 self.run.door_bands.append((bay, zone, in_z0, in_z1, back_y, int(zone.opts.get("racks", 0))))
             elif zone.kind == "flipout":
@@ -473,7 +484,11 @@ class _FrontsMixin:
             elif zone.kind == "front":
                 front_no += 1
                 fid = f"{bay.id}-FRONT" if single else f"{bay.id}-FRONT{zone.index}"
-                self.add(Part(fid, "Dvířka", "Front", [front_box], props=base), bay)
+                grips, edge = self._grips(bay, p, zone, "Front", front_box)
+                props = dict(base)
+                if edge:
+                    props["Grip"] = _grip_label(edge)
+                self.add(Part(fid, "Dvířka", "Front", [front_box], grips=grips, props=props), bay)
                 if zone.opts.get("shelves"):
                     self._shelves(bay, p, zone, in_z0, in_z1, back_y)
 
@@ -570,7 +585,9 @@ class _FrontsMixin:
             return [], None
         a0, a1, c0, c1, z0, z1 = box
         face, inward = (c0, 1.0) if bay.front_low else (c1, -1.0)
-        prof = grip_profile(p)
+        # Bottom-edge grips are the uneven U (same scoop, no straight J stem).
+        kind = "u" if edge == "bottom" else "j"
+        prof = grip_profile(p, kind=kind)
         if edge in ("top", "bottom"):
             zz = (lambda u: z1 - u) if edge == "top" else (lambda u: z0 + u)
             return [Grip("a", a0 - 1.0, a1 + 1.0, [[(face + inward * d, zz(u)) for d, u in sg] for sg in prof])], edge
@@ -769,7 +786,7 @@ class _FrontsMixin:
         props = dict(
             base,
             Hinge="bottom",
-            Grip=f"J {edge}" if edge else None,
+            Grip=_grip_label(edge),
             LeafWidth=round((front[1] - front[0]) / 1000.0, 6),
             LeafHeight=round((front[5] - front[4]) / 1000.0, 6),
             Bin="Elletipi Cover Box Small 8 L",
@@ -1050,3 +1067,44 @@ class _FrontsMixin:
         for box, oid in bay.obstacles:
             out.append((box, box[4] - p["ObstacleClearance"], oid))
         return out
+
+
+def join_living_sofa_front(runs_: list) -> None:
+    """Merge SF-TC's lower fixed front into SF-LB-S2-FRONT so one panel
+    runs behind the sofa and under the east corner cabinet, with no
+    vertical cut (Petr, 2026-11-27, t1013u). The J grip is rebuilt along
+    the new width. The oak worktop stays on KR-LB and still ends at SF-TC."""
+    by_id = {r.id: r for r in runs_}
+    lb, tc = by_id.get("KR-LB"), by_id.get("KR-TC")
+    if lb is None or tc is None:
+        return
+    try:
+        east = lb.part("SF-LB-S2-FRONT")
+        low = tc.part("SF-TC-FRONT2")
+    except StopIteration:
+        return
+    f, g = tc.frame, lb.frame
+    a0, a1, c0, c1, z0, z1 = low.boxes[0]
+    x0, y0 = f.world(a0, c0, 0.0)[:2]
+    x1, y1 = f.world(a1, c1, 0.0)[:2]
+    la0, lc0 = g.local(x0, y0)
+    la1, lc1 = g.local(x1, y1)
+    piece = (min(la0, la1), max(la0, la1), min(lc0, lc1), max(lc0, lc1), z0, z1)
+    box = east.boxes[0]
+    if abs(box[4] - z0) > 1e-6 or abs(box[5] - z1) > 1e-6:
+        raise ValueError(
+            f"SF-LB-S2-FRONT z {box[4]}–{box[5]} is not SF-TC-FRONT2 z {z0}–{z1}; "
+            "the continuous sofa front must match the corner-cabinet plinth band"
+        )
+    new_box = (box[0], piece[1], box[2], box[3], box[4], box[5])
+    east.boxes[0] = new_box
+    if east.grips:
+        g0 = east.grips[0]
+        east.grips[0] = Grip(g0.axis, new_box[0] - 1.0, new_box[1] + 1.0, g0.segments)
+    tc.parts.remove(low)
+    bay = tc.bay("SF-TC")
+    if low.id in bay.members:
+        bay.members.remove(low.id)
+    covers = [x for x in str(east.props.get("Covers") or "").split(",") if x]
+    east.props["Covers"] = ",".join(covers + ["SF-TC"])
+    east.props["Fixed"] = True
