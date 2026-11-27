@@ -61,6 +61,9 @@ LABEL_CABINET = "cabinet"
 # GRIDFINITY_ON_DEMAND = False would fuse them into the drawers again.
 LABEL_GRIDFINITY = "gridfinity"
 GRIDFINITY_ON_DEMAND = True
+# Low-poly drawer items (t1008u pilot): on-demand like the baseplates, and
+# an IfcGroup (GRP-DRAWER-CONTENTS) the inspector can hide.
+LABEL_CONTENTS = "contents"
 LABEL_APPLIANCE = "appliance"
 LABEL_SINK = "sink"
 LABEL_FURNITURE = "furniture"

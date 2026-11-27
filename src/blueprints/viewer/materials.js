@@ -31,6 +31,7 @@ export const SOLID_COLORS = {
   furniture: [255, 150, 0],
   cabinet: [214, 148, 40],
   gridfinity: [150, 154, 160],
+  contents: [70, 74, 80],
   worktop: [236, 233, 226],
   hob: [24, 24, 27],
   appliance: [176, 190, 205],
@@ -97,6 +98,7 @@ export const LAYER_DEPTH_BIAS = {
   furniture: 6,
   cabinet: 6,
   gridfinity: 7,
+  contents: 6,
   worktop: 6,
   hob: 7,
   appliance: 7,
@@ -489,6 +491,13 @@ export const SHADED_PRESETS = {
     color: [150, 154, 160],
     roughness: 0.6,
     metalness: 0.0,
+  },
+  // Default for the contents layer; per-mesh GLB colours override this
+  // (main.js bpOwnColor) so knives, steels and bins stay distinct.
+  contents: {
+    color: [70, 74, 80],
+    roughness: 0.55,
+    metalness: 0.05,
   },
   worktop: {
     // Silestone Blanco Maple: mottled white quartz, polished.
@@ -1068,7 +1077,14 @@ export function applyMaterialMode(partsMap, mode, opts = {}) {
         const list = Array.isArray(prev) ? prev : [prev];
         for (const m of list) previous.add(m);
       }
-      mesh.material = mat;
+      if (mesh.userData.bpOwnColor != null) {
+        const own = mat.clone();
+        own.userData.bpOwned = true;
+        if (own.color) own.color.setHex(mesh.userData.bpOwnColor);
+        mesh.material = own;
+      } else {
+        mesh.material = mat;
+      }
       // Opaque polygonOffset companion; applyOpacityToMeshes may zero this
       // while faded so transparent mesh sort does not invert layer order.
       mesh.userData.opaqueRenderOrder = depthBias;

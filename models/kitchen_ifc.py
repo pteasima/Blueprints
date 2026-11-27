@@ -21,7 +21,11 @@ The structure agreed with Petr (2026-11-11, docs/design/kitchen-cabinets.md):
   not already in a bay) as a member; kitchen-run assemblies stay out, so
   they are not listed twice beside their bays. ``Electrical``
   (``GRP-ELECTRICAL``) is empty until circuits exist, then those systems
-  are assigned under it (Petr, 2026-11-12).
+  are assigned under it (Petr, 2026-11-12). Filled-drawer items are
+  ``IfcSystemFurnitureElement`` products (``<drawer>-CONTENTS``) in the
+  bay group and in ``GRP-DRAWER-CONTENTS`` ("Drawer contents"), which
+  is a child group of Furniture so the inspector can hide them all at
+  once without hiding the drawers themselves.
 
 yaml-ifc (vendored, not edited) has no assemblies or plain groups, so this
 runs on the model it builds. ``apply`` is idempotent per model build.
@@ -37,6 +41,7 @@ from yaml_ifc.ids import global_id
 from yaml_ifc.supported import PSET_NAME
 
 import kitchen_cabinet as kc
+import drawer_contents
 
 PSET_PART = "Pset_KitchenPart"
 
@@ -72,6 +77,7 @@ FRONT_ROLES = frozenset({"Front", "Door", "Lift", "LiftMechanism", "LiftArm", "D
                          "Packer", "DecorPanel"})
 FURNITURE_GROUP_ID = "GRP-FURNITURE"
 ELECTRICAL_GROUP_ID = "GRP-ELECTRICAL"
+CONTENTS_GROUP_ID = drawer_contents.GROUP_ID
 # yaml-ifc types these as IfcFurniture, but they are construction or the
 # kitchen-run assembly itself, not a loose piece of furniture.
 NOT_FURNITURE_OBJECT_TYPES = frozenset({
@@ -503,11 +509,13 @@ def apply(model, doc: dict, runs: list | None = None) -> dict:
                 RelatingStructure=structure,
             )
         parts_by_id = products
+        content_by_bay = _add_drawer_contents(model, run, run_product, w, written)
         for bay in run.bays:
             group = _bay_to_group(model, by_id[bay.id], w)
             bay_groups.append(group)
             members = [parts_by_id[m] for m in bay.members]
             members += [by_id[e] for e in bay.external if e in by_id]
+            members += content_by_bay.get(bay.id, [])
             if not members:
                 continue
             model.create_entity(
@@ -540,6 +548,54 @@ def _id_pset(model, product, yaml_id: str) -> None:
         RelatedObjects=[product],
         RelatingPropertyDefinition=pset,
     )
+
+
+def _add_drawer_contents(model, run, run_product, w: _Writer, written: dict) -> dict:
+    """Create one IfcSystemFurnitureElement per filled drawer, contained in
+    the room (not aggregated into the run). Bodies live in the on-demand
+    ``contents`` GLB; the IFC product is an identity the inspector can hide.
+    """
+    by_bay: dict[str, list] = {}
+    items = drawer_contents.ifc_items_for_run(run)
+    if not items:
+        return by_bay
+    structure = next(
+        (r.RelatingStructure for r in (run_product.ContainedInStructure or [])), None
+    )
+    products = []
+    for item in items:
+        product = model.create_entity(
+            "IfcSystemFurnitureElement",
+            GlobalId=global_id(item["id"]),
+            Name=item["name"],
+            Description=item.get("description") or None,
+            ObjectType=drawer_contents.GROUP_TYPE,
+            ObjectPlacement=w.placement(run_product, run.frame),
+            PredefinedType="USERDEFINED",
+        )
+        _id_pset(model, product, item["id"])
+        w.pset(
+            product,
+            PSET_PART,
+            {
+                "Role": drawer_contents.GROUP_TYPE,
+                "Run": run.id,
+                "Drawer": item["drawer_id"],
+                "Bay": item["bay"],
+            },
+            item["id"],
+        )
+        written[item["id"]] = product.GlobalId
+        products.append(product)
+        by_bay.setdefault(item["bay"], []).append(product)
+    if structure is not None and products:
+        model.create_entity(
+            "IfcRelContainedInSpatialStructure",
+            GlobalId=global_id(f"rel:contained:{run.id}:contents"),
+            RelatedElements=products,
+            RelatingStructure=structure,
+        )
+    return by_bay
 
 
 def _plain_group(model, yaml_id: str, name: str, object_type: str, description: str = ""):
@@ -599,6 +655,8 @@ def _loose_furniture_elements(model, bay_groups) -> list:
         object_type = str(getattr(product, "ObjectType", None) or "")
         if object_type in NOT_FURNITURE_OBJECT_TYPES:
             continue
+        if object_type == drawer_contents.GROUP_TYPE:
+            continue
         pieces.append(product)
     pieces.sort(key=lambda product: (_yaml_id(product) or "", product.Name or "", product.GlobalId))
     return pieces
@@ -636,6 +694,23 @@ def _ensure_root_groups(model, bay_groups) -> None:
             "Electrical",
             "Electrical systems and circuits",
         )
+    contents_members = [
+        p for p in model.by_type("IfcSystemFurnitureElement")
+        if str(getattr(p, "ObjectType", "") or "") == drawer_contents.GROUP_TYPE
+    ]
+    contents_group = by_id.get(CONTENTS_GROUP_ID)
+    if contents_members and contents_group is None:
+        contents_group = _plain_group(
+            model,
+            CONTENTS_GROUP_ID,
+            drawer_contents.GROUP_NAME,
+            drawer_contents.GROUP_TYPE,
+            "Low-poly items in drawers and cabinets; hide this group to drop them from the view",
+        )
+    if contents_group is not None and contents_members:
+        _assign_to_group(model, contents_group, contents_members, CONTENTS_GROUP_ID, "PRODUCT")
+        if contents_group not in bay_groups:
+            bay_groups = list(bay_groups) + [contents_group]
     _assign_to_group(model, furniture, bay_groups, FURNITURE_GROUP_ID, "GROUP")
     _assign_to_group(model, furniture, pieces, f"{FURNITURE_GROUP_ID}:pieces", "PRODUCT")
     extra = [

@@ -25,6 +25,11 @@ export const BUDGETS = {
     nodes: 40, meshNodes: 40, draws: 40, faces: 18000, triangles: 57000,
     materials: 4, megabytes: 12, maxNodeTriangles: 5000, maxNodeFaces: 1200,
   },
+  // Pilot drawer items (t1008u). Small on purpose: keep contents low-poly.
+  "docs/models/ground_floor.contents.glb": {
+    nodes: 40, meshNodes: 40, draws: 40, faces: 2000, triangles: 8000,
+    materials: 16, megabytes: 2, maxNodeTriangles: 4000, maxNodeFaces: 800,
+  },
 };
 
 export function glbJson(buf) {
