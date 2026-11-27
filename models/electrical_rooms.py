@@ -29,7 +29,7 @@ from yaml_ifc.to_ifc import build_ifc
 
 from blueprints.fixture_overrides import load_fixture_document
 
-from bedroom_111 import _LIST_CLASS, _axis_box, _pset_props, _solid_from_product
+from blueprints.ifc_helpers import _LIST_CLASS, _axis_box, _pset_props, _solid_from_product
 
 INPUTS = Path(__file__).resolve().parents[1] / "inputs" / "ground_floor"
 MM = 1000.0

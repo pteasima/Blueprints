@@ -1,6 +1,102 @@
-"""CLI entry: python -m blueprints.export <module>"""
+"""CLI: python -m blueprints.export <module>  (also: python -m blueprints, bp-export)."""
 
-from blueprints.__main__ import main
+from __future__ import annotations
+
+import argparse
+import importlib
+import sys
+from pathlib import Path
+
+
+def _ensure_models_on_path() -> None:
+    repo = Path(__file__).resolve().parents[2]
+    models = str(repo / "models")
+    if models not in sys.path:
+        sys.path.insert(0, models)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="Build and export a parametric model module."
+    )
+    parser.add_argument(
+        "module",
+        help="Python module under models/ (e.g. hello_world or models.hello_world)",
+    )
+    args = parser.parse_args(argv)
+
+    _ensure_models_on_path()
+    name = args.module.removeprefix("models.")
+    mod = importlib.import_module(name)
+
+    if not hasattr(mod, "build"):
+        raise SystemExit(f"Module {name!r} must define build() -> shape")
+
+    result = mod.build()
+    # Models may return a shape, or (shape, metadata)
+    if isinstance(result, tuple):
+        shape, meta = result
+    else:
+        shape, meta = result, {}
+
+    from blueprints.export_utils import export_section, export_shape, summarize_params
+
+    model_name = getattr(mod, "MODEL_NAME", name)
+    kind = meta.get("kind") or getattr(mod, "EXPORT_KIND", "solid")
+    scenes_fn = getattr(mod, "scenes", None)
+    scenes = scenes_fn() if callable(scenes_fn) else None
+    parts_fn = getattr(mod, "part_groups", None)
+    part_groups = parts_fn() if callable(parts_fn) else None
+    motions = meta.get("door_motions")
+    if isinstance(motions, list):
+        from blueprints.scenes import write_doors_json
+
+        repo = Path(__file__).resolve().parents[2]
+        write_doors_json(model_name, motions, repo / "docs" / "models" / f"{model_name}.doors.json")
+    window_motions = meta.get("window_motions")
+    if isinstance(window_motions, list):
+        from blueprints.scenes import write_doors_json
+
+        repo = Path(__file__).resolve().parents[2]
+        write_doors_json(
+            model_name, window_motions, repo / "docs" / "models" / f"{model_name}.windows.json"
+        )
+    # Cable routes (docs/electrical/CableRoutes.md): the model names the file.
+    if getattr(mod, "CABLE_ROUTES", False):
+        from blueprints.cable_routes import write_viewer_json
+
+        repo = Path(__file__).resolve().parents[2]
+        write_viewer_json(repo / "docs" / "models" / f"{model_name}.cables.json")
+    # On-demand viewer layers (ground_floor's Gridfinity baseplates).
+    lazy_layers = meta.get("lazy_layers")
+    if isinstance(lazy_layers, dict):
+        from blueprints.export_utils import write_lazy_layers
+
+        repo = Path(__file__).resolve().parents[2]
+        write_lazy_layers(model_name, lazy_layers, repo / "docs" / "models")
+    ifc_fn = getattr(mod, "ifc_index", None)
+    ifc_index = ifc_fn() if callable(ifc_fn) else None
+    if kind == "section":
+        paths = export_section(shape, model_name)
+        annot = getattr(mod, "annotate", None)
+        if callable(annot):
+            annot(paths["svg"], paths.get("dxf"), paths.get("png"))
+    else:
+        paths = export_shape(
+            shape,
+            model_name,
+            scenes=scenes,
+            part_groups=part_groups,
+            label=getattr(mod, "MODEL_LABEL", None),
+            ifc_index=ifc_index,
+        )
+
+    params = meta.get("derived") or getattr(mod, "PARAMS", meta.get("params", {}))
+    print(f"Built {model_name}: {summarize_params(params) if params else '(no params)'}")
+    for fmt, path in paths.items():
+        print(f"  {fmt}: {path}")
+    return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

@@ -8,7 +8,7 @@ None of these is scheduled. When one starts, link its PR here and move it to Don
 2. **Merge edit mode with the IFC inspector.** One panel to inspect, select and edit an element ([electrical/EditMode.md](electrical/EditMode.md), [electrical/CableRoutes.md](electrical/CableRoutes.md)).
 3. **Remove unused scenes and features** from the viewer and the model modules. Partly done: the ground floor keeps one scene per detailed room ([PR 129](https://github.com/pteasima/Blueprints/pull/129), [design/ground-floor.md](design/ground-floor.md#scenes)); the room isolate is gone ([PR 133](https://github.com/pteasima/Blueprints/pull/133)). The standalone models' scenes and unused viewer features remain.
 4. **Remove unused models** (`models/`, `docs/models/`, the hub).
-5. **Refactor and clean up the codebase.**
+5. **Refactor and clean up the codebase.** Started 2026-11-27 ([PR 172](https://github.com/pteasima/Blueprints/pull/172)): export CLI collapsed, shared IFC helpers extracted, stale docs trimmed.
 
 ## Done
 
