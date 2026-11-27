@@ -2807,11 +2807,11 @@ The lowest drawers cannot take the mid-stack 13.5 mm offset: the cabinet profile
 **Intake panel (t976u):** **12 mm** compact HPL, 867–879, underside 867, thickness `guess:` (not confirmed). Holes stay as in the Miele KM 8665 FL manual. Clearances from the underside: **16.5 mm** to the N box top, **85 mm** to the box base (official ≥ 5 / ≥ 75, repo ≥ 8). Both pass.
 
 
-### Drawer contents (pilot, t1008u)
+### Drawer contents (t1008u / t1009u)
 
 Petr (t1008u): fill drawers and cabinets from the docs and best judgement, keep the meshes cheap, hide them as an IFC group, use Gridfinity boxes where they fit, and start with one island-west drawer.
 
-The first drawer is **SF-I600a-D1**, the top knife drawer of the island-west bay south of the sink (plan note „nože“; yaml `Contents`: `nože; nářadí; ; dole nevím`). It is a MERIVOBOX **M** box, NL 600:
+The first drawer (t1008u) is **SF-I600a-D1**, the top knife drawer of the island-west bay south of the sink (plan note „nože“; yaml `Contents`: `nože; nářadí; ; dole nevím`). It is a MERIVOBOX **M** box, NL 600:
 
 | | mm |
 | --- | ---: |
@@ -2825,7 +2825,15 @@ The first drawer is **SF-I600a-D1**, the top knife drawer of the island-west bay
 - Front block: 2×8 chef’s knife · 1×8 bread · 1×8 slicer · 1×7 santoku · 1×6 utility · 1×5 paring × 2 · two 1×3 steak knives in the leftover cells · 2×8 honing steel · 2×5 shears + a 2×3 accessory block
 - Back row (5 cells): 4×5 sharpening stone · 4×5 honing oil + cloth · 4×5 small tray
 
-Items are boxes and 8-sided prisms in distinct colours, not product models. D2 (nářadí: garlic press, mortar, scales), D3 (empty) and D4 (“dole nevím”) are not filled yet. The bay-by-bay table above still describes the older three-drawer stack; the live stack is in “Island west drawer stacks”.
+Items are boxes and 8-sided prisms in distinct colours, not product models. SF-I600a-D2 (nářadí: garlic press, mortar, scales), D3 (empty) and D4 (“dole nevím”) are not filled yet. The bay-by-bay table above still describes the older three-drawer stack; the live stack is in “Island west drawer stacks”.
+
+t1009u fills the next three named island-west drawers, still `guess:` / best judgement from the plan notes, in the same IFC group and on-demand layer:
+
+**SF-I500b-D1, spices (koření).** MERIVOBOX M, NL 600. Inside **464 × 558 × 75**, plate **11 × 13** (462 × 546) at z 798–803, **70 mm** clear above the plate. One 10×12 Gridfinity tray holds 12 squat 8-gon jars (56 mm including a box cap, well under 70 mm) plus a leftover 1-col tin tray and a 10×1 back row (8 square tins). Colours read as paprika, turmeric, herbs, pepper, cinnamon, salt and similar. The fill is sparse on purpose so the on-demand contents layer stays inside its mesh budget.
+
+**SF-I500b-D2, oils and condiments (oleje, octy, dochucovadla).** MERIVOBOX E, NL 600. Inside **464 × 558 × 176**, plate **11 × 13** at z 477–482. The E sides only give **171 mm** above the plate, but the clear item height to the D1 box underside (z 782) is **300 mm** (305 mm from the floor) — that is the limit that matters, and bottles may stand proud of the E sides. Every bottle is at most **280 mm** above the plate (20 mm of air under D1). One 10×8 Gridfinity tray holds 12 standing 8-gon bottles (three rows of four: cooking oils tallest, then vinegars/soy, then shorter condiments); the leftover column is a 4-vial tray and the back 10×5 tray holds 6 squat jars (pesto, paste). All bottles stay under the 280 mm cap.
+
+**SF-I600b-D1, cutlery (příbory).** MERIVOBOX N under the hob intake, NL 500. Inside **548 × 458 × 52.5**, plate **13 × 10** (546 × 420) at z 798–803, only **47.5 mm** clear above the plate. 4-unit (28 mm) trays stay under that: 2×8 wells for table knives, forks, spoons and tablespoons, 2×5 teaspoons and a 2×3 dessert well, a 3×8 steak-knife well, and a 13×2 serving tray at the back with pieces lying along the width. Flat steel heads and coloured handles, handles at the front (except the serving tray).
 
 **How to hide them.** All filled-drawer items are members of the IFC group **Drawer contents** (`GRP-DRAWER-CONTENTS`), a child of Furniture. In the inspector, open Furniture → Drawer contents and use **Hide** (or Hide all others on that row). They are also the on-demand Parts leaf **Interior › Drawer contents** (`ground_floor.contents.glb`), on by default like the Gridfinity baseplates; `?contents=0` skips the download. Each product is `<drawer>-CONTENTS` (pilot: `SF-I600a-D1-CONTENTS`), hangs on its drawer so it slides with it, and belongs to the bay group as well, so isolating the bay still shows the items.
 

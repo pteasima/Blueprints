@@ -47,6 +47,9 @@ RGB_STONE = (186, 166, 130)
 RGB_OIL = (170, 110, 36)
 RGB_CAP = (40, 40, 44)
 RGB_CLOTH = (80, 92, 70)
+RGB_YELLOW = (196, 164, 48)  # turmeric, mustard
+RGB_CREAM = (228, 220, 200)  # salt, mayo, pale oil
+RGB_OLIVE = (120, 124, 52)
 
 # Pilot only. More drawers join this dict as later passes fill them.
 PILOTS = {
@@ -56,7 +59,32 @@ PILOTS = {
         "description": "Knife drawer (nože): Gridfinity bins and a basic knife set",
         "kind": "knives",
     },
+    "SF-I500b-D1": {
+        "bay": "SF-I500b",
+        "name": "SF-I500b-D1 spices",
+        "description": "Spice drawer (koření): short jars in 2×2 Gridfinity trays",
+        "kind": "spices",
+    },
+    "SF-I500b-D2": {
+        "bay": "SF-I500b",
+        "name": "SF-I500b-D2 oils",
+        "description": "Oils and condiments (oleje, octy, dochucovadla): standing bottles",
+        "kind": "oils",
+    },
+    "SF-I600b-D1": {
+        "bay": "SF-I600b",
+        "name": "SF-I600b-D1 cutlery",
+        "description": "Cutlery drawer (příbory): shallow Gridfinity trays under the hob",
+        "kind": "cutlery",
+    },
 }
+
+# SF-I500b-D2: E box sides are only 171 mm above the plate, but the drawer
+# above (D1 box underside z 782) leaves 300 mm of clear item height above
+# the plate (docs/design/kitchen-cabinets.md, "Island west drawer stacks").
+# Bottles may stand proud of the E sides; they must stay under this cap.
+OIL_CLEAR_ABOVE_PLATE = 300.0
+OIL_MAX_H = OIL_CLEAR_ABOVE_PLATE - 20.0  # 280 mm, 20 mm air under D1
 
 
 def contents_id(drawer_id: str) -> str:
@@ -100,10 +128,16 @@ def solids_for(part, drawer, plane, inward: float) -> list:
     if part.id not in PILOTS or drawer is None or not drawer.grid or not drawer.baseplate:
         return []
     kind = PILOTS[part.id]["kind"]
-    if kind != "knives":
+    build = {
+        "knives": _knife_drawer,
+        "spices": _spice_drawer,
+        "oils": _oil_drawer,
+        "cutlery": _cutlery_drawer,
+    }.get(kind)
+    if build is None:
         return []
     buckets: dict[tuple[int, int, int], list] = defaultdict(list)
-    _knife_drawer(drawer, buckets)
+    build(drawer, buckets)
     if not buckets:
         return []
     eid = contents_id(part.id)
@@ -150,6 +184,7 @@ def _bin(buckets, origin, i, j, ni, nj, height: float = BIN_H) -> tuple[float, f
     z0 = origin[2]
     buckets[RGB_BIN].extend(_hollow_bin(a0, a1, c0, c1, z0, height))
     return a0, a1, c0, c1, z0
+
 
 
 def _hollow_bin(a0, a1, c0, c1, z0, h) -> list:
@@ -275,3 +310,204 @@ def _oil_and_cloth(buckets, a0, a1, c0, c1, z0) -> None:
     _prism(buckets, RGB_OIL, cx, cy, z0 + FLOOR + 1, 16.0, 36.0, 8)
     _prism(buckets, RGB_CAP, cx, cy, z0 + FLOOR + 37, 12.0, 8.0, 8)
     _box(buckets, RGB_CLOTH, a0 + 70, a1 - 12, c0 + 16, c1 - 16, z0 + FLOOR + 1, z0 + FLOOR + 8)
+
+
+def _spice_drawer(drawer, buckets) -> None:
+    """guess: short spice jars in a few large 4u trays. Clear above the plate
+    is 70 mm (M box); jars are 56 mm including the cap, well under that.
+    11 × 13 plate: one 10×12 tray of 12 jars, a leftover 1-col tin tray,
+    and a 10×1 back row of tins (20 items, sparse so the mesh stays small).
+    """
+    origin = _plate_origin(drawer)
+    # Recurring colours, one per jar, so a glance reads “spice rack”.
+    fills = [
+        RGB_HANDLE_RED,  # paprika / chilli
+        RGB_YELLOW,      # turmeric / curry
+        RGB_CLOTH,       # oregano / basil
+        RGB_HANDLE_DARK, # pepper
+        RGB_HANDLE_WOOD, # cinnamon
+        RGB_CREAM,       # salt
+        RGB_OIL,         # cumin / mustard seed
+        RGB_OLIVE,       # herbs de Provence
+        RGB_STONE,       # garlic powder
+        RGB_SHEARS,      # nigella / poppy
+    ]
+    h = 4 * UNIT
+    # Sparse fill (12 jars + 8 tins) so the on-demand layer stays inside
+    # the contents budget; one tray per zone, no per-cell bins or dividers.
+    _bin(buckets, origin, 0, 0, 10, 12, height=h)
+    n = 0
+    for i in (0, 2, 6, 8):
+        for j in (0, 4, 8):
+            a0, a1, c0, c1 = _cell(origin, i, j, 2, 2)
+            _spice_jar(buckets, (a0 + a1) / 2.0, (c0 + c1) / 2.0, origin[2], fills[n % len(fills)])
+            n += 1
+    _bin(buckets, origin, 10, 0, 1, 13, height=h)
+    for k, j in enumerate((0, 3, 6, 9, 12)):
+        a0, a1, c0, c1 = _cell(origin, 10, j, 1, 1)
+        _spice_tin(buckets, (a0 + a1) / 2.0, (c0 + c1) / 2.0, origin[2], fills[(n + k) % len(fills)])
+    _bin(buckets, origin, 0, 12, 10, 1, height=h)
+    for k, i in enumerate((0, 4, 8)):
+        a0, a1, c0, c1 = _cell(origin, i, 12, 2, 1)
+        _spice_tin(buckets, (a0 + a1) / 2.0, (c0 + c1) / 2.0, origin[2], fills[(n + 5 + k) % len(fills)])
+
+
+def _spice_jar(buckets, x, y, z0, fill_rgb) -> None:
+    """Squat 8-gon jar, 48 mm body + 8 mm box cap = 56 mm (< 70 mm clear)."""
+    z = z0 + FLOOR + 1.0
+    _prism(buckets, fill_rgb, x, y, z, 18.0, 48.0, 8)
+    _box(buckets, RGB_CAP, x - 12.0, x + 12.0, y - 12.0, y + 12.0, z + 48.0, z + 56.0)
+
+
+def _spice_tin(buckets, x, y, z0, fill_rgb) -> None:
+    """Flat square tin for the leftover 1-cell and 2×1 slots, 36 mm tall."""
+    z = z0 + FLOOR + 1.0
+    _box(buckets, fill_rgb, x - 12.0, x + 12.0, y - 12.0, y + 12.0, z, z + 28.0)
+    _box(buckets, RGB_CAP, x - 12.0, x + 12.0, y - 12.0, y + 12.0, z + 28.0, z + 36.0)
+
+
+def _oil_drawer(drawer, buckets) -> None:
+    """guess: standing oil, vinegar and condiment bottles in a few large trays.
+
+    Clear to the D1 box underside is 300 mm above the plate; E sides are
+    only 171 mm, so bottles may stand proud of the box. Every bottle is
+    ≤ ``OIL_MAX_H`` (280 mm), leaving 20 mm of air under D1.
+    """
+    origin = _plate_origin(drawer)
+    h = 3 * UNIT
+    # (body_h, radius, body_rgb) — cap 12 mm on top, optional 10 mm neck.
+    # One 10×8 tray: three rows of four bottles (cols 0–7, rows 0–5).
+    # Heights drop toward the back, all ≤ 280. Leftover col 10 is a vial
+    # tray; back rows 8–12 are a 10×5 tray of squat jars.
+    rows = [
+        # Tall cooking oils, 248–268 mm including neck+cap.
+        [(246, 28, RGB_OLIVE), (236, 26, RGB_OIL), (226, 26, RGB_YELLOW),
+         (216, 24, RGB_CREAM), (206, 22, RGB_HANDLE_WOOD)],
+        # Vinegars and soy, 198–218 mm.
+        [(196, 24, RGB_HANDLE_DARK), (186, 22, RGB_STONE), (186, 20, RGB_CREAM),
+         (176, 16, RGB_SHEARS), (176, 16, RGB_HANDLE_WOOD)],
+        # Condiments, 148–168 mm.
+        [(146, 22, RGB_HANDLE_RED), (146, 20, RGB_YELLOW), (136, 20, RGB_CREAM),
+         (136, 20, RGB_CLOTH), (126, 16, RGB_HANDLE_RED)],
+        # More seasonings, 128–158 mm.
+        [(136, 20, RGB_OIL), (126, 18, RGB_OLIVE), (126, 16, RGB_SHEARS),
+         (116, 18, RGB_STONE), (116, 16, RGB_HANDLE_DARK)],
+    ]
+    # 3×4 bottles (not a full 5×4 grid) plus 4 vials and 6 squat jars,
+    # so the 8-gon bottles stay recognizable without blowing the budget.
+    _bin(buckets, origin, 0, 0, 10, 8, height=h)
+    for r, specs in enumerate(rows[:3]):
+        for k, (body_h, radius, rgb) in enumerate(specs[:4]):
+            a0, a1, c0, c1 = _cell(origin, k * 2, r * 2, 2, 2)
+            _oil_bottle(buckets, (a0 + a1) / 2.0, (c0 + c1) / 2.0, origin[2], radius, body_h, rgb)
+    _bin(buckets, origin, 10, 0, 1, 13, height=h)
+    vial = [(100, 10, RGB_HANDLE_RED), (90, 10, RGB_OLIVE), (90, 10, RGB_YELLOW),
+            (80, 10, RGB_SHEARS)]
+    for k, (body_h, radius, rgb) in enumerate(vial):
+        a0, a1, c0, c1 = _cell(origin, 10, k * 3, 1, 3)
+        _oil_bottle(buckets, (a0 + a1) / 2.0, (c0 + c1) / 2.0, origin[2], radius, body_h, rgb)
+    a0, a1, c0, c1, z0 = _bin(buckets, origin, 0, 8, 10, 5, height=h)
+    squats = [RGB_CLOTH, RGB_OIL, RGB_HANDLE_RED, RGB_OLIVE, RGB_CREAM, RGB_YELLOW]
+    for k, rgb in enumerate(squats):
+        x = a0 + 70 + (k % 3) * 130
+        y = c0 + 50 + (k // 3) * 90
+        _box(buckets, rgb, x - 18.0, x + 18.0, y - 18.0, y + 18.0, z0 + FLOOR + 1.0, z0 + FLOOR + 71.0)
+        _box(buckets, RGB_CAP, x - 14.0, x + 14.0, y - 14.0, y + 14.0, z0 + FLOOR + 71.0, z0 + FLOOR + 81.0)
+
+
+def _oil_bottle(buckets, x, y, z0, radius, body_h, body_rgb, cap_h=12.0, neck_h=10.0) -> None:
+    """8-gon bottle + neck + cap. Total height is checked against OIL_MAX_H."""
+    total = body_h + neck_h + cap_h
+    if total > OIL_MAX_H + 1e-6:
+        raise ValueError(f"oil bottle {total:.0f} mm exceeds OIL_MAX_H {OIL_MAX_H:.0f}")
+    z = z0 + FLOOR + 1.0
+    _prism(buckets, body_rgb, x, y, z, radius, body_h, 8)
+    neck_r = max(6.0, radius * 0.4)
+    _prism(buckets, body_rgb, x, y, z + body_h, neck_r, neck_h, 8)
+    _prism(buckets, RGB_CAP, x, y, z + body_h + neck_h, neck_r + 1.5, cap_h, 8)
+
+
+def _cutlery_drawer(drawer, buckets) -> None:
+    """guess: shallow 4-unit (28 mm) trays in the 13 × 10 hob-top drawer.
+
+    Clear above the plate is 47.5 mm (N box under the intake). Flat
+    cutlery in 28 mm trays stays well under that. Handles at the front.
+    """
+    origin = _plate_origin(drawer)
+    h = 4 * UNIT  # 28 mm
+    # 13 cols × 10 rows. Long 2×8 wells at the front; a 13×2 serving tray
+    # at the back (rows 8–9).
+    wells = [
+        (0, 0, 2, 8, "knives"),
+        (2, 0, 2, 8, "forks"),
+        (4, 0, 2, 8, "spoons"),
+        (6, 0, 2, 8, "tablespoons"),
+        (8, 0, 2, 5, "teaspoons"),
+        (8, 5, 2, 3, "dessert"),
+        (10, 0, 3, 8, "steak"),
+    ]
+    for i, j, ni, nj, kind in wells:
+        a0, a1, c0, c1, z0 = _bin(buckets, origin, i, j, ni, nj, height=h)
+        _cutlery_set(buckets, a0, a1, c0, c1, z0, kind)
+    a0, a1, c0, c1, z0 = _bin(buckets, origin, 0, 8, 13, 2, height=h)
+    _cutlery_set(buckets, a0, a1, c0, c1, z0, "serving")
+
+
+def _cutlery_set(buckets, a0, a1, c0, c1, z0, kind: str) -> None:
+    """A short row of flat, recognizable pieces, handles at the front (low c)."""
+    z = z0 + FLOOR + 2.0
+    inner_a0, inner_a1 = a0 + WALL + 3.0, a1 - WALL - 3.0
+    inner_c0, inner_c1 = c0 + WALL + 3.0, c1 - WALL - 3.0
+    width = inner_a1 - inner_a0
+    usable = inner_c1 - inner_c0
+    n, head, handle_len, piece_w, handle_rgb, thick = {
+        "knives": (5, 18.0, 95.0, 9.0, RGB_HANDLE_DARK, 3.0),
+        "forks": (5, 22.0, 90.0, 11.0, RGB_HANDLE_WOOD, 3.0),
+        "spoons": (5, 28.0, 90.0, 12.0, RGB_HANDLE_WOOD, 3.5),
+        "tablespoons": (5, 32.0, 100.0, 13.0, RGB_HANDLE_DARK, 3.5),
+        "teaspoons": (6, 22.0, 70.0, 10.0, RGB_HANDLE_WOOD, 3.0),
+        "dessert": (4, 24.0, 55.0, 11.0, RGB_HANDLE_DARK, 3.0),
+        "steak": (5, 16.0, 90.0, 10.0, RGB_HANDLE_RED, 3.0),
+        "serving": (4, 36.0, 80.0, 16.0, RGB_HANDLE_DARK, 4.0),
+    }[kind]
+    if kind == "serving":
+        # The back tray is 13 cells wide and only 2 deep, so the pieces
+        # lie along a (handles toward the north / low a).
+        n = 5
+        slot = (inner_a1 - inner_a0) / n
+        handle_len = min(90.0, slot * 0.5)
+        blade_len = min(80.0, slot - handle_len - 8.0)
+        mid_c = (inner_c0 + inner_c1) / 2.0
+        for k in range(n):
+            a_lo = inner_a0 + k * slot + 4.0
+            a_mid = a_lo + handle_len
+            a_hi = a_mid + blade_len
+            _box(buckets, RGB_HANDLE_DARK, a_lo, a_mid, mid_c - 7.0, mid_c + 7.0, z, z + 8.0)
+            _box(buckets, RGB_STEEL, a_mid, a_mid + 14.0, mid_c - 3.0, mid_c + 3.0, z + 2.0, z + 2.0 + 4.0)
+            _box(buckets, RGB_STEEL, a_mid + 14.0, a_hi, mid_c - 16.0, mid_c + 16.0, z + 1.5, z + 5.5)
+        return
+
+    step = width / n
+    blade_len = min(usable - handle_len - 4.0, usable * 0.55)
+    if blade_len < 8.0:
+        handle_len = max(20.0, usable * 0.45)
+        blade_len = max(8.0, usable - handle_len - 4.0)
+    for k in range(n):
+        mid = inner_a0 + (k + 0.5) * step
+        hc0 = inner_c0
+        hc1 = hc0 + handle_len
+        _box(buckets, handle_rgb, mid - piece_w / 2.0, mid + piece_w / 2.0, hc0, hc1, z, z + 8.0)
+        bc0, bc1 = hc1, hc1 + blade_len
+        if kind in ("forks",):
+            # Neck plus one wide head (reads as a fork without three tine boxes).
+            _box(buckets, RGB_STEEL, mid - 3.0, mid + 3.0, bc0, bc0 + 16.0, z + 2.0, z + 2.0 + thick)
+            _box(buckets, RGB_STEEL, mid - 7.0, mid + 7.0, bc0 + 16.0, bc1, z + 2.0, z + 2.0 + thick)
+        elif kind in ("spoons", "tablespoons", "teaspoons", "dessert"):
+            neck_len = min(12.0, max(4.0, blade_len * 0.25))
+            _box(buckets, RGB_STEEL, mid - 3.0, mid + 3.0, bc0, bc0 + neck_len, z + 2.0, z + 2.0 + thick)
+            bowl = head / 2.0
+            _box(buckets, RGB_STEEL, mid - bowl, mid + bowl, bc0 + neck_len, bc1, z + 1.5, z + 1.5 + thick + 1.0)
+        else:
+            # Table / steak knives: a slim blade.
+            _box(buckets, RGB_STEEL, mid - piece_w / 2.5, mid + piece_w / 2.5, bc0, bc1, z + 2.0, z + 2.0 + thick)
+
