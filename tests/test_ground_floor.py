@@ -531,6 +531,8 @@ def test_terrace_door_is_a_glazed_hinged_leaf(ground_floor_model):
     assert glazed == ["D-OP32"]
     assert _door_records(ground_floor_model)["D-OP32"]["kind"] == "hinged"
     data = (ROOT / "docs" / "models" / "ground_floor.glb").read_bytes()
+    if data.startswith(b"version https://git-lfs"):
+        pytest.fail("docs/models/ground_floor.glb is a Git LFS pointer; pull LFS in the tests workflow")
     n, _ = struct.unpack_from("<II", data, 12)
     nodes = json.loads(data[20 : 20 + n])["nodes"]
     host = [x for x in nodes if x.get("name") == "door__D-OP32__"]

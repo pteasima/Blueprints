@@ -742,9 +742,13 @@ def _furnishing_parts(doc: dict, motions: list | None = None, layers: dict | Non
     # (models/kitchen_ifc.py). Their solids come from the same layout below.
     runs = kitchen_cabinet.runs(doc)
     # The living-room LED panels in electrical_rooms need this same layout.
+    # Do not publish an empty list from a synthetic furnishings document:
+    # that would hide KR-WEST-H from PanelRun lights (C180-S) still loaded
+    # from the default electrical plan.
     import electrical_rooms
 
-    electrical_rooms.share_kitchen_runs(runs)
+    if runs:
+        electrical_rooms.share_kitchen_runs(runs)
     # Petr, 2026-11-13: the ceiling line is an invariant (models/ceiling_line.py).
     ceiling_line.check_ceiling_line(doc, FURNISHING_LISTS, runs)
     for run in runs:

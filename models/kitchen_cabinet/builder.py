@@ -82,6 +82,8 @@ class _Builder(_CarcassMixin, _FrontsMixin, _AppliancesMixin, _WorktopMixin):
             for bay in cabinets:
                 if _prop(bay.element, PSET_HOB, "Model") is not None:
                     run.hobs[bay.id] = self._hob_layout(bay, z_base + height)
+        if wt > 0:
+            self._glue_undermount_sinks(z_base + height - wt)
         self._sink_fittings(cabinets, z_base + height)
         for bay in cabinets:
             self._bay_parts(bay, z0, z1, shared_back=any(bay in r for k, rs in blocks if k == "pair" for r in rs))

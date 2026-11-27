@@ -106,8 +106,16 @@ def shared_kitchen_runs() -> list | None:
     return _RUNS_LIST
 
 
-def _kitchen_runs() -> dict:
-    if _RUNS is None:
+def _kitchen_runs(require: str | None = None) -> dict:
+    """House kitchen runs, loading furnishings.yaml on a cache miss.
+
+    ``require`` is a run id that must be present. A previous
+    ``share_kitchen_runs`` from a synthetic test document (or an empty
+    list) must not hide the house layout: PanelRun lights such as C180-S
+    still name ``KR-WEST-H``.
+    """
+    missing = _RUNS is None or (require is not None and require not in _RUNS)
+    if missing:
         import ground_floor  # late: ground_floor imports this module
         import kitchen_cabinet as kc
 
@@ -121,7 +129,8 @@ def panel_rects(element: dict) -> list[tuple[float, float, float, float, float, 
     run_id = _pset_props(element).get("PanelRun")
     if not run_id:
         return []
-    run = _kitchen_runs().get(str(run_id))
+    run_id = str(run_id)
+    run = _kitchen_runs(require=run_id).get(run_id)
     if run is None:
         raise ValueError(f"{element['id']}: PanelRun {run_id} is not a kitchen run")
     if not run.led_fields:

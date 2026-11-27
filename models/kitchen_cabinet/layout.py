@@ -72,6 +72,7 @@ def runs(doc: dict) -> list[Run]:
                 if ext.get("PredefinedType") == "SINK" and _prop(ext, PSET_SINK, "BowlWidth") is not None:
                     sink = _sink(ext, frame, (ca, cc), (rx, ry), ez1)
                     loc = [frame.local(x, y) for x, y in pts]
+                    sink["element"] = ext
                     sink["box"] = (min(q[0] for q in loc), max(q[0] for q in loc),
                                    min(q[1] for q in loc), max(q[1] for q in loc), ez0, ez1)
                     sinks.append(sink)
