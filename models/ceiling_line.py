@@ -20,7 +20,7 @@ obstacle too (``lining_obstacles``).
 The obývák model's frame: X eave to eave, 0 at the south eave and
 ``room_width`` at the cabinet (north) eave; Y gable to gable, 0 at the living
 gable (east) and ``room_length`` at the kitchen gable (west). In ground-floor
-CAD mm: X = y − ROOM_Y0, Y = ROOM_X1 − x (models/ground_floor.py).
+CAD mm: X = y − ROOM_Y0, Y = ROOM_X1 − x (models/ground_floor/).
 """
 
 from __future__ import annotations

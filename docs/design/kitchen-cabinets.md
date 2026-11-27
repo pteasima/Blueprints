@@ -764,7 +764,7 @@ Modelled (`models/kitchen_cabinet/`, band kind `lift`, `AVENTOS` table):
 
 Petr, 2026-11-13: “And make them open too, add the animation for this opening mechanism.”, then “they stay only partially folded, like my image”, then “do 88 degrees in the model.”
 
-Each lift front is one `kind: "linkage"` record in `ground_floor.doors.json` (`_linkage_motion` in `models/ground_floor.py`, from the `LiftJoint` that `_lift_motion` in `models/kitchen_cabinet/` puts on each part). A linkage is a list of joints; each turns its part meshes about a line (`pivot` point, `axis`), by `angles` sampled at 25 even steps from shut to open, relative to a `parent` joint or to the model. The viewer (`doors.js` `bindLinkage`) interpolates them over 900 ms. Any part of it takes the tap.
+Each lift front is one `kind: "linkage"` record in `ground_floor.doors.json` (`_linkage_motion` in `models/ground_floor/`, from the `LiftJoint` that `_lift_motion` in `models/kitchen_cabinet/` puts on each part). A linkage is a list of joints; each turns its part meshes about a line (`pivot` point, `axis`), by `angles` sampled at 25 even steps from shut to open, relative to a `parent` joint or to the model. The viewer (`doors.js` `bindLinkage`) interpolates them over 900 ms. Any part of it takes the tap.
 
 The motion is a four-bar (`_hf_fourbar`): carcass, upper front, lower front, lever.
 
@@ -785,7 +785,7 @@ The −15° at 116° is read off Blum's “Platzbedarf nach oben” sketch (the 
 
 ### The ceiling line and the open fronts
 
-`models/ceiling_line.py` (called from `models/ground_floor.py` on every export):
+`models/ceiling_line.py` (called from `models/ground_floor/` on every export):
 - `CEILING_LINE_MM` = 2450, the obývák model's `furniture_height` (`models/obyvak_geom.py`), where the bass traps start and the pocket doors and tall cabinets stop. The export stops if any furnishing (lights excepted) or kitchen part reaches above it. Today the tops at 2450 are the wall cabinets, SF-DH, SF-T1–T4, FN-BK and SF-TC.
 - For each lift front, its swept path (the front's corners at every sampled angle) and its clearance box are checked against the kitchen-gable trap (x 18.80–18.99, from 2450), the living-gable trap, the soffit over the north cabinets (y from 15.15, underside 2470) and the sloped ceiling (`ObyvakLayout.z_ceil`, obývák X = y − 10.25). An overlap stops the export; the margins go to the run's notes.
 
@@ -2487,7 +2487,7 @@ Petr: "just like we hid the vacuum sealer in a drawer, lets hide a Kenwood Chef 
 - guess: the model is a basic machine (base, column, head, bowl); the control / display is a black patch on the head's north side next to the column; the bowl is at the drawer's front (east).
 - open: which Chef XL Petr has. Others for comparison (Kenwood listings): Chef XL Sense KVL6100 350 H × 430 × 300 (25 over it, fits); Titanium Chef Baker XL KVL85 370 H × 400 × 225 (5 over it).
 - **Layout**: `drawer * box=E inner=K inner_clear=0.375`: the top inner drawer (M) is gone, the K one's floor is 375 under the band top (345 + 30, as the sealer's 225 + 30). Inside 548 × 458: 268 spare along the run, 73 along the depth.
-- **Viewer**: a standing appliance's record names its inner drawer in `rides` (models/ground_floor.py); doors.js `attachRiders` hangs its mesh under that drawer's pivot, so it slides with it and a tap on it drives the drawer. Before, the sealer had its own motion (parent the outer drawer) and moved on its own.
+- **Viewer**: a standing appliance's record names its inner drawer in `rides` (models/ground_floor/); doors.js `attachRiders` hangs its mesh under that drawer's pivot, so it slides with it and a tap on it drives the drawer. Before, the sealer had its own motion (parent the outer drawer) and moved on its own.
 
 
 

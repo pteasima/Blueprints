@@ -20,9 +20,9 @@ The wave study uses a third layout. See [acoustics.md](acoustics.md).
 
 The red mark above the island is a handwritten 1200, the island’s overall width, not a 7200 dimension. The long line at pixel y = 1719 is a DWG dimension of about 7188 mm. The island does not use it. Source: the header comments of `furnishings.yaml`.
 
-Origin is the plan corner `[x, y]` in storey metres. Elevation is the base Z; omitted means 0. Width is local X, Depth local Y, Height up. `RefDirection` omitted means `[1, 0]`. yaml-ifc has no hinge field, so a hinge is `Pset_CabinetDoor` / `HingeSide`, L or R as you face the front. The space `SP-1.02` has no body. Clear height on the drawing is 2.50–5.05 m and is not a field. Source: the same header, and `ROOM_CLEAR_M` in `models/ground_floor.py`.
+Origin is the plan corner `[x, y]` in storey metres. Elevation is the base Z; omitted means 0. Width is local X, Depth local Y, Height up. `RefDirection` omitted means `[1, 0]`. yaml-ifc has no hinge field, so a hinge is `Pset_CabinetDoor` / `HingeSide`, L or R as you face the front. The space `SP-1.02` has no body. Clear height on the drawing is 2.50–5.05 m and is not a field. Source: the same header, and `ROOM_CLEAR_M` in `models/ground_floor/`.
 
-Solids are the boxes yaml-ifc writes, inset 1 mm so flush faces do not coincide. Walls are not moved to make a box fit. Source: `inputs/ground_floor/README.md`, `MESH_GAP_MM` in `models/ground_floor.py`.
+Solids are the boxes yaml-ifc writes, inset 1 mm so flush faces do not coincide. Walls are not moved to make a box fit. Source: `inputs/ground_floor/README.md`, `MESH_GAP_MM` in `models/ground_floor/`.
 
 ## Kitchen, on main
 

@@ -33,7 +33,7 @@ Open questions: [Questions.md](Questions.md#cable-routes-pilot-111-112) (board s
 | [src/blueprints/cable_routes.py](../../src/blueprints/cable_routes.py) | Applies the overrides and writes `docs/models/ground_floor.cables.json` for the viewer. `--report` prints the length table. |
 | `src/blueprints/viewer/cables.js`, `cableEdits.js` | The viewer layer and the route edits (tests: `cableEdits.test.mjs`). |
 
-`python -m blueprints.export ground_floor` writes the cables JSON too (`CABLE_ROUTES = True` in `models/ground_floor.py`), and so does `python -m blueprints.fixture_overrides merge`. Without a re-export: `python -m blueprints.cable_routes`. After changing the generator: `python scripts/guess_cable_routes.py`, then `python -m blueprints.cable_routes`.
+`python -m blueprints.export ground_floor` writes the cables JSON too (`CABLE_ROUTES = True` in `models/ground_floor/`), and so does `python -m blueprints.fixture_overrides merge`. Without a re-export: `python -m blueprints.cable_routes`. After changing the generator: `python scripts/guess_cable_routes.py`, then `python -m blueprints.cable_routes`.
 
 ## Model
 
