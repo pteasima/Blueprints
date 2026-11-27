@@ -4,7 +4,7 @@ Petr, 2026-11-20: "lets get the soffit modeled so I see how it works out
 with the top cabinets."
 
 One source: the obývák model's soffit box (``obyvak_geom.ObyvakParams`` /
-``ObyvakLayout``, drawn in ``obyvak.py`` and docs/design/obyvak.md):
+``ObyvakLayout``, drawn in ``models/obyvak/`` and docs/design/obyvak.md):
 
 - the 450 band (``furniture_width``) from the north wall's plaster face, the
   depth of the dining and living cabinets; the 600 kitchen tall units stick
@@ -25,7 +25,7 @@ x = ROOM_X1 − Y, y = ROOM_Y0 + X (models/ceiling_line.py).
 
 The ground-floor piers (W-052, W-053) stand in the soffit's depth behind the
 face; the underside is cut round them. The face and underside are drawn;
-the wool, CD frame, ducts and lid behind them are not (see obyvak.py).
+the wool, CD frame, ducts and lid behind them are not (see models/obyvak/).
 """
 
 from __future__ import annotations

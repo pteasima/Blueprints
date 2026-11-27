@@ -1,6 +1,6 @@
 # Obývák 1.02 — roof and section
 
-Facts the living-room section uses. Geometry is `models/obyvak_geom.py` and `models/obyvak.py`. Legacy sheets that were ported are listed in `inputs/README.md`.
+Facts the living-room section uses. Geometry is `models/obyvak_geom.py` and `models/obyvak/`. Legacy sheets that were ported are listed in `inputs/README.md`.
 
 Measured figures below come from constructing `ObyvakLayout(ObyvakParams())` while writing this file. They are derived, not extra inputs.
 
@@ -31,7 +31,7 @@ Source for the intent “visual centre”: the owner, in the 2026-11-06 request 
 
 **450 mm at the cabinets is the eave furniture depth. 450 mm at the living gable is the bass trap. They are not the same object.**
 
-Source: the closing line of the module note in `models/obyvak.py`, and `models/obyvak_elevation.py` (“450 mm předstěny u gauče není totéž jako 450 mm skříní u okapu v řezu”).
+Source: the closing line of the module note in `models/obyvak/`, and `models/obyvak_elevation.py` (“450 mm předstěny u gauče není totéž jako 450 mm skříní u okapu v řezu”).
 
 | Name | Value | What it is |
 | --- | ---: | --- |
@@ -95,7 +95,7 @@ Both slopes are 100 mm NaturHeld 140 with StoSilent Top Finish + Top Basic (2 + 
 
 **open:** the bill prices Knauf NatuRoll Pro 039. PR #77’s body instead names Isover Domo Plus 038 for the 160 mm layer, and PR #68’s title names Unifit 033 / NatuRoll 039. The lambda in the model matches 039. Which product was confirmed is not settled.
 
-**open:** hanger catalogue lengths. The section label in `models/obyvak.py` says “Přímý závěs 200 mm” and “Nonius 540 mm”. PR #77 prints a direct-hanger gap of 159 mm, a slope Nonius of 540 mm (gap 436) and a soffit Nonius of 440 mm (drop 407), and says the 540 mm top is still priced as the 440 mm set. An older note in this file said a 140 mm void and a 440 mm Nonius top. The solids were not remeasured, and neither length is chosen here.
+**open:** hanger catalogue lengths. The section label in `models/obyvak/` says “Přímý závěs 200 mm” and “Nonius 540 mm”. PR #77 prints a direct-hanger gap of 159 mm, a slope Nonius of 540 mm (gap 436) and a soffit Nonius of 440 mm (drop 407), and says the 540 mm top is still priced as the 440 mm set. An older note in this file said a 140 mm void and a 440 mm Nonius top. The solids were not remeasured, and neither length is chosen here.
 
 `open:` internal StoSilent corners (slope-to-slope, slope-to-gable, slope-to-soffit where the face is plastered) are a tape-cut separation joint, not acrylic on the finish. At the gables the alternative is a StoSilent Profile AP 210 shadow gap. Confirm with the plasterer and Sto for a NaturHeld substrate. Sources are the two Sto links in the module note of `obyvak_geom.py`, and the Czech steps in the PR #77 body.
 
@@ -111,17 +111,17 @@ The GKF lid (2 × 12.5 mm, extra layer on the attic side) has its top flush with
 
 `open:` that slope-to-lid joint is intentionally not detailed. No angle, no UD. Finish of the edge is undecided. Source: PR #77 body (“Open: slope / lid joint”). PR #68 had specified a 40° UD screwed to the soffit CD with an acrylic joint; the later model removed that profile.
 
-The kastlík frame is CD 60×27 at the same 500 mm module, plus a UD on the eave wall. No timber. Furniture and the wall plate do not carry the box. The plate only fixes the board edge. Vertical CD studs hang from the lid CD and brace into the wall UD. Source: module notes in `obyvak_geom.py` and `obyvak.py`.
+The kastlík frame is CD 60×27 at the same 500 mm module, plus a UD on the eave wall. No timber. Furniture and the wall plate do not carry the box. The plate only fixes the board edge. Vertical CD studs hang from the lid CD and brace into the wall UD. Source: module notes in `obyvak_geom.py` and `models/obyvak/`.
 
 ## Eaves, columns, traps
 
 Left (window) eave: the GKF ends on a UD screwed to the plaster. NaturHeld ends on the plaster too. Wool above the brake fills back up to the plate. There is no direct hanger through the wall plate. Source: `ObyvakLayout` left-eave comment, PR #77.
 
-Terrace wall (X = 0): the glass stops at the 2500 mm head. Above that head the wall is the same plaster, masonry and EPS as the solid eave, cut to the head, 1 mm off the glass. There is no separate lintel piece. Source: `models/obyvak.py` module note, commits `9de1f9a` and `b433609`.
+Terrace wall (X = 0): the glass stops at the 2500 mm head. Above that head the wall is the same plaster, masonry and EPS as the solid eave, cut to the head, 1 mm off the glass. There is no separate lintel piece. Source: `models/obyvak/` module note, commits `9de1f9a` and `b433609`.
 
 100×100 columns stand in front of the glass at the pier centres and stop one brick course (250 mm, `venec_h`) below the beam. Cabinet eave: 300×300 columns on the room side, same Y grid, drawn as masonry. Walls: 250 mm masonry, 200 mm EPS, 15 mm plaster. Wall plate 140×100 mm, centred on the ring beam. Source: `ObyvakParams`, PR #37.
 
-Bass traps are standalone CW walls on the gable only. They are not hung from the slopes or the soffit. The lining stops at the soffit face as well as under the slopes. GKB 12.5 meets those finishes with a flexible acrylic bead and nothing else. Studs vertical at 625 mm. 1250 mm boards span two bays. 2750 mm sheets cover the peak (about 2626 mm above 2450) with no horizontal joint. Source: `obyvak.py` module note, `bass_*` fields, PR #78.
+Bass traps are standalone CW walls on the gable only. They are not hung from the slopes or the soffit. The lining stops at the soffit face as well as under the slopes. GKB 12.5 meets those finishes with a flexible acrylic bead and nothing else. Studs vertical at 625 mm. 1250 mm boards span two bays. 2750 mm sheets cover the peak (about 2626 mm above 2450) with no horizontal joint. Source: `models/obyvak/` module note, `bass_*` fields, PR #78.
 
 | | Kitchen, wall → room | Living, wall → room |
 | --- | --- | --- |
@@ -135,4 +135,4 @@ Source: the bass-trap comments on `ObyvakParams`. The tune note’s “kitchen 1
 
 ## What the section does not include
 
-No exterior gable crown (those walls belong to the next rooms). No EPS on the gable shells. The floor slab is the clear room only. Source: `models/obyvak.py` scope list.
+No exterior gable crown (those walls belong to the next rooms). No EPS on the gable shells. The floor slab is the clear room only. Source: `models/obyvak/` scope list.
