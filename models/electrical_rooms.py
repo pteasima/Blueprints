@@ -87,15 +87,31 @@ def strip_runs(element: dict) -> list[list[tuple[float, float, float]]]:
 
 
 _RUNS: dict | None = None
+_RUNS_LIST: list | None = None
+
+
+def share_kitchen_runs(runs: list) -> None:
+    """Reuse runs already built by the ground-floor export.
+
+    ``kitchen_cabinet.runs`` is about 0.3 s. The living-room LED panels need
+    the same layout the furnishings builder just computed, so the export
+    hands that list over instead of loading furnishings.yaml again.
+    """
+    global _RUNS, _RUNS_LIST
+    _RUNS_LIST = list(runs)
+    _RUNS = {run.id: run for run in _RUNS_LIST}
+
+
+def shared_kitchen_runs() -> list | None:
+    return _RUNS_LIST
 
 
 def _kitchen_runs() -> dict:
-    global _RUNS
     if _RUNS is None:
         import ground_floor  # late: ground_floor imports this module
         import kitchen_cabinet as kc
 
-        _RUNS = {r.id: r for r in kc.runs(ground_floor.load_furnishings())}
+        share_kitchen_runs(kc.runs(ground_floor.load_furnishings()))
     return _RUNS
 
 

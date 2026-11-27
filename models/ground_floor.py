@@ -741,6 +741,10 @@ def _furnishing_parts(doc: dict, motions: list | None = None, layers: dict | Non
     # Kitchen runs: bays become groups, parts become the run's children
     # (models/kitchen_ifc.py). Their solids come from the same layout below.
     runs = kitchen_cabinet.runs(doc)
+    # The living-room LED panels in electrical_rooms need this same layout.
+    import electrical_rooms
+
+    electrical_rooms.share_kitchen_runs(runs)
     # Petr, 2026-11-13: the ceiling line is an invariant (models/ceiling_line.py).
     ceiling_line.check_ceiling_line(doc, FURNISHING_LISTS, runs)
     for run in runs:
@@ -1830,7 +1834,8 @@ def ifc_index() -> dict:
     from blueprints.ifc_index import index_documents
 
     docs = []
-    from electrical_rooms import source_paths as electrical_room_paths
+    furnishings_doc = None
+    from electrical_rooms import share_kitchen_runs, shared_kitchen_runs, source_paths as electrical_room_paths
 
     for path in (SOURCE_PATH, FURNISHINGS_PATH, BEDROOM, BATH_120, BATH_107, *electrical_room_paths()):
         if path.is_file():
@@ -1840,8 +1845,21 @@ def ifc_index() -> dict:
             if path == FURNISHINGS_PATH:
                 # Linked sizes (Pset_Links, models/furnishing_links.py).
                 doc = furnishing_links.resolve(doc)
+                furnishings_doc = doc
             docs.append(doc)
-    return index_documents(docs, transform=kitchen_ifc.apply)
+    # Reuse the kitchen layout from build() when it already ran in this
+    # process (avoids a second kitchen_cabinet.runs inside kitchen_ifc.apply).
+    runs = shared_kitchen_runs()
+    if runs is None and furnishings_doc is not None:
+        runs = kitchen_cabinet.runs(furnishings_doc)
+        share_kitchen_runs(runs)
+
+    def transform(model, doc):
+        if doc is furnishings_doc and runs is not None:
+            return kitchen_ifc.apply(model, doc, runs)
+        return kitchen_ifc.apply(model, doc)
+
+    return index_documents(docs, transform=transform)
 
 
 if __name__ == "__main__":

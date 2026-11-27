@@ -72,6 +72,8 @@ python -m blueprints.export <model>
 
 Example: `python -m blueprints.export ground_floor`
 
+Re-exporting unchanged sources reuses `.cache/export/` (gitignored): the previous STEP, STL, GLB, HTML and viewer sidecars are copied back, so the CAD build and tessellation are skipped. The key is a hash of `models/`, `src/blueprints/`, `vendor/yaml-ifc/`, `inputs/`, `scripts/` and `pyproject.toml`. Bypass with `--no-cache` or `BLUEPRINTS_NO_CACHE=1`. `--profile` prints wall-clock time for the main stages.
+
 Solids land in `exports/<model>/` as STEP/STL plus USDZ/GLB/HTML for the viewer. 2D modules (`obyvak_section`, `obyvak_elevation`) still write layered SVG/DXF/PNG. The HTML viewer is a self-contained offline WebGL page (embedded GLB + custom Three.js shell) with part toggles, camera presets, and scene drawings; USDZ remains for Quick Look/AR. Contractor plates — labels, dimensions, a named orthographic scene — come from the viewer **Drawing** button (PNG and PDF of that view).
 
 The first reply after the push is a plain explanation of what was done, plus the preview URL. If that explanation would benefit from extra images (2D plans, renders, a viewer drawing), say you are continuing to work on those. Unless he asks to cancel that work, send the images later. Images must never block the preview link. If you do later send a drawing, capture the viewer drawing, not a hidden-line dump of the solid.
