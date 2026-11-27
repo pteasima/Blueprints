@@ -133,7 +133,7 @@ Other heavy groups on main (bb58c41), primitives: bathroom grout 1,182 (5.7 %; 1
 
 | chunk | loads | size |
 | --- | --- | ---: |
-| edit mode (`editMode.js`, TransformControls, fixture and cable edits) | right after `mountViewer` (it also draws cable routes for the Parts leaf and `?cables=1`) | 82 KiB |
+| edit mode (`editMode.js` and its session modules, TransformControls, fixture and cable edits) | right after `mountViewer` (it also draws cable routes for the Parts leaf and `?cables=1`) | 90 KiB |
 | walk (`walkMode.js`, `walkPhysics.js`, three-mesh-bvh) | right after `mountViewer`; a saved walk pose re-enters once it is in | 63 KiB |
 | measure (`measure.js`) | right after `mountViewer` | 13 KiB |
 | Realistic catalogue parser (`catalogueYaml.js`, js-yaml) | when Realistic is first chosen | 43 KiB |
