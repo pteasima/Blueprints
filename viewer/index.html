@@ -66,7 +66,7 @@
   // The viewer is an ES module with lazy chunks (src/blueprints/viewer/build.mjs,
   // built by CI, not committed). preview_hub.ensure_viewer_shell stamps ?v= on
   // it. Imported here so it downloads in parallel with the model.
-  const viewerModule = import("./viewer.js?v=e7adbe6743");
+  const viewerModule = import("./viewer.js?v=9b079bd91b");
   const errEl = document.getElementById("err");
   function fail(msg) {
     errEl.style.display = "block";
