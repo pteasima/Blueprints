@@ -2,7 +2,7 @@
 
 Every kitchen cabinet run is one **monoblock**: a single carcass body whose neighbouring bays share their walls. The first detailed bay is **SF-I600a**, on the island's west row, the first 600 south of the rectangular sink, facing west. It is the bay with the knife drawer. Every other bay is a plain carcass with one slab front.
 
-Code: `models/kitchen_cabinet.py` (layout), `models/kitchen_ifc.py` (IFC structure). Parameters live in `inputs/ground_floor/furnishings.yaml`: each run is an element with `Pset_KitchenRun`, each bay keeps its box and names its run in `Pset_KitchenBay`, and a drawer bay has `Pset_Drawers`. The live Pages preview is how a change is reviewed. `scripts/render_kitchen_run.py <run> [--bay <id>] [--open <drawer ids>]` can draw plan, front and iso PNGs later if they would help explain something; do not wait for them before sending the preview link.
+Code: `models/kitchen_cabinet/` (layout), `models/kitchen_ifc.py` (IFC structure). Parameters live in `inputs/ground_floor/furnishings.yaml`: each run is an element with `Pset_KitchenRun`, each bay keeps its box and names its run in `Pset_KitchenBay`, and a drawer bay has `Pset_Drawers`. The live Pages preview is how a change is reviewed. `scripts/render_kitchen_run.py <run> [--bay <id>] [--open <drawer ids>]` can draw plan, front and iso PNGs later if they would help explain something; do not wait for them before sending the preview link.
 
 Labels: **Petr** is a fact Petr gave, with the date or document. **Blum** is from Blum's MERIVOBOX catalogue 2024/25 (every drawer and pull-out since 2026-11-23, see “Drawers: Blum MERIVOBOX”). **IKEA** is an IKEA METOD carcass default (the MAXIMERA drawer assumption is gone since 2026-11-23), used because Petr said “when unsure of details and margins, default to IKEA METOD measurements” (2026-11-11). These cabinets are custom made, so every IKEA number can change. `guess:` is a number with no source at all. **Cosentino** is from the maker's colour page.
 
@@ -609,7 +609,7 @@ The red bay numbers on this row are hidden under the cards. The card (and the li
 
 Built-ins are yaml elements with no box: `electricAppliances` or `sanitaryTerminals` with a `Pset_BuiltIn`.
 
-- `models/kitchen_cabinet.py` lays each one out:
+- `models/kitchen_cabinet/` lays each one out:
   - `Kind: Niche` with `Bay` and `Zone`: centred in the niche, standing on its board. The fascia is on the fronts' plane and the body fills the niche.
   - `Kind: Disposer` with `Sink`: a cylinder hung from the bowl's drain. When `Pset_Sink DrainOffsetFromBack` is set, the cylinder is centred on that drain (both RS15 sinks: 115 mm from the inner bowl back, official Teka plan, the shared 400 mm bowl depth). Otherwise it is centred on the bowl (`guess:`).
   - `Kind: Tap` with `Sink`: a body 50 round, `HoleOffset` behind the *inner bowl back* (not the rim — until 2026-11-22 the offset was applied to the overall box, 20 mm too far back on these Teka sinks), an arm to `SpoutReach`, and a nozzle down to `SpoutHeight` (`guess:` shape).
@@ -752,7 +752,7 @@ So the photo is **HF top, the bi-fold**, opening to the **88° stop**, and the c
 | Reach in front of the face, open at 88° | **443** (swept four-bar) | X max = FHo × 0.9 + 1.5 × FD + 35 = 460, at 116° | same |
 | Shelves behind the fronts | 22 | min 22 (the lever runs there) | planning sketch, “Platzbedarf” |
 
-Modelled (`models/kitchen_cabinet.py`, band kind `lift`, `AVENTOS` table):
+Modelled (`models/kitchen_cabinet/`, band kind `lift`, `AVENTOS` table):
 - Each bay's fronts are `<bay>-LIFT1` (upper, 2006–2448) and `<bay>-LIFT2` (lower, 1562–2004), `Role: Lift`, `Pset_KitchenFront` with the fitting, front weight, power factor, the open clearances and the override; the lower front also has its open pose (`OpenBottomEdgeHeight`, `OpenBottomEdgeAhead`, `OpenLowerAngle`).
 - A lift mechanism `<bay>-LIFTMECH-L` / `-R` on each side panel, just under the top board, 30 off the side, 264 deep, 195 high (2237–2432). Blum's sketch gives min 264 and 194.
 - A lever `<bay>-LIFTARM-L` / `-R` per side, `Role: LiftArm`: a 16 × 16 bar from the mechanism's underside (its pivot, 2237) plumb down just behind the fronts to its fixing on the lower front at 1819, 186 under the centre hinge. Blum's “Platzbedarf” sketch has the lever this way (pivot under the mechanism, fixed to the lower front); its length is solved (below).
@@ -764,7 +764,7 @@ Modelled (`models/kitchen_cabinet.py`, band kind `lift`, `AVENTOS` table):
 
 Petr, 2026-11-13: “And make them open too, add the animation for this opening mechanism.”, then “they stay only partially folded, like my image”, then “do 88 degrees in the model.”
 
-Each lift front is one `kind: "linkage"` record in `ground_floor.doors.json` (`_linkage_motion` in `models/ground_floor.py`, from the `LiftJoint` that `_lift_motion` in `models/kitchen_cabinet.py` puts on each part). A linkage is a list of joints; each turns its part meshes about a line (`pivot` point, `axis`), by `angles` sampled at 25 even steps from shut to open, relative to a `parent` joint or to the model. The viewer (`doors.js` `bindLinkage`) interpolates them over 900 ms. Any part of it takes the tap.
+Each lift front is one `kind: "linkage"` record in `ground_floor.doors.json` (`_linkage_motion` in `models/ground_floor.py`, from the `LiftJoint` that `_lift_motion` in `models/kitchen_cabinet/` puts on each part). A linkage is a list of joints; each turns its part meshes about a line (`pivot` point, `axis`), by `angles` sampled at 25 even steps from shut to open, relative to a `parent` joint or to the model. The viewer (`doors.js` `bindLinkage`) interpolates them over 900 ms. Any part of it takes the tap.
 
 The motion is a four-bar (`_hf_fourbar`): carcass, upper front, lower front, lever.
 
@@ -1738,7 +1738,7 @@ z 1560 └───┘ play 1.5 (SF-DH 2)                 play 1.5 (SF-DH 2)└�
 
 Diffuser play per end (since 2026-11-22 b): **2.75 west, 3 SF-DH**. PMMA grows about 70 µm/m·K: over 30 K the 2408 west diffuser grows 5.1 and the 2608 dining one 5.5, about half at each end. The same play applies front and back, where it is far more than needed. Do not glue the diffuser; it must be able to slide.
 
-The parts per lit run: `KR-WEST-H-BOTTOM` / `KR-DH-BOTTOM` (the board: web, the frame round the rebate, the ledge), `<run or bay>-LED1-PLATE` (the aluminium plates, butted) and `-LED1-SHEET` (the LED pieces). Without `LedContinuous` it is one field per cabinet section, as first built. The diffusers belong to the light fixtures (below). All of it follows the cabinet: change a bay's width, depth or a parameter and the fields, the cut list and the lights move with it (`models/kitchen_cabinet.py`, `_led_bottom`, `LedField`).
+The parts per lit run: `KR-WEST-H-BOTTOM` / `KR-DH-BOTTOM` (the board: web, the frame round the rebate, the ledge), `<run or bay>-LED1-PLATE` (the aluminium plates, butted) and `-LED1-SHEET` (the LED pieces). Without `LedContinuous` it is one field per cabinet section, as first built. The diffusers belong to the light fixtures (below). All of it follows the cabinet: change a bay's width, depth or a parameter and the fields, the cut list and the lights move with it (`models/kitchen_cabinet/`, `_led_bottom`, `LedField`).
 
 Woodworker notes:
 - `open:` fixing the 30 bottom: the pocket takes the lower 15 of the board up to 25 from its edges, so confirmats or dowels into the bottom's edge should sit in the upper half (the web), or use the 25 frame only.
