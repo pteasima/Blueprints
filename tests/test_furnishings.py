@@ -232,8 +232,8 @@ def test_furnishings_file_has_the_space_and_the_kitchen_boxes():
         _check_record(by_id[expected[0]], expected)
 
 
-def test_build_extrudes_walls_and_the_kitchen_boxes():
-    shape, meta = build()
+def test_build_extrudes_walls_and_the_kitchen_boxes(ground_floor_model):
+    shape, meta = ground_floor_model
     records = furnishing_records()
     assert meta["derived"]["furnishings"] == len(records)
     assert meta["derived"]["furnishings_commit"] == "0f96c26"
@@ -413,9 +413,9 @@ SOFA_IDS = (
 )
 
 
-def test_living_room_boxes_follow_plan_v3():
+def test_living_room_boxes_follow_plan_v3(ground_floor_model):
     """Every new solid fills its YAML box. The sofa outline is the plan box."""
-    shape, _meta = build()
+    shape, _meta = ground_floor_model
     placed = {
         child.furnishing_id: child
         for child in shape.children

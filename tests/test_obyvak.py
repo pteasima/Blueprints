@@ -10,7 +10,6 @@ from obyvak import (  # noqa: E402
     FACE_GAP,
     bass_cd_centres,
     bass_soffit_stop_x,
-    build,
     build_elevation_slice,
     build_section_slice,
     part_groups,
@@ -57,9 +56,7 @@ from obyvak_geom import (  # noqa: E402
     ObyvakParams,
     TIE_LIGHT_ABOVE,
     TIE_LIGHT_PAIR,
-    build_layout,
 )
-from obyvak_section import build as build_section  # noqa: E402
 from blueprints.export_utils import export_shape  # noqa: E402
 from blueprints.scenes import cad_mm_to_gltf_m, write_scenes_json  # noqa: E402
 
@@ -68,9 +65,8 @@ def _labeled(shape, name: str):
     return [c for c in shape.children if c.label == name]
 
 
-def test_layout_ceiling_and_gable():
-    p = ObyvakParams()
-    g = build_layout(p)
+def test_layout_ceiling_and_gable(obyvak_layout):
+    p, g = obyvak_layout
     assert abs(g.z_ceil(0.0) - g.h_start) < 1e-9
     assert abs(g.z_ceil(g.x_false) - g.z_false) < 1e-9
     assert abs(g.z_ceil(g.x_furn) - g.z_gkf_horiz) < 1e-9
@@ -226,16 +222,12 @@ def _overlap_volume(a, b) -> float:
     hit = a.intersect(b)
     if hit is None:
         return 0.0
-    try:
-        return float(hit.volume)
-    except Exception:
-        return 0.0
+    return float(hit.volume)
 
 
-def test_tie_rods_and_slope_lights():
+def test_tie_rods_and_slope_lights(obyvak_model, obyvak_layout):
     """Six ø14 ties in every other bay, and five spot pairs on each slope."""
-    p = ObyvakParams()
-    g = build_layout(p)
+    p, g = obyvak_layout
     y0, y1 = FACE_GAP, p.room_length - FACE_GAP
     ys = g.tie_y_stations(y0, y1)
     raf = g.rafter_y_stations(y0, y1)
@@ -270,7 +262,7 @@ def test_tie_rods_and_slope_lights():
         sum(h[2] for h in heads if h[5] == "L") / 10.0 - (z + TIE_LIGHT_ABOVE)
     ) < 1e-6
 
-    shape, _ = build(p)
+    shape, _ = obyvak_model
     rods = _labeled(shape, LABEL_TIE_ROD)
     lights = _labeled(shape, LABEL_SLOPE_LIGHT)
     assert len(rods) == 6
@@ -316,13 +308,12 @@ def test_tie_rods_and_slope_lights():
     assert {"ties-front", "ties-plan", "ties-section"} <= set(ids)
 
 
-def test_krov_is_discrete_rafters():
+def test_krov_is_discrete_rafters(obyvak_model, obyvak_layout):
     """Krov = krokve 100/160 @ 875 mm (sheet E_KROK), not a solid timber slab."""
-    p = ObyvakParams()
-    g = build_layout(p)
+    p, g = obyvak_layout
     assert p.rafter_spacing == 875.0
     assert p.rafter_w == 100.0
-    shape, _ = build(p)
+    shape, _ = obyvak_model
     krovs = _labeled(shape, LABEL_RAFTERS)
     expected = g.rafter_y_stations(FACE_GAP, p.room_length - FACE_GAP)
     assert len(krovs) == len(expected)
@@ -337,13 +328,12 @@ def test_krov_is_discrete_rafters():
         assert abs((b - a) - p.rafter_spacing) < 1.0
 
 
-def test_mineral_wool_fills_rafter_bays():
+def test_mineral_wool_fills_rafter_bays(obyvak_model, obyvak_layout):
     """Mineral wool packs the 160 mm between krokve and stops under the vent."""
     from build123d import Box, Location
 
-    p = ObyvakParams()
-    g = build_layout(p)
-    shape, _ = build(p)
+    p, g = obyvak_layout
+    shape, _ = obyvak_model
     wool_parts = _labeled(shape, LABEL_PLENUM_WOOL)
     assert len(wool_parts) == 1
     wool = wool_parts[0]
@@ -378,14 +368,13 @@ def test_mineral_wool_fills_rafter_bays():
         assert _hit_volume(wool, (x_plate, stations[4], z_in)) < 1.0
 
 
-def test_plenum_fill_hangers_and_vent():
+def test_plenum_fill_hangers_and_vent(obyvak_model, obyvak_layout):
     """Wool depths stay as solved, the vent stays empty, and hangers fit the stock."""
     import math
 
     from build123d import Box, Location
 
-    p = ObyvakParams()
-    g = build_layout(p)
+    p, g = obyvak_layout
     assert g.z_soffit_lid == p.eave_wall_z + p.plate_h - p.sdk_t
     assert abs(g.wool_left - (g.t_left - g.t_foil_outer_left)) < 1e-6
     assert abs(g.wool_right - (g.t_right - g.t_foil_outer_right)) < 1e-6
@@ -417,7 +406,7 @@ def test_plenum_fill_hangers_and_vent():
     soffit_drop = g.horiz_hanger_top_z(xc) - g.horiz_hanger_bot_z()
     assert soffit_drop < 440.0
 
-    shape, _ = build(p)
+    shape, _ = obyvak_model
     wool = _labeled(shape, LABEL_PLENUM_WOOL)[0]
 
     def _hit_volume(xyz) -> float:
@@ -440,11 +429,10 @@ def test_plenum_fill_hangers_and_vent():
         assert _hit_volume(vent_pt) < 1.0
 
 
-def test_sikminy_and_soffit_stack_in_3d():
+def test_sikminy_and_soffit_stack_in_3d(obyvak_model, obyvak_layout):
     """Šikminy NH screwed to CD, and the soffit box with mineral wool and its rost."""
-    p = ObyvakParams()
-    g = build_layout(p)
-    shape, _ = build(p)
+    p, g = obyvak_layout
+    shape, _ = obyvak_model
     nh = _labeled(shape, LABEL_SLOPE_NH) + _labeled(shape, LABEL_SOFFIT_NH)
     wool = _labeled(shape, LABEL_SOFFIT_WOOL)
     rost = [
@@ -649,11 +637,10 @@ def test_sikminy_and_soffit_stack_in_3d():
     assert len(wall_braces) >= 4
 
 
-def test_soffit_hangs_from_cd_not_furniture_or_pozednice():
+def test_soffit_hangs_from_cd_not_furniture_or_pozednice(obyvak_model, obyvak_layout):
     """Soffit load path: krokve → Nonius → CD → drop hangers → rost (wall = brace only)."""
-    p = ObyvakParams()
-    g = build_layout(p)
-    shape, _ = build(p)
+    p, g = obyvak_layout
+    shape, _ = obyvak_model
     # No rost/CD/zaves share volume with furniture.
     furn = _labeled(shape, LABEL_FURNITURE)[0]
     for label in (LABEL_SOFFIT_CD, LABEL_SOFFIT_UD, LABEL_SOFFIT_NONIUS):
@@ -662,12 +649,17 @@ def test_soffit_hangs_from_cd_not_furniture_or_pozednice():
                 continue
             try:
                 hit = part.intersect(furn)
-            except Exception:
-                continue
+            except Exception as exc:
+                raise RuntimeError(f"OCC boolean failed for {label} ∩ furniture") from exc
             if not hit:
                 continue
             shapes = list(hit) if hasattr(hit, "__iter__") and not hasattr(hit, "volume") else [hit]
-            vol = sum(float(getattr(s, "volume", 0) or 0) for s in shapes)
+            vol = 0.0
+            for s in shapes:
+                try:
+                    vol += float(s.volume)
+                except Exception as exc:
+                    raise RuntimeError(f"OCC volume failed for {label} ∩ furniture") from exc
             assert vol <= 1.0, f"{label} intersects furniture"
     # Pozednice stays above the hang plane — not a hang point.
     for poz in _labeled(shape, LABEL_WALL_PLATE):
@@ -675,11 +667,10 @@ def test_soffit_hangs_from_cd_not_furniture_or_pozednice():
         assert poz.bounding_box().min.Z > g.z_gkf_horiz + 10.0
 
 
-def test_soffit_ducts_sit_under_lid_on_wall_plate():
+def test_soffit_ducts_sit_under_lid_on_wall_plate(obyvak_model, obyvak_layout):
     """Three Ø160 pipes under the GKF; the board ends on the pozednice, not the plaster."""
-    p = ObyvakParams()
-    g = build_layout(p)
-    shape, _ = build(p)
+    p, g = obyvak_layout
+    shape, _ = obyvak_model
     ducts = _labeled(shape, LABEL_SOFFIT_DUCT)
     assert len(ducts) == 3
     r = p.duct_od * 0.5
@@ -717,7 +708,7 @@ def test_soffit_ducts_sit_under_lid_on_wall_plate():
         assert poz.bounding_box().min.Z > g.z_soffit_rail()
 
 
-def test_soffit_scene_recipe():
+def test_soffit_scene_recipe(obyvak_layout):
     specs = scenes()
     assert [s["id"] for s in specs][:4] == [
         "soffit",
@@ -749,8 +740,7 @@ def test_soffit_scene_recipe():
     assert len(cam["orthoFit"]) == 2
     assert cam["orthoFit"][0] > 0 and cam["orthoFit"][1] > 0
     # Target sits in the cabinet soffit bay (glTF metres).
-    p = ObyvakParams()
-    g = build_layout(p)
+    p, g = obyvak_layout
     tx, ty, tz = cam["target"]
     assert g.x_furn * 0.001 <= tx <= (g.x_furn + p.furniture_width) * 0.001
     assert g.z_nabeh_bot * 0.001 <= ty <= g.z_soffit_lid * 0.001
@@ -760,7 +750,7 @@ def test_soffit_scene_recipe():
     assert abs(cad_mm_to_gltf_m((0, 1000, 0))[2] - (-1.0)) < 1e-12
 
 
-def test_gable_scene_recipe():
+def test_gable_scene_recipe(obyvak_layout):
     """Gable: ISO length cut framed on the full šikminy (not soffit-zoomed)."""
     specs = {s["id"]: s for s in scenes()}
     assert "gable" in specs
@@ -781,8 +771,7 @@ def test_gable_scene_recipe():
     assert abs(cam["position"][0] - cam["target"][0]) < 1e-9
     assert abs(cam["position"][1] - cam["target"][1]) < 1e-9
     assert cam["orthoFit"][0] > 0 and cam["orthoFit"][1] > 0
-    p = ObyvakParams()
-    g = build_layout(p)
+    p, g = obyvak_layout
     tx, ty, tz = cam["target"]
     # Target near room mid-width / mid-height of the pitched pack.
     assert 0.0 <= tx <= p.room_width * 0.001
@@ -797,11 +786,10 @@ def test_gable_scene_recipe():
     assert cam["orthoFit"][1] > soffit_fit[1]
 
 
-def test_sikmina_drawing_scenes():
+def test_sikmina_drawing_scenes(obyvak_layout):
     """Lattice is head-on to the window slope; section shows both slopes and the soffit."""
     specs = {s["id"]: s for s in scenes()}
-    p = ObyvakParams()
-    g = build_layout(p)
+    p, g = obyvak_layout
     columns = g.eave_column_y_centres()
 
     lattice = specs["sikmina-lattice"]
@@ -1141,13 +1129,12 @@ def test_write_scenes_json(tmp_path):
     assert path.stat().st_size > 0
 
 
-def test_3d_matches_section_and_elevation_masses():
-    p = ObyvakParams()
-    g = build_layout(p)
-    shape, meta = build(p)
+def test_3d_matches_section_and_elevation_masses(obyvak_model, obyvak_layout, obyvak_section_model):
+    p, g = obyvak_layout
+    shape, meta = obyvak_model
     assert meta["kind"] == "solid"
     assert meta["derived"]["face_gap"] == FACE_GAP
-    _, section_meta = build_section()
+    _, section_meta = obyvak_section_model
     assert abs(meta["derived"]["h_start"] - section_meta["derived"]["h_start"]) < 1e-9
 
     labels = {c.label for c in shape.children}
@@ -1420,9 +1407,9 @@ def test_3d_matches_section_and_elevation_masses():
     assert abs(bb.max.Z - p.ridge_z) < 5.0
 
 
-def test_3d_parts_do_not_interpenetrate():
+def test_3d_parts_do_not_interpenetrate(obyvak_model):
     """Distinct solids must not share volume (mates use FACE_GAP; roof is notched)."""
-    shape, _ = build()
+    shape, _ = obyvak_model
     kids = list(shape.children)
 
     def aabb_hit(a, b) -> bool:
@@ -1440,8 +1427,8 @@ def test_3d_parts_do_not_interpenetrate():
                 continue
             try:
                 hit = a.intersect(b)
-            except Exception:
-                continue
+            except Exception as exc:
+                raise RuntimeError(f"OCC boolean failed for {a.label} ∩ {b.label}") from exc
             if not hit:
                 continue
             shapes = list(hit) if hasattr(hit, "__iter__") and not hasattr(hit, "volume") else [hit]
@@ -1449,8 +1436,10 @@ def test_3d_parts_do_not_interpenetrate():
             for s in shapes:
                 try:
                     vol += float(s.volume)
-                except Exception:
-                    pass
+                except Exception as exc:
+                    raise RuntimeError(
+                        f"OCC volume failed for {a.label} ∩ {b.label}"
+                    ) from exc
             # Soffit Nonius rods pierce the vapour brake on purpose (taped grommet),
             # screws are driven into what they fix, and the bass-trap anchor is
             # set into the plaster and the Ytong.
@@ -1465,12 +1454,11 @@ def test_3d_parts_do_not_interpenetrate():
     assert violations == [], sorted({(a, b) for a, b, _v in violations})
 
 
-def test_obyvak_3d_exports(tmp_path, monkeypatch):
+def test_obyvak_3d_exports(tmp_path, monkeypatch, obyvak_model):
     import blueprints.export_utils as eu
 
     monkeypatch.setattr(eu, "EXPORTS_DIR", tmp_path)
-    p = ObyvakParams()
-    shape, _meta = build(p)
+    shape, _meta = obyvak_model
     paths = export_shape(shape, "obyvak", formats=("step", "stl"))
     assert paths["step"].stat().st_size > 0
     assert paths["stl"].stat().st_size > 0
@@ -1510,7 +1498,7 @@ def test_soffit_acoustics_ignore_the_steel_section():
     assert abs(geom.soffit_air_depth - 0.32589419162443256) < 1e-9
 
 
-def test_default_gable_lattices_and_as_built_wool():
+def test_default_gable_lattices_and_as_built_wool(obyvak_model):
     """Both traps are vertical CW @ 625. Wool stays 130.5 and 300."""
     p = ObyvakParams()
     assert abs(p.bass_k_wool - 130.5) < 1e-9
@@ -1527,7 +1515,7 @@ def test_default_gable_lattices_and_as_built_wool():
     assert abs(x_furn - 4375.0 - 525.0) < 1e-6
     assert len(studs) == 9
 
-    shape, _ = build(p)
+    shape, _ = obyvak_model
     cws = _labeled(shape, LABEL_BASS_CW)
 
     def vertical_xs(side: str) -> list[float]:
@@ -1619,7 +1607,7 @@ def test_default_gable_lattices_and_as_built_wool():
 
 
 
-def test_shallow_trap_is_on_the_two_door_gable():
+def test_shallow_trap_is_on_the_two_door_gable(obyvak_model):
     """The 190 mm trap (wool 130.5 / air 47) sits on the gable with two sliding doors."""
     p = ObyvakParams()
     assert p.pocket_door_h <= p.predstena_bottom_z
@@ -1631,7 +1619,7 @@ def test_shallow_trap_is_on_the_two_door_gable():
     assert sorted((d[1], d[2]) for d in kitchen) == [(0.0, 1100.0), (3700.0, 1000.0)]
     assert (living[0][1], living[0][2]) == (0.0, 1000.0)
 
-    shape, _ = build(p)
+    shape, _ = obyvak_model
     wool = _labeled(shape, LABEL_BASS_WOOL)
     shallow = min(wool, key=lambda s: s.bounding_box().size.Y)
     deep = max(wool, key=lambda s: s.bounding_box().size.Y)
@@ -1658,13 +1646,13 @@ def test_shallow_trap_is_on_the_two_door_gable():
     assert two_door_face.volume < one_door_face.volume
 
 
-def test_part_groups_tree():
+def test_part_groups_tree(obyvak_model):
     groups = part_groups()
     assert groups == PART_GROUPS
     ids = [g["id"] for g in groups]
     assert ids == ["shell", "slopes", "soffit", "bass_traps", "furniture"]
     leaf_ids = {c for g in groups for c in g["children"]}
-    shape, _ = build()
+    shape, _ = obyvak_model
     for label in {c.label for c in shape.children}:
         assert label in leaf_ids, label
 

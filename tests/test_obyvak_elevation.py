@@ -5,7 +5,6 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "models"))
 
-from obyvak_elevation import build  # noqa: E402
 from obyvak_geom import (  # noqa: E402
     LABEL_BASS_WOOL,
     LABEL_POCKET_FRAME,
@@ -14,9 +13,7 @@ from obyvak_geom import (  # noqa: E402
     LABEL_SLOPE_NH,
     LABEL_WALL_GKF,
     ObyvakParams,
-    build_layout,
 )
-from obyvak_section import build as build_section  # noqa: E402
 from blueprints.export_utils import export_section  # noqa: E402
 
 
@@ -34,9 +31,8 @@ def _faces(shape, label: str):
     return [c for c in shape.children if c.label == label]
 
 
-def test_soffit_and_predsteny_match_source_sheet():
-    p = ObyvakParams()
-    g = build_layout(p)
+def test_soffit_and_predsteny_match_source_sheet(obyvak_layout, obyvak_section_model):
+    p, g = obyvak_layout
     z_soffit = _source_z_soffit(p)
     assert abs(g.z_soffit - z_soffit) < 1e-9
     assert abs(g.z_soffit - 5264.57) < 0.05
@@ -44,13 +40,13 @@ def test_soffit_and_predsteny_match_source_sheet():
     assert p.predstena_living == 450.0
     assert g.x_pred_l == p.predstena_living
     assert g.x_pred_r == p.room_length - p.predstena_kitchen
-    _, section_meta = build_section()
+    _, section_meta = obyvak_section_model
     assert abs(g.h_start - section_meta["derived"]["h_start"]) < 1e-9
 
 
-def test_elevation_is_cut_from_the_model():
+def test_elevation_is_cut_from_the_model(obyvak_elevation_model):
     p = ObyvakParams()
-    shape, meta = build(p)
+    shape, meta = obyvak_elevation_model
     assert meta["kind"] == "section"
     assert meta["derived"]["predstena_kitchen"] == 190.0
     assert meta["derived"]["predstena_living"] == 450.0
@@ -69,11 +65,11 @@ def test_elevation_is_cut_from_the_model():
         assert abs(face.bounding_box().min.Y) < 1e-6 and abs(face.bounding_box().max.Y) < 1e-6
 
 
-def test_obyvak_elevation_exports(tmp_path, monkeypatch):
+def test_obyvak_elevation_exports(tmp_path, monkeypatch, obyvak_elevation_model):
     import blueprints.export_utils as eu
 
     monkeypatch.setattr(eu, "EXPORTS_DIR", tmp_path)
-    shape, _meta = build()
+    shape, _meta = obyvak_elevation_model
     paths = export_section(shape, "obyvak_elevation")
     assert paths["svg"].exists()
     assert paths["dxf"].exists()

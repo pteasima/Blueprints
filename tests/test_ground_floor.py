@@ -20,7 +20,6 @@ from ground_floor import (  # noqa: E402
     SOURCE_COMMIT,
     SOURCE_PATH,
     WINDOW_TRAVEL,
-    build,
     furnishing_records,
     scenes,
     window_panels,
@@ -39,7 +38,7 @@ def test_source_records_yaml_ifc_origin():
     assert SOURCE_PATH.is_file()
 
 
-def test_ground_floor_builds_and_cuts_openings():
+def test_ground_floor_builds_and_cuts_openings(ground_floor_model):
     doc = _document()
     walls = doc["walls"]
     openings = doc["openings"]
@@ -55,7 +54,7 @@ def test_ground_floor_builds_and_cuts_openings():
     assert len(tees) == 32
     assert len(connections) - len(tees) == 23
 
-    shape, meta = build()
+    shape, meta = ground_floor_model
     assert shape is not None
     derived = meta["derived"]
     assert derived["walls"] == 67
@@ -199,10 +198,10 @@ def test_start_hinge_is_the_leaf_edge_on_a_turned_wall():
     assert right["panels"][0]["slide"] == pytest.approx([0.0, 0.0, -0.77], abs=1e-4)
 
 
-def test_butt_corners_do_not_overlap():
+def test_butt_corners_do_not_overlap(ground_floor_model):
     """Adjoining wall solids share a face and essentially no volume."""
     doc = _document()
-    shape, _meta = build()
+    shape, _meta = ground_floor_model
     solids = _wall_solids(shape)
     seen = {"L": None, "T": None}
     checked = []
@@ -350,9 +349,9 @@ def test_committed_window_records():
         assert sash["max"][2] < fixed["min"][2] + 1e-9
 
 
-def test_living_room_o11_sashes_meet_in_the_middle():
+def test_living_room_o11_sashes_meet_in_the_middle(ground_floor_model):
     """OP27/OP29 slide toward OP28 on the indoor face and meet at its centre."""
-    records = {item["id"]: item for item in build()[1]["window_motions"]}
+    records = {item["id"]: item for item in ground_floor_model[1]["window_motions"]}
     centre = records["WIN-OP28"]["panels"][0]["center"][0]
     assert records["WIN-OP28"]["operable"] is False
     left, right = records["WIN-OP27"]["panels"][0], records["WIN-OP29"]["panels"][0]
@@ -363,14 +362,14 @@ def test_living_room_o11_sashes_meet_in_the_middle():
     assert left["max"][2] < fixed["min"][2] and right["max"][2] < fixed["min"][2]
 
 
-def _door_records():
-    return {item["id"]: item for item in build()[1]["door_motions"] if item["kind"] != "drawer"}
+def _door_records(ground_floor_model):
+    return {item["id"]: item for item in ground_floor_model[1]["door_motions"] if item["kind"] != "drawer"}
 
 
-def test_garage_doors_are_sectional():
+def test_garage_doors_are_sectional(ground_floor_model):
     from ground_floor import SECTIONAL_BEND_MM, SECTIONAL_SECTIONS
 
-    records = _door_records()
+    records = _door_records(ground_floor_model)
     for door_id in ("D-OP49", "D-OP50"):
         r = records[door_id]
         assert r["kind"] == "sectional"
@@ -387,8 +386,8 @@ def test_garage_doors_are_sectional():
         assert r["top"][1] + r["bend"] < 2.75
 
 
-def test_living_room_pocket_doors_slide_into_the_wall():
-    records = _door_records()
+def test_living_room_pocket_doors_slide_into_the_wall(ground_floor_model):
+    records = _door_records(ground_floor_model)
     # (id, slides north): leaves parked per the DWG plan, on the living-room face.
     for door_id, north in (("D-OP24", True), ("D-OP25", False), ("D-OP33", True)):
         r = records[door_id]
@@ -430,10 +429,10 @@ def _plan(v):
     return v[0], -v[2]
 
 
-def test_hinge_sides_and_swings():
+def test_hinge_sides_and_swings(ground_floor_model):
     import math as _m
 
-    records = _door_records()
+    records = _door_records(ground_floor_model)
     for door_id, (side, swing) in HINGES.items():
         r = records[door_id]
         assert r["kind"] == "hinged", door_id
@@ -451,7 +450,7 @@ def test_hinge_sides_and_swings():
         assert went[swing], (door_id, swing, (px, py), (hx, hy))
 
 
-def test_hallway_doors_hang_flush_like_the_wc():
+def test_hallway_doors_hang_flush_like_the_wc(ground_floor_model):
     """OP11, OP17 and OP19 share the hallway face line (W-017, y 9.475).
 
     The leaf's south face, not its midplane, sits on that line, so the
@@ -459,7 +458,7 @@ def test_hallway_doors_hang_flush_like_the_wc():
     """
     from ground_floor import DOOR_LEAF_MM
 
-    records = _door_records()
+    records = _door_records(ground_floor_model)
     wc = records["D-OP19"]["center"][2]
     for door_id in ("D-OP11", "D-OP17"):
         assert records[door_id]["center"][2] == pytest.approx(wc, abs=1e-6), door_id
@@ -509,7 +508,7 @@ def _plan_xy(v):
     return v[0], -v[2]
 
 
-def test_reverse_interior_doors_sit_flush():
+def test_reverse_interior_doors_sit_flush(ground_floor_model):
     """Each reverse leaf's circulation face is coplanar with the flush plane."""
     from ground_floor import (
         DOOR_LEAF_MM,
@@ -524,7 +523,7 @@ def test_reverse_interior_doors_sit_flush():
     doors = {item["id"]: item for item in doc["doors"]}
     openings = {item["id"]: item for item in doc["openings"]}
     walls = {item["id"]: item for item in doc["walls"]}
-    records = _door_records()
+    records = _door_records(ground_floor_model)
     half = DOOR_LEAF_MM / 1000.0 / 2.0
 
     for door_id, flush in REVERSE_FLUSH.items():
@@ -583,7 +582,7 @@ def test_head_heights_match_the_window_head():
         assert doors[f"D-{oid}"]["OverallHeight"] == pytest.approx(window_head)
 
 
-def test_terrace_door_is_a_glazed_hinged_leaf():
+def test_terrace_door_is_a_glazed_hinged_leaf(ground_floor_model):
     """OP32 onto the terrace: hinged, glass in a frame (Petr 2026-11-12)."""
     import struct
 
@@ -593,7 +592,7 @@ def test_terrace_door_is_a_glazed_hinged_leaf():
     doors = {item["id"]: item for item in doc["doors"]}
     glazed = [d for d, item in doors.items() if is_glazed_door(item)]
     assert glazed == ["D-OP32"]
-    assert _door_records()["D-OP32"]["kind"] == "hinged"
+    assert _door_records(ground_floor_model)["D-OP32"]["kind"] == "hinged"
     data = (ROOT / "docs" / "models" / "ground_floor.glb").read_bytes()
     n, _ = struct.unpack_from("<II", data, 12)
     nodes = json.loads(data[20 : 20 + n])["nodes"]

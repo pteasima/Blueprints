@@ -16,7 +16,6 @@ from bedroom_111 import (  # noqa: E402
     room_faces,
     scenes,
 )
-from ground_floor import build  # noqa: E402
 from yaml_ifc import read_ifc, validation_errors, write_ifc  # noqa: E402
 from yaml_ifc.yamlio import load as load_yaml_ifc  # noqa: E402
 
@@ -171,8 +170,8 @@ def _centre(part) -> tuple[float, float, float]:
     )
 
 
-def test_boxes_sit_in_the_bay_and_round_trip(tmp_path):
-    placed = parts()
+def test_boxes_sit_in_the_bay_and_round_trip(tmp_path, bedroom_111_parts):
+    placed = bedroom_111_parts
     records = device_records()
     boxed = {record["id"] for record in records if _boxed(record)}
     furniture = {item["id"] for item in load_document()["furniture"] if _boxed(item)}
@@ -254,9 +253,9 @@ def _check_rail_strips(placed):
     assert max(box.max.Z for box in by_id["C8-S"]) <= rail_bottom + 0.5
 
 
-def test_ground_floor_carries_the_bedroom_plan():
-    _shape, meta = build()
-    assert meta["derived"]["bedroom_111"] == len(parts())
+def test_ground_floor_carries_the_bedroom_plan(ground_floor_model, bedroom_111_parts):
+    _shape, meta = ground_floor_model
+    assert meta["derived"]["bedroom_111"] == len(bedroom_111_parts)
     unboxed = {record["id"] for record in device_records() if not _boxed(record)}
     assert unboxed == _NO_BOX
     glance = next(scene for scene in scenes() if scene["id"] == "bedroom-1.11")

@@ -4,7 +4,6 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "models"))
 
-from obyvak_section import ObyvakParams, build, build_layout  # noqa: E402
 from obyvak_geom import (  # noqa: E402
     LABEL_FLOOR,
     LABEL_PLENUM_WOOL,
@@ -26,10 +25,9 @@ from obyvak_geom import (  # noqa: E402
 from blueprints.export_utils import export_section  # noqa: E402
 
 
-def test_derived_matches_source_sheet():
+def test_derived_matches_source_sheet(obyvak_layout):
     """Room face is set so the left stack, including 160 mm of wool, fits the rafter."""
-    p = ObyvakParams()
-    g = build_layout(p)
+    p, g = obyvak_layout
     stack = (
         p.finish_t
         + p.basic_t
@@ -52,11 +50,11 @@ def test_derived_matches_source_sheet():
     assert soffit_h > 0
 
 
-def test_obyvak_section_builds_and_exports(tmp_path, monkeypatch):
+def test_obyvak_section_builds_and_exports(tmp_path, monkeypatch, obyvak_section_model):
     import blueprints.export_utils as eu
 
     monkeypatch.setattr(eu, "EXPORTS_DIR", tmp_path)
-    shape, meta = build()
+    shape, meta = obyvak_section_model
     assert shape is not None
     assert meta["kind"] == "section"
     labels = {c.label for c in shape.children}

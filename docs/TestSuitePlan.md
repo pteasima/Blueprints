@@ -1,6 +1,6 @@
 # Test suite improvement plan
 
-Status: planned, not started. Pick this up when CI is re-enabled or when tests next need work. Source: a read-only review of the suite on `main` at `85d5cd0` (2026-11-11), requested by Petr: "I wanna make sure these are bringing actual value, by testing actual logic. Not just checking measurements that then need to be updated on every model change." Petr approved this plan the same day. Line numbers below refer to `85d5cd0` and will drift.
+Status: partly done. Session-scoped builds, YAML validation of every `inputs/ground_floor/*.yaml`, and overlap helpers that raise on an OCC boolean error landed on `refactor/test-harness` (2026-11-27). The tests workflow stays paused. Remaining items below are still planned. Source: a read-only review of the suite on `main` at `85d5cd0` (2026-11-11), requested by Petr: "I wanna make sure these are bringing actual value, by testing actual logic. Not just checking measurements that then need to be updated on every model change." Petr approved this plan the same day. Line numbers below refer to `85d5cd0` and will drift.
 
 ## Goal
 
@@ -25,7 +25,7 @@ Tests should check logic and invariants that would catch a real mistake. They sh
 
 ## Plan, most valuable first
 
-1. **Build each model once per test session.** Add a `conftest.py` with session-scoped fixtures (e.g. `obyvak_model = build(ObyvakParams())`) shared by all tests that need the model. Expected: CI drops from about 19 minutes to a few. Mark the export and study tests (USDZ, STEP/STL, `run_study`) `@pytest.mark.slow` and optionally run them only on `main`.
+1. **Build each model once per test session.** Done: `tests/conftest.py` session fixtures (`obyvak_model`, `ground_floor_model`, bathroom layouts/parts, and the 2D section/elevation builds) are shared and must not be mutated. Remaining: mark the export and study tests (USDZ, STEP/STL, `run_study`) `@pytest.mark.slow` and optionally run them only on `main`.
 2. **Run every viewer JS test in CI**, e.g. switch to `node --test` or loop over `*.test.mjs` in the workflow. Fix or delete `layerDepthBias.test.mjs`. Partly done 2026-11-12: the `viewer-js` workflow loops over `*.test.mjs` and skips only `layerDepthBias.test.mjs`, which still needs fixing or deleting.
 3. **Derive expectations from the source of truth instead of copying numbers.**
    - `test_furnishings.py`: delete the hard-coded kitchen table (22 IDs with origin, size and hinge) and the second table of world-mm boxes, and use the existing `_world_box(record)` comparison for every record. The same goes for the hard-coded sofa, TV and table coordinates.
@@ -38,8 +38,8 @@ Tests should check logic and invariants that would catch a real mistake. They sh
    - cabinet heights come from one parameter (e.g. all base cabinet tops equal);
    - every hinged door's swing (from `door_motions`) is clear of other solids, including neighbouring cabinet doors;
    - clearances are at least the documented minimums.
-   Overlap helpers must raise on a boolean-operation error. Today they swallow it (`except Exception: continue`, `test_obyvak.py:663` and `:1443`), so a failed OCC boolean counts as "no overlap" and the invariant passes silently.
-5. **Validate and round-trip every input YAML.** One parametrized test over `inputs/ground_floor/*.yaml`: load, unique IDs, references resolve (`VoidsElement`, `ContainedInStructure`, connections), `write_ifc`, `validation_errors == []`, round trip.
+   Overlap helpers must raise on a boolean-operation error. Done: the helpers in `test_obyvak.py` now raise instead of treating a failed OCC boolean as "no overlap".
+5. **Validate and round-trip every input YAML.** Done: `tests/test_yaml_roundtrip.py` covers every yaml-ifc file under `inputs/ground_floor/`, including `ground-floor.yaml`. `cable-routes.yaml` is not yaml-ifc and is checked for unique IDs only. Known gap: yaml-ifc drops `Description` on some `outlets` records; the test allows that loss and fails on any other mismatch.
 6. **Remove or shrink copy, doc and snapshot tests.** Delete the checks that grep AGENTS.md or YAML text (`test_export_artifacts.py:253`, `test_bedroom_111_plan.py:78–108`). Shrink the scene and callout tests (`test_obyvak.py:720–1127`) to structural checks: scenes reference existing labels, callouts don't cross, the camera frames its target. Drop exact strings, opacity values and float literals to 15 digits.
 7. **Split the large tests and share helpers.** Break up the multi-hundred-line functions in `test_obyvak.py` (around `:443` and `:1144`) into one invariant per test, and move the overlap and interior-probe helpers (copied in at least four places) into one shared test module. Use tolerances instead of exact float equality on geometry.
 

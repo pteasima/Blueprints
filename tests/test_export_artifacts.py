@@ -208,10 +208,9 @@ def test_usdz_tabletop_scale_for_room_sized_mesh(tmp_path):
     assert stage.GetDefaultPrim().GetAttribute("preliminary:anchoring:type").Get() == "plane"
 
 
-def test_obyvak_usdz_has_layer_materials(tmp_path, monkeypatch):
+def test_obyvak_usdz_has_layer_materials(tmp_path, monkeypatch, obyvak_model):
     """Each construction layer must keep its own UsdPreviewSurface colour in the USDZ."""
     import blueprints.export_utils as eu
-    from obyvak import build as build_obyvak
     from pxr import UsdShade
 
     monkeypatch.setattr(eu, "EXPORTS_DIR", tmp_path)
@@ -219,7 +218,7 @@ def test_obyvak_usdz_has_layer_materials(tmp_path, monkeypatch):
     monkeypatch.setenv("BLUEPRINTS_SKIP_PREVIEW_SITE", "1")
     (tmp_path / "artifacts").mkdir()
 
-    shape, _ = build_obyvak()
+    shape, _ = obyvak_model
     paths = export_shape(shape, "obyvak", formats=("stl",))
     stage = Usd.Stage.Open(str(paths["usdz"]))
     assert stage is not None
