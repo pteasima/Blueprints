@@ -1,0 +1,58 @@
+[
+  {
+    "id": "enclosure",
+    "locked": true,
+    "children": [
+      "masonry",
+      "glazing",
+      "door"
+    ]
+  },
+  {
+    "id": "interior",
+    "children": [
+      "cabinet",
+      "gridfinity",
+      "contents",
+      "worktop",
+      "oak",
+      "appliance",
+      "hob",
+      "sink",
+      "upholstery",
+      "furniture",
+      "rug",
+      "light"
+    ]
+  },
+  {
+    "id": "soffit",
+    "children": [
+      "soffit_naturheld_140",
+      "soffit_gkb"
+    ]
+  },
+  {
+    "id": "bathroom",
+    "children": [
+      "floor_tile",
+      "wall_tile",
+      "grout",
+      "drain",
+      "fixture",
+      "prewall",
+      "screen",
+      "profile",
+      "vanity"
+    ]
+  },
+  {
+    "id": "electrical",
+    "children": [
+      "switch",
+      "sensor",
+      "outlet",
+      "actuator"
+    ]
+  }
+]
