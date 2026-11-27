@@ -1,0 +1,2 @@
+Source: ambientCG "Fabric062", https://ambientcg.com/view?id=Fabric062 (CC0 1.0). Physical size 0.40 m (ambientCG metadata).
+Modified: colour re-tinted to the assumed warm light grey #a8a398.
