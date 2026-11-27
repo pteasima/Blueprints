@@ -27,7 +27,7 @@ dev = [
 ]
 
 [project.scripts]
-bp-export = "blueprints.cli:main"
+bp-export = "blueprints.export:main"
 
 [build-system]
 requires = ["setuptools>=84.2"]

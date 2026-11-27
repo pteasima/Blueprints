@@ -114,10 +114,8 @@ Petr, 2026-11-19 (Cody chat): "its now slow and crashing on iPad too. I think Bo
 
 Headless Chrome (SwiftShader, `/workspace/perfbisect` harness on the box), draws per frame while orbiting and JS heap, before → after: Shaded 32.6k → 14.3k draws, heap 249 → 177 MB; Realistic 61.2k → 17.2k draws; iPhone viewport (390×844 @3x, 4× CPU throttle) Shaded 40.8k → 17.2k draws, heap 485 → 179 MB. The kitchen island renders pixel for pixel the same with the layer off (drawers shut).
 
-What changed: the baseplates are no longer fused into their drawers in `ground_floor.glb`. `python -m blueprints.export ground_floor` writes them to `ground_floor.gridfinity.glb`, listed in `ground_floor.layers.json`. The viewer shows **Interior › Gridfinity baseplates** in Parts, off by default; switching it on fetches that GLB once and hangs each plate on its drawer, so it slides, hides and highlights with it ([viewer README](../../src/blueprints/viewer/README.md) "On-demand layers"). `?gridfinity=1` opens with it on. The IFC (`ground_floor.ifc.json`, the drawer's `Pset_KitchenFront.Gridfinity`) is unchanged.
+What changed: the baseplates are no longer fused into their drawers in `ground_floor.glb`. `python -m blueprints.export ground_floor` writes them to `ground_floor.gridfinity.glb`, listed in `ground_floor.layers.json`. The viewer shows **Interior › Gridfinity baseplates** in Parts and hangs each plate on its drawer, so it slides, hides and highlights with it ([viewer README](../../src/blueprints/viewer/README.md) "On-demand layers"). PR 127 shipped this leaf off by default (`?gridfinity=1` opened with it on). Since 2026-11-20 it is **on by default** (see above); `?gridfinity=0` skips the download. The IFC (`ground_floor.ifc.json`, the drawer's `Pset_KitchenFront.Gridfinity`) is unchanged.
 
 To fuse them back into the drawers: set `GRIDFINITY_ON_DEMAND = False` in `models/ground_floor.py` and export. The plates are fused into the drawers again and the layer files are removed.
-
-Since 2026-11-20 the layer is on by default (above).
 
 Other heavy groups on main (bb58c41), primitives: bathroom grout 1,182 (5.7 %; 13 % once the plates are out), cabinet carcasses 870, cabinet drawers 852, lights 822, oak furniture 762 (the bookcase alone 450), outlets 708. None is a tenth of the baseplates' cost, so none is hidden.

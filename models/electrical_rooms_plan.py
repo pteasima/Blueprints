@@ -19,8 +19,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from yaml_ifc.yamlio import load as load_yaml  # noqa: E402
 
+from blueprints.ifc_helpers import _pset_props  # noqa: E402
+
 from electrical_rooms import (  # noqa: E402
-    _pset_props,
     device_records,
     load_document,
     panel_rects,

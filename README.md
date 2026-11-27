@@ -1,10 +1,8 @@
 # Blueprints
 
-Parametric 2D/3D house and furniture models in Python, using [build123d](https://github.com/gumyr/build123d) (Open CASCADE).
+Parametric 2D/3D house and furniture models in Python, using [build123d](https://github.com/gumyr/build123d) (Open CASCADE). Parameters drive the solids; 2D drawings and other exports are cut or computed from that model.
 
-This repo is meant for Cursor agent workflows: edit parameters, regenerate geometry, export STEP/STL and viewer drawings, and review diffs + screenshots from the Cursor iOS app or desktop.
-
-Process for agents and contributors is in [AGENTS.md](AGENTS.md).
+Process for agents and contributors is in [AGENTS.md](AGENTS.md). Review geometry on the live [GitHub Pages hub](https://pteasima.github.io/Blueprints/) (see [docs/README.md](docs/README.md)); images in chat are optional follow-up, not the review path.
 
 ## Why build123d (vs plain ezdxf)
 
@@ -13,7 +11,7 @@ Process for agents and contributors is in [AGENTS.md](AGENTS.md).
 | **ezdxf alone** | Direct DXF drawing; easy for one-off 2D lines, but dimensions are often hard-coded and edits scatter across drawing commands. |
 | **build123d** | Parameters drive solids and sketches; regenerate 3D + 2D exports from one source of truth. Better for “what if we move this beam 200 mm?” |
 
-ezdxf remains available (it is a build123d dependency) for importing legacy DXF from Grok Bot and for DXF export when needed.
+ezdxf remains available (it is a build123d dependency) for importing legacy DXF and for DXF export when needed.
 
 ## Quick start
 
@@ -25,30 +23,48 @@ source .venv/bin/activate
 python -m blueprints.export hello_world
 ```
 
+The same CLI is also `python -m blueprints hello_world` or `bp-export hello_world`.
+
 Generated artifacts: `STEP`/`STL` (desktop CAD), `USDZ`/`GLB` (Git LFS under `docs/models/`). 2D sections still write `SVG`/`DXF`/`PNG`. Labelled 3D plates are PNG/PDF from the viewer Drawing button. GitHub Actions builds `docs/index.html` (web-viewer hub) and deploys production at https://pteasima.github.io/Blueprints/ plus per-PR previews under `/pr-preview/pr-<N>/` (see `AGENTS.md` / `docs/README.md`).
+
+## Docs
+
+| Path | What it is |
+| --- | --- |
+| [AGENTS.md](AGENTS.md) | Agent and contributor process (preview link first, export, tests) |
+| [docs/design/README.md](docs/design/README.md) | Design facts the models use, one file per area |
+| [docs/electrical/](docs/electrical/) | Fixture plans, cable routes, and viewer edit mode |
+| [docs/viewer/](docs/viewer/) | Viewer performance budget and remembered visibility |
+| [src/blueprints/viewer/README.md](src/blueprints/viewer/README.md) | Current WebGL viewer behaviour |
+| [docs/materials/README.md](docs/materials/README.md) | Realistic-mode material catalogue |
+| [docs/Home.md](docs/Home.md) | Split with the Home repo (model and IFC stay here) |
+| [docs/Roadmap.md](docs/Roadmap.md) | Long-term plans |
+| [docs/TestSuitePlan.md](docs/TestSuitePlan.md) | Planned test-suite improvements |
+| [docs/README.md](docs/README.md) | Pages hub layout and enablement |
 
 ## Layout
 
 ```
-src/blueprints/     # package: export helpers + CLI
+src/blueprints/     # package: export helpers, viewer shell, CLI
 models/             # parametric models (one module per design)
-exports/            # generated STEP / STL / SVG / DXF / PNG (gitignored binaries OK to keep small SVGs)
-inputs/             # drop legacy DXF / notes from prior tools (next step)
-docs/               # design notes in docs/design/; split with Home in docs/Home.md
-scripts/            # Cloud Agent / local bootstrap
+exports/            # generated STEP / STL / SVG / DXF / PNG (gitignored binaries)
+inputs/             # source YAML, catalogues, and legacy DXF / Python used by the models
+docs/               # design and electrical notes; Pages hub sources (docs/models, docs/viewer)
+scripts/            # Cloud Agent / local bootstrap and one-off tools
+tests/              # pytest suite (workflow currently paused; see AGENTS.md)
+vendor/             # vendored yaml-ifc (private upstream)
+.github/            # GitHub Actions (pages-content, viewer-js, model-budget, tests)
 AGENTS.md           # agent operating notes (preview link first, env)
 .cursor/            # cloud agent environment hints
 ```
 
-Long-term plans: [docs/Roadmap.md](docs/Roadmap.md).
-
 ## Agent workflow
 
-1. Drop source material (DXF + prior Python) under `inputs/`.
-2. Ask the agent to port a design into a parametric `models/<name>.py`.
-3. Agent exports, pushes, and sends the Pages preview link with a short explanation of what changed.
-4. If extra images would help, the agent says it is still making them and sends them later unless asked to stop.
-5. Review on the preview link, or on iOS (diffs + any later images) or MacBook.
+1. Read the design facts in `docs/design/` (and electrical / materials notes when they apply).
+2. Edit the parametric model under `models/` (source material already in `inputs/` if needed).
+3. Export, push, and send the Pages preview link with a short explanation of what changed.
+4. If extra images would help, say they are still being made and send them later unless asked to stop.
+5. Review on the preview link.
 
 ## Requirements
 
