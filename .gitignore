@@ -22,8 +22,7 @@ exports/**/*.usdz
 !docs/previews/**/*.png
 !docs/previews/**/*.svg
 
-# GitHub Pages Quick Look inputs (USDZ via LFS). Hub HTML is CI-generated.
-!docs/models/**/*.usdz
+# GitHub Pages viewer inputs (GLB via LFS). Hub HTML is CI-generated.
 !docs/models/**/*.glb
 !docs/models/**/*.json
 !docs/.nojekyll

@@ -3,7 +3,7 @@
  * Run: node scripts/smoke-viewer-pane.mjs
  */
 import { createServer } from "node:http";
-import { readFileSync, statSync } from "node:fs";
+import { mkdirSync, readFileSync, statSync } from "node:fs";
 import { extname, join } from "node:path";
 import { chromium } from "playwright";
 
@@ -111,11 +111,12 @@ if (!(value > 0.4)) {
   throw new Error(`range did not scrub in one gesture, value=${value}`);
 }
 
-// Capture screenshots for artifacts
-await page.screenshot({ path: "/opt/cursor/artifacts/viewer_wide_pane_open.png", fullPage: true });
+// Capture screenshots for local inspection
+mkdirSync("exports/smoke", { recursive: true });
+await page.screenshot({ path: "exports/smoke/viewer_wide_pane_open.png", fullPage: true });
 await toggle.click();
 await page.waitForTimeout(350);
-await page.screenshot({ path: "/opt/cursor/artifacts/viewer_wide_pane_closed.png", fullPage: true });
+await page.screenshot({ path: "exports/smoke/viewer_wide_pane_closed.png", fullPage: true });
 
 console.log("smoke-viewer-pane: ok", { value });
 await browser.close();

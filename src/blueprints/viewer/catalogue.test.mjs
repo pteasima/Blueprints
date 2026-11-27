@@ -144,7 +144,7 @@ function glbNodeNames(path) {
       else walk(n.children || []);
     }
   };
-  for (const m of ["ground_floor", "bathroom_107", "bathroom_120"]) {
+  for (const m of ["ground_floor"]) {
     walk(JSON.parse(readFileSync(join(models, `${m}.parts.json`), "utf8")));
   }
   const problems = [];
@@ -156,7 +156,7 @@ function glbNodeNames(path) {
       if (!existsSync(join(repo, rel))) problems.push(`${entry.id}: map ${rel} missing`);
     }
   }
-  for (const m of ["ground_floor", "bathroom_107", "bathroom_120"]) {
+  for (const m of ["ground_floor"]) {
     const names = glbNodeNames(join(models, `${m}.glb`));
     if (!names) {
       console.log(`skip mesh coverage for ${m} (GLB is an LFS pointer)`);

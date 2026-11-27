@@ -199,7 +199,7 @@ export function applyLayerDepthBias(mat, depthBias = 0) {
  * Nested Parts outline. A child is a leaf CAD label (string) or a group
  * `{ id, children }` (optional `label` is ignored — viewer i18n supplies display).
  * Keep leaf ids in sync with SOLID_COLORS / SECTION_LAYERS.
- * Model-specific trees come from `*.parts.json`; this is the hello_world fallback.
+ * Model-specific trees come from `*.parts.json`; this is the fallback when a model has none.
  *
  * @typedef {{ id: string, label?: string, children: PartTreeNode[] }} PartTreeGroup
  * @typedef {string | PartTreeGroup} PartTreeNode
