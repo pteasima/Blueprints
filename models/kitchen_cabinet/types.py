@@ -255,16 +255,32 @@ def _sample_segments(segs: list, step_deg: float = 10.0) -> list:
     return out
 
 
-def grip_profile(p: dict) -> list:
+def grip_profile(p: dict, *, kind: str = "j") -> list:
     """The VOXTORP J cup's cut-away region as segments in (d, u): d into the
     front from its visible face, u from the gripped edge toward the middle of
-    the front. Overcut 1 past the face and the edge. See ``IKEA_DEFAULTS_MM``."""
+    the front. Overcut 1 past the face and the edge. See ``IKEA_DEFAULTS_MM``.
+
+    ``kind="j"`` is the full J (face cut from the edge down to the crest,
+    back wall back up to the edge). ``kind="u"`` is the same scooped bowl
+    and crest, but without the J's straight stem: the visible face ends at
+    the rounded lip, so the groove is an uneven U opening at the edge
+    (Petr, 2026-11-27, t1013u / VoxtorpUGripPhoto.jpg).
+    """
     hc, hb, tb = p["JGripLipTop"], p["JGripCupDepth"], p["JGripBackWall"]
+    kind = (kind or "j").lower()
+    if kind == "u":
+        # Same bowl under the crest; the crest sits at the gripped edge
+        # (no 21 mm straight face cut). Cup depth below the new edge is
+        # the J's (bottom − lip) = 7 mm.
+        hb = hb - hc
+        hc = 0.0
+    elif kind != "j":
+        raise ValueError(f"grip_profile kind={kind!r}, expected 'j' or 'u'")
     R, rc, rk, re, e = p["JGripBowlRadius"], p["JGripCrestRadius"], p["JGripCornerRadius"], p["JGripEdgeRadius"], 1.0
     dw = p["FrontThickness"] - tb  # the back wall's inside
     dy = (hb - R) - (hc + rc)  # bowl centre to crest centre, along u
-    if not (0.0 < tb < p["FrontThickness"] and 0.0 < hc < hb and R > 0.0 and rc > 0.0 and (R + rc) ** 2 > dy * dy):
-        raise ValueError("J grip: 0 < JGripLipTop < JGripCupDepth, 0 < JGripBackWall < FrontThickness, "
+    if not (0.0 < tb < p["FrontThickness"] and 0.0 <= hc < hb and R > 0.0 and rc > 0.0 and (R + rc) ** 2 > dy * dy):
+        raise ValueError("J grip: 0 <= JGripLipTop < JGripCupDepth, 0 < JGripBackWall < FrontThickness, "
                          "and the bowl must reach the crest")
     xb = rc + math.sqrt((R + rc) ** 2 - dy * dy)  # the bowl's centre (and bottom point), d
     if not (0.0 <= rk and xb <= dw - rk + 1e-9 and rk <= hb - re and 0.0 <= re <= tb):

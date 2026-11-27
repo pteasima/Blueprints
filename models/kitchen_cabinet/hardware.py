@@ -132,6 +132,10 @@ IKEA_DEFAULTS_MM = {
     "JGripCrestRadius": 1.0,
     "JGripCornerRadius": 4.0,
     "JGripEdgeRadius": 0.0,
+    # Bottom-edge grips drop the straight stem (kind="u" in grip_profile):
+    # the same crest and bowl, opening at the edge as an uneven U
+    # (Petr, 2026-11-27, t1013u; docs/design/sources/VoxtorpUGripPhoto.jpg).
+
     # Wall (top) cabinets: the lowest front hangs this far below the carcass
     # bottom as the grip (Petr, 2026-11-22 c: "plain 1cm overhang on all top
     # cabinets"). The top edge does not move.
