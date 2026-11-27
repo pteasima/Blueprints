@@ -108,7 +108,7 @@
 # The Teka bowl is an IfcSanitaryTerminal, 750×440×200, centred in the 800,
 # undermount: rim under the 20 mm stone at 910, cut-out 706×396 R13 (Teka).
 # The EcoMaster EVO3 disposer and the Hansgrohe M71 tap hang on the bowl
-# (Pset_BuiltIn, laid out in models/kitchen_cabinet.py). Fronts, drawers,
+# (Pset_BuiltIn, laid out in models/kitchen_cabinet/). Fronts, drawers,
 # doors and shelves from the plan's notes: Pset_Fronts on each bay, see
 # docs/design/kitchen-cabinets.md "Fronts and interiors".
 #
@@ -1429,7 +1429,7 @@ sanitaryTerminals:
           CutoutRadius: 0.013
           DrainOffsetFromBack: 0.115
   # Taps from the plan's cards, laid out behind their sink's inner bowl
-  # by models/kitchen_cabinet.py (Pset_BuiltIn HoleOffset). Body 50 round,
+  # by models/kitchen_cabinet/ (Pset_BuiltIn HoleOffset). Body 50 round,
   # arm 30 (shape guess:). Official sizes in docs/design/kitchen-cabinets.md.
   - id: SN-TAP-W
     Name: "Hansgrohe M71 M7117-H320"
@@ -1525,7 +1525,7 @@ electricAppliances:
     Width: 0.598
     Depth: 0.53
     Height: 0.865
-  # Built-in appliances and sink fittings with no box: models/kitchen_cabinet.py
+  # Built-in appliances and sink fittings with no box: models/kitchen_cabinet/
   # lays each one out from its Pset_BuiltIn (the bay band or the sink it
   # belongs to) and models/kitchen_ifc.py gives it its body. Maker's numbers
   # and URLs: docs/design/kitchen-cabinets.md "Appliances".
@@ -1759,7 +1759,7 @@ electricAppliances:
 furniture:
   # Kitchen runs: one monoblock body each (Petr, 2026-11-12). No box: the
   # parts are laid out from the bays (Pset_KitchenBay.Run) by
-  # models/kitchen_cabinet.py. Lengths in metres. Sources:
+  # models/kitchen_cabinet/. Lengths in metres. Sources:
   # docs/design/kitchen-cabinets.md.
   - id: KR-ISL
     Name: "Ostrov"
@@ -1955,7 +1955,7 @@ furniture:
           # it." A 30 bottom (was 18), the panel field routed into its
           # underside, underside unchanged at 1560 (see kitchen-cabinets.md
           # "LED panels under the wall cabinets"; layer sizes are the
-          # Led* defaults in models/kitchen_cabinet.py).
+          # Led* defaults in models/kitchen_cabinet/).
           LedPanels: true
           BottomThickness: 0.030
           # Petr, 2026-11-22 a (PR #138): "cant we make it a single panel
@@ -2007,7 +2007,7 @@ furniture:
           # it." A 30 bottom (was 18), the panel field routed into its
           # underside, underside unchanged at 1560 (see kitchen-cabinets.md
           # "LED panels under the wall cabinets"; layer sizes are the
-          # Led* defaults in models/kitchen_cabinet.py).
+          # Led* defaults in models/kitchen_cabinet/).
           LedPanels: true
           BottomThickness: 0.030
           # Petr, 2026-11-22 a (PR #138): "cant we make it a single panel

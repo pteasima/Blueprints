@@ -1,4 +1,4 @@
-"""PNG previews of one kitchen run, straight from models/kitchen_cabinet.py.
+"""PNG previews of one kitchen run, straight from models/kitchen_cabinet/.
 
     python scripts/render_kitchen_run.py KR-ISL [--bay SF-I600a] [--open SF-I600a-D1,SF-T2-DOOR1,SF-BH800-LIFT] [--out DIR]
 

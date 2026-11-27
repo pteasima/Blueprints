@@ -14,7 +14,7 @@ LED panels under the wall cabinets (2026-11-22 a) have no box either:
 ``Pset_YamlIfc.PanelRun`` names the kitchen run whose cabinet bottoms carry
 the LED fields (``Pset_KitchenRun.LedPanels``), and the light is drawn as
 those fields' opal diffusers, so it follows the cabinets
-(``models/kitchen_cabinet.py``, ``LedField``).
+(``models/kitchen_cabinet/``, ``LedField``).
 
     python -m blueprints.export ground_floor
 """
