@@ -10,7 +10,7 @@ World:
 
 2D drawings sit in Plane.XZ for the orthographic exporter:
   section X = transverse, elevation X = longitudinal (world Y).
-3D (`models/obyvak.py`) extrudes section profiles along Y and gable profiles along Y
+3D (`models/obyvak/`) extrudes section profiles along Y and gable profiles along Y
 (thickness) / X (span).
 
 Šikminy stack (interior → attic; thicknesses ⊥ to the face unless noted):
