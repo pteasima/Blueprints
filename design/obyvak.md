@@ -23,7 +23,7 @@ The room’s visual centre is the false ridge: the middle of the clear width, wh
 
 2450 = (5350 − 450) / 2. In the storey frame that is 10.25 + 2.450 = 12.700, which is also the midpoint of y 10.25–15.15. The wall-to-wall middle is 225 mm further north.
 
-Source for the intent “visual centre”: the owner, in the 2026-11-06 request that added this file. Source for the formula: `furniture_width`, `x_furn`, `x_false` in `models/obyvak_geom.py`. The same X = 2450 is the “False ridge” row of `docs/acoustics/LAYOUT.md`. Source for the storey faces: `ROOM_Y0` / `ROOM_Y1` in `models/ground_floor.py`. Source for “225 mm south of the full-room centre” as a television placement: PR #83 body and the living-room note on that branch’s `furnishings.yaml` (not merged; see [furnishings.md](furnishings.md)).
+Source for the intent “visual centre”: the owner, in the 2026-11-06 request that added this file. Source for the formula: `furniture_width`, `x_furn`, `x_false` in `models/obyvak_geom.py`. The same X = 2450 is the “False ridge” row of `docs/acoustics/LAYOUT.md`. Source for the storey faces: `ROOM_Y0` / `ROOM_Y1` in `models/ground_floor/`. Source for “225 mm south of the full-room centre” as a television placement: PR #83 body and the living-room note on that branch’s `furnishings.yaml` (not merged; see [furnishings.md](furnishings.md)).
 
 `x_ridge` is only the roof’s geometric centre, where the rafters peak. Do not aim a television, a table, or a talker at it.
 

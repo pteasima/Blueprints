@@ -37,7 +37,7 @@ Unlike visibility and the camera, fixture and cable-route edits in Edit mode are
 
 ## Enclosure
 
-`ground_floor`'s first Parts group, formerly "Shell", is now **Enclosure** (cs "Obálka"): masonry (walls), glazing (windows) and doors (`models/ground_floor.py` `part_groups`). Its slider toggles all three; each leaf keeps its own slider. Other models keep their "Shell".
+`ground_floor`'s first Parts group, formerly "Shell", is now **Enclosure** (cs "Obálka"): masonry (walls), glazing (windows) and doors (`models/ground_floor/` `part_groups`). Its slider toggles all three; each leaf keeps its own slider. Other models keep their "Shell".
 
 Enclosure is **locked by default** (`"locked": true` on the group in `ground_floor.parts.json`), since Petr's use is to lock it and leave it. Reset brings that lock back. Unlock it with its padlock to hide walls.
 
