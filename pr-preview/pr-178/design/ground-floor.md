@@ -1,6 +1,6 @@
 # Ground floor
 
-Walls and openings for RD Šíma, 1.NP. The file is `inputs/ground_floor/ground-floor.yaml`, vendored from [pteasima/yaml-ifc](https://github.com/pteasima/yaml-ifc) at `0f96c26` (`samples/ground-floor.yaml`). The walls text matches the earlier pin `34e1597`. The Python package is `vendor/yaml-ifc/`. The solid is `models/ground_floor.py`. Lengths in the YAML are metres. Solids are millimetres.
+Walls and openings for RD Šíma, 1.NP. The file is `inputs/ground_floor/ground-floor.yaml`, vendored from [pteasima/yaml-ifc](https://github.com/pteasima/yaml-ifc) at `0f96c26` (`samples/ground-floor.yaml`). The walls text matches the earlier pin `34e1597`. The Python package is `vendor/yaml-ifc/`. The solid is `models/ground_floor/`. Lengths in the YAML are metres. Solids are millimetres.
 
 Schema: that repo’s `docs/spec.md`. This page does not retype the wall list. The facts below are the ones that are easy to miss because they are a comment, a missing field, or a placeholder in the builder.
 
@@ -8,7 +8,7 @@ Schema: that repo’s `docs/spec.md`. This page does not retype the wall list. T
 
 Local plan from `samples/source/ground-floor.json`. Origin at the min corner of the kept silná edges. Model-space origin of that export: 4698.8019 m, −615.0793 m. X to the right, Y up the sheet, Z up. Datum ±0.000 = 472.100 m Bpv, stored as the site `RefElevation`. Site name Bor u Tachova. Building name RD Šíma. Source: YAML header.
 
-Wall axes are centre-lines measured from parallel silná faces, thickness centred on the axis. Collinear pieces of one axis are one wall, including across an opening. Edges that are only jambs or reveal steps are not walls of their own. Butt joints are the `connections` block: the relating wall runs through, the related wall is trimmed to its face. Corner polygons come from `yaml_ifc.footprints`. They are not recomputed in `ground_floor.py`. Source: YAML header, module note in `models/ground_floor.py`, PR #57.
+Wall axes are centre-lines measured from parallel silná faces, thickness centred on the axis. Collinear pieces of one axis are one wall, including across an opening. Edges that are only jambs or reveal steps are not walls of their own. Butt joints are the `connections` block: the relating wall runs through, the related wall is trimmed to its face. Corner polygons come from `yaml_ifc.footprints`. They are not recomputed in `models/ground_floor/`. Source: YAML header, module note in `models/ground_floor/`, PR #57.
 
 ## Heights the drawing lists, and the height the solid uses
 
@@ -44,7 +44,7 @@ The builder extrudes every wall that has a thickness at yaml-ifc’s `DEFAULT_WA
 
 Which panes open. Petr, 2026-11-12, and the 2022 DWG (`RD Šíma stavba.dwg`, sheet POHLEDY, layer tenka), read on the box with LibreDWG. It is not in the repo. In the elevations an arrow in a pane is a sliding sash and its direction, and a `+` is a fixed pane. A triangle is a hinged sash, with its apex at the handle side. The legend says “Okna hliníková s izolačním trojsklem - antracit” (aluminium, triple glazing, anthracite).
 
-The data is on each `IfcWindow` in `inputs/ground_floor/ground-floor.yaml`. `PartitioningType` is the IFC enum. `Pset_BlueprintsWindow.PanelOperations` gives one IFC `IfcWindowPanelOperationEnum` name per panel. It is a property set because yaml-ifc has no `IfcWindowPanelProperties`. Panels are listed along the host wall axis, from the start jamb to the end jamb. W-001 and W-002 run west to east. Panels split the width equally. In the elevations the two panes look about equal; nothing else gives the split. The model (`models/ground_floor.py`, `window_panels`, `_window_sashes`, `_window_motion`) splits the glazing into one solid per panel. It writes `docs/models/ground_floor.windows.json` for the viewer. A sliding sash sits one pane plus 6 mm (`SASH_GAP_MM`) indoors of the fixed pane, in its own track. When open, it slides `WINDOW_TRAVEL` (80 %) of its own width toward the fixed pane. That 80 % is the earlier viewer animation, not a product figure.
+The data is on each `IfcWindow` in `inputs/ground_floor/ground-floor.yaml`. `PartitioningType` is the IFC enum. `Pset_BlueprintsWindow.PanelOperations` gives one IFC `IfcWindowPanelOperationEnum` name per panel. It is a property set because yaml-ifc has no `IfcWindowPanelProperties`. Panels are listed along the host wall axis, from the start jamb to the end jamb. W-001 and W-002 run west to east. Panels split the width equally. In the elevations the two panes look about equal; nothing else gives the split. The model (`models/ground_floor/`, `window_panels`, `_window_sashes`, `_window_motion`) splits the glazing into one solid per panel. It writes `docs/models/ground_floor.windows.json` for the viewer. A sliding sash sits one pane plus 6 mm (`SASH_GAP_MM`) indoors of the fixed pane, in its own track. When open, it slides `WINDOW_TRAVEL` (80 %) of its own width toward the fixed pane. That 80 % is the earlier viewer animation, not a product figure.
 
 | Window | Room | DWG mark and drawing | Model |
 | --- | --- | --- | --- |
@@ -97,7 +97,7 @@ The ground floor has four scenes in the View list, one per room that has its own
 | Bathroom 1.07 | `bath107-plan` (floor tiles) | 1.07 has no perspective view; its plan shows the whole room, the shower and the drain. |
 | Bedroom 1.11 | `bedroom-1.11` | The only bedroom perspective (the corner glance toward the bed, lamp and pendant). |
 
-The scenes are unchanged copies: `scenes()` in `models/ground_floor.py` picks the two bathroom scenes by id from `bathroom_120.scenes()` and `bathroom_107.scenes()`. The standalone bathroom models and `obyvak` keep all their scenes. Removed on 2026-11-19: the overview, the door-and-window and 120 mm post close-ups, the four butt-joint corner views and their plans, the whole-floor plan, five other kitchen and living views, the living-room plan, the other nine 1.20 and four 1.07 views, and the 22 per-room top views (`plan-1.xx`). An old `?scene=` link to a removed scene opens in Iso and drops the parameter. The electrical room plans in `docs/previews/electrical/` are separate PNGs from `models/electrical_rooms_plan.py` and are unaffected.
+The scenes are unchanged copies: `scenes()` in `models/ground_floor/` picks the two bathroom scenes by id from `bathroom_120.scenes()` and `bathroom_107.scenes()`. The standalone bathroom models and `obyvak` keep all their scenes. Removed on 2026-11-19: the overview, the door-and-window and 120 mm post close-ups, the four butt-joint corner views and their plans, the whole-floor plan, five other kitchen and living views, the living-room plan, the other nine 1.20 and four 1.07 views, and the 22 per-room top views (`plan-1.xx`). An old `?scene=` link to a removed scene opens in Iso and drops the parameter. The electrical room plans in `docs/previews/electrical/` are separate PNGs from `models/electrical_rooms_plan.py` and are unaffected.
 
 ## Floor EPS take-off
 

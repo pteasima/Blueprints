@@ -87,6 +87,8 @@ Petr's original document is the sticky-note plan [`KitchenPlan.jpg`](../../input
 | 38 | SF-T1 split in two equal doors 597 × 1172 (101.5–1273.5, 1276.5–2448.5), both bottom J | **Split on the oven columns' line: lower door 597 × 694 (101.5–795.5, normal top J, like the T2/T3/T4 drawer fronts), board 797–815, upper door 597 × 1650 (798.5–2448.5, upside-down bottom J, like the T2/T4 doors)**; both hinged L; shelves 1 below / 3 above (placeholders); contents: lower “nápoje, basy od piva”, upper “plechovky, vývary, trvanlivé potraviny” | Petr, 2026-11-23 (t887u) |
 | 39 | SF-E600b: inner drawers M 771–862 + K 483.5–612.5, Gridfinity on them | **One K inner drawer 501–630 (floor 517), 375 to the band top (892); the Kenwood Chef XL KVL4100S (345 high) on it with 30 over it, control side north; no Gridfinity plate**. The sealer and the Kenwood ride their inner drawers in the viewer (no motion of their own) | Petr, 2026-11-23 (t889u) |
 | 40 | MERIVOBOX load class: 70 kg for pull-outs, E sides and insides over 600 (12 pairs), else 40 kg | **70 kg (453.xxx1B) for every MERIVOBOX at NL 450–600: 26 pairs**; the 12 dining NL 400 pairs stay 40 kg (450.4001B, no 70 kg at NL 400); SF-A250 (SPACE TWIN) and SF-B800 (MOVENTO) unchanged | Petr, 2026-11-23 (t895u): "go all out, all heavy duty where they fit" |
+| 41 | 18 mm dining/living oak top plank (2432–2450); upside-down J on tall doors; blank SF-LB fronts and SF-T1 fillers; SF-TC split at 700 | **40 mm top plank** (2410–2450) matching the shelves, bookshelf sides and oak counter; SF-DH lowered to **2382** so the 28 mm AVENTOS HF clearance stays (20 mm gap to the 2470 soffit underside unchanged). **All bottom-edge grips are an uneven U** (same Voxtorp scoop, no straight stem; photo below). Fake **J + U** on the west tall cover (SF-T1-FILLER2/1), fake **top J** on the behind-couch fronts, SF-TC bottom joined to SF-LB-S2-FRONT (no vertical cut) and the door on the 888.5/891.5 handle line with the U | Petr, 2026-11-27 (t1013u) |
+| 42 | Recycling SF-C850 empty (row 10; three equal bins until 2026-11-23, `guess:`) | **One free-standing IKEA FILUR 42 l without lid** on the north side (plastic only), loose folded/torn cardboard leaning on a **tall drawer back panel**, a smaller paper box on the south, and a loosely lying bin bag with a few glass bottles and jars. No Gridfinity, no dividers; the drawer is deliberately unorganised. The back panel is real drawer geometry (`tall_back=rail`), 746 mm from the box bottom to z 889 (`guess:` 3 mm `TallBackClearance` under the 892 rail underside so the pull-out still slides). FILUR 290 × 380 × 520 mm: official IKEA 201.938.99 is 29 × 38 × 55 cm *with lid*; lid package 3 cm, so the lidless body height is `guess:` 520. Contents live in `GRP-DRAWER-CONTENTS` / `ground_floor.contents.glb` | Petr, 2026-11-28 (t1017u): only a bin for the plastic; little glass; paper amount unpredictable |
 
 ## Monoblocks
 
@@ -277,7 +279,7 @@ Blum, *Catalogue and technical manual 2024/2025* (English), MERIVOBOX pages 250�
 - Colour: Blum makes MERIVOBOX in **SW-M silk white matt**, IG-M indium grey matt and OG-M orion grey matt (catalogue 2024/25, MERIVOBOX pages). Every box here is **SW-M silk white matt** since 2026-11-23 (Petr, t866u; drawn cream until then). Fronts are the kitchen cream (RAL 1015 `guess:` shade). Material `blum-merivobox-silk-white` (sRGB #f1f0ea `guess:`).
 - Every height: inside cabinet depth **LT ≥ NL + 3**; base and back **LW − 51** wide; base **NL − 26** (chipboard back) or NL − 22 (steel back); integrated BLUMOTION; TIP-ON BLUMOTION and SERVO-DRIVE are optional add-ons (not used here).
 - Inner drawers: M and K, any NL of that side; front piece ZV4.1042M (1042 long, for KB 1200), cut to **LW − 126**.
-- Waste bins: a **cabinet profile with over-extension for waste-bin applications** (453.4501BZ / .5001BZ / .5501BZ, 70 kg, cabinet NL 450–550 with drawer sides NL − 50) for E pull-outs. Not used in the model yet (SF-C850 is empty, SF-B800 uses a plain M box); `open:` for the bins.
+- Waste bins: a **cabinet profile with over-extension for waste-bin applications** (453.4501BZ / .5001BZ / .5501BZ, 70 kg, cabinet NL 450–550 with drawer sides NL − 50) for E pull-outs. Not used in the model (SF-C850 is a standard 70 kg E pull-out with a tall back and one free-standing FILUR, not a Blum waste-bin frame; SF-B800 uses a hanging FILUR plate on MOVENTO).
 - Sink cabinets: Blum's own answer is the **drawer M or pull-out E with a centre piece** (a U-shaped box round the siphon, exterior NL 450–600, interior NL 300–450). Petr chose a plain low M box with upright FILUR bins instead (2026-11-23).
 - Narrow cabinets: **SPACE TWIN** for cabinet widths KB 150–250 (M, K or E sides), part of MERIVOBOX with its standard parts (bottom and back LW − 51). SF-A250 (212 wide) uses it since t863u.
 - Cabinet widths: Blum NZ gives MERIVOBOX drawers and pull-outs 275–1400 wide and inner drawers 275–1200 (`guess:` that the European range is the same).
@@ -576,7 +578,7 @@ The quoted notes are the yellow sticky notes next to each bay on KitchenPlan.jpg
 | SF-A250 | Note A: „dole vlevo suplik uklid (mycka, jar, odmastovac, houbicky)“ | bottom left: cleaning drawer (dishwasher tabs, washing-up liquid, degreaser, sponges) | A full-height pull-out (front 229 × 807, 247 until 2026-11-22) with 3 baskets. The basket count is `guess:`. |
 | SF-A600 | Note A: „dole vpravo mycka“ | bottom right: dishwasher | Unchanged: the niche for the Bosch SBD6ECX12E. |
 | SF-B800 (west sink) | Note B: „800 / dole vlevo kos, vpravo kompost / nahore talire / kose se musi vyhnout drtici, to se proste bude resit az skrinky budou“ | 800 / bottom left: bin, right: compost / top: plates / the bins must avoid the disposer, that will be solved once the cabinets exist | One full-height pull-out (front 797 × 807) with two bins (`guess:` one pull-out for both). The disposer `EA-EVO3-W` hangs under the bowl. The pull-out box stops 10 under it, so it is only **207 high (493 cut)**. Tap `SN-TAP-W` is modelled. `open:` the bin-vs-disposer conflict. Petr's own note defers it, and EcoMaster's manual suggests the disposer between two bins or a lower bin under it. |
-| SF-C850 | Note C: „900 / dole trideny odpad“ | 900 / bottom: sorted waste | A full-height pull-out (front 847 × 807) with three bins. The bin count is `guess:`. |
+| SF-C850 | Note C: „900 / dole trideny odpad“ | 900 / bottom: sorted waste | A full-height pull-out (front now 832 × 808.5 in the 835 bay) with **one free-standing IKEA FILUR 42 l without lid** on the north (plastic only), loose cardboard and a bin bag of glass; a tall real back panel (`tall_back=rail`). Earlier three equal bins (`guess:`) then empty (row 10) are superseded (t1017u, row 42). |
 | SF-AH850 | Note A: „nahore sklenice“ | top: glasses | Blum AVENTOS HF top bi-fold, two fronts 847 × 442, two shelves (since 2026-11-13; two doors before). The shelf count is `guess:`. |
 | SF-BH800 | Note B: „nahore talire“ | top: plates | AVENTOS HF top, two fronts 797 × 442, two shelves, as above. |
 | SF-CH850 | Note C: „nahore tycovy mixer, velke misky, odmerky (vsechno co se musi mejt ale moc se nepouziva)“ | top: stick blender, big bowls, measuring cups (everything that needs washing but is rarely used) | AVENTOS HF top lift, two fronts 847 × 442, two shelves, as above. |
@@ -641,7 +643,7 @@ No carcass size or position changed. These are the fronts:
 | SF-I600b | one slab 597 × 807 | three drawers 597 × 197 / 197 / 407 (2026-11-13: 604 × 197 / 97 / 507) |
 | SF-A250 | slab 247 × 807 (229 × 807 since 2026-11-22) | pull-out (same front) with 3 baskets |
 | SF-B800 | slab 797 × 807 | pull-out (same front) with 2 bins, box 207 high under the disposer |
-| SF-C850 | slab 847 × 807 | pull-out (same front) with 3 bins |
+| SF-C850 | slab 847 × 807 | pull-out (front now 832 × 808.5) with one lidless FILUR and loose recycling contents (t1017u); tall back panel |
 | SF-AH850, SF-CH850 | one slab 847 × 897 | two doors 422 × 897 (L, R), 2 shelves |
 | SF-BH800 | one slab 797 × 897 | two doors 397 × 897, 2 shelves |
 | SF-T1 | one slab 747 × 2347 | door 597 × 2347 hinged L, plus a filler 147 on the west, plus 4 shelves |
@@ -764,7 +766,7 @@ Modelled (`models/kitchen_cabinet/`, band kind `lift`, `AVENTOS` table):
 
 Petr, 2026-11-13: “And make them open too, add the animation for this opening mechanism.”, then “they stay only partially folded, like my image”, then “do 88 degrees in the model.”
 
-Each lift front is one `kind: "linkage"` record in `ground_floor.doors.json` (`_linkage_motion` in `models/ground_floor.py`, from the `LiftJoint` that `_lift_motion` in `models/kitchen_cabinet/` puts on each part). A linkage is a list of joints; each turns its part meshes about a line (`pivot` point, `axis`), by `angles` sampled at 25 even steps from shut to open, relative to a `parent` joint or to the model. The viewer (`doors.js` `bindLinkage`) interpolates them over 900 ms. Any part of it takes the tap.
+Each lift front is one `kind: "linkage"` record in `ground_floor.doors.json` (`_linkage_motion` in `models/ground_floor/`, from the `LiftJoint` that `_lift_motion` in `models/kitchen_cabinet/` puts on each part). A linkage is a list of joints; each turns its part meshes about a line (`pivot` point, `axis`), by `angles` sampled at 25 even steps from shut to open, relative to a `parent` joint or to the model. The viewer (`doors.js` `bindLinkage`) interpolates them over 900 ms. Any part of it takes the tap.
 
 The motion is a four-bar (`_hf_fourbar`): carcass, upper front, lower front, lever.
 
@@ -785,7 +787,7 @@ The −15° at 116° is read off Blum's “Platzbedarf nach oben” sketch (the 
 
 ### The ceiling line and the open fronts
 
-`models/ceiling_line.py` (called from `models/ground_floor.py` on every export):
+`models/ceiling_line.py` (called from `models/ground_floor/` on every export):
 - `CEILING_LINE_MM` = 2450, the obývák model's `furniture_height` (`models/obyvak_geom.py`), where the bass traps start and the pocket doors and tall cabinets stop. The export stops if any furnishing (lights excepted) or kitchen part reaches above it. Today the tops at 2450 are the wall cabinets, SF-DH, SF-T1–T4, FN-BK and SF-TC.
 - For each lift front, its swept path (the front's corners at every sampled angle) and its clearance box are checked against the kitchen-gable trap (x 18.80–18.99, from 2450), the living-gable trap, the soffit over the north cabinets (y from 15.15, underside 2470) and the sloped ceiling (`ObyvakLayout.z_ceil`, obývák X = y − 10.25). An overlap stops the export; the margins go to the run's notes.
 
@@ -1890,9 +1892,15 @@ Every cream front, end panel, cladding and plinth (`kitchen-front-cream`) is **m
 
   The front has a tall thin lip at the top, a rounded scoop / finger recess behind it, and the thicker body below. Petr finds the current model reasonably close (“I think we got reasonably close in the model”); the model is not changed.
 
-- `open:` **the woodworker**: ask whether he can route this VOXTORP profile into the fronts. The router-bit / 18 mm thickness `open:` just above stays.
+- **Bottom-edge grips are an uneven U, not an upside-down J** (t1013u). Petr sent a workshop photo of an upper door meeting a lower J-front:
+
+  ![Uneven Voxtorp U-grip at the bottom of an upper door](sources/VoxtorpUGripPhoto.jpg)
+
+  The scooped profile is the same Voxtorp clone (crest R1, bowl R7, 4 mm back wall, no undercut). What goes away is only the J's straight stem: the visible face of the upper door ends right at the rounded lip, so the groove is an uneven U opening at the bottom edge (not a symmetric U, and not an upside-down J with the 21 mm face cut and back wall running down to the edge). In `grip_profile(..., kind="u")` the crest sits at the gripped edge and the cup is 7 mm deep (the J's 28 − 21). Every `grip=bottom` front uses this U (`Grip: U bottom`); top and side stays remain `J top` / `J side`.
+
+- `open:` **the woodworker**: ask whether he can route this VOXTORP profile into the fronts (the J on lower/drawer tops, the uneven U on upper-door bottoms). The router-bit / 18 mm thickness `open:` just above stays.
 - The 3D model cuts the exact lines and arcs (four arcs, cylinders, so they shade smooth). The viewer outlines every CAD face, so the tangent seams between the arcs and the straight parts still show as thin lines. The IFC cuts the same outline as a polygon, arcs every 10°.
-- The grip is a real subtraction from the front solid in the GLB and in the IFC (an `IfcBooleanResult` DIFFERENCE of the profile extruded along the edge, `IfcExtrudedAreaSolid` of an `IfcArbitraryClosedProfileDef`, so the front is `CSG`), and rides with the drawer or door when it opens. Each front with a grip has `Grip: J top|bottom|side` in its properties.
+- The grip is a real subtraction from the front solid in the GLB and in the IFC (an `IfcBooleanResult` DIFFERENCE of the profile extruded along the edge, `IfcExtrudedAreaSolid` of an `IfcArbitraryClosedProfileDef`, so the front is `CSG`), and rides with the drawer or door when it opens. Each front with a grip has `Grip: J top|side` or `U bottom` in its properties.
 - **Which edge** (`kitchen_cabinet._grip_edge`), per front: the band's `grip=` option in `Pset_Fronts.Layout` (`top`, `bottom`, `side`, `none`) wins, so a tall door can be switched to a horizontal grip with `door:...,grip=top`. Otherwise:
   - drawers and doors up to 1200 high: **top edge** (horizontal);
   - doors over 1200 high: **the vertical edge away from the hinge** (side), full height, like IKEA's [VOXTORP “vertical handle” tall doors](https://www.ikea.com/de/en/p/voxtorp-door-oak-effect-vertical-handle-20648994/);
@@ -1900,7 +1908,19 @@ Every cream front, end panel, cladding and plinth (`kitchen-front-cream`) is **m
 - `open:` **inner drawer inside depth (woodworker).** Since t978u the main drawer inside is Blum's NL − 26 − 16 (458 east, 358 dining) and an inner drawer is 19 mm shallower (439 / 339) because of its own front piece. The woodworker should still verify both against the Blum catalogue (inner drawer with front piece vs. drawer with the front fixed to the sides). East inner Gridfinity stays 13 × 10 (slack 17); dining inner stays 14 × 8 (1 mm slack). See “Drawer boxes without a box front (2026-11-22 e)”.
 - `open:` **grips around the fridge.** Petr, 2026-11-22 (t792u): “Im not sure about handle placement around the fridge (based on how much final chosen fridge model sticks out).” Undecided: where and which way the grips go on the fronts next to and over the fridge: SF-TF-DOOR1/2 over it (now bottom edge), SF-T1-DOOR1 west of it and SF-T2-DOOR1 east of it (now side, latch edge), the SF-T2 drawers under SF-T2-DOOR1 (top), and the filler SF-T1-FILLER1 (none). It depends on how far the final fridge model stands proud of the cabinet fronts (the model's Whirlpool WQ9I MO2L EF box is a placeholder): a proud fridge can cover a grip on the edge next to it or get in the fingers' way.
 - Grips since 2026-11-23 (t865u, Petr: “same J grip everywhere”): the full-height **pull-outs** SF-I300-D1, SF-A250-D1, SF-B800-D1, SF-C850-D1 and the dishwasher's **decor panel** SF-A600-PANEL get the top J grip like the drawers.
-- Not given a grip: the fixed **blank fronts** SF-LB-S1…S7-FRONT and SF-TC-FRONT2 (dead space, they do not open); the **filler** SF-T1-FILLER1; the **appliance doors** (oven, microwave, fridge: the maker's own fronts); the **lift-ups** (overhang below).
+- Not given a grip: the **appliance doors** (oven, microwave, fridge: the maker's own fronts); the **lift-ups** (overhang below). Since t1013u the behind-couch fronts SF-LB-S1/S2-FRONT have a **fake top J** (the east one also covers SF-TC's lower band, with no vertical cut at x 29.60), and the west tall **cover fillers** SF-T1-FILLER2 / FILLER1 have a fake J (top) + uneven U (bottom) on the tall-run handle line (795.5 / 798.5).
+
+### 40 mm oak top plank and the north-wall handle line (t1013u)
+
+Petr, 2026-11-27: the top plank above the dining cabinets and the living-room bookshelf should be the same **40 mm** as the shelves, the bookshelf side panels and the oak counter; all upside-down J handles become the uneven U above; and the handle line should run the whole north wall.
+
+**Oak top plank `SF-DH-LINING`.** Still one board from SF-T4.East to SF-TC, front at the soffit face (y 15.15) back to the wall, notched around both pier slats. Top stays on the **2450** ceiling line; the **20 mm** gap to the soffit GKB underside (**2470**) is unchanged (`guess:` a shadow gap or a scribe). The underside drops from 2432 to **2410**. To keep Blum's **28 mm** AVENTOS HF space at the 88° stop, **SF-DH** is 22 mm shorter: top **2382**, height **822**, bottom still **1560**. The end returns `SF-DH-RET-W` / `RET-E` close the same 28 mm band (2382–2410). The bookshelf `FN-BK` and the oak side wall `SF-DH-SIDE-W` already link their top to the lining underside, so they follow to 2410 and the three shelves respace evenly in the new clear height. The 40 mm plank cannot go up into the soffit (that only has 20 mm to 2470, and 2 mm short of 40 even if the underside stayed at 2432), so the cabinet was lowered instead of invading HF space or the soffit.
+
+Open HF fronts: previously the lower-leaf peak was 2420.5, 11.5 mm clear of the 2432 lining. With the cabinet 22 mm lower the peak is about **2398.5**, still **11.5 mm** clear of 2410; Blum's Y = 28 envelope still touches the lining underside (2382 + 28 = 2410).
+
+**Handle line.** Every bottom-edge grip is the uneven U. The west tall cover (SF-T1-FILLER2 lower, SF-T1-FILLER1 upper) gets a fake J + U on the tall-run line (fronts 101.5–795.5 / 798.5–2448.5). The living-room panels behind the sofa (SF-LB-S1/S2-FRONT) get a fake top J at **888.5**, in line with the dining-base fronts under the 930 counter. SF-TC's lower band is raised to that same 890 carcass / 888.5 front, and `SF-LB-S2-FRONT` is extended to x 29.90 (a 2056.5–4408.5 in the KR-LB frame) so there is **no vertical cut** at the corner; the 40 mm oak worktop still ends at SF-TC (x 29.60). The SF-TC door starts at **891.5** with the uneven U on its bottom edge, so the J/U pair meets with the usual 3 mm gap, like the tall kitchen doors.
+
+
 
 | Front | Grip | Band (run frame) |
 |---|---|---|
@@ -2128,7 +2148,7 @@ Inside is width × depth × side height above the base. “Below front” is how
 | SF-E…-D1-I2 (inner K) | 128, 547 / 556 × 508 × 112 | **K**, 500, 40 | 547 / 556 × 458 × 113 | 129, 496 | — |
 | SF-A250-D1 (pull-out, 3 shelves) | 700, 121 × 497 × 684, 516 | **E**, 550, 70 | 154 × 508 × 176 | 192, 546 | 0 |
 | SF-B800-D1 (sink, FILUR) | 211 (trimmed under the disposer), 698 × 497 × 195, 516 | **M**, 550, 70 | 731 × 508 × 75 | 91, 546 | 0 |
-| SF-C850-D1 (recycling, empty) | 700, 739 × 497 × 684, 516, 3 bins | **E**, 550, 70, no bins | 772 × 508 × 176 | 192, 546 | 0 |
+| SF-C850-D1 (recycling, one lidless FILUR, loose paper/glass, t1017u) | 700, 739 × 497 × 684, 516, 3 bins then empty | **E**, 550, 70, tall back to z 889 (`guess:` 3 mm under the rail), no Gridfinity | 757 × 508 × 176 | 192, 546 | 0 |
 | SF-DN-S1…S4 D1 (main) and -I1, -I2 | MERIVOBOX K / M / K 128 / 90 / 128, 597 / 606 × 358 | **K / M / K**, 400, 40 | 597 / 606 × 358 × 113 / 75 / 113 | 129 / 91 / 129, 396 | 0 |
 | SF-T2/T3/T4-D1, -D2 (400 / 410 fronts) | 290 / 300, 489 / 498 / 435 × 497 × 274 / 284, 516 | **E**, 600, 70 | 522 / 531 / 468 × 558 × 176 | 192, 596 | 0 |
 
@@ -2487,7 +2507,7 @@ Petr: "just like we hid the vacuum sealer in a drawer, lets hide a Kenwood Chef 
 - guess: the model is a basic machine (base, column, head, bowl); the control / display is a black patch on the head's north side next to the column; the bowl is at the drawer's front (east).
 - open: which Chef XL Petr has. Others for comparison (Kenwood listings): Chef XL Sense KVL6100 350 H × 430 × 300 (25 over it, fits); Titanium Chef Baker XL KVL85 370 H × 400 × 225 (5 over it).
 - **Layout**: `drawer * box=E inner=K inner_clear=0.375`: the top inner drawer (M) is gone, the K one's floor is 375 under the band top (345 + 30, as the sealer's 225 + 30). Inside 548 × 458: 268 spare along the run, 73 along the depth.
-- **Viewer**: a standing appliance's record names its inner drawer in `rides` (models/ground_floor.py); doors.js `attachRiders` hangs its mesh under that drawer's pivot, so it slides with it and a tap on it drives the drawer. Before, the sealer had its own motion (parent the outer drawer) and moved on its own.
+- **Viewer**: a standing appliance's record names its inner drawer in `rides` (models/ground_floor/); doors.js `attachRiders` hangs its mesh under that drawer's pivot, so it slides with it and a tap on it drives the drawer. Before, the sealer had its own motion (parent the outer drawer) and moved on its own.
 
 
 
@@ -2788,7 +2808,7 @@ The lowest drawers cannot take the mid-stack 13.5 mm offset: the cabinet profile
 **Intake panel (t976u):** **12 mm** compact HPL, 867–879, underside 867, thickness `guess:` (not confirmed). Holes stay as in the Miele KM 8665 FL manual. Clearances from the underside: **16.5 mm** to the N box top, **85 mm** to the box base (official ≥ 5 / ≥ 75, repo ≥ 8). Both pass.
 
 
-### Drawer contents (t1008u / t1009u)
+### Drawer contents (t1008u / t1009u / t1017u)
 
 Petr (t1008u): fill drawers and cabinets from the docs and best judgement, keep the meshes cheap, hide them as an IFC group, use Gridfinity boxes where they fit, and start with one island-west drawer.
 
@@ -2815,6 +2835,17 @@ t1009u fills the next three named island-west drawers, still `guess:` / best jud
 **SF-I500b-D2, oils and condiments (oleje, octy, dochucovadla).** MERIVOBOX E, NL 600. Inside **464 × 558 × 176**, plate **11 × 13** at z 477–482. The E sides only give **171 mm** above the plate, but the clear item height to the D1 box underside (z 782) is **300 mm** (305 mm from the floor) — that is the limit that matters, and bottles may stand proud of the E sides. Every bottle is at most **280 mm** above the plate (20 mm of air under D1). One 10×8 Gridfinity tray holds 12 standing 8-gon bottles (three rows of four: cooking oils tallest, then vinegars/soy, then shorter condiments); the leftover column is a 4-vial tray and the back 10×5 tray holds 6 squat jars (pesto, paste). All bottles stay under the 280 mm cap.
 
 **SF-I600b-D1, cutlery (příbory).** MERIVOBOX N under the hob intake, NL 500. Inside **548 × 458 × 52.5**, plate **13 × 10** (546 × 420) at z 798–803, only **47.5 mm** clear above the plate. 4-unit (28 mm) trays stay under that: 2×8 wells for table knives, forks, spoons and tablespoons, 2×5 teaspoons and a 2×3 dessert well, a 3×8 steak-knife well, and a 13×2 serving tray at the back with pieces lying along the width. Flat steel heads and coloured handles, handles at the front (except the serving tray).
+
+t1017u fills the west-run recycling pull-out **SF-C850-D1** (plan note „900 / dole trideny odpad“; the bay is now 835 mm, yaml `Contents`: `tříděný odpad`). It is a MERIVOBOX **E** box, NL 550, 70 kg, inside **757 × 508 × 176**, with a **tall real back panel** (`tall_back=rail`) from the box bottom (z 143) to **z 889** (746 mm), `guess:` 3 mm `TallBackClearance` under the 892 mm rail underside so the drawer still slides out. The panel is drawer geometry (the MERIVOBOX back extended; the E sides stay 192 mm), not contents.
+
+Contents stay loose and unorganised (Petr: only plastic gets a bin; little glass; paper amount is unpredictable). There is no Gridfinity plate and no dividers:
+
+- North side: one free-standing **IKEA FILUR 42 l** (article 201.938.99) **without lid**, 290 × 380 × 520 mm. Width and depth are official; the 520 mm height is `guess:` (IKEA publishes 55 cm *with lid*; the lid package is 3 cm). A plastic bag liner and a few flattened PET bottles sit in it.
+- At the back: a few large folded or torn cardboard sheets leaning against the tall back panel.
+- South side: a smaller paper/cardboard box, slightly askew.
+- A loosely lying plastic bin bag with a few glass bottles and jars.
+
+This supersedes the earlier three-equal-bins `guess:` and the empty pull-out of row 10 (see changelog row 42). The hanging FILUR frame in **SF-B800** is unchanged.
 
 **How to hide them.** All filled-drawer items are members of the IFC group **Drawer contents** (`GRP-DRAWER-CONTENTS`), a child of Furniture. In the inspector, open Furniture → Drawer contents and use **Hide** (or Hide all others on that row). They are also the on-demand Parts leaf **Interior › Drawer contents** (`ground_floor.contents.glb`), on by default like the Gridfinity baseplates; `?contents=0` skips the download. Each product is `<drawer>-CONTENTS` (pilot: `SF-I600a-D1-CONTENTS`), hangs on its drawer so it slides with it, and belongs to the bay group as well, so isolating the bay still shows the items.
 

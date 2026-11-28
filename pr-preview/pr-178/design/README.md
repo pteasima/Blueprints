@@ -18,7 +18,7 @@ Read the file for the area before changing a model. Each fact names a source. `g
 
 The ground floor and the obývák section are the same room written on different axes. Mixing them is how a centre lands on the wrong wall.
 
-Storey frame, metres, X east, Y north. Source: header of `inputs/ground_floor/ground-floor.yaml`. Room 1.02 inner faces used by the furniture model: x 18.80–29.90, y 10.25–15.60. Source: `ROOM_X0` / `ROOM_Y0` in `models/ground_floor.py`, and the registration notes in `inputs/ground_floor/furnishings.yaml`.
+Storey frame, metres, X east, Y north. Source: header of `inputs/ground_floor/ground-floor.yaml`. Room 1.02 inner faces used by the furniture model: x 18.80–29.90, y 10.25–15.60. Source: `ROOM_X0` / `ROOM_Y0` in `models/ground_floor/`, and the registration notes in `inputs/ground_floor/furnishings.yaml`.
 
 Section frame, millimetres. X runs from the window wall to the cabinet wall (5350). Y runs from the living gable to the kitchen gable (11100). Z up. Source: module note in `models/obyvak_geom.py`.
 
