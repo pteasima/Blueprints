@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 
-from build123d import Align, Box, BuildSketch, Color, Pos, RegularPolygon, extrude
+from build123d import Align, Box, BuildSketch, Color, Pos, RegularPolygon, Rot, extrude
 
 # Viewer / IFC names. The layer id is the Parts leaf; the group id is the
 # inspector row. Content products are ``<drawer-id>-CONTENTS``.
@@ -50,6 +50,9 @@ RGB_CLOTH = (80, 92, 70)
 RGB_YELLOW = (196, 164, 48)  # turmeric, mustard
 RGB_CREAM = (228, 220, 200)  # salt, mayo, pale oil
 RGB_OLIVE = (120, 124, 52)
+RGB_WHITE = (230, 230, 232)  # IKEA FILUR body (white)
+RGB_PET = (150, 186, 196)  # flattened PET bottles
+RGB_GLASS = (80, 120, 100)  # green glass bottles
 
 # Pilot only. More drawers join this dict as later passes fill them.
 PILOTS = {
@@ -77,6 +80,12 @@ PILOTS = {
         "description": "Cutlery drawer (příbory): shallow Gridfinity trays under the hob",
         "kind": "cutlery",
     },
+    "SF-C850-D1": {
+        "bay": "SF-C850",
+        "name": "SF-C850-D1 recycling",
+        "description": "Recycling pull-out (tříděný odpad): one lidless FILUR for plastic, loose paper and glass",
+        "kind": "recycling",
+    },
 }
 
 # SF-I500b-D2: E box sides are only 171 mm above the plate, but the drawer
@@ -85,6 +94,17 @@ PILOTS = {
 # Bottles may stand proud of the E sides; they must stay under this cap.
 OIL_CLEAR_ABOVE_PLATE = 300.0
 OIL_MAX_H = OIL_CLEAR_ABOVE_PLATE - 20.0  # 280 mm, 20 mm air under D1
+
+# IKEA FILUR 42 l, article 201.938.99. Official (ikea.com): W 29 × D 38 × H 55 cm
+# with lid, volume 42 l. The lid is a second package 29 × 39 × 3 cm, so the
+# body height without the lid is 520 mm (`guess:`: 550 − 30; the lid overlaps
+# the rim, so the body may be slightly taller). Rim taper is not drawn
+# (low-poly); SF-B800 still uses BinTaper 10 mm a side (`guess:`).
+FILUR_W = 290.0
+FILUR_D = 380.0
+FILUR_H = 520.0  # guess: without lid
+FILUR_WALL = 3.0
+FILUR_FLOOR = 2.0
 
 
 def contents_id(drawer_id: str) -> str:
@@ -125,14 +145,18 @@ def ifc_items_for_run(run) -> list[dict]:
 
 def solids_for(part, drawer, plane, inward: float) -> list:
     """Painted compounds (one per colour) in the world frame, or []."""
-    if part.id not in PILOTS or drawer is None or not drawer.grid or not drawer.baseplate:
+    if part.id not in PILOTS or drawer is None:
         return []
     kind = PILOTS[part.id]["kind"]
+    # The recycling pull-out has no Gridfinity plate; the island pilots do.
+    if kind != "recycling" and (not drawer.grid or not drawer.baseplate):
+        return []
     build = {
         "knives": _knife_drawer,
         "spices": _spice_drawer,
         "oils": _oil_drawer,
         "cutlery": _cutlery_drawer,
+        "recycling": _recycling_drawer,
     }.get(kind)
     if build is None:
         return []
@@ -511,3 +535,136 @@ def _cutlery_set(buckets, a0, a1, c0, c1, z0, kind: str) -> None:
             # Table / steak knives: a slim blade.
             _box(buckets, RGB_STEEL, mid - piece_w / 2.5, mid + piece_w / 2.5, bc0, bc1, z + 2.0, z + 2.0 + thick)
 
+
+
+def _inside_floor(drawer) -> tuple[float, float, float, float, float]:
+    """Inside a0, a1, c0, c1 and floor z of a MERIVOBOX box (no plate)."""
+    a0, a1, c0, c1, _z0, _z1 = drawer.box
+    inner_w, inner_d, _ih = drawer.inside
+    mid = (a0 + a1) / 2.0
+    ia0, ia1 = mid - inner_w / 2.0, mid + inner_w / 2.0
+    if drawer.out < 0:  # front at low c
+        ic0, ic1 = min(c0, c1), min(c0, c1) + inner_d
+    else:
+        ic1, ic0 = max(c0, c1), max(c0, c1) - inner_d
+        ic0, ic1 = (ic0, ic1) if ic0 < ic1 else (ic1, ic0)
+    return ia0, ia1, ic0, ic1, drawer.floor_z
+
+
+def _hollow(a0, a1, c0, c1, z0, h, wall, floor) -> list:
+    """Floor + four walls, same construction as ``_hollow_bin`` with sizes."""
+    return [
+        Pos(a0, c0, z0) * Box(a1 - a0, c1 - c0, floor, align=(Align.MIN,) * 3),
+        Pos(a0, c0, z0) * Box(wall, c1 - c0, h, align=(Align.MIN,) * 3),
+        Pos(a1 - wall, c0, z0) * Box(wall, c1 - c0, h, align=(Align.MIN,) * 3),
+        Pos(a0 + wall, c0, z0) * Box(a1 - a0 - 2 * wall, wall, h, align=(Align.MIN,) * 3),
+        Pos(a0 + wall, c1 - wall, z0) * Box(a1 - a0 - 2 * wall, wall, h, align=(Align.MIN,) * 3),
+    ]
+
+
+def _leaning_sheet(buckets, rgb, a0, a1, c_back, z0, height, thick, lean):
+    """A thin sheet whose top rests on ``c_back`` and whose bottom is ``lean`` in front of it (smaller c)."""
+    import math
+
+    ang = math.degrees(math.atan2(lean, height))
+    mid = (a0 + a1) / 2.0
+    buckets[rgb].append(
+        Pos(mid, c_back, z0 + height)
+        * Rot(-ang, 0, 0)
+        * Box(a1 - a0, thick, height, align=(Align.CENTER, Align.MAX, Align.MAX))
+    )
+
+
+def _recycling_drawer(drawer, buckets: dict) -> None:
+    """SF-C850-D1: one lidless FILUR on the north, loose paper and glass.
+
+    Deliberately unorganised (Petr, t1017u): only plastic gets a bin; there
+    is little glass, and the paper amount changes. No Gridfinity, no dividers.
+    North is +a on KR-WEST (frame ``uy = 1``).
+    """
+    ia0, ia1, ic0, ic1, floor = _inside_floor(drawer)
+
+    # FILUR, free-standing, against the north side, not tight to the back
+    # (room behind it for cardboard).
+    gap_n, gap_f = 18.0, 40.0
+    fa1 = ia1 - gap_n
+    fa0 = fa1 - FILUR_W
+    fc0 = ic0 + gap_f
+    fc1 = fc0 + FILUR_D
+    buckets[RGB_WHITE].extend(
+        _hollow(fa0, fa1, fc0, fc1, floor, FILUR_H, FILUR_WALL, FILUR_FLOOR)
+    )
+    # Plastic bag liner, slightly short of the rim.
+    lin = 6.0
+    lin_h = 495.0
+    buckets[RGB_BIN].extend(
+        _hollow(
+            fa0 + lin,
+            fa1 - lin,
+            fc0 + lin,
+            fc1 - lin,
+            floor + FILUR_FLOOR,
+            lin_h,
+            1.5,
+            1.0,
+        )
+    )
+    # A few flattened PET bottles in the bin (lying, slightly askew).
+    z_bot = floor + FILUR_FLOOR + 4.0
+    bottles = (
+        (fa0 + 30, fa0 + 30 + 220, fc0 + 40, fc0 + 40 + 22, z_bot, z_bot + 80, 8.0),
+        (fa0 + 55, fa0 + 55 + 200, fc0 + 90, fc0 + 90 + 18, z_bot + 6, z_bot + 6 + 70, -12.0),
+        (fa0 + 40, fa0 + 40 + 180, fc0 + 200, fc0 + 200 + 20, z_bot, z_bot + 75, 15.0),
+    )
+    for a0, a1, c0, c1, z0, z1, yaw in bottles:
+        mid_a, mid_c = (a0 + a1) / 2.0, (c0 + c1) / 2.0
+        buckets[RGB_PET].append(
+            Pos(mid_a, mid_c, z0)
+            * Rot(0, 0, yaw)
+            * Box(a1 - a0, c1 - c0, z1 - z0, align=(Align.CENTER, Align.CENTER, Align.MIN))
+        )
+
+    # Large cardboard sheets leaning on the tall back (top against the
+    # inner back face). They span behind the FILUR and show on the south.
+    c_back = ic1
+    sheets = (
+        (ia0 + 40, ia1 - 30, 560.0, 8.0, 55.0),
+        (ia0 + 80, ia1 - 120, 500.0, 7.0, 70.0),
+        (ia0 + 160, ia1 - 200, 420.0, 6.0, 40.0),
+    )
+    for a0, a1, height, thick, lean in sheets:
+        _leaning_sheet(buckets, RGB_STONE, a0, a1, c_back, floor, height, thick, lean)
+
+    # Smaller paper/cardboard box on the south side, slightly yawed.
+    bw, bd, bh = 220.0, 160.0, 140.0
+    ba0 = ia0 + 24.0
+    bc0 = ic0 + 70.0
+    mid_a, mid_c = ba0 + bw / 2.0, bc0 + bd / 2.0
+    buckets[RGB_STONE].append(
+        Pos(mid_a, mid_c, floor)
+        * Rot(0, 0, 14.0)
+        * Box(bw, bd, bh, align=(Align.CENTER, Align.CENTER, Align.MIN))
+    )
+
+    # Loose bin bag in the remaining floor, with a few glass bottles and jars.
+    bag_a0, bag_c0 = ia0 + 250.0, ic0 + 50.0
+    buckets[RGB_BIN].append(
+        Pos(bag_a0, bag_c0, floor)
+        * Rot(0, 0, -18.0)
+        * Box(260.0, 200.0, 70.0, align=(Align.MIN,) * 3)
+    )
+    buckets[RGB_BIN].append(
+        Pos(bag_a0 + 30, bag_c0 + 20, floor + 50)
+        * Rot(0, 0, 10.0)
+        * Box(180.0, 140.0, 45.0, align=(Align.MIN,) * 3)
+    )
+    # Bottles / jars standing in the bag (low-poly 8-gons).
+    for x, y, r, h, rgb in (
+        (bag_a0 + 70, bag_c0 + 70, 32.0, 220.0, RGB_GLASS),
+        (bag_a0 + 145, bag_c0 + 95, 28.0, 180.0, RGB_GLASS),
+        (bag_a0 + 90, bag_c0 + 140, 38.0, 110.0, RGB_CREAM),  # jar
+        (bag_a0 + 175, bag_c0 + 155, 34.0, 95.0, RGB_CREAM),
+    ):
+        _prism(buckets, rgb, x, y, floor + 8.0, r, h, sides=8)
+        # lids / caps
+        _prism(buckets, RGB_CAP, x, y, floor + 8.0 + h, r * 0.85, 8.0, sides=8)

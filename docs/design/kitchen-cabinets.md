@@ -88,6 +88,7 @@ Petr's original document is the sticky-note plan [`KitchenPlan.jpg`](../../input
 | 39 | SF-E600b: inner drawers M 771–862 + K 483.5–612.5, Gridfinity on them | **One K inner drawer 501–630 (floor 517), 375 to the band top (892); the Kenwood Chef XL KVL4100S (345 high) on it with 30 over it, control side north; no Gridfinity plate**. The sealer and the Kenwood ride their inner drawers in the viewer (no motion of their own) | Petr, 2026-11-23 (t889u) |
 | 40 | MERIVOBOX load class: 70 kg for pull-outs, E sides and insides over 600 (12 pairs), else 40 kg | **70 kg (453.xxx1B) for every MERIVOBOX at NL 450–600: 26 pairs**; the 12 dining NL 400 pairs stay 40 kg (450.4001B, no 70 kg at NL 400); SF-A250 (SPACE TWIN) and SF-B800 (MOVENTO) unchanged | Petr, 2026-11-23 (t895u): "go all out, all heavy duty where they fit" |
 | 41 | 18 mm dining/living oak top plank (2432–2450); upside-down J on tall doors; blank SF-LB fronts and SF-T1 fillers; SF-TC split at 700 | **40 mm top plank** (2410–2450) matching the shelves, bookshelf sides and oak counter; SF-DH lowered to **2382** so the 28 mm AVENTOS HF clearance stays (20 mm gap to the 2470 soffit underside unchanged). **All bottom-edge grips are an uneven U** (same Voxtorp scoop, no straight stem; photo below). Fake **J + U** on the west tall cover (SF-T1-FILLER2/1), fake **top J** on the behind-couch fronts, SF-TC bottom joined to SF-LB-S2-FRONT (no vertical cut) and the door on the 888.5/891.5 handle line with the U | Petr, 2026-11-27 (t1013u) |
+| 42 | Recycling SF-C850 empty (row 10; three equal bins until 2026-11-23, `guess:`) | **One free-standing IKEA FILUR 42 l without lid** on the north side (plastic only), loose folded/torn cardboard leaning on a **tall drawer back panel**, a smaller paper box on the south, and a loosely lying bin bag with a few glass bottles and jars. No Gridfinity, no dividers; the drawer is deliberately unorganised. The back panel is real drawer geometry (`tall_back=rail`), 746 mm from the box bottom to z 889 (`guess:` 3 mm `TallBackClearance` under the 892 rail underside so the pull-out still slides). FILUR 290 × 380 × 520 mm: official IKEA 201.938.99 is 29 × 38 × 55 cm *with lid*; lid package 3 cm, so the lidless body height is `guess:` 520. Contents live in `GRP-DRAWER-CONTENTS` / `ground_floor.contents.glb` | Petr, 2026-11-28 (t1017u): only a bin for the plastic; little glass; paper amount unpredictable |
 
 ## Monoblocks
 
@@ -278,7 +279,7 @@ Blum, *Catalogue and technical manual 2024/2025* (English), MERIVOBOX pages 250�
 - Colour: Blum makes MERIVOBOX in **SW-M silk white matt**, IG-M indium grey matt and OG-M orion grey matt (catalogue 2024/25, MERIVOBOX pages). Every box here is **SW-M silk white matt** since 2026-11-23 (Petr, t866u; drawn cream until then). Fronts are the kitchen cream (RAL 1015 `guess:` shade). Material `blum-merivobox-silk-white` (sRGB #f1f0ea `guess:`).
 - Every height: inside cabinet depth **LT ≥ NL + 3**; base and back **LW − 51** wide; base **NL − 26** (chipboard back) or NL − 22 (steel back); integrated BLUMOTION; TIP-ON BLUMOTION and SERVO-DRIVE are optional add-ons (not used here).
 - Inner drawers: M and K, any NL of that side; front piece ZV4.1042M (1042 long, for KB 1200), cut to **LW − 126**.
-- Waste bins: a **cabinet profile with over-extension for waste-bin applications** (453.4501BZ / .5001BZ / .5501BZ, 70 kg, cabinet NL 450–550 with drawer sides NL − 50) for E pull-outs. Not used in the model yet (SF-C850 is empty, SF-B800 uses a plain M box); `open:` for the bins.
+- Waste bins: a **cabinet profile with over-extension for waste-bin applications** (453.4501BZ / .5001BZ / .5501BZ, 70 kg, cabinet NL 450–550 with drawer sides NL − 50) for E pull-outs. Not used in the model (SF-C850 is a standard 70 kg E pull-out with a tall back and one free-standing FILUR, not a Blum waste-bin frame; SF-B800 uses a hanging FILUR plate on MOVENTO).
 - Sink cabinets: Blum's own answer is the **drawer M or pull-out E with a centre piece** (a U-shaped box round the siphon, exterior NL 450–600, interior NL 300–450). Petr chose a plain low M box with upright FILUR bins instead (2026-11-23).
 - Narrow cabinets: **SPACE TWIN** for cabinet widths KB 150–250 (M, K or E sides), part of MERIVOBOX with its standard parts (bottom and back LW − 51). SF-A250 (212 wide) uses it since t863u.
 - Cabinet widths: Blum NZ gives MERIVOBOX drawers and pull-outs 275–1400 wide and inner drawers 275–1200 (`guess:` that the European range is the same).
@@ -577,7 +578,7 @@ The quoted notes are the yellow sticky notes next to each bay on KitchenPlan.jpg
 | SF-A250 | Note A: „dole vlevo suplik uklid (mycka, jar, odmastovac, houbicky)“ | bottom left: cleaning drawer (dishwasher tabs, washing-up liquid, degreaser, sponges) | A full-height pull-out (front 229 × 807, 247 until 2026-11-22) with 3 baskets. The basket count is `guess:`. |
 | SF-A600 | Note A: „dole vpravo mycka“ | bottom right: dishwasher | Unchanged: the niche for the Bosch SBD6ECX12E. |
 | SF-B800 (west sink) | Note B: „800 / dole vlevo kos, vpravo kompost / nahore talire / kose se musi vyhnout drtici, to se proste bude resit az skrinky budou“ | 800 / bottom left: bin, right: compost / top: plates / the bins must avoid the disposer, that will be solved once the cabinets exist | One full-height pull-out (front 797 × 807) with two bins (`guess:` one pull-out for both). The disposer `EA-EVO3-W` hangs under the bowl. The pull-out box stops 10 under it, so it is only **207 high (493 cut)**. Tap `SN-TAP-W` is modelled. `open:` the bin-vs-disposer conflict. Petr's own note defers it, and EcoMaster's manual suggests the disposer between two bins or a lower bin under it. |
-| SF-C850 | Note C: „900 / dole trideny odpad“ | 900 / bottom: sorted waste | A full-height pull-out (front 847 × 807) with three bins. The bin count is `guess:`. |
+| SF-C850 | Note C: „900 / dole trideny odpad“ | 900 / bottom: sorted waste | A full-height pull-out (front now 832 × 808.5 in the 835 bay) with **one free-standing IKEA FILUR 42 l without lid** on the north (plastic only), loose cardboard and a bin bag of glass; a tall real back panel (`tall_back=rail`). Earlier three equal bins (`guess:`) then empty (row 10) are superseded (t1017u, row 42). |
 | SF-AH850 | Note A: „nahore sklenice“ | top: glasses | Blum AVENTOS HF top bi-fold, two fronts 847 × 442, two shelves (since 2026-11-13; two doors before). The shelf count is `guess:`. |
 | SF-BH800 | Note B: „nahore talire“ | top: plates | AVENTOS HF top, two fronts 797 × 442, two shelves, as above. |
 | SF-CH850 | Note C: „nahore tycovy mixer, velke misky, odmerky (vsechno co se musi mejt ale moc se nepouziva)“ | top: stick blender, big bowls, measuring cups (everything that needs washing but is rarely used) | AVENTOS HF top lift, two fronts 847 × 442, two shelves, as above. |
@@ -642,7 +643,7 @@ No carcass size or position changed. These are the fronts:
 | SF-I600b | one slab 597 × 807 | three drawers 597 × 197 / 197 / 407 (2026-11-13: 604 × 197 / 97 / 507) |
 | SF-A250 | slab 247 × 807 (229 × 807 since 2026-11-22) | pull-out (same front) with 3 baskets |
 | SF-B800 | slab 797 × 807 | pull-out (same front) with 2 bins, box 207 high under the disposer |
-| SF-C850 | slab 847 × 807 | pull-out (same front) with 3 bins |
+| SF-C850 | slab 847 × 807 | pull-out (front now 832 × 808.5) with one lidless FILUR and loose recycling contents (t1017u); tall back panel |
 | SF-AH850, SF-CH850 | one slab 847 × 897 | two doors 422 × 897 (L, R), 2 shelves |
 | SF-BH800 | one slab 797 × 897 | two doors 397 × 897, 2 shelves |
 | SF-T1 | one slab 747 × 2347 | door 597 × 2347 hinged L, plus a filler 147 on the west, plus 4 shelves |
@@ -2147,7 +2148,7 @@ Inside is width × depth × side height above the base. “Below front” is how
 | SF-E…-D1-I2 (inner K) | 128, 547 / 556 × 508 × 112 | **K**, 500, 40 | 547 / 556 × 458 × 113 | 129, 496 | — |
 | SF-A250-D1 (pull-out, 3 shelves) | 700, 121 × 497 × 684, 516 | **E**, 550, 70 | 154 × 508 × 176 | 192, 546 | 0 |
 | SF-B800-D1 (sink, FILUR) | 211 (trimmed under the disposer), 698 × 497 × 195, 516 | **M**, 550, 70 | 731 × 508 × 75 | 91, 546 | 0 |
-| SF-C850-D1 (recycling, empty) | 700, 739 × 497 × 684, 516, 3 bins | **E**, 550, 70, no bins | 772 × 508 × 176 | 192, 546 | 0 |
+| SF-C850-D1 (recycling, one lidless FILUR, loose paper/glass, t1017u) | 700, 739 × 497 × 684, 516, 3 bins then empty | **E**, 550, 70, tall back to z 889 (`guess:` 3 mm under the rail), no Gridfinity | 757 × 508 × 176 | 192, 546 | 0 |
 | SF-DN-S1…S4 D1 (main) and -I1, -I2 | MERIVOBOX K / M / K 128 / 90 / 128, 597 / 606 × 358 | **K / M / K**, 400, 40 | 597 / 606 × 358 × 113 / 75 / 113 | 129 / 91 / 129, 396 | 0 |
 | SF-T2/T3/T4-D1, -D2 (400 / 410 fronts) | 290 / 300, 489 / 498 / 435 × 497 × 274 / 284, 516 | **E**, 600, 70 | 522 / 531 / 468 × 558 × 176 | 192, 596 | 0 |
 
@@ -2807,7 +2808,7 @@ The lowest drawers cannot take the mid-stack 13.5 mm offset: the cabinet profile
 **Intake panel (t976u):** **12 mm** compact HPL, 867–879, underside 867, thickness `guess:` (not confirmed). Holes stay as in the Miele KM 8665 FL manual. Clearances from the underside: **16.5 mm** to the N box top, **85 mm** to the box base (official ≥ 5 / ≥ 75, repo ≥ 8). Both pass.
 
 
-### Drawer contents (t1008u / t1009u)
+### Drawer contents (t1008u / t1009u / t1017u)
 
 Petr (t1008u): fill drawers and cabinets from the docs and best judgement, keep the meshes cheap, hide them as an IFC group, use Gridfinity boxes where they fit, and start with one island-west drawer.
 
@@ -2834,6 +2835,17 @@ t1009u fills the next three named island-west drawers, still `guess:` / best jud
 **SF-I500b-D2, oils and condiments (oleje, octy, dochucovadla).** MERIVOBOX E, NL 600. Inside **464 × 558 × 176**, plate **11 × 13** at z 477–482. The E sides only give **171 mm** above the plate, but the clear item height to the D1 box underside (z 782) is **300 mm** (305 mm from the floor) — that is the limit that matters, and bottles may stand proud of the E sides. Every bottle is at most **280 mm** above the plate (20 mm of air under D1). One 10×8 Gridfinity tray holds 12 standing 8-gon bottles (three rows of four: cooking oils tallest, then vinegars/soy, then shorter condiments); the leftover column is a 4-vial tray and the back 10×5 tray holds 6 squat jars (pesto, paste). All bottles stay under the 280 mm cap.
 
 **SF-I600b-D1, cutlery (příbory).** MERIVOBOX N under the hob intake, NL 500. Inside **548 × 458 × 52.5**, plate **13 × 10** (546 × 420) at z 798–803, only **47.5 mm** clear above the plate. 4-unit (28 mm) trays stay under that: 2×8 wells for table knives, forks, spoons and tablespoons, 2×5 teaspoons and a 2×3 dessert well, a 3×8 steak-knife well, and a 13×2 serving tray at the back with pieces lying along the width. Flat steel heads and coloured handles, handles at the front (except the serving tray).
+
+t1017u fills the west-run recycling pull-out **SF-C850-D1** (plan note „900 / dole trideny odpad“; the bay is now 835 mm, yaml `Contents`: `tříděný odpad`). It is a MERIVOBOX **E** box, NL 550, 70 kg, inside **757 × 508 × 176**, with a **tall real back panel** (`tall_back=rail`) from the box bottom (z 143) to **z 889** (746 mm), `guess:` 3 mm `TallBackClearance` under the 892 mm rail underside so the drawer still slides out. The panel is drawer geometry (the MERIVOBOX back extended; the E sides stay 192 mm), not contents.
+
+Contents stay loose and unorganised (Petr: only plastic gets a bin; little glass; paper amount is unpredictable). There is no Gridfinity plate and no dividers:
+
+- North side: one free-standing **IKEA FILUR 42 l** (article 201.938.99) **without lid**, 290 × 380 × 520 mm. Width and depth are official; the 520 mm height is `guess:` (IKEA publishes 55 cm *with lid*; the lid package is 3 cm). A plastic bag liner and a few flattened PET bottles sit in it.
+- At the back: a few large folded or torn cardboard sheets leaning against the tall back panel.
+- South side: a smaller paper/cardboard box, slightly askew.
+- A loosely lying plastic bin bag with a few glass bottles and jars.
+
+This supersedes the earlier three-equal-bins `guess:` and the empty pull-out of row 10 (see changelog row 42). The hanging FILUR frame in **SF-B800** is unchanged.
 
 **How to hide them.** All filled-drawer items are members of the IFC group **Drawer contents** (`GRP-DRAWER-CONTENTS`), a child of Furniture. In the inspector, open Furniture → Drawer contents and use **Hide** (or Hide all others on that row). They are also the on-demand Parts leaf **Interior › Drawer contents** (`ground_floor.contents.glb`), on by default like the Gridfinity baseplates; `?contents=0` skips the download. Each product is `<drawer>-CONTENTS` (pilot: `SF-I600a-D1-CONTENTS`), hangs on its drawer so it slides with it, and belongs to the bay group as well, so isolating the bay still shows the items.
 

@@ -192,6 +192,10 @@ IKEA_DEFAULTS_MM = {
     "FrameFloorGap": 10.0,  # hanging bin bottom over the carcass bottom (Petr, 2026-11-23, t849u; was 22)
     "BinRim": 30.0,  # FILUR rim + lid above the plate (guess: Petr ~3 cm; IKEA lid package 3 cm)
     "BinTaper": 10.0,  # FILUR body under the rim, narrower a side (guess:)
+    # Full-height pull-out back panel (``tall_back=rail``): the board stops
+    # this far under the top rail underside so the drawer can still slide
+    # out (t1017u). Not in the Blum cutting list; guess:.
+    "TallBackClearance": 3.0,
 }
 
 # Blum MOVENTO 760H / 766H nominal lengths (technical data sheet TD-132/1,

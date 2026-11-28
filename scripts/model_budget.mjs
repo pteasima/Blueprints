@@ -25,9 +25,12 @@ export const BUDGETS = {
     nodes: 40, meshNodes: 40, draws: 40, faces: 18000, triangles: 57000,
     materials: 4, megabytes: 12, maxNodeTriangles: 5000, maxNodeFaces: 1200,
   },
-  // Pilot drawer items (t1008u). Small on purpose: keep contents low-poly.
+  // Drawer items (t1008u / t1009u / t1017u). Small on purpose: keep
+  // contents low-poly. Each filled drawer is its own IFC element, so
+  // colours cannot be fused across drawers; a fifth drawer needs more
+  // mesh nodes/draws than the four-island-pilot cap of 40.
   "docs/models/ground_floor.contents.glb": {
-    nodes: 40, meshNodes: 40, draws: 40, faces: 2000, triangles: 8000,
+    nodes: 52, meshNodes: 52, draws: 52, faces: 2800, triangles: 10000,
     materials: 16, megabytes: 2, maxNodeTriangles: 4000, maxNodeFaces: 800,
   },
 };
