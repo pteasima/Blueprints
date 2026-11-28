@@ -13,6 +13,7 @@
     "children": [
       "cabinet",
       "gridfinity",
+      "contents",
       "worktop",
       "oak",
       "appliance",

@@ -1036,14 +1036,17 @@ systemFurniture:
       - Name: Pset_KitchenBay
         Properties:
           Run: KR-WEST
-      # Note C: "dole tridene odpad". Petr, 2026-11-23 (t835u): "assume
-      # deepest merivobox for southwest recycling cabinet, leave empty without
-      # bins for now". A full-height pull-out on the deepest MERIVOBOX that
-      # fits the 574 inside depth, NL 550, E sides, 70 kg; no bins (three
-      # equal bins until 2026-11-23, guess:).
+      # Note C: "dole tridene odpad". A full-height pull-out on the deepest
+      # MERIVOBOX that fits the 574 inside depth, NL 550, E sides, 70 kg.
+      # Petr, 2026-11-23 (t835u) left it empty (three equal bins until then,
+      # guess:). Petr, 2026-11-28 (t1017u): only plastic gets a bin — one
+      # free-standing IKEA FILUR 42 l without lid on the north side; loose
+      # cardboard and a bin bag of glass; no Gridfinity or dividers. The
+      # layout ``tall_back=rail`` draws a very tall real drawer back (not
+      # contents) up to the top-rail underside less TallBackClearance.
       - Name: Pset_Fronts
         Properties:
-          Layout: "pullout *"
+          Layout: "pullout * tall_back=rail"
           Contents: "tříděný odpad"
   - id: SF-CH850
     Name: "Západ horní 850"

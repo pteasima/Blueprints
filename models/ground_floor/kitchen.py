@@ -25,6 +25,7 @@ from .constants import (
     LABEL_APPLIANCE,
     LABEL_CABINET,
     LABEL_GRIDFINITY,
+    LABEL_CONTENTS,
     LABEL_HOB,
     LABEL_OAK,
     LABEL_SINK,
@@ -32,6 +33,8 @@ from .constants import (
     MESH_GAP_MM,
 )
 from .paint import _color, _paint, _tag
+
+import drawer_contents
 
 
 def _void_solid(void, z0: float, z1: float):
@@ -89,7 +92,9 @@ def _kitchen_run_parts(run, motions=None, layers: dict | None = None) -> list:
     With ``layers`` (a dict), a drawer's Gridfinity baseplate is not fused
     into it but goes, as its own ``gridfinity`` solid named by the drawer
     id, into ``layers["gridfinity"]`` (an on-demand GLB; the viewer hangs
-    it on the drawer).
+    it on the drawer). Filled-drawer items go in ``layers["contents"]``
+    the same way, named ``<drawer>-CONTENTS`` so they slide with the
+    drawer and the inspector can hide ``GRP-DRAWER-CONTENTS``.
     """
     frame = run.frame
     plane = Plane(origin=(frame.ox, frame.oy, 0.0), x_dir=(frame.ux, frame.uy, 0.0), z_dir=(0.0, 0.0, 1.0))
@@ -159,6 +164,9 @@ def _kitchen_run_parts(run, motions=None, layers: dict | None = None) -> list:
                 layers.setdefault(LABEL_GRIDFINITY, []).append(
                     _tag(_paint(plane * plate_solid, LABEL_GRIDFINITY), part.id, "systemFurniture")
                 )
+            if layers is not None:
+                for solid in drawer_contents.solids_for(part, dr, plane, inward):
+                    layers.setdefault(LABEL_CONTENTS, []).append(solid)
         elif part.door is not None:
             # A cabinet door leaf and its door racks: fused unshrunk into one
             # connected mesh the viewer swings about its hinge.

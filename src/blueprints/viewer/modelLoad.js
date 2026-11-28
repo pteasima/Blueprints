@@ -59,6 +59,11 @@ export function attachModelLoad(ctx) {
     ctx.parts.get(name).push(obj);
     if (obj.material) {
       const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      // Keep the GLB's own colour so a multi-colour part (drawer contents)
+      // stays recognizable after Solid/Shaded replaces materials by label.
+      if (mats.length === 1 && mats[0]?.color && obj.userData.bpOwnColor == null) {
+        obj.userData.bpOwnColor = mats[0].color.getHex();
+      }
       for (const m of mats) {
         if ("side" in m) m.side = THREE.DoubleSide;
       }
@@ -109,7 +114,15 @@ export function attachModelLoad(ctx) {
         for (const node of nodes) {
           const raw = meshIdentity(node.name || "").element;
           const key = ctx.idForNodeKey.get(raw) || raw;
-          const anchor = (ctx.meshesByKey.get(key) || []).find((m) => m.userData.bpPart !== id);
+          // Drawer contents (`SF-I600a-D1-CONTENTS`) have their own IFC
+          // id so the inspector group can hide them, but they must still
+          // hang on the drawer they ride in.
+          let anchor = (ctx.meshesByKey.get(key) || []).find((m) => m.userData.bpPart !== id);
+          if (!anchor && raw && raw.endsWith("-CONTENTS")) {
+            const hostId = raw.slice(0, -"-CONTENTS".length);
+            const hostKey = ctx.idForNodeKey.get(hostId) || hostId;
+            anchor = (ctx.meshesByKey.get(hostKey) || []).find((m) => m.userData.bpPart !== id);
+          }
           const host = anchor ? elementNodeOf(anchor) : ctx.root;
           const binding = anchor ? anchor.userData.bpDoor : null;
           // Attach as if shut: a drawer pivot rests at its parent's origin.

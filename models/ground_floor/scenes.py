@@ -26,6 +26,7 @@ from .constants import (
     LABEL_FURNITURE,
     LABEL_GLAZING,
     LABEL_GRIDFINITY,
+    LABEL_CONTENTS,
     LABEL_HOB,
     LABEL_LIGHT,
     LABEL_MASONRY,
@@ -101,6 +102,7 @@ def part_groups() -> list[dict]:
             "children": [
                 LABEL_CABINET,
                 LABEL_GRIDFINITY,
+                LABEL_CONTENTS,
                 LABEL_WORKTOP,
                 LABEL_OAK,
                 LABEL_APPLIANCE,

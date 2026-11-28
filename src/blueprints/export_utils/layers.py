@@ -98,6 +98,16 @@ SECTION_LAYERS: dict[str, dict[str, Any]] = {
         "roughness": 0.6,
         "metallic": 0.0,
     },
+    # Low-poly drawer items (t1008u). Per-mesh colours are set on the solids;
+    # this is the Parts-leaf default (dark bin grey).
+    "contents": {
+        "fill": (70, 74, 80),
+        "line": (40, 42, 46),
+        "dxf": ColorIndex.GRAY,
+        "weight": SECTION_LINE_WEIGHT,
+        "roughness": 0.55,
+        "metallic": 0.05,
+    },
     "worktop": {
         # Silestone Blanco Maple, a mottled white quartz (kitchen-cabinets.md).
         "fill": (236, 233, 226),
@@ -570,6 +580,7 @@ SECTION_LAYER_ORDER = [
     "upholstery",
     "cabinet",
     "gridfinity",
+    "contents",
     "worktop",
     "hob",
     "oak",

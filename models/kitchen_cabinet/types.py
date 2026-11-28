@@ -74,6 +74,10 @@ class Drawer:
     profile_z: float = 0.0  # bottom of the cabinet profile (Blum space requirement), mm
     frame: dict | None = None  # hanging-bin frame pull-out (``frame=u``): its sizes, see _frame_pullout
     twin: dict | None = None  # Blum SPACE TWIN (``twin=E``): the upper box and its profile, see _drawer
+    # Top of a tall recycling back panel (``tall_back=rail``), mm. 0 = none.
+    # The MERIVOBOX back itself is extended up to this z; the sides stay at
+    # the side letter height. See kitchen-cabinets.md (t1017u).
+    tall_back_z: float = 0.0
 
 
 @dataclass

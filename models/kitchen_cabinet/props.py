@@ -124,6 +124,8 @@ def zone_spec(element: dict) -> list[tuple[str, str, dict]]:
 
     - ``drawer``: a drawer (front, box on full-extension slides);
     - ``pullout``: a full-height pull-out; ``items=shelves|bins``, ``n=N``;
+      ``tall_back=rail`` extends the box back up to the top-rail underside
+      less ``TallBackClearance`` (t1017u);
     - ``door``: one hinged door, ``hinge=L|R`` as you face it, optional
       ``width=`` (metres, the rest of the band is a fixed filler on the
       ``filler=L|R`` side, default the hinge side), ``shelves=N``,

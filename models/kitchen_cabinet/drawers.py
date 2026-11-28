@@ -289,12 +289,25 @@ def _drawer(bay: Bay, p: dict, zone: Zone, number: int, back_y: float, ceiling: 
         items = items + baseplate
     else:
         baseplate = []
+    # ``tall_back=rail``: extend the box back up to the underside of the
+    # top rail less TallBackClearance (guess:) so a full-height pull-out
+    # can still slide out (t1017u, SF-C850 recycling). The E sides stay.
+    tall_back_z = 0.0
+    raw_tb = zone.opts.get("tall_back")
+    if raw_tb is not None and str(raw_tb).strip().lower() not in ("", "0", "false", "no", "none"):
+        cap = top_limit if top_limit is not None else roof
+        tall_back_z = cap - p["TallBackClearance"]
+        if tall_back_z <= box[5] + TOL:
+            raise ValueError(
+                f"{bay.id}: tall_back would not rise above the {letter} box "
+                f"(top {box[5]:g} vs {tall_back_z:g})"
+            )
     return Drawer(number, zone.content, zone.nominal, zone.slot_z0, front, box, length, out_dir, 0.0,
                   kind=zone.kind, items=items, zone=zone.index,
                   inside=(inner_w, inner_d, box[5] - floor_z), floor_z=floor_z, grid=grid,
                   baseplate=baseplate, side=letter, nl=nl,
                   load=p["SpaceTwinLoad"] if twin else merivobox_load(p, zone.kind, letter, inner_w, nl), drop=drop,
-                  profile_z=bz0 - below, twin=twin)
+                  profile_z=bz0 - below, twin=twin, tall_back_z=tall_back_z)
 
 
 def _frame_pullout(bay: Bay, p: dict, zone: Zone, number: int, back_y: float, obstacles: list,
@@ -527,6 +540,8 @@ def drawer_boxes(dr: Drawer, p: dict) -> list:
     a0, a1, c0, c1, z0, z1 = dr.box
     back_lo = dr.out > 0  # pulls toward +c, so its back is the c0 end
     back = (a0, a1, c0, c0 + wall, z0, z1) if back_lo else (a0, a1, c1 - wall, c1, z0, z1)
+    if dr.tall_back_z > z1 + 1e-6:
+        back = (*back[:4], back[4], dr.tall_back_z)
     out = [
         dr.front,
         (a0, a1, c0, c1, z0, z0 + p["BoxBottomThickness"]),

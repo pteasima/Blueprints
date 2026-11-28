@@ -315,6 +315,10 @@ class _FrontsMixin:
                              Gridfinity=f"{dr.grid[0]}x{dr.grid[1]}" if dr.grid else None,
                              GridfinitySlackWidth=round(gridfinity_cells(p, dr.inside[0])[1] / 1000.0, 6) if dr.grid else None,
                              GridfinitySlackDepth=round(gridfinity_cells(p, dr.inside[1])[1] / 1000.0, 6) if dr.grid else None)
+                if dr.tall_back_z:
+                    props["TallBackTop"] = round(dr.tall_back_z / 1000.0, 6)
+                    props["TallBackHeight"] = round((dr.tall_back_z - dr.box[4]) / 1000.0, 6)
+                    props["TallBackClearance"] = round(p["TallBackClearance"] / 1000.0, 6)
                 if dr.twin:
                     tw = dr.twin
                     props.update(System="Blum MERIVOBOX SPACE TWIN (BLUMOTION, manual opening)",
